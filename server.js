@@ -15,7 +15,7 @@ const {
 
 const server = app.listen(port, async () => {
     log('Listening on port: ' + port)
-    // if (process.env.NODE_APP_INSTANCE == 0) {
+    // if (process.env.NODE_APP_INSTANCEeeeeee == 0) {
         executeCronAverageCourses()
         updateAverageCourses()
         updateAverageRatings()
