@@ -1,0 +1,9 @@
+{
+  "ignore": [
+    "docker",
+    "snippets",
+    "src/public",
+    "test",
+    "tmp"
+  ]
+}

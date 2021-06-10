@@ -1,0 +1,30 @@
+const mongoose = require('mongoose')
+const { connect } = require('../../../utils/db')
+
+connect()
+
+const optionsSchema = {
+    strict: 'throw',
+    timestamps: true,
+    collation: { locale: 'en_US', strength: 1 },
+}
+
+const QuestionsSchema = new mongoose.Schema({
+    idCategory: { type: 'ObjectId', ref: 'categories' },
+    idEvaluation: { type: 'ObjectId', ref: 'evaluations' },
+    description: { type: String, required: true, trim: true, maxlength: 500 },
+    alternatives: { type: [{ type: 'ObjectId', ref: 'alternatives' }] },
+    rigthAnswer: { type: 'ObjectId', ref: 'alternatives' },
+    active: { type: Number, required: false, default: 1 },
+    repealed: { type: Number, required: false, default: 0 },
+    deleted: { type: Number, default: 0 },
+    number: { type: Number, default: 0 },
+}, {
+    ...optionsSchema,
+})
+
+const Question = mongoose.model('questions', QuestionsSchema)
+
+module.exports = {
+    Question,
+}

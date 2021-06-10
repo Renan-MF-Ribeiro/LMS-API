@@ -1,0 +1,213 @@
+/* eslint-disable handle-callback-err */
+/* eslint-disable no-async-promise-executor */
+const {
+    Block,
+    User,
+    LastLogin,
+} = require('./model')
+const {
+    formatDate,
+    getDateToday,
+    calculateDiffDate,
+    getDateTodayWithoutHours,
+} = require('../../utils/functions')
+const {
+    ldapClient,
+    returnIdProfileUser,
+    returnIdGroupUser,
+} = require('../../utils/auth')
+
+const { Log } = require('../logs/model')
+
+module.exports = {
+    checkAmountOfLocks (id) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const quantity = await Block.find({
+                    user: { $eq: id },
+                    unblocked: { $eq: false },
+                }).countDocuments()
+
+                resolve(quantity)
+            } catch (error) {
+                reject(error)
+            }
+        })
+    },
+
+    returnLastLoginAttemp (id) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const block = await Block
+                    .find({
+                        user: { $eq: id },
+                        unblocked: { $eq: false },
+                    })
+
+                resolve(block[2].dateTimeBlock)
+            } catch (error) {
+                reject(error)
+            }
+        })
+    },
+
+    checkLastAttemptTime (dateTimeBlock) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const lastTimeBlock = formatDate(dateTimeBlock)
+                const dateCurrent = getDateToday()
+                const resultDiff = calculateDiffDate(dateCurrent, lastTimeBlock, 'minutes')
+
+                resolve(resultDiff)
+            } catch (error) {
+                reject(error)
+            }
+        })
+    },
+
+    // # Exclusivo para validação no LPAD
+    // # TODO: Remover
+    signInAndReturnRole (login, password, login2) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                await ldapClient.bind(login, password)
+                // const ldapResponse = await ldapClient.bind('cn=read-only-admin,dc=example,dc=com', 'password')
+
+                const opts = {
+                    filter: `(sAMAccountName=${login2})`,
+                    scope: 'sub',
+                    timeLimit: 30000,
+                    attributes: ['memberOf'],
+                }
+
+                await ldapClient.search('DC=brasil, DC=latam, DC=cea', opts, function (err, res) {
+                    res.on('searchEntry', async function (entry) {
+                        const ldapUser = entry.object
+                        const groups = ldapUser.memberOf
+                        const namesProfiles = []
+                        const namesGroups = []
+
+                        for (const p in groups) {
+                            const groupsSplit = groups[p].split(',')
+                            const cnSplit = groupsSplit[0].split('=')[1]
+
+                            if (cnSplit.indexOf('GL_ACADMODA_PF') >= 0) namesProfiles.push(cnSplit)
+
+                            if (cnSplit.indexOf('GL_ACADMODA_LJ') >= 0 ||
+                                cnSplit.indexOf('GL_ACADMODA_EC') >= 0 ||
+                                cnSplit.indexOf('GL_APP') >= 0
+                            ) namesGroups.push(cnSplit)
+                        }
+
+                        const profilesIDS = await returnIdProfileUser(namesProfiles)
+                        const groupsIDS = await returnIdGroupUser(namesGroups)
+
+                        resolve({
+                            token: {
+                                profiles: profilesIDS.result,
+                                numbers: profilesIDS.numbers,
+                                groups: groupsIDS,
+                            },
+                            names: namesProfiles.concat(namesGroups),
+                        })
+                    })
+
+                    res.on('error', function (err) {
+                        reject(err)
+                    })
+                })
+            } catch (error) {
+                reject(error)
+            }
+        })
+    },
+
+    updateGroupsOfUser (userID, groups) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                await User.findByIdAndUpdate(userID, { groupsAD: groups })
+                resolve()
+            } catch (error) {
+                reject(error)
+            }
+        })
+    },
+
+    updateLastLoginUser (userID) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const user = await LastLogin.findOne({ user: userID })
+                if (user) {
+                    await LastLogin.updateOne({ user: userID }, { lastLogin: getDateToday() })
+                } else {
+                    await LastLogin.create({
+                        user: userID,
+                        lastLogin: getDateToday(),
+                    })
+                }
+                resolve()
+            } catch (error) {
+                reject(error)
+            }
+        })
+    },
+
+    lastLoggedInUsers (userID) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const arrUsers = []
+                const users = await LastLogin.find().populate('users')
+                for (const user of users) {
+                    const diff = calculateDiffDate(getDateToday(), user.lastLogin, 'minutes')
+                    if (diff <= 35) arrUsers.push(user)
+                }
+                resolve(arrUsers)
+            } catch (error) {
+                reject(error)
+            }
+        })
+    },
+
+    ldapSearch (login, name) {
+        return new Promise(async (resolve, reject) => {
+            const opts = {
+                filter: `(sAMAccountName=${login})`,
+                scope: 'sub',
+                timeLimit: 30000,
+                attributes: ['memberOf'],
+            }
+
+            let response = null
+
+            await ldapClient.search('DC=brasil, DC=latam, DC=cea', opts, function (err, res) {
+                res.on('searchEntry', function (entry) {
+                    entry = entry.object
+                    response = entry
+                    resolve(response)
+                })
+
+                res.on('error', function (err) {
+                    reject(err)
+
+                    Log.create({
+                        user: null,
+                        type: 'CREATE',
+                        message: `ROTINA AD - ${name} - ${err.message}`,
+                        component: 'CRON_GROUP',
+                        dataNew: [],
+                        dataOld: [],
+                        route: null,
+                        ip: null,
+                        login: null,
+                        groups: [],
+                    })
+                })
+
+                res.on('end', function (result) {
+                    resolve(response)
+                })
+            })
+        })
+    },
+
+}

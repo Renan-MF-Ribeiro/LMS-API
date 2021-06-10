@@ -1,0 +1,14 @@
+{
+    "Default controller function": {
+        "prefix": "controller-function",
+        "body": [
+            "async nameFunction (req, res) {",
+            "        try {",
+            "            _messages.success(res, 'Cadastrado com sucesso')",
+            "        } catch (error) {",
+            "            _messages.internalServer(res, 'Erro interno no servidor')",
+            "        }",
+            "    },"
+        ]
+    }
+}

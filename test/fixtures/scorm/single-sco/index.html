@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simple SCORM 1.2 Demo</title>
+  <link rel="stylesheet" type="text/css" href="assets/tailwind.min.css">
+</head>
+<body>
+  <div class="group p-4 xl:p-16 text-center">
+    <h1 class="text-3xl font-black">Simple SCORM 1.2 Demo</h1>
+
+    <p class="mt-4">Initializing...</p>
+  </div>
+
+  <script type="text/javascript" src="assets/scormfunctions.js"></script>
+  <script type="text/javascript" src="assets/jquery.min.js"></script>
+  <script type="text/javascript">
+    $(document).ready(function () {
+
+      init()
+      function init () {
+        var api, status
+        if (!(api = getAPI()) && $.inArray(api.LMSGetValue('cmi.core.lesson_status'), [false, 'false']) < 0) {
+          return setTimeout(init, 500)
+        }
+
+        if (status === 'completed') {
+          api.LMSSetValue('cmi.core.session_time', '00:00:01')
+          api.LMSCommit('')
+          return showCompleted()
+        }
+
+        api.LMSSetValue('cmi.core.lesson_status', 'incomplete')
+        api.LMSCommit('')
+
+        var count = 3
+        showWait(count)
+
+        var countdown = setInterval(function () { showWait(--count) }, 1000)
+        setTimeout(function () {
+          clearInterval(countdown)
+
+          api.LMSSetValue('cmi.core.lesson_status', 'completed')
+          api.LMSSetValue('cmi.core.session_time', '00:00:03')
+          api.LMSCommit('')
+
+          showCompleted()
+        }, count * 1000)
+      }
+
+      function showCompleted () {
+        $('p').html('completed.')
+      }
+
+      function showWait (seconds) {
+        $('p').html('wait ' + seconds + '...')
+      }
+    })
+  </script>
+</body>
+</html>

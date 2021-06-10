@@ -1,0 +1,151 @@
+const { Question } = require('./model')
+const { Alternative } = require('../alternatives/model')
+const { Category } = require('../categories/model')
+const _messages = require('../../../utils/messages')
+const _business = require('../business')
+const _functions = require('../../../utils/functions')
+
+module.exports = {
+    async returnQuestions (req, res) {
+        try {
+            const { skip, limit } = _functions.pagination(req)
+            const { order, sort } = _functions.ordernation(req)
+            const { id } = req.params
+
+            const total = await Question
+                .find({
+                    idEvaluation: { $eq: id },
+                    deleted: { $eq: 0 },
+                    repealed: { $eq: 0 },
+                }).countDocuments()
+
+            const questions = await Question
+                .find({
+                    idEvaluation: { $eq: id },
+                    deleted: { $eq: 0 },
+                    repealed: { $eq: 0 },
+                })
+                .populate('idCategory', 'description')
+                .sort({ [order]: sort })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit))
+
+            _messages.success(res, req, {
+                data: questions,
+                total,
+            })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'questions', 'returnQuestions')
+        }
+    },
+
+    async createQuestion (req, res) {
+        try {
+            const { idCategory, description, idEvaluation } = req.body
+            const verify = await Question.find({
+                description: { $eq: description },
+                idEvaluation: { $eq: idEvaluation },
+                deleted: { $eq: 0 },
+            })
+
+            if (verify.length === 0) {
+                let alert = ''
+                const category = await Category.findOne({
+                    _id: { $eq: idCategory },
+                })
+                const totalQuestions = await Question.find({
+                    idCategory: { $eq: idCategory },
+                    deleted: { $eq: 0 },
+                    repealed: { $eq: 0 },
+                })
+                if (category.amountOfQuestions > totalQuestions.length + 1) {
+                    alert = `${totalQuestions.length + 1} de ${category.amountOfQuestions} questões gravadas para a categoria. É necessário cadastrar no mínimo mais ${category.amountOfQuestions - (totalQuestions.length + 1)} ${category.amountOfQuestions - (totalQuestions.length + 1) > 1 ? 'questões' : 'questão'}.`
+                }
+                const objQuestion = { ...req.body }
+                const { idEvaluation } = await Category.findOne({ _id: { $eq: idCategory } })
+                objQuestion.idEvaluation = idEvaluation
+                const alternativeCreated = await Question.create(objQuestion)
+                _messages.success(res, req, 'Questão cadastrada com sucesso', 'questions', 'createQuestion', alternativeCreated, [], true, 'CREATE')
+            } else {
+                _messages.badRequest(res, req, 'Essa questão já foi cadastrada!', 'Essa questão já foi cadastrada!', 'questions', 'createQuestion')
+            }
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'questions', 'createQuestion')
+        }
+    },
+
+    async updateQuestion (req, res) {
+        try {
+            const verify = await Question.find({
+                description: { $eq: req.body.description },
+                idEvaluation: { $eq: req.body.idEvaluation },
+                idCategory: { $eq: req.body.idCategory },
+                deleted: { $eq: 0 },
+                repealed: { $eq: 0 },
+            })
+            if (verify.length === 0) {
+                let alert = ''
+                const category = await Category.findOne({
+                    _id: { $eq: req.body.idCategory },
+                })
+                const totalQuestions = await Question.find({
+                    idCategory: { $eq: req.body.idCategory },
+                    deleted: { $eq: 0 },
+                    repealed: { $eq: 0 },
+                })
+                if (category.amountOfQuestions > totalQuestions.length + 1) {
+                    alert = `${totalQuestions.length + 1} de ${category.amountOfQuestions} questões gravadas para a categoria. É necessário cadastrar no mínimo mais ${category.amountOfQuestions - (totalQuestions.length + 1)} ${category.amountOfQuestions - (totalQuestions.length + 1) > 1 ? 'questões' : 'questão'}.`
+                }
+                const { _id } = req.body
+                await _business.updateAndRepealedQuestion(_id, req.body)
+                _messages.success(res, req, alert, 'Atualização de dados', 'questions', 'updateQuestion', [], [], true, 'UPDATE')
+            } else {
+                _messages.badRequest(res, req, 'Essa questão já foi cadastrada!', 'Essa questão já foi cadastrada!', 'questions', 'updateQuestion')
+            }
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'questions', 'updateQuestion')
+        }
+    },
+
+    async deleteQuestion (req, res) {
+        try {
+            const { id } = req.params
+            await Question.findByIdAndUpdate(id, { deleted: 1 })
+            _messages.success(res, req, 'Deletado com sucesso', 'Exclusão de dados', 'questions', 'deleteQuestion', [], [], true, 'DELETE')
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'questions', 'deleteQuestion')
+        }
+    },
+
+    async rigthAnswer (req, res) {
+        try {
+            const { idQuestion, idAlternative } = req.body
+            const { rigthAnswer } = await Question.findOne({ _id: { $eq: idQuestion } })
+            let oldData = []
+
+            if (rigthAnswer) {
+                await _business.updateAndRepealedQuestion(idQuestion, req.body, 'alternative')
+            } else {
+                oldData = await Question.findByIdAndUpdate(idQuestion, { rigthAnswer: idAlternative })
+                await Alternative.findByIdAndUpdate(idAlternative, { correct: true })
+            }
+
+            const newData = await Question.find({ _id: { $eq: idQuestion } })
+            _messages.success(res, req, 'Atualizado com sucesso', 'Atualização de dados', 'questions', 'rigthAnswer', newData, oldData, true, 'UPDATE')
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'questions', 'rigthAnswer')
+        }
+    },
+
+    async changeStatus (req, res) {
+        try {
+            const { active, _id } = req.body
+            const oldData = await Question.findByIdAndUpdate(_id, { active })
+            const newData = await Question.find({ _id: { $eq: _id } })
+            _messages.success(res, req, 'Atualizado com sucesso', 'Atualização de dados', 'questions', 'changeStatus', newData, oldData, true, 'UPDATE')
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'questions', 'changeStatus')
+        }
+    },
+
+}

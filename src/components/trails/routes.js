@@ -1,0 +1,25 @@
+const express = require('express')
+const formidable = require('express-formidable')
+const _controller = require('./controller')
+const {
+    isStudent,
+    isAccountant,
+} = require('../../utils/middlewares')
+
+module.exports = express.Router()
+    .post('/', isAccountant, _controller.create)
+    .post('/items', isAccountant, _controller.linkItems)
+    .post('/delete-item', isAccountant, _controller.unlinkItems)
+    .post('/change-order', isAccountant, _controller.changeItemOrderFromTrail)
+    .put('/update', isAccountant, formidable(), _controller.update)
+    .put('/change-status', isAccountant, _controller.changeStatus)
+    .put('/', isAccountant, formidable(), _controller.multiUploadCreate)
+    .get('/', isAccountant, _controller.findAll)
+    .get('/banners-elegibles', isStudent, _controller.returnBannersElegibles)
+    .get('/items/:id', isStudent, _controller.returnItemsByTrail)
+    .get('/menu/:id', isStudent, _controller.returnItemsByTrailMenu)
+    .get('/:trailId', isAccountant, _controller.findById)
+    .post('/list', _controller.returnTrailsByIDS)
+    .post('/mandatory', _controller.mandatory)
+    .get('/xapi', _controller.xapi)
+    .get('/course-information/:trailId/:itemId', _controller.getCourseInformation)
