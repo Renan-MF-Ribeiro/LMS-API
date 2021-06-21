@@ -15,7 +15,7 @@ const { error } = require('../../utils/logger')
 const _errors = require('../../utils/errors')
 const _messages = require('../../utils/messages')
 const _functions = require('../../utils/functions')
-const { Item, DocumentItem, MediaItem, SCORMItem, ExamItem } = require('./model')
+const { Item, DocumentItem, MediaItem, SCORMItem, ExamItem,AudioItem,SoundcloudItem } = require('./model')
 const { Tracking } = require('../tracking/model')
 const {
     awsAmazon,
@@ -33,10 +33,12 @@ const ITEM_KINDS = Object.freeze({
     MediaItem: MediaItem,
     SCORMItem: SCORMItem,
     ExamItem: ExamItem,
+    AudioItem: AudioItem,
+    SoundcloudItem: SoundcloudItem
 })
 
 const ItemController = {
-    async create (req, res) {
+    async create(req, res) {
         const ItemModel = ITEM_KINDS[req.body.kind] || Item
 
         try {
@@ -48,7 +50,7 @@ const ItemController = {
         }
     },
 
-    async multiUploadCreate (req, res) {
+    async multiUploadCreate(req, res) {
         let payload = {}
         if (req.fields.payload) {
             try {
@@ -66,6 +68,8 @@ const ItemController = {
                 })
             if (verify.length === 0) {
                 const ItemModel = ITEM_KINDS[req.body.kind || payload.kind] || Item
+
+                console.log('ItemModel: ',ItemModel)
 
                 try {
                     const { thumb, content, banner } = req.files
@@ -87,22 +91,31 @@ const ItemController = {
                         bannerPath = await azureBlob(banner, 'items/banners')
                     }
 
-                    if (!contentPath && payload.content && ItemModel === MediaItem) {
+                    if (!contentPath && payload.content && (ItemModel === MediaItem || ItemModel === AudioItem)) {
                         contentPath = payload.content
                         delete payload.content
                     }
 
-                    payload = {
-                        ...payload,
-                        enabled: true,
-                        thumbPath: thumbPath || undefined,
-                        contentPath: contentPath || undefined,
-                        bannerPath: bannerPath || undefined,
+                    if (payload.kind !== 'SoundcloudItem') {
+                        payload = {
+                            ...payload,
+                            enabled: true,
+                            thumbPath: thumbPath || undefined,
+                            bannerPath: bannerPath || undefined,
+                            contentPath: contentPath || undefined,
+                        }
+                    } else {
+                        payload = {
+                            ...payload,
+                            enabled: true,
+                            thumbPath: thumbPath || undefined,
+                            bannerPath: bannerPath || undefined,
+                        }
                     }
 
                     delete payload.thumb
                     delete payload.banner
-
+                    console.log('payload: ',payload)
                     const { _id } = await ItemModel.create(payload)
                     _messages.success(res, req, { _id })
                 } catch (error) {
@@ -120,7 +133,7 @@ const ItemController = {
         }
     },
 
-    async update (req, res) {
+    async update(req, res) {
         let payload = {}
         if (req.fields.payload) {
             try {
@@ -203,7 +216,7 @@ const ItemController = {
         }
     },
 
-    async updateById (req, res) {
+    async updateById(req, res) {
         const ItemModel = ITEM_KINDS[req.body.kind] || Item
 
         try {
@@ -215,7 +228,7 @@ const ItemController = {
         }
     },
 
-    async updateStatus (req, res) {
+    async updateStatus(req, res) {
         try {
             const { _id, enabled } = req.body
             const item = await Item.findOne({ _id })
@@ -231,7 +244,7 @@ const ItemController = {
         }
     },
 
-    async findItemTrails (req, res) {
+    async findItemTrails(req, res) {
         try {
             const _id = req.params.itemId
             const trails = await Trail.find({ 'items.itemID': { $in: _id } }, 'title')
@@ -241,11 +254,11 @@ const ItemController = {
         }
     },
 
-    async disableById (req, res) {
+    async disableById(req, res) {
         ItemController.updateById({ ...req, body: { enabled: false } }, res)
     },
 
-    async findById (req, res) {
+    async findById(req, res) {
         try {
             const _id = req.params.itemId
             const item = await Item.findOne({ _id })
@@ -255,7 +268,7 @@ const ItemController = {
         }
     },
 
-    async findItemById (req, res) {
+    async findItemById(req, res) {
         try {
             const itemId = req.params.itemId
             const trailId = req.params.trailId
@@ -317,27 +330,27 @@ const ItemController = {
         }
     },
 
-    async createDocument (req, res) {
+    async createDocument(req, res) {
         req.body.kind = 'DocumentItem'
         ItemController.create(req, res)
     },
 
-    async multiUploadDocument (req, res) {
+    async multiUploadDocument(req, res) {
         req.body.kind = 'DocumentItem'
         ItemController.multiUploadCreate(req, res)
     },
 
-    async createMedia (req, res) {
+    async createMedia(req, res) {
         req.body.kind = 'MediaItem'
         ItemController.create(req, res)
     },
 
-    async multiUploadMedia (req, res) {
+    async multiUploadMedia(req, res) {
         req.body.kind = 'MediaItem'
         ItemController.multiUploadCreate(req, res)
     },
 
-    async uploadSCORM (req, res) {
+    async uploadSCORM(req, res) {
         if (req.method !== 'POST') {
             return res.status(httpStatus.NOT_FOUND).send()
         }
@@ -462,7 +475,7 @@ const ItemController = {
         }
     },
 
-    async updateSCORM (req, res) {
+    async updateSCORM(req, res) {
         if (req.method !== 'PUT') {
             return res.status(httpStatus.NOT_FOUND).send()
         }
@@ -541,7 +554,7 @@ const ItemController = {
         }
     },
 
-    async findAll (req, res) {
+    async findAll(req, res) {
         try {
             const { skip, limit } = _functions.pagination(req)
             const { sort, order } = _functions.ordernation(req)
@@ -597,7 +610,7 @@ const ItemController = {
         }
     },
 
-    async findItensActives (req, res) {
+    async findItensActives(req, res) {
         try {
             const itens = await Item.find({
                 enabled: { $eq: true },
@@ -609,7 +622,7 @@ const ItemController = {
         }
     },
 
-    async generateCertificate (req, res) {
+    async generateCertificate(req, res) {
         try {
             const { item } = req.params
             const user = await _functions.getUserByToken(req)

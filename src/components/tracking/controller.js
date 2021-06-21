@@ -4,7 +4,7 @@ const { decodeToken } = require('../../utils/auth')
 
 const _messages = require('../../utils/messages')
 const { User } = require('../users/model')
-const { Tracking, DocumentTracking, MediaTracking, SCORMTracking, ExamTracking, SCORMTrackingHistory, SCORMLessonStatus } = require('./model')
+const { Tracking, DocumentTracking, MediaTracking,AudioTracking, SCORMTracking, ExamTracking, SCORMTrackingHistory, SCORMLessonStatus } = require('./model')
 const { HistoricEvaluation } = require('../assessments/model')
 
 const {
@@ -18,6 +18,7 @@ const TRACKING_KINDS = Object.freeze({
     MediaTracking: MediaTracking,
     SCORMTracking: SCORMTracking,
     ExamTracking: ExamTracking,
+    AudioTracking: AudioTracking,
 })
 
 const TrackingController = {
