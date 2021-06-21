@@ -41,6 +41,12 @@ const MediaTracking = Tracking.discriminator('MediaTracking', new mongoose.Schem
     ...schemaOptions,
 }))
 
+const AudioTracking = Tracking.discriminator('AudioTracking', new mongoose.Schema({
+    completion: { type: Number, min: 0, max: 1 },
+}, {
+    ...schemaOptions,
+}))
+
 const SCORMLessonStatus = Object.freeze({
     NOT_ATTEMPTED: 'not attempted',
     BROWSED: 'browsed',
@@ -84,4 +90,5 @@ module.exports = {
     SCORMTracking,
     SCORMTrackingHistory,
     ExamTracking,
+    AudioTracking
 }

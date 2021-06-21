@@ -18,6 +18,7 @@ function ifEndpointEnabled () { return this.isEndpointEnabled }
 
 const isURL = test(/^https?:\/\//)
 const isLocalMedia = test(/^\/?(\w+\/)*[a-f0-9]{10}\.mp4$/)
+const isLocalAudio = test(/^\/?(\w+\/)*[a-f0-9]{10}\.mp3$/)
 const isYouTubeVideo = test(/^https:\/\/(www\.)?youtube\.com\//i)
 const isVimeoVideo = test(/^https:\/\/((player|www)\.)?vimeo\.com\//i)
 
@@ -114,6 +115,27 @@ const MediaItem = Item.discriminator('MediaItem', new mongoose.Schema({
     ...schemaOptions,
 }))
 
+
+const audioFormats = Object.freeze({
+    AUDIO: 'audio',
+})
+
+const AudioItem = Item.discriminator('AudioItem', new mongoose.Schema({
+    format: { type: String, enum: Object.values(audioFormats), default: audioFormats.AUDIO, required: true },
+    contentPath: {
+        type: String,
+        get: pathResolver,
+        required: true,
+        validate: {
+            validator: anyPass([isURL, isLocalMedia, isLocalAudio, isYouTubeVideo, isVimeoVideo]),
+            message: props => `${props.value} não é um caminho válido ou uma URL suportada.`,
+        },
+    },
+    ...endpointOptions,
+}, {
+    ...schemaOptions,
+}))
+
 const scormVersions = Object.freeze({
     SCORM_1_2: 'scorm_1_2',
 })
@@ -129,10 +151,23 @@ const SCORMItem = Item.discriminator('SCORMItem', new mongoose.Schema({
     ...schemaOptions,
 }))
 
+const SoundcloudItem = Item.discriminator('SoundcloudItem', new mongoose.Schema({
+    format: { type: String, enum: Object.values(mediaFormats), default: mediaFormats.VIDEO, required: true },
+    contentPath: {
+        type: String,
+        required: true,
+    },
+    ...endpointOptions,
+}, {
+    ...schemaOptions,
+}))
+
 module.exports = {
     Item,
     DocumentItem,
     MediaItem,
     SCORMItem,
     ExamItem,
+    AudioItem,
+    SoundcloudItem
 }
