@@ -3,22 +3,19 @@ const { createTerminus } = require('@godaddy/terminus')
 const { ldapClient } = require('./src/utils/auth')
 const { log } = require('./src/utils/logger')
 const app = require('./src/index')
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3000
 const {
     updateAverageCourses,
     updateAverageRatings,
     executeCronAverageCourses,
-    cronGroupsAD,
-    dailyCharge,
 } = require('./src/utils/cron')
-
 
 const server = app.listen(port, async () => {
     log('Listening on port: ' + port)
     // if (process.env.NODE_APP_Ieeeee == 0) {
-        executeCronAverageCourses()
-        updateAverageCourses()
-        updateAverageRatings()
+    executeCronAverageCourses()
+    updateAverageCourses()
+    updateAverageRatings()
     // }
 })
 

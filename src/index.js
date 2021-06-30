@@ -15,6 +15,7 @@ const { PUBLIC_PATH } = process.env
 const app = express()
 
 var corsOptions = {
+    origin: 'http://localhost:4200',
     credentials: true,
     allowedHeaders: ['Content-Type', 'Range', 'X-CSRF-TOKEN', 'Authorization'],
     exposedHeaders: ['Accept-Ranges', 'Content-Encoding', 'Content-Length', 'Content-Range'],
@@ -33,7 +34,7 @@ app.use(morgan('dev'))
 app.use(bodyParser.json({
     limit: '100mb',
 }))
-app.use(cookieParser('', { domain: origins }))
+app.use(cookieParser())
 app.use(express.static(path.resolve(PUBLIC_PATH)))
 app.get('/', (req, res) => {
     res.sendFile(path.resolve(path.join(PUBLIC_PATH, 'index.html')))
@@ -73,7 +74,6 @@ app
     .use('/logs', validateTokenRoute, logsRoutes)
     .use('/xapi', validateTokenRoute, xapiRoutes)
     .use('/suppliers', supplierRoutes)
-
 
 app.use(function (err, req, res, next) {
     if (err.code !== 'EBADCSRFTOKEN') return next(err)
