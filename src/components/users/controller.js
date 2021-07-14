@@ -228,14 +228,21 @@ module.exports = {
     },
 
     async singleSignOn (req, res) {
+        let user = {}
         const { token } = req.body
         const secret = process.env.JWT_SECRET
-        const { cpf } = await jwt.verify(token.token, secret)
-        console.log(cpf)
+        const { cpf, email, registration } = await jwt.verify(token.token, secret)
         try {
-            if (cpf) {
-                user = await User.findOne({ cpf: { $eq: cpf }, status: 'ATIVO', enabled: true }, ['_id', 'networkLogin', 'password', 'acceptTerms', 'passwordValid', 'name', 'profilePhoto', 'groupsAD', 'email'])
-
+            if (cpf || email || registration) {
+                if (email) {
+                    user = await User.findOne({ email, status: 'ATIVO', enabled: true }, ['_id', 'networkLogin', 'password', 'acceptTerms', 'passwordValid', 'name', 'profilePhoto', 'groupsAD', 'email'])
+                }
+                if (cpf) {
+                    user = await User.findOne({ cpf, status: 'ATIVO', enabled: true }, ['_id', 'networkLogin', 'password', 'acceptTerms', 'passwordValid', 'name', 'profilePhoto', 'groupsAD', 'email'])
+                }
+                if (registration) {
+                    user = await User.findOne({ registration, status: 'ATIVO', enabled: true }, ['_id', 'networkLogin', 'password', 'acceptTerms', 'passwordValid', 'name', 'profilePhoto', 'groupsAD', 'email'])
+                }
                 if (user) {
                     const amountOfLocks = await checkAmountOfLocks(user._id)
                     // 5 Tentativas
@@ -298,7 +305,6 @@ module.exports = {
                 _messages.forbidden(res, req, 'Usuário ou senha não informados', 'Erro de validação', 'users', 'ldapSignIn')
             }
         } catch (error) {
-            console.log(error)
             await sleep(3000)
             await Block.create({
                 user: user._id,
@@ -783,4 +789,11 @@ module.exports = {
             res.status(500).json('Erro no servidor!')
         }
     },
+
+    async ssoCallback (req, res) {
+        const email = req.samlUserObject.httpSchemasXmlsoapOrgWs200505IdentityClaimsEmailaddress
+        const token = await jwt.sign({ email }, process.env.JWT_SECRET)
+        res.redirect(302, `${process.env.DOMAIN}/#/login/entrar/sso?token=${token}`)
+    },
+
 }
