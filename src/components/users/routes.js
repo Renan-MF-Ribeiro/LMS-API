@@ -2,13 +2,14 @@ const express = require('express')
 const _controller = require('./controller')
 const multiparty = require('connect-multiparty')
 const formidable = require('express-formidable')
-
+const passport = require('../../utils/passport')
 const {
     isAdmin,
     isAdminOrInstructor,
     validateTokenRoute,
 } = require('../../utils/middlewares')
 
+const Saml2js = require('saml2js')
 module.exports = express.Router()
     .post('/auth', _controller.ldapSignIn)
     .post('/accept-terms', validateTokenRoute, _controller.acceptTerms)
@@ -33,4 +34,16 @@ module.exports = express.Router()
     .post('/signup', _controller.signup)
     .post('/activate', _controller.activateUser)
     .post('/sso', _controller.singleSignOn)
+    .get('/sso/saml', passport.authenticate('saml', {
+        successRedirect: '/',
+        failureRedirect: '/login',
+    }))
+    .post('/sso/saml/callback', passport
+        .authenticate('saml', { failureRedirect: '/', failureFlash: true }), (req, res, next) => {
+        const xmlResponse = req.body.SAMLResponse
+        const parser = new Saml2js(xmlResponse)
+        req.samlUserObject = parser.toObject()
+        next()
+    },
+    _controller.ssoCallback)
     // .get('/script-users', validateTokenRoute, _controller.scriptUsers)

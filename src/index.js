@@ -6,14 +6,13 @@ const helmet = require('helmet')
 const path = require('path')
 const cookieParser = require('cookie-parser')
 const morgan = require('morgan')
-const { isAdmin } = require('./utils/middlewares')
 const {
     htmlInjection,
     validateTokenRoute,
 } = require('./utils/middlewares')
 const { PUBLIC_PATH } = process.env
 const app = express()
-
+const passport = require('./utils/passport')
 var corsOptions = {
     origin: 'http://localhost:4200',
     credentials: true,
@@ -34,11 +33,15 @@ app.use(morgan('dev'))
 app.use(bodyParser.json({
     limit: '100mb',
 }))
+app.use(bodyParser.urlencoded({ extended: true }))
 app.use(cookieParser())
 app.use(express.static(path.resolve(PUBLIC_PATH)))
 app.get('/', (req, res) => {
     res.sendFile(path.resolve(path.join(PUBLIC_PATH, 'index.html')))
 })
+
+app.use(passport.initialize())
+app.use(passport.session())
 
 const usersRoutes = require('./components/users/routes')
 const itemsRoutes = require('./components/items/routes')
