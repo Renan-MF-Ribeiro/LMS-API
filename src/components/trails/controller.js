@@ -91,7 +91,7 @@ module.exports = {
                         enabled: true,
                         thumbPath: thumbPath,
                         bannerPath: bannerPath,
-                        backgroundPath
+                        backgroundPath,
                     }
 
                     const trail = await Trail.create(payload)

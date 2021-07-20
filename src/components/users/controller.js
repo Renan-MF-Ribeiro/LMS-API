@@ -419,6 +419,8 @@ module.exports = {
     async import (req, res) {
         try {
             var file = null
+            const newUsers = []
+            const existingUsers = []
             if (req.files.file) {
                 file = req.files.file
             } else {
@@ -439,8 +441,24 @@ module.exports = {
                     const processedUser = processUsersLoad(result)
 
                     processedUser.password = existingUser ? existingUser.password : processedUser.password
+
+                    if (existingUser) {
+                        existingUsers.push({ _id: existingUser._id, processedUser })
+                    } else {
+                        newUsers.push(processedUser)
+                    }
                 }
             }
+
+            console.log(`Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`)
+            for (const user of existingUsers) {
+                await User.findByIdAndUpdate(user._id, {
+                    ...user.processedUser,
+                })
+            }
+
+            console.log(`Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`)
+            await User.insertMany(newUsers)
             _messages.success(res, req, 'Importado com sucesso')
         } catch (error) {
             console.log(error)
