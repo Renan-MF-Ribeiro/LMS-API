@@ -225,6 +225,8 @@ module.exports = {
         data.networkLogin = data.cpf
         data.enabled = true
 
+        const roles = data.roles ? data.roles.split(',') : []
+
         const groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO']
 
         const elegibility = [
@@ -234,6 +236,17 @@ module.exports = {
             data && data.office ? `ELEGE_${data.office.split(' ')[0]}` : null,
             data && data.office ? `ELEGE_${data.office.split(' ')[0] + '_' + _functions.clearString(data.company)}` : null,
         ]
+
+        if (roles.includes('Admin')) {
+            groupsAD.push('PERFIL_Admin')
+        }
+
+        if (roles.includes('Analista')) {
+            groupsAD.push('PERFIL_Analista')
+        }
+        if (roles.includes('Conteudista')) {
+            groupsAD.push('PERFIL_Conteudista')
+        }
 
         elegibility.forEach(async value => {
             if (value) {
