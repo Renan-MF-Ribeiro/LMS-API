@@ -428,7 +428,9 @@ module.exports = {
             }
             const preProcessedUsers = await _files.readXLSXUsers(file.path)
             const results = preProcessedUsers.map(user => {
-                user.cpf = user.cpf.replace(/[^a-z0-9]/gi, '')
+                if (user.cpf) {
+                    user.cpf = user.cpf.replace(/[^a-z0-9]/gi, '')
+                }
                 return user
             })
 
