@@ -167,6 +167,8 @@ module.exports = {
                         if (process.env.NODE_ENV !== 'local') {
                             backgroundPath = backgroundPath.replace(AZURE_BLOB_URL, DOMAIN);
                         }
+                    } else {
+                        backgroundPath = null
                     }
 
                     delete payload.thumb
