@@ -5,8 +5,7 @@ const formidable = require('express-formidable')
 
 router
     .get('/', _controller.list)
-    .post('/import', formidable(),  _controller.import)
-    .delete('/delete',  _controller.deleteAll)
-
+    .post('/import', formidable(), _controller.import)
+    .delete('/delete', _controller.deleteAll)
 
 module.exports = router
