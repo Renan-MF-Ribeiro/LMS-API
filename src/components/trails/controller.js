@@ -91,7 +91,7 @@ module.exports = {
                         enabled: true,
                         thumbPath: thumbPath,
                         bannerPath: bannerPath,
-                        backgroundPath
+                        backgroundPath,
                     }
 
                     const trail = await Trail.create(payload)
@@ -167,6 +167,8 @@ module.exports = {
                         if (process.env.NODE_ENV !== 'local') {
                             backgroundPath = backgroundPath.replace(AZURE_BLOB_URL, DOMAIN);
                         }
+                    } else {
+                        backgroundPath = null
                     }
 
                     delete payload.thumb

@@ -9,7 +9,6 @@ const {
     formatDate,
     getDateToday,
     calculateDiffDate,
-    getDateTodayWithoutHours,
 } = require('../../utils/functions')
 const {
     ldapClient,
@@ -18,7 +17,10 @@ const {
 } = require('../../utils/auth')
 
 const { Log } = require('../logs/model')
-
+const bcrypt = require('bcryptjs')
+const _functions = require('../../utils/functions')
+const { Group } = require('../groups/model')
+const { CLIENT_ID } = process.env
 module.exports = {
     checkAmountOfLocks (id) {
         return new Promise(async (resolve, reject) => {
@@ -208,6 +210,56 @@ module.exports = {
                 })
             })
         })
+    },
+    processUsersLoad (data) {
+        const salt = bcrypt.genSaltSync(10)
+
+        const initialPasswordKey = '1234'
+        data.password = [{ hash: bcrypt.hashSync(initialPasswordKey, salt), valid: true, createdAt: new Date(Date.now()) }]
+
+        data.clientUserKey = CLIENT_ID + '@@' + data.cpf
+        data.status = String(data.status).toUpperCase()
+        data.birthDate = _functions.formatDateWithoutHoursBrasilian(data.birthDate)
+        data.admission = _functions.formatDateWithoutHoursBrasilian(data.admission)
+        data.status = data.status.toUpperCase()
+        data.networkLogin = data.cpf
+        data.enabled = true
+
+        const roles = data.roles ? data.roles.split(',').map(item => item.trim()) : []
+
+        const groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO']
+
+        const elegibility = [
+            `ELEGE_${_functions.clearString(data.company)}`,
+            `ELEGE_${_functions.clearString(data.model)}`,
+            `ELEGE_${_functions.clearString(data.office)}`,
+            data && data.office ? `ELEGE_${data.office.split(' ')[0]}` : null,
+            data && data.office ? `ELEGE_${data.office.split(' ')[0] + '_' + _functions.clearString(data.company)}` : null,
+        ]
+
+        if (roles.includes('Admin')) {
+            groupsAD.push('PERFIL_Admin')
+        }
+
+        if (roles.includes('Analista')) {
+            groupsAD.push('PERFIL_Analista')
+        }
+        if (roles.includes('Conteudista')) {
+            groupsAD.push('PERFIL_Conteudista')
+        }
+
+        elegibility.forEach(async value => {
+            if (value) {
+                groupsAD.push(value)
+                const group = await Group.findOne({ name: value })
+                if (!group) {
+                    await Group.create({ name: value })
+                }
+            }
+        })
+        data.groupsAD = groupsAD
+
+        return data
     },
 
 }

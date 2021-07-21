@@ -183,12 +183,14 @@ module.exports = {
 
             if (tags.length > 0) {
                 const filter = req.query
-                const trails = await populateTrails(true, {
+                let trails = await populateTrails(true, {
                     enabled: true,
                     tags: {
                         $in: tags,
                     },
                 })
+
+                trails = trails.filter(trail => checkIfTheTrackIsValid(trail))
 
                 for (const trail of trails) {
                     for (const item of trail.items) {

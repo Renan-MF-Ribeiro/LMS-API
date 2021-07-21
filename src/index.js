@@ -6,58 +6,42 @@ const helmet = require('helmet')
 const path = require('path')
 const cookieParser = require('cookie-parser')
 const morgan = require('morgan')
-const { isAdmin } = require('./utils/middlewares')
 const {
     htmlInjection,
     validateTokenRoute,
 } = require('./utils/middlewares')
 const { PUBLIC_PATH } = process.env
 const app = express()
-
-const env = process.env.NODE_ENV
-const origins = env === 'production' ? ['https://pearson.com.br', 'https://www.pearson.com.br'] : env === 'staging' ? ['https://pearson.happmobi.com.br'] : ['http://localhost:4200']
+const passport = require('./utils/passport')
 var corsOptions = {
-    origin: origins,
+    origin: 'http://localhost:4200',
     credentials: true,
     allowedHeaders: ['Content-Type', 'Range', 'X-CSRF-TOKEN', 'Authorization'],
     exposedHeaders: ['Accept-Ranges', 'Content-Encoding', 'Content-Length', 'Content-Range'],
 }
 app.use(cors(corsOptions))
-app.use(helmet({ frameguard: false }))
+
 app.use(helmet.xssFilter())
 app.use(helmet.noSniff())
 app.use(htmlInjection(path.resolve(PUBLIC_PATH)))
-app.use(helmet.contentSecurityPolicy({
-    directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", 'fonts.googleapis.com'],
-        fontSrc: ["'self'", 'fonts.gstatic.com'],
-        objectSrc: ["'none'"],
-        imgSrc: ["'self'", 'lmspearsonblob.blob.core.windows.net'],
-        frameSrc: ["'self'", 'www.youtube.com'],
-    },
-}))
+
 app.use(helmet.noCache())
 app.use(helmet.referrerPolicy({ policy: 'same-origin' }))
-app.use(helmet.featurePolicy({
-    features: {
-        camera: ["'none'"],
-        microphone: ["'none'"],
-        pictureInPicture: ["'none'"],
-        usb: ["'none'"],
-    },
-}))
 
 app.use(morgan('dev'))
 
 app.use(bodyParser.json({
     limit: '100mb',
 }))
-app.use(cookieParser('', { domain: origins }))
+app.use(bodyParser.urlencoded({ extended: true }))
+app.use(cookieParser())
 app.use(express.static(path.resolve(PUBLIC_PATH)))
 app.get('/', (req, res) => {
     res.sendFile(path.resolve(path.join(PUBLIC_PATH, 'index.html')))
 })
+
+app.use(passport.initialize())
+app.use(passport.session())
 
 const usersRoutes = require('./components/users/routes')
 const itemsRoutes = require('./components/items/routes')
@@ -93,7 +77,6 @@ app
     .use('/logs', validateTokenRoute, logsRoutes)
     .use('/xapi', validateTokenRoute, xapiRoutes)
     .use('/suppliers', supplierRoutes)
-
 
 app.use(function (err, req, res, next) {
     if (err.code !== 'EBADCSRFTOKEN') return next(err)

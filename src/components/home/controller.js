@@ -46,6 +46,7 @@ const ItemController = {
                 ],
                 enabled: true,
             })
+            filterTrails = filterTrails.filter(trail => checkIfTheTrackIsValid(trail))
 
             const items = await Item.find({
                 $text: { $search: `"${searchBy}"` },
@@ -107,7 +108,7 @@ const ItemController = {
 
             const averageSchoolCourses = await schoolAverageCourses(user)
             const averageSchoolYearCourses = await schoolYearAverageCourses(user)
-            
+
             const averageStudent = await calculateAverageStudent(user) // Não necessita de mudanças
             const averageSchool = await calculateAverageSchool(user)
             const averageSchoolYear = await calculateAverageSchoolYear(user)

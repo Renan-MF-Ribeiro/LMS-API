@@ -29,6 +29,7 @@ const {
     signInAndReturnRole,
     updateGroupsOfUser,
     updateLastLoginUser,
+    processUsersLoad,
 } = require('./business')
 
 const {
@@ -49,11 +50,11 @@ const {
 const bcrypt = require('bcryptjs')
 const messages = require('../../utils/messages')
 const cryptoJS = require('crypto-js')
-const node_cryptojs = require('node-cryptojs-aes');
+const node_cryptojs = require('node-cryptojs-aes')
 const jwt = require('jsonwebtoken')
 
 module.exports = {
-    async create(req, res) {
+    async create (req, res) {
         try {
             const { _id } = await User.create(req.body)
             _messages.success(res, req, { _id })
@@ -62,7 +63,7 @@ module.exports = {
         }
     },
 
-    async findById(req, res) {
+    async findById (req, res) {
         try {
             const _id = req.params.userId
             const user = await User.findOne({ _id })
@@ -71,7 +72,7 @@ module.exports = {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'findById')
         }
     },
-    async signup(req, res) {
+    async signup (req, res) {
         try {
             var salt = bcrypt.genSaltSync(10)
             const { birthDate, name, email, password, supplierId, area, office } = req.body
@@ -104,12 +105,12 @@ module.exports = {
                 _messages.success(res, req, newUser)
             }
         } catch (error) {
-            console.log(error);
+            console.log(error)
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'signup')
         }
     },
 
-    async activateUser(req, res) {
+    async activateUser (req, res) {
         try {
             const { token, email } = req.body
             const isUser = await bcrypt.compare(email, token)
@@ -124,14 +125,14 @@ module.exports = {
         }
     },
 
-    async ldapSignIn(req, res) {
+    async ldapSignIn (req, res) {
         let user = {}
         try {
-            const { login, password } = req.body;
+            const { login, password } = req.body
 
-            var decrypted = cryptoJS.AES.decrypt(password, "pass");
+            var decrypted = cryptoJS.AES.decrypt(password, 'pass')
 
-            let passwordDecripty = decrypted.toString(cryptoJS.enc.Utf8);
+            const passwordDecripty = decrypted.toString(cryptoJS.enc.Utf8)
 
             if (login !== undefined && password !== undefined) {
                 user = await User.findOne({ networkLogin: { $eq: login }, status: 'ATIVO', enabled: true }, ['_id', 'networkLogin', 'password', 'acceptTerms', 'passwordValid', 'name', 'profilePhoto', 'groupsAD', 'email'])
@@ -147,7 +148,7 @@ module.exports = {
                         if (resultDiff >= 1) {
                             await Block.updateMany({ user: { $eq: user._id } }, { unblocked: true })
                         } else {
-                            sendNotificationEmail(user.email, "Conta bloqueada", `Olá ${user.name}, uma nova tentativa de acesso a sua conta não foi permita pois sua conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`);
+                            sendNotificationEmail(user.email, 'Conta bloqueada', `Olá ${user.name}, uma nova tentativa de acesso a sua conta não foi permita pois sua conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`)
                             _messages.forbidden(res, req, 'Usuário bloqueado temporariamente', 'Por favor tente novamente mais tarde!', 'users', 'ldapSignIn')
                             return
                         }
@@ -201,11 +202,11 @@ module.exports = {
                     await updateLastLoginUser(user._id)
 
                     // sendNotificationEmail(user.email, "Acesso a sua conta", `Olá ${user.name}, foi feito uma novo acesso a sua conta, se você não reconhece esse acesso, por favor, acesse a sua conta e troque a sua senha.`);
-                    var tokenEncript = cryptoJS.AES.encrypt(token, login);
+                    var tokenEncript = cryptoJS.AES.encrypt(token, login)
 
                     var tk = tokenEncript.toString()
-                    var key = login + ":" + password
-                    key = cryptoJS.AES.encrypt(key, password).toString();
+                    var key = login + ':' + password
+                    key = cryptoJS.AES.encrypt(key, password).toString()
 
                     _messages.success(res, req, { tk, key, accept: user.acceptTerms, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
                 } else {
@@ -226,15 +227,22 @@ module.exports = {
         }
     },
 
-    async singleSignOn(req, res) {
+    async singleSignOn (req, res) {
+        let user = {}
         const { token } = req.body
         const secret = process.env.JWT_SECRET
-        const { cpf } = await jwt.verify(token.token, secret)
-        console.log(cpf);
+        const { cpf, email, registration } = await jwt.verify(token.token, secret)
         try {
-            if (cpf) {
-                user = await User.findOne({ cpf: { $eq: cpf }, status: 'ATIVO', enabled: true }, ['_id', 'networkLogin', 'password', 'acceptTerms', 'passwordValid', 'name', 'profilePhoto', 'groupsAD', 'email'])
-
+            if (cpf || email || registration) {
+                if (email) {
+                    user = await User.findOne({ email, status: 'ATIVO', enabled: true }, ['_id', 'networkLogin', 'password', 'acceptTerms', 'passwordValid', 'name', 'profilePhoto', 'groupsAD', 'email'])
+                }
+                if (cpf) {
+                    user = await User.findOne({ cpf, status: 'ATIVO', enabled: true }, ['_id', 'networkLogin', 'password', 'acceptTerms', 'passwordValid', 'name', 'profilePhoto', 'groupsAD', 'email'])
+                }
+                if (registration) {
+                    user = await User.findOne({ registration, status: 'ATIVO', enabled: true }, ['_id', 'networkLogin', 'password', 'acceptTerms', 'passwordValid', 'name', 'profilePhoto', 'groupsAD', 'email'])
+                }
                 if (user) {
                     const amountOfLocks = await checkAmountOfLocks(user._id)
                     // 5 Tentativas
@@ -246,7 +254,7 @@ module.exports = {
                         if (resultDiff >= 1) {
                             await Block.updateMany({ user: { $eq: user._id } }, { unblocked: true })
                         } else {
-                            sendNotificationEmail(user.email, "Conta bloqueada", `Olá ${user.name}, uma nova tentativa de acesso a sua conta não foi permita pois sua conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`);
+                            sendNotificationEmail(user.email, 'Conta bloqueada', `Olá ${user.name}, uma nova tentativa de acesso a sua conta não foi permita pois sua conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`)
                             _messages.forbidden(res, req, 'Usuário bloqueado temporariamente', 'Por favor tente novamente mais tarde!', 'users', 'ldapSignIn')
                             return
                         }
@@ -282,11 +290,11 @@ module.exports = {
                     await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups))
                     await updateLastLoginUser(user._id)
 
-                    var tokenEncript = cryptoJS.AES.encrypt(token, 'cacaushow');
+                    var tokenEncript = cryptoJS.AES.encrypt(token, 'cacaushow')
                     var key = 'cacaushow' + ':' + '25KP76yNnhiGH9bSj'
 
                     var tk = tokenEncript.toString()
-                    key = cryptoJS.AES.encrypt(key, '25KP76yNnhiGH9bSj').toString();
+                    key = cryptoJS.AES.encrypt(key, '25KP76yNnhiGH9bSj').toString()
 
                     _messages.success(res, req, { tk, key, accept: user.acceptTerms, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
                 } else {
@@ -297,7 +305,6 @@ module.exports = {
                 _messages.forbidden(res, req, 'Usuário ou senha não informados', 'Erro de validação', 'users', 'ldapSignIn')
             }
         } catch (error) {
-            console.log(error);
             await sleep(3000)
             await Block.create({
                 user: user._id,
@@ -308,7 +315,7 @@ module.exports = {
         }
     },
 
-    async acceptTerms(req, res) {
+    async acceptTerms (req, res) {
         try {
             const { _id } = await getUserByToken(req)
             await User.findByIdAndUpdate(_id, { acceptTerms: true })
@@ -318,14 +325,14 @@ module.exports = {
         }
     },
 
-    async recoveryPassword(req, res) {
+    async recoveryPassword (req, res) {
         try {
             const { cpf, domain } = req.body
 
-            const users = await User.find({ groupsAD: { $in: ["PERFIL_Admin"] } })
+            const users = await User.find({ groupsAD: { $in: ['PERFIL_Admin'] } })
             const user = await User.findOne({ cpf: { $eq: cpf } })
 
-            const emails = users.map((user) => user.email)
+            const emails = users.map(user => user.email)
 
             const password_new = Math.random().toString(36).replace(/[^a-zA-Z0-9_]+/g, '').substring(0, 6)
 
@@ -342,19 +349,19 @@ module.exports = {
             const isUser = await User.findOneAndUpdate({ cpf: { $eq: cpf } }, { password: newPass, passwordValid: false })
 
             if (isUser) {
-                await sendEmailRecoryPassword(user.email ? user.email : emails, user.email ? true : false, password_new, domain, { name: user.name, cpf: user.cpf })
+                await sendEmailRecoryPassword(user.email ? user.email : emails, !!user.email, password_new, domain, { name: user.name, cpf: user.cpf })
                 // $2a$10$G06bQZrp8R8kn2cnImS47eHQv./K4i0bp1yBaNDyj3WSrsCH/639G --> senha
                 _messages.success(res, req, 'Sucesso', 'Email para recupera senha disparado', 'users', 'recoveryPassword', [], [], true, 'RECOVERY PASSWORD')
             } else {
                 _messages.badRequest(res, req, 'Email não existe', 'Não existe uma conta associada a este email')
             }
         } catch (error) {
-            console.log(error);
+            console.log(error)
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'recoveryPassword')
         }
     },
 
-    async changePassword(req, res) {
+    async changePassword (req, res) {
         try {
             const { password_old, password_new, password_newConfirm } = req.body
 
@@ -409,9 +416,11 @@ module.exports = {
         }
     },
 
-    async import(req, res) {
+    async import (req, res) {
         try {
             var file = null
+            const newUsers = []
+            const existingUsers = []
             if (req.files.file) {
                 file = req.files.file
             } else {
@@ -419,58 +428,39 @@ module.exports = {
             }
             const preProcessedUsers = await _files.readXLSXUsers(file.path)
             const results = preProcessedUsers.map(user => {
-                user.cpf = user.cpf.replace(/[^a-z0-9]/gi, '')
+                if (user.cpf) {
+                    user.cpf = user.cpf.replace(/[^a-z0-9]/gi, '')
+                }
                 return user
             })
 
-            var salt = bcrypt.genSaltSync(10)
             for (const result of results) {
                 if (result.cpf) {
-                    const user = await User.findOne({
+                    const existingUser = await User.findOne({
                         cpf: result.cpf,
                     })
 
-                    const userBirthDate = _functions.formatDateWithoutHoursBrasilian(result.birthDate).replace('/', '').replace('/', '')
-                    var hashPass = [{ hash: bcrypt.hashSync(userBirthDate, salt), valid: true, createdAt: new Date(Date.now()) }]
-                    result.password = user ? user.password : hashPass
-                    result.clientUserKey = CLIENT_ID + '@@' + result.cpf
-                    result.status = String(result.status).toUpperCase()
+                    const processedUser = processUsersLoad(result)
 
-                    result.createDate = _functions.formatDateWithoutHoursBrasilian(result.createdAt)
-                    result.birthDate = _functions.formatDateWithoutHoursBrasilian(result.birthDate)
-                    result.admission = _functions.formatDateWithoutHoursBrasilian(result.admission)
-                    result.status = result.status.toUpperCase()
-                    result.networkLogin = result.cpf
-                    result.enabled = true
+                    processedUser.password = existingUser ? existingUser.password : processedUser.password
 
-                    const groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO']
-
-
-                    if (roles.includes('Admin')) {
-                        groupsAD.push("PERFIL_Conteudista")
-                        groupsAD.push("PERFIL_Admin")
-                        groupsAD.push("PERFIL_Analista")
-                    }
-
-                    if (!roles.includes('Admin') && roles.includes('Analista')) {
-                        groupsAD.push("PERFIL_Analista")
-                    }
-                    if (!roles.includes('Admin') && roles.includes('Conteudista')) {
-                        groupsAD.push("PERFIL_Conteudista")
-                    }
-                    result.groupsAD = groupsAD
-
-                    if (user) {
-                        await User.findByIdAndUpdate(user._id, {
-                            ...result,
-                        })
+                    if (existingUser) {
+                        existingUsers.push({ _id: existingUser._id, processedUser })
                     } else {
-                        await User.create({
-                            ...result,
-                        })
+                        newUsers.push(processedUser)
                     }
                 }
             }
+
+            console.log(`Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`)
+            for (const user of existingUsers) {
+                await User.findByIdAndUpdate(user._id, {
+                    ...user.processedUser,
+                })
+            }
+
+            console.log(`Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`)
+            await User.insertMany(newUsers)
             _messages.success(res, req, 'Importado com sucesso')
         } catch (error) {
             console.log(error)
@@ -478,7 +468,7 @@ module.exports = {
         }
     },
 
-    async returnUsers(req, res) {
+    async returnUsers (req, res) {
         try {
             const { skip, limit } = pagination(req)
             const { order, sort } = ordernation(req)
@@ -516,7 +506,7 @@ module.exports = {
         }
     },
 
-    async updateUser(req, res) {
+    async updateUser (req, res) {
         try {
             const { _id, tags } = req.body
             const user = await User.findOne({
@@ -542,22 +532,22 @@ module.exports = {
         }
     },
 
-    async changePhoto(req, res) {
+    async changePhoto (req, res) {
         try {
             const user = await getUserByToken(req)
             const file = req.files.file
             // const photoPath = await _files.awsAmazon(file, `photos/${user._id}`)
             let photoPath = await _files.azureBlob(file, `photos/${user._id}`)
-            photoPath = photoPath.replace(AZURE_BLOB_URL, DOMAIN);
+            photoPath = photoPath.replace(AZURE_BLOB_URL, DOMAIN)
             await User.findByIdAndUpdate(user._id, { profilePhoto: photoPath })
             _messages.success(res, req, photoPath)
         } catch (error) {
-            console.log(error);
+            console.log(error)
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'changePhoto')
         }
     },
 
-    async isAuthenticated(req, res) {
+    async isAuthenticated (req, res) {
         if (await validateToken(req)) {
             _messages.success(res, req, true)
         } else {
@@ -565,7 +555,7 @@ module.exports = {
         }
     },
 
-    async isAuthenticatedNginx(req, res) {
+    async isAuthenticatedNginx (req, res) {
         if (await validateTokenNginx(req.params.token)) {
             _messages.success(res, req, true)
         } else {
@@ -573,7 +563,7 @@ module.exports = {
         }
     },
 
-    async selfData(req, res) {
+    async selfData (req, res) {
         try {
             const { data } = await decodeToken(req.headers.authorization)
             const user = await User.findOne({ _id: data.ref }, 'registration networkLogin name birthday admission typeHiring cargoCode cargo state costCenter hierarchical education gender email board department manager status')
@@ -583,7 +573,7 @@ module.exports = {
         }
     },
 
-    async importUserTest(req, res) {
+    async importUserTest (req, res) {
         try {
             const usersTest = await UserTest.find()
             for (const result of usersTest) {
@@ -641,7 +631,7 @@ module.exports = {
         }
     },
 
-    async exportUsers(req, res) {
+    async exportUsers (req, res) {
         try {
             const users = await User.find()
             const records = []
@@ -669,7 +659,7 @@ module.exports = {
         }
     },
 
-    async email(req, res) {
+    async email (req, res) {
         try {
             const error = { message: 'ERRO NA CARGA DIÁRIA', stack: 'erro' }
             await sendLogEmail('success', error, 100, 10, 40, 50, '13/01/2020', 10, 20, 30)
@@ -680,7 +670,7 @@ module.exports = {
         }
     },
 
-    async importUsersDisabled(req, res) {
+    async importUsersDisabled (req, res) {
         try {
             const { file } = req.files
             const results = await _files.readCSV(file.path)
@@ -699,7 +689,7 @@ module.exports = {
         }
     },
 
-    async emulation(req, res) {
+    async emulation (req, res) {
         try {
             const { body } = req
             const { groupsAD, name, acceptTerms, profilePhoto } = await User.findById(body._id)
@@ -740,7 +730,7 @@ module.exports = {
         }
     },
 
-    async importUpdateStatusUsers(req, res, next) {
+    async importUpdateStatusUsers (req, res, next) {
         try {
             const { file } = req.files
             const results = await _files.readCSV(file.path)
@@ -762,7 +752,7 @@ module.exports = {
         }
     },
 
-    async scriptUsers(req, res, next) {
+    async scriptUsers (req, res, next) {
         try {
             const obj = {
                 networkLogin: 'OFICINA5DEV',
@@ -809,7 +799,7 @@ module.exports = {
         }
     },
 
-    async updateAllUsers(req, res) {
+    async updateAllUsers (req, res) {
         try {
             await User.updateMany({}, { clientId: 2 })
 
@@ -819,4 +809,11 @@ module.exports = {
             res.status(500).json('Erro no servidor!')
         }
     },
+
+    async ssoCallback (req, res) {
+        const email = req.samlUserObject.httpSchemasXmlsoapOrgWs200505IdentityClaimsEmailaddress
+        const token = await jwt.sign({ email }, process.env.JWT_SECRET)
+        res.redirect(302, `${process.env.DOMAIN}/#/login/entrar/sso?token=${token}`)
+    },
+
 }
