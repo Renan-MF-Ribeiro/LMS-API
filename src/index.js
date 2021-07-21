@@ -59,6 +59,7 @@ const cronRoutes = require('./components/crons/routes')
 const logsRoutes = require('./components/logs/routes')
 const xapiRoutes = require('./components/xapi/routes')
 const supplierRoutes = require('./components/suppliers/routes')
+const termsOfUseRoutes = require('./components/terms-of-use/routes')
 
 app
     .use('/items', validateTokenRoute, itemsRoutes)
@@ -77,6 +78,7 @@ app
     .use('/logs', validateTokenRoute, logsRoutes)
     .use('/xapi', validateTokenRoute, xapiRoutes)
     .use('/suppliers', supplierRoutes)
+    .use('/terms-of-use', validateTokenRoute, termsOfUseRoutes)
 
 app.use(function (err, req, res, next) {
     if (err.code !== 'EBADCSRFTOKEN') return next(err)
