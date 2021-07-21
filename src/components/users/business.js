@@ -225,7 +225,7 @@ module.exports = {
         data.networkLogin = data.cpf
         data.enabled = true
 
-        const roles = data.roles ? data.roles.split(',') : []
+        const roles = data.roles ? data.roles.split(',').map(item => item.trim()) : []
 
         const groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO']
 
