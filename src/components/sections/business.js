@@ -10,8 +10,6 @@ const {
 } = require('../../utils/functions')
 const { Group } = require('../groups/model')
 const { Tracking } = require('../tracking/model')
-const { HistoricEvaluation } = require('../assessments/model')
-const { calculateRatingEvaluation } = require('../assessments/business')
 
 module.exports = {
     checkIfTheTrackIsValid (trail) {
@@ -107,7 +105,7 @@ module.exports = {
     setTrailMandatory (trail, tags) {
         const mandatoryTags = trail.mandatory
 
-        if (mandatoryTags.length == 0) {
+        if (mandatoryTags.length === 0) {
             return
         }
 
@@ -116,7 +114,7 @@ module.exports = {
                 return true
             }
 
-            const filter = tags.filter(_tag => _tag.value == tag.value)
+            const filter = tags.filter(_tag => _tag.value === tag.value)
 
             return filter.length > 0
         }, false)
@@ -233,7 +231,7 @@ function isNecessary (trail, tags) {
             return true
         }
 
-        const filter = tags.filter(_tag => _tag.value == tag.value)
+        const filter = tags.filter(_tag => _tag.value === tag.value)
 
         return filter.length > 0
     }, false)

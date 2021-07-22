@@ -3,12 +3,10 @@ require('dotenv').config()
 const { CLIENT_ID, DOMAIN, AZURE_BLOB_URL } = process.env
 const _messages = require('../../utils/messages')
 const _files = require('../../utils/files')
-const _functions = require('../../utils/functions')
 const {
     User,
     UserTest,
     Block,
-    LastLogin,
 } = require('./model')
 
 const {
@@ -26,7 +24,6 @@ const {
     checkAmountOfLocks,
     checkLastAttemptTime,
     returnLastLoginAttemp,
-    signInAndReturnRole,
     updateGroupsOfUser,
     updateLastLoginUser,
     processUsersLoad,
@@ -48,9 +45,7 @@ const {
 } = require('../../utils/email')
 
 const bcrypt = require('bcryptjs')
-const messages = require('../../utils/messages')
 const cryptoJS = require('crypto-js')
-const node_cryptojs = require('node-cryptojs-aes')
 const jwt = require('jsonwebtoken')
 
 module.exports = {
@@ -155,14 +150,14 @@ module.exports = {
                     }
 
                     var pass = user.password.filter(function (obj) {
-                        if (obj.valid == true && bcrypt.compareSync(passwordDecripty, obj.hash)) {
+                        if (obj.valid === true && bcrypt.compareSync(passwordDecripty, obj.hash)) {
                             return true
                         }
 
                         return false
                     })
 
-                    if (pass.length == 0) {
+                    if (pass.length === 0) {
                         // sendNotificationEmail(user.email, "Falha na sua conta", `Olá ${user.name}, foi feita uma nova tentativa de acesso acesso a sua conta, se você não reconhece esse acesso, por favor, acesse a sua conta e troque a sua senha.`);
                         throw new Error('Senha inválida')
                     } else {
@@ -366,12 +361,12 @@ module.exports = {
             const { password_old, password_new, password_newConfirm } = req.body
 
             const { _id } = await getUserByToken(req)
-            user = await User.findOne({ _id: _id }, ['password'])
+            const user = await User.findOne({ _id: _id }, ['password'])
 
             // const passChecked = bcrypt.compareSync(password_old, user.password)
 
             var pass = user.password.filter(function (obj) {
-                if (obj.valid == true && bcrypt.compareSync(password_old, obj.hash)) {
+                if (obj.valid === true && bcrypt.compareSync(password_old, obj.hash)) {
                     return true
                 }
 
@@ -386,7 +381,7 @@ module.exports = {
                 return false
             })
 
-            if (pass.length == 0 || password_new != password_newConfirm) {
+            if (pass.length === 0 || password_new !== password_newConfirm) {
                 _messages.unauthorized(res, req, new Error('ErrorAoTrocarSenha'), 'Erro ao trocar senha.', 'users', 'changePassword')
                 return
             } else if (Oldpass.length > 0) {

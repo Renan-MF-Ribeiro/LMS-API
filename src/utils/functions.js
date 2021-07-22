@@ -98,8 +98,8 @@ module.exports = {
                     try {
                         var { data } = _auth.decodeToken(token)
                         user = await User.findOne({ _id: { $eq: data.ref } })
-                    }catch {
-                       
+                    } catch {
+
                     }
                 }
 
@@ -309,6 +309,37 @@ module.exports = {
         return this.removeAccents(text).replace(/[\])}[{(]/g, '').split(' ').join('_')
     },
 
+    processTrailTracking (trail, allTrackingUser) {
+        let containsACompletedItem = false
+        for (const item of trail.items) {
+            const objTracking = allTrackingUser.filter(obj => {
+                if (String(obj.item) === String(item.itemID._id)) {
+                    return true
+                }
+            })[0]
+
+            var tmpCompletion = null
+            if (objTracking) {
+                if (objTracking.kind === 'SCORMTracking' || objTracking.kind === 'ExamTracking') {
+                    if (objTracking.lessonStatus === 'FAILED' || objTracking.lessonStatus === 'failed') {
+                        tmpCompletion = 2
+                    } else {
+                        tmpCompletion = _isSCORMCompleted(objTracking.lessonStatus) ? 1 : 0
+                    }
+                } else {
+                    tmpCompletion = objTracking.completion
+                }
+            }
+
+            item.completion = tmpCompletion
+            if (item.completion === 1) {
+                containsACompletedItem = true
+            }
+        }
+        trail.completion = getTrailCompletion(trail)
+        return { trail, containsACompletedItem }
+    },
+
 }
 
 function nameMonth (month) {
@@ -328,4 +359,28 @@ function calculateRatingEvaluation (amountQuestionsCorrect, amountOfQuestions) {
 
         resolve(result)
     })
+}
+
+function getTrailCompletion (trail) {
+    const completed = trail.items.find(val => val.completion === 1)
+    const incomplete = trail.items.find(val => val.completion != null && val.completion >= 0 && val.completion < 1)
+    const notAttempted = trail.items.find(val => val.completion === null)
+
+    if (incomplete) {
+        return 0
+    } else if (completed && notAttempted) {
+        return 0
+    } else if (completed && !incomplete && !notAttempted) {
+        return 1
+    } else {
+        return null
+    }
+}
+
+function _isSCORMCompleted (status = '') {
+    return [
+        SCORMLessonStatus.COMPLETED,
+        SCORMLessonStatus.FAILED,
+        SCORMLessonStatus.PASSED,
+    ].includes(status.toLowerCase())
 }
