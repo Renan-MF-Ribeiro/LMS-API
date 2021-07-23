@@ -12,19 +12,19 @@ const transporter = nodemailer.createTransport({
     },
     tls: {
         ciphers: 'SSLv3',
-        rejectUnauthorized: false
+        rejectUnauthorized: false,
 
-    }
+    },
 })
 
 module.exports = {
-    sendEmailRecoryPassword(strTo, hasEmail, newPass = '', domain = '', userData) {
+    sendEmailRecoryPassword (strTo, hasEmail, newPass = '', domain = '', userData) {
         return new Promise(async (resolve, reject) => {
             try {
                 let message
                 if (hasEmail) {
-                    message = `Olá, você reiniciou a sua senha, sua nova senha é: <b> ${newPass} </b> <br> Acesse a <a href="${domain}">plataforma</a> e bons estudos.`
-                } else{
+                    message = `Olá ${userData.name}, você reiniciou a sua senha, sua nova senha é: <b> ${newPass} </b> <br> Acesse a <a href="${domain}">plataforma</a> e bons estudos.`
+                } else {
                     message = `Olá, o usuário ${userData.name} com número de CPF ${userData.cpf} requisitou troca de senha. A nova senha gerada para o usuário é: <b> ${newPass} </b> <br> Ao entrar na plataforma o mesmo deverá obrigatoriamente trocar a senha <br> Acesse a <a href="${domain}">plataforma</a> e bons estudos.`
                 }
                 const html = `<html>
@@ -49,7 +49,7 @@ module.exports = {
         })
     },
 
-    sendSignupActivationEmail(strTo, activationLink) {
+    sendSignupActivationEmail (strTo, activationLink) {
         return new Promise(async (resolve, reject) => {
             try {
                 const html = `<html xmlns="http://www.w3.org/1999/xhtml">
@@ -112,7 +112,7 @@ module.exports = {
         })
     },
 
-    sendNotificationEmail(strTo, strTitle, strContent) {
+    sendNotificationEmail (strTo, strTitle, strContent) {
         return new Promise(async (resolve, reject) => {
             try {
                 const html = `<html xmlns="http://www.w3.org/1999/xhtml">
@@ -170,7 +170,7 @@ module.exports = {
         })
     },
 
-    sendLogEmail(type, error, totalUsers = null, totalUsersCreated = null, totalUsersUpdated = null, totalUsersWithoutLogin = null, data = null, totalUsersInactive = null, totalUsersActiveBD = null, totalUsersInactiveBD = null) {
+    sendLogEmail (type, error, totalUsers = null, totalUsersCreated = null, totalUsersUpdated = null, totalUsersWithoutLogin = null, data = null, totalUsersInactive = null, totalUsersActiveBD = null, totalUsersInactiveBD = null) {
         return new Promise(async (resolve, reject) => {
             try {
                 let message
