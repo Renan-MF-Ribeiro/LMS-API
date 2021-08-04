@@ -38,4 +38,10 @@ module.exports = {
         res.status(httpStatus.BAD_REQUEST).json(data)
     },
 
+    notFound: async (res, req, err, data, component = null, rota = null) => {
+        info(component, rota, 'notFound', err)
+        await _functions.recordLog(req, 'NOT FOUND', err, component, rota)
+        res.status(httpStatus.NOT_FOUND).json(data)
+    },
+
 }
