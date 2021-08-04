@@ -327,12 +327,13 @@ module.exports = {
 
     async recoveryPassword (req, res) {
         try {
-            const { cpf, domain } = req.body
+            const { cpf, birthDate, domain } = req.body
 
-            const users = await User.find({ groupsAD: { $in: ['PERFIL_Admin'] } })
-            const user = await User.findOne({ cpf: { $eq: cpf } })
+            const user = await User.findOne({ cpf: { $eq: cpf }, birthDate: {$eq: birthDate } })
 
-            const emails = users.map(user => user.email)
+            if(!user){
+                throw "user not found"
+            }
 
             const password_new = Math.random().toString(36).replace(/[^a-zA-Z0-9_]+/g, '').substring(0, 6)
 
@@ -346,16 +347,20 @@ module.exports = {
 
             newPass.push({ hash: hashPass, valid: true, createdAt: new Date() })
 
-            const isUser = await User.findOneAndUpdate({ cpf: { $eq: cpf } }, { password: newPass, passwordValid: false })
+            const isUser = await User.findOneAndUpdate({ cpf: { $eq: cpf }, birthDate: { $eq: birthDate } }, { password: newPass, passwordValid: false })
 
-            if (isUser) {
+            if (isUser.email) {
                 await sendEmailRecoryPassword(user.email ? user.email : emails, !!user.email, password_new, domain, { name: user.name, cpf: user.cpf })
                 // $2a$10$G06bQZrp8R8kn2cnImS47eHQv./K4i0bp1yBaNDyj3WSrsCH/639G --> senha
-                _messages.success(res, req, 'Sucesso', 'Email para recupera senha disparado', 'users', 'recoveryPassword', [], [], true, 'RECOVERY PASSWORD')
+               return await _messages.success(res, req, 'Sucesso', 'Email para recupera senha disparado', 'users', 'recoveryPassword', [], [], true, 'RECOVERY PASSWORD')
             } else {
-                _messages.badRequest(res, req, 'Email não existe', 'Não existe uma conta associada a este email')
+               return await _messages.success(res, req, password_new )
+                // _messages.badRequest(res, req, 'Email não existe', 'Não existe uma conta associada a este email')
             }
         } catch (error) {
+            if(error === "user not found"){
+                return await _messages.notFound(res, req, error, error)
+            }
             console.log(error)
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'recoveryPassword')
         }

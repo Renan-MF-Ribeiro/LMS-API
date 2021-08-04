@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const multiparty = require('connect-multiparty')
-const _controller = require('./controller') 
+const _controller = require('./controller')
 const formidable = require('express-formidable')
 
 
