@@ -327,9 +327,14 @@ module.exports = {
 
     async recoveryPassword (req, res) {
         try {
-            const { cpf, birthDate, domain } = req.body
+            const { body, domain } = req.body
 
-            const user = await User.findOne({ cpf: { $eq: cpf }, birthDate: {$eq: birthDate } })
+            let search = Object()
+            Object.entries(body).forEach(([k, v]) => {
+                search = Object.assign(search, {[k]: {$eq: v}})
+            })
+
+            const user = await User.findOne(search)
 
             if(!user){
                 throw "user not found"
@@ -347,7 +352,7 @@ module.exports = {
 
             newPass.push({ hash: hashPass, valid: true, createdAt: new Date() })
 
-            const isUser = await User.findOneAndUpdate({ cpf: { $eq: cpf }, birthDate: { $eq: birthDate } }, { password: newPass, passwordValid: false })
+            const isUser = await User.findOneAndUpdate(search, { password: newPass, passwordValid: false })
 
             if (isUser.email) {
                 await sendEmailRecoryPassword(user.email ? user.email : emails, !!user.email, password_new, domain, { name: user.name, cpf: user.cpf })
