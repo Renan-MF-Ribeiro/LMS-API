@@ -99,8 +99,8 @@ stages:
   - stage: Deploy
     displayName: Deploy to container instance
     jobs:
-      - deployment: DeployStaging
-        displayName: Deploy staging
+      - deployment: DeployDev
+        displayName: Deploy dev
         environment:
           name: HomologVM_Test
           resourceType: VirtualMachine
