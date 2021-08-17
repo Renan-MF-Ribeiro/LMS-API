@@ -13,7 +13,9 @@ resources:
 variables:
   # Container registry service connection established during pipeline creation
   dockerRegistryServiceConnection: "84aab9b3-fcd3-410b-b505-931bb62751c0"
-  runningPort: "3002"
+  devRunningPort: "3002"
+  stagingRunningPort: "3002"
+  prodRunningPort: "3002"
   prodVM: "prod01"
   imageRepositoryProd: "cacaushow-backend-prod"
   imageRepositoryStaging: "cacaushow-backend-staging"
@@ -114,7 +116,7 @@ stages:
                   displayName: Stop current container
                 - script: sudo docker rm $(imageRepositoryDev) || true
                   displayName: Remove current container
-                - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryDev) -p $(runningPort):3000 happlearning.azurecr.io/$(imageRepositoryDev):$(tag)
+                - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryDev) -p $(devRunningPort):3000 happlearning.azurecr.io/$(imageRepositoryDev):$(tag)
                   displayName: Execute new container instance
                 - script: sudo docker ps
                   displayName: Container status
@@ -136,7 +138,7 @@ stages:
                   displayName: Stop current container
                 - script: sudo docker rm $(imageRepositoryStaging) || true
                   displayName: Remove current container
-                - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryStaging) -p $(runningPort):3000 happlearning.azurecr.io/$(imageRepositoryStaging):$(tag)
+                - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryStaging) -p $(stagingRunningPort):3000 happlearning.azurecr.io/$(imageRepositoryStaging):$(tag)
                   displayName: Execute new container instance
                 - script: sudo docker ps
                   displayName: Container status
@@ -159,7 +161,7 @@ stages:
                   displayName: Stop current container
                 - script: sudo docker rm $(imageRepositoryProd) || true
                   displayName: Remove current container
-                - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryProd) -p $(runningPort):3000 happlearning.azurecr.io/$(imageRepositoryProd):$(tag)
+                - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryProd) -p $(prodRunningPort):3000 happlearning.azurecr.io/$(imageRepositoryProd):$(tag)
                   displayName: Execute new container instance
                 - script: sudo docker ps
                   displayName: Container status
