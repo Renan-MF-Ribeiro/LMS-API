@@ -12,6 +12,7 @@ resources:
 
 variables:
   # Container registry service connection established during pipeline creation
+  name: "cacaushow"
   dockerRegistryServiceConnection: "84aab9b3-fcd3-410b-b505-931bb62751c0"
   devRunningPort: "3002"
   stagingRunningPort: "3002"
@@ -40,19 +41,19 @@ stages:
             displayName: "Download secure file"
             name: dotenvdev
             inputs:
-              secureFile: "cacaushow.env.dev"
+              secureFile: "$(name).env.dev"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
           - task: DownloadSecureFile@1
             displayName: "Download secure file"
             name: dotenvstaging
             inputs:
-              secureFile: "cacaushow.env.staging"
+              secureFile: "$(name).env.staging"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
           - task: DownloadSecureFile@1
             displayName: "Download secure file"
             name: dotenvprod
             inputs:
-              secureFile: "cacaushow.env.prod"
+              secureFile: "$(name).env.prod"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
           - task: CmdLine@2
             inputs:
@@ -120,7 +121,7 @@ stages:
                   displayName: Execute new container instance
                 - script: sudo docker ps
                   displayName: Container status
-        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
       - deployment: DeployStaging
         displayName: Deploy staging
         environment:
