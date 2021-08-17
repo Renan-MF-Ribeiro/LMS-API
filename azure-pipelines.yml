@@ -42,7 +42,7 @@ stages:
             name: dotenvdev
             inputs:
               secureFile: "$(name).env.dev"
-            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/development'))
           - task: DownloadSecureFile@1
             displayName: "Download secure file"
             name: dotenvstaging
@@ -58,7 +58,7 @@ stages:
           - task: CmdLine@2
             inputs:
               script: "mv $(dotenvdev.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
-            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/development'))
           - task: CmdLine@2
             inputs:
               script: "mv $(dotenvstaging.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
@@ -76,7 +76,7 @@ stages:
               containerRegistry: $(dockerRegistryServiceConnection)
               tags: |
                 $(tag)
-            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/development'))
           - task: Docker@2
             displayName: Build and push an image to container registry
             inputs:
@@ -121,7 +121,7 @@ stages:
                   displayName: Execute new container instance
                 - script: sudo docker ps
                   displayName: Container status
-        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/development'))
       - deployment: DeployStaging
         displayName: Deploy staging
         environment:
