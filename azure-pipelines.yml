@@ -38,7 +38,7 @@ stages:
         steps:
           - task: DownloadSecureFile@1
             displayName: "Download secure file"
-            name: dotenvstaging
+            name: dotenvdev
             inputs:
               secureFile: "cacaushow.env.dev"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
