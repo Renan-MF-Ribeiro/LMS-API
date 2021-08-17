@@ -103,8 +103,9 @@ stages:
       - deployment: DeployDev
         displayName: Deploy dev
         environment:
-          name: HomologVM_Test
+          name: Development
           resourceType: VirtualMachine
+          tags: dev01
         strategy:
           runOnce:
             deploy:
