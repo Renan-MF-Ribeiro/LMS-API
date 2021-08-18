@@ -17,7 +17,6 @@ variables:
   devRunningPort: "3002"
   stagingRunningPort: "3002"
   prodRunningPort: "3002"
-  prodVM: "prod01"
   imageRepositoryProd: "cacaushow-backend-prod"
   imageRepositoryStaging: "cacaushow-backend-staging"
   imageRepositoryDev: "cacaushow-backend-dev"
@@ -150,7 +149,7 @@ stages:
         environment:
           name: Production
           resourceType: VirtualMachine
-          tags: "$(prodVM)"
+          tags: prod01
         strategy:
           runOnce:
             deploy:
