@@ -150,7 +150,7 @@ stages:
         environment:
           name: Production
           resourceType: VirtualMachine
-          tags: $(prodVM)
+          tags: "$(prodVM)"
         strategy:
           runOnce:
             deploy:
