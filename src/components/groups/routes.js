@@ -9,6 +9,7 @@ const {
 router
     .post('/', isAdmin, _controller.create)
     .get('/', _controller.get)
+    .get('/tags', _controller.getTags)
     .put('/', isAdmin, _controller.update)
     .delete('/:id', isAdmin, _controller.delete)
     .get('/instructor', _controller.getInstructorGroups)
