@@ -3,12 +3,13 @@ const router = express.Router()
 const _controller = require('./controller')
 
 const {
-    isAdmin,
+    isAdmin, isAccountant,
 } = require('../../utils/middlewares')
 
 router
     .post('/', isAdmin, _controller.create)
     .get('/', _controller.get)
+    .get('/tags', isAccountant, _controller.getTags)
     .put('/', isAdmin, _controller.update)
     .delete('/:id', isAdmin, _controller.delete)
     .get('/instructor', _controller.getInstructorGroups)

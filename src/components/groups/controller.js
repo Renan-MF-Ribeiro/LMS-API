@@ -174,4 +174,19 @@ module.exports = {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'groups', '/updateInstructor')
         }
     },
+
+    async getTags (req, res) {
+        try {
+            const groups = await Group.find({})
+
+            const obj = groups.filter(value => value.tags.length > 0).map(group => {
+                group.tags = group.tags.map(tag => tag.value)
+                return { name: group.name, tags: group.tags }
+            })
+
+            _messages.success(res, req, obj)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'groups', '/tags')
+        }
+    },
 }
