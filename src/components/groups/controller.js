@@ -1,5 +1,7 @@
 const _messages = require('../../utils/messages')
 const _functions = require('../../utils/functions')
+const { Trail } = require('../../components/trails/model')
+const { Section } = require('../../components/sections/model')
 const { Group, InstructorGroup } = require('./model')
 const { CourseModel } = require('../courses/model')
 
@@ -178,13 +180,20 @@ module.exports = {
     async getTags (req, res) {
         try {
             const groups = await Group.find({})
+            const trails = await Trail.find({})
+            const sections = await Section.find({})
 
-            const obj = groups.filter(value => value.tags.length > 0).map(group => {
-                group.tags = group.tags.map(tag => tag.value)
-                return { name: group.name, tags: group.tags }
-            })
+            const groupTags = groups.filter(value => value.tags.length > 0).map(group => group.tags.map(tag => tag.value))
 
-            _messages.success(res, req, obj)
+            const trailTags = trails.filter(value => value.tags.length > 0).map(trail => trail.tags.map(tag => tag.value))
+
+            const sectionTags = sections.filter(value => value.tags.length > 0).map(section => section.tags.map(tag => tag.value))
+
+            let tags = [...groupTags, ...trailTags, ...sectionTags]
+
+            tags = tags.reduce((prev, curr) => prev.concat(curr), [])
+
+            _messages.success(res, req, tags)
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'groups', '/tags')
         }
