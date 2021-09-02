@@ -197,7 +197,9 @@ module.exports = {
                 for (let trail of trails) {
                     const processedTrail = processTrailTracking(trail, allTrackingUser)
 
-                    trail = processExpirationDate(trail, user)
+                    if (trail.expirationType) {
+                        trail = processExpirationDate(trail, user)
+                    }
 
                     trail = processedTrail.trail
                 }
