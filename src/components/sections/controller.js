@@ -10,7 +10,7 @@ const {
     setTrailMandatory,
     getTagsElegiblesByToken,
 } = require('./business')
-const { getUserByToken, processTrailTracking } = require('../../utils/functions')
+const { getUserByToken, processTrailTracking, processExpirationDate } = require('../../utils/functions')
 
 module.exports = {
     async returnSections (req, res) {
@@ -196,6 +196,9 @@ module.exports = {
 
                 for (let trail of trails) {
                     const processedTrail = processTrailTracking(trail, allTrackingUser)
+
+                    trail = processExpirationDate(trail, user)
+
                     trail = processedTrail.trail
                 }
 
