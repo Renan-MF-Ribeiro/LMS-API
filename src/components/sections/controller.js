@@ -1,20 +1,19 @@
 /* eslint-disable no-async-promise-executor */
 const { Section } = require('./model')
+const { Tracking } = require('../tracking/model')
 const _messages = require('../../utils/messages')
-const { checkItemCompleted } = require('./business')
-const { getUserByToken } = require('../../utils/functions')
 const { populateTrails } = require('../trails/business')
 const {
     checkIfTheTrackIsValid,
     calculateDiffDateTrail,
-    getTrailCompletion,
     filterTrails,
     setTrailMandatory,
     getTagsElegiblesByToken,
 } = require('./business')
+const { getUserByToken, processTrailTracking } = require('../../utils/functions')
 
 module.exports = {
-    async returnSections(req, res) {
+    async returnSections (req, res) {
         try {
             const searchBy = req.query.searchBy
             const total = await Section.find({
@@ -48,7 +47,7 @@ module.exports = {
         }
     },
 
-    async createSection(req, res) {
+    async createSection (req, res) {
         try {
             const verify = await Section.find({
                 title: { $eq: req.body.title },
@@ -89,7 +88,7 @@ module.exports = {
         }
     },
 
-    async updateSection(req, res) {
+    async updateSection (req, res) {
         try {
             const { _id } = req.body
             const verify = await Section.find({
@@ -134,7 +133,7 @@ module.exports = {
         }
     },
 
-    async deleteSection(req, res) {
+    async deleteSection (req, res) {
         try {
             const { id } = req.params
             const section = await Section.findById(id)
@@ -174,7 +173,7 @@ module.exports = {
         }
     },
 
-    async getSectionsElegibles(req, res) {
+    async getSectionsElegibles (req, res) {
         try {
             const user = await getUserByToken(req)
             const tags = await getTagsElegiblesByToken(req)
@@ -189,16 +188,15 @@ module.exports = {
                         $in: tags,
                     },
                 })
-
                 trails = trails.filter(trail => checkIfTheTrackIsValid(trail))
 
-                for (const trail of trails) {
-                    for (const item of trail.items) {
-                        const completion = await checkItemCompleted(item, user)
-                        item.completion = completion
-                    }
+                const allTrackingUser = await Tracking.find({
+                    userLogin: { $eq: user.networkLogin },
+                })
 
-                    trail.completion = getTrailCompletion(trail)
+                for (let trail of trails) {
+                    const processedTrail = processTrailTracking(trail, allTrackingUser)
+                    trail = processedTrail.trail
                 }
 
                 const arrSections = await elegiblesContents(
@@ -267,6 +265,7 @@ module.exports = {
 
             _messages.success(res, req, resultSections)
         } catch (error) {
+            console.log(error)
             _messages.internalServer(
                 res,
                 req,
@@ -278,7 +277,7 @@ module.exports = {
         }
     },
 
-    async updatePosition(req, res) {
+    async updatePosition (req, res) {
         try {
             const sections = req.body
 
@@ -301,7 +300,7 @@ module.exports = {
     },
 }
 
-function elegiblesContents(user, trails) {
+function elegiblesContents (user, trails) {
     return new Promise(async (resolve, reject) => {
         try {
             const arrSections = []
@@ -319,7 +318,7 @@ function elegiblesContents(user, trails) {
                 for (const section of sections) {
                     var idSec = null
                     for (let i = 0; i < arrSections.length; i++) {
-                        if (String(arrSections[i]._id) == String(section._id)) {
+                        if (String(arrSections[i]._id) === String(section._id)) {
                             idSec = i
                             break
                         }
@@ -372,7 +371,7 @@ function elegiblesContents(user, trails) {
     })
 }
 
-function mandatorySections(user, trails, tags) {
+function mandatorySections (user, trails, tags) {
     return new Promise(async (resolve, reject) => {
         try {
             const section = await Section.findOne({
@@ -395,8 +394,8 @@ function mandatorySections(user, trails, tags) {
 
                 trails = trails.filter(trail => {
                     for (var m in trail.mandatory) {
-                        for (t in tags) {
-                            if (trail.mandatory[m].value == tags[t].value) {
+                        for (const t in tags) {
+                            if (trail.mandatory[m].value === tags[t].value) {
                                 return true
                             }
                         }
@@ -410,7 +409,6 @@ function mandatorySections(user, trails, tags) {
                 section.trails = trails
             }
 
-
             resolve(trails.length > 0 ? section : [])
         } catch (error) {
             reject(error)
@@ -418,7 +416,7 @@ function mandatorySections(user, trails, tags) {
     })
 }
 
-function recentsSections(user, trails, tags) {
+function recentsSections (user, trails, tags) {
     return new Promise(async (resolve, reject) => {
         try {
             const section = await Section.findOne({
@@ -442,7 +440,6 @@ function recentsSections(user, trails, tags) {
                 section.trails.sort(sortFnc)
             }
 
-
             resolve(section && section.trails.length > 0 ? section : [])
         } catch (error) {
             reject(error)
@@ -450,7 +447,7 @@ function recentsSections(user, trails, tags) {
     })
 }
 
-function keepLearningSections(user, trails, tags) {
+function keepLearningSections (user, trails, tags) {
     return new Promise(async (resolve, reject) => {
         try {
             const section = await Section.findOne({
@@ -465,14 +462,13 @@ function keepLearningSections(user, trails, tags) {
                         : function (a, b) { var x = a.title.toLowerCase(); var y = b.title.toLowerCase(); return x < y ? -1 : x > y ? 1 : 0 }
 
                 for (const trail of trails) {
-                    if (trail.completion == 0) {
+                    if (trail.completion === 0) {
                         section.trails.push(trail)
                     }
                 }
 
                 section.trails.sort(sortFnc)
             }
-
 
             resolve(section && section.trails.length > 0 ? section : [])
         } catch (error) {
@@ -482,7 +478,7 @@ function keepLearningSections(user, trails, tags) {
     })
 }
 
-function concludedSections(user, trails, tags) {
+function concludedSections (user, trails, tags) {
     return new Promise(async (resolve, reject) => {
         try {
             const section = await Section.findOne({
@@ -504,7 +500,6 @@ function concludedSections(user, trails, tags) {
 
                 section.trails.sort(sortFnc)
             }
-
 
             resolve(section && section.trails.length > 0 ? section : [])
         } catch (error) {
