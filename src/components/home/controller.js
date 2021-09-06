@@ -1,11 +1,12 @@
 const _messages = require('../../utils/messages')
 const { Item } = require('../items/model')
-const { Trail } = require('../trails/model')
-const { checkIfTheTrackIsValid, checkItemCompleted, getTrailCompletion } = require('../sections/business')
+const { Tracking } = require('../tracking/model')
+const { checkIfTheTrackIsValid } = require('../sections/business')
 const { User } = require('../users/model')
 const {
     getUserByToken,
     getTagsGroupsByToken,
+    processTrailTracking,
 } = require('../../utils/functions')
 const {
     trailsCompletedOrInProgress,
@@ -32,6 +33,10 @@ const ItemController = {
             const searchBy = req.query.searchBy
             let filterTrails = []
             const result = []
+
+            const allTrackingUser = await Tracking.find({
+                userLogin: { $eq: user.networkLogin },
+            })
 
             for (const tag of user.tags) {
                 delete tag.createdAt
@@ -77,15 +82,11 @@ const ItemController = {
                 }
             }
 
-            for (const trail of filterTrails) {
+            for (let trail of filterTrails) {
                 const isValid = checkIfTheTrackIsValid(trail)
                 if (isValid) {
-                    for (const item of trail.items) {
-                        const completion = await checkItemCompleted(item, user)
-                        item.completion = completion
-                    }
-
-                    trail.completion = getTrailCompletion(trail)
+                    const processedTrail = processTrailTracking(trail, allTrackingUser)
+                    trail = processedTrail.trail
                     result.push(trail)
                 }
             }

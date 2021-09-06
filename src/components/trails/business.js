@@ -39,7 +39,6 @@ module.exports = {
                 } : {
                     deleted: 0,
                 }
-
                 if (skip !== null) {
                     trails = await Trail.find(findObj).populate({
                         path: 'items.itemID',
@@ -54,7 +53,6 @@ module.exports = {
                         match: matchObj,
                     }).sort(sortObj)
                 }
-
                 const arrTrails = []
 
                 if (!flag) {
@@ -83,6 +81,7 @@ module.exports = {
                             completion: trail.completion,
                             isSequenceEnabled: trail.isSequenceEnabled,
                             items: arrItems,
+                            expirationType: trail.expirationType,
                         })
                     }
                 } else {
@@ -118,6 +117,8 @@ module.exports = {
                             completion: trail.completion,
                             isSequenceEnabled: trail.isSequenceEnabled,
                             items: arrItems,
+                            expirationType: trail.expirationType,
+
                         })
                     }
                 }

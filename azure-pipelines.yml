@@ -3,99 +3,167 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/docker
 
 trigger:
-- main
-- staging
-
+  - main
+  - staging
+  - development
 
 resources:
-- repo: self
+  - repo: self
 
 variables:
   # Container registry service connection established during pipeline creation
-  dockerRegistryServiceConnection: '84aab9b3-fcd3-410b-b505-931bb62751c0'
-  imageRepositoryProd: 'cacaushow-backend-prod'
-  imageRepositoryStaging: 'cacaushow-backend-staging'
-  containerRegistry: 'happlearning.azurecr.io'
-  dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
-  tag: 'latest'
+  name: "cacaushow"
+  dockerRegistryServiceConnection: "84aab9b3-fcd3-410b-b505-931bb62751c0"
+  devRunningPort: "3002"
+  stagingRunningPort: "3002"
+  prodRunningPort: "3002"
+  imageRepositoryProd: "cacaushow-backend-prod"
+  imageRepositoryStaging: "cacaushow-backend-staging"
+  imageRepositoryDev: "cacaushow-backend-dev"
+  containerRegistry: "happlearning.azurecr.io"
+  dockerfilePath: "$(Build.SourcesDirectory)/Dockerfile"
+  tag: "latest"
 
   # Agent VM image name
-  vmImageName: 'ubuntu-latest'
+  vmImageName: "ubuntu-latest"
 
 stages:
-- stage: Build
-  displayName: Build and push stage
-  jobs:
-  - job: Build
-    displayName: Build
-    pool:
-      vmImage: $(vmImageName)
-    steps:
-    - task: DownloadSecureFile@1
-      displayName: 'Download secure file'
-      name: dotenvprod
-      inputs:
-        secureFile: 'cacaushow.env.prod'
-      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
-    - task: DownloadSecureFile@1
-      displayName: 'Download secure file'
-      name: dotenvstaging
-      inputs:
-        secureFile: 'cacaushow.env.staging'
-      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
-    - task: CmdLine@2
-      inputs:
-        script: 'mv $(dotenvprod.secureFilePath) $(System.DefaultWorkingDirectory)/.env'
-      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
-    - task: CmdLine@2
-      inputs:
-        script: 'mv $(dotenvstaging.secureFilePath) $(System.DefaultWorkingDirectory)/.env'
-      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
-
-    - task: CmdLine@2
-      inputs:
-        script: 'ls -a $(System.DefaultWorkingDirectory)'
-    - task: Docker@2
-      displayName: Build and push an image to container registry
-      inputs:
-        command: buildAndPush
-        repository: $(imageRepositoryProd)
-        dockerfile: $(dockerfilePath)
-        containerRegistry: $(dockerRegistryServiceConnection)
-        tags: |
-          $(tag)
-      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
-    - task: Docker@2
-      displayName: Build and push an image to container registry
-      inputs:
-        command: buildAndPush
-        repository: $(imageRepositoryStaging)
-        dockerfile: $(dockerfilePath)
-        containerRegistry: $(dockerRegistryServiceConnection)
-        tags: |
-          $(tag)
-      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
-- stage: Deploy
-  displayName: Deploy to container instance
-  jobs:  
-  - job: Deploy
-    displayName: Deploy
-    pool:
-      vmImage: $(vmImageName)
-    steps:
-    - task: AzureCLI@2
-      displayName: 'Restart containers'
-      inputs:
-        azureSubscription: 'Pago conforme o uso (8181574c-f09a-4b26-8008-9d0119427b12)'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: az container restart -n lmsCacauShowStaging -g LMS_CacauShow
-      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
-    - task: AzureCLI@2
-      displayName: 'Restart containers'
-      inputs:
-        azureSubscription: 'Pago conforme o uso (8181574c-f09a-4b26-8008-9d0119427b12)'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: az container restart -n lmsCacauShowProd -g LMS_CacauShow
-      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  - stage: Build
+    displayName: Build and push stage
+    jobs:
+      - job: Build
+        displayName: Build
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - task: DownloadSecureFile@1
+            displayName: "Download secure file"
+            name: dotenvdev
+            inputs:
+              secureFile: "$(name).env.dev"
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/development'))
+          - task: DownloadSecureFile@1
+            displayName: "Download secure file"
+            name: dotenvstaging
+            inputs:
+              secureFile: "$(name).env.staging"
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
+          - task: DownloadSecureFile@1
+            displayName: "Download secure file"
+            name: dotenvprod
+            inputs:
+              secureFile: "$(name).env.prod"
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+          - task: CmdLine@2
+            inputs:
+              script: "mv $(dotenvdev.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/development'))
+          - task: CmdLine@2
+            inputs:
+              script: "mv $(dotenvstaging.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
+          - task: CmdLine@2
+            inputs:
+              script: "mv $(dotenvprod.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+          - task: Docker@2
+            displayName: Build and push an image to container registry
+            inputs:
+              command: buildAndPush
+              repository: $(imageRepositoryDev)
+              dockerfile: $(dockerfilePath)
+              containerRegistry: $(dockerRegistryServiceConnection)
+              tags: |
+                $(tag)
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/development'))
+          - task: Docker@2
+            displayName: Build and push an image to container registry
+            inputs:
+              command: buildAndPush
+              repository: $(imageRepositoryStaging)
+              dockerfile: $(dockerfilePath)
+              containerRegistry: $(dockerRegistryServiceConnection)
+              tags: |
+                $(tag)
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
+          - task: Docker@2
+            displayName: Build and push an image to container registry
+            inputs:
+              command: buildAndPush
+              repository: $(imageRepositoryProd)
+              dockerfile: $(dockerfilePath)
+              containerRegistry: $(dockerRegistryServiceConnection)
+              tags: |
+                $(tag)
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  - stage: Deploy
+    displayName: Deploy to container instance
+    jobs:
+      - deployment: DeployDev
+        displayName: Deploy dev
+        environment:
+          name: Development
+          resourceType: VirtualMachine
+          tags: dev01
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - script: sudo az acr login --name happlearning
+                  displayName: Login azure ACR
+                - script: sudo docker pull happlearning.azurecr.io/$(imageRepositoryDev):$(tag)
+                  displayName: Pull latest image
+                - script: sudo docker stop $(imageRepositoryDev) || true
+                  displayName: Stop current container
+                - script: sudo docker rm $(imageRepositoryDev) || true
+                  displayName: Remove current container
+                - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryDev) -p $(devRunningPort):3000 happlearning.azurecr.io/$(imageRepositoryDev):$(tag)
+                  displayName: Execute new container instance
+                - script: sudo docker ps
+                  displayName: Container status
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/development'))
+      - deployment: DeployStaging
+        displayName: Deploy staging
+        environment:
+          name: HomologVM_Test
+          resourceType: VirtualMachine
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - script: sudo az acr login --name happlearning
+                  displayName: Login azure ACR
+                - script: sudo docker pull happlearning.azurecr.io/$(imageRepositoryStaging):$(tag)
+                  displayName: Pull latest image
+                - script: sudo docker stop $(imageRepositoryStaging) || true
+                  displayName: Stop current container
+                - script: sudo docker rm $(imageRepositoryStaging) || true
+                  displayName: Remove current container
+                - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryStaging) -p $(stagingRunningPort):3000 happlearning.azurecr.io/$(imageRepositoryStaging):$(tag)
+                  displayName: Execute new container instance
+                - script: sudo docker ps
+                  displayName: Container status
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
+      - deployment: DeployProd
+        displayName: Deploy prod
+        environment:
+          name: Production
+          resourceType: VirtualMachine
+          tags: prod01
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - script: sudo az acr login --name happlearning
+                  displayName: Login azure ACR
+                - script: sudo docker pull happlearning.azurecr.io/$(imageRepositoryProd):$(tag)
+                  displayName: Pull latest image
+                - script: sudo docker stop $(imageRepositoryProd) || true
+                  displayName: Stop current container
+                - script: sudo docker rm $(imageRepositoryProd) || true
+                  displayName: Remove current container
+                - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryProd) -p $(prodRunningPort):3000 happlearning.azurecr.io/$(imageRepositoryProd):$(tag)
+                  displayName: Execute new container instance
+                - script: sudo docker ps
+                  displayName: Container status
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))

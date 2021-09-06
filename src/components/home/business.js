@@ -7,7 +7,7 @@ const { AverageCourses, AverageRating } = require('../logs/model')
 const {
     getUserByToken,
     calculateAverage,
-    convertMinutesToHours,
+    processTrailTracking,
 } = require('../../utils/functions')
 const {
     getTrailCompletion,
@@ -18,13 +18,15 @@ const {
 const { getCoursesByUserID } = require('../courses/business')
 
 module.exports = {
-    trailsCompletedOrInProgress(req) {
+    trailsCompletedOrInProgress (req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const user = await getUserByToken(req)
                 const arrTrails = []
                 const arrTrailsCompletedOrProgress = []
-
+                const allTrackingUser = await Tracking.find({
+                    userLogin: { $eq: user.networkLogin },
+                })
                 const numberTrackings = await Tracking.find().countDocuments()
 
                 if (numberTrackings > 0) {
@@ -46,31 +48,15 @@ module.exports = {
                     const newArrTrails = [...new Set(arrTrails)]
 
                     for (const p in newArrTrails) {
-                        let containsACompletedItem = false
-
                         const trailFilter = await populateTrails(true, {
                             _id: { $eq: newArrTrails[p] },
                         })
-                        const trail = trailFilter[0]
-                        // const trail = await Trail.findOne({
-                        //     // enabled: true,
-                        //     _id: { $eq: newArrTrails[p] },
-                        // }).populate('items')
+                        let trail = trailFilter[0]
 
                         if (trail) {
-                            for (const item of trail.items) {
-                                const completion = await checkItemCompleted(
-                                    item,
-                                    user,
-                                )
-                                item.completion = completion
-                                if (completion === 1) {
-                                    containsACompletedItem = true
-                                }
-                            }
-
-                            trail.completion = getTrailCompletion(trail)
-                            if (containsACompletedItem) {
+                            const processedTrail = processTrailTracking(trail, allTrackingUser)
+                            trail = processedTrail.trail
+                            if (processedTrail.containsACompletedItem) {
                                 arrTrailsCompletedOrProgress.push(trail)
                             }
                         }
@@ -90,7 +76,7 @@ module.exports = {
         })
     },
 
-    calculateAverageStudent(user) {
+    calculateAverageStudent (user) {
         return new Promise(async (resolve, reject) => {
             try {
                 const result = await calculateAverage(user)
@@ -102,7 +88,7 @@ module.exports = {
         })
     },
 
-    studentAverageCourses(user, req) {
+    studentAverageCourses (user, req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const {
@@ -124,11 +110,11 @@ module.exports = {
         })
     },
 
-    schoolAverageCourses(user) {
+    schoolAverageCourses (user) {
         return new Promise(async (resolve, reject) => {
             try {
                 const school = user.escola
-                const averageSchoolCourses = await AverageCourses.findOne({ "store.type": { $eq: "school" }, "item.tag": { $eq: school } })
+                const averageSchoolCourses = await AverageCourses.findOne({ 'store.type': { $eq: 'school' }, 'item.tag': { $eq: school } })
                 resolve(averageSchoolCourses ? averageSchoolCourses.average : 0)
             } catch (error) {
                 reject(error)
@@ -136,11 +122,11 @@ module.exports = {
         })
     },
 
-    schoolYearAverageCourses(user) {
+    schoolYearAverageCourses (user) {
         return new Promise(async (resolve, reject) => {
             try {
                 const schoolYear = user.anoEscolar
-                const averageSchoolYearCourses = await AverageCourses.findOne({ "store.type": { $eq: "schoolYear" }, "item.tag": { $eq: schoolYear } })
+                const averageSchoolYearCourses = await AverageCourses.findOne({ 'store.type': { $eq: 'schoolYear' }, 'item.tag': { $eq: schoolYear } })
                 resolve(averageSchoolYearCourses ? averageSchoolYearCourses.average : 0)
             } catch (error) {
                 reject(error)
@@ -148,11 +134,11 @@ module.exports = {
         })
     },
 
-    calculateAverageSchool(user) {
+    calculateAverageSchool (user) {
         return new Promise(async (resolve, reject) => {
             try {
                 const school = user.escola
-                const averageSchoolRating = await AverageRating.findOne({ "store.type": { $eq: "school" }, "item.tag": { $eq: school } })
+                const averageSchoolRating = await AverageRating.findOne({ 'store.type': { $eq: 'school' }, 'item.tag': { $eq: school } })
                 resolve(averageSchoolRating ? averageSchoolRating.average : 0)
             } catch (error) {
                 reject(error)
@@ -160,11 +146,11 @@ module.exports = {
         })
     },
 
-    calculateAverageSchoolYear(user) {
+    calculateAverageSchoolYear (user) {
         return new Promise(async (resolve, reject) => {
             try {
                 const schoolYear = user.anoEscolar
-                const averageSchoolYearRating = await AverageRating.findOne({ "store.type": { $eq: "schoolYear" }, "item.tag": { $eq: schoolYear } })
+                const averageSchoolYearRating = await AverageRating.findOne({ 'store.type': { $eq: 'schoolYear' }, 'item.tag': { $eq: schoolYear } })
                 resolve(averageSchoolYearRating ? averageSchoolYearRating.average : 0)
             } catch (error) {
                 reject(error)
@@ -172,7 +158,7 @@ module.exports = {
         })
     },
 
-    getNumberOfItemsCompletedOrInProgressOrNotStarted(req) {
+    getNumberOfItemsCompletedOrInProgressOrNotStarted (req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const user = await getUserByToken(req)
@@ -248,7 +234,7 @@ module.exports = {
             }
         })
     },
-    getStudentCourses(req) {
+    getStudentCourses (req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const user = await getUserByToken(req)
@@ -262,7 +248,7 @@ module.exports = {
         })
     },
 
-    returnCertificates(trails, user) {
+    returnCertificates (trails, user) {
         return new Promise(async (resolve, reject) => {
             try {
                 const items = []
@@ -294,7 +280,7 @@ module.exports = {
     },
 }
 
-function numberOfCompleteAndEligibleCourses(user, flagToken, req) {
+function numberOfCompleteAndEligibleCourses (user, flagToken, req) {
     return new Promise(async (resolve, reject) => {
         try {
             const tags = flagToken
@@ -353,7 +339,7 @@ function numberOfCompleteAndEligibleCourses(user, flagToken, req) {
 //     }, false)
 // }
 
-function calculateNumberOfMandatoryItems(trails, user, userTags) {
+function calculateNumberOfMandatoryItems (trails, user, userTags) {
     return new Promise(async (resolve, reject) => {
         try {
             // Filtra todas as trilhas mandatórias para o usuário.

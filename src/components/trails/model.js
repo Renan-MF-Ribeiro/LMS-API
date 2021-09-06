@@ -16,6 +16,7 @@ const TrailSchema = new mongoose.Schema({
     thumbPath: { type: String, required: ifEnabledAndNotHighlighted },
     backgroundPath: { type: String },
     bannerPath: { type: String, required: ifEnabledAndHighlighted },
+    expirationType: { type: Object },
     items: {
         type: [{
             itemID: { type: 'ObjectId', ref: 'Item' },
