@@ -28,24 +28,6 @@ const pathResolver = p => isURL(p)
 
 const endpointOptions = {
     isEndpointEnabled: { type: Boolean, default: false, required: true },
-    urlTrilha: {
-        type: String,
-        get: pathResolver,
-        required: ifEndpointEnabled,
-        // validate: {
-        //     validator: anyPass([isURL]),
-        //     message: props => `${props.value} não é um caminho válido ou uma URL suportada.`,
-        // },
-    },
-    urlItem: {
-        type: String,
-        get: pathResolver,
-        required: ifEndpointEnabled,
-        // validate: {
-        //     validator: anyPass([isURL]),
-        //     message: props => `${props.value} não é um caminho válido ou uma URL suportada.`,
-        // },
-    },
 }
 
 const ItemSchema = new mongoose.Schema({
@@ -115,7 +97,6 @@ const MediaItem = Item.discriminator('MediaItem', new mongoose.Schema({
     ...schemaOptions,
 }))
 
-
 const audioFormats = Object.freeze({
     AUDIO: 'audio',
 })
@@ -169,5 +150,5 @@ module.exports = {
     SCORMItem,
     ExamItem,
     AudioItem,
-    SoundcloudItem
+    SoundcloudItem,
 }
