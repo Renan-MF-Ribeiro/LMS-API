@@ -26,26 +26,29 @@ const {
 
 const { getAzureFile, readXLSXUsersBuffer } = require('../utils/files')
 
+const groupingA = process.env.groupA
+const groupingB = process.env.groupB
+
 module.exports = {
-    updateAverageCourses() {
+    updateAverageCourses () {
         new CronJob('*/30 * * * * ', () => {
             averageCourses()
         }, null, true, 'America/Sao_Paulo')
     },
 
-    updateAverageRatings() {
+    updateAverageRatings () {
         new CronJob('*/60 * * * * ', () => {
             averageRating()
         }, null, true, 'America/Sao_Paulo')
     },
-    executeCronAverageCourses() {
+    executeCronAverageCourses () {
         averageCourses()
         averageRating()
         // getUsersLoad()
     },
 }
 
-async function averageRating() {
+async function averageRating () {
     try {
         const limit = 1000
         let skip = 0
@@ -60,11 +63,11 @@ async function averageRating() {
 
         const usersLastLogin = await lastLoggedInUsers()
 
-        const companies = getCompanySet(usersFinal)
-        const costCenters = getCostCenters(usersFinal)
+        const groupA = getGroupSet(usersFinal, groupingA)
+        const groupB = getGroupSet(usersFinal, groupingB)
 
-        await companyRatingCron(companies, usersLastLogin)
-        await costCenterRatingCron(costCenters, usersLastLogin)
+        await ratingCron(groupA, usersLastLogin)
+        await ratingCron(groupB, usersLastLogin)
 
         storageLog('MÉDIAS DAS NOTAS CALCULADAS COM SUCESSO', '', '', 'AVERAGE')
     } catch (error) {
@@ -72,18 +75,17 @@ async function averageRating() {
     }
 }
 
-function companyRatingCron(companies, usersLastLogin) {
+function ratingCron (grouping, usersLastLogin) {
     return new Promise(async (resolve, reject) => {
         try {
-            for (const p in companies) {
+            for (const g of grouping) {
                 let numberUsers = 0
                 let numberAverage = 0
+                const groupName = `${g.group}`
+                const query = { [groupName]: g.value }
+                const userGroup = await User.find(query)
 
-                const users = await User.find({
-                    store: { $eq: companies[p] },
-                })
-
-                for (const u of users) {
+                for (const u of userGroup) {
                     const filter = usersLastLogin.filter(val => { return val.user._id.toString() === u._id.toString() })
                     if (filter.length > 0) {
                         const result = await calculateAverage(u)
@@ -98,13 +100,13 @@ function companyRatingCron(companies, usersLastLogin) {
                 const max = numberUsers * 100
                 const averageStore = max !== 0 ? (numberAverage * 100) / max : 0
 
-                const storeLog = await AverageRating.findOne({ "store.type": { $eq: "company" }, "item.tag": { $eq: companies[p] } })
+                const log = await AverageCourses.findOne({ 'store.group': g.group, 'item.tag': g.value })
 
-                if (storeLog) {
-                    await AverageRating.findByIdAndUpdate(storeLog._id, { average: averageStore || 0 })
+                if (log) {
+                    await AverageRating.findByIdAndUpdate(log._id, { average: averageStore || 0 })
                 } else {
                     await AverageRating.create({
-                        store: { type: 'company', tag: companies[p] },
+                        store: { group: g.group, tag: g.value },
                         average: averageStore,
                     })
                 }
@@ -116,52 +118,7 @@ function companyRatingCron(companies, usersLastLogin) {
     })
 }
 
-function costCenterRatingCron(costCenters, usersLastLogin) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            for (const p in costCenters) {
-                let numberUsers = 0
-                let numberAverage = 0
-
-                const users = await User.find({
-                    store: { $eq: costCenters[p] },
-                })
-
-                for (const u of users) {
-                    const filter = usersLastLogin.filter(val => { return val.user._id.toString() === u._id.toString() })
-                    if (filter.length > 0) {
-                        const result = await calculateAverage(u)
-                        const average = (result.total * 100) / result.max
-                        numberAverage += average || 0
-                        numberUsers += result.totalOfUsers
-                    } else {
-                        numberAverage += u.averageRating || 0
-                    }
-                }
-
-                const max = numberUsers * 100
-                const averageStore = (numberAverage * 100) / max
-
-                const storeLog = await AverageRating.findOne({ "store.type": { $eq: "costCenter" }, "item.tag": { $eq: costCenters[p] } })
-
-                if (storeLog) {
-                    await AverageRating.findByIdAndUpdate(storeLog._id, { average: averageStore || 0 })
-                } else {
-                    await AverageRating.create({
-                        store: { type: 'costCenter', tag: costCenters[p] },
-                        average: averageStore || 0,
-                    })
-                }
-            }
-            resolve()
-        } catch (error) {
-            reject(error)
-        }
-    })
-}
-
-
-async function averageCourses() {
+async function averageCourses () {
     try {
         // Busca os usuário e coloca paginação
         const limit = 1000
@@ -175,15 +132,15 @@ async function averageCourses() {
             users = await User.find({ status: 'ATIVO' }).limit(limit).skip(skip)
         }
 
-        const companies = getCompanySet(usersFinal)
-        const costCenters = getCostCenters(usersFinal)
+        const groupA = getGroupSet(usersFinal, groupingA)
+        const groupB = getGroupSet(usersFinal, groupingB)
 
         // Filtra somente os usuários que fizeram login nos últimos 35 minutos
         const usersLastLogin = await lastLoggedInUsers()
 
         // Call Cron
-        await companyCron(usersLastLogin, companies)
-        await costCenterCron(usersLastLogin, costCenters)
+        await groupCron(usersLastLogin, groupA)
+        await groupCron(usersLastLogin, groupB)
 
         storageLog('MÉDIAS DOS CURSOS CALCULADAS COM SUCESSO', '', '', 'AVERAGE')
     } catch (error) {
@@ -191,30 +148,32 @@ async function averageCourses() {
     }
 }
 
-function getCompanySet(allUsers) {
-    const arrCompanies = []
+function getGroupSet (allUsers, group) {
+    const data = []
+    const grouping = []
     for (const user of allUsers) {
-        arrCompanies.push(user.company)
+        data.push(user[group])
     }
-    return [...new Set(arrCompanies)]
+    const set = [...new Set(data)]
+
+    for (const s of set) {
+        grouping.push({ group, value: s })
+    }
+
+    console.log(grouping)
+    return grouping
 }
 
-function getCostCenters(allUsers) {
-    const arrCostCenters = []
-    for (const user of allUsers) {
-        arrCostCenters.push(user.costCenterDescription)
-    }
-    return [...new Set(arrCostCenters)]
-}
-
-function companyCron(usersLastLogin, companies) {
+function groupCron (usersLastLogin, grouping) {
     return new Promise(async (resolve, reject) => {
         try {
-            for (const p in companies) {
+            for (const g of grouping) {
                 let numberTrailsCompletedCompany = 0
                 let numberTrailsElegiblesCompany = 0
-                const userCompanies = await User.find({ company: { $eq: companies[p] } })
-                for (const user of userCompanies) {
+                const groupName = `${g.group}`
+                const query = { [groupName]: g.value }
+                const userGroup = await User.find(query)
+                for (const user of userGroup) {
                     const filter = usersLastLogin.filter(val => { return user._id.toString() === val.user.toString() })
                     if (filter.length > 0) {
                         const { numberTrailsCompleted, numberTrailsElegibles } = await numberOfCompleteAndEligibleCourses(user)
@@ -228,13 +187,13 @@ function companyCron(usersLastLogin, companies) {
 
                 const averageCompanyCourses = numberTrailsElegiblesCompany > 0 ? (numberTrailsCompletedCompany * 100) / numberTrailsElegiblesCompany : 0
 
-                const storeLog = await AverageCourses.findOne({ "store.type": { $eq: "company" }, "item.tag": { $eq: companies[p] } })
-                if (storeLog) {
-                    await AverageCourses.findByIdAndUpdate(storeLog._id, { average: averageCompanyCourses })
+                const log = await AverageCourses.findOne({ 'store.group': g.group, 'item.tag': g.value })
+                if (log) {
+                    await AverageCourses.findByIdAndUpdate(log._id, { average: averageCompanyCourses })
                 } else {
                     await AverageCourses.create({
                         average: averageCompanyCourses.toFixed(1),
-                        store: { type: 'company', tag: companies[p] },
+                        store: { group: g.group, tag: g.value },
                     })
                 }
             }
@@ -245,46 +204,7 @@ function companyCron(usersLastLogin, companies) {
     })
 }
 
-function costCenterCron(usersLastLogin, costCenters) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            for (const p in costCenters) {
-                let numberTrailsCompletedSchoolYear = 0
-                let numberTrailsElegiblesSchoolYear = 0
-                const userSchoolYears = await User.find({ escola: { $eq: costCenters[p] } })
-
-                for (const user of userSchoolYears) {
-                    const filter = usersLastLogin.filter(val => { return user._id.toString() === val.user.toString() })
-                    if (filter.length > 0) {
-                        const { numberTrailsCompleted, numberTrailsElegibles } = await numberOfCompleteAndEligibleCourses(user)
-                        numberTrailsCompletedSchoolYear += numberTrailsCompleted
-                        numberTrailsElegiblesSchoolYear += numberTrailsElegibles
-                    } else {
-                        numberTrailsCompletedSchoolYear += user.numberTrailsCompleted
-                        numberTrailsElegiblesSchoolYear += user.numberTrailsElegibles
-                    }
-                }
-
-                const averageSchoolYearCourses = numberTrailsElegiblesSchoolYear > 0 ? (numberTrailsCompletedSchoolYear * 100) / numberTrailsElegiblesSchoolYear : 0
-                const storeLog = await AverageCourses.findOne({ "store.type": { $eq: "costCenter" }, "item.tag": { $eq: costCenters[p] } })
-
-                if (storeLog) {
-                    await AverageCourses.findByIdAndUpdate(storeLog._id, { average: averageSchoolYearCourses })
-                } else {
-                    await AverageCourses.create({
-                        average: averageSchoolYearCourses.toFixed(1),
-                        store: { type: 'costCenter', tag: costCenters[p] },
-                    })
-                }
-            }
-            resolve()
-        } catch (error) {
-            reject(error)
-        }
-    })
-}
-
-function numberOfCompleteAndEligibleCourses(user) {
+function numberOfCompleteAndEligibleCourses (user) {
     return new Promise(async (resolve, reject) => {
         try {
             const tags = await getTagsElegibles(user)
@@ -326,8 +246,7 @@ function numberOfCompleteAndEligibleCourses(user) {
     })
 }
 
-
-function storageLog(message, dataNew = [], dataOld = [], cronType) {
+function storageLog (message, dataNew = [], dataOld = [], cronType) {
     Log.create({
         user: null,
         type: 'CREATE',
@@ -342,10 +261,10 @@ function storageLog(message, dataNew = [], dataOld = [], cronType) {
     })
 }
 
-async function getUsersLoad() {
+async function getUsersLoad () {
     const usersLoad = await getAzureFile()
     const users = await readXLSXUsersBuffer(usersLoad)
-    console.log(users);
+    console.log(users)
 
     for (const user of users) {
         if (user.cpf) {
@@ -368,18 +287,17 @@ async function getUsersLoad() {
 
             const groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO']
 
-
             if (roles.includes('Admin')) {
-                groupsAD.push("PERFIL_Conteudista")
-                groupsAD.push("PERFIL_Admin")
-                groupsAD.push("PERFIL_Analista")
+                groupsAD.push('PERFIL_Conteudista')
+                groupsAD.push('PERFIL_Admin')
+                groupsAD.push('PERFIL_Analista')
             }
-            
+
             if (!roles.includes('Admin') && roles.includes('Analista')) {
-                groupsAD.push("PERFIL_Analista")
+                groupsAD.push('PERFIL_Analista')
             }
             if (!roles.includes('Admin') && roles.includes('Conteudista')) {
-                groupsAD.push("PERFIL_Conteudista")
+                groupsAD.push('PERFIL_Conteudista')
             }
             user.groupsAD = groupsAD
 
