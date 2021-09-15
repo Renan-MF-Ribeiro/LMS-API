@@ -22,6 +22,7 @@ const _functions = require('../../utils/functions')
 const { Group } = require('../groups/model')
 const { CLIENT_ID } = process.env
 const kafka = require('../../utils/kafka')
+const { Trail } = require('../trails/model')
 
 module.exports = {
     checkAmountOfLocks (id) {
@@ -303,6 +304,72 @@ module.exports = {
             await producer.disconnect()
         } catch (error) {
             console.log(error)
+        }
+    },
+
+    async getUsersByTrail (trailId) {
+        try {
+            const trail = await Trail.findOne({ _id: trailId })
+
+            const tags = trail.tags
+
+            let groups = []
+
+            for (const tag of tags) {
+                const group = await Group.find({ tags: { $in: tag } })
+                groups.push(...group)
+            }
+            groups = groups.map(group => group.name)
+
+            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin'])
+            return users
+        } catch (error) {
+            return error
+        }
+    },
+
+    async getUsersByGroups (groups) {
+        try {
+            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin'])
+            return users
+        } catch (error) {
+            return error
+        }
+    },
+
+    async getUsersByTags (tags) {
+        try {
+            let groups = []
+
+            for (const tag of tags) {
+                const group = await Group.find({ tags: { $in: tag } })
+                groups.push(...group)
+            }
+            groups = groups.map(group => group.name)
+
+            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin'])
+
+            return users
+        } catch (error) {
+            return error
+        }
+    },
+
+    async getUsersByEmails (tags) {
+        try {
+            let groups = []
+
+            for (const tag of tags) {
+                const group = await Group.find({ tags: { $in: tag } })
+                groups.push(...group)
+            }
+            groups = groups.map(group => group.name)
+
+            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin'])
+
+            return users
+        } catch (error) {
+            return error
         }
     },
 
