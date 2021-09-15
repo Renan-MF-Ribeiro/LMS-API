@@ -21,6 +21,8 @@ const bcrypt = require('bcryptjs')
 const _functions = require('../../utils/functions')
 const { Group } = require('../groups/model')
 const { CLIENT_ID } = process.env
+const kafka = require('../../utils/kafka')
+
 module.exports = {
     checkAmountOfLocks (id) {
         return new Promise(async (resolve, reject) => {
@@ -231,10 +233,7 @@ module.exports = {
 
         const elegibility = [
             `ELEGE_${_functions.clearString(data.company)}`,
-            `ELEGE_${_functions.clearString(data.model)}`,
             `ELEGE_${_functions.clearString(data.office)}`,
-            data && data.office ? `ELEGE_${data.office.split(' ')[0]}` : null,
-            data && data.office ? `ELEGE_${data.office.split(' ')[0] + '_' + _functions.clearString(data.company)}` : null,
         ]
 
         if (roles.includes('Admin')) {
@@ -260,6 +259,51 @@ module.exports = {
         data.groupsAD = groupsAD
 
         return data
+    },
+
+    async processUserAccount (data) {
+        try {
+            const { groupsAD } = data
+
+            let groupsObj = []
+
+            for (const value of groupsAD) {
+                const g = await Group.find({ name: value })
+                if (g.length > 0) {
+                    groupsObj.push(...g)
+                }
+            }
+            groupsObj = groupsObj.map(obj => {
+                const tags = obj.tags.map(tag => tag.value)
+                const data = { name: obj.name, tags }
+                return data
+            })
+
+            const account = {
+                name: data.name,
+                email: data.email ? data.email : null,
+                identifier: data.networkLogin,
+                clientid: process.env.CLIENT_ID,
+                group: groupsObj,
+            }
+            return JSON.stringify(account)
+        } catch (error) {
+            console.log(error)
+            return error
+        }
+    },
+
+    async sendToMessengerService (account) {
+        try {
+            const producer = kafka.producer()
+            await producer.connect()
+
+            await producer.send({ topic: 'accounter', messages: [{ value: account }] })
+
+            await producer.disconnect()
+        } catch (error) {
+            console.log(error)
+        }
     },
 
 }

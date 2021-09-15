@@ -159,8 +159,6 @@ function getGroupSet (allUsers, group) {
     for (const s of set) {
         grouping.push({ group, value: s })
     }
-
-    console.log(grouping)
     return grouping
 }
 

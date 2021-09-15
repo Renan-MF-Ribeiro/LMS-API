@@ -27,6 +27,8 @@ const {
     updateGroupsOfUser,
     updateLastLoginUser,
     processUsersLoad,
+    processUserAccount,
+    sendToMessengerService,
 } = require('./business')
 
 const {
@@ -326,13 +328,13 @@ module.exports = {
 
             let search = Object()
             Object.entries(body).forEach(([k, v]) => {
-                search = Object.assign(search, {[k]: {$eq: v}})
+                search = Object.assign(search, { [k]: { $eq: v } })
             })
 
             const user = await User.findOne(search)
 
-            if(!user){
-                throw "user not found"
+            if (!user) {
+                throw 'user not found'
             }
 
             const password_new = Math.random().toString(36).replace(/[^a-zA-Z0-9_]+/g, '').substring(0, 6)
@@ -352,13 +354,13 @@ module.exports = {
             if (isUser.email) {
                 await sendEmailRecoryPassword(user.email ? user.email : emails, !!user.email, password_new, domain, { name: user.name, cpf: user.cpf })
                 // $2a$10$G06bQZrp8R8kn2cnImS47eHQv./K4i0bp1yBaNDyj3WSrsCH/639G --> senha
-               return await _messages.success(res, req, 'Sucesso', 'Email para recupera senha disparado', 'users', 'recoveryPassword', [], [], true, 'RECOVERY PASSWORD')
+                return await _messages.success(res, req, 'Sucesso', 'Email para recupera senha disparado', 'users', 'recoveryPassword', [], [], true, 'RECOVERY PASSWORD')
             } else {
-               return await _messages.success(res, req, password_new )
+                return await _messages.success(res, req, password_new)
                 // _messages.badRequest(res, req, 'Email não existe', 'Não existe uma conta associada a este email')
             }
         } catch (error) {
-            if(error === "user not found"){
+            if (error === 'user not found') {
                 return await _messages.notFound(res, req, error, error)
             }
             console.log(error)
@@ -446,6 +448,9 @@ module.exports = {
                     })
 
                     const processedUser = processUsersLoad(result)
+
+                    const account = await processUserAccount(processedUser)
+                    await sendToMessengerService(account)
 
                     processedUser.password = existingUser ? existingUser.password : processedUser.password
 
