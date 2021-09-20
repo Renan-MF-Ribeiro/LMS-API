@@ -373,4 +373,18 @@ module.exports = {
         }
     },
 
+    async sendUpdatedDeviceIdToMessenger (device, identifier) {
+        try {
+            const producer = kafka.producer()
+            await producer.connect()
+            const obj = JSON.stringify({ device, identifier })
+            await producer.send({ topic: 'devicer', messages: [{ value: obj }] })
+
+            await producer.disconnect()
+        } catch (error) {
+            console.log(error)
+            throw error
+        }
+    },
+
 }

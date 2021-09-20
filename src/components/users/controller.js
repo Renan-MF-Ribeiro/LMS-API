@@ -29,6 +29,7 @@ const {
     processUsersLoad,
     processUserAccount,
     sendToMessengerService,
+    sendUpdatedDeviceIdToMessenger,
 } = require('./business')
 
 const {
@@ -824,6 +825,18 @@ module.exports = {
         const email = req.samlUserObject.httpSchemasXmlsoapOrgWs200505IdentityClaimsEmailaddress
         const token = await jwt.sign({ email }, process.env.JWT_SECRET)
         res.redirect(302, `${process.env.DOMAIN}/#/login/entrar/sso?token=${token}`)
+    },
+
+    async updateDeviceId (req, res) {
+        try {
+            const user = await getUserByToken(req)
+            const { deviceId } = req.body
+            await sendUpdatedDeviceIdToMessenger(deviceId, user.networkLogin)
+
+            _messages.success(res, req, { deviceId })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'device')
+        }
     },
 
 }

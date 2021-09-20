@@ -36,6 +36,7 @@ module.exports = {
             await producer.disconnect()
         } catch (error) {
             console.log(error)
+            throw error
         }
     },
 }

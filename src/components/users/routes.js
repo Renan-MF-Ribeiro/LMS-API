@@ -46,4 +46,6 @@ module.exports = express.Router()
         next()
     },
     _controller.ssoCallback)
-    // .get('/script-users', validateTokenRoute, _controller.scriptUsers)
+    .post('/device', validateTokenRoute, _controller.updateDeviceId)
+
+// .get('/script-users', validateTokenRoute, _controller.scriptUsers)
