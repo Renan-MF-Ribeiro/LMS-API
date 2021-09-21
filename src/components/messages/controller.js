@@ -37,7 +37,15 @@ module.exports = {
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
 
-            _messages.success(res, req, { messages })
+            const total = await Message
+                .find(searchBy ? {
+                    $or: [
+                        { title: { $regex: searchBy, $options: 'i' } },
+                        { text: { $regex: searchBy, $options: 'i' } },
+                        { category: { $regex: searchBy, $options: 'i' } }],
+                } : {}).count()
+
+            _messages.success(res, req, { messages, total })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'returnUsers')
         }
