@@ -30,7 +30,7 @@ module.exports = {
                 await producer.send({
                     topic: 'messenger',
                     messages: temporary,
-                }).then(console.log)
+                })
             }
 
             await producer.disconnect()

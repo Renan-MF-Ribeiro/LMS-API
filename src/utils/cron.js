@@ -4,12 +4,14 @@ require('dotenv').config()
 const { CLIENT_ID } = process.env
 const CronJob = require('cron').CronJob
 const { User, UserTest } = require('../components/users/model')
-const { Trail } = require('../components/trails/model')
+const { Group } = require('../components/groups/model')
 const { populateTrails } = require('../components/trails/business')
 const { Tracking } = require('../components/tracking/model')
 const {
     isSCORMCompleted,
     calculateAverage,
+    processTrailTracking,
+    processExpirationDate,
 } = require('./functions')
 const {
     getTagsElegibles,
@@ -25,7 +27,7 @@ const {
 } = require('../components/users/business')
 
 const { getAzureFile, readXLSXUsersBuffer } = require('../utils/files')
-
+const { sendMessageToKafka } = require('../components/messages/business')
 const groupingA = process.env.groupA
 const groupingB = process.env.groupB
 
@@ -41,10 +43,25 @@ module.exports = {
             averageRating()
         }, null, true, 'America/Sao_Paulo')
     },
+
+    sendCourseReleaseNotification () {
+        new CronJob('00 10 * * * ', () => {
+            courseReleaseCron()
+        }, null, true, 'America/Sao_Paulo')
+    },
+
+    sendCourseChargeNotification () {
+        new CronJob('00 14 * * * ', () => {
+            courseChargeCron()
+        }, null, true, 'America/Sao_Paulo')
+    },
+
     executeCronAverageCourses () {
-        averageCourses()
-        averageRating()
+        // averageCourses()
+        // averageRating()
         // getUsersLoad()
+        courseChargeCron()
+        // courseReleaseCron()
     },
 }
 
@@ -310,4 +327,113 @@ async function getUsersLoad () {
             }
         }
     }
+}
+
+async function courseReleaseCron () {
+    try {
+        const startOfDay = new Date(new Date().setUTCHours(0, 0, 0, 0)).toISOString()
+        const endOfDay = new Date(new Date().setUTCHours(23, 59, 59, 999)).toISOString()
+
+        const trails = await populateTrails(true, {
+            enabled: true,
+            createdAt: {
+                $gte: startOfDay,
+                $lt: endOfDay,
+            },
+        })
+
+        for (let trail of trails) {
+            const tags = trail.tags
+
+            let groups = []
+
+            for (const tag of tags) {
+                const group = await Group.find({ tags: { $in: tag } })
+                groups.push(...group)
+            }
+            groups = groups.map(group => group.name)
+
+            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin'])
+
+            const elegibleUsers = []
+            for (const user of users) {
+                const allTrackingUser = await Tracking.find({
+                    userLogin: { $eq: user.networkLogin },
+                })
+
+                const processedTrail = processTrailTracking(trail, allTrackingUser)
+                trail = processedTrail.trail
+
+                if (trail.completion !== 1) {
+                    elegibleUsers.push(user)
+                }
+            }
+
+            const campaign = createReleaseCampaign(trail)
+            sendMessageToKafka(campaign, elegibleUsers)
+        }
+    } catch (error) {
+        return error
+    }
+}
+
+async function courseChargeCron () {
+    try {
+        const today = new Date().getTime()
+        const oneDay = 1000 * 60 * 60 * 24
+        const trails = await populateTrails(true, {
+            enabled: true,
+            expirationType: { $exists: true },
+        })
+        console.log(trails)
+        for (let trail of trails) {
+            const tags = trail.tags
+
+            let groups = []
+
+            for (const tag of tags) {
+                const group = await Group.find({ tags: { $in: tag } })
+                groups.push(...group)
+            }
+            groups = groups.map(group => group.name)
+
+            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin'])
+            const elegibleUsers = []
+            for (const user of users) {
+                const allTrackingUser = await Tracking.find({
+                    userLogin: { $eq: user.networkLogin },
+                })
+
+                const processedTrail = processTrailTracking(trail, allTrackingUser)
+                trail = processedTrail.trail
+
+                trail = processExpirationDate(trail, user)
+                const expirationDate = trail.expirationDate.getTime()
+                const diff = Math.round((expirationDate - today) / oneDay)
+                if (trail.completion !== 1 && diff === 5) {
+                    elegibleUsers.push(user)
+                }
+            }
+            const campaign = createChargeCampaign(trail)
+            sendMessageToKafka(campaign, elegibleUsers)
+        }
+    } catch (error) {
+        return error
+    }
+}
+
+function createReleaseCampaign (trail) {
+    const title = 'Nova trilha para você!'
+    const text = `Venha conhecer a nova trilha ${trail.title}, imperdível!`
+    const communication = ['notification']
+    const category = 'launch'
+    return { title, text, communication, category }
+}
+
+function createChargeCampaign (trail) {
+    const title = 'Se liga!'
+    const text = `A trilha ${trail.title} vence em 5 dias!`
+    const communication = ['notification']
+    const category = 'launch'
+    return { title, text, communication, category }
 }
