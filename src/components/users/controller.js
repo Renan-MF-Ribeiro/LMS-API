@@ -28,7 +28,7 @@ const {
     updateLastLoginUser,
     processUsersLoad,
     processUserAccount,
-    sendToMessengerService,
+    sendAccountsToKafka,
     sendUpdatedDeviceIdToMessenger,
 } = require('./business')
 
@@ -50,6 +50,7 @@ const {
 const bcrypt = require('bcryptjs')
 const cryptoJS = require('crypto-js')
 const jwt = require('jsonwebtoken')
+const { sendMessageToKafka } = require('../messages/business')
 
 module.exports = {
     async create (req, res) {
@@ -429,6 +430,7 @@ module.exports = {
             var file = null
             const newUsers = []
             const existingUsers = []
+            const usersToSend = []
             if (req.files.file) {
                 file = req.files.file
             } else {
@@ -451,13 +453,13 @@ module.exports = {
                     const processedUser = processUsersLoad(result)
 
                     const account = await processUserAccount(processedUser)
-                    await sendToMessengerService(account)
 
                     processedUser.password = existingUser ? existingUser.password : processedUser.password
 
                     if (existingUser) {
                         existingUsers.push({ _id: existingUser._id, processedUser })
                     } else {
+                        usersToSend.push(account)
                         newUsers.push(processedUser)
                     }
                 }
@@ -470,8 +472,14 @@ module.exports = {
                 })
             }
 
-            console.log(`Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`)
-            await User.insertMany(newUsers)
+            if (newUsers.length > 0) {
+                console.log(`Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`)
+                await User.insertMany(newUsers)
+                await sendAccountsToKafka(usersToSend)
+                const campaign = createWelcomeCampaign()
+                await sendMessageToKafka(campaign, newUsers)
+            }
+
             _messages.success(res, req, 'Importado com sucesso')
         } catch (error) {
             console.log(error)
@@ -839,4 +847,11 @@ module.exports = {
         }
     },
 
+}
+function createWelcomeCampaign () {
+    const title = 'Seja bem-vindo!'
+    const text = 'Venha conhecer a plataforma!'
+    const communication = ['notification']
+    const category = 'notify'
+    return { title, text, communication, category }
 }

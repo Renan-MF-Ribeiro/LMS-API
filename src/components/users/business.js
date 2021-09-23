@@ -287,19 +287,19 @@ module.exports = {
                 clientid: process.env.CLIENT_ID,
                 group: groupsObj,
             }
-            return JSON.stringify(account)
+            return { value: JSON.stringify(account) }
         } catch (error) {
             console.log(error)
             return error
         }
     },
 
-    async sendToMessengerService (account) {
+    async sendAccountsToKafka (accounts) {
         try {
             const producer = kafka.producer()
             await producer.connect()
 
-            await producer.send({ topic: 'accounter', messages: [{ value: account }] })
+            await producer.send({ topic: 'accounter', messages: accounts })
 
             await producer.disconnect()
         } catch (error) {
