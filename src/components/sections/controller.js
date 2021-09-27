@@ -147,7 +147,7 @@ module.exports = {
                     '/deleteSection',
                 )
             } else {
-                await Section.findByIdAndUpdate(id, { deleted: 1 })
+                await Section.findByIdAndUpdate(id, { deleted: 1, title: section.title + ':deleted' })
                 _messages.success(
                     res,
                     req,
