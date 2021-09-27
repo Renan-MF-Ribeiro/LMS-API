@@ -60,7 +60,9 @@ async function returnUsersBasedOnTarget (type, value) {
 }
 
 function processMessage (campaign, user) {
-    const { title, text, communication, category } = campaign
+    const { title, text, communication, category, target } = campaign
+
+    const notificationlink = processNotificationLink(target)
     return {
         clientid,
         title,
@@ -69,5 +71,22 @@ function processMessage (campaign, user) {
         type: communication,
         identifier: user.networkLogin,
         viewed: false,
+        notificationlink,
+    }
+}
+
+function processNotificationLink (target) {
+    const { type, value } = target
+    if (type && type === 'trail') {
+        const url = value.itemId ? `${process.env.DOMAIN}/#/app/player/${value.trailId}/${value.itemId}` : `${process.env.DOMAIN}/#/app/menu/${value.trailId}`
+        const notificationlink = {
+            trailid: value.trailId,
+            itemid: value.itemId,
+            url,
+        }
+
+        return notificationlink
+    } else {
+        return null
     }
 }
