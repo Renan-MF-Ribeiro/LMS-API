@@ -27,6 +27,9 @@ const {
     updateGroupsOfUser,
     updateLastLoginUser,
     processUsersLoad,
+    processUserAccount,
+    sendAccountsToKafka,
+    sendUpdatedDeviceIdToMessenger,
 } = require('./business')
 
 const {
@@ -47,6 +50,7 @@ const {
 const bcrypt = require('bcryptjs')
 const cryptoJS = require('crypto-js')
 const jwt = require('jsonwebtoken')
+const { sendMessageToKafka } = require('../messages/business')
 
 module.exports = {
     async create (req, res) {
@@ -203,7 +207,7 @@ module.exports = {
                     var key = login + ':' + password
                     key = cryptoJS.AES.encrypt(key, password).toString()
 
-                    _messages.success(res, req, { tk, key, accept: user.acceptTerms, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
+                    _messages.success(res, req, { tk, key, accept: user.acceptTerms, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
                 } else {
                     await sleep(3000)
                     _messages.forbidden(res, req, 'Usuário ou senha inválidos.', '<strong>Usuário ou senha inválidos.</strong>', 'users', 'ldapSignIn')
@@ -291,7 +295,7 @@ module.exports = {
                     var tk = tokenEncript.toString()
                     key = cryptoJS.AES.encrypt(key, '25KP76yNnhiGH9bSj').toString()
 
-                    _messages.success(res, req, { tk, key, accept: user.acceptTerms, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
+                    _messages.success(res, req, { tk, key, accept: user.acceptTerms, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
                 } else {
                     await sleep(3000)
                     _messages.forbidden(res, req, 'Usuário ou senha inválidos.', '<strong>Usuário ou senha inválidos.</strong>', 'users', 'ldapSignIn')
@@ -326,13 +330,13 @@ module.exports = {
 
             let search = Object()
             Object.entries(body).forEach(([k, v]) => {
-                search = Object.assign(search, {[k]: {$eq: v}})
+                search = Object.assign(search, { [k]: { $eq: v } })
             })
 
             const user = await User.findOne(search)
 
-            if(!user){
-                throw "user not found"
+            if (!user) {
+                throw 'user not found'
             }
 
             const password_new = Math.random().toString(36).replace(/[^a-zA-Z0-9_]+/g, '').substring(0, 6)
@@ -352,13 +356,13 @@ module.exports = {
             if (isUser.email) {
                 await sendEmailRecoryPassword(user.email ? user.email : emails, !!user.email, password_new, domain, { name: user.name, cpf: user.cpf })
                 // $2a$10$G06bQZrp8R8kn2cnImS47eHQv./K4i0bp1yBaNDyj3WSrsCH/639G --> senha
-               return await _messages.success(res, req, 'Sucesso', 'Email para recupera senha disparado', 'users', 'recoveryPassword', [], [], true, 'RECOVERY PASSWORD')
+                return await _messages.success(res, req, 'Sucesso', 'Email para recupera senha disparado', 'users', 'recoveryPassword', [], [], true, 'RECOVERY PASSWORD')
             } else {
-               return await _messages.success(res, req, password_new )
+                return await _messages.success(res, req, password_new)
                 // _messages.badRequest(res, req, 'Email não existe', 'Não existe uma conta associada a este email')
             }
         } catch (error) {
-            if(error === "user not found"){
+            if (error === 'user not found') {
                 return await _messages.notFound(res, req, error, error)
             }
             console.log(error)
@@ -426,6 +430,7 @@ module.exports = {
             var file = null
             const newUsers = []
             const existingUsers = []
+            const usersToSend = []
             if (req.files.file) {
                 file = req.files.file
             } else {
@@ -447,11 +452,14 @@ module.exports = {
 
                     const processedUser = processUsersLoad(result)
 
+                    const account = await processUserAccount(processedUser)
+
                     processedUser.password = existingUser ? existingUser.password : processedUser.password
 
                     if (existingUser) {
                         existingUsers.push({ _id: existingUser._id, processedUser })
                     } else {
+                        usersToSend.push(account)
                         newUsers.push(processedUser)
                     }
                 }
@@ -464,8 +472,14 @@ module.exports = {
                 })
             }
 
-            console.log(`Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`)
-            await User.insertMany(newUsers)
+            if (newUsers.length > 0) {
+                console.log(`Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`)
+                await User.insertMany(newUsers)
+                await sendAccountsToKafka(usersToSend)
+                const campaign = createWelcomeCampaign()
+                await sendMessageToKafka(campaign, newUsers)
+            }
+
             _messages.success(res, req, 'Importado com sucesso')
         } catch (error) {
             console.log(error)
@@ -821,4 +835,23 @@ module.exports = {
         res.redirect(302, `${process.env.DOMAIN}/#/login/entrar/sso?token=${token}`)
     },
 
+    async updateDeviceId (req, res) {
+        try {
+            const user = await getUserByToken(req)
+            const { deviceId } = req.body
+            await sendUpdatedDeviceIdToMessenger(deviceId, user.networkLogin)
+
+            _messages.success(res, req, { deviceId })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'device')
+        }
+    },
+
+}
+function createWelcomeCampaign () {
+    const title = 'Seja bem-vindo!'
+    const text = 'Venha conhecer a plataforma!'
+    const communication = ['notification']
+    const category = 'notify'
+    return { title, text, communication, category }
 }

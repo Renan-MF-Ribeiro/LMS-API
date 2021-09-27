@@ -119,7 +119,6 @@ const userTestSchema = new mongoose.Schema({
     ...optionsSchema,
 })
 
-
 userSchema.index({
     name: 'text',
     networkLogin: 'text',
