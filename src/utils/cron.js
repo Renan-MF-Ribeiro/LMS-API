@@ -12,6 +12,9 @@ const {
     calculateAverage,
     processTrailTracking,
     processExpirationDate,
+    getDateTodayWithoutHours,
+    formatDateWithoutHours,
+    calculateDiffDate,
 } = require('./functions')
 const {
     getTagsElegibles,
@@ -56,11 +59,18 @@ module.exports = {
         }, null, true, 'America/Sao_Paulo')
     },
 
+    updateUserTemporaryTags () {
+        new CronJob('00 00 * * * ', () => {
+            userTemporaryTagsCron()
+        }, null, true, 'America/Sao_Paulo')
+    },
+
     executeCronAverageCourses () {
+        // userTemporaryTagsCron()
         // averageCourses()
         // averageRating()
         // getUsersLoad()
-        courseChargeCron()
+        // courseChargeCron()
         // courseReleaseCron()
     },
 }
@@ -279,7 +289,6 @@ function storageLog (message, dataNew = [], dataOld = [], cronType) {
 async function getUsersLoad () {
     const usersLoad = await getAzureFile()
     const users = await readXLSXUsersBuffer(usersLoad)
-    console.log(users)
 
     for (const user of users) {
         if (user.cpf) {
@@ -385,7 +394,6 @@ async function courseChargeCron () {
             enabled: true,
             expirationType: { $exists: true },
         })
-        console.log(trails)
         for (let trail of trails) {
             const tags = trail.tags
 
@@ -436,4 +444,23 @@ function createChargeCampaign (trail) {
     const communication = ['notification']
     const category = 'launch'
     return { title, text, communication, category }
+}
+
+async function userTemporaryTagsCron () {
+    try {
+        const users = await User.find({ status: 'ATIVO' })
+        for (const user of users) {
+            if (user.tags.length > 0) {
+                const today = getDateTodayWithoutHours()
+
+                user.tags = user.tags.filter(tag => {
+                    const diff = calculateDiffDate(today, formatDateWithoutHours(tag.createdAt), 'days')
+                    return diff <= 30
+                })
+                await User.updateOne({ _id: user._id }, { tags: user.tags })
+            }
+        }
+    } catch (error) {
+        return error
+    }
 }
