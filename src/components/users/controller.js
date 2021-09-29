@@ -848,8 +848,8 @@ module.exports = {
     },
 
 }
-function createWelcomeCampaign () {
-    const title = 'Seja bem-vindo!'
+function createWelcomeCampaign (user) {
+    const title = `Seja bem-vindo(a) à plataforma ${process.env.PROJECT_NAME}, ${user.name}!`
     const text = 'Venha conhecer a plataforma!'
     const communication = ['notification']
     const category = 'notify'
