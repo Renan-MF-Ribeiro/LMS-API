@@ -355,17 +355,9 @@ module.exports = {
         }
     },
 
-    async getUsersByEmails (tags) {
+    async getUsersByEmails (emails) {
         try {
-            let groups = []
-
-            for (const tag of tags) {
-                const group = await Group.find({ tags: { $in: tag } })
-                groups.push(...group)
-            }
-            groups = groups.map(group => group.name)
-
-            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin'])
+            const users = await User.find({ groupsAD: { $in: emails } }, ['networkLogin'])
 
             return users
         } catch (error) {
