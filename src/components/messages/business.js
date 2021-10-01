@@ -47,11 +47,11 @@ async function returnUsersBasedOnTarget (type, value) {
         if (type === 'trail') {
             users.push(...(await getUsersByTrail(value.trailId)))
         } else if (type === 'group') {
-            users.push(...(await getUsersByGroups(value.groups)))
+            users.push(...(await getUsersByGroups(value.group)))
         } else if (type === 'tag') {
             users.push(...(await getUsersByTags(value.tags)))
         } else if (type === 'users') {
-            users.push(...(await getUsersByEmails(value.emails)))
+            users.push(...(await getUsersByEmails(value.users)))
         }
         return users
     } catch (error) {
