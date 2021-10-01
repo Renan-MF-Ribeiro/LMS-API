@@ -431,16 +431,16 @@ async function courseChargeCron () {
 }
 
 function createReleaseCampaign (trail) {
-    const title = 'Nova trilha para você!'
-    const text = `Venha conhecer a nova trilha ${trail.title}, imperdível!`
+    const title = `Conheça a nova trilha ${trail.title}`
+    const text = `A trilha ${trail.title} acabou de ser lançada, clique para visualizar!`
     const communication = ['notification']
     const category = 'launch'
     return { title, text, communication, category }
 }
 
 function createChargeCampaign (trail) {
-    const title = 'Se liga!'
-    const text = `A trilha ${trail.title} vence em 5 dias!`
+    const title = `A trilha ${trail.title} expirará em 5 dias!`
+    const text = 'Por favor procure concluir antes do término do prazo!'
     const communication = ['notification']
     const category = 'launch'
     return { title, text, communication, category }
