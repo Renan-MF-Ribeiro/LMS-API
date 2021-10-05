@@ -298,7 +298,7 @@ module.exports = {
                     _messages.success(res, req, { tk, key, accept: user.acceptTerms, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
                 } else {
                     await sleep(3000)
-                    _messages.forbidden(res, req, 'Usuário ou senha inválidos.', '<strong>Usuário ou senha inválidos.</strong>', 'users', 'ldapSignIn')
+                    _messages.forbidden(res, req, 'Usuário ou senha inválidos.', 'Usuário ou senha inválidos.', 'users', 'ldapSignIn')
                 }
             } else {
                 _messages.forbidden(res, req, 'Usuário ou senha não informados', 'Erro de validação', 'users', 'ldapSignIn')
