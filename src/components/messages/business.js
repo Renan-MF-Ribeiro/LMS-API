@@ -78,7 +78,7 @@ function processMessage (campaign, user) {
 function processNotificationLink (target) {
     const { type, value } = target
     if (type && type === 'trail') {
-        const url = value.itemId ? `${process.env.DOMAIN}/#/app/player/${value.trailId}/${value.itemId}` : `${process.env.DOMAIN}/#/app/menu/${value.trailId}`
+        const url = value.itemId ? `${process.env.DOMAIN}/#/login/entrar?redirectTo=/player/${value.trailId}/${value.itemId}` : `${process.env.DOMAIN}/#/login/entrar?redirectTo=/menu/${value.trailId}`
         const notificationlink = {
             trailid: value.trailId,
             itemid: value.itemId,
