@@ -24,7 +24,7 @@ const {
 const { Evaluation } = require('../assessments/model')
 
 module.exports = {
-    async create(req, res) {
+    async create (req, res) {
         try {
             const trail = await Trail.create(req.body)
             _messages.success(res, req, { _id: trail._id }, 'Criação de dados', 'trails', 'create', trail, [], true, 'CREATE')
@@ -33,7 +33,7 @@ module.exports = {
         }
     },
 
-    async findById(req, res) {
+    async findById (req, res) {
         try {
             const _id = req.params.trailId
             const trail = await Trail
@@ -44,7 +44,7 @@ module.exports = {
         }
     },
 
-    async multiUploadCreate(req, res) {
+    async multiUploadCreate (req, res) {
         try {
             const { thumb, banner, background } = req.files
 
@@ -71,7 +71,7 @@ module.exports = {
                     if (thumb) {
                         thumbPath = await azureBlob(thumb, 'trails/thumbs')
                         if (process.env.NODE_ENV !== 'local') {
-                            thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
+                            thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN)
                         }
                     }
                     if (banner) {
@@ -82,7 +82,7 @@ module.exports = {
                     if (background) {
                         backgroundPath = await azureBlob(background, 'trails/backgrounds')
                         if (process.env.NODE_ENV !== 'local') {
-                            backgroundPath = backgroundPath.replace(AZURE_BLOB_URL, DOMAIN);
+                            backgroundPath = backgroundPath.replace(AZURE_BLOB_URL, DOMAIN)
                         }
                     }
 
@@ -105,7 +105,7 @@ module.exports = {
         }
     },
 
-    async changeStatus(req, res) {
+    async changeStatus (req, res) {
         try {
             const { _id, enabled } = req.body
 
@@ -126,7 +126,7 @@ module.exports = {
         }
     },
 
-    async update(req, res) {
+    async update (req, res) {
         try {
             const { thumb, banner, background } = req.files
             const { _id } = JSON.parse(req.fields.payload)
@@ -154,7 +154,7 @@ module.exports = {
                     if (thumb) {
                         thumbPath = await azureBlob(thumb, 'trails/thumbs')
                         if (process.env.NODE_ENV !== 'local') {
-                            thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
+                            thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN)
                         }
                     }
                     if (banner) {
@@ -165,10 +165,10 @@ module.exports = {
                     if (background) {
                         backgroundPath = await azureBlob(background, 'trails/backgrounds')
                         if (process.env.NODE_ENV !== 'local') {
-                            backgroundPath = backgroundPath.replace(AZURE_BLOB_URL, DOMAIN);
+                            backgroundPath = backgroundPath.replace(AZURE_BLOB_URL, DOMAIN)
                         }
                     } else {
-                        backgroundPath = null
+                        backgroundPath = payload.backgroundPath ? payload.backgroundPath : null
                     }
 
                     delete payload.thumb
@@ -178,7 +178,7 @@ module.exports = {
                         ...payload,
                         thumbPath,
                         bannerPath,
-                        backgroundPath
+                        backgroundPath,
                     }
 
                     const [trail] = await Trail.find({ _id: { $eq: payload._id } })
@@ -205,7 +205,7 @@ module.exports = {
         }
     },
 
-    async linkItems(req, res) {
+    async linkItems (req, res) {
         try {
             let exist = false
             const { idItem, idTrail } = req.body
@@ -242,7 +242,7 @@ module.exports = {
         }
     },
 
-    async findAll(req, res) {
+    async findAll (req, res) {
         try {
             const { skip, limit } = pagination(req)
             const { order, sort } = ordernation(req)
@@ -269,7 +269,7 @@ module.exports = {
         }
     },
 
-    async returnItemsByTrail(req, res) {
+    async returnItemsByTrail (req, res) {
         try {
             const { skip, limit } = pagination(req)
             const { order, sort } = ordernation(req)
@@ -332,7 +332,7 @@ module.exports = {
         }
     },
 
-    async returnItemsByTrailMenu(req, res) {
+    async returnItemsByTrailMenu (req, res) {
         try {
             const { id } = req.params
             const user = await getUserByToken(req)
@@ -383,7 +383,7 @@ module.exports = {
         }
     },
 
-    async unlinkItems(req, res) {
+    async unlinkItems (req, res) {
         try {
             const { idItem, idTrail } = req.body
             const { items } = await Trail.findOne({
@@ -409,7 +409,7 @@ module.exports = {
         }
     },
 
-    async changeItemOrderFromTrail(req, res) {
+    async changeItemOrderFromTrail (req, res) {
         try {
             const { idTrail, itemsInOrder } = req.body
 
@@ -448,7 +448,7 @@ module.exports = {
         }
     },
 
-    async returnBannersElegibles_new(req, res) {
+    async returnBannersElegibles_new (req, res) {
         // # Nova versão para retornar banner, para melhorar a performance
         try {
             var dtInicio = new Date()
@@ -483,12 +483,12 @@ module.exports = {
                 ],
                 'items.itemID': { $in: arrItemsID },
             },
-                { createdAt: 'desc' },
-                false,
-                { highlighted: true },
+            { createdAt: 'desc' },
+            false,
+            { highlighted: true },
             )
 
-            //console.log('trilhas ' + trails.length)
+            // console.log('trilhas ' + trails.length)
             // console.log(trails)
 
             for (const trail of trails) {
@@ -506,7 +506,7 @@ module.exports = {
                 }
             }
 
-            //console.log('banners > ' + banners.length)
+            // console.log('banners > ' + banners.length)
 
             if (banners.length > 0) banners = banners.sort((a, b) => (a.startDate > b.startDate) ? -1 : 1)
             _messages.success(res, req, banners)
@@ -516,7 +516,7 @@ module.exports = {
         }
     },
 
-    async returnBannersElegibles(req, res) {
+    async returnBannersElegibles (req, res) {
         try {
             var dtInicio = new Date()
 
@@ -537,9 +537,9 @@ module.exports = {
                 ],
 
             },
-                { createdAt: 'desc' },
-                false,
-                { highlighted: true },
+            { createdAt: 'desc' },
+            false,
+            { highlighted: true },
             )
 
             for (const trail of trails) {
@@ -565,7 +565,7 @@ module.exports = {
         }
     },
 
-    async returnTrailsByIDS(req, res) {
+    async returnTrailsByIDS (req, res) {
         try {
             const { trailsIDS } = req.body
             const arrTrails = []
@@ -581,7 +581,7 @@ module.exports = {
         }
     },
 
-    async returnLinkTrailByItem(idItem) {
+    async returnLinkTrailByItem (idItem) {
         return new Promise(async (resolve, reject) => {
             try {
                 const trails = await Trail.find({ 'items.itemID': idItem })
@@ -601,7 +601,7 @@ module.exports = {
         })
     },
 
-    async mandatory(req, res) {
+    async mandatory (req, res) {
         try {
             const { idTrail, idItem, mandatory } = req.body
             const trail = await Trail.findById(idTrail)
@@ -632,7 +632,7 @@ module.exports = {
         }
     },
 
-    async xapi(req, res) {
+    async xapi (req, res) {
         try {
             const trails = await Trail.find()
 
@@ -669,7 +669,7 @@ module.exports = {
      * @param {*} req Request
      * @param {*} res Response
      */
-    async getCourseInformation(req, res) {
+    async getCourseInformation (req, res) {
         try {
             const trailId = req.params.trailId
             const itemId = req.params.itemId
