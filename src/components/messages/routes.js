@@ -5,7 +5,7 @@ const {
     isAdmin,
 } = require('../../utils/middlewares')
 router
-    .post('/create', _controller.createMessages)
+    .post('/create', isAdmin, _controller.createMessages)
     .get('/', isAdmin, _controller.getMessages)
 
 module.exports = router
