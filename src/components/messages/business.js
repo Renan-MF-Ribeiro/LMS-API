@@ -87,6 +87,6 @@ function processNotificationLink (target) {
 
         return notificationlink
     } else {
-        return null
+        return { url: `${process.env.DOMAIN}/#/login/entrar?redirectTo=/home`, trailid: '', item: '' }
     }
 }
