@@ -3,7 +3,7 @@
 require('dotenv').config()
 const { CLIENT_ID } = process.env
 const CronJob = require('cron').CronJob
-const { User, UserTest } = require('../components/users/model')
+const { User } = require('../components/users/model')
 const { Message } = require('../components/messages/model')
 const { Group } = require('../components/groups/model')
 const { populateTrails } = require('../components/trails/business')
@@ -382,6 +382,7 @@ async function courseReleaseCron () {
             const campaign = createReleaseCampaign(trail)
             await Message.create(campaign)
             sendMessageToKafka(campaign, elegibleUsers)
+            storageLog('Campanha de lançamento de cursos enviada', '', '', 'Lançamento')
         }
     } catch (error) {
         return error
@@ -427,6 +428,7 @@ async function courseChargeCron () {
             const campaign = createChargeCampaign(trail)
             await Message.create(campaign)
             sendMessageToKafka(campaign, elegibleUsers)
+            storageLog('Campanha de cobrança de cursos enviada', '', '', 'Cobrança')
         }
     } catch (error) {
         return error
