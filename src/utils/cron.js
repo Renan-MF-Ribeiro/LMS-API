@@ -4,6 +4,7 @@ require('dotenv').config()
 const { CLIENT_ID } = process.env
 const CronJob = require('cron').CronJob
 const { User, UserTest } = require('../components/users/model')
+const { Message } = require('../components/messages/model')
 const { Group } = require('../components/groups/model')
 const { populateTrails } = require('../components/trails/business')
 const { Tracking } = require('../components/tracking/model')
@@ -379,6 +380,7 @@ async function courseReleaseCron () {
             }
 
             const campaign = createReleaseCampaign(trail)
+            await Message.create(campaign)
             sendMessageToKafka(campaign, elegibleUsers)
         }
     } catch (error) {
@@ -423,6 +425,7 @@ async function courseChargeCron () {
                 }
             }
             const campaign = createChargeCampaign(trail)
+            await Message.create(campaign)
             sendMessageToKafka(campaign, elegibleUsers)
         }
     } catch (error) {
@@ -435,7 +438,8 @@ function createReleaseCampaign (trail) {
     const text = `A trilha ${trail.title} acabou de ser lançada, clique para visualizar!`
     const communication = ['notification']
     const category = 'launch'
-    return { title, text, communication, category }
+    const target = { trailid: trail._id, url: `${process.env.DOMAIN}/#/login/entrar?redirectTo=/menu/${trail._id}` }
+    return { title, text, communication, category, target }
 }
 
 function createChargeCampaign (trail) {
@@ -443,7 +447,8 @@ function createChargeCampaign (trail) {
     const text = 'Por favor procure concluir antes do término do prazo!'
     const communication = ['notification']
     const category = 'launch'
-    return { title, text, communication, category }
+    const target = { trailid: trail._id, url: `${process.env.DOMAIN}/#/login/entrar?redirectTo=/menu/${trail._id}` }
+    return { title, text, communication, category, target }
 }
 
 async function userTemporaryTagsCron () {
