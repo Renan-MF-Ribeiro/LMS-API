@@ -47,7 +47,17 @@ module.exports = {
 
             _messages.success(res, req, { messages, total })
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'returnUsers')
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'messages', 'returnUsers')
+        }
+    },
+
+    async getMessageById (req, res) {
+        try {
+            const { id } = req.params
+            const message = await Message.findOne({ _id: id })
+            _messages.success(res, req, message)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'messages', 'returnMessage')
         }
     },
 }

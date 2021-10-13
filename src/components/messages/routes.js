@@ -7,5 +7,6 @@ const {
 router
     .post('/create', isAdmin, _controller.createMessages)
     .get('/', isAdmin, _controller.getMessages)
+    .get('/:id', isAdmin, _controller.getMessageById)
 
 module.exports = router

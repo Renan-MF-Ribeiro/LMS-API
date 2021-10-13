@@ -8,7 +8,7 @@ const { Message } = require('../components/messages/model')
 const { Group } = require('../components/groups/model')
 const { populateTrails } = require('../components/trails/business')
 const { Tracking } = require('../components/tracking/model')
-const _functions = require('../../utils/functions')
+const _functions = require('../utils/functions')
 
 const {
     isSCORMCompleted,
