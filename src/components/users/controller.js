@@ -3,6 +3,7 @@ require('dotenv').config()
 const { CLIENT_ID, DOMAIN, AZURE_BLOB_URL } = process.env
 const _messages = require('../../utils/messages')
 const _files = require('../../utils/files')
+const { Message } = require('../messages/model')
 const {
     User,
     UserTest,
@@ -478,6 +479,7 @@ module.exports = {
                 await sendAccountsToKafka(usersToSend)
                 const campaign = createWelcomeCampaign()
                 await sendMessageToKafka(campaign, newUsers)
+                await Message.create(campaign)
             }
 
             _messages.success(res, req, 'Importado com sucesso')
@@ -852,6 +854,7 @@ function createWelcomeCampaign (user) {
     const title = `Seja bem-vindo(a) à plataforma ${process.env.PROJECT_NAME}, ${user.name}!`
     const text = 'Venha conhecer a plataforma!'
     const communication = ['notification']
+    const mode = 'automatic'
     const category = 'notify'
-    return { title, text, communication, category }
+    return { title, text, communication, category, mode }
 }

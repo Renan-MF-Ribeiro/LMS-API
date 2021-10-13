@@ -449,9 +449,10 @@ function createReleaseCampaign (trail) {
     const title = `Conheça a nova trilha ${trail.title}`
     const text = `A trilha ${trail.title} acabou de ser lançada, clique para visualizar!`
     const communication = ['notification']
+    const mode = 'automatic'
     const category = 'launch'
     const target = { trailid: trail._id, url: `${process.env.DOMAIN}/#/login/entrar?redirectTo=/menu/${trail._id}` }
-    return { title, text, communication, category, target }
+    return { title, text, communication, category, target, mode }
 }
 
 function createChargeCampaign (trail) {
@@ -459,8 +460,9 @@ function createChargeCampaign (trail) {
     const text = 'Por favor procure concluir antes do término do prazo!'
     const communication = ['notification']
     const category = 'launch'
+    const mode = 'automatic'
     const target = { trailid: trail._id, url: `${process.env.DOMAIN}/#/login/entrar?redirectTo=/menu/${trail._id}` }
-    return { title, text, communication, category, target }
+    return { title, text, communication, category, target, mode }
 }
 
 async function userTemporaryTagsCron () {

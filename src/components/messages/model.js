@@ -8,7 +8,8 @@ const MessageSchema = new mongoose.Schema({
     communication: { type: Array, required: true },
     title: { type: String, required: true },
     text: { type: String, required: true },
-    target: { type: Object, required: true },
+    target: { type: Object },
+    mode: { type: String, required: true },
 }, { timestamps: true })
 
 const Message = mongoose.model('Message', MessageSchema)
