@@ -1,6 +1,6 @@
 {
     "cron": {
-        "studentPage": {
+        "average": {
             "groupA": "company",
             "groupB": "costCenter"
         }

@@ -1,14 +1,12 @@
 /* eslint-disable no-async-promise-executor */
 /* eslint-disable no-new */
 require('dotenv').config()
-const { CLIENT_ID } = process.env
 const CronJob = require('cron').CronJob
 const { User } = require('../components/users/model')
 const { Message } = require('../components/messages/model')
 const { Group } = require('../components/groups/model')
 const { populateTrails } = require('../components/trails/business')
 const { Tracking } = require('../components/tracking/model')
-const _functions = require('../utils/functions')
 
 const {
     isSCORMCompleted,
@@ -18,6 +16,7 @@ const {
     getDateTodayWithoutHours,
     formatDateWithoutHours,
     calculateDiffDate,
+    formatNumberCpf,
 } = require('./functions')
 const {
     getTagsElegibles,
@@ -30,12 +29,15 @@ const {
 } = require('../components/logs/model')
 const {
     lastLoggedInUsers,
+    processUsersLoad,
 } = require('../components/users/business')
 
-const { getAzureFile, readXLSXUsersBuffer } = require('../utils/files')
+const { getAzureFile, readCSVUsersBuffer } = require('../utils/files')
 const { sendMessageToKafka } = require('../components/messages/business')
-const groupingA = process.env.groupA
-const groupingB = process.env.groupB
+const config = require('../../config.json')
+const groupingA = config.cron.average.groupA
+const groupingB = config.cron.average.groupB
+const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadsheet
 
 module.exports = {
     updateAverageCourses () {
@@ -298,54 +300,53 @@ function storageLog (message, dataNew = [], dataOld = [], cronType) {
 }
 
 async function getUsersLoad () {
-    const usersLoad = await getAzureFile()
-    const users = await readXLSXUsersBuffer(usersLoad)
+    try {
+        const usersLoad = await getAzureFile()
+        if (usersLoad) {
+            const users = await readCSVUsersBuffer(usersLoad.readableStream)
+            const newUsers = []
+            const existingUsers = []
+            console.log(`Iniciando Processamento de ${users.length} usuários...`)
+            for (const user of users) {
+                if (user.cpf) {
+                    user.cpf = user.cpf.replace(/[^a-z0-9]/gi, '')
+                    user.cpf = formatNumberCpf(user.cpf)
+                    const existingUser = await User.findOne({
+                        cpf: user.cpf,
+                    })
 
-    for (const user of users) {
-        if (user.cpf) {
-            const user = await User.findOne({
-                cpf: user.cpf,
-            })
+                    const processedUser = processUsersLoad(user)
 
-            const userBirthDate = _functions.formatDateWithoutHoursBrasilian(user.birthDate).replace('/', '').replace('/', '')
-            var hashPass = [{ hash: bcrypt.hashSync(userBirthDate, salt), valid: true, createdAt: new Date(Date.now()) }]
-            user.password = user ? user.password : hashPass
-            user.clientUserKey = CLIENT_ID + '@@' + user.cpf
-            user.status = String(user.status).toUpperCase()
+                    processedUser.password = existingUser ? existingUser.password : processedUser.password
 
-            user.createDate = _functions.formatDateWithoutHoursBrasilian(user.createdAt)
-            user.birthDate = _functions.formatDateWithoutHoursBrasilian(user.birthDate)
-            user.admission = _functions.formatDateWithoutHoursBrasilian(user.admission)
-            user.status = user.status.toUpperCase()
-            user.networkLogin = user.cpf
-            user.enabled = true
-
-            const groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO']
-
-            if (roles.includes('Admin')) {
-                groupsAD.push('PERFIL_Conteudista')
-                groupsAD.push('PERFIL_Admin')
-                groupsAD.push('PERFIL_Analista')
+                    if (existingUser) {
+                        existingUsers.push({ _id: existingUser._id, processedUser })
+                    } else {
+                        newUsers.push(processedUser)
+                    }
+                }
             }
 
-            if (!roles.includes('Admin') && roles.includes('Analista')) {
-                groupsAD.push('PERFIL_Analista')
-            }
-            if (!roles.includes('Admin') && roles.includes('Conteudista')) {
-                groupsAD.push('PERFIL_Conteudista')
-            }
-            user.groupsAD = groupsAD
+            console.log(`Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`)
 
-            if (user) {
+            const data_start = new Date()
+            for (const user of existingUsers) {
                 await User.findByIdAndUpdate(user._id, {
-                    ...user,
-                })
-            } else {
-                await User.create({
-                    ...user,
+                    ...user.processedUser,
                 })
             }
+
+            if (inactivateIfNotInSpreadsheet) {
+                await User.update({ updatedAt: { $lt: data_start } }, { $set: { status: 'INATIVO' } }, { multi: true })
+            }
+
+            console.log(`Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`)
+            await User.insertMany(newUsers)
+            console.log('Novos usuários criados')
+            await moveUserLoadToProcessed(usersLoad.buffer)
         }
+    } catch (error) {
+        console.log(error)
     }
 }
 
