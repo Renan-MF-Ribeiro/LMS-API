@@ -251,7 +251,7 @@ module.exports = {
     returnCertificates (trails, user) {
         return new Promise(async (resolve, reject) => {
             try {
-                const items = []
+                const certs = []
                 const itemsID = []
                 for (const trail of trails) {
                     for (const item of trail.items) {
@@ -261,18 +261,34 @@ module.exports = {
                             itemsID.indexOf(item.itemID.id) < 0
                         ) {
                             const tracking = await Tracking.findOne({
-                                $text: { $search: user },
+                                $text: { $search: user.networkLogin },
                                 item: item.itemID._id,
                             }).sort({ createdAt: -1 })
 
                             item.itemID.createdAt = tracking.createdAt
-                            items.push(item)
+
+                            const concludedAt = tracking.createdAt
+                            const { durationHours, title } = item.itemID
+                            certs.push({ duration: durationHours, concludedAt, title, userName: user.name })
                             itemsID.push(item.itemID.id)
                         }
                     }
+
+                    var mostRecentDate = new Date(Math.max.apply(null, trail.items.map(e => {
+                        return new Date(e.itemID.createdAt)
+                    })))
+
+                    if (trail && trail.completion === 1) {
+                        let duration = 0
+                        for (const item of trail.items) {
+                            duration += item.itemID.durationHours
+                        }
+                        const { title } = trail
+                        certs.push({ duration, title, concludedAt: mostRecentDate, userName: user.name })
+                    }
                 }
 
-                resolve(items)
+                resolve(certs)
             } catch (error) {
                 reject(error)
             }

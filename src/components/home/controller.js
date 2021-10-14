@@ -103,7 +103,7 @@ const ItemController = {
             const courses = await getStudentCourses(req)
 
             const resultTrails = await trailsCompletedOrInProgress(req)
-            const certificates = await returnCertificates(resultTrails.trailsCompleted, user.networkLogin)
+            const certificates = await returnCertificates(resultTrails.trailsCompleted, user)
             const { numberOfItemsCompleted, numberOfItemsInProgress, numberOfItemsNotStarted, numberOfItemsMandatoryNotStarted, numberOfItemsMandatoryCompleted, numberOfItemsMandatoryInProgress } = await getNumberOfItemsCompletedOrInProgressOrNotStarted(req)
             const { averageStudentCourses, numberTrailsCompleted, numberTrailsElegibles } = await studentAverageCourses(user, req) // Não necessita de mudanças
 
