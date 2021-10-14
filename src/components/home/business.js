@@ -268,8 +268,9 @@ module.exports = {
                             item.itemID.createdAt = tracking.createdAt
 
                             const concludedAt = tracking.createdAt
-                            const { durationHours, title } = item.itemID
-                            certs.push({ duration: durationHours, concludedAt, title, userName: user.name })
+                            const { completion } = item
+                            const { durationHours, title, thumbPath } = item.itemID
+                            certs.push({ duration: durationHours, concludedAt, title, userName: user.name, thumbPath, completion })
                             itemsID.push(item.itemID.id)
                         }
                     }
@@ -283,8 +284,8 @@ module.exports = {
                         for (const item of trail.items) {
                             duration += item.itemID.durationHours
                         }
-                        const { title } = trail
-                        certs.push({ duration, title, concludedAt: mostRecentDate, userName: user.name })
+                        const { title, thumbPath, completion } = trail
+                        certs.push({ duration, title, concludedAt: mostRecentDate, userName: user.name, thumbPath, completion })
                     }
                 }
 
