@@ -110,48 +110,24 @@ module.exports = {
         })
     },
 
-    schoolAverageCourses (user) {
+    averageGroupCourses (user, group) {
         return new Promise(async (resolve, reject) => {
             try {
-                const school = user.escola
-                const averageSchoolCourses = await AverageCourses.findOne({ 'store.type': { $eq: 'school' }, 'item.tag': { $eq: school } })
-                resolve(averageSchoolCourses ? averageSchoolCourses.average : 0)
+                const data = user[group]
+                const averageGroupACourses = await AverageCourses.findOne({ 'store.group': group, 'item.tag': data })
+                resolve(averageGroupACourses ? averageGroupACourses.average : 0)
             } catch (error) {
                 reject(error)
             }
         })
     },
 
-    schoolYearAverageCourses (user) {
+    averageGroupRatings (user, group) {
         return new Promise(async (resolve, reject) => {
             try {
-                const schoolYear = user.anoEscolar
-                const averageSchoolYearCourses = await AverageCourses.findOne({ 'store.type': { $eq: 'schoolYear' }, 'item.tag': { $eq: schoolYear } })
-                resolve(averageSchoolYearCourses ? averageSchoolYearCourses.average : 0)
-            } catch (error) {
-                reject(error)
-            }
-        })
-    },
-
-    calculateAverageSchool (user) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const school = user.escola
-                const averageSchoolRating = await AverageRating.findOne({ 'store.type': { $eq: 'school' }, 'item.tag': { $eq: school } })
-                resolve(averageSchoolRating ? averageSchoolRating.average : 0)
-            } catch (error) {
-                reject(error)
-            }
-        })
-    },
-
-    calculateAverageSchoolYear (user) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const schoolYear = user.anoEscolar
-                const averageSchoolYearRating = await AverageRating.findOne({ 'store.type': { $eq: 'schoolYear' }, 'item.tag': { $eq: schoolYear } })
-                resolve(averageSchoolYearRating ? averageSchoolYearRating.average : 0)
+                const data = user[group]
+                const averageGroupACourses = await AverageRating.findOne({ 'store.group': group, 'item.tag': data })
+                resolve(averageGroupACourses ? averageGroupACourses.average : 0)
             } catch (error) {
                 reject(error)
             }
