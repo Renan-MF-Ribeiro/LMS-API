@@ -53,13 +53,13 @@ module.exports = {
     },
 
     sendCourseReleaseNotification () {
-        new CronJob('00 10 * * * ', () => {
+        new CronJob('00 07 * * * ', () => {
             courseReleaseCron()
         }, null, true, 'America/Sao_Paulo')
     },
 
     sendCourseChargeNotification () {
-        new CronJob('00 14 * * * ', () => {
+        new CronJob('00 08 * * * ', () => {
             courseChargeCron()
         }, null, true, 'America/Sao_Paulo')
     },
@@ -363,7 +363,7 @@ async function courseReleaseCron () {
             },
         })
 
-        for (let trail of trails) {
+        for (const trail of trails) {
             const tags = trail.tags
 
             let groups = []
@@ -375,25 +375,34 @@ async function courseReleaseCron () {
             groups = groups.map(group => group.name)
 
             const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin'])
-
+            const items = trail.items.map(item => {
+                return item.itemID._id
+            })
             const elegibleUsers = []
             for (const user of users) {
+                let completedTracking = 0
+
                 const allTrackingUser = await Tracking.find({
-                    userLogin: { $eq: user.networkLogin },
+                    userLogin: { $eq: user.networkLogin }, item: { $in: items },
                 })
 
-                const processedTrail = processTrailTracking(trail, allTrackingUser)
-                trail = processedTrail.trail
+                for (const tracking of allTrackingUser) {
+                    if (tracking.completionAt !== null) {
+                        completedTracking++
+                    }
+                }
 
-                if (trail.completion !== 1) {
+                if (allTrackingUser.length === 0 || completedTracking < items.length) {
                     elegibleUsers.push(user)
                 }
             }
 
-            const campaign = createReleaseCampaign(trail)
-            await Message.create(campaign)
-            sendMessageToKafka(campaign, elegibleUsers)
-            storageLog('Campanha de lançamento de cursos enviada', '', '', 'Lançamento')
+            if (elegibleUsers.length > 0) {
+                const campaign = createReleaseCampaign(trail)
+                await Message.create(campaign)
+                sendMessageToKafka(campaign, elegibleUsers)
+                storageLog('Campanha de lançamento de cursos enviada', '', '', 'Lançamento')
+            }
         }
     } catch (error) {
         return error
@@ -421,25 +430,38 @@ async function courseChargeCron () {
 
             const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin'])
             const elegibleUsers = []
+            const items = trail.items.map(item => {
+                return item.itemID._id
+            })
+
             for (const user of users) {
-                const allTrackingUser = await Tracking.find({
-                    userLogin: { $eq: user.networkLogin },
-                })
-
-                const processedTrail = processTrailTracking(trail, allTrackingUser)
-                trail = processedTrail.trail
-
                 trail = processExpirationDate(trail, user)
                 const expirationDate = trail.expirationDate.getTime()
                 const diff = Math.round((expirationDate - today) / oneDay)
-                if (trail.completion !== 1 && diff === 5) {
-                    elegibleUsers.push(user)
+                if (diff === 5) {
+                    let completedTracking = 0
+                    const allTrackingUser = await Tracking.find({
+                        userLogin: { $eq: user.networkLogin }, item: { $in: items },
+                    })
+
+                    for (const tracking of allTrackingUser) {
+                        if (tracking.completionAt !== null) {
+                            completedTracking++
+                        }
+                    }
+
+                    if (allTrackingUser.length === 0 || completedTracking < items.length) {
+                        elegibleUsers.push(user)
+                    }
                 }
             }
-            const campaign = createChargeCampaign(trail)
-            await Message.create(campaign)
-            sendMessageToKafka(campaign, elegibleUsers)
-            storageLog('Campanha de cobrança de cursos enviada', '', '', 'Cobrança')
+
+            if (elegibleUsers.length > 0) {
+                const campaign = createChargeCampaign(trail)
+                await Message.create(campaign)
+                sendMessageToKafka(campaign, elegibleUsers)
+                storageLog('Campanha de cobrança de cursos enviada', '', '', 'Cobrança')
+            }
         }
     } catch (error) {
         return error
@@ -460,7 +482,7 @@ function createChargeCampaign (trail) {
     const title = `A trilha ${trail.title} expirará em 5 dias!`
     const text = 'Por favor procure concluir antes do término do prazo!'
     const communication = ['notification']
-    const category = 'launch'
+    const category = 'charge'
     const mode = 'automatic'
     const target = { trailid: trail._id, url: `${process.env.DOMAIN}/#/login/entrar?redirectTo=/menu/${trail._id}` }
     return { title, text, communication, category, target, mode }
