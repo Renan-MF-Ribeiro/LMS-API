@@ -19,6 +19,8 @@ const {
     getNumberOfItemsCompletedOrInProgressOrNotStarted,
     getStudentCourses,
     returnCertificates,
+    averageGroupCourses,
+    averageGroupRatings,
 } = require('./business')
 
 const { populateTrails } = require('../trails/business')
@@ -103,16 +105,20 @@ const ItemController = {
             const courses = await getStudentCourses(req)
 
             const resultTrails = await trailsCompletedOrInProgress(req)
-            const certificates = await returnCertificates(resultTrails.trailsCompleted, user.networkLogin)
+            const certificates = await returnCertificates(resultTrails.trailsCompleted, user)
             const { numberOfItemsCompleted, numberOfItemsInProgress, numberOfItemsNotStarted, numberOfItemsMandatoryNotStarted, numberOfItemsMandatoryCompleted, numberOfItemsMandatoryInProgress } = await getNumberOfItemsCompletedOrInProgressOrNotStarted(req)
             const { averageStudentCourses, numberTrailsCompleted, numberTrailsElegibles } = await studentAverageCourses(user, req) // Não necessita de mudanças
 
-            const averageSchoolCourses = await schoolAverageCourses(user)
-            const averageSchoolYearCourses = await schoolYearAverageCourses(user)
+            const groupA = process.env.groupA
+            const groupB = process.env.groupB
+
+            const averageGroupACourses = await averageGroupCourses(user, groupA)
+            const averageGroupBCourses = await averageGroupCourses(user, groupB)
 
             const averageStudent = await calculateAverageStudent(user) // Não necessita de mudanças
-            const averageSchool = await calculateAverageSchool(user)
-            const averageSchoolYear = await calculateAverageSchoolYear(user)
+
+            const averageGroupARatings = await averageGroupRatings(user, groupA)
+            const averageGroupBRatings = await averageGroupRatings(user, groupB)
 
             await User.findByIdAndUpdate(user._id, { averageRating: averageStudent.toFixed(2), numberTrailsCompleted, numberTrailsElegibles })
 
@@ -125,11 +131,11 @@ const ItemController = {
                 numberOfItemsMandatoryCompleted,
                 numberOfItemsMandatoryInProgress,
                 averageStudentCourses,
-                averageSchoolCourses,
-                averageSchoolYearCourses,
+                averageGroupACourses,
+                averageGroupBCourses,
                 averageStudent,
-                averageSchool,
-                averageSchoolYear,
+                averageGroupARatings,
+                averageGroupBRatings,
                 courses,
                 certificates,
             })

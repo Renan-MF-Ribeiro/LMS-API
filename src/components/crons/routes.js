@@ -7,6 +7,8 @@ const {
     LastExecuteDailyCharge,
     LastExecuteAverageCourses,
     LastExecuteGroupsAD,
+    executeCourseChargeNotification,
+    executeCourseReleaseNotification,
 } = require('./controller')
 
 router
@@ -16,5 +18,7 @@ router
     .get('/users', executeDailyCharge)
     .get('/average-courses', executeAverageCourses)
     .get('/groups-ad', executeGroupsAD)
+    .get('/release', executeCourseReleaseNotification)
+    .get('/charge', executeCourseChargeNotification)
 
 module.exports = router

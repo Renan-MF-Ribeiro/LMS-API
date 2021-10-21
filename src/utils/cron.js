@@ -1,15 +1,22 @@
 /* eslint-disable no-async-promise-executor */
 /* eslint-disable no-new */
 require('dotenv').config()
-const { CLIENT_ID } = process.env
 const CronJob = require('cron').CronJob
-const { User, UserTest } = require('../components/users/model')
-const { Trail } = require('../components/trails/model')
+const { User } = require('../components/users/model')
+const { Message } = require('../components/messages/model')
+const { Group } = require('../components/groups/model')
 const { populateTrails } = require('../components/trails/business')
 const { Tracking } = require('../components/tracking/model')
+
 const {
     isSCORMCompleted,
     calculateAverage,
+    processTrailTracking,
+    processExpirationDate,
+    getDateTodayWithoutHours,
+    formatDateWithoutHours,
+    calculateDiffDate,
+    formatNumberCpf,
 } = require('./functions')
 const {
     getTagsElegibles,
@@ -22,30 +29,66 @@ const {
 } = require('../components/logs/model')
 const {
     lastLoggedInUsers,
+    processUsersLoad,
 } = require('../components/users/business')
 
-const { getAzureFile, readXLSXUsersBuffer } = require('../utils/files')
+const { getAzureFile, readCSVUsersBuffer } = require('../utils/files')
+const { sendMessageToKafka } = require('../components/messages/business')
+const config = require('../../config.json')
+const groupingA = config.cron.average.groupA
+const groupingB = config.cron.average.groupB
+const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadsheet
 
 module.exports = {
-    updateAverageCourses() {
+    updateAverageCourses () {
         new CronJob('*/30 * * * * ', () => {
             averageCourses()
         }, null, true, 'America/Sao_Paulo')
     },
 
-    updateAverageRatings() {
+    updateAverageRatings () {
         new CronJob('*/60 * * * * ', () => {
             averageRating()
         }, null, true, 'America/Sao_Paulo')
     },
-    executeCronAverageCourses() {
-        averageCourses()
-        averageRating()
+
+    sendCourseReleaseNotification () {
+        new CronJob('00 07 * * * ', () => {
+            courseReleaseCron()
+        }, null, true, 'America/Sao_Paulo')
+    },
+
+    sendCourseChargeNotification () {
+        new CronJob('00 08 * * * ', () => {
+            courseChargeCron()
+        }, null, true, 'America/Sao_Paulo')
+    },
+
+    updateUserTemporaryTags () {
+        new CronJob('00 00 * * * ', () => {
+            userTemporaryTagsCron()
+        }, null, true, 'America/Sao_Paulo')
+    },
+
+    executeCronAverageCourses () {
+        // userTemporaryTagsCron()
+        // averageCourses()
+        // averageRating()
         // getUsersLoad()
+        // courseChargeCron()
+        // courseReleaseCron()
+    },
+
+    executeCourseReleaseNotification () {
+        courseReleaseCron()
+    },
+
+    executeCourseChargeNotification () {
+        courseChargeCron()
     },
 }
 
-async function averageRating() {
+async function averageRating () {
     try {
         const limit = 1000
         let skip = 0
@@ -60,11 +103,11 @@ async function averageRating() {
 
         const usersLastLogin = await lastLoggedInUsers()
 
-        const companies = getCompanySet(usersFinal)
-        const costCenters = getCostCenters(usersFinal)
+        const groupA = getGroupSet(usersFinal, groupingA)
+        const groupB = getGroupSet(usersFinal, groupingB)
 
-        await companyRatingCron(companies, usersLastLogin)
-        await costCenterRatingCron(costCenters, usersLastLogin)
+        await ratingCron(groupA, usersLastLogin)
+        await ratingCron(groupB, usersLastLogin)
 
         storageLog('MÉDIAS DAS NOTAS CALCULADAS COM SUCESSO', '', '', 'AVERAGE')
     } catch (error) {
@@ -72,18 +115,17 @@ async function averageRating() {
     }
 }
 
-function companyRatingCron(companies, usersLastLogin) {
+function ratingCron (grouping, usersLastLogin) {
     return new Promise(async (resolve, reject) => {
         try {
-            for (const p in companies) {
+            for (const g of grouping) {
                 let numberUsers = 0
                 let numberAverage = 0
+                const groupName = `${g.group}`
+                const query = { [groupName]: g.value }
+                const userGroup = await User.find(query)
 
-                const users = await User.find({
-                    store: { $eq: companies[p] },
-                })
-
-                for (const u of users) {
+                for (const u of userGroup) {
                     const filter = usersLastLogin.filter(val => { return val.user._id.toString() === u._id.toString() })
                     if (filter.length > 0) {
                         const result = await calculateAverage(u)
@@ -98,13 +140,13 @@ function companyRatingCron(companies, usersLastLogin) {
                 const max = numberUsers * 100
                 const averageStore = max !== 0 ? (numberAverage * 100) / max : 0
 
-                const storeLog = await AverageRating.findOne({ "store.type": { $eq: "company" }, "item.tag": { $eq: companies[p] } })
+                const log = await AverageCourses.findOne({ 'store.group': g.group, 'item.tag': g.value })
 
-                if (storeLog) {
-                    await AverageRating.findByIdAndUpdate(storeLog._id, { average: averageStore || 0 })
+                if (log) {
+                    await AverageRating.findByIdAndUpdate(log._id, { average: averageStore || 0 })
                 } else {
                     await AverageRating.create({
-                        store: { type: 'company', tag: companies[p] },
+                        store: { group: g.group, tag: g.value },
                         average: averageStore,
                     })
                 }
@@ -116,52 +158,7 @@ function companyRatingCron(companies, usersLastLogin) {
     })
 }
 
-function costCenterRatingCron(costCenters, usersLastLogin) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            for (const p in costCenters) {
-                let numberUsers = 0
-                let numberAverage = 0
-
-                const users = await User.find({
-                    store: { $eq: costCenters[p] },
-                })
-
-                for (const u of users) {
-                    const filter = usersLastLogin.filter(val => { return val.user._id.toString() === u._id.toString() })
-                    if (filter.length > 0) {
-                        const result = await calculateAverage(u)
-                        const average = (result.total * 100) / result.max
-                        numberAverage += average || 0
-                        numberUsers += result.totalOfUsers
-                    } else {
-                        numberAverage += u.averageRating || 0
-                    }
-                }
-
-                const max = numberUsers * 100
-                const averageStore = (numberAverage * 100) / max
-
-                const storeLog = await AverageRating.findOne({ "store.type": { $eq: "costCenter" }, "item.tag": { $eq: costCenters[p] } })
-
-                if (storeLog) {
-                    await AverageRating.findByIdAndUpdate(storeLog._id, { average: averageStore || 0 })
-                } else {
-                    await AverageRating.create({
-                        store: { type: 'costCenter', tag: costCenters[p] },
-                        average: averageStore || 0,
-                    })
-                }
-            }
-            resolve()
-        } catch (error) {
-            reject(error)
-        }
-    })
-}
-
-
-async function averageCourses() {
+async function averageCourses () {
     try {
         // Busca os usuário e coloca paginação
         const limit = 1000
@@ -175,15 +172,15 @@ async function averageCourses() {
             users = await User.find({ status: 'ATIVO' }).limit(limit).skip(skip)
         }
 
-        const companies = getCompanySet(usersFinal)
-        const costCenters = getCostCenters(usersFinal)
+        const groupA = getGroupSet(usersFinal, groupingA)
+        const groupB = getGroupSet(usersFinal, groupingB)
 
         // Filtra somente os usuários que fizeram login nos últimos 35 minutos
         const usersLastLogin = await lastLoggedInUsers()
 
         // Call Cron
-        await companyCron(usersLastLogin, companies)
-        await costCenterCron(usersLastLogin, costCenters)
+        await groupCron(usersLastLogin, groupA)
+        await groupCron(usersLastLogin, groupB)
 
         storageLog('MÉDIAS DOS CURSOS CALCULADAS COM SUCESSO', '', '', 'AVERAGE')
     } catch (error) {
@@ -191,30 +188,30 @@ async function averageCourses() {
     }
 }
 
-function getCompanySet(allUsers) {
-    const arrCompanies = []
+function getGroupSet (allUsers, group) {
+    const data = []
+    const grouping = []
     for (const user of allUsers) {
-        arrCompanies.push(user.company)
+        data.push(user[group])
     }
-    return [...new Set(arrCompanies)]
+    const set = [...new Set(data)]
+
+    for (const s of set) {
+        grouping.push({ group, value: s })
+    }
+    return grouping
 }
 
-function getCostCenters(allUsers) {
-    const arrCostCenters = []
-    for (const user of allUsers) {
-        arrCostCenters.push(user.costCenterDescription)
-    }
-    return [...new Set(arrCostCenters)]
-}
-
-function companyCron(usersLastLogin, companies) {
+function groupCron (usersLastLogin, grouping) {
     return new Promise(async (resolve, reject) => {
         try {
-            for (const p in companies) {
+            for (const g of grouping) {
                 let numberTrailsCompletedCompany = 0
                 let numberTrailsElegiblesCompany = 0
-                const userCompanies = await User.find({ company: { $eq: companies[p] } })
-                for (const user of userCompanies) {
+                const groupName = `${g.group}`
+                const query = { [groupName]: g.value }
+                const userGroup = await User.find(query)
+                for (const user of userGroup) {
                     const filter = usersLastLogin.filter(val => { return user._id.toString() === val.user.toString() })
                     if (filter.length > 0) {
                         const { numberTrailsCompleted, numberTrailsElegibles } = await numberOfCompleteAndEligibleCourses(user)
@@ -228,13 +225,13 @@ function companyCron(usersLastLogin, companies) {
 
                 const averageCompanyCourses = numberTrailsElegiblesCompany > 0 ? (numberTrailsCompletedCompany * 100) / numberTrailsElegiblesCompany : 0
 
-                const storeLog = await AverageCourses.findOne({ "store.type": { $eq: "company" }, "item.tag": { $eq: companies[p] } })
-                if (storeLog) {
-                    await AverageCourses.findByIdAndUpdate(storeLog._id, { average: averageCompanyCourses })
+                const log = await AverageCourses.findOne({ 'store.group': g.group, 'item.tag': g.value })
+                if (log) {
+                    await AverageCourses.findByIdAndUpdate(log._id, { average: averageCompanyCourses })
                 } else {
                     await AverageCourses.create({
                         average: averageCompanyCourses.toFixed(1),
-                        store: { type: 'company', tag: companies[p] },
+                        store: { group: g.group, tag: g.value },
                     })
                 }
             }
@@ -245,46 +242,7 @@ function companyCron(usersLastLogin, companies) {
     })
 }
 
-function costCenterCron(usersLastLogin, costCenters) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            for (const p in costCenters) {
-                let numberTrailsCompletedSchoolYear = 0
-                let numberTrailsElegiblesSchoolYear = 0
-                const userSchoolYears = await User.find({ escola: { $eq: costCenters[p] } })
-
-                for (const user of userSchoolYears) {
-                    const filter = usersLastLogin.filter(val => { return user._id.toString() === val.user.toString() })
-                    if (filter.length > 0) {
-                        const { numberTrailsCompleted, numberTrailsElegibles } = await numberOfCompleteAndEligibleCourses(user)
-                        numberTrailsCompletedSchoolYear += numberTrailsCompleted
-                        numberTrailsElegiblesSchoolYear += numberTrailsElegibles
-                    } else {
-                        numberTrailsCompletedSchoolYear += user.numberTrailsCompleted
-                        numberTrailsElegiblesSchoolYear += user.numberTrailsElegibles
-                    }
-                }
-
-                const averageSchoolYearCourses = numberTrailsElegiblesSchoolYear > 0 ? (numberTrailsCompletedSchoolYear * 100) / numberTrailsElegiblesSchoolYear : 0
-                const storeLog = await AverageCourses.findOne({ "store.type": { $eq: "costCenter" }, "item.tag": { $eq: costCenters[p] } })
-
-                if (storeLog) {
-                    await AverageCourses.findByIdAndUpdate(storeLog._id, { average: averageSchoolYearCourses })
-                } else {
-                    await AverageCourses.create({
-                        average: averageSchoolYearCourses.toFixed(1),
-                        store: { type: 'costCenter', tag: costCenters[p] },
-                    })
-                }
-            }
-            resolve()
-        } catch (error) {
-            reject(error)
-        }
-    })
-}
-
-function numberOfCompleteAndEligibleCourses(user) {
+function numberOfCompleteAndEligibleCourses (user) {
     return new Promise(async (resolve, reject) => {
         try {
             const tags = await getTagsElegibles(user)
@@ -326,8 +284,7 @@ function numberOfCompleteAndEligibleCourses(user) {
     })
 }
 
-
-function storageLog(message, dataNew = [], dataOld = [], cronType) {
+function storageLog (message, dataNew = [], dataOld = [], cronType) {
     Log.create({
         user: null,
         type: 'CREATE',
@@ -342,56 +299,210 @@ function storageLog(message, dataNew = [], dataOld = [], cronType) {
     })
 }
 
-async function getUsersLoad() {
-    const usersLoad = await getAzureFile()
-    const users = await readXLSXUsersBuffer(usersLoad)
-    console.log(users);
+async function getUsersLoad () {
+    try {
+        const usersLoad = await getAzureFile()
+        if (usersLoad) {
+            const users = await readCSVUsersBuffer(usersLoad.readableStream)
+            const newUsers = []
+            const existingUsers = []
+            console.log(`Iniciando Processamento de ${users.length} usuários...`)
+            for (const user of users) {
+                if (user.cpf) {
+                    user.cpf = user.cpf.replace(/[^a-z0-9]/gi, '')
+                    user.cpf = formatNumberCpf(user.cpf)
+                    const existingUser = await User.findOne({
+                        cpf: user.cpf,
+                    })
 
-    for (const user of users) {
-        if (user.cpf) {
-            const user = await User.findOne({
-                cpf: user.cpf,
-            })
+                    const processedUser = processUsersLoad(user)
 
-            const userBirthDate = _functions.formatDateWithoutHoursBrasilian(user.birthDate).replace('/', '').replace('/', '')
-            var hashPass = [{ hash: bcrypt.hashSync(userBirthDate, salt), valid: true, createdAt: new Date(Date.now()) }]
-            user.password = user ? user.password : hashPass
-            user.clientUserKey = CLIENT_ID + '@@' + user.cpf
-            user.status = String(user.status).toUpperCase()
+                    processedUser.password = existingUser ? existingUser.password : processedUser.password
 
-            user.createDate = _functions.formatDateWithoutHoursBrasilian(user.createdAt)
-            user.birthDate = _functions.formatDateWithoutHoursBrasilian(user.birthDate)
-            user.admission = _functions.formatDateWithoutHoursBrasilian(user.admission)
-            user.status = user.status.toUpperCase()
-            user.networkLogin = user.cpf
-            user.enabled = true
-
-            const groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO']
-
-
-            if (roles.includes('Admin')) {
-                groupsAD.push("PERFIL_Conteudista")
-                groupsAD.push("PERFIL_Admin")
-                groupsAD.push("PERFIL_Analista")
+                    if (existingUser) {
+                        existingUsers.push({ _id: existingUser._id, processedUser })
+                    } else {
+                        newUsers.push(processedUser)
+                    }
+                }
             }
-            
-            if (!roles.includes('Admin') && roles.includes('Analista')) {
-                groupsAD.push("PERFIL_Analista")
-            }
-            if (!roles.includes('Admin') && roles.includes('Conteudista')) {
-                groupsAD.push("PERFIL_Conteudista")
-            }
-            user.groupsAD = groupsAD
 
-            if (user) {
+            console.log(`Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`)
+
+            const data_start = new Date()
+            for (const user of existingUsers) {
                 await User.findByIdAndUpdate(user._id, {
-                    ...user,
+                    ...user.processedUser,
                 })
-            } else {
-                await User.create({
-                    ...user,
+            }
+
+            if (inactivateIfNotInSpreadsheet) {
+                await User.update({ updatedAt: { $lt: data_start } }, { $set: { status: 'INATIVO' } }, { multi: true })
+            }
+
+            console.log(`Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`)
+            await User.insertMany(newUsers)
+            console.log('Novos usuários criados')
+            await moveUserLoadToProcessed(usersLoad.buffer)
+        }
+    } catch (error) {
+        console.log(error)
+    }
+}
+
+async function courseReleaseCron () {
+    try {
+        const startOfDay = new Date(new Date().setUTCHours(0, 0, 0, 0)).toISOString()
+        const endOfDay = new Date(new Date().setUTCHours(23, 59, 59, 999)).toISOString()
+
+        const trails = await populateTrails(true, {
+            enabled: true,
+            createdAt: {
+                $gte: startOfDay,
+                $lt: endOfDay,
+            },
+        })
+
+        for (const trail of trails) {
+            const tags = trail.tags
+
+            let groups = []
+
+            for (const tag of tags) {
+                const group = await Group.find({ tags: { $in: tag } })
+                groups.push(...group)
+            }
+            groups = groups.map(group => group.name)
+
+            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin'])
+            const items = trail.items.map(item => {
+                return item.itemID._id
+            })
+            const elegibleUsers = []
+            for (const user of users) {
+                let completedTracking = 0
+
+                const allTrackingUser = await Tracking.find({
+                    userLogin: { $eq: user.networkLogin }, item: { $in: items },
                 })
+
+                for (const tracking of allTrackingUser) {
+                    if (tracking.completionAt !== null) {
+                        completedTracking++
+                    }
+                }
+
+                if (allTrackingUser.length === 0 || completedTracking < items.length) {
+                    elegibleUsers.push(user)
+                }
+            }
+
+            if (elegibleUsers.length > 0) {
+                const campaign = createReleaseCampaign(trail)
+                await Message.create(campaign)
+                sendMessageToKafka(campaign, elegibleUsers)
+                storageLog('Campanha de lançamento de cursos enviada', '', '', 'Lançamento')
             }
         }
+    } catch (error) {
+        return error
+    }
+}
+
+async function courseChargeCron () {
+    try {
+        const today = new Date().getTime()
+        const oneDay = 1000 * 60 * 60 * 24
+        const trails = await populateTrails(true, {
+            enabled: true,
+            expirationType: { $exists: true },
+        })
+        for (let trail of trails) {
+            const tags = trail.tags
+
+            let groups = []
+
+            for (const tag of tags) {
+                const group = await Group.find({ tags: { $in: tag } })
+                groups.push(...group)
+            }
+            groups = groups.map(group => group.name)
+
+            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin'])
+            const elegibleUsers = []
+            const items = trail.items.map(item => {
+                return item.itemID._id
+            })
+
+            for (const user of users) {
+                trail = processExpirationDate(trail, user)
+                const expirationDate = trail.expirationDate.getTime()
+                const diff = Math.round((expirationDate - today) / oneDay)
+                if (diff === 5) {
+                    let completedTracking = 0
+                    const allTrackingUser = await Tracking.find({
+                        userLogin: { $eq: user.networkLogin }, item: { $in: items },
+                    })
+
+                    for (const tracking of allTrackingUser) {
+                        if (tracking.completionAt !== null) {
+                            completedTracking++
+                        }
+                    }
+
+                    if (allTrackingUser.length === 0 || completedTracking < items.length) {
+                        elegibleUsers.push(user)
+                    }
+                }
+            }
+
+            if (elegibleUsers.length > 0) {
+                const campaign = createChargeCampaign(trail)
+                await Message.create(campaign)
+                sendMessageToKafka(campaign, elegibleUsers)
+                storageLog('Campanha de cobrança de cursos enviada', '', '', 'Cobrança')
+            }
+        }
+    } catch (error) {
+        return error
+    }
+}
+
+function createReleaseCampaign (trail) {
+    const title = `Conheça a nova trilha ${trail.title}`
+    const text = `A trilha ${trail.title} acabou de ser lançada, clique para visualizar!`
+    const communication = ['notification']
+    const mode = 'automatic'
+    const category = 'launch'
+    const target = { trailid: trail._id, url: `${process.env.DOMAIN}/#/login/entrar?redirectTo=/menu/${trail._id}` }
+    return { title, text, communication, category, target, mode }
+}
+
+function createChargeCampaign (trail) {
+    const title = `A trilha ${trail.title} expirará em 5 dias!`
+    const text = 'Por favor procure concluir antes do término do prazo!'
+    const communication = ['notification']
+    const category = 'charge'
+    const mode = 'automatic'
+    const target = { trailid: trail._id, url: `${process.env.DOMAIN}/#/login/entrar?redirectTo=/menu/${trail._id}` }
+    return { title, text, communication, category, target, mode }
+}
+
+async function userTemporaryTagsCron () {
+    try {
+        const users = await User.find({ status: 'ATIVO' })
+        for (const user of users) {
+            if (user.tags.length > 0) {
+                const today = getDateTodayWithoutHours()
+
+                user.tags = user.tags.filter(tag => {
+                    const diff = calculateDiffDate(today, formatDateWithoutHours(tag.createdAt), 'days')
+                    return diff <= 30
+                })
+                await User.updateOne({ _id: user._id }, { tags: user.tags })
+            }
+        }
+    } catch (error) {
+        return error
     }
 }

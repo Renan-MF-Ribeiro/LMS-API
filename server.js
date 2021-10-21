@@ -7,16 +7,20 @@ const port = process.env.PORT || 3000
 const {
     updateAverageCourses,
     updateAverageRatings,
+    sendCourseReleaseNotification,
+    sendCourseChargeNotification,
+    updateUserTemporaryTags,
     executeCronAverageCourses,
 } = require('./src/utils/cron')
 
 const server = app.listen(port, async () => {
     log('Listening on port: ' + port)
-    // if (process.env.NODE_APP_Ieeeee == 0) {
-    executeCronAverageCourses()
     updateAverageCourses()
     updateAverageRatings()
-    // }
+    sendCourseReleaseNotification()
+    sendCourseChargeNotification()
+    updateUserTemporaryTags()
+    executeCronAverageCourses()
 })
 
 createTerminus(server, {

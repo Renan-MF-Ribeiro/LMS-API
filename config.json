@@ -1,0 +1,11 @@
+{
+    "cron": {
+        "average": {
+            "groupA": "company",
+            "groupB": "costCenter"
+        }
+    },
+    "usersData": {
+        "inactivateIfNotInSpreadsheet": false
+    }
+}
