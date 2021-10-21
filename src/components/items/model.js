@@ -44,7 +44,7 @@ const ItemSchema = new mongoose.Schema({
     highlighted: { type: Boolean, default: false },
     startDate: { type: Date },
     endDate: { type: Date },
-    survey: { type: String, enum: ['required', 'optional', 'none'], required: true },
+    survey: { type: String, enum: ['required', 'optional', 'none'] },
 }, {
     ...schemaOptions,
     discriminatorKey: 'kind',
