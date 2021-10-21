@@ -23,10 +23,10 @@ Para realizar a instação
 ```
     
 ## Projetos
-
+ - [WhiteLabel](https://github.com/happmobi/happlearning-api)
  - [Econgen](https://github.com/happmobi/lms-ecogen-api)
  - [SBF](https://github.com/happmobi/lms-gruposbf-api)
- - [Cacau Show](https://github.com/happmobi/lms-happlearning-api)
+ - [Cacau Show](https://github.com/happmobi/lms-cacaushow-api)
  - [Ogmo](https://github.com/happmobi/lms-gerdau-api)
  - [Pearson Showcase](https://github.com/happmobi/lms-pearson-showcase-api)
 
