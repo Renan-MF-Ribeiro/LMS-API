@@ -14,7 +14,6 @@ const schemaOptions = {
 }
 
 function ifEnabled () { return this.enabled }
-function ifEndpointEnabled () { return this.isEndpointEnabled }
 
 const isURL = test(/^https?:\/\//)
 const isLocalMedia = test(/^\/?(\w+\/)*[a-f0-9]{10}\.mp4$/)
@@ -45,6 +44,7 @@ const ItemSchema = new mongoose.Schema({
     highlighted: { type: Boolean, default: false },
     startDate: { type: Date },
     endDate: { type: Date },
+    survey: { type: String, enum: ['required', 'optional', 'none'], required: true },
 }, {
     ...schemaOptions,
     discriminatorKey: 'kind',
