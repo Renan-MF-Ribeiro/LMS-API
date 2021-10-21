@@ -26,7 +26,7 @@ Para realizar a instação
 
  - [Econgen](https://github.com/happmobi/lms-ecogen-api)
  - [SBF](https://github.com/happmobi/lms-gruposbf-api)
- - [Cacau Show](https://github.com/happmobi/lms-cacaushow-api)
+ - [Cacau Show](https://github.com/happmobi/lms-happlearning-api)
  - [Ogmo](https://github.com/happmobi/lms-gerdau-api)
  - [Pearson Showcase](https://github.com/happmobi/lms-pearson-showcase-api)
 

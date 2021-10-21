@@ -290,8 +290,8 @@ module.exports = {
                     await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups))
                     await updateLastLoginUser(user._id)
 
-                    var tokenEncript = cryptoJS.AES.encrypt(token, 'cacaushow')
-                    var key = 'cacaushow' + ':' + '25KP76yNnhiGH9bSj'
+                    var tokenEncript = cryptoJS.AES.encrypt(token, 'happlearning')
+                    var key = 'happlearning' + ':' + '25KP76yNnhiGH9bSj'
 
                     var tk = tokenEncript.toString()
                     key = cryptoJS.AES.encrypt(key, '25KP76yNnhiGH9bSj').toString()

@@ -1,16 +1,16 @@
 version: "3"
 services:
-  cacaushow-backend-staging:
-    container_name: cacaushow-backend-staging
-    build: .
-    image: happlearning.azurecr.io/cacaushow-backend-staging
-    restart: always
-    ports:
-      - "3000:3000"
-  cacaushow-backend-prod:
-    container_name: cacaushow-backend-prod
-    build: .
-    image: happlearning.azurecr.io/cacaushow-backend-prod
-    restart: always
-    ports:
-      - "3000:3000"
+    happlearning-backend-staging:
+        container_name: happlearning-backend-staging
+        build: .
+        image: happlearning.azurecr.io/happlearning-backend-staging
+        restart: always
+        ports:
+            - "3000:3000"
+    happlearning-backend-prod:
+        container_name: happlearning-backend-prod
+        build: .
+        image: happlearning.azurecr.io/happlearning-backend-prod
+        restart: always
+        ports:
+            - "3000:3000"
