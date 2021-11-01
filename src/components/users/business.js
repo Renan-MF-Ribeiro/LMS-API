@@ -355,9 +355,9 @@ module.exports = {
         }
     },
 
-    async getUsersByEmails (emails) {
+    async getUsersByIds (ids) {
         try {
-            const users = await User.find({ email: { $in: emails } }, ['networkLogin'])
+            const users = await User.find({ _id: { $in: ids } }, ['networkLogin'])
 
             return users
         } catch (error) {
