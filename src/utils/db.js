@@ -18,7 +18,7 @@ module.exports = {
                 strConn = `mongodb://${DB_USER}:${DB_PASSWORD}@${DB_HOST}/${DB_NAME}`
             }
 
-            return mongoose.connect(strConn, { useNewUrlParser: true, autoReconnect: true })
+            return mongoose.connect(strConn)
         } catch (err) {
             error(err)
         }
