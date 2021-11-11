@@ -1,7 +1,6 @@
 const _messages = require('../../utils/messages')
 const _functions = require('../../utils/functions')
 const { Trail } = require('../../components/trails/model')
-const { Section } = require('../../components/sections/model')
 const { Group, InstructorGroup } = require('./model')
 const { CourseModel } = require('../courses/model')
 
@@ -181,15 +180,11 @@ module.exports = {
         try {
             const groups = await Group.find({})
             const trails = await Trail.find({})
-            const sections = await Section.find({})
 
             const groupTags = groups.filter(value => value.tags.length > 0).map(group => group.tags.map(tag => tag.value))
+            const trailTags = trails.filter(value => value.tags.length > 0).map(trail => trail.tags.map(tag => tag.value)).filter(tag => !/(\bSECAO_)/.test(tag))
 
-            const trailTags = trails.filter(value => value.tags.length > 0).map(trail => trail.tags.map(tag => tag.value))
-
-            const sectionTags = sections.filter(value => value.tags.length > 0).map(section => section.tags.map(tag => tag.value))
-
-            let tags = [...groupTags, ...trailTags, ...sectionTags]
+            let tags = [...groupTags, ...trailTags]
 
             tags = tags.reduce((prev, curr) => prev.concat(curr), [])
 
