@@ -41,27 +41,35 @@ const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadshe
 
 module.exports = {
     updateAverageCourses () {
-        new CronJob('*/30 * * * * ', () => {
-            averageCourses()
-        }, null, true, 'America/Sao_Paulo')
+        if (config.cron.average.active) {
+            new CronJob('*/30 * * * * ', () => {
+                averageCourses()
+            }, null, true, 'America/Sao_Paulo')
+        }
     },
 
     updateAverageRatings () {
-        new CronJob('*/60 * * * * ', () => {
-            averageRating()
-        }, null, true, 'America/Sao_Paulo')
+        if (config.cron.average.active) {
+            new CronJob('*/60 * * * * ', () => {
+                averageRating()
+            }, null, true, 'America/Sao_Paulo')
+        }
     },
 
     sendCourseReleaseNotification () {
-        new CronJob('00 07 * * * ', () => {
-            courseReleaseCron()
-        }, null, true, 'America/Sao_Paulo')
+        if (config.cron.courseRelease.active) {
+            new CronJob('00 07 * * * ', () => {
+                courseReleaseCron()
+            }, null, true, 'America/Sao_Paulo')
+        }
     },
 
     sendCourseChargeNotification () {
-        new CronJob('00 08 * * * ', () => {
-            courseChargeCron()
-        }, null, true, 'America/Sao_Paulo')
+        if (config.cron.courseCharge.active) {
+            new CronJob('00 08 * * * ', () => {
+                courseChargeCron()
+            }, null, true, 'America/Sao_Paulo')
+        }
     },
 
     updateUserTemporaryTags () {

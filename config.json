@@ -1,11 +1,24 @@
 {
     "cron": {
         "average": {
+            "active": false,
             "groupA": "company",
             "groupB": "costCenter"
+        },
+        "userFTP": {
+            "active": false
+        },
+        "courseRelease": {
+            "active": false
+        },
+        "courseCharge": {
+            "active": false
         }
     },
     "usersData": {
         "inactivateIfNotInSpreadsheet": false
+    },
+    "messenger": {
+        "sendUsersToMicrosservice": false
     }
 }

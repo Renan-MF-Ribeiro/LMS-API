@@ -53,6 +53,8 @@ const cryptoJS = require('crypto-js')
 const jwt = require('jsonwebtoken')
 const { sendMessageToKafka } = require('../messages/business')
 
+const config = require('../../../config.json')
+
 module.exports = {
     async create (req, res) {
         try {
@@ -476,10 +478,13 @@ module.exports = {
             if (newUsers.length > 0) {
                 console.log(`Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`)
                 await User.insertMany(newUsers)
-                await sendAccountsToKafka(usersToSend)
-                const campaign = createWelcomeCampaign()
-                await sendMessageToKafka(campaign, newUsers)
-                await Message.create(campaign)
+
+                if (config.messenger.sendUsersToMicrosservice) {
+                    await sendAccountsToKafka(usersToSend)
+                    const campaign = createWelcomeCampaign()
+                    await sendMessageToKafka(campaign, newUsers)
+                    await Message.create(campaign)
+                }
             }
 
             _messages.success(res, req, 'Importado com sucesso')
