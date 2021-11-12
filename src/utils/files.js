@@ -25,21 +25,21 @@ const { PUBLIC_PATH, UPLOADS_PATH, AZURE_STRINGCONN, AZURE_BLOBNAME, AZURE_ACCES
 
 shelljs.mkdir('-p', UPLOADS_PATH)
 
-async function streamToBuffer(readableStream) {
+async function streamToBuffer (readableStream) {
     return new Promise((resolve, reject) => {
-        const chunks = [];
-        readableStream.on("data", (data) => {
-            chunks.push(data instanceof Buffer ? data : Buffer.from(data));
-        });
-        readableStream.on("end", () => {
-            resolve(Buffer.concat(chunks));
-        });
-        readableStream.on("error", reject);
-    });
+        const chunks = []
+        readableStream.on('data', data => {
+            chunks.push(data instanceof Buffer ? data : Buffer.from(data))
+        })
+        readableStream.on('end', () => {
+            resolve(Buffer.concat(chunks))
+        })
+        readableStream.on('error', reject)
+    })
 }
 
 module.exports = {
-    awsAmazon(file, folder) {
+    awsAmazon (file, folder) {
         return new Promise((resolve, reject) => {
             const s3 = new aws.S3()
 
@@ -75,7 +75,7 @@ module.exports = {
         })
     },
 
-    async azureBlob(file, folder) {
+    async azureBlob (file, folder) {
         // return new Promise((resolve, reject) => {
         const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STRINGCONN)
         blobServiceClient.get
@@ -106,7 +106,7 @@ module.exports = {
         // })
     },
 
-    async getAzureFile() {
+    async getAzureFile () {
         const fileShareServiceClient = ShareServiceClient.fromConnectionString(AZURE_STRINGCONN)
         const fileShareClient = fileShareServiceClient.getShareClient('sftpfileshare').rootDirectoryClient.getFileClient('CargaUsuarios (1).xlsx')
 
@@ -115,9 +115,7 @@ module.exports = {
         // return await streamToBuffer(downloadFileResponse.readableStreamBody)
     },
 
-
-
-    async moveUpload(file) {
+    async moveUpload (file) {
         if (!file) return null
 
         const hash = revHash(file.path)
@@ -132,7 +130,7 @@ module.exports = {
     isSCORMManifestFile: pipe(path.basename, test(/^imsmanifest\.xml$/i)),
     isSCORMSchemaFile: pipe(path.basename, test(/^(adlcp_rootv1p2|ims_xml|imscp_rootv1p1p2|imsmd_rootv1p2p1)\.xsd$/i)),
 
-    mkdirSCORM(packageId) {
+    mkdirSCORM (packageId) {
         const _path = path.join(UPLOADS_PATH, 'scorm', packageId)
 
         try {
@@ -142,7 +140,7 @@ module.exports = {
         return _path
     },
 
-    mvFile(file, name) {
+    mvFile (file, name) {
         return new Promise((resolve, reject) => {
             try {
                 const _path = path.join(UPLOADS_PATH, name)
@@ -154,25 +152,25 @@ module.exports = {
         })
     },
 
-    readXLSX(file) {
+    readXLSX (file) {
         return new Promise((resolve, reject) => {
             xlsx(file)
                 .then(rows => {
                     resolve(rows)
                 })
                 .catch(error => {
-                    console.log(error);
+                    console.log(error)
                     reject(error)
                 })
         })
     },
 
-    readXLSXAlternative(file) {
+    readXLSXAlternative (file) {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook()
             workbook.xlsx.readFile(file).then(() => {
                 var worksheet = workbook.getWorksheet('Planilha1')
-                let rows = []
+                const rows = []
                 worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
                     rows.push(row.values)
                 })
@@ -181,13 +179,12 @@ module.exports = {
         })
     },
 
-
-    formatCnpj(value) {
+    formatCnpj (value) {
         const formatValue = value.replace(/[^\w\s]/gi, '')
         return formatValue
     },
 
-    readXLSXUsers(file) {
+    readXLSXUsers (file) {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook()
             workbook.xlsx.readFile(file)
@@ -204,7 +201,7 @@ module.exports = {
                                 labelCarga = String(labelCarga).toUpperCase()
 
                                 const labelDB = mapUser[labelCarga]
-                                console.log(labelDB);
+                                console.log(labelDB)
 
                                 objPattern.push(labelDB)
                             }
@@ -228,7 +225,7 @@ module.exports = {
                 })
         })
     },
-    readXLSXUsersBuffer(file) {
+    readXLSXUsersBuffer (file) {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook()
             workbook.xlsx.load(file)
@@ -269,7 +266,7 @@ module.exports = {
         })
     },
 
-    readCSV(file) {
+    readCSV (file) {
         return new Promise((resolve, reject) => {
             try {
                 const results = []
@@ -286,7 +283,7 @@ module.exports = {
         })
     },
 
-    writeFile(header, records) {
+    writeFile (header, records) {
         return new Promise((resolve, reject) => {
             const csvWriter = createCsvWriter({
                 path: path.resolve() + '/src/public/lista_usuarios.csv',
@@ -303,7 +300,7 @@ module.exports = {
         })
     },
 
-    writeFileLogs(header, records) {
+    writeFileLogs (header, records) {
         return new Promise((resolve, reject) => {
             const csvWriter = createCsvWriter({
                 path: path.resolve() + `/src/public/logs_${momentz().format('HHmmss')}.csv`,
@@ -321,7 +318,7 @@ module.exports = {
         })
     },
 
-    createCSVString(header, records) {
+    createCSVString (header, records) {
         const csvStringfier = createObjectCsvStringifier({
             header,
             encoding: 'utf8',
@@ -333,5 +330,25 @@ module.exports = {
         ].join('')
 
         return csvString
+    },
+
+    async moveUserLoadToProcessed (buffer) {
+        try {
+            const env = process.env.NODE_ENV
+            const directory = env === 'production' ? 'producao' : 'homologacao'
+            const fileShareServiceClient = ShareServiceClient.fromConnectionString(AZURE_STRINGCONN)
+
+            await fileShareServiceClient.getShareClient('sftpfileshare').getDirectoryClient(directory).deleteFile('Happmobi_Carga.csv')
+
+            const completeDate = new Date().toLocaleString('pt-BR').split(' ')
+            const date = completeDate[0].replace('/', '').replace('/', '')
+            const hours = completeDate[1].replace(':', '').replace(':', '')
+            const fileName = `Happmobi_${date}_${hours}.csv`
+            await fileShareServiceClient.getShareClient('sftpfileshare').getDirectoryClient(directory).getDirectoryClient('processados').createFile(fileName, 4000000)
+
+            await fileShareServiceClient.getShareClient('sftpfileshare').getDirectoryClient(directory).getDirectoryClient('processados').getFileClient(fileName).uploadData(buffer)
+        } catch (error) {
+            console.log('Error', error)
+        }
     },
 }

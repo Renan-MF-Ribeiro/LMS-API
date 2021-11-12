@@ -30,10 +30,14 @@ const {
 const {
     lastLoggedInUsers,
     processUsersLoad,
+    sendAccountsToKafka,
+    createWelcomeCampaign,
+    processUserAccount,
 } = require('../components/users/business')
 
-const { getAzureFile, readCSVUsersBuffer } = require('../utils/files')
+const { getAzureFile, readCSVUsersBuffer, moveUserLoadToProcessed } = require('../utils/files')
 const { sendMessageToKafka } = require('../components/messages/business')
+
 const config = require('../../config.json')
 const groupingA = config.cron.average.groupA
 const groupingB = config.cron.average.groupB
@@ -314,6 +318,8 @@ async function getUsersLoad () {
             const users = await readCSVUsersBuffer(usersLoad.readableStream)
             const newUsers = []
             const existingUsers = []
+            const usersToSend = []
+
             console.log(`Iniciando Processamento de ${users.length} usuários...`)
             for (const user of users) {
                 if (user.cpf) {
@@ -324,12 +330,14 @@ async function getUsersLoad () {
                     })
 
                     const processedUser = processUsersLoad(user)
+                    const account = await processUserAccount(processedUser)
 
                     processedUser.password = existingUser ? existingUser.password : processedUser.password
 
                     if (existingUser) {
                         existingUsers.push({ _id: existingUser._id, processedUser })
                     } else {
+                        usersToSend.push(account)
                         newUsers.push(processedUser)
                     }
                 }
@@ -347,9 +355,17 @@ async function getUsersLoad () {
             if (inactivateIfNotInSpreadsheet) {
                 await User.update({ updatedAt: { $lt: data_start } }, { $set: { status: 'INATIVO' } }, { multi: true })
             }
+            if (newUsers.length > 0) {
+                console.log(`Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`)
+                await User.insertMany(newUsers)
 
-            console.log(`Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`)
-            await User.insertMany(newUsers)
+                if (config.messenger.sendUsersToMicrosservice) {
+                    await sendAccountsToKafka(usersToSend)
+                    const campaign = createWelcomeCampaign()
+                    await sendMessageToKafka(campaign, newUsers)
+                    await Message.create(campaign)
+                }
+            }
             console.log('Novos usuários criados')
             await moveUserLoadToProcessed(usersLoad.buffer)
         }

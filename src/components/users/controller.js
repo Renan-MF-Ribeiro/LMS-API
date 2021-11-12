@@ -31,6 +31,7 @@ const {
     processUserAccount,
     sendAccountsToKafka,
     sendUpdatedDeviceIdToMessenger,
+    createWelcomeCampaign,
 } = require('./business')
 
 const {
@@ -54,6 +55,7 @@ const jwt = require('jsonwebtoken')
 const { sendMessageToKafka } = require('../messages/business')
 
 const config = require('../../../config.json')
+const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadsheet
 
 module.exports = {
     async create (req, res) {
@@ -468,11 +470,16 @@ module.exports = {
                 }
             }
 
+            const data_start = new Date()
             console.log(`Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`)
             for (const user of existingUsers) {
                 await User.findByIdAndUpdate(user._id, {
                     ...user.processedUser,
                 })
+            }
+
+            if (inactivateIfNotInSpreadsheet) {
+                await User.update({ updatedAt: { $lt: data_start } }, { $set: { status: 'INATIVO' } }, { multi: true })
             }
 
             if (newUsers.length > 0) {
@@ -854,12 +861,4 @@ module.exports = {
         }
     },
 
-}
-function createWelcomeCampaign (user) {
-    const title = `Seja bem-vindo(a) à plataforma ${process.env.PROJECT_NAME}, ${user.name}!`
-    const text = 'Venha conhecer a plataforma!'
-    const communication = ['notification']
-    const mode = 'automatic'
-    const category = 'notify'
-    return { title, text, communication, category, mode }
 }
