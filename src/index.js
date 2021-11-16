@@ -61,6 +61,7 @@ const xapiRoutes = require('./components/xapi/routes')
 const supplierRoutes = require('./components/suppliers/routes')
 const termsOfUseRoutes = require('./components/terms-of-use/routes')
 const messagesRoutes = require('./components/messages/routes')
+const showCaseRoutes = require('./components/showcase/routes')
 
 app
     .use('/items', validateTokenRoute, itemsRoutes)
@@ -80,7 +81,8 @@ app
     .use('/xapi', validateTokenRoute, xapiRoutes)
     .use('/suppliers', supplierRoutes)
     .use('/terms-of-use', validateTokenRoute, termsOfUseRoutes)
-    .use('/messages', messagesRoutes)
+    .use('/messages', validateTokenRoute, messagesRoutes)
+    .use('/showcase', showCaseRoutes)
 
 app.use(function (err, req, res, next) {
     if (err.code !== 'EBADCSRFTOKEN') return next(err)
