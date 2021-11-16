@@ -5,10 +5,14 @@ const _messages = require('../../utils/messages')
 const { populateTrails } = require('../trails/business')
 const {
     checkIfTheTrackIsValid,
-    calculateDiffDateTrail,
     filterTrails,
     setTrailMandatory,
     getTagsElegiblesByToken,
+    elegiblesContents,
+    mandatorySections,
+    recentsSections,
+    keepLearningSections,
+    concludedSections,
 } = require('./business')
 const { getUserByToken, processTrailTracking, processExpirationDate } = require('../../utils/functions')
 
@@ -204,30 +208,11 @@ module.exports = {
                     trail = processedTrail.trail
                 }
 
-                const arrSections = await elegiblesContents(
-                    user,
-                    trails,
-                )
-                const arrMandatorySections = await mandatorySections(
-                    user,
-                    trails,
-                    tags,
-                )
-                const arrRecentsSections = await recentsSections(
-                    user,
-                    trails,
-                    tags,
-                )
-                const arrKeepLearningSections = await keepLearningSections(
-                    user,
-                    trails,
-                    tags,
-                )
-                const arrConcludedSections = await concludedSections(
-                    user,
-                    trails,
-                    tags,
-                )
+                const arrSections = await elegiblesContents(trails)
+                const arrMandatorySections = await mandatorySections(trails, tags)
+                const arrRecentsSections = await recentsSections(trails)
+                const arrKeepLearningSections = await keepLearningSections(trails)
+                const arrConcludedSections = await concludedSections(trails)
 
                 resultSections = arrSections
                     .concat(arrMandatorySections)
@@ -303,213 +288,4 @@ module.exports = {
             )
         }
     },
-}
-
-function elegiblesContents (user, trails) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            const arrSections = []
-            const arrTrailsIDS = []
-            const sectionsIDS = []
-
-            for (const trail of trails) {
-                const sections = await Section.find({
-                    deleted: 0,
-                    active: 1,
-                    default: false,
-                    tags: { $in: trail.tags },
-                })
-
-                for (const section of sections) {
-                    var idSec = null
-                    for (let i = 0; i < arrSections.length; i++) {
-                        if (String(arrSections[i]._id) === String(section._id)) {
-                            idSec = i
-                            break
-                        }
-                    }
-
-                    if (idSec == null) {
-                        arrSections.push(section)
-                        idSec = arrSections.length - 1
-                    }
-
-                    const flagValid = checkIfTheTrackIsValid(trail)
-                    if (flagValid) {
-                        arrSections[idSec].trails.push(trail)
-
-                        const sortFnc =
-                            arrSections[idSec] &&
-                                arrSections[idSec].ordination !== undefined && arrSections[idSec].ordination === 0
-                                ? function (a, b) { return b.createdAt - a.createdAt }
-                                : function (a, b) { var x = a.title.toLowerCase(); var y = b.title.toLowerCase(); return x < y ? -1 : x > y ? 1 : 0 }
-
-                        arrSections[idSec].trails.sort(sortFnc)
-                    }
-
-                    sectionsIDS.push(section._id.toString())
-                }
-
-                arrTrailsIDS.push(trail._id.toString())
-            }
-            /*
-            console.log("***********")
-            console.log(arrSections.length)
-            console.log("***********")
-            for(var sss = 0; sss < arrSections.length; sss++) {
-                var sec = arrSections[sss]
-                //console.log(sec.title)
-                console.log("\t" + sec.title + " > Trilhas: " + sec.trails.length)
-                for(var ttt = 0; ttt < sec.trails.length; ttt++) {
-                    var traill = sec.trails[ttt];
-                    console.log("\t\t" + traill.title + " > Items: " + traill.items.length)
-                }
-            }
-
-            console.log("***********")
-            // */
-
-            resolve(arrSections)
-        } catch (error) {
-            reject(error)
-        }
-    })
-}
-
-function mandatorySections (user, trails, tags) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            const section = await Section.findOne({
-                title: { $eq: 'NECESSÁRIOS PARA VOCÊ' },
-                active: 1,
-            })
-            if (section) {
-                const sortFnc =
-                    section &&
-                        section.ordination !== undefined && section.ordination === 0
-                        ? function (a, b) { return b.createdAt - a.createdAt }
-                        : function (a, b) { var x = a.title.toLowerCase(); var y = b.title.toLowerCase(); return x < y ? -1 : x > y ? 1 : 0 }
-
-                trails = trails.filter(trail => {
-                    const trailItems = trail.items.filter(item =>
-                        item.mandatory ? item.mandatory : false,
-                    )
-                    return trailItems.length > 0
-                })
-
-                trails = trails.filter(trail => {
-                    for (var m in trail.mandatory) {
-                        for (const t in tags) {
-                            if (trail.mandatory[m].value === tags[t].value) {
-                                return true
-                            }
-                        }
-                    }
-
-                    return false
-                })
-
-                trails.sort(sortFnc)
-
-                section.trails = trails
-            }
-
-            resolve(trails.length > 0 ? section : [])
-        } catch (error) {
-            reject(error)
-        }
-    })
-}
-
-function recentsSections (user, trails, tags) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            const section = await Section.findOne({
-                title: { $eq: 'NOVIDADES PRA VOCÊ' },
-                active: 1,
-            })
-            if (section) {
-                const sortFnc =
-                    section &&
-                        section.ordination !== undefined && section.ordination === 0
-                        ? function (a, b) { return b.createdAt - a.createdAt }
-                        : function (a, b) { var x = a.title.toLowerCase(); var y = b.title.toLowerCase(); return x < y ? -1 : x > y ? 1 : 0 }
-
-                for (const trail of trails) {
-                    const flag = calculateDiffDateTrail(trail)
-                    if (flag) {
-                        section.trails.push(trail)
-                    }
-                }
-
-                section.trails.sort(sortFnc)
-            }
-
-            resolve(section && section.trails.length > 0 ? section : [])
-        } catch (error) {
-            reject(error)
-        }
-    })
-}
-
-function keepLearningSections (user, trails, tags) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            const section = await Section.findOne({
-                title: { $eq: 'CONTINUE APRENDENDO' },
-                active: 1,
-            })
-            if (section) {
-                const sortFnc =
-                    section &&
-                        section.ordination !== undefined && section.ordination === 0
-                        ? function (a, b) { return b.createdAt - a.createdAt }
-                        : function (a, b) { var x = a.title.toLowerCase(); var y = b.title.toLowerCase(); return x < y ? -1 : x > y ? 1 : 0 }
-
-                for (const trail of trails) {
-                    if (trail.completion === 0) {
-                        section.trails.push(trail)
-                    }
-                }
-
-                section.trails.sort(sortFnc)
-            }
-
-            resolve(section && section.trails.length > 0 ? section : [])
-        } catch (error) {
-            console.log(error)
-            reject(error)
-        }
-    })
-}
-
-function concludedSections (user, trails, tags) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            const section = await Section.findOne({
-                title: { $eq: 'CONCLUÍDOS' },
-                active: 1,
-            })
-            if (section) {
-                const sortFnc =
-                    section &&
-                        section.ordination !== undefined && section.ordination === 0
-                        ? function (a, b) { return b.createdAt - a.createdAt }
-                        : function (a, b) { var x = a.title.toLowerCase(); var y = b.title.toLowerCase(); return x < y ? -1 : x > y ? 1 : 0 }
-
-                for (const trail of trails) {
-                    if (trail.completion) {
-                        section.trails.push(trail)
-                    }
-                }
-
-                section.trails.sort(sortFnc)
-            }
-
-            resolve(section && section.trails.length > 0 ? section : [])
-        } catch (error) {
-            console.log(error)
-            reject(error)
-        }
-    })
 }
