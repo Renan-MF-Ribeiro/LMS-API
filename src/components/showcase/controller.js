@@ -78,5 +78,6 @@ function prepareObject (trail) {
         updatedAt: trail.updatedAt,
         items: trail.items,
         duration: trail.duration,
+        thumbPath: trail.thumbPath,
     }
 }
