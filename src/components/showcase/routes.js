@@ -3,3 +3,4 @@ const _controller = require('./controller')
 
 module.exports = express.Router()
     .get('/', _controller.getShowCaseTrails)
+    .get('/:trailId', _controller.getShowCaseTrailById)
