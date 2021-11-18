@@ -379,8 +379,8 @@ module.exports = {
         }
     },
 
-    async createWelcomeCampaign (user) {
-        const title = `Seja bem-vindo(a) à plataforma ${process.env.PROJECT_NAME}, ${user.name}!`
+    async createWelcomeCampaign () {
+        const title = `Seja bem-vindo(a) à plataforma ${process.env.PROJECT_NAME}!`
         const text = 'Venha conhecer a plataforma!'
         const communication = ['notification']
         const mode = 'automatic'
