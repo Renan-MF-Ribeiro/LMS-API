@@ -11,6 +11,7 @@ const schemaOptions = {
 
 const TermsOfUseSchema = new mongoose.Schema({
     content: { type: String, required: true },
+    category: { type: String, required: true, enum: ['collaboration', 'privacy-policy'] },
 }, schemaOptions)
 
 const TermsOfUse = mongoose.model('TermsOfUse', TermsOfUseSchema)
