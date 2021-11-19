@@ -10,6 +10,7 @@ const {
 } = require('../../utils/functions')
 const { Group } = require('../groups/model')
 const { Tracking } = require('../tracking/model')
+const { Section } = require('./model')
 
 module.exports = {
     checkIfTheTrackIsValid (trail) {
@@ -217,6 +218,215 @@ module.exports = {
             }
         })
     },
+    async elegiblesContents (trails) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const arrSections = []
+                const arrTrailsIDS = []
+                const sectionsIDS = []
+
+                for (const trail of trails) {
+                    const sections = await Section.find({
+                        deleted: 0,
+                        active: 1,
+                        default: false,
+                        tags: { $in: trail.tags },
+                    })
+
+                    for (const section of sections) {
+                        var idSec = null
+                        for (let i = 0; i < arrSections.length; i++) {
+                            if (String(arrSections[i]._id) === String(section._id)) {
+                                idSec = i
+                                break
+                            }
+                        }
+
+                        if (idSec == null) {
+                            arrSections.push(section)
+                            idSec = arrSections.length - 1
+                        }
+
+                        const flagValid = checkIfTheTrackIsValid(trail)
+                        if (flagValid) {
+                            arrSections[idSec].trails.push(trail)
+
+                            const sortFnc =
+                                arrSections[idSec] &&
+                                    arrSections[idSec].ordination !== undefined && arrSections[idSec].ordination === 0
+                                    ? function (a, b) { return b.createdAt - a.createdAt }
+                                    : function (a, b) { var x = a.title.toLowerCase(); var y = b.title.toLowerCase(); return x < y ? -1 : x > y ? 1 : 0 }
+
+                            arrSections[idSec].trails.sort(sortFnc)
+                        }
+
+                        sectionsIDS.push(section._id.toString())
+                    }
+
+                    arrTrailsIDS.push(trail._id.toString())
+                }
+                /*
+                console.log("***********")
+                console.log(arrSections.length)
+                console.log("***********")
+                for(var sss = 0; sss < arrSections.length; sss++) {
+                    var sec = arrSections[sss]
+                    //console.log(sec.title)
+                    console.log("\t" + sec.title + " > Trilhas: " + sec.trails.length)
+                    for(var ttt = 0; ttt < sec.trails.length; ttt++) {
+                        var traill = sec.trails[ttt];
+                        console.log("\t\t" + traill.title + " > Items: " + traill.items.length)
+                    }
+                }
+
+                console.log("***********")
+                // */
+
+                resolve(arrSections)
+            } catch (error) {
+                reject(error)
+            }
+        })
+    },
+
+    async mandatorySections (trails, tags) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const section = await Section.findOne({
+                    title: { $eq: 'NECESSÁRIOS PARA VOCÊ' },
+                    active: 1,
+                })
+                if (section) {
+                    const sortFnc =
+                        section &&
+                            section.ordination !== undefined && section.ordination === 0
+                            ? function (a, b) { return b.createdAt - a.createdAt }
+                            : function (a, b) { var x = a.title.toLowerCase(); var y = b.title.toLowerCase(); return x < y ? -1 : x > y ? 1 : 0 }
+
+                    trails = trails.filter(trail => {
+                        const trailItems = trail.items.filter(item =>
+                            item.mandatory ? item.mandatory : false,
+                        )
+                        return trailItems.length > 0
+                    })
+
+                    trails = trails.filter(trail => {
+                        for (var m in trail.mandatory) {
+                            for (const t in tags) {
+                                if (trail.mandatory[m].value === tags[t].value) {
+                                    return true
+                                }
+                            }
+                        }
+
+                        return false
+                    })
+
+                    trails.sort(sortFnc)
+
+                    section.trails = trails
+                }
+
+                resolve(trails.length > 0 ? section : [])
+            } catch (error) {
+                reject(error)
+            }
+        })
+    },
+
+    async recentsSections (trails) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const section = await Section.findOne({
+                    title: { $eq: 'NOVIDADES PRA VOCÊ' },
+                    active: 1,
+                })
+                if (section) {
+                    const sortFnc =
+                        section &&
+                            section.ordination !== undefined && section.ordination === 0
+                            ? function (a, b) { return b.createdAt - a.createdAt }
+                            : function (a, b) { var x = a.title.toLowerCase(); var y = b.title.toLowerCase(); return x < y ? -1 : x > y ? 1 : 0 }
+
+                    for (const trail of trails) {
+                        const flag = calculateDiffDateTrail(trail)
+                        if (flag) {
+                            section.trails.push(trail)
+                        }
+                    }
+
+                    section.trails.sort(sortFnc)
+                }
+
+                resolve(section && section.trails.length > 0 ? section : [])
+            } catch (error) {
+                reject(error)
+            }
+        })
+    },
+
+    async keepLearningSections (trails) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const section = await Section.findOne({
+                    title: { $eq: 'CONTINUE APRENDENDO' },
+                    active: 1,
+                })
+                if (section) {
+                    const sortFnc =
+                        section &&
+                            section.ordination !== undefined && section.ordination === 0
+                            ? function (a, b) { return b.createdAt - a.createdAt }
+                            : function (a, b) { var x = a.title.toLowerCase(); var y = b.title.toLowerCase(); return x < y ? -1 : x > y ? 1 : 0 }
+
+                    for (const trail of trails) {
+                        if (trail.completion === 0) {
+                            section.trails.push(trail)
+                        }
+                    }
+
+                    section.trails.sort(sortFnc)
+                }
+
+                resolve(section && section.trails.length > 0 ? section : [])
+            } catch (error) {
+                console.log(error)
+                reject(error)
+            }
+        })
+    },
+
+    async concludedSections (trails) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const section = await Section.findOne({
+                    title: { $eq: 'CONCLUÍDOS' },
+                    active: 1,
+                })
+                if (section) {
+                    const sortFnc =
+                        section &&
+                            section.ordination !== undefined && section.ordination === 0
+                            ? function (a, b) { return b.createdAt - a.createdAt }
+                            : function (a, b) { var x = a.title.toLowerCase(); var y = b.title.toLowerCase(); return x < y ? -1 : x > y ? 1 : 0 }
+
+                    for (const trail of trails) {
+                        if (trail.completion) {
+                            section.trails.push(trail)
+                        }
+                    }
+
+                    section.trails.sort(sortFnc)
+                }
+
+                resolve(section && section.trails.length > 0 ? section : [])
+            } catch (error) {
+                console.log(error)
+                reject(error)
+            }
+        })
+    },
+
 }
 
 function isNecessary (trail, tags) {
@@ -306,4 +516,31 @@ function isMostRecent (trail) {
             return false
         }
     }
+}
+
+function checkIfTheTrackIsValid (trail) {
+    const startDate = formatDateWithoutHours(trail.startDate)
+    const endDate = formatDateWithoutHours(trail.endDate)
+    const today = getDateTodayWithoutHours()
+    // && (endDate >= today || endDate === 'Invalid Date')
+    if (trail.items.length > 0) {
+        if (startDate && (endDate === null || endDate === 'Invalid Date')) {
+            if (startDate <= today) return true
+        }
+
+        if (startDate && endDate) {
+            if (startDate <= today && endDate >= today) return true
+        }
+    }
+
+    return false
+}
+
+function calculateDiffDateTrail (trail) {
+    const today = getDateTodayWithoutHours()
+    const diffCreate = calculateDiffDate(today, formatDateWithoutHours(trail.createdAt), 'days')
+    const diffUpdate = calculateDiffDate(today, formatDateWithoutHours(trail.updatedAt), 'days')
+
+    if (diffCreate <= 30 || diffUpdate <= 30) return true
+    return false
 }

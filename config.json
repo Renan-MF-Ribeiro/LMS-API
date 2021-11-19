@@ -16,7 +16,8 @@
         }
     },
     "usersData": {
-        "inactivateIfNotInSpreadsheet": false
+        "inactivateIfNotInSpreadsheet": false,
+        "sendSignUpActivationEmail": false
     },
     "messenger": {
         "sendUsersToMicrosservice": false

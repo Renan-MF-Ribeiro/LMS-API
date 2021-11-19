@@ -56,6 +56,7 @@ const { sendMessageToKafka } = require('../messages/business')
 
 const config = require('../../../config.json')
 const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadsheet
+const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail
 
 module.exports = {
     async create (req, res) {
@@ -79,33 +80,34 @@ module.exports = {
     async signup (req, res) {
         try {
             var salt = bcrypt.genSaltSync(10)
-            const { birthDate, name, email, password, supplierId, area, office } = req.body
-            const user = await User.find({ email })
+            const { networkLogin, password, ...data } = req.body
+
+            const user = await User.find({ networkLogin })
+
             if (user.length !== 0) {
-                _messages.badRequest(res, req, 'Email já cadastrado', 'Já existe um usuário cadastrado com este email', 'users', 'signup')
+                _messages.badRequest(res, req, 'Usuário já cadastrado', 'Já existe um usuário cadastrado para este usuário', 'users', 'signup')
             } else {
                 const hashPassword = { hash: bcrypt.hashSync(password, salt), valid: true, createdAt: new Date(Date.now()) }
                 const userData = {
-                    birthDate,
-                    name,
-                    email,
-                    networkLogin: email,
+                    networkLogin,
                     password: hashPassword,
                     passwordValid: true,
-                    supplierId,
-                    clientUserKey: CLIENT_ID + '@@' + email,
+                    clientUserKey: CLIENT_ID + '@@' + networkLogin,
                     groupsAD: ['PERFIL_Aluno', 'ELEGE_CURSO'],
-                    status: 'INATIVO',
-                    area,
-                    office,
+                    status: sendSignUpActivationEmail ? 'INATIVO' : 'ATIVO',
+                    ...data,
                 }
+
                 const newUser = await User.create(userData)
 
-                // Hash única para ativação de usuário
-                const emailToken = await bcrypt.hash(email, 10)
+                if (newUser && sendSignUpActivationEmail) {
+                    const emailToken = generateToken({ networkLogin })
 
-                const activationLink = `${process.env.DOMAIN}/#/login/ativacao?token=${emailToken}&email=${email}`
-                await sendSignupActivationEmail(email, activationLink)
+                    const activationLink = `${process.env.DOMAIN}/#/login/ativacao?token=${emailToken}`
+
+                    await sendSignupActivationEmail(newUser.email, activationLink)
+                }
+
                 _messages.success(res, req, newUser)
             }
         } catch (error) {
@@ -119,7 +121,7 @@ module.exports = {
             const { token, email } = req.body
             const isUser = await bcrypt.compare(email, token)
             if (isUser) {
-                const activate = await User.updateOne({ email }, { status: 'ATIVO', enabled: true })
+                const activate = await User.updateOne({ email }, { status: 'ATIVO' })
                 _messages.success(res, req, activate)
             } else {
                 _messages.badRequest(res, req, 'Token inválido', 'O token fornecido é inválido')

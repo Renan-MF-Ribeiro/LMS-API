@@ -126,6 +126,27 @@ module.exports = {
         }
     },
 
+    async changeShowcase (req, res) {
+        try {
+            const { _id, showcase } = req.body
+
+            if (!_id) {
+                throw new Error('Did not pass _id')
+            }
+
+            if (showcase === null || showcase === undefined) {
+                throw new Error('Did not pass showcase')
+            }
+
+            const oldData = await Trail.updateOne({ _id: { $eq: _id } }, { showcase: showcase })
+            const newData = await Trail.find({ _id: { $eq: _id } })
+
+            _messages.success(res, req, newData, 'Atualização de exibição na Vitrine', 'trails', 'update', newData, oldData, true, 'UPDATE')
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'trails', 'change-showcase')
+        }
+    },
+
     async update (req, res) {
         try {
             const { thumb, banner, background } = req.files

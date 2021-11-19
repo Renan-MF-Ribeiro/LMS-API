@@ -13,6 +13,8 @@ const TrailSchema = new mongoose.Schema({
     description: { type: String, required: true, trim: true },
     mandatory: { type: Array, default: [] },
     highlighted: { type: Boolean, default: false },
+    level: { type: String, enum: ['basic', 'intermediate', 'advanced'] },
+    showcase: { tyoe: Boolean, default: false },
     thumbPath: { type: String, required: ifEnabledAndNotHighlighted },
     backgroundPath: { type: String },
     bannerPath: { type: String, required: ifEnabledAndHighlighted },
