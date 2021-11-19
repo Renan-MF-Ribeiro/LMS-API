@@ -44,6 +44,21 @@ module.exports = {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'showcase', 'getShowCaseTrailById')
         }
     },
+
+    async getOnlyShowCaseTrails (req, res) {
+        try {
+            let trails = await populateTrails(true, { showcase: true }, { createdAt: -1 })
+
+            trails = trails.map(trail => {
+                trail = processTrailAndItems(trail)
+                return prepareObject(trail)
+            })
+
+            _messages.success(res, req, trails)
+        } catch (error) {
+
+        }
+    },
 }
 
 function processTrailAndItems (trail) {
