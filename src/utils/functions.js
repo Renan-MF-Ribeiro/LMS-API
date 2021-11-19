@@ -311,12 +311,17 @@ module.exports = {
 
     processTrailTracking (trail, allTrackingUser) {
         let containsACompletedItem = false
+        let completionDate = []
         for (const item of trail.items) {
             const objTracking = allTrackingUser.filter(obj => {
                 if (String(obj.item) === String(item.itemID._id)) {
                     return true
                 }
             })[0]
+            
+            completionAt = objTracking?.completionAt
+            item.completionAt = completionAt;
+            completionDate.push(completionAt)
 
             var tmpCompletion = null
             if (objTracking) {
@@ -336,6 +341,10 @@ module.exports = {
                 containsACompletedItem = true
             }
         }
+        var mostRecentDate = new Date(Math.max.apply(null, completionDate.map(e => {
+                        return new Date(e)
+        })))
+        trail.completionAt = mostRecentDate
         trail.completion = getTrailCompletion(trail)
         return { trail, containsACompletedItem }
     },
