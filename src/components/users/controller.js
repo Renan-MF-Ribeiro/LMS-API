@@ -55,8 +55,8 @@ const jwt = require('jsonwebtoken')
 const { sendMessageToKafka } = require('../messages/business')
 
 const config = require('../../../config.json')
-const { getShowCaseTrailById } = require('../showcase/controller')
 const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadsheet
+const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail
 
 module.exports = {
     async create (req, res) {
@@ -94,18 +94,20 @@ module.exports = {
                     passwordValid: true,
                     clientUserKey: CLIENT_ID + '@@' + networkLogin,
                     groupsAD: ['PERFIL_Aluno', 'ELEGE_CURSO'],
-                    status: 'INATIVO',
+                    status: sendSignUpActivationEmail ? 'INATIVO' : 'ATIVO',
                     ...data,
                 }
 
                 const newUser = await User.create(userData)
 
-                // Hash única para ativação de usuário
-                // const emailToken = generateToken({ networkLogin })
+                if (newUser && sendSignUpActivationEmail) {
+                    const emailToken = generateToken({ networkLogin })
 
-                // const activationLink = `${process.env.DOMAIN}/#/login/ativacao?token=${emailToken}`
+                    const activationLink = `${process.env.DOMAIN}/#/login/ativacao?token=${emailToken}`
 
-                // await sendSignupActivationEmail(email, activationLink)
+                    await sendSignupActivationEmail(newUser.email, activationLink)
+                }
+
                 _messages.success(res, req, newUser)
             }
         } catch (error) {
@@ -119,7 +121,7 @@ module.exports = {
             const { token, email } = req.body
             const isUser = await bcrypt.compare(email, token)
             if (isUser) {
-                const activate = await User.updateOne({ email }, { status: 'ATIVO', enabled: true })
+                const activate = await User.updateOne({ email }, { status: 'ATIVO' })
                 _messages.success(res, req, activate)
             } else {
                 _messages.badRequest(res, req, 'Token inválido', 'O token fornecido é inválido')
