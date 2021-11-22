@@ -90,7 +90,6 @@ const ItemController = {
 
                     if (!contentPath && payload.content && (ItemModel === MediaItem || ItemModel === AudioItem)) {
                         contentPath = payload.content
-                        delete payload.content
                     }
 
                     if (payload.kind !== 'SoundcloudItem') {
@@ -112,6 +111,7 @@ const ItemController = {
 
                     delete payload.thumb
                     delete payload.banner
+                    delete payload.content
                     console.log('payload: ', payload)
                     const { _id } = await ItemModel.create(payload)
                     _messages.success(res, req, { _id })
