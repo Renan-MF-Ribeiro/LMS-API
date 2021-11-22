@@ -14,6 +14,7 @@ const SectionSchema = new mongoose.Schema({
     description: { type: String, required: true, trim: true },
     tags: { type: Array, required: true },
     default: { type: Boolean, default: false },
+    showcase: { tyoe: Boolean, default: false },
     order: { type: Number, default: 0 },
     deleted: { type: Number, default: 0 },
     active: { type: Number, default: 1 },
