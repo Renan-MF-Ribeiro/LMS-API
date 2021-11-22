@@ -90,6 +90,7 @@ const ItemController = {
 
                     if (!contentPath && payload.content && (ItemModel === MediaItem || ItemModel === AudioItem)) {
                         contentPath = payload.content
+                        delete payload.content
                     }
 
                     if (payload.kind !== 'SoundcloudItem') {
