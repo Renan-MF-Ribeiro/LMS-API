@@ -31,6 +31,7 @@ const {
     processUserAccount,
     sendAccountsToKafka,
     sendUpdatedDeviceIdToMessenger,
+    createWelcomeCampaign,
 } = require('./business')
 
 const {
@@ -52,6 +53,10 @@ const bcrypt = require('bcryptjs')
 const cryptoJS = require('crypto-js')
 const jwt = require('jsonwebtoken')
 const { sendMessageToKafka } = require('../messages/business')
+
+const config = require('../../../config.json')
+const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadsheet
+const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail
 
 module.exports = {
     async create (req, res) {
@@ -75,33 +80,34 @@ module.exports = {
     async signup (req, res) {
         try {
             var salt = bcrypt.genSaltSync(10)
-            const { birthDate, name, email, password, supplierId, area, office } = req.body
-            const user = await User.find({ email })
+            const { networkLogin, password, ...data } = req.body
+
+            const user = await User.find({ networkLogin })
+
             if (user.length !== 0) {
-                _messages.badRequest(res, req, 'Email já cadastrado', 'Já existe um usuário cadastrado com este email', 'users', 'signup')
+                _messages.badRequest(res, req, 'Usuário já cadastrado', 'Já existe um usuário cadastrado para este usuário', 'users', 'signup')
             } else {
                 const hashPassword = { hash: bcrypt.hashSync(password, salt), valid: true, createdAt: new Date(Date.now()) }
                 const userData = {
-                    birthDate,
-                    name,
-                    email,
-                    networkLogin: email,
+                    networkLogin,
                     password: hashPassword,
                     passwordValid: true,
-                    supplierId,
-                    clientUserKey: CLIENT_ID + '@@' + email,
+                    clientUserKey: CLIENT_ID + '@@' + networkLogin,
                     groupsAD: ['PERFIL_Aluno', 'ELEGE_CURSO'],
-                    status: 'INATIVO',
-                    area,
-                    office,
+                    status: sendSignUpActivationEmail ? 'INATIVO' : 'ATIVO',
+                    ...data,
                 }
+
                 const newUser = await User.create(userData)
 
-                // Hash única para ativação de usuário
-                const emailToken = await bcrypt.hash(email, 10)
+                if (newUser && sendSignUpActivationEmail) {
+                    const emailToken = generateToken({ networkLogin })
 
-                const activationLink = `${process.env.DOMAIN}/#/login/ativacao?token=${emailToken}&email=${email}`
-                await sendSignupActivationEmail(email, activationLink)
+                    const activationLink = `${process.env.DOMAIN}/#/login/ativacao?token=${emailToken}`
+
+                    await sendSignupActivationEmail(newUser.email, activationLink)
+                }
+
                 _messages.success(res, req, newUser)
             }
         } catch (error) {
@@ -115,7 +121,7 @@ module.exports = {
             const { token, email } = req.body
             const isUser = await bcrypt.compare(email, token)
             if (isUser) {
-                const activate = await User.updateOne({ email }, { status: 'ATIVO', enabled: true })
+                const activate = await User.updateOne({ email }, { status: 'ATIVO' })
                 _messages.success(res, req, activate)
             } else {
                 _messages.badRequest(res, req, 'Token inválido', 'O token fornecido é inválido')
@@ -208,7 +214,7 @@ module.exports = {
                     var key = login + ':' + password
                     key = cryptoJS.AES.encrypt(key, password).toString()
 
-                    _messages.success(res, req, { tk, key, accept: user.acceptTerms, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
+                    _messages.success(res, req, { tk, key, accept: user.acceptTerms, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
                 } else {
                     await sleep(3000)
                     _messages.forbidden(res, req, 'Usuário ou senha inválidos.', '<strong>Usuário ou senha inválidos.</strong>', 'users', 'ldapSignIn')
@@ -296,7 +302,7 @@ module.exports = {
                     var tk = tokenEncript.toString()
                     key = cryptoJS.AES.encrypt(key, '25KP76yNnhiGH9bSj').toString()
 
-                    _messages.success(res, req, { tk, key, accept: user.acceptTerms, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
+                    _messages.success(res, req, { tk, key, accept: user.acceptTerms, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
                 } else {
                     await sleep(3000)
                     _messages.forbidden(res, req, 'Usuário ou senha inválidos.', 'Usuário ou senha inválidos.', 'users', 'ldapSignIn')
@@ -466,6 +472,7 @@ module.exports = {
                 }
             }
 
+            const data_start = new Date()
             console.log(`Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`)
             for (const user of existingUsers) {
                 await User.findByIdAndUpdate(user._id, {
@@ -473,13 +480,20 @@ module.exports = {
                 })
             }
 
+            if (inactivateIfNotInSpreadsheet) {
+                await User.update({ updatedAt: { $lt: data_start } }, { $set: { status: 'INATIVO' } }, { multi: true })
+            }
+
             if (newUsers.length > 0) {
                 console.log(`Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`)
                 await User.insertMany(newUsers)
-                await sendAccountsToKafka(usersToSend)
-                const campaign = createWelcomeCampaign()
-                await sendMessageToKafka(campaign, newUsers)
-                await Message.create(campaign)
+
+                if (config.messenger.sendUsersToMicrosservice) {
+                    await sendAccountsToKafka(usersToSend)
+                    const campaign = createWelcomeCampaign()
+                    await sendMessageToKafka(campaign, newUsers)
+                    await Message.create(campaign)
+                }
             }
 
             _messages.success(res, req, 'Importado com sucesso')
@@ -849,12 +863,4 @@ module.exports = {
         }
     },
 
-}
-function createWelcomeCampaign (user) {
-    const title = `Seja bem-vindo(a) à plataforma ${process.env.PROJECT_NAME}, ${user.name}!`
-    const text = 'Venha conhecer a plataforma!'
-    const communication = ['notification']
-    const mode = 'automatic'
-    const category = 'notify'
-    return { title, text, communication, category, mode }
 }

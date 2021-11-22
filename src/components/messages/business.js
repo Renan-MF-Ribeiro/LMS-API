@@ -1,4 +1,4 @@
-const { getUsersByTrail, getUsersByGroups, getUsersByTags, getUsersByEmails } = require('../users/business')
+const { getUsersByTrail, getUsersByGroups, getUsersByTags, getUsersByIds } = require('../users/business')
 const clientid = process.env.CLIENT_ID
 const kafka = require('../../utils/kafka')
 
@@ -51,7 +51,7 @@ async function returnUsersBasedOnTarget (type, value) {
         } else if (type === 'tag') {
             users.push(...(await getUsersByTags(value.tags)))
         } else if (type === 'users') {
-            users.push(...(await getUsersByEmails(value.users)))
+            users.push(...(await getUsersByIds(value.users)))
         }
         return users
     } catch (error) {

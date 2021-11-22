@@ -241,9 +241,9 @@ module.exports = {
                                 item: item.itemID._id,
                             }).sort({ createdAt: -1 })
 
-                            item.itemID.createdAt = tracking.createdAt
+                            item.itemID.completionAt = tracking.completionAt
 
-                            const concludedAt = tracking.createdAt
+                            const concludedAt = tracking.completionAt
                             const { completion } = item
                             const { durationHours, title, thumbPath } = item.itemID
                             certs.push({ duration: durationHours, concludedAt, title, userName: user.name, thumbPath, completion })
@@ -252,7 +252,7 @@ module.exports = {
                     }
 
                     var mostRecentDate = new Date(Math.max.apply(null, trail.items.map(e => {
-                        return new Date(e.itemID.createdAt)
+                        return new Date(e.itemID.completionAt)
                     })))
 
                     if (trail && trail.completion === 1) {

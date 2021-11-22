@@ -1,6 +1,6 @@
 {
     "name": "happmobi-api",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "",
     "main": "server.js",
     "scripts": {
@@ -50,7 +50,7 @@
         "mime-types": "^2.1.24",
         "moment": "^2.24.0",
         "moment-timezone": "^0.5.26",
-        "mongoose": "^5.7.0",
+        "mongoose": "^5.13.12",
         "morgan": "^1.9.1",
         "node-cryptojs-aes": "^0.4.0",
         "nodemailer": "^6.4.2",

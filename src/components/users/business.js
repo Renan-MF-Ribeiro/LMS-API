@@ -355,9 +355,9 @@ module.exports = {
         }
     },
 
-    async getUsersByEmails (emails) {
+    async getUsersByIds (ids) {
         try {
-            const users = await User.find({ email: { $in: emails } }, ['networkLogin'])
+            const users = await User.find({ _id: { $in: ids } }, ['networkLogin'])
 
             return users
         } catch (error) {
@@ -377,6 +377,15 @@ module.exports = {
             console.log(error)
             throw error
         }
+    },
+
+    async createWelcomeCampaign () {
+        const title = `Seja bem-vindo(a) à plataforma ${process.env.PROJECT_NAME}!`
+        const text = 'Venha conhecer a plataforma!'
+        const communication = ['notification']
+        const mode = 'automatic'
+        const category = 'notify'
+        return { title, text, communication, category, mode }
     },
 
 }
