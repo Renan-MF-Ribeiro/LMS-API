@@ -58,3 +58,4 @@ docker/traefik/certs/*
 # not .keep files
 !**/.keep
 src/public/uploads
+workspace.code-workspace
