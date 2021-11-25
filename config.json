@@ -21,5 +21,8 @@
     },
     "messenger": {
         "sendUsersToMicrosservice": false
+    },
+    "showcase": {
+        "active": false
     }
 }
