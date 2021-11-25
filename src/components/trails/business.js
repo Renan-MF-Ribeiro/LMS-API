@@ -82,6 +82,7 @@ module.exports = {
                             isSequenceEnabled: trail.isSequenceEnabled,
                             items: arrItems,
                             expirationType: trail.expirationType,
+                            collaborative: trail.collaborative
                         })
                     }
                 } else {

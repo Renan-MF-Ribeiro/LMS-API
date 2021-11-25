@@ -24,6 +24,22 @@ const {
 const { Evaluation } = require('../assessments/model')
 
 module.exports = {
+
+    async getColaborativo (req, res) {
+        try {
+            await getUserByToken(req)
+            let trails = await populateTrails(true, { collaborative: true }, { createdAt: -1 })
+            trails = trails.map(trail => {
+                trail = processTrailAndItems(trail)
+                return prepareObject(trail)
+            })
+
+            _messages.success(res, req, trails)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'trails', 'create')
+        }
+    },
+
     async create (req, res) {
         try {
             const trail = await Trail.create(req.body)
@@ -712,4 +728,41 @@ module.exports = {
             _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'getCourseInformation')
         }
     },
+}
+
+function processTrailAndItems (trail) {
+    let duration = 0
+    for (const item of trail.items) {
+        duration += item.itemID.durationHours
+    }
+
+    trail.items = trail.items.map(item => {
+        return {
+            _id: item._id,
+            title: item.itemID.title,
+            description: item.itemID.description,
+            durationHours: item.itemID.durationHours,
+        }
+    })
+
+    trail.duration = duration
+
+    return trail
+}
+
+function prepareObject (trail) {
+    return {
+        _id: trail._id,
+        title: trail.title,
+        description: trail.description,
+        startDate: trail.startDate,
+        endDate: trail.endDate,
+        tags: trail.tags,
+        createdAt: trail.createdAt,
+        updatedAt: trail.updatedAt,
+        items: trail.items,
+        duration: trail.duration,
+        thumbPath: trail.thumbPath,
+        collaborative: trail.collaborative,
+    }
 }

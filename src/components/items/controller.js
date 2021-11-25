@@ -27,7 +27,9 @@ const {
 const {
     getTagsElegiblesByToken,
 } = require('../sections/business')
-
+const {
+    getUserByToken
+} = require('../../utils/functions')
 const ITEM_KINDS = Object.freeze({
     DocumentItem: DocumentItem,
     MediaItem: MediaItem,
@@ -97,6 +99,9 @@ const ItemController = {
                     delete payload.thumb
                     delete payload.content
 
+                    const user = await getUserByToken(req)
+                    payload.author = user._id
+
                     const item = await ItemModel.create(payload)
 
                     if (item._id) {
@@ -126,6 +131,7 @@ const ItemController = {
                                     value: 'ELEGE_geral',
                                 },
                             ],
+                            collaborative: item.collaborative,
                             thumbPath: thumbPath,
                             title: item.title,
                         })
