@@ -133,6 +133,7 @@ const ItemController = {
                             ],
                             collaborative: item.collaborative,
                             author: item.author,
+                            moderation: 'pending',
                             thumbPath: thumbPath,
                             title: item.title,
                         })

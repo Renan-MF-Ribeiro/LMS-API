@@ -27,8 +27,9 @@ module.exports = {
 
     async getColaborativo (req, res) {
         try {
-            await getUserByToken(req)
-            let trails = await populateTrails(true, { collaborative: true }, { createdAt: -1 })
+            const queryParams = req.query
+
+            let trails = await populateTrails(true, { collaborative: true, queryParams }, { createdAt: -1 })
             trails = trails.map(trail => {
                 trail = processTrailAndItems(trail)
                 return prepareObject(trail)
@@ -726,6 +727,21 @@ module.exports = {
             _messages.success(res, req, response)
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'getCourseInformation')
+        }
+    },
+
+    async updateModeration (req, res) {
+        try {
+            const { moderation, trailId } = req.body
+
+            if (!moderation || !trailId) {
+                _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
+            }
+            const trailUpdate = await Trail.findByIdAndUpdate(trailId, { moderation })
+
+            _messages.success(res, req, trailUpdate)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'updateModeration')
         }
     },
 }
