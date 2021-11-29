@@ -28,7 +28,7 @@ const {
     getTagsElegiblesByToken,
 } = require('../sections/business')
 const {
-    getUserByToken
+    getUserByToken,
 } = require('../../utils/functions')
 const ITEM_KINDS = Object.freeze({
     DocumentItem: DocumentItem,
@@ -132,6 +132,7 @@ const ItemController = {
                                 },
                             ],
                             collaborative: item.collaborative,
+                            author: item.author,
                             thumbPath: thumbPath,
                             title: item.title,
                         })
