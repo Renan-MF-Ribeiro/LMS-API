@@ -744,6 +744,21 @@ module.exports = {
             _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'updateModeration')
         }
     },
+
+    async saveComplaint (req, res) {
+        try {
+            const { reason, trailId } = req.body
+
+            if (!reason) {
+                _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
+            }
+            const trailUpdate = await Trail.findByIdAndUpdate(trailId, { $push: { complaints: { reason } } })
+
+            _messages.success(res, req, trailUpdate)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'updateModeration')
+        }
+    },
 }
 
 function processTrailAndItems (trail) {
