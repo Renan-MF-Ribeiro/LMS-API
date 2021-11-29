@@ -47,5 +47,6 @@ module.exports = express.Router()
     },
     _controller.ssoCallback)
     .post('/device', validateTokenRoute, _controller.updateDeviceId)
+    .get('/collaborative', validateTokenRoute, _controller.returnCollaborativeUsers)
 
 // .get('/script-users', validateTokenRoute, _controller.scriptUsers)
