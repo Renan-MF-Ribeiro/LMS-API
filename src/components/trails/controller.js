@@ -737,9 +737,9 @@ module.exports = {
             if (!moderation || !trailId) {
                 _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
             }
-            const trailUpdate = await Trail.findByIdAndUpdate(trailId, { moderation })
+            await Trail.findByIdAndUpdate(trailId, { moderation })
 
-            _messages.success(res, req, trailUpdate)
+            _messages.success(res, req, { message: 'Trilha atualizada' })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'updateModeration')
         }
@@ -752,9 +752,9 @@ module.exports = {
             if (!reason) {
                 _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
             }
-            const trailUpdate = await Trail.findByIdAndUpdate(trailId, { $push: { complaints: { reason } } })
+            await Trail.findByIdAndUpdate(trailId, { $push: { complaints: { reason } } })
 
-            _messages.success(res, req, trailUpdate)
+            _messages.success(res, req, { message: 'Trilha atualizada' })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'updateModeration')
         }

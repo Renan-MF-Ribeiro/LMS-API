@@ -26,7 +26,7 @@ const TrailSchema = new mongoose.Schema({
     bannerPath: { type: String, required: ifEnabledAndHighlighted },
     expirationType: { type: Object },
     complaints: [ComplaintSchema],
-    moderation: { type: String, enum: ['pending', 'approved', 'repproved'] },
+    moderation: { type: String, enum: ['pending', 'approved', 'disapproved'] },
     items: {
         type: [{
             itemID: { type: 'ObjectId', ref: 'Item' },
