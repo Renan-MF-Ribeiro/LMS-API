@@ -834,17 +834,6 @@ module.exports = {
         }
     },
 
-    async updateAllUsers (req, res) {
-        try {
-            await User.updateMany({}, { clientId: 2 })
-
-            res.status(200).json('Sucesso!')
-        } catch (error) {
-            console.log(error.message)
-            res.status(500).json('Erro no servidor!')
-        }
-    },
-
     async ssoCallback (req, res) {
         const email = req.samlUserObject.httpSchemasXmlsoapOrgWs200505IdentityClaimsEmailaddress
         const token = await jwt.sign({ email }, process.env.JWT_SECRET)
@@ -860,6 +849,63 @@ module.exports = {
             _messages.success(res, req, { deviceId })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'device')
+        }
+    },
+
+    async setCollaborator (req, res) {
+        try {
+            const { userId } = req.query
+
+            if (!userId) {
+                _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
+            }
+
+            const profiles = ['PERFIL_Colaborador']
+
+            await User.findByIdAndUpdate(userId, { $addToSet: { groupsAD: profiles } })
+
+            _messages.success(res, req, { message: 'Usuário adicionado ao grupo de colaboradores' })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'setCollaborator')
+        }
+    },
+
+    async toggleCollaboratorModeration (req, res) {
+        try {
+            const { userId, moderation } = req.query
+
+            if (!userId) {
+                _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
+            }
+
+            const profiles = ['PERFIL_Colaborador_Livre']
+            if (moderation === 'true') {
+                await User.findByIdAndUpdate(userId, { $pullAll: { groupsAD: profiles } })
+                _messages.success(res, req, { message: 'Usuário removido do grupo de colaboradores livres' })
+            } else {
+                await User.findByIdAndUpdate(userId, { $addToSet: { groupsAD: profiles } })
+                _messages.success(res, req, { message: 'Usuário adicionado ao grupo de colaboradores livres' })
+            }
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'setCollaborator')
+        }
+    },
+
+    async removeCollaborator (req, res) {
+        try {
+            const { userId } = req.query
+
+            if (!userId) {
+                _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
+            }
+
+            const profiles = ['PERFIL_Colaborador', 'PERFIL_Colaborador_Livre']
+
+            await User.findByIdAndUpdate(userId, { $pullAll: { groupsAD: profiles } })
+
+            _messages.success(res, req, { message: 'Usuário removido do grupo de colaboradores' })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'removeCollaborator')
         }
     },
 
