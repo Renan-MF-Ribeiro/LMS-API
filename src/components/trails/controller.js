@@ -728,6 +728,9 @@ module.exports = {
             _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'getCourseInformation')
         }
     },
+    async returnItemsByUser(req,res){
+        console.log('Aqui')
+    }
 }
 
 function processTrailAndItems (trail) {
