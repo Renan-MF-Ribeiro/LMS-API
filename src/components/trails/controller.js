@@ -729,8 +729,21 @@ module.exports = {
             _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'getCourseInformation')
         }
     },
+
     async returnItemsByUser(req,res){
-        console.log('Aqui')
+        try {
+            const { userId } = req.query
+            const userItems = []
+            let trails = await populateTrails(true, { author: { $eq: userId }})
+            for(let trail of trails){
+                trail.items.map(item =>{
+                    userItems.push(item)
+                })
+            }
+            _messages.success(res, req, {userItems})
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno do servidor')
+        }
     },
 
     async updateModeration (req, res) {
