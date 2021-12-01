@@ -730,17 +730,11 @@ module.exports = {
         }
     },
 
-    async returnItemsByUser(req,res){
+    async returnTrailsByUser(req,res){
         try {
             const { userId } = req.query
-            const userItems = []
             let trails = await populateTrails(true, { author: { $eq: userId }})
-            for(let trail of trails){
-                trail.items.map(item =>{
-                    userItems.push(item)
-                })
-            }
-            _messages.success(res, req, {userItems})
+            _messages.success(res, req, {trails})
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno do servidor')
         }
