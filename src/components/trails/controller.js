@@ -730,6 +730,16 @@ module.exports = {
         }
     },
 
+    async returnTrailsByUser(req,res){
+        try {
+            const { userId } = req.query
+            let trails = await populateTrails(true, { author: { $eq: userId }})
+            _messages.success(res, req, {trails})
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno do servidor')
+        }
+    },
+
     async updateModeration (req, res) {
         try {
             const { moderation, trailId } = req.body
