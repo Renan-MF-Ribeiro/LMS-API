@@ -852,6 +852,15 @@ module.exports = {
         }
     },
 
+    async returnCollaborativeUsers (req, res) {
+        try {
+            const collaborativeUsers = await User.find({groupsAD: {$in:['PERFIL_Colaborador']}})
+            _messages.success(res, req, {collaborativeUsers})
+        }catch(error){
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor')
+        }
+    },
+    
     async setCollaborator (req, res) {
         try {
             const { userId } = req.query
