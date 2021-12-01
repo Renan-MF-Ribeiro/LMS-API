@@ -540,7 +540,7 @@ const ItemController = {
                 contentP,
             ])
 
-            await SCORMItem.findByIdAndUpdate(_id, { contentPath: `${packageId}/index.html?SCORM=true` })
+            await SCORMItem.findByIdAndUpdate(_id, { contentPath: `${packageId}/${contentPathExplode[1]}` })
 
             res.status(httpStatus.NO_CONTENT).send()
         } catch (err) {
