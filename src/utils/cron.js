@@ -491,8 +491,8 @@ function createReleaseCampaign (trail) {
 }
 
 function createChargeCampaign (trail) {
-    const title = `A trilha ${trail.title} expirará em 5 dias!`
-    const text = 'Por favor procure concluir antes do término do prazo!'
+    const title = `Ei, faltam 5 dias para você concluir a trilha ${trail.title}!`
+    const text = `Você ainda não completou a trilha ${trail.title}! O prazo para a conclusão é até o dia ${trail.expirationDate}. Por favor, clique para visualizar!`
     const communication = ['notification']
     const category = 'charge'
     const mode = 'automatic'
