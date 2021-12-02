@@ -46,9 +46,9 @@ module.exports = express.Router()
     },
     _controller.ssoCallback)
     .post('/device', validateTokenRoute, _controller.updateDeviceId)
-    .get('/collaboration/list', validateTokenRoute, _controller.returnCollaborativeUsers)
-    .put('/collaboration/apply', isAdmin, _controller.setCollaborator)
-    .put('/collaboration/remove', isAdmin, _controller.removeCollaborator)
-    .put('/collaboration/moderation', isAdmin, _controller.toggleCollaboratorModeration)
+    .get('/collaboration/list', validateTokenRoute, isAdmin, _controller.returnCollaborativeUsers)
+    .put('/collaboration/apply', validateTokenRoute, isAdmin, _controller.setCollaborator)
+    .put('/collaboration/remove', validateTokenRoute, isAdmin, _controller.removeCollaborator)
+    .put('/collaboration/moderation', validateTokenRoute, isAdmin, _controller.toggleCollaboratorModeration)
 
 // .get('/script-users', validateTokenRoute, _controller.scriptUsers)

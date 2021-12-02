@@ -4,6 +4,7 @@ const _controller = require('./controller')
 const {
     isStudent,
     isAccountant,
+    isAdmin,
 } = require('../../utils/middlewares')
 
 module.exports = express.Router()
@@ -24,7 +25,7 @@ module.exports = express.Router()
     .post('/mandatory', _controller.mandatory)
     .get('/xapi', _controller.xapi)
     .get('/course-information/:trailId/:itemId', _controller.getCourseInformation)
-    .get('/collaboration/user/trails',_controller.returnTrailsByUser)
-    .get('/collaboration/', isAccountant, _controller.getColaborativo)
-    .put('/collaboration/moderate', _controller.updateModeration)
-    .post('/collaboration/report', _controller.saveComplaint)
+    .get('/collaboration/user/trails', isAdmin, _controller.returnTrailsByUser)
+    .get('/collaboration', isAccountant, _controller.getColaborativo)
+    .put('/collaboration/moderate', isAdmin, _controller.updateModeration)
+    .post('/collaboration/report', isAdmin, _controller.saveComplaint)

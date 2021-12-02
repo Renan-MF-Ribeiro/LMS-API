@@ -29,13 +29,13 @@ module.exports = {
         try {
             const queryParams = req.query
 
-            let trails = await populateTrails(true, { collaborative: true, queryParams }, { createdAt: -1 })
-            trails = trails.map(trail => {
-                trail = processTrailAndItems(trail)
-                return prepareObject(trail)
-            })
+            const { skip, limit } = pagination(req)
 
-            _messages.success(res, req, trails)
+            const total = await Trail.countDocuments({ collaborative: true, queryParams })
+
+            const trails = await populateTrails(true, { collaborative: true, queryParams }, { createdAt: -1 }, skip, limit)
+
+            _messages.success(res, req, { trails, total })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'trails', 'create')
         }
@@ -730,11 +730,11 @@ module.exports = {
         }
     },
 
-    async returnTrailsByUser(req,res){
+    async returnTrailsByUser (req, res) {
         try {
             const { userId } = req.query
-            let trails = await populateTrails(true, { author: { $eq: userId }})
-            _messages.success(res, req, {trails})
+            const trails = await populateTrails(true, { author: { $eq: userId } })
+            _messages.success(res, req, { trails })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno do servidor')
         }
