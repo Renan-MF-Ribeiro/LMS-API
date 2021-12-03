@@ -25,7 +25,7 @@ const { Evaluation } = require('../assessments/model')
 
 module.exports = {
 
-    async getColaborativo(req, res) {
+    async getColaborativo (req, res) {
         try {
             const queryParams = req.query
 
@@ -33,7 +33,9 @@ module.exports = {
 
             const total = await Trail.countDocuments({ collaborative: true, queryParams })
 
-            const trails = await populateTrails(true, { collaborative: true, queryParams }, { createdAt: -1 }, skip, limit)
+            const searchObj = { collaborative: true, ...queryParams }
+
+            const trails = await populateTrails(true, searchObj, { createdAt: -1 }, skip, limit)
 
             _messages.success(res, req, { trails, total })
         } catch (error) {
@@ -41,7 +43,7 @@ module.exports = {
         }
     },
 
-    async create(req, res) {
+    async create (req, res) {
         try {
             const trail = await Trail.create(req.body)
             _messages.success(res, req, { _id: trail._id }, 'Criação de dados', 'trails', 'create', trail, [], true, 'CREATE')
@@ -50,7 +52,7 @@ module.exports = {
         }
     },
 
-    async findById(req, res) {
+    async findById (req, res) {
         try {
             const _id = req.params.trailId
             const trail = await Trail
@@ -61,7 +63,7 @@ module.exports = {
         }
     },
 
-    async multiUploadCreate(req, res) {
+    async multiUploadCreate (req, res) {
         try {
             const { thumb, banner, background } = req.files
 
@@ -122,7 +124,7 @@ module.exports = {
         }
     },
 
-    async changeStatus(req, res) {
+    async changeStatus (req, res) {
         try {
             const { _id, enabled } = req.body
 
@@ -143,7 +145,7 @@ module.exports = {
         }
     },
 
-    async changeShowcase(req, res) {
+    async changeShowcase (req, res) {
         try {
             const { _id, showcase } = req.body
 
@@ -164,7 +166,7 @@ module.exports = {
         }
     },
 
-    async update(req, res) {
+    async update (req, res) {
         try {
             const { thumb, banner, background } = req.files
             const { _id } = JSON.parse(req.fields.payload)
@@ -243,7 +245,7 @@ module.exports = {
         }
     },
 
-    async linkItems(req, res) {
+    async linkItems (req, res) {
         try {
             let exist = false
             const { idItem, idTrail } = req.body
@@ -280,7 +282,7 @@ module.exports = {
         }
     },
 
-    async findAll(req, res) {
+    async findAll (req, res) {
         try {
             const { skip, limit } = pagination(req)
             const { order, sort } = ordernation(req)
@@ -307,7 +309,7 @@ module.exports = {
         }
     },
 
-    async returnItemsByTrail(req, res) {
+    async returnItemsByTrail (req, res) {
         try {
             const { skip, limit } = pagination(req)
             const { order, sort } = ordernation(req)
@@ -370,7 +372,7 @@ module.exports = {
         }
     },
 
-    async returnItemsByTrailMenu(req, res) {
+    async returnItemsByTrailMenu (req, res) {
         try {
             const { id } = req.params
             const user = await getUserByToken(req)
@@ -421,7 +423,7 @@ module.exports = {
         }
     },
 
-    async unlinkItems(req, res) {
+    async unlinkItems (req, res) {
         try {
             const { idItem, idTrail } = req.body
             const { items } = await Trail.findOne({
@@ -447,7 +449,7 @@ module.exports = {
         }
     },
 
-    async changeItemOrderFromTrail(req, res) {
+    async changeItemOrderFromTrail (req, res) {
         try {
             const { idTrail, itemsInOrder } = req.body
 
@@ -486,7 +488,7 @@ module.exports = {
         }
     },
 
-    async returnBannersElegibles_new(req, res) {
+    async returnBannersElegibles_new (req, res) {
         // # Nova versão para retornar banner, para melhorar a performance
         try {
             var dtInicio = new Date()
@@ -521,9 +523,9 @@ module.exports = {
                 ],
                 'items.itemID': { $in: arrItemsID },
             },
-                { createdAt: 'desc' },
-                false,
-                { highlighted: true },
+            { createdAt: 'desc' },
+            false,
+            { highlighted: true },
             )
 
             // console.log('trilhas ' + trails.length)
@@ -554,7 +556,7 @@ module.exports = {
         }
     },
 
-    async returnBannersElegibles(req, res) {
+    async returnBannersElegibles (req, res) {
         try {
             var dtInicio = new Date()
 
@@ -575,9 +577,9 @@ module.exports = {
                 ],
 
             },
-                { createdAt: 'desc' },
-                false,
-                { highlighted: true },
+            { createdAt: 'desc' },
+            false,
+            { highlighted: true },
             )
 
             for (const trail of trails) {
@@ -603,7 +605,7 @@ module.exports = {
         }
     },
 
-    async returnTrailsByIDS(req, res) {
+    async returnTrailsByIDS (req, res) {
         try {
             const { trailsIDS } = req.body
             const arrTrails = []
@@ -619,7 +621,7 @@ module.exports = {
         }
     },
 
-    async returnLinkTrailByItem(idItem) {
+    async returnLinkTrailByItem (idItem) {
         return new Promise(async (resolve, reject) => {
             try {
                 const trails = await Trail.find({ 'items.itemID': idItem })
@@ -639,7 +641,7 @@ module.exports = {
         })
     },
 
-    async mandatory(req, res) {
+    async mandatory (req, res) {
         try {
             const { idTrail, idItem, mandatory } = req.body
             const trail = await Trail.findById(idTrail)
@@ -670,7 +672,7 @@ module.exports = {
         }
     },
 
-    async xapi(req, res) {
+    async xapi (req, res) {
         try {
             const trails = await Trail.find()
 
@@ -707,7 +709,7 @@ module.exports = {
      * @param {*} req Request
      * @param {*} res Response
      */
-    async getCourseInformation(req, res) {
+    async getCourseInformation (req, res) {
         try {
             const trailId = req.params.trailId
             const itemId = req.params.itemId
@@ -730,7 +732,7 @@ module.exports = {
         }
     },
 
-    async returnTrailsByUser(req, res) {
+    async returnTrailsByUser (req, res) {
         try {
             const { userId } = req.query
             const trails = await populateTrails(true, { author: { $eq: userId } })
@@ -740,7 +742,7 @@ module.exports = {
         }
     },
 
-    async updateModeration(req, res) {
+    async updateModeration (req, res) {
         try {
             const { moderation, trailId } = req.body
 
@@ -755,7 +757,7 @@ module.exports = {
         }
     },
 
-    async saveComplaint(req, res) {
+    async saveComplaint (req, res) {
         try {
             const { reason, trailId } = req.body
 
@@ -771,7 +773,7 @@ module.exports = {
     },
 }
 
-function processTrailAndItems(trail) {
+function processTrailAndItems (trail) {
     let duration = 0
     for (const item of trail.items) {
         duration += item.itemID.durationHours
@@ -791,7 +793,7 @@ function processTrailAndItems(trail) {
     return trail
 }
 
-function prepareObject(trail) {
+function prepareObject (trail) {
     return {
         _id: trail._id,
         title: trail.title,
