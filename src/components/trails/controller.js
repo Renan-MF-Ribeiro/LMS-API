@@ -30,10 +30,9 @@ module.exports = {
             const queryParams = req.query
 
             const { skip, limit } = pagination(req)
-
-            const total = await Trail.countDocuments({ collaborative: true, queryParams })
-
             const searchObj = { collaborative: true, ...queryParams }
+
+            const total = await Trail.countDocuments(searchObj)
 
             const trails = await populateTrails(true, searchObj, { createdAt: -1 }, skip, limit)
 
