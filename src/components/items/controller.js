@@ -112,6 +112,7 @@ const ItemController = {
 
                     delete payload.thumb
                     delete payload.banner
+                    delete payload.content
                     console.log('payload: ', payload)
                     const { _id } = await ItemModel.create(payload)
                     _messages.success(res, req, { _id })
@@ -539,7 +540,7 @@ const ItemController = {
                 contentP,
             ])
 
-            await SCORMItem.findByIdAndUpdate(_id, { contentPath: `${packageId}/index.html?SCORM=true` })
+            await SCORMItem.findByIdAndUpdate(_id, { contentPath: `${packageId}/${contentPathExplode[1]}` })
 
             res.status(httpStatus.NO_CONTENT).send()
         } catch (err) {

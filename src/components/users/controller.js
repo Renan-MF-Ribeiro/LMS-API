@@ -1,6 +1,6 @@
 /* eslint-disable handle-callback-err */
 require('dotenv').config()
-const { CLIENT_ID, DOMAIN, AZURE_BLOB_URL } = process.env
+const { CLIENT_ID, DOMAIN, AZURE_BLOB_URL, NODE_ENV } = process.env
 const _messages = require('../../utils/messages')
 const _files = require('../../utils/files')
 const { Message } = require('../messages/model')
@@ -573,7 +573,9 @@ module.exports = {
             const file = req.files.file
             // const photoPath = await _files.awsAmazon(file, `photos/${user._id}`)
             let photoPath = await _files.azureBlob(file, `photos/${user._id}`)
-            photoPath = photoPath.replace(AZURE_BLOB_URL, DOMAIN)
+            if(NODE_ENV != "local"){
+                photoPath = photoPath.replace(AZURE_BLOB_URL, DOMAIN)
+            }
             await User.findByIdAndUpdate(user._id, { profilePhoto: photoPath })
             _messages.success(res, req, photoPath)
         } catch (error) {
