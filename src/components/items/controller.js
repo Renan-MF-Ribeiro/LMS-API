@@ -51,7 +51,7 @@ const ItemController = {
                 payload = JSON.parse(req.fields.payload)
             } catch { }
         }
-
+      
         const flag = _functions.checksIfTheEndDateIsLessThanTheStartDate(payload.startDate, payload.endDate)
         if (!flag) {
             _messages.badRequest(res, req, 'A data final não pode ser menor que a data inicial!', 'A data final não pode ser menor que a data inicial!', 'items', '')
@@ -95,6 +95,7 @@ const ItemController = {
                             thumbPath: thumbPath || undefined,
                         }
                     }
+                    console.log(payload,thumb)
 
                     delete payload.thumb
                     delete payload.content
@@ -144,13 +145,13 @@ const ItemController = {
                     if (error.name === 'ValidationError') {
                         const messages = {}
                         for (const k in error.errors) messages[k] = error.errors[k].message
-                        _messages.badRequest(res, req, error, { name: error.name, messages }, 'items', 'multiUploadCreate')
+                        _messages.badRequest(res, req, error, { name: error.name, messages }, 'items', 'itemColaborativo')
                     } else {
-                        _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'items', 'multiUploadCreate')
+                        _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'items', 'itemColaborativo')
                     }
                 }
             } else {
-                _messages.badRequest(res, req, 'Já existe um item com esse título!', 'Já existe um item com esse título!', 'items', 'multiUploadCreate')
+                _messages.badRequest(res, req, 'Já existe um item com esse título!', 'Já existe um item com esse título!', 'items', 'itemColaborativo')
             }
         }
     },

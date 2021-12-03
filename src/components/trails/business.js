@@ -82,7 +82,8 @@ module.exports = {
                             isSequenceEnabled: trail.isSequenceEnabled,
                             items: arrItems,
                             expirationType: trail.expirationType,
-                            collaborative: trail.collaborative
+                            collaborative: trail.collaborative,
+                            moderation: trail.moderation
                         })
                     }
                 } else {
@@ -119,7 +120,8 @@ module.exports = {
                             isSequenceEnabled: trail.isSequenceEnabled,
                             items: arrItems,
                             expirationType: trail.expirationType,
-
+                            collaborative: trail.collaborative,
+                            moderation: trail.moderation
                         })
                     }
                 }
