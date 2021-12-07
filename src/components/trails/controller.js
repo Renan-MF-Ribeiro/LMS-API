@@ -25,7 +25,24 @@ const { Evaluation } = require('../assessments/model')
 
 module.exports = {
 
-    async getColaborativo (req, res) {
+    async getCollaborative (req, res) {
+        try {
+            const queryParams = req.query
+
+            const { skip, limit } = pagination(req)
+            const searchObj = { collaborative: true, ...queryParams }
+
+            const total = await Trail.countDocuments(searchObj)
+
+            const trails = await populateTrails(true, searchObj, { createdAt: -1 }, skip, limit)
+
+            _messages.success(res, req, { trails, total })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'trails', 'getColaborativo')
+        }
+    },
+
+    async getCollaborativeChannel (req, res) {
         try {
             const queryParams = req.query
 
