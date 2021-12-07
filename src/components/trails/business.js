@@ -83,7 +83,8 @@ module.exports = {
                             items: arrItems,
                             expirationType: trail.expirationType,
                             collaborative: trail.collaborative,
-                            moderation: trail.moderation
+                            moderation: trail.moderation,
+                            complaints: trail.complaints,
                         })
                     }
                 } else {
@@ -121,7 +122,8 @@ module.exports = {
                             items: arrItems,
                             expirationType: trail.expirationType,
                             collaborative: trail.collaborative,
-                            moderation: trail.moderation
+                            moderation: trail.moderation,
+                            complaints: trail.complaints,
                         })
                     }
                 }
