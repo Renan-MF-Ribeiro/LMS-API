@@ -863,8 +863,7 @@ module.exports = {
 
     async setCollaborator (req, res) {
         try {
-            const { userId } = req.query
-
+            const { userId } = req.body
             if (!userId) {
                 _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
             }
