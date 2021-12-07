@@ -780,7 +780,8 @@ module.exports = {
             if (!reason) {
                 _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
             }
-            await Trail.findByIdAndUpdate(trailId, { $push: { complaints: { reason } } })
+
+            await Trail.findByIdAndUpdate(trailId, { $push: { complaints: { reason } }, moderation: 'denounced' })
 
             _messages.success(res, req, { message: 'Trilha atualizada' })
         } catch (error) {
