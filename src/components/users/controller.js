@@ -880,7 +880,7 @@ module.exports = {
 
     async toggleCollaboratorModeration (req, res) {
         try {
-            const { userId, moderation } = req.query
+            const { userId, moderation } = req.body
 
             if (!userId) {
                 _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
