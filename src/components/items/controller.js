@@ -51,7 +51,7 @@ const ItemController = {
                 payload = JSON.parse(req.fields.payload)
             } catch { }
         }
-      
+
         const flag = _functions.checksIfTheEndDateIsLessThanTheStartDate(payload.startDate, payload.endDate)
         if (!flag) {
             _messages.badRequest(res, req, 'A data final não pode ser menor que a data inicial!', 'A data final não pode ser menor que a data inicial!', 'items', '')
@@ -95,7 +95,7 @@ const ItemController = {
                             thumbPath: thumbPath || undefined,
                         }
                     }
-                    console.log(payload,thumb)
+                    console.log(payload, thumb)
 
                     delete payload.thumb
                     delete payload.content
@@ -134,7 +134,7 @@ const ItemController = {
                             ],
                             collaborative: item.collaborative,
                             author: item.author,
-                            moderation: 'pending',
+                            moderation: user.groupsAD.includes('PERFIL_Colaborador_Livre') ? 'approved' : 'pending',
                             thumbPath: thumbPath,
                             title: item.title,
                         })
