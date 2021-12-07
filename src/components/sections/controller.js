@@ -188,6 +188,7 @@ module.exports = {
                 const filter = req.query
                 let trails = await populateTrails(true, {
                     enabled: true,
+                    collaborative: false,
                     tags: {
                         $in: tags,
                     },
