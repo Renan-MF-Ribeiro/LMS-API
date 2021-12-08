@@ -28,7 +28,7 @@ module.exports = {
             for (let i = 0; i < messages.length; i += chunk) {
                 const temporary = messages.slice(i, i + chunk)
                 await producer.send({
-                    topic: 'messenger',
+                    topic: process.env.TOPIC_DEVICER,
                     messages: temporary,
                 })
             }

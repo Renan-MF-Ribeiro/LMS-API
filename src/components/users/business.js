@@ -299,7 +299,7 @@ module.exports = {
             const producer = kafka.producer()
             await producer.connect()
 
-            await producer.send({ topic: 'accounter', messages: accounts })
+            await producer.send({ topic: process.env.TOPIC_ACC, messages: accounts })
 
             await producer.disconnect()
         } catch (error) {
@@ -370,7 +370,7 @@ module.exports = {
             const producer = kafka.producer()
             await producer.connect()
             const obj = JSON.stringify({ device, identifier })
-            await producer.send({ topic: 'devicer', messages: [{ value: obj }] })
+            await producer.send({ topic: process.env.TOPIC_DEVICER, messages: [{ value: obj }] })
 
             await producer.disconnect()
         } catch (error) {
