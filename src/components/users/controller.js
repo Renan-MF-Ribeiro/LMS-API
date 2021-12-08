@@ -863,12 +863,12 @@ module.exports = {
 
     async setCollaborator (req, res) {
         try {
-            const { userId } = req.body
-            if (!userId) {
+            const { userId, moderation } = req.body
+            if (!userId || !moderation) {
                 _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
             }
 
-            const profiles = ['PERFIL_Colaborador']
+            const profiles = moderation ? ['PERFIL_Colaborador_Livre', 'PERFIL_Colaborador'] : ['PERFIL_Colaborador']
 
             await User.findByIdAndUpdate(userId, { $addToSet: { groupsAD: profiles } })
 
