@@ -2,7 +2,7 @@ require('dotenv').config()
 const { TINCAN_OWNER, DOMAIN, AZURE_BLOB_URL } = process.env
 const _messages = require('../../utils/messages')
 const { awsAmazon, azureBlob } = require('../../utils/files')
-const { isSCORMCompleted } = require('../../utils/functions')
+const { isSCORMCompleted, processExpirationDate, processTrailTracking } = require('../../utils/functions')
 const { Trail } = require('./model')
 const { Item } = require('../items/model')
 const { populateTrails } = require('../trails/business')
@@ -22,6 +22,9 @@ const {
 } = require('./business')
 
 const { Evaluation } = require('../assessments/model')
+const { User } = require('../users/model')
+const { Message } = require('../messages/model')
+const { sendMessageToKafka } = require('../messages/business')
 
 module.exports = {
 
@@ -44,6 +47,7 @@ module.exports = {
 
     async getCollaborativeChannel (req, res) {
         try {
+            const user = getUserByToken(req)
             const queryParams = req.query
 
             const { skip, limit } = pagination(req)
@@ -52,6 +56,20 @@ module.exports = {
             const total = await Trail.countDocuments(searchObj)
 
             const trails = await populateTrails(true, searchObj, { createdAt: -1 }, skip, limit)
+
+            const allTrackingUser = await Tracking.find({
+                userLogin: { $eq: user.networkLogin },
+            })
+
+            for (let trail of trails) {
+                const processedTrail = processTrailTracking(trail, allTrackingUser)
+
+                if (trail.expirationType) {
+                    trail = processExpirationDate(trail, user)
+                }
+
+                trail = processedTrail.trail
+            }
 
             _messages.success(res, req, { trails, total })
         } catch (error) {
@@ -765,7 +783,15 @@ module.exports = {
             if (!moderation || !trailId) {
                 _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
             }
-            await Trail.findByIdAndUpdate(trailId, { moderation })
+            const trail = await Trail.findByIdAndUpdate(trailId, { moderation }, { new: true })
+
+            const user = await User.findById(trail.author)
+
+            if (moderation === 'approved' || moderation === 'disapproved') {
+                const campaign = createModerationAlert(trail, moderation === 'approved' ? 'aprovado' : 'recusado')
+                await Message.create(campaign)
+                sendMessageToKafka(campaign, [user])
+            }
 
             _messages.success(res, req, { message: 'Trilha atualizada' })
         } catch (error) {
@@ -825,4 +851,14 @@ function prepareObject (trail) {
         thumbPath: trail.thumbPath,
         collaborative: trail.collaborative,
     }
+}
+
+function createModerationAlert (trail, verb) {
+    const title = `O conteúdo ${trail.title} foi ${verb}!`
+    const text = `Seu conteúdo ${trail.title} acabou de ser ${verb} por um moderador!`
+    const communication = ['notification']
+    const mode = 'automatic'
+    const category = 'launch'
+    const target = { trailid: trail._id, url: `${process.env.DOMAIN}/#/login/entrar?redirectTo=/menu/${trail._id}` }
+    return { title, text, communication, category, target, mode }
 }
