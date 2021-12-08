@@ -887,7 +887,7 @@ module.exports = {
             }
 
             const profiles = ['PERFIL_Colaborador_Livre']
-            if (moderation) {
+            if (!moderation) {
                 await User.findByIdAndUpdate(userId, { $pullAll: { groupsAD: profiles } })
                 _messages.success(res, req, { message: 'Usuário removido do grupo de colaboradores livres' })
             } else {
