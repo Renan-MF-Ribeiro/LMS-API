@@ -24,6 +24,41 @@ const {
 const { Evaluation } = require('../assessments/model')
 
 module.exports = {
+
+    async getCollaborative (req, res) {
+        try {
+            const queryParams = req.query
+
+            const { skip, limit } = pagination(req)
+            const searchObj = { collaborative: true, ...queryParams }
+
+            const total = await Trail.countDocuments(searchObj)
+
+            const trails = await populateTrails(true, searchObj, { createdAt: -1 }, skip, limit)
+
+            _messages.success(res, req, { trails, total })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'trails', 'getColaborativo')
+        }
+    },
+
+    async getCollaborativeChannel (req, res) {
+        try {
+            const queryParams = req.query
+
+            const { skip, limit } = pagination(req)
+            const searchObj = { collaborative: true, ...queryParams, enabled: true }
+
+            const total = await Trail.countDocuments(searchObj)
+
+            const trails = await populateTrails(true, searchObj, { createdAt: -1 }, skip, limit)
+
+            _messages.success(res, req, { trails, total })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'trails', 'getColaborativo')
+        }
+    },
+
     async create (req, res) {
         try {
             const trail = await Trail.create(req.body)
@@ -712,4 +747,82 @@ module.exports = {
             _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'getCourseInformation')
         }
     },
+
+    async returnTrailsByUser (req, res) {
+        try {
+            const { userId } = req.query
+            const trails = await populateTrails(true, { author: { $eq: userId } })
+            _messages.success(res, req, { trails })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno do servidor')
+        }
+    },
+
+    async updateModeration (req, res) {
+        try {
+            const { moderation, trailId } = req.body
+
+            if (!moderation || !trailId) {
+                _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
+            }
+            await Trail.findByIdAndUpdate(trailId, { moderation })
+
+            _messages.success(res, req, { message: 'Trilha atualizada' })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'updateModeration')
+        }
+    },
+
+    async saveComplaint (req, res) {
+        try {
+            const { reason, trailId } = req.body
+
+            if (!reason) {
+                _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
+            }
+
+            await Trail.findByIdAndUpdate(trailId, { $push: { complaints: { reason } }, moderation: 'denounced' })
+
+            _messages.success(res, req, { message: 'Trilha atualizada' })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'updateModeration')
+        }
+    },
+}
+
+function processTrailAndItems (trail) {
+    let duration = 0
+    for (const item of trail.items) {
+        duration += item.itemID.durationHours
+    }
+
+    trail.items = trail.items.map(item => {
+        return {
+            _id: item._id,
+            title: item.itemID.title,
+            description: item.itemID.description,
+            durationHours: item.itemID.durationHours,
+        }
+    })
+
+    trail.duration = duration
+
+    return trail
+}
+
+function prepareObject (trail) {
+    return {
+        _id: trail._id,
+        title: trail.title,
+        description: trail.description,
+        startDate: trail.startDate,
+        endDate: trail.endDate,
+        tags: trail.tags,
+        createdAt: trail.createdAt,
+        updatedAt: trail.updatedAt,
+        items: trail.items,
+        duration: trail.duration,
+        thumbPath: trail.thumbPath,
+        collaborative: trail.collaborative,
+    }
 }

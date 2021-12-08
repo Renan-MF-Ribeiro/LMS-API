@@ -24,7 +24,8 @@ module.exports = {
 
     async getLast (req, res) {
         try {
-            const termsOfUse = await TermsOfUse.find().sort({ _id: -1 }).limit(1)
+            const { category } = req.query
+            const termsOfUse = await TermsOfUse.find({ category }).sort({ _id: -1 }).limit(1)
             _messages.success(res, req, termsOfUse[0])
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'supplier', 'deleteAll')

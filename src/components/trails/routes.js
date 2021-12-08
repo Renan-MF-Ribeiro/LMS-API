@@ -4,6 +4,7 @@ const _controller = require('./controller')
 const {
     isStudent,
     isAccountant,
+    isAdmin,
 } = require('../../utils/middlewares')
 
 module.exports = express.Router()
@@ -19,6 +20,11 @@ module.exports = express.Router()
     .get('/banners-elegibles', isStudent, _controller.returnBannersElegibles)
     .get('/items/:id', isStudent, _controller.returnItemsByTrail)
     .get('/menu/:id', isStudent, _controller.returnItemsByTrailMenu)
+    .get('/collaboration', isAdmin, _controller.getCollaborative)
+    .get('/collaboration/channel', isAccountant, _controller.getCollaborativeChannel)
+    .get('/collaboration/user/trails', isAdmin, _controller.returnTrailsByUser)
+    .put('/collaboration/moderate', isAdmin, _controller.updateModeration)
+    .post('/collaboration/report', isAccountant, _controller.saveComplaint)
     .get('/:trailId', isAccountant, _controller.findById)
     .post('/list', _controller.returnTrailsByIDS)
     .post('/mandatory', _controller.mandatory)

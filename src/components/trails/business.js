@@ -82,6 +82,9 @@ module.exports = {
                             isSequenceEnabled: trail.isSequenceEnabled,
                             items: arrItems,
                             expirationType: trail.expirationType,
+                            collaborative: trail.collaborative,
+                            moderation: trail.moderation,
+                            complaints: trail.complaints,
                         })
                     }
                 } else {
@@ -118,7 +121,9 @@ module.exports = {
                             isSequenceEnabled: trail.isSequenceEnabled,
                             items: arrItems,
                             expirationType: trail.expirationType,
-
+                            collaborative: trail.collaborative,
+                            moderation: trail.moderation,
+                            complaints: trail.complaints,
                         })
                     }
                 }

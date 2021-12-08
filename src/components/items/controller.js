@@ -27,7 +27,9 @@ const {
 const {
     getTagsElegiblesByToken,
 } = require('../sections/business')
-
+const {
+    getUserByToken,
+} = require('../../utils/functions')
 const ITEM_KINDS = Object.freeze({
     DocumentItem: DocumentItem,
     MediaItem: MediaItem,
@@ -38,6 +40,122 @@ const ITEM_KINDS = Object.freeze({
 })
 
 const ItemController = {
+
+    async itemColaborativo (req, res) {
+        if (!req.is('multipart/form-data')) {
+            return res.status(httpStatus.NOT_ACCEPTABLE).send()
+        }
+        let payload = {}
+        if (req.fields.payload) {
+            try {
+                payload = JSON.parse(req.fields.payload)
+            } catch { }
+        }
+
+        const flag = _functions.checksIfTheEndDateIsLessThanTheStartDate(payload.startDate, payload.endDate)
+        if (!flag) {
+            _messages.badRequest(res, req, 'A data final não pode ser menor que a data inicial!', 'A data final não pode ser menor que a data inicial!', 'items', '')
+        } else {
+            const verify = await Item
+                .find({
+                    title: { $eq: payload.title },
+                })
+            if (verify.length === 0) {
+                const ItemModel = ITEM_KINDS[req.body.kind || payload.kind] || Item
+
+                try {
+                    const { thumb, content } = req.files
+                    let thumbPath
+                    let contentPath
+
+                    if (thumb) {
+                        thumbPath = await azureBlob(thumb, 'items/thumbs')
+                        thumbPath = process.env.NODE_ENV === 'local' ? thumbPath : thumbPath.replace(AZURE_BLOB_URL, DOMAIN)
+                    }
+                    if (content) {
+                        contentPath = await azureBlob(content, 'items/content')
+                        contentPath = process.env.NODE_ENV === 'local' ? contentPath : contentPath.replace(AZURE_BLOB_URL, DOMAIN)
+                    }
+
+                    if (!contentPath && payload.content && (ItemModel === MediaItem || ItemModel === AudioItem || ItemModel === DocumentItem)) {
+                        contentPath = payload.content
+                    }
+
+                    if (payload.kind !== 'SoundcloudItem') {
+                        payload = {
+                            ...payload,
+                            enabled: true,
+                            thumbPath: thumbPath || undefined,
+                            contentPath: contentPath || undefined,
+                        }
+                    } else {
+                        payload = {
+                            ...payload,
+                            enabled: true,
+                            thumbPath: thumbPath || undefined,
+                        }
+                    }
+                    console.log(payload, thumb)
+
+                    delete payload.thumb
+                    delete payload.content
+
+                    const user = await getUserByToken(req)
+                    payload.author = user._id
+
+                    const item = await ItemModel.create(payload)
+
+                    if (item._id) {
+                        await Trail.create({
+                            backgroundPath: null,
+                            bannerPath: null,
+                            completion: null,
+                            description: item.description,
+                            enabled: true,
+                            endDate: item.endDate,
+                            highlighted: false,
+                            isSequenceEnabled: false,
+                            items: [
+                                {
+                                    itemID: item._id,
+                                    urlItem: item._item,
+                                    urlTrail: item._,
+                                    mandatory: false,
+                                },
+                            ],
+                            items_new: [],
+                            mandatory: [],
+                            startDate: item.startDate,
+                            tags: [
+                                {
+                                    display: 'ELEGE_geral',
+                                    value: 'ELEGE_geral',
+                                },
+                            ],
+                            collaborative: item.collaborative,
+                            author: item.author,
+                            moderation: user.groupsAD.includes('PERFIL_Colaborador_Livre') ? 'approved' : 'pending',
+                            thumbPath: thumbPath,
+                            title: item.title,
+                        })
+                    }
+                    _messages.success(res, req, item._id)
+                } catch (error) {
+                    console.log(error)
+                    if (error.name === 'ValidationError') {
+                        const messages = {}
+                        for (const k in error.errors) messages[k] = error.errors[k].message
+                        _messages.badRequest(res, req, error, { name: error.name, messages }, 'items', 'itemColaborativo')
+                    } else {
+                        _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'items', 'itemColaborativo')
+                    }
+                }
+            } else {
+                _messages.badRequest(res, req, 'Já existe um item com esse título!', 'Já existe um item com esse título!', 'items', 'itemColaborativo')
+            }
+        }
+    },
+
     async create (req, res) {
         const ItemModel = ITEM_KINDS[req.body.kind] || Item
 
