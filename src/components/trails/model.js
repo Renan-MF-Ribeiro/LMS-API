@@ -7,6 +7,10 @@ connect()
 function ifEnabledAndHighlighted () { return this.enabled && this.highlighted }
 function ifEnabledAndNotHighlighted () { return this.enabled && !this.highlighted }
 
+const ComplaintSchema = new mongoose.Schema({
+    reason: { type: String },
+}, { timestamps: true })
+
 const TrailSchema = new mongoose.Schema({
     enabled: { type: Boolean, default: false },
     title: { type: String, required: true, trim: true },
@@ -14,11 +18,15 @@ const TrailSchema = new mongoose.Schema({
     mandatory: { type: Array, default: [] },
     highlighted: { type: Boolean, default: false },
     level: { type: String, enum: ['basic', 'intermediate', 'advanced'] },
-    showcase: { tyoe: Boolean, default: false },
+    showcase: { type: Boolean, default: false },
+    collaborative: { type: Boolean, default: false },
+    author: { type: 'ObjectId', ref: 'users', required: true },
     thumbPath: { type: String, required: ifEnabledAndNotHighlighted },
     backgroundPath: { type: String },
     bannerPath: { type: String, required: ifEnabledAndHighlighted },
     expirationType: { type: Object },
+    complaints: [ComplaintSchema],
+    moderation: { type: String, enum: ['pending', 'approved', 'disapproved', 'denounced'] },
     items: {
         type: [{
             itemID: { type: 'ObjectId', ref: 'Item' },

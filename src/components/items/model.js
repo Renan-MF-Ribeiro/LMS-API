@@ -38,6 +38,8 @@ const ItemSchema = new mongoose.Schema({
     deleted: { type: Number, default: 0 },
     completion: { type: Number, default: null },
     descriptionEvaluation: { type: String },
+    author: { type: 'ObjectId', ref: 'users', required: true },
+    collaborative: { type: Boolean, default: false },
     mobile: { type: Number, default: 1 },
     certificate: { type: Number, default: 0 },
     bannerPath: { type: String, required: false },
