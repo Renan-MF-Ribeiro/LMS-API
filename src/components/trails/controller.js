@@ -48,20 +48,21 @@ module.exports = {
     async getCollaborativeChannel (req, res) {
         try {
             const user = getUserByToken(req)
-            const queryParams = req.query
 
             const { skip, limit } = pagination(req)
-            const searchObj = { collaborative: true, ...queryParams, enabled: true }
+            const searchObj = { collaborative: true, $or: [{ moderation: 'approved' }, { moderation: 'denounced' }], enabled: true }
 
             const total = await Trail.countDocuments(searchObj)
 
             const trails = await populateTrails(true, searchObj, { createdAt: -1 }, skip, limit)
 
+            const filteredTrails = trails.filter(trail => trail.complaints.length <= 5)
+
             const allTrackingUser = await Tracking.find({
                 userLogin: { $eq: user.networkLogin },
             })
 
-            for (let trail of trails) {
+            for (let trail of filteredTrails) {
                 const processedTrail = processTrailTracking(trail, allTrackingUser)
 
                 if (trail.expirationType) {
@@ -71,7 +72,7 @@ module.exports = {
                 trail = processedTrail.trail
             }
 
-            _messages.success(res, req, { trails, total })
+            _messages.success(res, req, { trails: filteredTrails, total })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'trails', 'getColaborativo')
         }
@@ -858,7 +859,7 @@ function createModerationAlert (trail, verb) {
     const text = `Seu conteúdo ${trail.title} acabou de ser ${verb} por um moderador!`
     const communication = ['notification']
     const mode = 'automatic'
-    const category = 'launch'
+    const category = 'alert'
     const target = { trailid: trail._id, url: `${process.env.DOMAIN}/#/login/entrar?redirectTo=/menu/${trail._id}` }
     return { title, text, communication, category, target, mode }
 }
