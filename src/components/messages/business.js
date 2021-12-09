@@ -1,3 +1,4 @@
+require('dotenv').config()
 const { getUsersByTrail, getUsersByGroups, getUsersByTags, getUsersByIds } = require('../users/business')
 const clientid = process.env.CLIENT_ID
 const kafka = require('../../utils/kafka')
@@ -28,7 +29,7 @@ module.exports = {
             for (let i = 0; i < messages.length; i += chunk) {
                 const temporary = messages.slice(i, i + chunk)
                 await producer.send({
-                    topic: process.env.TOPIC_DEVICER,
+                    topic: process.env.TOPIC_MSG,
                     messages: temporary,
                 })
             }
