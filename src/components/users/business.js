@@ -23,6 +23,7 @@ const { Group } = require('../groups/model')
 const { CLIENT_ID } = process.env
 const kafka = require('../../utils/kafka')
 const { Trail } = require('../trails/model')
+require('dotenv').config()
 
 module.exports = {
     checkAmountOfLocks (id) {

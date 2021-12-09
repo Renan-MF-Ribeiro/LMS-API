@@ -1,3 +1,4 @@
+require('dotenv').config()
 const { getUsersByTrail, getUsersByGroups, getUsersByTags, getUsersByIds } = require('../users/business')
 const clientid = process.env.CLIENT_ID
 const kafka = require('../../utils/kafka')
