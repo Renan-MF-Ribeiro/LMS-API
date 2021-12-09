@@ -34,10 +34,37 @@ module.exports = {
                                 </body>
                               </html>`
                 await transporter.sendMail({
-                    from: '"Grupo Vamos" <noreply@happmobi.com.br>',
+                    from: '"Happlearning" <noreply@happmobi.com.br>',
                     to: strTo,
                     subject: 'Reiniciar senha',
                     text: 'Reiniciar senha',
+                    html,
+                })
+
+                resolve()
+            } catch (error) {
+                console.log(error)
+                reject(error)
+            }
+        })
+    },
+
+    sendResetedPasswordToUser (strTo, newPass = '', domain = '', userData) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const message = `Olá ${userData.name}, um administrador gerou uma nova senha para você. Sua nova senha é: <b> ${newPass} </b> <br> Acesse a <a href="${domain}">plataforma</a> e bons estudos.`
+
+                const html = `<html>
+                                <head></head>
+                                <body>
+                                    ${message}
+                                </body>
+                              </html>`
+                await transporter.sendMail({
+                    from: '"Happlearning" <noreply@happmobi.com.br>',
+                    to: strTo,
+                    subject: 'Nova senha',
+                    text: 'Nova senha',
                     html,
                 })
 
@@ -64,7 +91,7 @@ module.exports = {
                   <table align="center" cellpadding="0" cellspacing="0" width="600">
                   <tr bgcolor="red">
                     <td style="height: 10vh;text-align: center;">
-                        <h1 style="margin-top: 20px; font-weight: bold; color: white;">Grupo Vamos</h1>
+                        <h1 style="margin-top: 20px; font-weight: bold; color: white;">Happlearning</h1>
                     </td>
                   </tr>
                     <tr>
@@ -97,9 +124,9 @@ module.exports = {
                 
                 </html>`
                 await transporter.sendMail({
-                    from: '"Grupo Vamos" <suporte.happlearning@happmobi.com.br>',
+                    from: '"Happlearning" <suporte.happlearning@happmobi.com.br>',
                     to: strTo,
-                    subject: 'Ativação da sua conta para treinamento sobre Grupo Vamos',
+                    subject: 'Ativação da sua conta para treinamento sobre Happlearning',
                     text: 'Ativação de conta',
                     html,
                 })
@@ -127,7 +154,7 @@ module.exports = {
                   <table align="center" cellpadding="0" cellspacing="0" width="600">
                   <tr bgcolor="red">
                     <td style="height: 10vh;text-align: center;">
-                        <h1 style="margin-top: 20px; font-weight: bold; color: white;">Grupo Vamos</h1>
+                        <h1 style="margin-top: 20px; font-weight: bold; color: white;">Happlearning</h1>
                     </td>
                   </tr>
                     <tr>
@@ -155,7 +182,7 @@ module.exports = {
                 
                 </html>`
                 await transporter.sendMail({
-                    from: '"Grupo Vamos" <suporte.happlearning@happmobi.com.br>',
+                    from: '"Happlearning" <suporte.happlearning@happmobi.com.br>',
                     to: strTo,
                     subject: strTitle,
                     text: 'Notificação de conta',
