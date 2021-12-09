@@ -859,7 +859,7 @@ function createModerationAlert (trail, verb) {
     const text = `Seu conteúdo ${trail.title} acabou de ser ${verb} por um moderador!`
     const communication = ['notification']
     const mode = 'automatic'
-    const category = 'alert'
+    const category = 'notify'
     const target = { trailid: trail._id, url: `${process.env.DOMAIN}/#/login/entrar?redirectTo=/menu/${trail._id}` }
     return { title, text, communication, category, target, mode }
 }
