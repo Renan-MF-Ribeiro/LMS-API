@@ -47,6 +47,7 @@ const {
     sendLogEmail,
     sendSignupActivationEmail,
     sendNotificationEmail,
+    sendResetedPasswordToUser,
 } = require('../../utils/email')
 
 const bcrypt = require('bcryptjs')
@@ -573,7 +574,7 @@ module.exports = {
             const file = req.files.file
             // const photoPath = await _files.awsAmazon(file, `photos/${user._id}`)
             let photoPath = await _files.azureBlob(file, `photos/${user._id}`)
-            if(NODE_ENV != "local"){
+            if (NODE_ENV != 'local') {
                 photoPath = photoPath.replace(AZURE_BLOB_URL, DOMAIN)
             }
             await User.findByIdAndUpdate(user._id, { profilePhoto: photoPath })
@@ -916,6 +917,43 @@ module.exports = {
             _messages.success(res, req, { message: 'Usuário removido do grupo de colaboradores' })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'removeCollaborator')
+        }
+    },
+
+    async resetUserPassword (req, res) {
+        try {
+            const { userId, password, generate } = req.body
+
+            if (!userId || generate === null) {
+                _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
+            }
+
+            let hashPassword
+            let generatedPassword
+
+            if (!generate && password) {
+                hashPassword = { hash: bcrypt.hashSync(password, 10), valid: true, createdAt: new Date(Date.now()) }
+            } else {
+                generatedPassword = Math.random().toString(36).replace(/[^a-zA-Z0-9_]+/g, '').substring(0, 12)
+                hashPassword = { hash: bcrypt.hashSync(generatedPassword, 10), valid: true, createdAt: new Date(Date.now()) }
+            }
+
+            await User.findOneAndUpdate({ _id: userId, 'password.valid': true }, { $set: { 'password.$[].valid': false } }, { new: true })
+
+            const user = await User.findOneAndUpdate({ _id: userId }, { $push: { password: hashPassword } }, { new: true })
+
+            if ((user && user.email) && generate) {
+                await sendResetedPasswordToUser(user.email, generatedPassword, process.env.DOMAIN, user)
+                _messages.success(res, req, { message: 'Senha alterada e enviada para o usuário.' })
+            } else if ((user && user.email) && (!generate && password)) {
+                await sendResetedPasswordToUser(user.email, password, process.env.DOMAIN, user)
+                _messages.success(res, req, { message: 'Senha alterada e enviada para o usuário.' })
+            } else {
+                _messages.success(res, req, { message: 'Senha alterada, porém o usuário não possui email. ' })
+            }
+        } catch (error) {
+            console.log(error)
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'resetUserPassword')
         }
     },
 
