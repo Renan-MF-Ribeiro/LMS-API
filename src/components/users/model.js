@@ -64,6 +64,7 @@ const userSchema = new mongoose.Schema({
     passwordValid: { type: Boolean, default: false },
     profilePhoto: { type: String, trim: true, required: false },
     acceptTerms: { type: Boolean, default: false },
+    acceptTermsCollaboration: { type: Boolean, default: false },
     groupsAD: { type: Array, default: [] },
     clientId: { type: Number, default: CLIENT_ID },
     clientUserKey: { type: String, trim: true },
