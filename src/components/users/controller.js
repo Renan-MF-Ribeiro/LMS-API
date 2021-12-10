@@ -215,10 +215,10 @@ module.exports = {
                     var key = login + ':' + password
                     key = cryptoJS.AES.encrypt(key, password).toString()
 
-                    _messages.success(res, req, { tk, key, accept: user.acceptTerms, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
+                    _messages.success(res, req, { tk, key, accept: user.acceptTerms,acceptCollaboration: user.acceptTermsCollaboration, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
                 } else {
                     await sleep(3000)
-                    _messages.forbidden(res, req, 'Usuário ou senha inválidos.', '<strong>Usuário ou senha inválidos.</strong>', 'users', 'ldapSignIn')
+                    _messages.forbidden(res, req, 'Usuário ou senha inválidos.', 'Usuário ou senha inválidos.', 'users', 'ldapSignIn')
                 }
             } else {
                 _messages.forbidden(res, req, 'Usuário ou senha não informados', 'Erro de validação', 'users', 'ldapSignIn')
@@ -230,7 +230,7 @@ module.exports = {
                 dateTimeBlock: getDateToday(),
                 ip: req.ip,
             })
-            _messages.forbidden(res, req, error.message, 'Usuário ou senha inválidos.', '<strong>Usuário ou senha inválidos. </strong>', 'users', 'ldapSignIn')
+            _messages.forbidden(res, req, error.message, 'Usuário ou senha inválidos.', 'Usuário ou senha inválidos.', 'users', 'ldapSignIn')
         }
     },
 
@@ -329,6 +329,16 @@ module.exports = {
             _messages.success(res, req, 'Sucesso', 'Aceitação dos termos de uso', 'users', 'acceptTerms', [], [], true, 'TERMS OF USE')
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'acceptTerms')
+        }
+    },
+
+    async acceptTermsCollaboration (req, res) {
+        try {
+            const { _id } = await getUserByToken(req)
+            await User.findByIdAndUpdate(_id, { acceptTermsCollaboration: true })
+            _messages.success(res, req, 'Sucesso', 'Aceitação dos termos de uso de colaboração', 'users', 'acceptTermsCollaboration', [], [], true, 'TERMS OF USE')
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'acceptTermsCollaboration')
         }
     },
 
