@@ -10,6 +10,7 @@ const unzipper = require('unzipper')
 const etl = require('etl')
 const parseXml = require('@rgrove/parse-xml')
 const { filter, reduce, pipe } = require('ramda')
+const Vimeo = require('vimeo').Vimeo
 const { Trail } = require('../trails/model')
 const { error } = require('../../utils/logger')
 const _errors = require('../../utils/errors')
@@ -51,7 +52,7 @@ const ItemController = {
                 payload = JSON.parse(req.fields.payload)
             } catch { }
         }
-      
+
         const flag = _functions.checksIfTheEndDateIsLessThanTheStartDate(payload.startDate, payload.endDate)
         if (!flag) {
             _messages.badRequest(res, req, 'A data final não pode ser menor que a data inicial!', 'A data final não pode ser menor que a data inicial!', 'items', '')
@@ -81,7 +82,7 @@ const ItemController = {
                         contentPath = payload.content
                     }
 
-                    if (payload.kind !== 'SoundcloudItem') {
+                    if (payload.kind !== 'SoundcloudItem' && payload.kind !== 'vimeoItem') {
                         payload = {
                             ...payload,
                             enabled: true,
@@ -95,8 +96,29 @@ const ItemController = {
                             thumbPath: thumbPath || undefined,
                         }
                     }
-                    console.log(payload,thumb)
+                    console.log(payload, thumb, contentPath, req.files)
+                    // return 0
+                    const client = new Vimeo(
+                        '6f5c7e401147a116965271999c009bf8eb518eac',
+                        'OJmB4QikaHS/oSK2Vnp89mgyg4v78WNSPNiNOQpbk5jgN9EdPSj/M3v6YEnfto2KmywqTadpG4FuxSjbGaDZ11EkkTTnZhJ1Q6IJyTM6aFw+SOFWeF60FKpXg1pFgwUV',
+                        'f8db3bbf8f20fa31039cda4ba566f88a',
+                    )
 
+                    client.upload(
+                        '/tmp/world_sample.mp4',
+                        function (uri) {
+                            console.log('Your video URI is: ' + uri)
+                        },
+                        function (bytes_uploaded, bytes_total) {
+                            var percentage = (bytes_uploaded / bytes_total * 100).toFixed(2)
+                            console.log(bytes_uploaded, bytes_total, percentage + '%')
+                        },
+                        function (error) {
+                            console.log('Failed because: ' + error)
+                        },
+                    )
+
+                    return 0
                     delete payload.thumb
                     delete payload.content
 
