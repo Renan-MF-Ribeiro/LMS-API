@@ -6,6 +6,7 @@ const { UPLOADS_PATH } = process.env
 const {
     isAccountant,
     isStudent,
+    isCollaborator,
 } = require('../../utils/middlewares')
 
 try {
@@ -29,4 +30,4 @@ module.exports = express.Router()
     .put('/media', isAccountant, formidable(), _controller.multiUploadMedia)
     .post('/scorm', isAccountant, [], _controller.uploadSCORM)
     .put('/:itemId/scorm', isAccountant, [], _controller.updateSCORM)
-    .post('/collaboration', isAccountant, formidable({ maxFileSize: 1024 * 1024 * 1024 }), _controller.itemColaborativo)
+    .post('/collaboration', isCollaborator, formidable({ maxFileSize: 1024 * 1024 * 1024 }), _controller.itemColaborativo)
