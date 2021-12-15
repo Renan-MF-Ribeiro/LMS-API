@@ -142,7 +142,7 @@ module.exports = {
             const passwordDecripty = decrypted.toString(cryptoJS.enc.Utf8)
 
             if (login !== undefined && password !== undefined) {
-                user = await User.findOne({ networkLogin: { $eq: login }, status: 'ATIVO' }, ['_id', 'networkLogin', 'password', 'acceptTerms', 'passwordValid', 'name', 'profilePhoto', 'groupsAD', 'email'])
+                user = await User.findOne({ networkLogin: { $eq: login }, status: 'ATIVO' }, ['_id', 'networkLogin', 'password', 'acceptTerms', 'acceptTermsCollaboration', 'passwordValid', 'name', 'profilePhoto', 'groupsAD', 'email'])
 
                 if (user) {
                     const amountOfLocks = await checkAmountOfLocks(user._id)
