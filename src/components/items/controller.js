@@ -467,6 +467,7 @@ const ItemController = {
     },
 
     async uploadSCORM (req, res) {
+        const user = await getUserByToken(req)
         if (req.method !== 'POST') {
             return res.status(httpStatus.NOT_FOUND).send()
         }
@@ -558,19 +559,20 @@ const ItemController = {
                 if (!$items.length) return _messages.success(res, req, [])
 
                 const $resources = $manifest.children.find(el => el.name === 'resources')
-
+                
                 const items = await Promise.all($items.map($item => {
                     const $resource = $resources.children.find(el =>
                         el.name === 'resource' &&
                         el.attributes.identifier === $item.attributes.identifierref,
                     )
                     const $title = $item.children.find(el => el.name === 'title')
-
+                    
                     const title = $title && $title.children[0].text
                     const href = $resource.attributes.href
                     const scoId = $item.attributes.identifier
 
                     return SCORMItem.create({
+                        author: user._id,
                         title,
                         packageId,
                         scoId,
