@@ -130,8 +130,8 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             try {
                 const token = req.headers.authorization
-                // const { data } = _auth.decodeToken(token)
-                const user = await User.findOne({ _id: '60b786c4a62f93624aa5d336' })
+                const { data } = _auth.decodeToken(token)
+                const user = await User.findOne({ _id: { $eq: data.ref } })
                 resolve(user)
             } catch (error) {
                 reject(error)
