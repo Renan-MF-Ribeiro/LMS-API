@@ -145,6 +145,17 @@ const SoundcloudItem = Item.discriminator('SoundcloudItem', new mongoose.Schema(
     ...schemaOptions,
 }))
 
+const VimeoItem = Item.discriminator('VimeoItem', new mongoose.Schema({
+    format: { type: String, enum: Object.values(mediaFormats), default: mediaFormats.VIDEO, required: true },
+    contentPath: {
+        type: String,
+        required: true,
+    },
+    ...endpointOptions,
+}, {
+    ...schemaOptions,
+}))
+
 module.exports = {
     Item,
     DocumentItem,
@@ -153,4 +164,5 @@ module.exports = {
     ExamItem,
     AudioItem,
     SoundcloudItem,
+    VimeoItem,
 }

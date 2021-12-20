@@ -10,19 +10,19 @@ const unzipper = require('unzipper')
 const etl = require('etl')
 const parseXml = require('@rgrove/parse-xml')
 const { filter, reduce, pipe } = require('ramda')
-const Vimeo = require('vimeo').Vimeo
 const { Trail } = require('../trails/model')
 const { error } = require('../../utils/logger')
 const _errors = require('../../utils/errors')
 const _messages = require('../../utils/messages')
 const _functions = require('../../utils/functions')
-const { Item, DocumentItem, MediaItem, SCORMItem, ExamItem, AudioItem, SoundcloudItem } = require('./model')
+const { Item, DocumentItem, MediaItem, SCORMItem, ExamItem, AudioItem, SoundcloudItem, VimeoItem } = require('./model')
 const { Tracking } = require('../tracking/model')
 const {
     awsAmazon,
     azureBlob,
     isSCORMManifestFile,
     isSCORMSchemaFile,
+    vimeoFilePath,
 } = require('../../utils/files')
 
 const {
@@ -38,6 +38,7 @@ const ITEM_KINDS = Object.freeze({
     ExamItem: ExamItem,
     AudioItem: AudioItem,
     SoundcloudItem: SoundcloudItem,
+    VimeoItem: VimeoItem,
 })
 
 const ItemController = {
@@ -73,16 +74,19 @@ const ItemController = {
                         thumbPath = await azureBlob(thumb, 'items/thumbs')
                         thumbPath = process.env.NODE_ENV === 'local' ? thumbPath : thumbPath.replace(AZURE_BLOB_URL, DOMAIN)
                     }
-                    if (content) {
-                        contentPath = await azureBlob(content, 'items/content')
-                        contentPath = process.env.NODE_ENV === 'local' ? contentPath : contentPath.replace(AZURE_BLOB_URL, DOMAIN)
+
+                    if (payload.kind !== 'VimeoItem') {
+                        if (content) {
+                            contentPath = await azureBlob(content, 'items/content')
+                            contentPath = process.env.NODE_ENV === 'local' ? contentPath : contentPath.replace(AZURE_BLOB_URL, DOMAIN)
+                        }
+
+                        if (!contentPath && payload.content && (ItemModel === MediaItem || ItemModel === AudioItem || ItemModel === DocumentItem)) {
+                            contentPath = payload.content
+                        }
                     }
 
-                    if (!contentPath && payload.content && (ItemModel === MediaItem || ItemModel === AudioItem || ItemModel === DocumentItem)) {
-                        contentPath = payload.content
-                    }
-
-                    if (payload.kind !== 'SoundcloudItem' && payload.kind !== 'vimeoItem') {
+                    if (payload.kind !== 'SoundcloudItem' || payload.kind !== 'VimeoItem') {
                         payload = {
                             ...payload,
                             enabled: true,
@@ -96,34 +100,17 @@ const ItemController = {
                             thumbPath: thumbPath || undefined,
                         }
                     }
-                    console.log(payload, thumb, contentPath, req.files)
-                    // return 0
-                    const client = new Vimeo(
-                        '6f5c7e401147a116965271999c009bf8eb518eac',
-                        'OJmB4QikaHS/oSK2Vnp89mgyg4v78WNSPNiNOQpbk5jgN9EdPSj/M3v6YEnfto2KmywqTadpG4FuxSjbGaDZ11EkkTTnZhJ1Q6IJyTM6aFw+SOFWeF60FKpXg1pFgwUV',
-                        'f8db3bbf8f20fa31039cda4ba566f88a',
-                    )
 
-                    client.upload(
-                        '/tmp/world_sample.mp4',
-                        function (uri) {
-                            console.log('Your video URI is: ' + uri)
-                        },
-                        function (bytes_uploaded, bytes_total) {
-                            var percentage = (bytes_uploaded / bytes_total * 100).toFixed(2)
-                            console.log(bytes_uploaded, bytes_total, percentage + '%')
-                        },
-                        function (error) {
-                            console.log('Failed because: ' + error)
-                        },
-                    )
-
-                    return 0
                     delete payload.thumb
                     delete payload.content
 
                     const user = await getUserByToken(req)
                     payload.author = user._id
+
+                    if (payload.kind === 'VimeoItem') {
+                        payload.contentPath = String(new Date().toISOString())
+                        const vimeoFile = vimeoFilePath(content, payload, user)
+                    }
 
                     const item = await ItemModel.create(payload)
 
@@ -163,6 +150,9 @@ const ItemController = {
                     }
                     _messages.success(res, req, item._id)
                 } catch (error) {
+                    if (error.message === 'Something went wrong') {
+                        _messages.internalServer(res, req, error.error, error, 'itemColaborativo')
+                    }
                     console.log(error)
                     if (error.name === 'ValidationError') {
                         const messages = {}
@@ -233,7 +223,7 @@ const ItemController = {
                         delete payload.content
                     }
 
-                    if (payload.kind !== 'SoundcloudItem') {
+                    if (payload.kind !== 'SoundcloudItem' || payload.kind !== 'VimeoItem') {
                         payload = {
                             ...payload,
                             enabled: true,

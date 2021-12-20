@@ -64,7 +64,7 @@ const messagesRoutes = require('./components/messages/routes')
 const showCaseRoutes = require('./components/showcase/routes')
 
 app
-    .use('/items', validateTokenRoute, itemsRoutes)
+    .use('/items', itemsRoutes)
     .use('/tracking', validateTokenRoute, trackingRoutes)
     .use('/trails', validateTokenRoute, trailsRoutes)
     .use('/evaluations', validateTokenRoute, assessmentsRoutes)

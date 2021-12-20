@@ -131,7 +131,7 @@ module.exports = {
     validateTokenNginx: token => {
         return new Promise(resolve => {
             try {
-                //const token = req.headers.authorization
+                // const token = req.headers.authorization
                 jwt.verify(token, PROJECT_SECRET_KEY, function (err) {
                     if (err) {
                         resolve(false)

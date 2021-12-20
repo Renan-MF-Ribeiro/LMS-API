@@ -7,6 +7,7 @@ const xlsx = require('read-excel-file/node')
 const csv = require('csv-parser')
 const fs = require('fs')
 const isStream = require('is-stream')
+const Vimeo = require('vimeo').Vimeo
 const { pipe, test, reject } = require('ramda')
 const createCsvWriter = require('csv-writer').createObjectCsvWriter
 const createObjectCsvStringifier = require('csv-writer').createObjectCsvStringifier
@@ -17,6 +18,9 @@ const momentz = require('moment-timezone')
 const ExcelJS = require('exceljs')
 const _functions = require('./functions')
 const { mapUser } = require('./../components/users/model')
+const { Item, VimeoItem } = require('../components/items/model')
+const { sleep } = require('./functions')
+const { sendMessageToKafka } = require('../../src/components/messages/business')
 
 const bucket = process.env.BUCKET
 aws.config = { accessKeyId: process.env.ACCESSKEY, secretAccessKey: process.env.SECRETKEY, region: process.env.REGION }
@@ -113,6 +117,75 @@ module.exports = {
         const downloadFileResponse = await fileShareClient.download()
         return await streamToBuffer(downloadFileResponse.readableStreamBody)
         // return await streamToBuffer(downloadFileResponse.readableStreamBody)
+    },
+
+    vimeoFilePath (file, payload, user) {
+        let filePath
+        let fileType
+        let uploadStatus
+        if (isStream(file)) {
+            filePath = file.path
+            fileType = mime.lookup(file.path) || 'text/plain'
+        } else {
+            const ext = mime.extension(file.type)
+            filePath = `${file.path}.${ext}`
+        }
+
+        const campainObj = function () {
+            const title = 'Video upload'
+            const text = 'Efetuado upload na plataforma Vimeo!'
+            const communication = ['notification']
+            const category = 'charge'
+            const mode = 'automatic'
+            const target = { url: `${process.env.DOMAIN}/#/login/entrar?redirectTo=/home`, trailid: '', item: '' }
+            return { title, text, communication, category, target, mode }
+        }
+
+        const vimeoTrx = new Vimeo(
+            process.env.clientId,
+            process.env.clientSecret,
+            process.env.accessToken,
+        )
+
+        vimeoTrx.upload(
+            String(file.path),
+            function (uri) {
+                uploadStatus = 'Upload was done!'
+                console.log('Upload was done!', uri)
+                const trx = async () => {
+                    console.log(payload)
+                    await sleep(3000)
+                    const { _id } = await Item.findOne({
+                        title: { $eq: payload.title },
+                        contentPath: { $eq: payload.contentPath },
+                    })
+                    await VimeoItem.findByIdAndUpdate(_id, {
+                        contentPath: 'https://vimeo.com' + uri,
+                    })
+
+                    const campObj = campainObj()
+                    await sendMessageToKafka(campObj, [user])
+                }
+                trx()
+            },
+            function (bytes_uploaded, bytes_total) {
+                var percentage = (bytes_uploaded / bytes_total * 100).toFixed(2)
+                console.log(bytes_uploaded, bytes_total, percentage + '%')
+            },
+            function (error) {
+                uploadStatus = { message: 'Something went wrong', error: error }
+                console.error('Something went wrong: ' + error)
+                const trx = async () => {
+                    await Item.findOneAndDelete({
+                        title: { $eq: payload.title },
+                        contentPath: { $eq: payload.contentPath },
+                    })
+                }
+                trx()
+            },
+        )
+
+        return uploadStatus
     },
 
     async moveUpload (file) {

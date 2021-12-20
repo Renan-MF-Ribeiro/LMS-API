@@ -12,7 +12,6 @@ const {
 
 const formidable = require('express-formidable')
 
-
 router
     // CATEGORIES
     .get('/categories/actives/:id', isAccountant, _controllerCategories.returnCategoriesActives)
