@@ -172,20 +172,10 @@ function ratingCron (grouping, usersLastLogin) {
 
 async function averageCourses () {
     try {
-        // Busca os usuário e coloca paginação
-        const limit = 1000
-        let skip = 0
-        const usersFinal = []
-        let users = await User.find({ status: 'ATIVO' }).limit(limit).skip(skip)
+        const users = await User.find({ status: 'ATIVO' })
 
-        while (users.length > 0) {
-            usersFinal.push(...users)
-            skip += limit
-            users = await User.find({ status: 'ATIVO' }).limit(limit).skip(skip)
-        }
-
-        const groupA = getGroupSet(usersFinal, groupingA)
-        const groupB = getGroupSet(usersFinal, groupingB)
+        const groupA = getGroupSet(users, groupingA)
+        const groupB = getGroupSet(users, groupingB)
 
         // Filtra somente os usuários que fizeram login nos últimos 35 minutos
         const usersLastLogin = await lastLoggedInUsers()
@@ -263,27 +253,25 @@ function numberOfCompleteAndEligibleCourses (user) {
                 tags: { $in: tags },
             })
 
+            const allTrackingUser = await Tracking.find({
+                userLogin: { $eq: user.networkLogin },
+            })
+
             let numberTrailsCompleted = 0
             const numberTrailsElegibles = trails.length
 
-            for (const trail of trails) {
-                for (const item of trail.items) {
-                    const tracking = await Tracking.findOne({
-                        item: { $eq: item.itemID._id },
-                        userLogin: { $eq: user.networkLogin },
-                    })
+            for (let trail of trails) {
+                const processedTrail = processTrailTracking(trail, allTrackingUser)
 
-                    if (tracking) {
-                        if (tracking.kind === 'SCORMTracking') {
-                            item.completion = isSCORMCompleted(tracking.lessonStatus) ? 1 : 0
-                        } else {
-                            item.completion = tracking.completion
-                        }
-                    }
+                if (trail.expirationType) {
+                    trail = processExpirationDate(trail, user)
                 }
 
-                trail.completion = getTrailCompletion(trail)
-                if (getTrailCompletion(trail) === 1) numberTrailsCompleted += 1
+                trail = processedTrail.trail
+
+                if (trail.completion === 1) {
+                    numberTrailsCompleted++
+                }
             }
 
             resolve({
@@ -503,8 +491,8 @@ function createReleaseCampaign (trail) {
 }
 
 function createChargeCampaign (trail) {
-    const title = `A trilha ${trail.title} expirará em 5 dias!`
-    const text = 'Por favor procure concluir antes do término do prazo!'
+    const title = `Ei, faltam 5 dias para você concluir a trilha ${trail.title}!`
+    const text = `Você ainda não completou a trilha ${trail.title}! O prazo para a conclusão é até o dia ${trail.expirationDate}. Por favor, clique para visualizar!`
     const communication = ['notification']
     const category = 'charge'
     const mode = 'automatic'

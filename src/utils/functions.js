@@ -319,7 +319,7 @@ module.exports = {
                 }
             })[0]
 
-            completionAt = objTracking.completionAt
+            const completionAt = objTracking ? objTracking.completionAt : null
             item.completionAt = completionAt
             completionDate.push(completionAt)
 

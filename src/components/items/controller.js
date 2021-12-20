@@ -100,6 +100,10 @@ const ItemController = {
                             thumbPath: thumbPath || undefined,
                         }
                     }
+<<<<<<< HEAD
+=======
+                    console.log(payload, thumb)
+>>>>>>> staging
 
                     delete payload.thumb
                     delete payload.content
@@ -143,7 +147,7 @@ const ItemController = {
                             ],
                             collaborative: item.collaborative,
                             author: item.author,
-                            moderation: 'pending',
+                            moderation: user.groupsAD.includes('PERFIL_Colaborador_Livre') ? 'approved' : 'pending',
                             thumbPath: thumbPath,
                             title: item.title,
                         })
@@ -242,6 +246,7 @@ const ItemController = {
 
                     delete payload.thumb
                     delete payload.banner
+                    delete payload.content
                     console.log('payload: ', payload)
                     const { _id } = await ItemModel.create(payload)
                     _messages.success(res, req, { _id })
@@ -478,6 +483,7 @@ const ItemController = {
     },
 
     async uploadSCORM (req, res) {
+        const user = await getUserByToken(req)
         if (req.method !== 'POST') {
             return res.status(httpStatus.NOT_FOUND).send()
         }
@@ -569,19 +575,20 @@ const ItemController = {
                 if (!$items.length) return _messages.success(res, req, [])
 
                 const $resources = $manifest.children.find(el => el.name === 'resources')
-
+                
                 const items = await Promise.all($items.map($item => {
                     const $resource = $resources.children.find(el =>
                         el.name === 'resource' &&
                         el.attributes.identifier === $item.attributes.identifierref,
                     )
                     const $title = $item.children.find(el => el.name === 'title')
-
+                    
                     const title = $title && $title.children[0].text
                     const href = $resource.attributes.href
                     const scoId = $item.attributes.identifier
 
                     return SCORMItem.create({
+                        author: user._id,
                         title,
                         packageId,
                         scoId,
@@ -669,7 +676,7 @@ const ItemController = {
                 contentP,
             ])
 
-            await SCORMItem.findByIdAndUpdate(_id, { contentPath: `${packageId}/index.html?SCORM=true` })
+            await SCORMItem.findByIdAndUpdate(_id, { contentPath: `${packageId}/${contentPathExplode[1]}` })
 
             res.status(httpStatus.NO_CONTENT).send()
         } catch (err) {

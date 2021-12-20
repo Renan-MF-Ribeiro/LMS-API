@@ -58,6 +58,15 @@ module.exports = {
         }
     },
 
+    isCollaborator: async (req, res, next) => {
+        const profiles = await returnProfileByToken(req.headers.authorization)
+        if (profiles.indexOf('GL_ACADMODA_PF_COLABORADOR') >= 0 || profiles.indexOf('PERFIL_Colaborador') >= 0) {
+            next()
+        } else {
+            _messages.forbidden(res, req, 'Sem permissão de acesso', 'Você não tem permissão para prosseguir com a ação!', '', req.originalUrl)
+        }
+    },
+    
     isAdmin: async (req, res, next) => {
         const profiles = await returnProfileByToken(req.headers.authorization)
         if (profiles.indexOf('GL_ACADMODA_PF_ADM') >= 0 || profiles.indexOf('PERFIL_Admin') >= 0) {

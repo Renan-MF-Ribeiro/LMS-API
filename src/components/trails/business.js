@@ -85,6 +85,7 @@ module.exports = {
                             collaborative: trail.collaborative,
                             moderation: trail.moderation,
                             complaints: trail.complaints,
+                            certificate: trail.certificate,
                         })
                     }
                 } else {
@@ -124,6 +125,7 @@ module.exports = {
                             collaborative: trail.collaborative,
                             moderation: trail.moderation,
                             complaints: trail.complaints,
+                            certificate: trail.certificate,
                         })
                     }
                 }

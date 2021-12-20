@@ -1,5 +1,5 @@
 const _messages = require('../../utils/messages')
-const { elegiblesContents, recentsSections } = require('../sections/business')
+const { elegiblesContents, recentsSections, checkIfTheTrackIsValid } = require('../sections/business')
 const { populateTrails } = require('../trails/business')
 
 module.exports = {
@@ -57,6 +57,29 @@ module.exports = {
             _messages.success(res, req, trails)
         } catch (error) {
 
+        }
+    },
+
+    async searchTrails (req, res) {
+        try {
+            const searchBy = req.query.searchBy
+            let filterTrails = []
+
+            filterTrails = await populateTrails(true, {
+                $text: { $search: `"${searchBy}"` },
+                showcase: true,
+                enabled: true,
+            })
+            filterTrails = filterTrails.filter(trail => checkIfTheTrackIsValid(trail))
+
+            filterTrails = filterTrails.map(trail => {
+                trail = processTrailAndItems(trail)
+                return prepareObject(trail)
+            })
+
+            _messages.success(res, req, filterTrails)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'home', 'searchTrailsItems')
         }
     },
 }

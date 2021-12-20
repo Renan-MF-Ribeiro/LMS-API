@@ -1,6 +1,6 @@
 /* eslint-disable handle-callback-err */
 require('dotenv').config()
-const { CLIENT_ID, DOMAIN, AZURE_BLOB_URL } = process.env
+const { CLIENT_ID, DOMAIN, AZURE_BLOB_URL, NODE_ENV } = process.env
 const _messages = require('../../utils/messages')
 const _files = require('../../utils/files')
 const { Message } = require('../messages/model')
@@ -47,6 +47,7 @@ const {
     sendLogEmail,
     sendSignupActivationEmail,
     sendNotificationEmail,
+    sendResetedPasswordToUser,
 } = require('../../utils/email')
 
 const bcrypt = require('bcryptjs')
@@ -141,7 +142,7 @@ module.exports = {
             const passwordDecripty = decrypted.toString(cryptoJS.enc.Utf8)
 
             if (login !== undefined && password !== undefined) {
-                user = await User.findOne({ networkLogin: { $eq: login }, status: 'ATIVO', enabled: true }, ['_id', 'networkLogin', 'password', 'acceptTerms', 'passwordValid', 'name', 'profilePhoto', 'groupsAD', 'email'])
+                user = await User.findOne({ networkLogin: { $eq: login }, status: 'ATIVO' }, ['_id', 'networkLogin', 'password', 'acceptTerms', 'acceptTermsCollaboration', 'passwordValid', 'name', 'profilePhoto', 'groupsAD', 'email'])
 
                 if (user) {
                     const amountOfLocks = await checkAmountOfLocks(user._id)
@@ -214,10 +215,10 @@ module.exports = {
                     var key = login + ':' + password
                     key = cryptoJS.AES.encrypt(key, password).toString()
 
-                    _messages.success(res, req, { tk, key, accept: user.acceptTerms, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
+                    _messages.success(res, req, { tk, key, accept: user.acceptTerms,acceptCollaboration: user.acceptTermsCollaboration, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
                 } else {
                     await sleep(3000)
-                    _messages.forbidden(res, req, 'Usuário ou senha inválidos.', '<strong>Usuário ou senha inválidos.</strong>', 'users', 'ldapSignIn')
+                    _messages.forbidden(res, req, 'Usuário ou senha inválidos.', 'Usuário ou senha inválidos.', 'users', 'ldapSignIn')
                 }
             } else {
                 _messages.forbidden(res, req, 'Usuário ou senha não informados', 'Erro de validação', 'users', 'ldapSignIn')
@@ -229,7 +230,7 @@ module.exports = {
                 dateTimeBlock: getDateToday(),
                 ip: req.ip,
             })
-            _messages.forbidden(res, req, error.message, 'Usuário ou senha inválidos.', '<strong>Usuário ou senha inválidos. </strong>', 'users', 'ldapSignIn')
+            _messages.forbidden(res, req, error.message, 'Usuário ou senha inválidos.', 'Usuário ou senha inválidos.', 'users', 'ldapSignIn')
         }
     },
 
@@ -328,6 +329,16 @@ module.exports = {
             _messages.success(res, req, 'Sucesso', 'Aceitação dos termos de uso', 'users', 'acceptTerms', [], [], true, 'TERMS OF USE')
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'acceptTerms')
+        }
+    },
+
+    async acceptTermsCollaboration (req, res) {
+        try {
+            const { _id } = await getUserByToken(req)
+            await User.findByIdAndUpdate(_id, { acceptTermsCollaboration: true })
+            _messages.success(res, req, 'Sucesso', 'Aceitação dos termos de uso de colaboração', 'users', 'acceptTermsCollaboration', [], [], true, 'TERMS OF USE')
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'acceptTermsCollaboration')
         }
     },
 
@@ -573,7 +584,9 @@ module.exports = {
             const file = req.files.file
             // const photoPath = await _files.awsAmazon(file, `photos/${user._id}`)
             let photoPath = await _files.azureBlob(file, `photos/${user._id}`)
-            photoPath = photoPath.replace(AZURE_BLOB_URL, DOMAIN)
+            if (NODE_ENV != 'local') {
+                photoPath = photoPath.replace(AZURE_BLOB_URL, DOMAIN)
+            }
             await User.findByIdAndUpdate(user._id, { profilePhoto: photoPath })
             _messages.success(res, req, photoPath)
         } catch (error) {
@@ -863,12 +876,12 @@ module.exports = {
 
     async setCollaborator (req, res) {
         try {
-            const { userId } = req.body
-            if (!userId) {
+            const { userId, moderation } = req.body
+            if (!userId || !moderation) {
                 _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
             }
 
-            const profiles = ['PERFIL_Colaborador']
+            const profiles = moderation ? ['PERFIL_Colaborador_Livre', 'PERFIL_Colaborador'] : ['PERFIL_Colaborador']
 
             await User.findByIdAndUpdate(userId, { $addToSet: { groupsAD: profiles } })
 
@@ -887,7 +900,7 @@ module.exports = {
             }
 
             const profiles = ['PERFIL_Colaborador_Livre']
-            if (moderation === 'true') {
+            if (!moderation) {
                 await User.findByIdAndUpdate(userId, { $pullAll: { groupsAD: profiles } })
                 _messages.success(res, req, { message: 'Usuário removido do grupo de colaboradores livres' })
             } else {
@@ -914,6 +927,53 @@ module.exports = {
             _messages.success(res, req, { message: 'Usuário removido do grupo de colaboradores' })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'removeCollaborator')
+        }
+    },
+
+    async resetUserPassword (req, res) {
+        try {
+            const { userId, password, generate } = req.body
+
+            if (!userId || generate === null) {
+                _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
+            }
+
+            let hashPassword
+            let generatedPassword
+
+            if (!generate && password) {
+                hashPassword = { hash: bcrypt.hashSync(password, 10), valid: true, createdAt: new Date(Date.now()) }
+            } else {
+                generatedPassword = Math.random().toString(36).replace(/[^a-zA-Z0-9_]+/g, '').substring(0, 12)
+                hashPassword = { hash: bcrypt.hashSync(generatedPassword, 10), valid: true, createdAt: new Date(Date.now()) }
+            }
+
+            await User.findOneAndUpdate({ _id: userId, 'password.valid': true }, { $set: { 'password.$[].valid': false } }, { new: true })
+
+            const user = await User.findOneAndUpdate({ _id: userId }, { $push: { password: hashPassword } }, { new: true })
+
+            if ((user && user.email) && generate) {
+                await sendResetedPasswordToUser(user.email, generatedPassword, process.env.DOMAIN, user)
+                _messages.success(res, req, { message: 'Senha alterada e enviada para o usuário.' })
+            } else if ((user && user.email) && (!generate && password)) {
+                await sendResetedPasswordToUser(user.email, password, process.env.DOMAIN, user)
+                _messages.success(res, req, { message: 'Senha alterada e enviada para o usuário.' })
+            } else {
+                _messages.success(res, req, { message: 'Senha alterada, porém o usuário não possui email. ' })
+            }
+        } catch (error) {
+            console.log(error)
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'resetUserPassword')
+        }
+    },
+
+    async acceptTermsCollaboration (req, res) {
+        try {
+            const { _id } = await getUserByToken(req)
+            await User.findByIdAndUpdate(_id, { acceptTermsCollaboration: true })
+            _messages.success(res, req, 'Sucesso', 'Aceitação dos termos de uso', 'users', 'acceptTerms', [], [], true, 'TERMS OF USE')
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'acceptTerms')
         }
     },
 

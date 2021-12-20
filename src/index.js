@@ -13,6 +13,8 @@ const {
 const { PUBLIC_PATH } = process.env
 const app = express()
 const passport = require('./utils/passport')
+const config = require('../config.json')
+
 var corsOptions = {
     origin: 'http://localhost:4200',
     credentials: true,
@@ -82,8 +84,10 @@ app
     .use('/suppliers', supplierRoutes)
     .use('/terms-of-use', validateTokenRoute, termsOfUseRoutes)
     .use('/messages', validateTokenRoute, messagesRoutes)
-    .use('/showcase', showCaseRoutes)
 
+if (config.showcase.active) {
+    app.use('/showcase', showCaseRoutes)
+}
 app.use(function (err, req, res, next) {
     if (err.code !== 'EBADCSRFTOKEN') return next(err)
     res.status(403)
