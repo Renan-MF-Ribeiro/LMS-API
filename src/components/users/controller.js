@@ -40,6 +40,7 @@ const {
     pagination,
     ordernation,
     getUserByToken,
+    formatNumberCpf,
 } = require('../../utils/functions')
 
 const {
@@ -215,7 +216,7 @@ module.exports = {
                     var key = login + ':' + password
                     key = cryptoJS.AES.encrypt(key, password).toString()
 
-                    _messages.success(res, req, { tk, key, accept: user.acceptTerms,acceptCollaboration: user.acceptTermsCollaboration, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
+                    _messages.success(res, req, { tk, key, accept: user.acceptTerms, acceptCollaboration: user.acceptTermsCollaboration, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
                 } else {
                     await sleep(3000)
                     _messages.forbidden(res, req, 'Usuário ou senha inválidos.', 'Usuário ou senha inválidos.', 'users', 'ldapSignIn')
@@ -458,6 +459,7 @@ module.exports = {
             const results = preProcessedUsers.map(user => {
                 if (user.cpf) {
                     user.cpf = user.cpf.replace(/[^a-z0-9]/gi, '')
+                    user.cpf = formatNumberCpf(user.cpf)
                 }
                 return user
             })
