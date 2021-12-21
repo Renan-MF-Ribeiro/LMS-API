@@ -15,7 +15,7 @@ const _functions = require('../../utils/functions')
 const _files = require('../../utils/files')
 
 module.exports = {
-    async createEvaluation(req, res) {
+    async createEvaluation (req, res) {
         try {
             const { description } = req.body
 
@@ -37,7 +37,7 @@ module.exports = {
         }
     },
 
-    async returnEvaluation(req, res) {
+    async returnEvaluation (req, res) {
         try {
             const { id } = req.params
             const user = await _functions.getUserByToken(req)
@@ -80,7 +80,7 @@ module.exports = {
         }
     },
 
-    async getAllEvaluations(req, res) {
+    async getAllEvaluations (req, res) {
         try {
             const { skip, limit } = _functions.pagination(req)
             const { order, sort } = _functions.ordernation(req)
@@ -111,7 +111,7 @@ module.exports = {
         }
     },
 
-    async updateEvaluation(req, res) {
+    async updateEvaluation (req, res) {
         try {
             const { _id } = req.body
             const evaluationCheck = await Evaluation.find({
@@ -134,7 +134,7 @@ module.exports = {
         }
     },
 
-    async deleteEvaluation(req, res) {
+    async deleteEvaluation (req, res) {
         try {
             const { id } = req.params
             await Evaluation.findByIdAndUpdate(id, { deleted: 1 })
@@ -145,7 +145,7 @@ module.exports = {
         }
     },
 
-    async importQuestions(req, res) {
+    async importQuestions (req, res) {
         try {
             const { idEvaluation } = req.fields
 
@@ -245,7 +245,7 @@ module.exports = {
         }
     },
 
-    async getActivesEvaluations(req, res) {
+    async getActivesEvaluations (req, res) {
         try {
             const evaluations = await Evaluation.find({ active: { $eq: 1 } })
             _messages.success(res, req, evaluations)
@@ -254,7 +254,7 @@ module.exports = {
         }
     },
 
-    async startEvaluation(req, res) {
+    async startEvaluation (req, res) {
         try {
             const { id, idItem } = req.params
             const user = await _functions.getUserByToken(req)
@@ -300,7 +300,7 @@ module.exports = {
         }
     },
 
-    async questionResponse(req, res) {
+    async questionResponse (req, res) {
         try {
             const { _id, idQuestion, idAlternative, idItem } = req.body
             const { idEvaluation, answers, amountQuestionsCorrect, createdAt } = await HistoricEvaluation.findOne({ _id: { $eq: _id } })
@@ -426,7 +426,7 @@ module.exports = {
         }
     },
 
-    async nextQuestion(req, res) {
+    async nextQuestion (req, res) {
         try {
             const { id } = req.params
             const user = await _functions.getUserByToken(req)
@@ -474,7 +474,7 @@ module.exports = {
         }
     },
 
-    async checkEvaluationStarted(req, res) {
+    async checkEvaluationStarted (req, res) {
         try {
             const { idItem, id } = req.params
             const user = await _functions.getUserByToken(req)
@@ -505,7 +505,7 @@ module.exports = {
         }
     },
 
-    async countdownEvaluation(req, res) {
+    async countdownEvaluation (req, res) {
         try {
             const { evaluationID, duration } = req.body
 
@@ -517,7 +517,7 @@ module.exports = {
         }
     },
 
-    async finalizeEvaluation(req, res) {
+    async finalizeEvaluation (req, res) {
         try {
             const { evaluationID, itemID } = req.body
             const { passingScore } = await Item.findOne({ _id: { $eq: itemID } })
@@ -535,7 +535,7 @@ module.exports = {
             result.passingScore = passingScore
 
             if (result.values.correct >= passingScore) {
-                await ExamTracking.findOneAndUpdate({ item: itemID, userLogin: user.networkLogin}, {lessonStatus: 'passed'})
+                await ExamTracking.findOneAndUpdate({ item: itemID, userLogin: user.networkLogin }, { lessonStatus: 'passed' })
             }
 
             _messages.success(res, req, result)

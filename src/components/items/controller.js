@@ -15,13 +15,14 @@ const { error } = require('../../utils/logger')
 const _errors = require('../../utils/errors')
 const _messages = require('../../utils/messages')
 const _functions = require('../../utils/functions')
-const { Item, DocumentItem, MediaItem, SCORMItem, ExamItem, AudioItem, SoundcloudItem } = require('./model')
+const { Item, DocumentItem, MediaItem, SCORMItem, ExamItem, AudioItem, SoundcloudItem, VimeoItem } = require('./model')
 const { Tracking } = require('../tracking/model')
 const {
     awsAmazon,
     azureBlob,
     isSCORMManifestFile,
     isSCORMSchemaFile,
+    vimeoFilePath,
 } = require('../../utils/files')
 
 const {
@@ -37,6 +38,7 @@ const ITEM_KINDS = Object.freeze({
     ExamItem: ExamItem,
     AudioItem: AudioItem,
     SoundcloudItem: SoundcloudItem,
+    VimeoItem: VimeoItem,
 })
 
 const ItemController = {
@@ -72,16 +74,19 @@ const ItemController = {
                         thumbPath = await azureBlob(thumb, 'items/thumbs')
                         thumbPath = process.env.NODE_ENV === 'local' ? thumbPath : thumbPath.replace(AZURE_BLOB_URL, DOMAIN)
                     }
-                    if (content) {
-                        contentPath = await azureBlob(content, 'items/content')
-                        contentPath = process.env.NODE_ENV === 'local' ? contentPath : contentPath.replace(AZURE_BLOB_URL, DOMAIN)
+
+                    if (payload.kind !== 'VimeoItem') {
+                        if (content) {
+                            contentPath = await azureBlob(content, 'items/content')
+                            contentPath = process.env.NODE_ENV === 'local' ? contentPath : contentPath.replace(AZURE_BLOB_URL, DOMAIN)
+                        }
+
+                        if (!contentPath && payload.content && (ItemModel === MediaItem || ItemModel === AudioItem || ItemModel === DocumentItem)) {
+                            contentPath = payload.content
+                        }
                     }
 
-                    if (!contentPath && payload.content && (ItemModel === MediaItem || ItemModel === AudioItem || ItemModel === DocumentItem)) {
-                        contentPath = payload.content
-                    }
-
-                    if (payload.kind !== 'SoundcloudItem') {
+                    if (payload.kind !== 'SoundcloudItem' || payload.kind !== 'VimeoItem') {
                         payload = {
                             ...payload,
                             enabled: true,
@@ -95,13 +100,17 @@ const ItemController = {
                             thumbPath: thumbPath || undefined,
                         }
                     }
-                    console.log(payload, thumb)
 
                     delete payload.thumb
                     delete payload.content
 
                     const user = await getUserByToken(req)
                     payload.author = user._id
+
+                    if (payload.kind === 'VimeoItem') {
+                        payload.contentPath = String(new Date().toISOString())
+                        const vimeoFile = vimeoFilePath(content, payload, user)
+                    }
 
                     const item = await ItemModel.create(payload)
 
@@ -141,6 +150,9 @@ const ItemController = {
                     }
                     _messages.success(res, req, item._id)
                 } catch (error) {
+                    if (error.message === 'Something went wrong') {
+                        _messages.internalServer(res, req, error.error, error, 'itemColaborativo')
+                    }
                     console.log(error)
                     if (error.name === 'ValidationError') {
                         const messages = {}
@@ -211,7 +223,7 @@ const ItemController = {
                         delete payload.content
                     }
 
-                    if (payload.kind !== 'SoundcloudItem') {
+                    if (payload.kind !== 'SoundcloudItem' || payload.kind !== 'VimeoItem') {
                         payload = {
                             ...payload,
                             enabled: true,
@@ -467,6 +479,7 @@ const ItemController = {
     },
 
     async uploadSCORM (req, res) {
+        const user = await getUserByToken(req)
         if (req.method !== 'POST') {
             return res.status(httpStatus.NOT_FOUND).send()
         }
@@ -571,6 +584,7 @@ const ItemController = {
                     const scoId = $item.attributes.identifier
 
                     return SCORMItem.create({
+                        author: user._id,
                         title,
                         packageId,
                         scoId,

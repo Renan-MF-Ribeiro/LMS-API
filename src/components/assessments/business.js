@@ -88,7 +88,7 @@ module.exports = {
                     await Question.findByIdAndUpdate(questionCreated._id, { alternatives: arrIdAlternatives, rigthAnswer: idRigthAnswer, description: strDescription })
                 } else {
                     if (body) {
-                        console.log(question.description);
+                        console.log(question.description)
                         await Question.findByIdAndUpdate(id, { description: body.description ? body.description : question.description })
                     }
                 }
