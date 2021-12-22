@@ -82,7 +82,9 @@ module.exports = {
     async signup (req, res) {
         try {
             var salt = bcrypt.genSaltSync(10)
-            const { networkLogin, password, ...data } = req.body
+            const { networkLogin, properties } = req.body
+
+            const { password, ...data } = properties
 
             const user = await User.find({ networkLogin })
 
@@ -109,8 +111,9 @@ module.exports = {
 
                     await sendSignupActivationEmail(newUser.email, activationLink)
                 }
+                const token = generateToken({networkLogin});
 
-                _messages.success(res, req, newUser)
+                _messages.success(res, req, token)
             }
         } catch (error) {
             console.log(error)
@@ -239,18 +242,12 @@ module.exports = {
         let user = {}
         const { token } = req.body
         const secret = process.env.JWT_SECRET
-        const { cpf, email, registration } = await jwt.verify(token.token, secret)
+        const { data } = await jwt.verify(token, secret)
+        const networkLogin = data.networkLogin;
+
         try {
-            if (cpf || email || registration) {
-                if (email) {
-                    user = await User.findOne({ email, status: 'ATIVO', enabled: true }, ['_id', 'networkLogin', 'password', 'acceptTerms', 'passwordValid', 'name', 'profilePhoto', 'groupsAD', 'email'])
-                }
-                if (cpf) {
-                    user = await User.findOne({ cpf, status: 'ATIVO', enabled: true }, ['_id', 'networkLogin', 'password', 'acceptTerms', 'passwordValid', 'name', 'profilePhoto', 'groupsAD', 'email'])
-                }
-                if (registration) {
-                    user = await User.findOne({ registration, status: 'ATIVO', enabled: true }, ['_id', 'networkLogin', 'password', 'acceptTerms', 'passwordValid', 'name', 'profilePhoto', 'groupsAD', 'email'])
-                }
+            if (networkLogin) {
+                user = await User.findOne({ networkLogin, status: 'ATIVO' }, ['_id', 'networkLogin', 'user', 'password', 'acceptTerms', 'passwordValid', 'name', 'profilePhoto', 'groupsAD', 'email'])
                 if (user) {
                     const amountOfLocks = await checkAmountOfLocks(user._id)
                     // 5 Tentativas
