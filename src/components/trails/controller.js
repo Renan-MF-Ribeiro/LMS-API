@@ -5,7 +5,7 @@ const { awsAmazon, azureBlob } = require('../../utils/files')
 const { isSCORMCompleted, processExpirationDate, processTrailTracking } = require('../../utils/functions')
 const { Trail } = require('./model')
 const { Item } = require('../items/model')
-const { populateTrails } = require('../trails/business')
+const { populateTrails} = require('../trails/business')
 const { Tracking } = require('../tracking/model')
 const {
     pagination,
@@ -25,6 +25,7 @@ const { Evaluation } = require('../assessments/model')
 const { User } = require('../users/model')
 const { Message } = require('../messages/model')
 const { sendMessageToKafka } = require('../messages/business')
+const { elegiblesContents, keepLearningSections, concludedSections } = require('../sections/business')
 
 module.exports = {
 
@@ -70,7 +71,18 @@ module.exports = {
                 }
 
                 trail = processedTrail.trail
-            }
+            } 
+                                      
+            const arrSections = await elegiblesContents(filteredTrails)
+            const arrKeepLearningSections = await keepLearningSections(filteredTrails)
+            const arrConcludedSections = await concludedSections(filteredTrails)
+
+            resultSections = arrSections
+                    .concat(arrKeepLearningSections)
+                    .concat(arrConcludedSections)
+                resultSections = resultSections.filter(val => {
+                    return val != null
+                })
 
             _messages.success(res, req, { trails: filteredTrails, total })
         } catch (error) {
