@@ -790,12 +790,12 @@ module.exports = {
 
     async updateModeration (req, res) {
         try {
-            const { moderation, trailId } = req.body
+            const { moderation,tags, trailId } = req.body
 
             if (!moderation || !trailId) {
                 _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
             }
-            const trail = await Trail.findByIdAndUpdate(trailId, { moderation }, { new: true })
+            const trail = await Trail.findByIdAndUpdate(trailId, { moderation,tags }, { new: true })
 
             const user = await User.findById(trail.author)
 
