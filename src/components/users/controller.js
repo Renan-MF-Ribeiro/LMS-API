@@ -215,7 +215,7 @@ module.exports = {
                     var key = login + ':' + password
                     key = cryptoJS.AES.encrypt(key, password).toString()
 
-                    _messages.success(res, req, { tk, key, accept: user.acceptTerms,acceptCollaboration: user.acceptTermsCollaboration, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
+                    _messages.success(res, req, { tk, key, accept: user.acceptTerms, acceptCollaboration: user.acceptTermsCollaboration, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
                 } else {
                     await sleep(3000)
                     _messages.forbidden(res, req, 'Usuário ou senha inválidos.', 'Usuário ou senha inválidos.', 'users', 'ldapSignIn')
