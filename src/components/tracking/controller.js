@@ -4,7 +4,7 @@ const { decodeToken } = require('../../utils/auth')
 
 const _messages = require('../../utils/messages')
 const { User } = require('../users/model')
-const { Tracking, DocumentTracking, MediaTracking,AudioTracking, SCORMTracking, ExamTracking, SCORMTrackingHistory, SCORMLessonStatus } = require('./model')
+const { Tracking, DocumentTracking, MediaTracking, AudioTracking, SCORMTracking, ExamTracking, SCORMTrackingHistory, SCORMLessonStatus } = require('./model')
 const { HistoricEvaluation } = require('../assessments/model')
 
 const {
@@ -184,10 +184,10 @@ const TrackingController = {
     },
 
     async createOrUpdateSCORM (req, res) {
-        var decrypted = cryptoJS.AES.decrypt(req.headers.tokendata, 'commit');  
-        let tmpStatus = decrypted.toString(cryptoJS.enc.Utf8);
-        
-        if(tmpStatus != req.body.lessonStatus) {
+        var decrypted = cryptoJS.AES.decrypt(req.headers.tokendata, 'commit')
+        const tmpStatus = decrypted.toString(cryptoJS.enc.Utf8)
+
+        if (tmpStatus != req.body.lessonStatus) {
             res.status(httpStatus.NO_CONTENT).send()
             return
         }

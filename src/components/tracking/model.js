@@ -90,5 +90,5 @@ module.exports = {
     SCORMTracking,
     SCORMTrackingHistory,
     ExamTracking,
-    AudioTracking
+    AudioTracking,
 }

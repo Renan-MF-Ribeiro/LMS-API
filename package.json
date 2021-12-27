@@ -64,7 +64,8 @@
         "shelljs": "^0.8.3",
         "ssh2-sftp-client": "^4.2.3",
         "tincanjs": "^0.50.0",
-        "unzipper": "^0.10.5"
+        "unzipper": "^0.10.5",
+        "vimeo": "^2.1.1"
     },
     "devDependencies": {
         "cross-env": "^5.2.1",

@@ -365,6 +365,15 @@ module.exports = {
         }
         return trail
     },
+    formatNumberCpf (value) {
+        const cpfLength = 11
+        if (value.length < cpfLength) {
+            for (let i = value.length; i < cpfLength; i++) {
+                value = '0' + value
+            }
+        }
+        return value
+    },
 
 }
 

@@ -25,6 +25,7 @@ const { Evaluation } = require('../assessments/model')
 const { User } = require('../users/model')
 const { Message } = require('../messages/model')
 const { sendMessageToKafka } = require('../messages/business')
+const { elegiblesContents, keepLearningSections, concludedSections } = require('../sections/business')
 
 module.exports = {
 
@@ -47,8 +48,7 @@ module.exports = {
 
     async getCollaborativeChannel (req, res) {
         try {
-            const user = getUserByToken(req)
-
+            const user = await getUserByToken(req)
             const { skip, limit } = pagination(req)
             const searchObj = { collaborative: true, $or: [{ moderation: 'approved' }, { moderation: 'denounced' }], enabled: true }
 
@@ -70,9 +70,20 @@ module.exports = {
                 }
 
                 trail = processedTrail.trail
-            }
+            } 
 
-            _messages.success(res, req, { trails: filteredTrails, total })
+            const arrSections = await elegiblesContents(filteredTrails)
+            const arrKeepLearningSections = await keepLearningSections(filteredTrails)
+            const arrConcludedSections = await concludedSections(filteredTrails)
+
+            resultSections = arrSections
+                    .concat(arrKeepLearningSections)
+                    .concat(arrConcludedSections)
+                resultSections = resultSections.filter(val => {
+                    return val != null
+                })
+
+            _messages.success(res, req, { sections: resultSections, total })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'trails', 'getColaborativo')
         }
@@ -779,12 +790,12 @@ module.exports = {
 
     async updateModeration (req, res) {
         try {
-            const { moderation, trailId } = req.body
+            const { moderation,tags, trailId } = req.body
 
             if (!moderation || !trailId) {
                 _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
             }
-            const trail = await Trail.findByIdAndUpdate(trailId, { moderation }, { new: true })
+            const trail = await Trail.findByIdAndUpdate(trailId, { moderation,tags }, { new: true })
 
             const user = await User.findById(trail.author)
 
