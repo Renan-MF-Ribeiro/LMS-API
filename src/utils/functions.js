@@ -88,6 +88,13 @@ module.exports = {
         return { order, sort }
     },
 
+    formatExcelDateToString (date) {
+        const dateArray = date.split(' ')
+        const month = returnMonthNumber(dateArray[1])
+        const newDate = `${dateArray[2]}/${month}/${dateArray[3]}`
+        return newDate
+    },
+
     recordLog (req, type, message, component, route, dataNew = null, dataOld = null, namesGroups = null) {
         return new Promise(async (resolve, reject) => {
             try {
@@ -365,6 +372,15 @@ module.exports = {
         }
         return trail
     },
+    formatNumberCpf (value) {
+        const cpfLength = 11
+        if (value.length < cpfLength) {
+            for (let i = value.length; i < cpfLength; i++) {
+                value = '0' + value
+            }
+        }
+        return value
+    },
 
 }
 
@@ -409,4 +425,32 @@ function _isSCORMCompleted (status = '') {
         SCORMLessonStatus.FAILED,
         SCORMLessonStatus.PASSED,
     ].includes(status.toLowerCase())
+}
+function returnMonthNumber (month) {
+    switch (month) {
+        case 'Jan':
+            return '01'
+        case 'Feb':
+            return '02'
+        case 'Mar':
+            return '03'
+        case 'Apr':
+            return '04'
+        case 'May':
+            return '05'
+        case 'Jun':
+            return '06'
+        case 'Jul':
+            return '07'
+        case 'Aug':
+            return '08'
+        case 'Sep':
+            return '09'
+        case 'Oct':
+            return '10'
+        case 'Nov':
+            return '11'
+        case 'Dec':
+            return '12'
+    }
 }

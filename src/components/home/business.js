@@ -246,7 +246,7 @@ module.exports = {
                             const concludedAt = tracking.completionAt
                             const { completion } = item
                             const { durationHours, title, thumbPath } = item.itemID
-                            certs.push({ duration: durationHours, concludedAt, title, userName: user.name, thumbPath, completion })
+                            certs.push({ duration: durationHours, concludedAt, title, userName: user.name, thumbPath, completion, score: tracking.score })
                             itemsID.push(item.itemID.id)
                         }
                     }
