@@ -142,9 +142,9 @@ module.exports = {
         }
 
         const vimeoTrx = new Vimeo(
-            process.env.clientId,
-            process.env.clientSecret,
-            process.env.accessToken,
+            process.env.VIMEO_CLIENTID,
+            process.env.VIMEO_CLIENTSECRET,
+            process.env.VIMEO_ACCESSTOKEN,
         )
 
         vimeoTrx.upload(
