@@ -3,21 +3,21 @@ require('dotenv').config()
 const ldap = require('ldapjs')
 const jwt = require('jsonwebtoken')
 const {
-    promisify
+    promisify,
 } = require('util')
 const {
-    error
+    error,
 } = require('../utils/logger')
 const {
     PROJECT_SECRET_KEY,
     LDAP_HOST,
-    ANALYTICS_SECRET_KEY
+    ANALYTICS_SECRET_KEY,
 } = process.env
 const {
-    Profile
+    Profile,
 } = require('../components/profiles/model')
 const {
-    Group
+    Group,
 } = require('../components/groups/model')
 
 const _ldapClient = ldap.createClient({
@@ -36,11 +36,11 @@ module.exports = {
 
     generateToken: obj => {
         const token = jwt.sign({
-                data: obj
-            },
-            PROJECT_SECRET_KEY, {
-                expiresIn: '1h'
-            },
+            data: obj,
+        },
+        PROJECT_SECRET_KEY, {
+            expiresIn: '1h',
+        },
         )
 
         return token
@@ -48,23 +48,23 @@ module.exports = {
 
     generateSSOToken: obj => {
         const token = jwt.sign({
-                data: obj
-            },
-            PROJECT_SECRET_KEY, {
-                expiresIn: '1h'
-            },
+            data: obj,
+        },
+        PROJECT_SECRET_KEY, {
+            expiresIn: '1h',
+        },
         )
         return token
     },
 
     generateTokenAnalytics: obj => {
         const token = jwt.sign({
-                perfil: obj.perfil,
-                clientID: obj.clientID,
-            },
-            ANALYTICS_SECRET_KEY, {
-                expiresIn: '12h'
-            },
+            perfil: obj.perfil,
+            clientID: obj.clientID,
+        },
+        ANALYTICS_SECRET_KEY, {
+            expiresIn: '12h',
+        },
         )
 
         return token
@@ -83,7 +83,7 @@ module.exports = {
                 for (const p in profiles) {
                     const profile = await Profile.findOne({
                         $text: {
-                            $search: profiles[p]
+                            $search: profiles[p],
                         },
                     })
 
@@ -117,7 +117,7 @@ module.exports = {
                 for (const p in profiles) {
                     const profile = await Profile.findOne({
                         _id: {
-                            $eq: profiles[p]
+                            $eq: profiles[p],
                         },
                     })
 
@@ -165,7 +165,7 @@ module.exports = {
         })
     },
 
-    returnIdGroupUser(groups) {
+    returnIdGroupUser (groups) {
         return new Promise(async (resolve, reject) => {
             try {
                 const result = []
@@ -173,7 +173,7 @@ module.exports = {
                 for (const p in groups) {
                     const group = await Group.findOne({
                         $text: {
-                            $search: groups[p]
+                            $search: groups[p],
                         },
                     })
 
@@ -188,7 +188,7 @@ module.exports = {
     },
 }
 
-function returnNumberOfProfile(profile) {
+function returnNumberOfProfile (profile) {
     let number
     switch (profile) {
         case 'GL_ACADMODA_PF_INTEGRADOR':

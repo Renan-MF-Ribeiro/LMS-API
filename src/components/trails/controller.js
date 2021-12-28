@@ -70,18 +70,18 @@ module.exports = {
                 }
 
                 trail = processedTrail.trail
-            } 
+            }
 
             const arrSections = await elegiblesContents(filteredTrails)
             const arrKeepLearningSections = await keepLearningSections(filteredTrails)
             const arrConcludedSections = await concludedSections(filteredTrails)
 
             resultSections = arrSections
-                    .concat(arrKeepLearningSections)
-                    .concat(arrConcludedSections)
-                resultSections = resultSections.filter(val => {
-                    return val != null
-                })
+                .concat(arrKeepLearningSections)
+                .concat(arrConcludedSections)
+            resultSections = resultSections.filter(val => {
+                return val != null
+            })
 
             _messages.success(res, req, { sections: resultSections, total })
         } catch (error) {
@@ -790,12 +790,12 @@ module.exports = {
 
     async updateModeration (req, res) {
         try {
-            const { moderation,tags, trailId } = req.body
+            const { moderation, tags, trailId } = req.body
 
             if (!moderation || !trailId) {
                 _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
             }
-            const trail = await Trail.findByIdAndUpdate(trailId, { moderation,tags }, { new: true })
+            const trail = await Trail.findByIdAndUpdate(trailId, { moderation, tags }, { new: true })
 
             const user = await User.findById(trail.author)
 

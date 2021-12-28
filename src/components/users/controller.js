@@ -111,7 +111,7 @@ module.exports = {
 
                     await sendSignupActivationEmail(newUser.email, activationLink)
                 }
-                const token = generateToken({networkLogin});
+                const token = generateToken({ networkLogin })
 
                 _messages.success(res, req, token)
             }
@@ -243,7 +243,7 @@ module.exports = {
         const { token } = req.body
         const secret = process.env.JWT_SECRET
         const { data } = await jwt.verify(token, secret)
-        const networkLogin = data.networkLogin;
+        const networkLogin = data.networkLogin
 
         try {
             if (networkLogin) {
