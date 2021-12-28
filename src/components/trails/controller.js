@@ -70,18 +70,18 @@ module.exports = {
                 }
 
                 trail = processedTrail.trail
-            } 
+            }
 
             const arrSections = await elegiblesContents(filteredTrails)
             const arrKeepLearningSections = await keepLearningSections(filteredTrails)
             const arrConcludedSections = await concludedSections(filteredTrails)
 
-            resultSections = arrSections
-                    .concat(arrKeepLearningSections)
-                    .concat(arrConcludedSections)
-                resultSections = resultSections.filter(val => {
-                    return val != null
-                })
+            let resultSections = arrSections
+                .concat(arrKeepLearningSections)
+                .concat(arrConcludedSections)
+            resultSections = resultSections.filter(val => {
+                return val != null
+            })
 
             _messages.success(res, req, { sections: resultSections, total })
         } catch (error) {
@@ -106,6 +106,26 @@ module.exports = {
             _messages.success(res, req, trail)
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'trails', 'findById')
+        }
+    },
+
+    async findByIdWithTracking (req, res) {
+        try {
+            const _id = req.params.trailId
+            const user = await getUserByToken(req)
+
+            const allTrackingUser = await Tracking.find({
+                userLogin: { $eq: user.networkLogin },
+            })
+
+            const trails = await populateTrails(true, { _id })
+            const trail = processExpirationDate(trails[0], user)
+
+            const processedTrail = processTrailTracking(trail, allTrackingUser)
+
+            _messages.success(res, req, processedTrail.trail)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'trails', 'findByIdWithTracking')
         }
     },
 
@@ -790,12 +810,12 @@ module.exports = {
 
     async updateModeration (req, res) {
         try {
-            const { moderation,tags, trailId } = req.body
+            const { moderation, tags, trailId } = req.body
 
             if (!moderation || !trailId) {
                 _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
             }
-            const trail = await Trail.findByIdAndUpdate(trailId, { moderation,tags }, { new: true })
+            const trail = await Trail.findByIdAndUpdate(trailId, { moderation, tags }, { new: true })
 
             const user = await User.findById(trail.author)
 
