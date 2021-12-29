@@ -76,7 +76,7 @@ module.exports = {
             const arrKeepLearningSections = await keepLearningSections(filteredTrails)
             const arrConcludedSections = await concludedSections(filteredTrails)
 
-            resultSections = arrSections
+            let resultSections = arrSections
                 .concat(arrKeepLearningSections)
                 .concat(arrConcludedSections)
             resultSections = resultSections.filter(val => {
@@ -106,6 +106,26 @@ module.exports = {
             _messages.success(res, req, trail)
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'trails', 'findById')
+        }
+    },
+
+    async findByIdWithTracking (req, res) {
+        try {
+            const _id = req.params.trailId
+            const user = await getUserByToken(req)
+
+            const allTrackingUser = await Tracking.find({
+                userLogin: { $eq: user.networkLogin },
+            })
+
+            const trails = await populateTrails(true, { _id })
+            const trail = processExpirationDate(trails[0], user)
+
+            const processedTrail = processTrailTracking(trail, allTrackingUser)
+
+            _messages.success(res, req, processedTrail.trail)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'trails', 'findByIdWithTracking')
         }
     },
 
