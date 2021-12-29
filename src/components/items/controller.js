@@ -101,6 +101,11 @@ const ItemController = {
                         }
                     }
 
+                    let vimeoLink
+                    if (payload.kind === 'VimeoItem' && !content) {
+                        vimeoLink = payload.content
+                    }
+
                     delete payload.thumb
                     delete payload.content
 
@@ -108,8 +113,12 @@ const ItemController = {
                     payload.author = user._id
 
                     if (payload.kind === 'VimeoItem') {
-                        payload.contentPath = String(new Date().toISOString())
-                        const vimeoFile = vimeoFilePath(content, payload, user)
+                        if (!content) {
+                            payload.contentPath = vimeoLink
+                        } else {
+                            payload.contentPath = String(new Date().toISOString())
+                            vimeoFilePath(content, payload, user)
+                        }
                     }
 
                     const item = await ItemModel.create(payload)
