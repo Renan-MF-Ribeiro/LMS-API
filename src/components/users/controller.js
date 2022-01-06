@@ -344,6 +344,7 @@ module.exports = {
         try {
             const { body, domain } = req.body
 
+
             let search = Object()
             Object.entries(body).forEach(([k, v]) => {
                 search = Object.assign(search, { [k]: { $eq: v } })
@@ -365,12 +366,18 @@ module.exports = {
                 return item
             })
 
+            const token = generateToken({
+                password_new
+            })
+
+            const resetPasswordUrl = `${domain}/#/login/troca-senha?token=${token}`
+
             newPass.push({ hash: hashPass, valid: true, createdAt: new Date() })
 
             const isUser = await User.findOneAndUpdate(search, { password: newPass, passwordValid: false })
 
             if (isUser.email) {
-                await sendEmailRecoryPassword(user.email ? user.email : emails, !!user.email, password_new, domain, { name: user.name, cpf: user.cpf })
+                await sendEmailRecoryPassword(user.email ? user.email : emails, !!user.email, password_new, resetPasswordUrl, { name: user.name, cpf: user.cpf })
                 // $2a$10$G06bQZrp8R8kn2cnImS47eHQv./K4i0bp1yBaNDyj3WSrsCH/639G --> senha
                 return await _messages.success(res, req, 'Sucesso', 'Email para recupera senha disparado', 'users', 'recoveryPassword', [], [], true, 'RECOVERY PASSWORD')
             } else {
@@ -932,6 +939,9 @@ module.exports = {
     async resetUserPassword (req, res) {
         try {
             const { userId, password, generate } = req.body
+
+            console.log(userId, password, generate)
+            console.log('????')
 
             if (!userId || generate === null) {
                 _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
