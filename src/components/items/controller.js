@@ -218,20 +218,21 @@ const ItemController = {
                         thumbPath = await azureBlob(thumb, 'items/thumbs')
                         thumbPath = process.env.NODE_ENV === 'local' ? thumbPath : thumbPath.replace(AZURE_BLOB_URL, DOMAIN)
                     }
-                    if (content) {
-                        contentPath = await azureBlob(content, 'items/content')
-                        contentPath = process.env.NODE_ENV === 'local' ? contentPath : contentPath.replace(AZURE_BLOB_URL, DOMAIN)
-                    }
-                    if (banner) {
-                        bannerPath = await azureBlob(banner, 'items/banners')
-                        bannerPath = process.env.NODE_ENV === 'local' ? bannerPath : bannerPath.replace(AZURE_BLOB_URL, DOMAIN)
-                    }
+                    if (payload.kind !== 'VimeoItem') {
+                        if (content) {
+                            contentPath = await azureBlob(content, 'items/content')
+                            contentPath = process.env.NODE_ENV === 'local' ? contentPath : contentPath.replace(AZURE_BLOB_URL, DOMAIN)
+                        }
+                        if (banner) {
+                            bannerPath = await azureBlob(banner, 'items/banners')
+                            bannerPath = process.env.NODE_ENV === 'local' ? bannerPath : bannerPath.replace(AZURE_BLOB_URL, DOMAIN)
+                        }
 
-                    if (!contentPath && payload.content && (ItemModel === MediaItem || ItemModel === AudioItem)) {
-                        contentPath = payload.content
-                        delete payload.content
+                        if (!contentPath && payload.content && (ItemModel === MediaItem || ItemModel === AudioItem)) {
+                            contentPath = payload.content
+                            delete payload.content
+                        }
                     }
-
                     if (payload.kind !== 'SoundcloudItem' || payload.kind !== 'VimeoItem') {
                         payload = {
                             ...payload,
@@ -249,10 +250,25 @@ const ItemController = {
                         }
                     }
 
+                    let vimeoLink
+                    if (payload.kind === 'VimeoItem' && !content) {
+                        vimeoLink = payload.content
+                    }
+
                     delete payload.thumb
                     delete payload.banner
                     delete payload.content
                     console.log('payload: ', payload)
+
+                    if (payload.kind === 'VimeoItem') {
+                        if (!content) {
+                            payload.contentPath = vimeoLink
+                        } else {
+                            payload.contentPath = String(new Date().toISOString())
+                            vimeoFilePath(content, payload, user)
+                        }
+                    }
+
                     const { _id } = await ItemModel.create(payload)
                     _messages.success(res, req, { _id })
                 } catch (error) {
