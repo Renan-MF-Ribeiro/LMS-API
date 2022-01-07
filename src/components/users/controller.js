@@ -554,7 +554,10 @@ module.exports = {
     async returnUserById (req, res) {
         try {
             const { _id } = req.body
-            const user = await User.findOne({_id: _id});
+            let user = await User.findOne({_id: _id})
+
+            user.password = undefined
+            
             _messages.success(res, req, {
                 data: user,
             })
