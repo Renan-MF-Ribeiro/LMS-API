@@ -551,6 +551,18 @@ module.exports = {
         }
     },
 
+    async returnUserById (req, res) {
+        try {
+            const { _id } = req.body
+            const user = await User.findOne({_id: _id});
+            _messages.success(res, req, {
+                data: user,
+            })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'returnUsers')
+        }
+    },
+
     async updateUser (req, res) {
         try {
             const { _id, tags } = req.body
@@ -570,6 +582,16 @@ module.exports = {
                     }
                 }
             }
+            await User.findByIdAndUpdate(_id, req.body)
+            _messages.success(res, req, 'Atualizado com sucesso')
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'updateUser')
+        }
+    },
+
+    async updateUserById (req, res) {
+        try {
+            const { _id } = req.body
             await User.findByIdAndUpdate(_id, req.body)
             _messages.success(res, req, 'Atualizado com sucesso')
         } catch (error) {
