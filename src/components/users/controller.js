@@ -991,14 +991,4 @@ module.exports = {
         }
     },
 
-    async acceptTermsCollaboration (req, res) {
-        try {
-            const { _id } = await getUserByToken(req)
-            await User.findByIdAndUpdate(_id, { acceptTermsCollaboration: true })
-            _messages.success(res, req, 'Sucesso', 'Aceitação dos termos de uso', 'users', 'acceptTerms', [], [], true, 'TERMS OF USE')
-        } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'acceptTerms')
-        }
-    },
-
 }

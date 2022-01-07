@@ -20,7 +20,17 @@
         "sendSignUpActivationEmail": false
     },
     "messenger": {
-        "sendUsersToMicrosservice": false
+        "sendUsersToMicrosservice": false,
+        "emailTemplate": {
+            "primary": "#38B9C2",
+            "secondary": "#ffffff",
+            "logo": "https://happlearning.blob.core.windows.net/logo/logoHapp.png",
+            "buttonTextColor": "#FFFFFF",
+            "buttonBackgroundColor": "#38B9C2",
+            "client": "LMS Happlearning",
+            "thumbnail": "https://happlearning.blob.core.windows.net/logo/thumbnailHapp.png",
+            "footer": "https://happlearning.blob.core.windows.net/logo/footerHapp.png"
+        }
     },
     "showcase": {
         "active": false
