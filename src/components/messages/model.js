@@ -10,7 +10,7 @@ const MessageSchema = new mongoose.Schema({
     text: { type: String, required: true },
     target: { type: Object },
     mode: { type: String, required: true },
-    texthtml: { type: String, required: true },
+    texthtml: { type: String },
 }, { timestamps: true })
 
 const Message = mongoose.model('Message', MessageSchema)
