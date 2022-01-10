@@ -322,13 +322,15 @@ const ItemController = {
                         thumbPath = await azureBlob(thumb, 'items/thumbs')
                         thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN)
                     }
-                    if (content) {
-                        // contentPath = await awsAmazon(content, 'items/content')
-                        contentPath = await azureBlob(content, 'items/content')
-                    }
-                    if (banner) {
-                        // bannerPath = await awsAmazon(banner, 'items/banners')
-                        bannerPath = await azureBlob(banner, 'items/banners')
+                    if (payload.kind !== 'VimeoItem') {
+                        if (content) {
+                            // contentPath = await awsAmazon(content, 'items/content')
+                            contentPath = await azureBlob(content, 'items/content')
+                        }
+                        if (banner) {
+                            // bannerPath = await awsAmazon(banner, 'items/banners')
+                            bannerPath = await azureBlob(banner, 'items/banners')
+                        }
                     }
 
                     if (!contentPath && payload.content && ItemModel === MediaItem) {
@@ -345,6 +347,18 @@ const ItemController = {
                     delete payload.content
                     delete payload.thumb
                     delete payload.banner
+
+                    const user = await getUserByToken(req)
+                    payload.author = user._id
+
+                    if (payload.kind === 'VimeoItem') {
+                        if (!content) {
+                            payload.contentPath = vimeoLink
+                        } else {
+                            payload.contentPath = String(new Date().toISOString())
+                            vimeoFilePath(content, payload, user)
+                        }
+                    }
 
                     if (payload.kind === 'SCORMItem' && content) {
                         const { contentPath } = await ItemModel.findById(payload._id)
