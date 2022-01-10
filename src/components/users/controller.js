@@ -551,6 +551,21 @@ module.exports = {
         }
     },
 
+    async returnUserById (req, res) {
+        try {
+            const { _id } = req.body
+            let user = await User.findOne({_id: _id})
+
+            user.password = undefined
+            
+            _messages.success(res, req, {
+                data: user,
+            })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'returnUsers')
+        }
+    },
+
     async updateUser (req, res) {
         try {
             const { _id, tags } = req.body
@@ -570,6 +585,16 @@ module.exports = {
                     }
                 }
             }
+            await User.findByIdAndUpdate(_id, req.body)
+            _messages.success(res, req, 'Atualizado com sucesso')
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'updateUser')
+        }
+    },
+
+    async updateUserById (req, res) {
+        try {
+            const { _id } = req.body
             await User.findByIdAndUpdate(_id, req.body)
             _messages.success(res, req, 'Atualizado com sucesso')
         } catch (error) {
@@ -963,16 +988,6 @@ module.exports = {
         } catch (error) {
             console.log(error)
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'resetUserPassword')
-        }
-    },
-
-    async acceptTermsCollaboration (req, res) {
-        try {
-            const { _id } = await getUserByToken(req)
-            await User.findByIdAndUpdate(_id, { acceptTermsCollaboration: true })
-            _messages.success(res, req, 'Sucesso', 'Aceitação dos termos de uso', 'users', 'acceptTerms', [], [], true, 'TERMS OF USE')
-        } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'acceptTerms')
         }
     },
 

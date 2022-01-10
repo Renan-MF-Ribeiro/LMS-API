@@ -23,6 +23,8 @@ const { Group } = require('../groups/model')
 const { CLIENT_ID } = process.env
 const kafka = require('../../utils/kafka')
 const { Trail } = require('../trails/model')
+const config = require('../../../config.json')
+const emailTemplate = config.messenger.emailTemplate
 require('dotenv').config()
 
 module.exports = {
@@ -386,7 +388,7 @@ module.exports = {
         const communication = ['notification']
         const mode = 'automatic'
         const category = 'notify'
-        return { title, text, communication, category, mode }
+        return { title, text, communication, category, mode, ...emailTemplate }
     },
 
 }

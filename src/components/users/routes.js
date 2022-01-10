@@ -52,5 +52,7 @@ module.exports = express.Router()
     .put('/collaboration/remove', validateTokenRoute, isAdmin, _controller.removeCollaborator)
     .put('/collaboration/moderation', validateTokenRoute, isAdmin, _controller.toggleCollaboratorModeration)
     .post('/password/reset', validateTokenRoute, isAdmin, _controller.resetUserPassword)
+    .put('/update', validateTokenRoute, _controller.updateUserById)
+    .get('/details', validateTokenRoute, _controller.returnUserById)
 
 // .get('/script-users', validateTokenRoute, _controller.scriptUsers)
