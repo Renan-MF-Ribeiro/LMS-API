@@ -260,6 +260,9 @@ const ItemController = {
                     delete payload.content
                     console.log('payload: ', payload)
 
+                    const user = await getUserByToken(req)
+                    payload.author = user._id
+
                     if (payload.kind === 'VimeoItem') {
                         if (!content) {
                             payload.contentPath = vimeoLink
@@ -268,7 +271,6 @@ const ItemController = {
                             vimeoFilePath(content, payload, user)
                         }
                     }
-
                     const { _id } = await ItemModel.create(payload)
                     _messages.success(res, req, { _id })
                 } catch (error) {
