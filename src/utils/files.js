@@ -119,7 +119,7 @@ module.exports = {
         // return await streamToBuffer(downloadFileResponse.readableStreamBody)
     },
 
-    vimeoFilePath (file, payload, user) {
+    vimeoFilePath (file, payload, user, mode = "create") {
         let filePath
         let fileType
         let uploadStatus
@@ -181,7 +181,9 @@ module.exports = {
                         contentPath: { $eq: payload.contentPath },
                     })
                 }
-                trx()
+                if(mode === "create"){
+                    trx()
+                }
             },
         )
 
