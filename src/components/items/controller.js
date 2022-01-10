@@ -344,6 +344,12 @@ const ItemController = {
                         ...(bannerPath ? { bannerPath: bannerPath } : {}),
                         ...payload,
                     }
+
+                    let vimeoLink
+                    if (payload.kind === 'VimeoItem' && !content) {
+                        vimeoLink = payload.content
+                    }
+
                     delete payload.content
                     delete payload.thumb
                     delete payload.banner
@@ -356,7 +362,7 @@ const ItemController = {
                             payload.contentPath = vimeoLink
                         } else {
                             payload.contentPath = String(new Date().toISOString())
-                            // vimeoFilePath(content, payload, user, "update")
+                            vimeoFilePath(content, payload, user, "update")
                         }
                     }
 
