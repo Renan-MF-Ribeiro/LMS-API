@@ -15,7 +15,7 @@ const { error } = require('../../utils/logger')
 const _errors = require('../../utils/errors')
 const _messages = require('../../utils/messages')
 const _functions = require('../../utils/functions')
-const { Item, DocumentItem, MediaItem, SCORMItem, ExamItem, AudioItem, SoundcloudItem, VimeoItem } = require('./model')
+const { Item, DocumentItem, MediaItem, SCORMItem, ExamItem, AudioItem, SoundcloudItem } = require('./model')
 const { Tracking } = require('../tracking/model')
 const {
     awsAmazon,
@@ -38,7 +38,6 @@ const ITEM_KINDS = Object.freeze({
     ExamItem: ExamItem,
     AudioItem: AudioItem,
     SoundcloudItem: SoundcloudItem,
-    VimeoItem: VimeoItem,
 })
 
 const ItemController = {
@@ -58,6 +57,8 @@ const ItemController = {
         if (!flag) {
             _messages.badRequest(res, req, 'A data final não pode ser menor que a data inicial!', 'A data final não pode ser menor que a data inicial!', 'items', '')
         } else {
+            const user = await getUserByToken(req)
+
             const verify = await Item
                 .find({
                     title: { $eq: payload.title },
@@ -75,7 +76,7 @@ const ItemController = {
                         thumbPath = process.env.NODE_ENV === 'local' ? thumbPath : thumbPath.replace(AZURE_BLOB_URL, DOMAIN)
                     }
 
-                    if (payload.kind !== 'VimeoItem') {
+                    if (payload.kind !== 'MediaItem') {
                         if (content) {
                             contentPath = await azureBlob(content, 'items/content')
                             contentPath = process.env.NODE_ENV === 'local' ? contentPath : contentPath.replace(AZURE_BLOB_URL, DOMAIN)
@@ -86,7 +87,7 @@ const ItemController = {
                         }
                     }
 
-                    if (payload.kind !== 'SoundcloudItem' || payload.kind !== 'VimeoItem') {
+                    if (payload.kind !== 'SoundcloudItem' || payload.kind !== 'MediaItem') {
                         payload = {
                             ...payload,
                             enabled: true,
@@ -101,25 +102,19 @@ const ItemController = {
                         }
                     }
 
-                    let vimeoLink
-                    if (payload.kind === 'VimeoItem' && !content) {
-                        vimeoLink = payload.content
-                    }
-
-                    delete payload.thumb
-                    delete payload.content
-
-                    const user = await getUserByToken(req)
-                    payload.author = user._id
-
-                    if (payload.kind === 'VimeoItem') {
+                    if (payload.kind === 'MediaItem') {
                         if (!content) {
-                            payload.contentPath = vimeoLink
+                            payload.contentPath = payload.content
                         } else {
                             payload.contentPath = String(new Date().toISOString())
                             vimeoFilePath(content, payload, user)
                         }
                     }
+
+                    delete payload.thumb
+                    delete payload.content
+
+                    payload.author = user._id
 
                     const item = await ItemModel.create(payload)
 
@@ -201,6 +196,8 @@ const ItemController = {
         if (!flag) {
             _messages.badRequest(res, req, 'A data final não pode ser menor que a data inicial!', 'A data final não pode ser menor que a data inicial!', 'items', 'multiUploadCreate')
         } else {
+            const user = await getUserByToken(req)
+
             const verify = await Item
                 .find({
                     title: { $eq: payload.title },
@@ -218,14 +215,16 @@ const ItemController = {
                         thumbPath = await azureBlob(thumb, 'items/thumbs')
                         thumbPath = process.env.NODE_ENV === 'local' ? thumbPath : thumbPath.replace(AZURE_BLOB_URL, DOMAIN)
                     }
-                    if (payload.kind !== 'VimeoItem') {
+
+                    if (banner) {
+                        bannerPath = await azureBlob(banner, 'items/banners')
+                        bannerPath = process.env.NODE_ENV === 'local' ? bannerPath : bannerPath.replace(AZURE_BLOB_URL, DOMAIN)
+                    }
+
+                    if (payload.kind !== 'MediaItem') {
                         if (content) {
                             contentPath = await azureBlob(content, 'items/content')
                             contentPath = process.env.NODE_ENV === 'local' ? contentPath : contentPath.replace(AZURE_BLOB_URL, DOMAIN)
-                        }
-                        if (banner) {
-                            bannerPath = await azureBlob(banner, 'items/banners')
-                            bannerPath = process.env.NODE_ENV === 'local' ? bannerPath : bannerPath.replace(AZURE_BLOB_URL, DOMAIN)
                         }
 
                         if (!contentPath && payload.content && (ItemModel === MediaItem || ItemModel === AudioItem)) {
@@ -233,7 +232,8 @@ const ItemController = {
                             delete payload.content
                         }
                     }
-                    if (payload.kind !== 'SoundcloudItem' || payload.kind !== 'VimeoItem') {
+
+                    if (payload.kind !== 'SoundcloudItem' || payload.kind !== 'MediaItem') {
                         payload = {
                             ...payload,
                             enabled: true,
@@ -250,27 +250,20 @@ const ItemController = {
                         }
                     }
 
-                    let vimeoLink
-                    if (payload.kind === 'VimeoItem' && !content) {
-                        vimeoLink = payload.content
-                    }
-
-                    delete payload.thumb
-                    delete payload.banner
-                    delete payload.content
-                    console.log('payload: ', payload)
-
-                    const user = await getUserByToken(req)
-                    payload.author = user._id
-
-                    if (payload.kind === 'VimeoItem') {
+                    if (payload.kind === 'MediaItem') {
                         if (!content) {
-                            payload.contentPath = vimeoLink
+                            payload.contentPath = payload.content
                         } else {
                             payload.contentPath = String(new Date().toISOString())
                             vimeoFilePath(content, payload, user)
                         }
                     }
+
+                    delete payload.thumb
+                    delete payload.banner
+                    delete payload.content
+                    payload.author = user._id
+
                     const { _id } = await ItemModel.create(payload)
                     _messages.success(res, req, { _id })
                 } catch (error) {
@@ -300,6 +293,8 @@ const ItemController = {
         if (!flag) {
             _messages.badRequest(res, req, 'A data final não pode ser menor que a data inicial!', 'A data final não pode ser menor que a data inicial!', 'items', 'multiUploadCreate')
         } else {
+            const user = await getUserByToken(req)
+
             const verify = await Item
                 .find({
                     title: { $eq: payload.title },
@@ -318,24 +313,32 @@ const ItemController = {
                     let bannerPath
 
                     if (thumb) {
-                        // thumbPath = await awsAmazon(thumb, 'items/thumbs')
                         thumbPath = await azureBlob(thumb, 'items/thumbs')
                         thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN)
                     }
-                    if (payload.kind !== 'VimeoItem') {
+
+                    if (banner) {
+                        bannerPath = await azureBlob(banner, 'items/banners')
+                    }
+
+                    if (payload.kind !== 'MediaItem') {
                         if (content) {
-                            // contentPath = await awsAmazon(content, 'items/content')
                             contentPath = await azureBlob(content, 'items/content')
-                        }
-                        if (banner) {
-                            // bannerPath = await awsAmazon(banner, 'items/banners')
-                            bannerPath = await azureBlob(banner, 'items/banners')
                         }
                     }
 
                     if (!contentPath && payload.content && ItemModel === MediaItem) {
                         contentPath = payload.content
                         delete payload.content
+                    }
+
+                    if (payload.kind === 'MediaItem') {
+                        if (!content) {
+                            payload.contentPath = payload.content
+                        } else {
+                            payload.contentPath = String(new Date().toISOString())
+                            vimeoFilePath(content, payload, user, 'update')
+                        }
                     }
 
                     payload = {
@@ -345,26 +348,11 @@ const ItemController = {
                         ...payload,
                     }
 
-                    let vimeoLink
-                    if (payload.kind === 'VimeoItem' && !content) {
-                        vimeoLink = payload.content
-                    }
-
                     delete payload.content
                     delete payload.thumb
                     delete payload.banner
 
-                    const user = await getUserByToken(req)
                     payload.author = user._id
-
-                    if (payload.kind === 'VimeoItem') {
-                        if (!content) {
-                            payload.contentPath = vimeoLink
-                        } else {
-                            payload.contentPath = String(new Date().toISOString())
-                            vimeoFilePath(content, payload, user, "update")
-                        }
-                    }
 
                     if (payload.kind === 'SCORMItem' && content) {
                         const { contentPath } = await ItemModel.findById(payload._id)
