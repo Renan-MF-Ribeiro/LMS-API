@@ -812,6 +812,20 @@ const ItemController = {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'items', 'generateCertificate')
         }
     },
+
+    async getItemWithTracking (req, res) {
+        try {
+            const { itemId } = req.params
+            const user = await getUserByToken(req)
+            const item = await Item.findById(itemId)
+            const tracking = await Tracking.findOne({ item: item._id, userLogin: user.networkLogin })
+
+            _messages.success(res, req, { item, tracking })
+        } catch (error) {
+            console.log(error)
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'items', 'getItemWithTracking')
+        }
+    },
 }
 
 module.exports = ItemController
