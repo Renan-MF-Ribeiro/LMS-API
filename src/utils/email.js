@@ -27,12 +27,35 @@ module.exports = {
                 } else {
                     message = `Olá, o usuário ${userData.name} com número de CPF ${userData.cpf} requisitou troca de senha. A nova senha gerada para o usuário é: <b> ${newPass} </b> <br> Ao entrar na plataforma o mesmo deverá obrigatoriamente trocar a senha <br> Acesse a <a href="${domain}">plataforma</a> e bons estudos.`
                 }
-                const html = `<html>
-                                <head></head>
-                                <body>
-                                    ${message}
-                                </body>
-                              </html>`
+                const html = `<table align="center" border="0" cellpadding="0" cellspacing="0" style="height: 600px; width: 800px;">
+                                <tbody>
+                                    <tr>
+                                        <td height=" 328"><img data-imagetype="External"
+                                                src="https://happlearning.blob.core.windows.net/logo/thumbnailHapp.png" alt="Thumbnail"
+                                                style="width:100%; height:100%"> </td>
+                                    </tr>
+                                    <tr>
+                                        <td height="100" style="text-align: center; vertical-align: middle;">
+                                            <div class="content"
+                                                style="font-size:1.5rem; font-weight:bold; text-align:center; font-family:ubuntu,Roboto,sans-serif; width:60%; margin-left:20%">
+                                                ${message}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td height="100" style="text-align: center;"><a
+                                                href="https://happlearning.happmobi.com.br/#/login/entrar"
+                                                target="_blank"
+                                                style="font-size: 1rem; border: 0px; text-transform: uppercase; text-align: center; text-decoration: none; border-radius: 5px; color: rgb(255, 255, 255); font-weight: bold; font-family: Ubuntu, Roboto, sans-serif; padding: 1rem; background-color: #38B9C2 !important;">Acessar</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td height="75"><img data-imagetype="External"
+                                                src="https://happlearning.blob.core.windows.net/logo/footerHapp.png" alt="Footer"
+                                                style="width:100%; height:100%"> </td>
+                                    </tr>
+                                </tbody>
+                            </table>`
                 await transporter.sendMail({
                     from: '"Happlearning" <noreply@happmobi.com.br>',
                     to: strTo,
