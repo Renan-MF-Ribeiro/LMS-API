@@ -1,6 +1,7 @@
 /* eslint-disable no-async-promise-executor */
 'use strict'
 const nodemailer = require('nodemailer')
+const emailTemplate = require('../../config.json')
 
 const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
@@ -27,11 +28,11 @@ module.exports = {
                 } else {
                     message = `Olá, o usuário ${userData.name} com número de CPF ${userData.cpf} requisitou troca de senha. A nova senha gerada para o usuário é: <b> ${newPass} </b> <br> Ao entrar na plataforma o mesmo deverá obrigatoriamente trocar a senha <br> Acesse a <a href="${domain}">plataforma</a> e bons estudos.`
                 }
-                const html = `<table align="center" border="0" cellpadding="0" cellspacing="0" style="height: 600px; width: 800px;">
+                const html =`<table align="center" border="0" cellpadding="0" cellspacing="0" style="height: 600px; width: 800px;">
                                 <tbody>
                                     <tr>
                                         <td height=" 328"><img data-imagetype="External"
-                                                src="https://happlearning.blob.core.windows.net/logo/thumbnailHapp.png" alt="Thumbnail"
+                                                src="${emailTemplate.messenger.emailTemplate.thumbnail}" alt="Thumbnail"
                                                 style="width:100%; height:100%"> </td>
                                     </tr>
                                     <tr>
@@ -44,14 +45,14 @@ module.exports = {
                                     </tr>
                                     <tr>
                                         <td height="100" style="text-align: center;"><a
-                                                href="https://happlearning.happmobi.com.br/#/login/entrar"
+                                                href="${domain}"
                                                 target="_blank"
-                                                style="font-size: 1rem; border: 0px; text-transform: uppercase; text-align: center; text-decoration: none; border-radius: 5px; color: rgb(255, 255, 255); font-weight: bold; font-family: Ubuntu, Roboto, sans-serif; padding: 1rem; background-color: #38B9C2 !important;">Acessar</a>
+                                                style="font-size: 1rem; border: 0px; text-transform: uppercase; text-align: center; text-decoration: none; border-radius: 5px; color: rgb(255, 255, 255); font-weight: bold; font-family: Ubuntu, Roboto, sans-serif; padding: 1rem; background-color: ${emailTemplate.messenger.emailTemplate.primary} !important;">Acessar</a>
                                         </td>
                                     </tr>
                                     <tr>
                                         <td height="75"><img data-imagetype="External"
-                                                src="https://happlearning.blob.core.windows.net/logo/footerHapp.png" alt="Footer"
+                                                src="${emailTemplate.messenger.emailTemplate.footer}" alt="Footer"
                                                 style="width:100%; height:100%"> </td>
                                     </tr>
                                 </tbody>
