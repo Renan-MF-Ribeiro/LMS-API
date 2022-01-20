@@ -32,6 +32,7 @@ const {
     sendAccountsToKafka,
     sendUpdatedDeviceIdToMessenger,
     createWelcomeCampaign,
+    returnDateSinceFirstLogin,
 } = require('./business')
 
 const {
@@ -51,12 +52,14 @@ const {
     sendResetedPasswordToUser,
 } = require('../../utils/email')
 
+const axios = require('axios')
 const bcrypt = require('bcryptjs')
 const cryptoJS = require('crypto-js')
 const jwt = require('jsonwebtoken')
 const { sendMessageToKafka } = require('../messages/business')
 
 const config = require('../../../config.json')
+const { getNumberOfItemsCompletedOrInProgressOrNotStarted } = require('../home/business')
 const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadsheet
 const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail
 
@@ -218,7 +221,6 @@ module.exports = {
                     var tk = tokenEncript.toString()
                     var key = login + ':' + password
                     key = cryptoJS.AES.encrypt(key, password).toString()
-
                     _messages.success(res, req, { tk, key, accept: user.acceptTerms, acceptCollaboration: user.acceptTermsCollaboration, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
                 } else {
                     await sleep(3000)
@@ -235,6 +237,24 @@ module.exports = {
                 ip: req.ip,
             })
             _messages.forbidden(res, req, error.message, 'Usuário ou senha inválidos.', 'Usuário ou senha inválidos.', 'users', 'ldapSignIn')
+        }
+    },
+
+    async feedbackElegible(req,res){
+        const user = await getUserByToken(req)
+        const today = new Date();
+        const firstLogin = await returnDateSinceFirstLogin(user._id)
+        const { numberOfItemsCompleted } = await getNumberOfItemsCompletedOrInProgressOrNotStarted(req)
+        const response = await axios.get(`${process.env.API_SURVEY}/feedback/listbyuser?userid=${user.networkLogin}`)
+        let latestFeedback = response.data.items.slice(-1)
+        let latestFeedbackDate = new Date(latestFeedback[0].createdAt)
+        let daysSinceLastFeedback = Math.floor((latestFeedbackDate-today)/(24*3600*1000))
+        daysSinceLastFeedback *= -1
+
+        if(firstLogin >= 180 && daysSinceLastFeedback >= 180 && numberOfItemsCompleted >= 1){
+            _messages.success(res, req, true)
+        }else{
+            _messages.success(res, req, false)
         }
     },
 
