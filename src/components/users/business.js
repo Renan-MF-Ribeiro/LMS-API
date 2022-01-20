@@ -20,10 +20,11 @@ const { Log } = require('../logs/model')
 const bcrypt = require('bcryptjs')
 const _functions = require('../../utils/functions')
 const { Group } = require('../groups/model')
-const { CLIENT_ID } = process.env
+const { CLIENT_ID, API_SURVEY } = process.env
 const kafka = require('../../utils/kafka')
 const { Trail } = require('../trails/model')
 const config = require('../../../config.json')
+const axios = require('axios')
 const emailTemplate = config.messenger.emailTemplate
 require('dotenv').config()
 
@@ -130,7 +131,7 @@ module.exports = {
         })
     },
 
-    returnDateSinceFisrtLogin(userID){
+    returnDateSinceFirstLogin(userID){
         return new Promise(async(resolve, reject)=>{
             try{
                 const userLastLogin = await LastLogin.find({ user: userID })
@@ -145,6 +146,8 @@ module.exports = {
             }
         })
     },
+
+    
 
     updateGroupsOfUser (userID, groups) {
         return new Promise(async (resolve, reject) => {
