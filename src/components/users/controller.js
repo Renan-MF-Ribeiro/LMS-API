@@ -32,6 +32,7 @@ const {
     sendAccountsToKafka,
     sendUpdatedDeviceIdToMessenger,
     createWelcomeCampaign,
+    returnDateSinceFisrtLogin,
 } = require('./business')
 
 const {
@@ -211,6 +212,7 @@ module.exports = {
 
                     await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups))
                     await updateLastLoginUser(user._id)
+                    const firstLogin = await returnDateSinceFisrtLogin(user._id)
 
                     // sendNotificationEmail(user.email, "Acesso a sua conta", `Olá ${user.name}, foi feito uma novo acesso a sua conta, se você não reconhece esse acesso, por favor, acesse a sua conta e troque a sua senha.`);
                     var tokenEncript = cryptoJS.AES.encrypt(token, login)
@@ -218,8 +220,7 @@ module.exports = {
                     var tk = tokenEncript.toString()
                     var key = login + ':' + password
                     key = cryptoJS.AES.encrypt(key, password).toString()
-
-                    _messages.success(res, req, { tk, key, accept: user.acceptTerms, acceptCollaboration: user.acceptTermsCollaboration, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
+                    _messages.success(res, req, { tk, key, accept: user.acceptTerms, firstLogin, acceptCollaboration: user.acceptTermsCollaboration, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
                 } else {
                     await sleep(3000)
                     _messages.forbidden(res, req, 'Usuário ou senha inválidos.', 'Usuário ou senha inválidos.', 'users', 'ldapSignIn')

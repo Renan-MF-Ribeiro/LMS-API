@@ -130,6 +130,22 @@ module.exports = {
         })
     },
 
+    returnDateSinceFisrtLogin(userID){
+        return new Promise(async(resolve, reject)=>{
+            try{
+                const userLastLogin = await LastLogin.find({ user: userID })
+                const userFirstLogin = userLastLogin[0].createdAt;
+                const today = new Date();
+                const firstLogin = new Date(userFirstLogin);
+                let daysSinceFirstLogin = Math.floor((firstLogin-today)/(24*3600*1000))
+                daysSinceFirstLogin *= -1
+                resolve(daysSinceFirstLogin)
+            }catch(error){
+                reject(error)
+            }
+        })
+    },
+
     updateGroupsOfUser (userID, groups) {
         return new Promise(async (resolve, reject) => {
             try {
