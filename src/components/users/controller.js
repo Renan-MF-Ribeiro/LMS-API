@@ -251,7 +251,7 @@ module.exports = {
         let daysSinceLastFeedback = Math.floor((latestFeedbackDate-today)/(24*3600*1000))
         daysSinceLastFeedback *= -1
 
-        if(firstLogin >= 180 && daysSinceLastFeedback >= 180 && numberOfItemsCompleted >= 1){
+        if(firstLogin >= 1 && daysSinceLastFeedback >= 1 && numberOfItemsCompleted >= 1){
             _messages.success(res, req, true)
         }else{
             _messages.success(res, req, false)
