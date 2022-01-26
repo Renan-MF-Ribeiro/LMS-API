@@ -1041,9 +1041,6 @@ module.exports = {
         try {
             const { userId, password, generate } = req.body
 
-            console.log(userId, password, generate)
-            console.log('????')
-
             if (!userId || generate === null) {
                 _messages.badRequest(res, req, 'Payload inválido', { message: 'Payload inválido' })
             }
