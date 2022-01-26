@@ -46,7 +46,7 @@ module.exports = {
                                     </tr>
                                     <tr>
                                         <td height="100" style="text-align: center;"><a
-                                                href="${domain}"
+                                                href="${resetPasswordUrl}"
                                                 target="_blank"
                                                 style="font-size: 1rem; border: 0px; text-transform: uppercase; text-align: center; text-decoration: none; border-radius: 5px; color: rgb(255, 255, 255); font-weight: bold; font-family: Ubuntu, Roboto, sans-serif; padding: 1rem; background-color: ${emailTemplate.messenger.emailTemplate.primary} !important;">Acessar</a>
                                         </td>
