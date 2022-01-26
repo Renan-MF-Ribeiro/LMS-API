@@ -89,10 +89,10 @@ const MediaItem = Item.discriminator('MediaItem', new mongoose.Schema({
         type: String,
         get: pathResolver,
         required: ifEnabled,
-        validate: {
-            validator: anyPass([isURL, isLocalMedia, isYouTubeVideo, isVimeoVideo]),
-            message: props => `${props.value} não é um caminho válido ou uma URL suportada.`,
-        },
+        // validate: {
+        //     validator: anyPass([isURL, isLocalMedia, isYouTubeVideo, isVimeoVideo]),
+        //     message: props => `${props.value} não é um caminho válido ou uma URL suportada.`,
+        // },
     },
     ...endpointOptions,
 }, {
@@ -145,17 +145,6 @@ const SoundcloudItem = Item.discriminator('SoundcloudItem', new mongoose.Schema(
     ...schemaOptions,
 }))
 
-const VimeoItem = Item.discriminator('VimeoItem', new mongoose.Schema({
-    format: { type: String, enum: Object.values(mediaFormats), default: mediaFormats.VIDEO, required: true },
-    contentPath: {
-        type: String,
-        required: true,
-    },
-    ...endpointOptions,
-}, {
-    ...schemaOptions,
-}))
-
 module.exports = {
     Item,
     DocumentItem,
@@ -164,5 +153,4 @@ module.exports = {
     ExamItem,
     AudioItem,
     SoundcloudItem,
-    VimeoItem,
 }

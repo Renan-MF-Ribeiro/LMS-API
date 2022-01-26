@@ -32,6 +32,7 @@ const {
     sendAccountsToKafka,
     sendUpdatedDeviceIdToMessenger,
     createWelcomeCampaign,
+    returnDateSinceFirstLogin,
 } = require('./business')
 
 const {
@@ -51,12 +52,14 @@ const {
     sendResetedPasswordToUser,
 } = require('../../utils/email')
 
+const axios = require('axios')
 const bcrypt = require('bcryptjs')
 const cryptoJS = require('crypto-js')
 const jwt = require('jsonwebtoken')
 const { sendMessageToKafka } = require('../messages/business')
 
 const config = require('../../../config.json')
+const { getNumberOfItemsCompletedOrInProgressOrNotStarted } = require('../home/business')
 const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadsheet
 const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail
 
@@ -218,7 +221,6 @@ module.exports = {
                     var tk = tokenEncript.toString()
                     var key = login + ':' + password
                     key = cryptoJS.AES.encrypt(key, password).toString()
-
                     _messages.success(res, req, { tk, key, accept: user.acceptTerms, acceptCollaboration: user.acceptTermsCollaboration, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
                 } else {
                     await sleep(3000)
@@ -235,6 +237,24 @@ module.exports = {
                 ip: req.ip,
             })
             _messages.forbidden(res, req, error.message, 'Usuário ou senha inválidos.', 'Usuário ou senha inválidos.', 'users', 'ldapSignIn')
+        }
+    },
+
+    async feedbackElegible(req,res){
+        const user = await getUserByToken(req)
+        const today = new Date();
+        const firstLogin = await returnDateSinceFirstLogin(user._id)
+        const { numberOfItemsCompleted } = await getNumberOfItemsCompletedOrInProgressOrNotStarted(req)
+        const response = await axios.get(`${process.env.API_SURVEY}/feedback/listbyuser?userid=${user.networkLogin}`)
+        let latestFeedback = response.data.items.slice(-1)
+        let latestFeedbackDate = new Date(latestFeedback[0].createdAt)
+        let daysSinceLastFeedback = Math.floor((latestFeedbackDate-today)/(24*3600*1000))
+        daysSinceLastFeedback *= -1
+
+        if(firstLogin >= 1 && daysSinceLastFeedback >= 1 && numberOfItemsCompleted >= 1){
+            _messages.success(res, req, true)
+        }else{
+            _messages.success(res, req, false)
         }
     },
 
@@ -560,6 +580,21 @@ module.exports = {
         }
     },
 
+    async returnUserById (req, res) {
+        try {
+            const { _id } = req.body
+            let user = await User.findOne({_id: _id})
+
+            user.password = undefined
+            
+            _messages.success(res, req, {
+                data: user,
+            })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'returnUsers')
+        }
+    },
+
     async updateUser (req, res) {
         try {
             const { _id, tags } = req.body
@@ -579,6 +614,16 @@ module.exports = {
                     }
                 }
             }
+            await User.findByIdAndUpdate(_id, req.body)
+            _messages.success(res, req, 'Atualizado com sucesso')
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'updateUser')
+        }
+    },
+
+    async updateUserById (req, res) {
+        try {
+            const { _id } = req.body
             await User.findByIdAndUpdate(_id, req.body)
             _messages.success(res, req, 'Atualizado com sucesso')
         } catch (error) {
@@ -975,16 +1020,6 @@ module.exports = {
         } catch (error) {
             console.log(error)
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'resetUserPassword')
-        }
-    },
-
-    async acceptTermsCollaboration (req, res) {
-        try {
-            const { _id } = await getUserByToken(req)
-            await User.findByIdAndUpdate(_id, { acceptTermsCollaboration: true })
-            _messages.success(res, req, 'Sucesso', 'Aceitação dos termos de uso', 'users', 'acceptTerms', [], [], true, 'TERMS OF USE')
-        } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'acceptTerms')
         }
     },
 

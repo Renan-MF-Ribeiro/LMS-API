@@ -18,7 +18,7 @@ const momentz = require('moment-timezone')
 const ExcelJS = require('exceljs')
 const _functions = require('./functions')
 const { mapUser } = require('./../components/users/model')
-const { Item, VimeoItem } = require('../components/items/model')
+const { Item, MediaItem } = require('../components/items/model')
 const { sleep } = require('./functions')
 const { sendMessageToKafka } = require('../../src/components/messages/business')
 
@@ -119,7 +119,8 @@ module.exports = {
         // return await streamToBuffer(downloadFileResponse.readableStreamBody)
     },
 
-    vimeoFilePath (file, payload, user) {
+    vimeoFilePath (file, payload, user, mode = 'create') {
+        console.log(payload)
         let filePath
         let fileType
         let uploadStatus
@@ -141,51 +142,58 @@ module.exports = {
             return { title, text, communication, category, target, mode }
         }
 
-        const vimeoTrx = new Vimeo(
-            process.env.VIMEO_CLIENTID,
-            process.env.VIMEO_CLIENTSECRET,
-            process.env.VIMEO_ACCESSTOKEN,
-        )
+        let vimeoTrx
+        setTimeout(() => {
+            vimeoTrx = new Vimeo(
+                process.env.VIMEO_CLIENTID,
+                process.env.VIMEO_CLIENTSECRET,
+                process.env.VIMEO_ACCESSTOKEN,
+            )
+            vimeoTrx.upload(
+                String(file.path),
+                {
+                    name: payload.title,
+                    description: payload.description,
+                },
+                function (uri) {
+                    uploadStatus = 'Upload was done!'
+                    console.log('Upload was done!', uri)
+                    const trx = async () => {
+                        await sleep(3000)
+                        const { _id } = await Item.findOne({
+                            title: { $eq: payload.title },
+                            contentPath: { $eq: payload.contentPath },
+                        })
+                        await MediaItem.findByIdAndUpdate(_id, {
+                            contentPath: 'https://vimeo.com' + uri,
+                        })
 
-        vimeoTrx.upload(
-            String(file.path),
-            function (uri) {
-                uploadStatus = 'Upload was done!'
-                console.log('Upload was done!', uri)
-                const trx = async () => {
-                    console.log(payload)
-                    await sleep(3000)
-                    const { _id } = await Item.findOne({
-                        title: { $eq: payload.title },
-                        contentPath: { $eq: payload.contentPath },
-                    })
-                    await VimeoItem.findByIdAndUpdate(_id, {
-                        contentPath: 'https://vimeo.com' + uri,
-                    })
+                        const campObj = campainObj()
+                        await sendMessageToKafka(campObj, [user])
+                    }
+                    trx()
+                },
+                function (bytes_uploaded, bytes_total) {
+                    var percentage = (bytes_uploaded / bytes_total * 100).toFixed(2)
+                    console.log(bytes_uploaded, bytes_total, percentage + '%')
+                },
+                function (error) {
+                    uploadStatus = { message: 'Something went wrong', error: error }
+                    console.error('Something went wrong: ' + error)
+                    const trx = async () => {
+                        await Item.findOneAndDelete({
+                            title: { $eq: payload.title },
+                            contentPath: { $eq: payload.contentPath },
+                        })
+                    }
+                    if (mode === 'create') {
+                        trx()
+                    }
+                },
+            )
 
-                    const campObj = campainObj()
-                    await sendMessageToKafka(campObj, [user])
-                }
-                trx()
-            },
-            function (bytes_uploaded, bytes_total) {
-                var percentage = (bytes_uploaded / bytes_total * 100).toFixed(2)
-                console.log(bytes_uploaded, bytes_total, percentage + '%')
-            },
-            function (error) {
-                uploadStatus = { message: 'Something went wrong', error: error }
-                console.error('Something went wrong: ' + error)
-                const trx = async () => {
-                    await Item.findOneAndDelete({
-                        title: { $eq: payload.title },
-                        contentPath: { $eq: payload.contentPath },
-                    })
-                }
-                trx()
-            },
-        )
-
-        return uploadStatus
+            return uploadStatus
+        }, 5000)
     },
 
     async moveUpload (file) {

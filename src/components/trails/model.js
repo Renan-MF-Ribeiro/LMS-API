@@ -52,6 +52,7 @@ const TrailSchema = new mongoose.Schema({
     isSequenceEnabled: { type: Boolean, default: false, required: true },
     createdAt: { type: Date },
     updatedAt: { type: Date },
+    externalPlayer: { type: Boolean, default: false },
     clientId: { type: Number, default: CLIENT_ID },
 }, {
     strict: 'throw',
