@@ -365,8 +365,10 @@ module.exports = {
                 item.valid = false
                 return item
             })
+            const login = user.networkLogin
 
             const token = generateToken({
+                login,
                 password_new
             })
 
