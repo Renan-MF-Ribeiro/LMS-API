@@ -21,6 +21,7 @@ const { mapUser } = require('./../components/users/model')
 const { Item, MediaItem } = require('../components/items/model')
 const { sleep } = require('./functions')
 const { sendMessageToKafka } = require('../../src/components/messages/business')
+const { Readable } = require('stream')
 
 const bucket = process.env.BUCKET
 aws.config = { accessKeyId: process.env.ACCESSKEY, secretAccessKey: process.env.SECRETKEY, region: process.env.REGION }
@@ -40,6 +41,17 @@ async function streamToBuffer (readableStream) {
         })
         readableStream.on('error', reject)
     })
+}
+
+function bufferToStream (binary) {
+    const readableInstanceStream = new Readable({
+        read () {
+            this.push(binary)
+            this.push(null)
+        },
+    })
+
+    return readableInstanceStream
 }
 
 module.exports = {
@@ -111,12 +123,42 @@ module.exports = {
     },
 
     async getAzureFile () {
-        const fileShareServiceClient = ShareServiceClient.fromConnectionString(AZURE_STRINGCONN)
-        const fileShareClient = fileShareServiceClient.getShareClient('sftpfileshare').rootDirectoryClient.getFileClient('CargaUsuarios (1).xlsx')
+        try {
+            const env = process.env.NODE_ENV
+            const directory = env === 'production' ? 'producao' : 'homologacao'
+            const fileShareServiceClient = ShareServiceClient.fromConnectionString(AZURE_STRINGCONN)
+            const fileShareClient = fileShareServiceClient.getShareClient('sftpfileshare').getDirectoryClient(directory).getFileClient('Happmobi_Carga.xlsx')
+            const downloadBufferResponse = await fileShareClient.downloadToBuffer(0, 0)
 
-        const downloadFileResponse = await fileShareClient.download()
-        return await streamToBuffer(downloadFileResponse.readableStreamBody)
+            const decodedFile = await iconv.decode(downloadBufferResponse, 'iso88591')
+            const decodedReadStream = bufferToStream(decodedFile)
+
+            return { readableStream: decodedReadStream, buffer: downloadBufferResponse }
+        } catch (error) {
+            console.log('Carga de usuários não encontrada no compartilhamento de arquivos')
+            return null
+        }
         // return await streamToBuffer(downloadFileResponse.readableStreamBody)
+    },
+
+    async moveUserLoadToProcessed (buffer) {
+        try {
+            const env = process.env.NODE_ENV
+            const directory = env === 'production' ? 'producao' : 'homologacao'
+            const fileShareServiceClient = ShareServiceClient.fromConnectionString(AZURE_STRINGCONN)
+
+            await fileShareServiceClient.getShareClient('sftpfileshare').getDirectoryClient(directory).deleteFile('Happmobi_Carga.xlsx')
+
+            const completeDate = new Date().toLocaleString('pt-BR').split(' ')
+            const date = completeDate[0].replace('/', '').replace('/', '')
+            const hours = completeDate[1].replace(':', '').replace(':', '')
+            const fileName = `Happmobi_${date}_${hours}.xlsx`
+            await fileShareServiceClient.getShareClient('sftpfileshare').getDirectoryClient(directory).getDirectoryClient('processados').createFile(fileName, 4000000)
+
+            await fileShareServiceClient.getShareClient('sftpfileshare').getDirectoryClient(directory).getDirectoryClient('processados').getFileClient(fileName).uploadData(buffer)
+        } catch (error) {
+            console.log('Error', error)
+        }
     },
 
     vimeoFilePath (file, payload, user, mode = 'create') {

@@ -120,7 +120,11 @@ module.exports = {
 
             const trails = await populateTrails(true, { _id })
             const trail = processExpirationDate(trails[0], user)
-
+            let durationHours = 0
+            for (const item of trail.items) {
+                durationHours += item.itemID.durationHours
+            }
+            trail.durationHours = durationHours
             const processedTrail = processTrailTracking(trail, allTrackingUser)
 
             _messages.success(res, req, processedTrail.trail)

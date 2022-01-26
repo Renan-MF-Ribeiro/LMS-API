@@ -242,7 +242,7 @@ module.exports = {
         let user = {}
         const { token } = req.body
         const secret = process.env.JWT_SECRET
-        const { data } = await jwt.verify(token, secret)
+        const data = await jwt.verify(token, secret)
         const networkLogin = data.networkLogin
 
         try {
@@ -554,10 +554,10 @@ module.exports = {
     async returnUserById (req, res) {
         try {
             const { _id } = req.body
-            let user = await User.findOne({_id: _id})
+            const user = await User.findOne({ _id: _id })
 
             user.password = undefined
-            
+
             _messages.success(res, req, {
                 data: user,
             })

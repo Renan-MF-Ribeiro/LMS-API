@@ -1,7 +1,6 @@
 const express = require('express')
 const router = express.Router()
 const {
-    executeDailyCharge,
     executeAverageCourses,
     executeGroupsAD,
     LastExecuteDailyCharge,
@@ -9,13 +8,14 @@ const {
     LastExecuteGroupsAD,
     executeCourseChargeNotification,
     executeCourseReleaseNotification,
+    executeUsersCron,
 } = require('./controller')
 
 router
     .get('/last-users', LastExecuteDailyCharge)
     .get('/last-average-courses', LastExecuteAverageCourses)
     .get('/last-groups-ad', LastExecuteGroupsAD)
-    .get('/users', executeDailyCharge)
+    .get('/users', executeUsersCron)
     .get('/average-courses', executeAverageCourses)
     .get('/groups-ad', executeGroupsAD)
     .get('/release', executeCourseReleaseNotification)

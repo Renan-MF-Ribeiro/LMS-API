@@ -83,7 +83,13 @@ module.exports = {
             userTemporaryTagsCron()
         }, null, true, 'America/Sao_Paulo')
     },
-
+    getUsersLoadCron () {
+        if (config.cron.userFTP.active) {
+            new CronJob('00 19 * * * ', () => {
+                getUsersLoad()
+            }, null, true, 'America/Sao_Paulo')
+        }
+    },
     executeCronAverageCourses () {
         // userTemporaryTagsCron()
         // averageCourses()
@@ -99,6 +105,9 @@ module.exports = {
 
     executeCourseChargeNotification () {
         courseChargeCron()
+    },
+    executeCronUsers () {
+        getUsersLoad()
     },
 }
 
