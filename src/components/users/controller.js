@@ -364,6 +364,7 @@ module.exports = {
         try {
             const { body, domain } = req.body
 
+
             let search = Object()
             Object.entries(body).forEach(([k, v]) => {
                 search = Object.assign(search, { [k]: { $eq: v } })
@@ -384,13 +385,23 @@ module.exports = {
                 item.valid = false
                 return item
             })
+            const networkLogin = user.networkLogin
+            const _id = user._id;
+
+            const token = generateToken({
+                networkLogin,
+                _id,
+                password_old: password_new
+            })
+
+            const resetPasswordUrl = `${domain}/#/login/troca-senha?token=${token}`
 
             newPass.push({ hash: hashPass, valid: true, createdAt: new Date() })
 
             const isUser = await User.findOneAndUpdate(search, { password: newPass, passwordValid: false })
 
             if (isUser.email) {
-                await sendEmailRecoryPassword(user.email ? user.email : emails, !!user.email, password_new, domain, { name: user.name, cpf: user.cpf })
+                await sendEmailRecoryPassword(user.email ? user.email : emails, !!user.email, password_new, resetPasswordUrl, { name: user.name, cpf: user.cpf })
                 // $2a$10$G06bQZrp8R8kn2cnImS47eHQv./K4i0bp1yBaNDyj3WSrsCH/639G --> senha
                 return await _messages.success(res, req, 'Sucesso', 'Email para recupera senha disparado', 'users', 'recoveryPassword', [], [], true, 'RECOVERY PASSWORD')
             } else {
@@ -409,11 +420,63 @@ module.exports = {
     async changePassword (req, res) {
         try {
             const { password_old, password_new, password_newConfirm } = req.body
-
             const { _id } = await getUserByToken(req)
             const user = await User.findOne({ _id: _id }, ['password'])
 
             // const passChecked = bcrypt.compareSync(password_old, user.password)
+
+            var pass = user.password.filter(function (obj) {
+                if (obj.valid === true && bcrypt.compareSync(password_old, obj.hash)) {
+                    return true
+                }
+
+                return false
+            })
+
+            var Oldpass = user.password.filter(function (obj) {
+                if (bcrypt.compareSync(password_new, obj.hash)) {
+                    return true
+                }
+
+                return false
+            })
+
+            if (pass.length === 0 || password_new !== password_newConfirm) {
+                _messages.unauthorized(res, req, new Error('ErrorAoTrocarSenha'), 'Erro ao trocar senha.', 'users', 'changePassword')
+                return
+            } else if (Oldpass.length > 0) {
+                _messages.unauthorized(res, req, new Error('ErrorAoTrocarSenha'), 'Essa senha já foi utilizada anteriormente, por favor, crie uma nova senha.', 'users', 'changePassword')
+                return
+            } else {
+                if (new Date(pass[0].createdAt).getTime() < Date.now() - (90 * 24 * 60 * 60 * 1000)) {
+                    user.passwordValid = false
+                }
+            }
+
+            var salt = bcrypt.genSaltSync(10)
+            var hashPass = bcrypt.hashSync(password_new, salt)
+
+            var newPass = user.password.map(function (item, indice) {
+                item.valid = false
+                return item
+            })
+
+            newPass.push({ hash: hashPass, valid: true, createdAt: new Date() })
+
+            await User.findByIdAndUpdate(_id, { password: newPass, passwordValid: true })
+
+            _messages.success(res, req, 'Sucesso', 'Senha alterada com sucesso', 'users', 'changePassword', [], [], true, 'CHANGE PASSWORD')
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'recoveryPassword')
+        }
+    },
+
+    async changePasswordByEmail (req, res) {
+        try {
+            const { password_new, password_newConfirm } = req.body
+            const { data } = decodeToken(req.headers.authorization)
+            const { _id, password_old } = data
+            const user = await User.findOne({ _id: _id }, ['password'])
 
             var pass = user.password.filter(function (obj) {
                 if (obj.valid === true && bcrypt.compareSync(password_old, obj.hash)) {
