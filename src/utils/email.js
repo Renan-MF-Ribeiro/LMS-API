@@ -25,7 +25,7 @@ module.exports = {
                 let message
                 console.log(resetPasswordUrl)
                 if (hasEmail) {
-                    message = `Olá ${userData.name}, você solicitou o reset da sua senha! <b> ${newPass} </b> <br> Acesse a <a href="${resetPasswordUrl}">plataforma</a> e bons estudos.`
+                    message = `Olá ${userData.name}, você solicitou a recuperação da sua senha! <b> ${newPass} </b> <br> Acesse a <a href="${resetPasswordUrl}">plataforma</a> e bons estudos.`
                 } else {
                     message = `Olá, o usuário ${userData.name} com número de CPF ${userData.cpf} requisitou troca de senha. A nova senha gerada para o usuário é: <b> ${newPass} </b> <br> Ao entrar na plataforma o mesmo deverá obrigatoriamente trocar a senha <br> Acesse a <a href="${resetPasswordUrl}">plataforma</a> e bons estudos.`
                 }
