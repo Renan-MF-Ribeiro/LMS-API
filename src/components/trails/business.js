@@ -86,6 +86,8 @@ module.exports = {
                             moderation: trail.moderation,
                             complaints: trail.complaints,
                             certificate: trail.certificate,
+                            externalPlayer: trail.externalPlayer,
+
                         })
                     }
                 } else {
@@ -126,6 +128,7 @@ module.exports = {
                             moderation: trail.moderation,
                             complaints: trail.complaints,
                             certificate: trail.certificate,
+                            externalPlayer: trail.externalPlayer,
                         })
                     }
                 }

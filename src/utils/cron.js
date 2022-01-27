@@ -39,6 +39,8 @@ const { getAzureFile, readCSVUsersBuffer, moveUserLoadToProcessed } = require('.
 const { sendMessageToKafka } = require('../components/messages/business')
 
 const config = require('../../config.json')
+
+const emailTemplate = config.messenger.emailTemplate
 const groupingA = config.cron.average.groupA
 const groupingB = config.cron.average.groupB
 const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadsheet
@@ -81,7 +83,13 @@ module.exports = {
             userTemporaryTagsCron()
         }, null, true, 'America/Sao_Paulo')
     },
-
+    getUsersLoadCron () {
+        if (config.cron.userFTP.active) {
+            new CronJob('00 19 * * * ', () => {
+                getUsersLoad()
+            }, null, true, 'America/Sao_Paulo')
+        }
+    },
     executeCronAverageCourses () {
         // userTemporaryTagsCron()
         // averageCourses()
@@ -97,6 +105,9 @@ module.exports = {
 
     executeCourseChargeNotification () {
         courseChargeCron()
+    },
+    executeCronUsers () {
+        getUsersLoad()
     },
 }
 
@@ -487,7 +498,7 @@ function createReleaseCampaign (trail) {
     const mode = 'automatic'
     const category = 'launch'
     const target = { trailid: trail._id, url: `${process.env.DOMAIN}/#/login/entrar?redirectTo=/menu/${trail._id}` }
-    return { title, text, communication, category, target, mode }
+    return { title, text, communication, category, target, mode, ...emailTemplate }
 }
 
 function createChargeCampaign (trail) {
@@ -497,7 +508,7 @@ function createChargeCampaign (trail) {
     const category = 'charge'
     const mode = 'automatic'
     const target = { trailid: trail._id, url: `${process.env.DOMAIN}/#/login/entrar?redirectTo=/menu/${trail._id}` }
-    return { title, text, communication, category, target, mode }
+    return { title, text, communication, category, target, mode, ...emailTemplate }
 }
 
 async function userTemporaryTagsCron () {

@@ -117,5 +117,7 @@ function prepareObject (trail) {
         items: trail.items,
         duration: trail.duration,
         thumbPath: trail.thumbPath,
+        externalPlayer: trail.externalPlayer,
+
     }
 }

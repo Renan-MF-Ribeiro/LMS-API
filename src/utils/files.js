@@ -18,9 +18,10 @@ const momentz = require('moment-timezone')
 const ExcelJS = require('exceljs')
 const _functions = require('./functions')
 const { mapUser } = require('./../components/users/model')
-const { Item, VimeoItem } = require('../components/items/model')
+const { Item, MediaItem } = require('../components/items/model')
 const { sleep } = require('./functions')
 const { sendMessageToKafka } = require('../../src/components/messages/business')
+const { Readable } = require('stream')
 
 const bucket = process.env.BUCKET
 aws.config = { accessKeyId: process.env.ACCESSKEY, secretAccessKey: process.env.SECRETKEY, region: process.env.REGION }
@@ -40,6 +41,17 @@ async function streamToBuffer (readableStream) {
         })
         readableStream.on('error', reject)
     })
+}
+
+function bufferToStream (binary) {
+    const readableInstanceStream = new Readable({
+        read () {
+            this.push(binary)
+            this.push(null)
+        },
+    })
+
+    return readableInstanceStream
 }
 
 module.exports = {
@@ -111,15 +123,46 @@ module.exports = {
     },
 
     async getAzureFile () {
-        const fileShareServiceClient = ShareServiceClient.fromConnectionString(AZURE_STRINGCONN)
-        const fileShareClient = fileShareServiceClient.getShareClient('sftpfileshare').rootDirectoryClient.getFileClient('CargaUsuarios (1).xlsx')
+        try {
+            const env = process.env.NODE_ENV
+            const directory = env === 'production' ? 'producao' : 'homologacao'
+            const fileShareServiceClient = ShareServiceClient.fromConnectionString(AZURE_STRINGCONN)
+            const fileShareClient = fileShareServiceClient.getShareClient('sftpfileshare').getDirectoryClient(directory).getFileClient('Happmobi_Carga.xlsx')
+            const downloadBufferResponse = await fileShareClient.downloadToBuffer(0, 0)
 
-        const downloadFileResponse = await fileShareClient.download()
-        return await streamToBuffer(downloadFileResponse.readableStreamBody)
+            const decodedFile = await iconv.decode(downloadBufferResponse, 'iso88591')
+            const decodedReadStream = bufferToStream(decodedFile)
+
+            return { readableStream: decodedReadStream, buffer: downloadBufferResponse }
+        } catch (error) {
+            console.log('Carga de usuários não encontrada no compartilhamento de arquivos')
+            return null
+        }
         // return await streamToBuffer(downloadFileResponse.readableStreamBody)
     },
 
-    vimeoFilePath (file, payload, user) {
+    async moveUserLoadToProcessed (buffer) {
+        try {
+            const env = process.env.NODE_ENV
+            const directory = env === 'production' ? 'producao' : 'homologacao'
+            const fileShareServiceClient = ShareServiceClient.fromConnectionString(AZURE_STRINGCONN)
+
+            await fileShareServiceClient.getShareClient('sftpfileshare').getDirectoryClient(directory).deleteFile('Happmobi_Carga.xlsx')
+
+            const completeDate = new Date().toLocaleString('pt-BR').split(' ')
+            const date = completeDate[0].replace('/', '').replace('/', '')
+            const hours = completeDate[1].replace(':', '').replace(':', '')
+            const fileName = `Happmobi_${date}_${hours}.xlsx`
+            await fileShareServiceClient.getShareClient('sftpfileshare').getDirectoryClient(directory).getDirectoryClient('processados').createFile(fileName, 4000000)
+
+            await fileShareServiceClient.getShareClient('sftpfileshare').getDirectoryClient(directory).getDirectoryClient('processados').getFileClient(fileName).uploadData(buffer)
+        } catch (error) {
+            console.log('Error', error)
+        }
+    },
+
+    vimeoFilePath (file, payload, user, mode = 'create') {
+        console.log(payload)
         let filePath
         let fileType
         let uploadStatus
@@ -141,51 +184,58 @@ module.exports = {
             return { title, text, communication, category, target, mode }
         }
 
-        const vimeoTrx = new Vimeo(
-            process.env.clientId,
-            process.env.clientSecret,
-            process.env.accessToken,
-        )
+        let vimeoTrx
+        setTimeout(() => {
+            vimeoTrx = new Vimeo(
+                process.env.VIMEO_CLIENTID,
+                process.env.VIMEO_CLIENTSECRET,
+                process.env.VIMEO_ACCESSTOKEN,
+            )
+            vimeoTrx.upload(
+                String(file.path),
+                {
+                    name: payload.title,
+                    description: payload.description,
+                },
+                function (uri) {
+                    uploadStatus = 'Upload was done!'
+                    console.log('Upload was done!', uri)
+                    const trx = async () => {
+                        await sleep(3000)
+                        const { _id } = await Item.findOne({
+                            title: { $eq: payload.title },
+                            contentPath: { $eq: payload.contentPath },
+                        })
+                        await MediaItem.findByIdAndUpdate(_id, {
+                            contentPath: 'https://vimeo.com' + uri,
+                        })
 
-        vimeoTrx.upload(
-            String(file.path),
-            function (uri) {
-                uploadStatus = 'Upload was done!'
-                console.log('Upload was done!', uri)
-                const trx = async () => {
-                    console.log(payload)
-                    await sleep(3000)
-                    const { _id } = await Item.findOne({
-                        title: { $eq: payload.title },
-                        contentPath: { $eq: payload.contentPath },
-                    })
-                    await VimeoItem.findByIdAndUpdate(_id, {
-                        contentPath: 'https://vimeo.com' + uri,
-                    })
+                        const campObj = campainObj()
+                        await sendMessageToKafka(campObj, [user])
+                    }
+                    trx()
+                },
+                function (bytes_uploaded, bytes_total) {
+                    var percentage = (bytes_uploaded / bytes_total * 100).toFixed(2)
+                    console.log(bytes_uploaded, bytes_total, percentage + '%')
+                },
+                function (error) {
+                    uploadStatus = { message: 'Something went wrong', error: error }
+                    console.error('Something went wrong: ' + error)
+                    const trx = async () => {
+                        await Item.findOneAndDelete({
+                            title: { $eq: payload.title },
+                            contentPath: { $eq: payload.contentPath },
+                        })
+                    }
+                    if (mode === 'create') {
+                        trx()
+                    }
+                },
+            )
 
-                    const campObj = campainObj()
-                    await sendMessageToKafka(campObj, [user])
-                }
-                trx()
-            },
-            function (bytes_uploaded, bytes_total) {
-                var percentage = (bytes_uploaded / bytes_total * 100).toFixed(2)
-                console.log(bytes_uploaded, bytes_total, percentage + '%')
-            },
-            function (error) {
-                uploadStatus = { message: 'Something went wrong', error: error }
-                console.error('Something went wrong: ' + error)
-                const trx = async () => {
-                    await Item.findOneAndDelete({
-                        title: { $eq: payload.title },
-                        contentPath: { $eq: payload.contentPath },
-                    })
-                }
-                trx()
-            },
-        )
-
-        return uploadStatus
+            return uploadStatus
+        }, 5000)
     },
 
     async moveUpload (file) {

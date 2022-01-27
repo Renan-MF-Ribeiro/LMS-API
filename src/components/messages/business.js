@@ -61,15 +61,13 @@ async function returnUsersBasedOnTarget (type, value) {
 }
 
 function processMessage (campaign, user) {
-    const { title, text, communication, category, target } = campaign
+    const { communication, target, ...data } = campaign
 
     const notificationlink = processNotificationLink(target)
     return {
         clientid,
-        title,
-        text,
-        category,
         type: communication,
+        ...data,
         identifier: user.networkLogin,
         viewed: false,
         notificationlink,
