@@ -9,7 +9,6 @@ const { Group } = require('../components/groups/model')
 const { SCORMLessonStatus } = require('../components/tracking/model')
 const { HistoricEvaluation } = require('../components/assessments/model')
 const { Tracking } = require('../components/tracking/model')
-const { curryN } = require('ramda')
 
 module.exports = {
 
