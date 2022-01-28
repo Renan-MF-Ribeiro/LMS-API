@@ -9,6 +9,7 @@ const { Group } = require('../components/groups/model')
 const { SCORMLessonStatus } = require('../components/tracking/model')
 const { HistoricEvaluation } = require('../components/assessments/model')
 const { Tracking } = require('../components/tracking/model')
+const { curryN } = require('ramda')
 
 module.exports = {
 
@@ -319,6 +320,8 @@ module.exports = {
     processTrailTracking (trail, allTrackingUser) {
         let containsACompletedItem = false
         const completionDate = []
+        let scoreArr = []
+
         for (const item of trail.items) {
             const objTracking = allTrackingUser.filter(obj => {
                 if (String(obj.item) === String(item.itemID._id)) {
@@ -329,6 +332,7 @@ module.exports = {
             const completionAt = objTracking ? objTracking.completionAt : null
             item.completionAt = completionAt
             completionDate.push(completionAt)
+
 
             var tmpCompletion = null
             if (objTracking) {
@@ -343,11 +347,23 @@ module.exports = {
                 }
             }
 
+            if(objTracking && objTracking.kind === 'ExamTracking') {
+                scoreArr.push(objTracking.score)
+            }
+
             item.completion = tmpCompletion
             if (item.completion === 1) {
                 containsACompletedItem = true
             }
         }
+
+        let scoreAverage = 0
+        for (let score of scoreArr){
+            scoreAverage += score
+        }
+        scoreAverage = scoreAverage / scoreArr.length
+        trail.scoreAverage = scoreAverage
+
         var mostRecentDate = new Date(Math.max.apply(null, completionDate.map(e => {
             return new Date(e)
         })))
