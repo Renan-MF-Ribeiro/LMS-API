@@ -10,6 +10,7 @@ router
     .post('/', isAdmin, _controller.create)
     .get('/', _controller.get)
     .get('/tags', isAccountant, _controller.getTags)
+    .get('/section-tags', isAccountant, _controller.getSectionTags)
     .put('/', isAdmin, _controller.update)
     .delete('/:id', isAdmin, _controller.delete)
     .get('/instructor', _controller.getInstructorGroups)

@@ -1,6 +1,7 @@
 const _messages = require('../../utils/messages')
 const _functions = require('../../utils/functions')
 const { Trail } = require('../../components/trails/model')
+const { Section } = require('../../components/sections/model')
 const { Group, InstructorGroup } = require('./model')
 const { CourseModel } = require('../courses/model')
 
@@ -193,4 +194,18 @@ module.exports = {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'groups', '/tags')
         }
     },
+    async getSectionTags (req, res){
+            try {
+                const sections = await Section.find({})
+                const sectionTags = sections.filter(value => value.tags.length > 0).map(section => section.tags.map(tag => tag.value)).filter(tag => !/(\bELEGE_)/.test(tag))
+
+                let tags = [...sectionTags]
+
+                tags = tags.reduce((prev, curr) => prev.concat(curr), [])
+                
+                _messages.success(res, req, tags)
+            } catch (error) {
+                _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'groups', '/tags') 
+            }
+    }
 }
