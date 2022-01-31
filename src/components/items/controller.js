@@ -333,9 +333,7 @@ const ItemController = {
                     }
 
                     if (payload.kind === 'MediaItem') {
-                        if (!content) {
-                            payload.contentPath = payload.content
-                        } else {
+                        if (content) {
                             payload.contentPath = String(new Date().toISOString())
                             vimeoFilePath(content, payload, user, 'update')
                         }
