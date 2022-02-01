@@ -211,7 +211,6 @@ module.exports = {
                             contentPath: 'https://vimeo.com' + uri,
                             vimeoId: vimeoId,
                         })
-                        console.log(vimeoId)
                         const campObj = campainObj()
                         await sendMessageToKafka(campObj, [user])
                     }
