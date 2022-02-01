@@ -94,6 +94,7 @@ const MediaItem = Item.discriminator('MediaItem', new mongoose.Schema({
         //     message: props => `${props.value} não é um caminho válido ou uma URL suportada.`,
         // },
     },
+    vimeoId: {type: String, required: false },
     ...endpointOptions,
 }, {
     ...schemaOptions,

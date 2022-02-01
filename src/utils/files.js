@@ -202,14 +202,15 @@ module.exports = {
                     console.log('Upload was done!', uri)
                     const trx = async () => {
                         await sleep(3000)
+                        const vimeoId = uri.split('/')[2]
                         const { _id } = await Item.findOne({
                             title: { $eq: payload.title },
                             contentPath: { $eq: payload.contentPath },
                         })
                         await MediaItem.findByIdAndUpdate(_id, {
                             contentPath: 'https://vimeo.com' + uri,
+                            vimeoId: vimeoId,
                         })
-
                         const campObj = campainObj()
                         await sendMessageToKafka(campObj, [user])
                     }
