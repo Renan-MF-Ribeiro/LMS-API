@@ -22,7 +22,8 @@ const {
     azureBlob,
     isSCORMManifestFile,
     isSCORMSchemaFile,
-    vimeoFilePath,
+    vimeoFilePathCreate,
+    vimeoFilePathUpdate,
 } = require('../../utils/files')
 
 const {
@@ -108,7 +109,7 @@ const ItemController = {
                         } else {
                             payload.enabled = false
                             payload.contentPath = String(new Date().toISOString())
-                            vimeoFilePath(content, payload, user)
+                            vimeoFilePathCreate(content, payload, user)
                         }
                     }
 
@@ -257,7 +258,7 @@ const ItemController = {
                         } else {
                             payload.enabled = false
                             payload.contentPath = String(new Date().toISOString())
-                            vimeoFilePath(content, payload, user)
+                            vimeoFilePathCreate(content, payload, user)
                         }
                     }
 
@@ -336,8 +337,11 @@ const ItemController = {
 
                     if (payload.kind === 'MediaItem') {
                         if (content) {
+                            payload.enabled = false
+                            const item = await Item.findOne({ _id: payload._id })
+                            const vimeoId = item.vimeoId
                             payload.contentPath = String(new Date().toISOString())
-                            vimeoFilePath(content, payload, user, 'update')
+                            vimeoFilePathUpdate(content, payload, user, vimeoId)
                         }
                     }
 
