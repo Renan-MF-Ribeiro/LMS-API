@@ -210,6 +210,7 @@ module.exports = {
                         await MediaItem.findByIdAndUpdate(_id, {
                             contentPath: 'https://vimeo.com' + uri,
                             vimeoId: vimeoId,
+                            enabled: true,
                         })
                         const campObj = campainObj()
                         await sendMessageToKafka(campObj, [user])

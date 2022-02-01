@@ -106,6 +106,7 @@ const ItemController = {
                         if (!content) {
                             payload.contentPath = payload.content
                         } else {
+                            payload.enabled = false
                             payload.contentPath = String(new Date().toISOString())
                             vimeoFilePath(content, payload, user)
                         }
@@ -254,6 +255,7 @@ const ItemController = {
                         if (!content) {
                             payload.contentPath = payload.content
                         } else {
+                            payload.enabled = false
                             payload.contentPath = String(new Date().toISOString())
                             vimeoFilePath(content, payload, user)
                         }
