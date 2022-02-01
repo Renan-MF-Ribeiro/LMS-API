@@ -273,7 +273,6 @@ module.exports = {
                             contentPath: { $eq: payload.contentPath },
                         })
                         await MediaItem.findByIdAndUpdate(_id, {
-                            contentPath: 'https://vimeo.com' + uri,
                             enabled: true
                         })
                         const campObj = campainObj()
