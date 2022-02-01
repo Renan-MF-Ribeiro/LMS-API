@@ -242,6 +242,7 @@ module.exports = {
     vimeoFilePathUpdate (file, payload, user, vimeoId) {
         let uploadStatus
         let vimeoIdPath = `/videos/${vimeoId}`
+        let fileName = file.name
         
         const campainObj = function () {
             const title = 'Video upload'
@@ -263,6 +264,12 @@ module.exports = {
             vimeoTrx.replace(
                 String(file.path),
                 vimeoIdPath,
+                {
+                    "file_name": fileName,
+                    "upload": {
+                        "approach": "post"
+                    }
+                },
                 function (uri) {
                     uploadStatus = 'Upload was done!'
                     console.log('Upload was done!', uri)
@@ -273,6 +280,7 @@ module.exports = {
                             contentPath: { $eq: payload.contentPath },
                         })
                         await MediaItem.findByIdAndUpdate(_id, {
+                            contentPath: 'https://vimeo.com' + uri,
                             enabled: true
                         })
                         const campObj = campainObj()
