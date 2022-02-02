@@ -161,8 +161,7 @@ module.exports = {
         }
     },
 
-    vimeoFilePath (file, payload, user, mode = 'create') {
-        console.log(payload)
+    vimeoFilePathCreate (file, payload, user, mode = 'create') {
         let filePath
         let fileType
         let uploadStatus
@@ -202,14 +201,16 @@ module.exports = {
                     console.log('Upload was done!', uri)
                     const trx = async () => {
                         await sleep(3000)
+                        const vimeoId = uri.split('/')[2]
                         const { _id } = await Item.findOne({
                             title: { $eq: payload.title },
                             contentPath: { $eq: payload.contentPath },
                         })
                         await MediaItem.findByIdAndUpdate(_id, {
                             contentPath: 'https://vimeo.com' + uri,
+                            vimeoId: vimeoId,
+                            enabled: true,
                         })
-
                         const campObj = campainObj()
                         await sendMessageToKafka(campObj, [user])
                     }
@@ -231,6 +232,69 @@ module.exports = {
                     if (mode === 'create') {
                         trx()
                     }
+                },
+            )
+
+            return uploadStatus
+        }, 5000)
+    },
+
+    vimeoFilePathUpdate (file, payload, user, vimeoId) {
+        let uploadStatus
+        let vimeoIdPath = `/videos/${vimeoId}`
+        let fileName = file.name
+        
+        const campainObj = function () {
+            const title = 'Video upload'
+            const text = 'Efetuado upload na plataforma Vimeo!'
+            const communication = ['notification']
+            const category = 'charge'
+            const mode = 'automatic'
+            const target = { url: `${process.env.DOMAIN}/#/login/entrar?redirectTo=/home`, trailid: '', item: '' }
+            return { title, text, communication, category, target, mode }
+        }
+
+        let vimeoTrx
+        setTimeout(() => {
+            vimeoTrx = new Vimeo(
+                process.env.VIMEO_CLIENTID,
+                process.env.VIMEO_CLIENTSECRET,
+                process.env.VIMEO_ACCESSTOKEN,
+            )
+            vimeoTrx.replace(
+                String(file.path),
+                vimeoIdPath,
+                {
+                    "file_name": fileName,
+                    "upload": {
+                        "approach": "post"
+                    }
+                },
+                function (uri) {
+                    uploadStatus = 'Upload was done!'
+                    console.log('Upload was done!', uri)
+                    const trx = async () => {
+                        await sleep(3000)
+                        const { _id } = await Item.findOne({
+                            title: { $eq: payload.title },
+                            contentPath: { $eq: payload.contentPath },
+                        })
+                        await MediaItem.findByIdAndUpdate(_id, {
+                            contentPath: 'https://vimeo.com' + uri,
+                            enabled: true
+                        })
+                        const campObj = campainObj()
+                        await sendMessageToKafka(campObj, [user])
+                    }
+                    trx()
+                },
+                function (bytes_uploaded, bytes_total) {
+                    var percentage = (bytes_uploaded / bytes_total * 100).toFixed(2)
+                    console.log(bytes_uploaded, bytes_total, percentage + '%')
+                },
+                function (error) {
+                    uploadStatus = { message: 'Something went wrong', error: error }
+                    console.error('Something went wrong: ' + error)
                 },
             )
 
