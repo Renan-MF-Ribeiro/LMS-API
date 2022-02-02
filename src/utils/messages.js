@@ -17,7 +17,7 @@ module.exports = {
     },
 
     success: async (res, req, data, mensagem = null, component = null, route = null, dataNew = null, dataOld = null, store = null, action = null, namesGroups = null) => {
-        if (store) await _functions.recordLog(req, action, mensagem, component, route, dataNew, dataOld, namesGroups)
+        if (store) await _functions.recordLog(req, action, mensagem, component, route, dataNew, dataOld, namesGroups, data)
         res.status(httpStatus.OK).json(data)
     },
 

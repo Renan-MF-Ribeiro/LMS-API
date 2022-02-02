@@ -95,7 +95,7 @@ module.exports = {
         return newDate
     },
 
-    recordLog (req, type, message, component, route, dataNew = null, dataOld = null, namesGroups = null) {
+    recordLog (req, type, message, component, route, dataNew = null, dataOld = null, namesGroups = null, dataUser = null) {
         return new Promise(async (resolve, reject) => {
             try {
                 const token = req.headers.authorization
@@ -109,9 +109,10 @@ module.exports = {
 
                     }
                 }
-
+                const userLogin = dataUser ? dataUser.networkLogin : null
+                const userId = dataUser ? dataUser.userId : null
                 await Log.create({
-                    user: user ? user._id : null,
+                    user: user ? user._id : userId,
                     type,
                     message,
                     component,
@@ -119,7 +120,7 @@ module.exports = {
                     dataOld,
                     route,
                     ip: req.ip,
-                    login: req.body.login || null,
+                    login: req.body.login ? req.body.login : userLogin,
                     groups: namesGroups,
                 })
                 resolve()
@@ -319,7 +320,7 @@ module.exports = {
     processTrailTracking (trail, allTrackingUser) {
         let containsACompletedItem = false
         const completionDate = []
-        let scoreArr = []
+        const scoreArr = []
 
         for (const item of trail.items) {
             const objTracking = allTrackingUser.filter(obj => {
@@ -331,7 +332,6 @@ module.exports = {
             const completionAt = objTracking ? objTracking.completionAt : null
             item.completionAt = completionAt
             completionDate.push(completionAt)
-
 
             var tmpCompletion = null
             if (objTracking) {
@@ -346,7 +346,7 @@ module.exports = {
                 }
             }
 
-            if(objTracking && objTracking.kind === 'ExamTracking') {
+            if (objTracking && objTracking.kind === 'ExamTracking') {
                 scoreArr.push(objTracking.score)
             }
 
@@ -357,7 +357,7 @@ module.exports = {
         }
 
         let scoreAverage = 0
-        for (let score of scoreArr){
+        for (const score of scoreArr) {
             scoreAverage += score
         }
         scoreAverage = scoreAverage / scoreArr.length
