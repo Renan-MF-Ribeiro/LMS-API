@@ -345,17 +345,18 @@ module.exports = {
                     tmpCompletion = objTracking.completion
                 }
             }
-
-            if (objTracking && objTracking.kind === 'ExamTracking') {
-                scoreArr.push(objTracking.score)
+            if(item.itemID.passingScore && item.itemID.passingScore !== 0){
+                if (objTracking && objTracking.kind === 'ExamTracking') {
+                    scoreArr.push(objTracking.score)
+                }
             }
-
+            
             item.completion = tmpCompletion
             if (item.completion === 1) {
                 containsACompletedItem = true
             }
         }
-
+        
         let scoreAverage = 0
         for (const score of scoreArr) {
             scoreAverage += score
