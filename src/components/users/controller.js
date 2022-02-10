@@ -405,7 +405,7 @@ module.exports = {
                 let emailName = email[0]
                 let newEmail = ""
                 for(var i in emailName){
-                    if(i > 1 && i < emailName.length - 1){
+                    if(i > 2 && i < emailName.length){
                         newEmail += "*"
                     }else {
                         newEmail += emailName[i]
