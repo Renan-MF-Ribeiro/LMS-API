@@ -404,7 +404,7 @@ module.exports = {
                 let email = isUser.email.split('@')
                 let emailName = email[0]
                 let newEmail = ""
-                for(var i in emailName){
+                for(let i in emailName){
                     if(i > 2 && i < emailName.length){
                         newEmail += "*"
                     }else {
