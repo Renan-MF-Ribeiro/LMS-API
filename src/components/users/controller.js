@@ -401,9 +401,21 @@ module.exports = {
             const isUser = await User.findOneAndUpdate(search, { password: newPass, passwordValid: false })
 
             if (isUser.email) {
+                let email = isUser.email.split('@')
+                let emailName = email[0]
+                let newEmail = ""
+                for(var i in emailName){
+                    if(i > 1 && i < emailName.length - 1){
+                        newEmail += "*"
+                    }else {
+                        newEmail += emailName[i]
+                    };
+                }
+                newEmail = `${newEmail}@${email[1]}`
+
                 await sendEmailRecoryPassword(user.email ? user.email : emails, !!user.email, password_new, resetPasswordUrl, { name: user.name, cpf: user.cpf })
                 // $2a$10$G06bQZrp8R8kn2cnImS47eHQv./K4i0bp1yBaNDyj3WSrsCH/639G --> senha
-                return await _messages.success(res, req, 'Sucesso', 'Email para recupera senha disparado', 'users', 'recoveryPassword', [], [], true, 'RECOVERY PASSWORD')
+                return await _messages.success(res, req, {"status":'Sucesso', "userEmail": newEmail}, 'Email para recupera senha disparado', 'users', 'recoveryPassword', [], [], true, 'RECOVERY PASSWORD')
             } else {
                 return await _messages.success(res, req, password_new)
                 // _messages.badRequest(res, req, 'Email não existe', 'Não existe uma conta associada a este email')

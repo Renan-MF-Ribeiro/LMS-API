@@ -23,7 +23,7 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             try {
                 let message
-                console.log(resetPasswordUrl)
+                
                 if (hasEmail) {
                     message = `Olá ${userData.name}, você solicitou a recuperação da sua senha! <b> ${newPass} </b> <br> Acesse a <a href="${resetPasswordUrl}">plataforma</a> e bons estudos.`
                 } else {
