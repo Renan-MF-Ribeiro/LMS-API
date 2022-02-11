@@ -40,7 +40,11 @@ module.exports = {
                     deleted: 0,
                 }
                 if (skip !== null) {
-                    trails = await Trail.find(findObj).populate({
+                    trails = await Trail.find(findObj)
+                    .populate({
+                        path:'author',
+                    })
+                    .populate({
                         path: 'items.itemID',
                         match: matchObj,
                     })
@@ -49,18 +53,24 @@ module.exports = {
                         .limit(limit)
                 } else {
                     trails = await Trail.find(findObj).populate({
+                        path:'author'
+                    }).populate({
                         path: 'items.itemID',
                         match: matchObj,
                     }).sort(sortObj)
                 }
                 const arrTrails = []
-
                 if (!flag) {
                     for (const trail of trails) {
                         const arrItems = []
                         for (const i of trail.items) {
                             const item = await Item.findById(i.itemID)
                             if (item !== null) arrItems.push(item)
+                        }
+
+                        let userName = ""
+                        if(trail.author){
+                            userName = trail.author.name
                         }
 
                         arrTrails.push({
@@ -78,6 +88,7 @@ module.exports = {
                             updatedAt: trail.updatedAt,
                             endDate: trail.endDate,
                             tags: trail.tags,
+                            author: userName,
                             completion: trail.completion,
                             isSequenceEnabled: trail.isSequenceEnabled,
                             items: arrItems,
@@ -87,7 +98,6 @@ module.exports = {
                             complaints: trail.complaints,
                             certificate: trail.certificate,
                             externalPlayer: trail.externalPlayer,
-
                         })
                     }
                 } else {
@@ -105,6 +115,11 @@ module.exports = {
                             }
                         }
 
+                        let userName = ""
+                        if(trail.author){
+                            userName = trail.author.name
+                        }
+
                         arrTrails.push({
                             _id: trail._id,
                             enabled: trail.enabled,
@@ -123,6 +138,7 @@ module.exports = {
                             completion: trail.completion,
                             isSequenceEnabled: trail.isSequenceEnabled,
                             items: arrItems,
+                            author: userName,
                             expirationType: trail.expirationType,
                             collaborative: trail.collaborative,
                             moderation: trail.moderation,
@@ -132,7 +148,6 @@ module.exports = {
                         })
                     }
                 }
-
                 resolve(arrTrails)
             } catch (error) {
                 reject(error)
