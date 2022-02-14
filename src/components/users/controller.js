@@ -243,18 +243,26 @@ module.exports = {
     async feedbackElegible(req,res){
         const user = await getUserByToken(req)
         const today = new Date();
-        const firstLogin = await returnDateSinceFirstLogin(user._id)
-        const { numberOfItemsCompleted } = await getNumberOfItemsCompletedOrInProgressOrNotStarted(req)
-        const response = await axios.get(`${process.env.API_SURVEY}/feedback/listbyuser?userid=${user.networkLogin}`)
-        let latestFeedback = response.data.items.slice(-1)
-        let latestFeedbackDate = new Date(latestFeedback[0].createdAt)
-        let daysSinceLastFeedback = Math.floor((latestFeedbackDate-today)/(24*3600*1000))
-        daysSinceLastFeedback *= -1
+        const uri = `${process.env.API_SURVEY}/feedback/listbyuser?userid=${user._id}`
+        try {
+            const response = await axios.get(uri)
+            const firstLogin = await returnDateSinceFirstLogin(user._id)
+            const { numberOfItemsCompleted } = await getNumberOfItemsCompletedOrInProgressOrNotStarted(req)
+            if(response.data[0]){
+                let latestFeedback = response.data.slice(-1)
+                let latestFeedbackDate = new Date(latestFeedback[0].createdAt)
+                let daysSinceLastFeedback = Math.floor((latestFeedbackDate-today)/(24*3600*1000))
+                daysSinceLastFeedback *= -1
 
-        if(firstLogin >= 1 && daysSinceLastFeedback >= 1 && numberOfItemsCompleted >= 1){
-            _messages.success(res, req, true)
-        }else{
-            _messages.success(res, req, false)
+                if(firstLogin >= 1 && daysSinceLastFeedback >= 1 && numberOfItemsCompleted >= 1){
+                    _messages.success(res, req, true)
+                }
+            }else{
+                _messages.success(res, req, false)
+            }
+        } catch (error) {
+            console.log(error.message)
+            _messages.internalServer(res, req, error.message)
         }
     },
 
