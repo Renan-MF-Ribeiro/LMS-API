@@ -22,6 +22,7 @@ const { Item, MediaItem } = require('../components/items/model')
 const { sleep } = require('./functions')
 const { sendMessageToKafka } = require('../../src/components/messages/business')
 const { Readable } = require('stream')
+const configJson = require('../../config.json')
 
 const bucket = process.env.BUCKET
 aws.config = { accessKeyId: process.env.ACCESSKEY, secretAccessKey: process.env.SECRETKEY, region: process.env.REGION }
@@ -165,6 +166,7 @@ module.exports = {
         let filePath
         let fileType
         let uploadStatus
+        const vimeoFolderUri = `/${configJson.vimeoFolder}`
         if (isStream(file)) {
             filePath = file.path
             fileType = mime.lookup(file.path) || 'text/plain'
@@ -195,6 +197,7 @@ module.exports = {
                 {
                     name: payload.title,
                     description: payload.description,
+                    folder_uri: vimeoFolderUri
                 },
                 function (uri) {
                     uploadStatus = 'Upload was done!'
