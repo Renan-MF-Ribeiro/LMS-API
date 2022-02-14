@@ -317,7 +317,7 @@ const ItemController = {
 
                     if (thumb) {
                         thumbPath = await azureBlob(thumb, 'items/thumbs')
-                        thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN)
+                        thumbPath = process.env.NODE_ENV === 'local' ? thumbPath : thumbPath.replace(AZURE_BLOB_URL, DOMAIN)
                     }
 
                     if (banner) {
