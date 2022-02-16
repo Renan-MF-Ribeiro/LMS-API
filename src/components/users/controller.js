@@ -240,24 +240,24 @@ module.exports = {
         }
     },
 
-    async feedbackElegible(req,res){
+    async feedbackElegible (req, res) {
         const user = await getUserByToken(req)
-        const today = new Date();
+        const today = new Date()
         const uri = `${process.env.API_SURVEY}/feedback/listbyuser?userid=${user._id}`
         try {
             const response = await axios.get(uri)
             const firstLogin = await returnDateSinceFirstLogin(user._id)
             const { numberOfItemsCompleted } = await getNumberOfItemsCompletedOrInProgressOrNotStarted(req)
-            if(response.data[0]){
-                let latestFeedback = response.data.slice(-1)
-                let latestFeedbackDate = new Date(latestFeedback[0].createdAt)
-                let daysSinceLastFeedback = Math.floor((latestFeedbackDate-today)/(24*3600*1000))
+            if (response.data[0]) {
+                const latestFeedback = response.data.slice(-1)
+                const latestFeedbackDate = new Date(latestFeedback[0].createdAt)
+                let daysSinceLastFeedback = Math.floor((latestFeedbackDate - today) / (24 * 3600 * 1000))
                 daysSinceLastFeedback *= -1
 
-                if(firstLogin >= 1 && daysSinceLastFeedback >= 1 && numberOfItemsCompleted >= 1){
+                if (firstLogin >= 1 && daysSinceLastFeedback >= config.usersData.daysSinceLastFeedback && numberOfItemsCompleted >= 1) {
                     _messages.success(res, req, true)
                 }
-            }else{
+            } else {
                 _messages.success(res, req, false)
             }
         } catch (error) {
@@ -372,7 +372,6 @@ module.exports = {
         try {
             const { body, domain } = req.body
 
-
             let search = Object()
             Object.entries(body).forEach(([k, v]) => {
                 search = Object.assign(search, { [k]: { $eq: v } })
@@ -394,12 +393,12 @@ module.exports = {
                 return item
             })
             const networkLogin = user.networkLogin
-            const _id = user._id;
+            const _id = user._id
 
             const token = generateToken({
                 networkLogin,
                 _id,
-                password_old: password_new
+                password_old: password_new,
             })
 
             const resetPasswordUrl = `${domain}/#/login/troca-senha?token=${token}`
@@ -409,13 +408,13 @@ module.exports = {
             const isUser = await User.findOneAndUpdate(search, { password: newPass, passwordValid: false })
 
             if (isUser.email) {
-                let email = isUser.email.split('@')
-                let emailName = email[0]
-                let newEmail = ""
-                for(let i in emailName){
-                    if(i > 2 && i < emailName.length){
-                        newEmail += "*"
-                    }else {
+                const email = isUser.email.split('@')
+                const emailName = email[0]
+                let newEmail = ''
+                for (const i in emailName) {
+                    if (i > 2 && i < emailName.length) {
+                        newEmail += '*'
+                    } else {
                         newEmail += emailName[i]
                     };
                 }
@@ -423,7 +422,7 @@ module.exports = {
 
                 await sendEmailRecoryPassword(user.email ? user.email : emails, !!user.email, password_new, resetPasswordUrl, { name: user.name, cpf: user.cpf })
                 // $2a$10$G06bQZrp8R8kn2cnImS47eHQv./K4i0bp1yBaNDyj3WSrsCH/639G --> senha
-                return await _messages.success(res, req, {"status":'Sucesso', "userEmail": newEmail}, 'Email para recupera senha disparado', 'users', 'recoveryPassword', [], [], true, 'RECOVERY PASSWORD')
+                return await _messages.success(res, req, { status: 'Sucesso', userEmail: newEmail }, 'Email para recupera senha disparado', 'users', 'recoveryPassword', [], [], true, 'RECOVERY PASSWORD')
             } else {
                 return await _messages.success(res, req, password_new)
                 // _messages.badRequest(res, req, 'Email não existe', 'Não existe uma conta associada a este email')

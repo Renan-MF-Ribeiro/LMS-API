@@ -17,7 +17,8 @@
     },
     "usersData": {
         "inactivateIfNotInSpreadsheet": false,
-        "sendSignUpActivationEmail": false
+        "sendSignUpActivationEmail": false,
+        "daysSinceLastFeedback": 180
     },
     "messenger": {
         "sendUsersToMicrosservice": false,
