@@ -370,7 +370,7 @@ module.exports = {
 
     async recoveryPassword (req, res) {
         try {
-            const { body, domain } = req.body
+            const { body, domain, changeByEmail } = req.body
 
             let search = Object()
             Object.entries(body).forEach(([k, v]) => {
@@ -407,7 +407,7 @@ module.exports = {
 
             const isUser = await User.findOneAndUpdate(search, { password: newPass, passwordValid: false })
 
-            if (isUser.email) {
+            if (isUser.email && changeByEmail) {
                 const email = isUser.email.split('@')
                 const emailName = email[0]
                 let newEmail = ''
