@@ -16,9 +16,11 @@ module.exports = {
             });
             const tracking = await Tracking.find({
                 completion: 1,
-            }).limit(1);
+            }).limit(1).sort({createdAt: -1});
 
-            const login = await Log.find({ type: "LOGIN" }).limit(1);
+            const login = await Log.find({ type: "LOGIN" }).limit(1).sort({createdAt: -1})
+
+            console.log(login)
 
             const databaseStatus = mongoose.connection.readyState;
 
