@@ -16,6 +16,7 @@ module.exports = {
 
             _messages.success(res, req, message)
         } catch (error) {
+            console.log(error)
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'groups', 'get')
         }
     },

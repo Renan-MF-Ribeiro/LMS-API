@@ -250,7 +250,6 @@ module.exports = {
                             itemsID.push(item.itemID.id)
                         }
                     }
-
                     var mostRecentDate = new Date(Math.max.apply(null, trail.items.map(e => {
                         return new Date(e.itemID.completionAt)
                     })))
@@ -261,10 +260,9 @@ module.exports = {
                             duration += item.itemID.durationHours
                         }
                         const { title, thumbPath, completion } = trail
-                        certs.push({ duration, title, concludedAt: mostRecentDate, userName: user.name, thumbPath, completion })
+                        certs.push({ duration, title, concludedAt: mostRecentDate, userName: user.name, thumbPath, completion, scoreAverage: trail.scoreAverage })
                     }
                 }
-
                 resolve(certs)
             } catch (error) {
                 reject(error)

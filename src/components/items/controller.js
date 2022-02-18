@@ -22,7 +22,8 @@ const {
     azureBlob,
     isSCORMManifestFile,
     isSCORMSchemaFile,
-    vimeoFilePath,
+    vimeoFilePathCreate,
+    vimeoFilePathUpdate,
 } = require('../../utils/files')
 
 const {
@@ -106,8 +107,9 @@ const ItemController = {
                         if (!content) {
                             payload.contentPath = payload.content
                         } else {
+                            payload.enabled = false
                             payload.contentPath = String(new Date().toISOString())
-                            vimeoFilePath(content, payload, user)
+                            vimeoFilePathCreate(content, payload, user)
                         }
                     }
 
@@ -254,8 +256,9 @@ const ItemController = {
                         if (!content) {
                             payload.contentPath = payload.content
                         } else {
+                            payload.enabled = false
                             payload.contentPath = String(new Date().toISOString())
-                            vimeoFilePath(content, payload, user)
+                            vimeoFilePathCreate(content, payload, user)
                         }
                     }
 
@@ -314,7 +317,7 @@ const ItemController = {
 
                     if (thumb) {
                         thumbPath = await azureBlob(thumb, 'items/thumbs')
-                        thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN)
+                        thumbPath = process.env.NODE_ENV === 'local' ? thumbPath : thumbPath.replace(AZURE_BLOB_URL, DOMAIN)
                     }
 
                     if (banner) {
@@ -333,11 +336,12 @@ const ItemController = {
                     }
 
                     if (payload.kind === 'MediaItem') {
-                        if (!content) {
-                            payload.contentPath = payload.content
-                        } else {
+                        if (content) {
+                            payload.enabled = false
+                            const item = await Item.findOne({ _id: payload._id })
+                            const vimeoId = item.vimeoId
                             payload.contentPath = String(new Date().toISOString())
-                            vimeoFilePath(content, payload, user, 'update')
+                            vimeoFilePathUpdate(content, payload, user, vimeoId)
                         }
                     }
 

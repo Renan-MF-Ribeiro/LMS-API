@@ -19,14 +19,15 @@ const transporter = nodemailer.createTransport({
 })
 
 module.exports = {
-    sendEmailRecoryPassword (strTo, hasEmail, newPass = '', domain = '', userData) {
+    sendEmailRecoryPassword (strTo, hasEmail, newPass, resetPasswordUrl = '', userData) {
         return new Promise(async (resolve, reject) => {
             try {
                 let message
+                
                 if (hasEmail) {
-                    message = `Olá ${userData.name}, você reiniciou a sua senha, sua nova senha é: <b> ${newPass} </b> <br> Acesse a <a href="${domain}">plataforma</a> e bons estudos.`
+                    message = `Olá ${userData.name}, você solicitou a recuperação da sua senha!<br> Acesse a <a href="${resetPasswordUrl}">plataforma</a> e bons estudos.`
                 } else {
-                    message = `Olá, o usuário ${userData.name} com número de CPF ${userData.cpf} requisitou troca de senha. A nova senha gerada para o usuário é: <b> ${newPass} </b> <br> Ao entrar na plataforma o mesmo deverá obrigatoriamente trocar a senha <br> Acesse a <a href="${domain}">plataforma</a> e bons estudos.`
+                    message = `Olá, o usuário ${userData.name} com número de CPF ${userData.cpf} requisitou troca de senha. A nova senha gerada para o usuário é: <b> ${newPass} </b> <br> Ao entrar na plataforma o mesmo deverá obrigatoriamente trocar a senha <br> Acesse a <a href="${resetPasswordUrl}">plataforma</a> e bons estudos.`
                 }
                 const html =`<table align="center" border="0" cellpadding="0" cellspacing="0" style="height: 600px; width: 800px;">
                                 <tbody>
@@ -45,7 +46,7 @@ module.exports = {
                                     </tr>
                                     <tr>
                                         <td height="100" style="text-align: center;"><a
-                                                href="${domain}"
+                                                href="${resetPasswordUrl}"
                                                 target="_blank"
                                                 style="font-size: 1rem; border: 0px; text-transform: uppercase; text-align: center; text-decoration: none; border-radius: 5px; color: rgb(255, 255, 255); font-weight: bold; font-family: Ubuntu, Roboto, sans-serif; padding: 1rem; background-color: ${emailTemplate.messenger.emailTemplate.primary} !important;">Acessar</a>
                                         </td>
