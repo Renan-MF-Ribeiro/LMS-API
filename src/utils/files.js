@@ -197,7 +197,7 @@ module.exports = {
                 {
                     name: payload.title,
                     description: payload.description,
-                    folder_uri: vimeoFolderUri
+                    folder_uri: vimeoFolderUri,
                 },
                 function (uri) {
                     uploadStatus = 'Upload was done!'
@@ -210,7 +210,7 @@ module.exports = {
                             contentPath: { $eq: payload.contentPath },
                         })
                         await MediaItem.findByIdAndUpdate(_id, {
-                            contentPath: 'https://vimeo.com' + uri,
+                            contentPath: 'https://vimeo.com/' + vimeoId,
                             vimeoId: vimeoId,
                             enabled: true,
                         })
@@ -244,9 +244,9 @@ module.exports = {
 
     vimeoFilePathUpdate (file, payload, user, vimeoId) {
         let uploadStatus
-        let vimeoIdPath = `/videos/${vimeoId}`
-        let fileName = file.name
-        
+        const vimeoIdPath = `/videos/${vimeoId}`
+        const fileName = file.name
+
         const campainObj = function () {
             const title = 'Video upload'
             const text = 'Efetuado upload na plataforma Vimeo!'
@@ -268,23 +268,25 @@ module.exports = {
                 String(file.path),
                 vimeoIdPath,
                 {
-                    "file_name": fileName,
-                    "upload": {
-                        "approach": "post"
-                    }
+                    file_name: fileName,
+                    upload: {
+                        approach: 'post',
+                    },
                 },
                 function (uri) {
                     uploadStatus = 'Upload was done!'
                     console.log('Upload was done!', uri)
                     const trx = async () => {
                         await sleep(3000)
+                        const vimeoId = uri.split('/')[2]
+
                         const { _id } = await Item.findOne({
                             title: { $eq: payload.title },
                             contentPath: { $eq: payload.contentPath },
                         })
                         await MediaItem.findByIdAndUpdate(_id, {
-                            contentPath: 'https://vimeo.com' + uri,
-                            enabled: true
+                            contentPath: 'https://vimeo.com/' + vimeoId,
+                            enabled: true,
                         })
                         const campObj = campainObj()
                         await sendMessageToKafka(campObj, [user])
