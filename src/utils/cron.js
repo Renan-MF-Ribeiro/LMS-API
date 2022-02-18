@@ -82,7 +82,7 @@ module.exports = {
     deleteReprovedExamTracking () {
         if (config.cron.deleteReprovedExamTracking.active) {
             new CronJob('00 00 * * * ', () => {
-                courseChargeCron()
+                examTrackingDeleteCron()
             }, null, true, 'America/Sao_Paulo')
         }
     },
@@ -506,9 +506,9 @@ async function examTrackingDeleteCron () {
         const today = new Date()
         const users = await User.find({ status: 'ATIVO' })
         for (const user of users) {
-            const trackings = await Tracking.find({ userLogin: user.networkLogin, kind: 'ExamTracking', lessonStatus: 'reproved' })
+            const trackings = await Tracking.find({ userLogin: user.networkLogin, kind: 'ExamTracking', lessonStatus: 'failed' })
             for (const tr of trackings) {
-                const daysSinceReproval = Math.floor((tr.completionAt - today) / (24 * 3600 * 1000))
+                const daysSinceReproval = Math.floor((today - tr.completionAt) / (24 * 3600 * 1000))
                 if (daysSinceReproval >= 30) {
                     await HistoricEvaluation.deleteMany({ item: tr.item, user: user._id })
                     await Tracking.deleteMany({ item: tr.item, userLogin: user.networkLogin })
