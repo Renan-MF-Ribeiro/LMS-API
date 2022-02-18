@@ -10,7 +10,8 @@ const {
     sendCourseReleaseNotification,
     sendCourseChargeNotification,
     updateUserTemporaryTags,
-    // executeCronAverageCourses,
+    executeCronAverageCourses,
+    deleteReprovedExamTracking,
 } = require('./src/utils/cron')
 
 const server = app.listen(port, async () => {
@@ -20,7 +21,8 @@ const server = app.listen(port, async () => {
     sendCourseReleaseNotification()
     sendCourseChargeNotification()
     updateUserTemporaryTags()
-    // executeCronAverageCourses()
+    executeCronAverageCourses()
+    deleteReprovedExamTracking()
 })
 
 createTerminus(server, {
