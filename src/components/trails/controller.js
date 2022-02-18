@@ -353,27 +353,35 @@ module.exports = {
     },
 
     async findAll (req, res) {
-        try {
+        try { 
             const { skip, limit } = pagination(req)
             const { order, sort } = ordernation(req)
             const searchBy = req.query.searchBy
-
+            
             const total = await Trail.countDocuments()
-            const trails = await Trail
-                .find(searchBy ? {
-                    $or: [
-                        { description: { $regex: searchBy, $options: 'i' } },
-                        { title: { $regex: searchBy, $options: 'i' } },
-                    ],
-                } : {})
-                .sort({ [order]: sort })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit))
-
-            _messages.success(res, req, {
+            if(req.query.type){
+                const trails = await Trail.find()
+                _messages.success(res, req, {
                 data: trails,
                 total,
             })
+            } else {
+                const trails = await Trail
+                    .find(searchBy ? {
+                        $or: [
+                            { description: { $regex: searchBy, $options: 'i' } },
+                            { title: { $regex: searchBy, $options: 'i' } },
+                        ],
+                    } : {})
+                    .sort({ [order]: sort })
+                    .skip(parseInt(skip))
+                    .limit(parseInt(limit))
+
+                _messages.success(res, req, {
+                    data: trails,
+                    total,
+                })
+            }
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'trails', 'findAll')
         }
