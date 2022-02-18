@@ -13,6 +13,9 @@
         },
         "courseCharge": {
             "active": false
+        },
+        "deleteReprovedExamTracking": {
+            "active": false
         }
     },
     "usersData": {

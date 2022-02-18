@@ -39,6 +39,8 @@ const { getAzureFile, readCSVUsersBuffer, moveUserLoadToProcessed } = require('.
 const { sendMessageToKafka } = require('../components/messages/business')
 
 const config = require('../../config.json')
+const { Item } = require('../components/items/model')
+const { HistoricEvaluation } = require('../components/assessments/model')
 
 const emailTemplate = config.messenger.emailTemplate
 const groupingA = config.cron.average.groupA
@@ -77,6 +79,13 @@ module.exports = {
             }, null, true, 'America/Sao_Paulo')
         }
     },
+    deleteReprovedExamTracking () {
+        if (config.cron.deleteReprovedExamTracking.active) {
+            new CronJob('00 00 * * * ', () => {
+                courseChargeCron()
+            }, null, true, 'America/Sao_Paulo')
+        }
+    },
 
     updateUserTemporaryTags () {
         new CronJob('00 00 * * * ', () => {
@@ -97,6 +106,7 @@ module.exports = {
         // getUsersLoad()
         // courseChargeCron()
         // courseReleaseCron()
+        // examTrackingDeleteCron()
     },
 
     executeCourseReleaseNotification () {
@@ -484,6 +494,25 @@ async function courseChargeCron () {
                 await Message.create(campaign)
                 sendMessageToKafka(campaign, elegibleUsers)
                 storageLog('Campanha de cobrança de cursos enviada', '', '', 'Cobrança')
+            }
+        }
+    } catch (error) {
+        return error
+    }
+}
+
+async function examTrackingDeleteCron () {
+    try {
+        const today = new Date()
+        const users = await User.find({ status: 'ATIVO' })
+        for (const user of users) {
+            const trackings = await Tracking.find({ userLogin: user.networkLogin, kind: 'ExamTracking', lessonStatus: 'reproved' })
+            for (const tr of trackings) {
+                const daysSinceReproval = Math.floor((tr.completionAt - today) / (24 * 3600 * 1000))
+                if (daysSinceReproval >= 30) {
+                    await HistoricEvaluation.deleteMany({ item: tr.item, user: user._id })
+                    await Tracking.deleteMany({ item: tr.item, userLogin: user.networkLogin })
+                }
             }
         }
     } catch (error) {
