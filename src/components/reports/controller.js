@@ -20,8 +20,6 @@ module.exports = {
 
             const login = await Log.find({ type: "LOGIN" }).limit(1).sort({createdAt: -1})
 
-            console.log(login)
-
             const databaseStatus = mongoose.connection.readyState;
 
             const systemHealth = {
@@ -30,7 +28,7 @@ module.exports = {
                 activeUsers: activeUsers.length,
                 inactiveUsers: inactiveUsers.length,
                 lastConclusion: tracking[0].createdAt,
-                lastAcess: login[0].createdAt,
+                lastAccess: login[0].createdAt,
             };
             return _messages.success(res, req, systemHealth);
         } catch (error) {

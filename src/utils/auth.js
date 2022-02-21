@@ -12,6 +12,7 @@ const {
     PROJECT_SECRET_KEY,
     LDAP_HOST,
     ANALYTICS_SECRET_KEY,
+    MONITORING_SECRET_KEY
 } = process.env
 const {
     Profile,
@@ -146,6 +147,23 @@ module.exports = {
                 resolve(false)
             }
         })
+    },
+
+    validateMonitoringToken: (req) => {
+        return new Promise((resolve) => {
+            try {
+                const token = req.headers.authorization;
+                jwt.verify(token, MONITORING_SECRET_KEY, function (err) {
+                    if (err) {
+                        resolve(false);
+                    } else {
+                        resolve(true);
+                    }
+                });
+            } catch (error) {
+                resolve(false);
+            }
+        });
     },
 
     validateTokenNginx: token => {
