@@ -1,12 +1,20 @@
-const Client = require('ssh2-sftp-client')
+const ClientSftp = require('ssh2-sftp-client')
+const ClientFtp = require('ftp')
 const path = require('path')
 const fs = require('fs')
-const sftp = new Client()
+const sftp = new ClientSftp()
 const config = {
     host: process.env.SFTP_HOST,
     port: process.env.SFTP_PORT,
     username: process.env.SFTP_USERNAME,
     password: process.env.SFTP_PASSWORD,
+}
+
+const configDegreed = {
+    host: process.env.SFTP_HOST_DEGREED,
+    port: process.env.SFTP_PORT_DEGREED,
+    user: process.env.SFTP_USERNAME_DEGREED,
+    password: process.env.SFTP_PASSWORD_DEGREED,
 }
 
 const remotePath = '/home/happmobi/prod/AcademiaModaCEA_cargaUsuarios.csv'
@@ -75,6 +83,38 @@ module.exports = {
                 resolve(Math.min(...arrNumbers))
             })
         })
+    },
+    uploadFileDegreed (localFile, remoteFile) {
+        if (process.env.SFTP_ENABLE_DEGREED !== 'true') {
+            console.log('Executação bloqueada, ambiente não é prod.')
+            return
+        }
+
+        const client = new ClientFtp()
+
+        client.on('ready', () => {
+            client.put(localFile, remoteFile, err => {
+                if (err) throw err
+                fs.unlink(localFile, err => {
+                    if (err) throw err
+                    console.log(localFile + 'was deleted')
+                    client.end()
+                })
+            })
+        })
+
+        client.on('error', err => {
+            if (err) {
+                client.end()
+            }
+            client.end()
+        })
+
+        client.on('greeting', msg => {
+            console.log(msg)
+        })
+
+        client.connect(configDegreed)
     },
 }
 

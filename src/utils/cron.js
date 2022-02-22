@@ -17,6 +17,7 @@ const {
     formatDateWithoutHours,
     calculateDiffDate,
     formatNumberCpf,
+    getDateToday,
 } = require('./functions')
 const {
     getTagsElegibles,
@@ -37,10 +38,12 @@ const {
 
 const { getAzureFile, readCSVUsersBuffer, moveUserLoadToProcessed } = require('../utils/files')
 const { sendMessageToKafka } = require('../components/messages/business')
+const ExcelJS = require('exceljs')
 
 const config = require('../../config.json')
 const { Item } = require('../components/items/model')
 const { HistoricEvaluation } = require('../components/assessments/model')
+const { uploadFileDegreed } = require('./ftp')
 
 const emailTemplate = config.messenger.emailTemplate
 const groupingA = config.cron.average.groupA
@@ -99,6 +102,13 @@ module.exports = {
             }, null, true, 'America/Sao_Paulo')
         }
     },
+    degreedCharge () {
+        if (config.cron.degreed.active) {
+            new CronJob('0 2 * * * ', () => {
+                cronDegreedCharge()
+            }, null, true, 'America/Sao_Paulo')
+        }
+    },
     executeCronAverageCourses () {
         // userTemporaryTagsCron()
         // averageCourses()
@@ -107,6 +117,7 @@ module.exports = {
         // courseChargeCron()
         // courseReleaseCron()
         // examTrackingDeleteCron()
+        // cronDegreedCharge()
     },
 
     executeCourseReleaseNotification () {
@@ -556,5 +567,86 @@ async function userTemporaryTagsCron () {
         }
     } catch (error) {
         return error
+    }
+}
+
+async function cronDegreedCharge (hours) {
+    var intHours = hours ? parseInt(hours) : 24
+    try {
+        const workbook = new ExcelJS.Workbook()
+        workbook.creator = 'Happmobi'
+        workbook.lastModifiedBy = 'Happmobi'
+        workbook.created = new Date()
+        workbook.modified = new Date()
+
+        var sheet = workbook.addWorksheet('Carga')
+        const headerSheet = ['ContentType', 'CustomerContentID', 'URL', 'Delete', 'Title', 'Summary', 'ImageURL', 'Format', 'Language', 'Duration', 'DurationUnits', 'PublishDate', 'Provider', 'Topics']
+
+        sheet.addRow(headerSheet);
+        ['A1', 'B1', 'C1', 'D1', 'E1', 'F1', 'G1', 'H1', 'I1', 'J1', 'K1', 'L1', 'M1', 'N1'].map(key => {
+            var tmpCell = sheet.getCell(key)
+            tmpCell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'd9d9d9' },
+
+            }
+            tmpCell.font = { name: 'Calibri', size: 10, bold: true }
+            tmpCell.alignment = { horizontal: 'center', vertical: 'center' }
+
+            const tmpCol = sheet.getColumn(key.substr(0, 1))
+            tmpCol.width = 30
+        })
+
+        let blnChangeItens = false
+
+        const trails = await populateTrails(true, {
+            enabled: true,
+        })
+        // console.log(trails)
+        for (const trail of trails) {
+            for (const item of trail.items) {
+                const itemDetails = item.itemID
+                const urlItem = `${process.env.DOMAIN}/#/app/player/` + item.urlItem.split(`${process.env.TINCAN_OWNER}/`)[1]
+
+                if (calculateDiffDate(getDateToday(), itemDetails.updatedAt, 'hours') <= intHours) {
+                    blnChangeItens = true
+                    var rowItem = ['course',
+                        String(itemDetails._id),
+                        urlItem,
+                        itemDetails.enabled ? '' : 'Y',
+                        String(itemDetails.title),
+                        String(itemDetails.description).split('\n').join(' '),
+                        itemDetails.thumbPath,
+                        'Online',
+                        'pt',
+                        String(Math.ceil((itemDetails.durationHours / 60) * 10) / 10).split('.').join(','),
+                        'Hours',
+                        '',
+                        process.env.TINCAN_OWNER,
+                        '',
+                    ]
+                    sheet.addRow(rowItem)
+                }
+            }
+        }
+
+        if (blnChangeItens) {
+            const strLocalPath = 'src/public/cargas-degreed/'
+            const strFileName = `carga${process.env.TINCAN_OWNER}` + getDateTodayWithoutHours() + '.csv'
+
+            await workbook.csv.writeFile(strLocalPath + strFileName, { encoding: 'utf8' })
+
+            // await workbook.xlsx.writeFile("src/public/cargas-degreed/cargaAcadModa-"+getDateTodayWithoutHours()+".xlsx");
+
+            uploadFileDegreed('./' + strLocalPath + strFileName, '/' + strFileName)
+
+            storageLog('SINCRONIZAÇÃO COM DEGREED ' + strFileName, '', '', 'DAILY_CHARGE_DEGREED')
+        }
+        // sendLogEmail('success', '', result.length, totalUsersCreated, totalUsersUpdated, totalUsersWithoutLogin, getDateTodayWithoutHours(), totalUsersInactive, totalUsersActiveBD, totalUsersInactiveBD)
+    } catch (error) {
+        console.log(error)
+        // sendLogEmail('error', error)
+        storageLog('DAILY_CHARGE_DEGREED - ' + error.message)
     }
 }
