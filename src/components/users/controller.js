@@ -443,14 +443,15 @@ module.exports = {
             const user = await User.findOne({ _id: _id }, ['password'])
 
             // const passChecked = bcrypt.compareSync(password_old, user.password)
-
-            var pass = user.password.filter(function (obj) {
+            if(password_old){
+                var pass = user.password.filter(function (obj) {
                 if (obj.valid === true && bcrypt.compareSync(password_old, obj.hash)) {
                     return true
                 }
 
                 return false
             })
+            }
 
             var Oldpass = user.password.filter(function (obj) {
                 if (bcrypt.compareSync(password_new, obj.hash)) {
@@ -460,14 +461,14 @@ module.exports = {
                 return false
             })
 
-            if (pass.length === 0 || password_new !== password_newConfirm) {
+            if (password_new !== password_newConfirm) {
                 _messages.unauthorized(res, req, new Error('ErrorAoTrocarSenha'), 'Erro ao trocar senha.', 'users', 'changePassword')
                 return
             } else if (Oldpass.length > 0) {
                 _messages.unauthorized(res, req, new Error('ErrorAoTrocarSenha'), 'Essa senha já foi utilizada anteriormente, por favor, crie uma nova senha.', 'users', 'changePassword')
                 return
             } else {
-                if (new Date(pass[0].createdAt).getTime() < Date.now() - (90 * 24 * 60 * 60 * 1000)) {
+                if (pass && new Date(pass[0].createdAt).getTime() < Date.now() - (90 * 24 * 60 * 60 * 1000)) {
                     user.passwordValid = false
                 }
             }
