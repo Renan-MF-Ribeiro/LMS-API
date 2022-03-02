@@ -1,35 +1,21 @@
 /* eslint-disable no-async-promise-executor */
 'use strict'
-const nodemailer = require('nodemailer')
 const emailTemplate = require('../../config.json')
-
-const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT,
-    secure: false,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-    tls: {
-        ciphers: 'SSLv3',
-        rejectUnauthorized: false,
-
-    },
-})
+const sgMail = require('@sendgrid/mail')
+sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
 module.exports = {
     sendEmailRecoryPassword (strTo, hasEmail, newPass, resetPasswordUrl = '', userData) {
         return new Promise(async (resolve, reject) => {
             try {
                 let message
-                
+
                 if (hasEmail) {
                     message = `Olá ${userData.name}, você solicitou a recuperação da sua senha!<br> Acesse a <a href="${resetPasswordUrl}">plataforma</a> e bons estudos.`
                 } else {
                     message = `Olá, o usuário ${userData.name} com número de CPF ${userData.cpf} requisitou troca de senha. A nova senha gerada para o usuário é: <b> ${newPass} </b> <br> Ao entrar na plataforma o mesmo deverá obrigatoriamente trocar a senha <br> Acesse a <a href="${resetPasswordUrl}">plataforma</a> e bons estudos.`
                 }
-                const html =`<table align="center" border="0" cellpadding="0" cellspacing="0" style="height: 600px; width: 800px;">
+                const html = `<table align="center" border="0" cellpadding="0" cellspacing="0" style="height: 600px; width: 800px;">
                                 <tbody>
                                     <tr>
                                         <td height=" 328"><img data-imagetype="External"
@@ -58,11 +44,12 @@ module.exports = {
                                     </tr>
                                 </tbody>
                             </table>`
-                await transporter.sendMail({
-                    from: '"Happlearning" <noreply@happmobi.com.br>',
+                await sgMail.send({
+                    from: 'Happlearning <noreply@happmobi.com.br>',
                     to: strTo,
                     subject: 'Reiniciar senha',
                     text: 'Reiniciar senha',
+                    category: `${process.env.CLIENT_ID}`,
                     html,
                 })
 
@@ -85,11 +72,12 @@ module.exports = {
                                     ${message}
                                 </body>
                               </html>`
-                await transporter.sendMail({
-                    from: '"Happlearning" <noreply@happmobi.com.br>',
+                await sgMail.send({
+                    from: 'Happlearning <noreply@happmobi.com.br>',
                     to: strTo,
                     subject: 'Nova senha',
                     text: 'Nova senha',
+                    category: `${process.env.CLIENT_ID}`,
                     html,
                 })
 
@@ -148,11 +136,12 @@ module.exports = {
                 </body>
                 
                 </html>`
-                await transporter.sendMail({
-                    from: '"Happlearning" <suporte.happlearning@happmobi.com.br>',
+                await sgMail.send({
+                    from: 'Happlearning <suporte.happlearning@happmobi.com.br>',
                     to: strTo,
                     subject: 'Ativação da sua conta para treinamento sobre Happlearning',
                     text: 'Ativação de conta',
+                    category: `${process.env.CLIENT_ID}`,
                     html,
                 })
 
@@ -206,10 +195,11 @@ module.exports = {
                 </body>
                 
                 </html>`
-                await transporter.sendMail({
-                    from: '"Happlearning" <suporte.happlearning@happmobi.com.br>',
+                await sgMail.send({
+                    from: 'Happlearning <suporte.happlearning@happmobi.com.br>',
                     to: strTo,
                     subject: strTitle,
+                    category: `${process.env.CLIENT_ID}`,
                     text: 'Notificação de conta',
                     html,
                 })
@@ -367,11 +357,12 @@ module.exports = {
 
                     </html>`
 
-                await transporter.sendMail({
+                await sgMail.send({
                     from: '<academiadamodacea@happmobi.com.br>',
                     to: 'academiadamodacea@happmobi.com.br',
                     subject: 'RELATÓRIO DA CARGA DIÁRIA',
                     text: 'Relatório da carga diária',
+                    category: `${process.env.CLIENT_ID}`,
                     html,
                 })
 
