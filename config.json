@@ -16,6 +16,9 @@
         },
         "deleteReprovedExamTracking": {
             "active": false
+        },
+        "degreed": {
+            "active": false
         }
     },
     "usersData": {
