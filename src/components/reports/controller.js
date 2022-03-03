@@ -24,7 +24,9 @@ module.exports = {
                 .limit(1)
                 .sort({ createdAt: -1 });
 
-            const databaseStatus = mongoose.connection.readyState;
+            const mongoStatus = mongoose.connection.readyState;
+
+            const databaseStatus = mongoStatus === 0 ? false : true;
 
             const systemHealth = {
                 runtimeStatus: true,
