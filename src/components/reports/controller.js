@@ -16,14 +16,18 @@ module.exports = {
             });
             const tracking = await Tracking.find({
                 completion: 1,
-            }).limit(1).sort({createdAt: -1});
+            })
+                .limit(1)
+                .sort({ createdAt: -1 });
 
-            const login = await Log.find({ type: "LOGIN" }).limit(1).sort({createdAt: -1})
+            const login = await Log.find({ type: "LOGIN" })
+                .limit(1)
+                .sort({ createdAt: -1 });
 
             const databaseStatus = mongoose.connection.readyState;
 
             const systemHealth = {
-                runtimeStatus: "OK",
+                runtimeStatus: true,
                 databaseStatus: databaseStatus,
                 activeUsers: activeUsers.length,
                 inactiveUsers: inactiveUsers.length,
