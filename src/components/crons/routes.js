@@ -9,6 +9,7 @@ const {
     executeCourseChargeNotification,
     executeCourseReleaseNotification,
     executeUsersCron,
+    executeDeleteTrackingCron,
 } = require('./controller')
 
 router
@@ -20,5 +21,6 @@ router
     .get('/groups-ad', executeGroupsAD)
     .get('/release', executeCourseReleaseNotification)
     .get('/charge', executeCourseChargeNotification)
+    .get('/exam-tracking-delete', executeDeleteTrackingCron)
 
 module.exports = router

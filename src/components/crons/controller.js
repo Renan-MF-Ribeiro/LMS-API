@@ -7,6 +7,7 @@ const {
     executeCourseReleaseNotification,
     executeCourseChargeNotification,
     executeCronUsers,
+    executeExamDeleteTrackingCron,
 } = require('../../utils/cron')
 
 module.exports = {
@@ -37,6 +38,11 @@ module.exports = {
 
     async executeCourseChargeNotification (req, res) {
         executeCourseChargeNotification()
+        res.status(200).json('CRON INICIADO COM SUCESSO')
+    },
+
+    async executeDeleteTrackingCron (req, res) {
+        executeExamDeleteTrackingCron()
         res.status(200).json('CRON INICIADO COM SUCESSO')
     },
 
