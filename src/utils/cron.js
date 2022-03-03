@@ -116,7 +116,7 @@ module.exports = {
         // getUsersLoad()
         // courseChargeCron()
         // courseReleaseCron()
-        // examTrackingDeleteCron()
+        examTrackingDeleteCron()
         // cronDegreedCharge()
     },
 
@@ -444,7 +444,7 @@ async function courseReleaseCron () {
             if (elegibleUsers.length > 0) {
                 const campaign = createReleaseCampaign(trail)
                 await Message.create(campaign)
-                sendMessageToKafka(campaign, elegibleUsers)
+                await sendMessageToKafka(campaign, elegibleUsers)
                 storageLog('Campanha de lançamento de cursos enviada', '', '', 'Lançamento')
             }
         }
@@ -517,12 +517,18 @@ async function examTrackingDeleteCron () {
         const today = new Date()
         const users = await User.find({ status: 'ATIVO' })
         for (const user of users) {
-            const trackings = await Tracking.find({ userLogin: user.networkLogin, kind: 'ExamTracking', lessonStatus: 'failed' })
+            const trackings = await Tracking.find({ userLogin: user.networkLogin, kind: 'ExamTracking', lessonStatus: 'failed' }).populate('item')
             for (const tr of trackings) {
                 const daysSinceReproval = Math.floor((today - tr.completionAt) / (24 * 3600 * 1000))
                 if (daysSinceReproval >= 30) {
                     await HistoricEvaluation.deleteMany({ item: tr.item, user: user._id })
                     await Tracking.deleteMany({ item: tr.item, userLogin: user.networkLogin })
+
+                    const campaign = createExamTrackingCampaign(tr.item.title)
+                    await Message.create(campaign)
+                    console.log([user.networkLogin])
+                    sendMessageToKafka(campaign, [user])
+                    storageLog(`Tracking de avaliações deletados para ${user.networkLogin}`, user.networkLogin, tr.item._id, 'ExamTracking Delete')
                 }
             }
         }
@@ -549,6 +555,16 @@ function createChargeCampaign (trail) {
     const mode = 'automatic'
     const target = { trailid: trail._id, url: `${process.env.DOMAIN}/#/login/entrar?redirectTo=/menu/${trail._id}` }
     return { title, text, communication, category, target, mode, ...emailTemplate }
+}
+
+function createExamTrackingCampaign (item) {
+    const title = `O resultado da avaliação ${item} foi renovado.`
+    const text = 'O resultado da avaliação mencionada foi renovado, agora você pode refazer a prova para tentar obter uma aprovação!'
+    const communication = ['notification']
+    const mode = 'automatic'
+    const category = 'notify'
+    const target = { type: 'none' }
+    return { title, text, communication, category, mode, target }
 }
 
 async function userTemporaryTagsCron () {

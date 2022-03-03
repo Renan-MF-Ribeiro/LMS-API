@@ -76,7 +76,7 @@ app
     .use('/profiles', validateTokenRoute, profilesRoutes)
     .use('/courses', validateTokenRoute, coursesRoutes)
     .use('/onboarding', validateTokenRoute, onboardingRoutes)
-    .use('/reports', validateTokenRoute, reportsRoutes)
+    .use('/reports', reportsRoutes)
     .use('/home', validateTokenRoute, homeRoutes)
     .use('/crons', validateTokenRoute, cronRoutes)
     .use('/logs', validateTokenRoute, logsRoutes)
