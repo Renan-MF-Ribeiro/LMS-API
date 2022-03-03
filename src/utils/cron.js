@@ -444,7 +444,7 @@ async function courseReleaseCron () {
             if (elegibleUsers.length > 0) {
                 const campaign = createReleaseCampaign(trail)
                 await Message.create(campaign)
-                sendMessageToKafka(campaign, elegibleUsers)
+                await sendMessageToKafka(campaign, elegibleUsers)
                 storageLog('Campanha de lançamento de cursos enviada', '', '', 'Lançamento')
             }
         }
@@ -526,8 +526,9 @@ async function examTrackingDeleteCron () {
 
                     const campaign = createExamTrackingCampaign(tr.item.title)
                     await Message.create(campaign)
-                    sendMessageToKafka(campaign, [user.networkLogin])
-                    storageLog(`Tracking de avaliações deletados para ${user.networkLogin}`, user.networkLogin, '', 'ExamTracking Delete')
+                    console.log([user.networkLogin])
+                    sendMessageToKafka(campaign, [user])
+                    storageLog(`Tracking de avaliações deletados para ${user.networkLogin}`, user.networkLogin, tr.item._id, 'ExamTracking Delete')
                 }
             }
         }
