@@ -2,7 +2,7 @@ const fs = require('fs')
 const path = require('path')
 const cheerio = require('cheerio')
 const _messages = require('../utils/messages')
-const { returnProfileByToken, validateToken } = require('./auth')
+const { returnProfileByToken, validateToken, validateMonitoringToken } = require('./auth')
 
 module.exports = {
 
@@ -139,4 +139,14 @@ module.exports = {
         }
     },
 
+    validateMonitoringToken: async(req, res, next) => {
+            const token = req.headers.authorization
+            if (token) {
+                if (await validateMonitoringToken(req)) {
+                    next()
+                } else {
+                    _messages.forbidden(res, req, 'Sem permissão de acesso')
+                }
+            }
+    }
 }
