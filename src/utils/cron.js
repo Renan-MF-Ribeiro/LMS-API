@@ -130,6 +130,10 @@ module.exports = {
     executeCronUsers () {
         getUsersLoad()
     },
+
+    executeExamDeleteTrackingCron () {
+        examTrackingDeleteCron()
+    },
 }
 
 async function averageRating () {

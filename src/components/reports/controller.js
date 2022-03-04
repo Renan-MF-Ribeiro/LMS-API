@@ -1,38 +1,36 @@
-const { Tracking } = require("../tracking/model");
-const { User } = require("../users/model");
-const { Log } = require("../logs/model");
-const mongoose = require("mongoose");
+const {
+    getActiveUsers,
+    getDbState,
+    getInactiveUsers,
+    getLastAccess,
+    getLastConclusion,
+} = require("./business");
 const _messages = require("../../utils/messages");
 
 module.exports = {
     async findAll(req, res) {
-        try {
-            const users = await User.find();
-            const activeUsers = users.filter((e) => {
-                return e.status === "ATIVO";
-            });
-            const inactiveUsers = users.filter((e) => {
-                return e.status === "INATIVO";
-            });
-            const tracking = await Tracking.find({
-                completion: 1,
-            }).limit(1).sort({createdAt: -1});
-
-            const login = await Log.find({ type: "LOGIN" }).limit(1).sort({createdAt: -1})
-
-            const databaseStatus = mongoose.connection.readyState;
-
+        const dbState = await getDbState();
+        console.log(dbState);
+        if (dbState) {
+            const activeUsers = await getActiveUsers();
+            const inactiveUsers = await getInactiveUsers();
+            const lastAccess = await getLastAccess();
+            const lastConclusion = await getLastConclusion();
             const systemHealth = {
-                runtimeStatus: "OK",
-                databaseStatus: databaseStatus,
-                activeUsers: activeUsers.length,
-                inactiveUsers: inactiveUsers.length,
-                lastConclusion: tracking[0].createdAt,
-                lastAccess: login[0].createdAt,
+                runtimeStatus: true,
+                databaseStatus: dbState,
+                activeUsers: activeUsers,
+                inactiveUsers: inactiveUsers,
+                lastConclusion: lastConclusion,
+                lastAccess: lastAccess,
             };
             return _messages.success(res, req, systemHealth);
-        } catch (error) {
-            return _messages.internalServer(res, req, "Internal Server Error");
+        } else {
+            const systemHealth = {
+                runtimeStatus: true,
+                databaseStatus: dbState,
+            };
+            return _messages.success(res, req, systemHealth);
         }
     },
 };
