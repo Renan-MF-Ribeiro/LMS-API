@@ -5,18 +5,12 @@ const mongoose = require("mongoose");
 
 module.exports = {
     async getActiveUsers() {
-        const users = await User.find();
-        const activeUsers = users.filter((e) => {
-            return e.status === "ATIVO";
-        });
+        const activeUsers = await User.find({'status': 'ATIVO'}).lean();
         return activeUsers.length;
     },
 
     async getInactiveUsers() {
-        const users = await User.find();
-        const inactiveUsers = users.filter((e) => {
-            return e.status === "INATIVO";
-        });
+        const inactiveUsers = await User.find({'status':'INATIVO'}).lean();
         return inactiveUsers.length;
     },
 
