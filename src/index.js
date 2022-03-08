@@ -16,7 +16,6 @@ const passport = require('./utils/passport')
 const config = require('../config.json')
 
 var corsOptions = {
-    origin: 'http://localhost:4200',
     credentials: true,
     allowedHeaders: ['Content-Type', 'Range', 'X-CSRF-TOKEN', 'Authorization'],
     exposedHeaders: ['Accept-Ranges', 'Content-Encoding', 'Content-Length', 'Content-Range'],
