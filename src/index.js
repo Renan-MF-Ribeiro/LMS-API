@@ -21,6 +21,10 @@ var corsOptions = {
     exposedHeaders: ['Accept-Ranges', 'Content-Encoding', 'Content-Length', 'Content-Range'],
 }
 
+if (process.env.NODE_ENV === 'local') {
+    corsOptions = Object.assign(corsOptions, { origin: 'http://localhost:4200' })
+}
+
 app.use(cors(corsOptions))
 
 app.use(helmet.xssFilter())
