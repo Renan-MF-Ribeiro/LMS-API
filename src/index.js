@@ -15,7 +15,15 @@ const app = express()
 const passport = require('./utils/passport')
 const config = require('../config.json')
 
+const whitelist = [process.env.DOMAIN, 'http://localhost:4200', 'monitoring.happlearning.com.br']
 var corsOptions = {
+    origin: function (origin, callback) {
+        if (whitelist.indexOf(origin) !== -1) {
+            callback(null, true)
+        } else {
+            callback(new Error('Not allowed by CORS'))
+        }
+    },
     credentials: true,
     allowedHeaders: ['Content-Type', 'Range', 'X-CSRF-TOKEN', 'Authorization'],
     exposedHeaders: ['Accept-Ranges', 'Content-Encoding', 'Content-Length', 'Content-Range'],
