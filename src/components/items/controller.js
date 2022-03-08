@@ -113,8 +113,11 @@ const ItemController = {
                         }
                     }
 
+                    const sectionTags = payload.tags
+
                     delete payload.thumb
                     delete payload.content
+                    delete payload.tags
 
                     payload.author = user._id
 
@@ -141,12 +144,7 @@ const ItemController = {
                             items_new: [],
                             mandatory: [],
                             startDate: item.startDate,
-                            tags: [
-                                {
-                                    display: 'ELEGE_geral',
-                                    value: 'ELEGE_geral',
-                                },
-                            ],
+                            tags: [...sectionTags, { display: 'ELEGE_geral', value: 'ELEGE_geral' }],
                             collaborative: item.collaborative,
                             author: item.author,
                             moderation: user.groupsAD.includes('PERFIL_Colaborador_Livre') ? 'approved' : 'pending',
