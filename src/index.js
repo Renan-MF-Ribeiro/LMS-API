@@ -18,7 +18,7 @@ const config = require('../config.json')
 const whitelist = [process.env.DOMAIN, 'monitoring.happlearning.com.br']
 var corsOptions = {
     origin: function (origin, callback) {
-        if (whitelist.indexOf(origin) !== -1 || !origin) {
+        if (whitelist.indexOf(origin) !== -1) {
             callback(null, true)
         } else {
             callback(null, false)
