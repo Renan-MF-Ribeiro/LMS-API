@@ -18,7 +18,7 @@ const config = require('../config.json')
 const whitelist = [process.env.DOMAIN, 'monitoring.happlearning.com.br']
 var corsOptions = {
     origin: function (origin, callback) {
-        if (whitelist.indexOf(origin) !== -1) {
+        if (whitelist.indexOf(origin) !== -1 || !origin) {
             callback(null, true)
         } else {
             callback(new Error('Not allowed by CORS'))
@@ -27,10 +27,6 @@ var corsOptions = {
     credentials: true,
     allowedHeaders: ['Content-Type', 'Range', 'X-CSRF-TOKEN', 'Authorization'],
     exposedHeaders: ['Accept-Ranges', 'Content-Encoding', 'Content-Length', 'Content-Range'],
-}
-
-if (process.env.NODE_ENV === 'local') {
-    corsOptions = Object.assign(corsOptions, { origin: 'http://localhost:4200' })
 }
 
 app.use(cors(corsOptions))
