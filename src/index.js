@@ -15,7 +15,7 @@ const app = express()
 const passport = require('./utils/passport')
 const config = require('../config.json')
 
-const whitelist = [process.env.DOMAIN, 'http://localhost:4200', 'monitoring.happlearning.com.br']
+const whitelist = [process.env.DOMAIN, 'monitoring.happlearning.com.br']
 var corsOptions = {
     origin: function (origin, callback) {
         if (whitelist.indexOf(origin) !== -1) {
