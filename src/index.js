@@ -16,10 +16,13 @@ const passport = require('./utils/passport')
 const config = require('../config.json')
 
 var corsOptions = {
-    origin: process.env.NODE_ENV === 'local' ? 'http://localhost:4200' : null,
     credentials: true,
     allowedHeaders: ['Content-Type', 'Range', 'X-CSRF-TOKEN', 'Authorization'],
     exposedHeaders: ['Accept-Ranges', 'Content-Encoding', 'Content-Length', 'Content-Range'],
+}
+
+if (process.env.NODE_ENV === 'local') {
+    corsOptions.append('origin', 'http://localhost:4200')
 }
 app.use(cors(corsOptions))
 
