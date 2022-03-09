@@ -16,14 +16,15 @@ const passport = require('./utils/passport')
 const config = require('../config.json')
 
 var corsOptions = {
+    origin: [process.env.DOMAIN, 'http://localhost:4200', 'https://monitoring.happlearning.com.br'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Range', 'X-CSRF-TOKEN', 'Authorization'],
     exposedHeaders: ['Accept-Ranges', 'Content-Encoding', 'Content-Length', 'Content-Range'],
 }
 
-if (process.env.NODE_ENV === 'local') {
-    corsOptions = Object.assign(corsOptions, { origin: 'http://localhost:4200' })
-}
+// if (process.env.NODE_ENV === 'local') {
+//     corsOptions = Object.assign(corsOptions, { origin: 'http://localhost:4200' })
+// }
 
 app.use(cors(corsOptions))
 
