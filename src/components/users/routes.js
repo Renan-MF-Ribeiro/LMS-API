@@ -56,5 +56,6 @@ module.exports = express.Router()
     .put('/update', validateTokenRoute, _controller.updateUserById)
     .get('/details', validateTokenRoute, _controller.returnUserById)
     .get('/feedbackelegibility', validateTokenRoute,_controller.feedbackElegible)
+    .post('/remove-permission', validateTokenRoute,_controller.deleteGroups)
 
 // .get('/script-users', validateTokenRoute, _controller.scriptUsers)

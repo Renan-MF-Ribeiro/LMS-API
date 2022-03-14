@@ -1094,4 +1094,10 @@ module.exports = {
         }
     },
 
+    async deleteGroups(req,res){
+        const {tag, userId} = req.body
+
+        await User.findByIdAndUpdate(userId, { $pull: { groupsAD: tag } })
+                _messages.success(res, req, { message: 'Usuário removido do grupo de colaboradores livres' })
+    }
 }
