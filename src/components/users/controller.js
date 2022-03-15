@@ -1099,5 +1099,12 @@ module.exports = {
 
         await User.findByIdAndUpdate(userId, { $pull: { groupsAD: tag } })
                 _messages.success(res, req, { message: 'Usuário removido do grupo de colaboradores livres' })
+    },
+
+    async addGroups(req,res){
+        const {tag, userId} = req.body
+
+        await User.findByIdAndUpdate(userId, { $addToSet: { groupsAD: tag } })
+                _messages.success(res, req, { message: 'Usuário adicionado ao grupo de colaboradores livres' })
     }
 }
