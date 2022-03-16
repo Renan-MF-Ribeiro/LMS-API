@@ -374,14 +374,11 @@ module.exports = {
 
     processExpirationDate (trail, user) {
         const expirationType = trail.expirationType
-        const admissionDate = new Date(user.admission).getTime()
-        const startDate = new Date(trail.startDate).getTime()
-
-        if (expirationType && expirationType.type === 'launch') {
-            const date = 1000 * 60 * 60 * 24 * expirationType.value + startDate
-            trail.expirationDate = new Date(date)
-        } else if (expirationType && expirationType.type === 'admission') {
-            const date = 1000 * 60 * 60 * 24 * expirationType.value + admissionDate
+        const userCreationDate = new Date(user.createdAt).getTime()
+        const trailReleaseDate = new Date(trail.startDate).getTime()
+        if (expirationType && expirationType.type === 'availability') {
+            const expirationDate = userCreationDate > trailReleaseDate ? userCreationDate : trailReleaseDate
+            const date = 1000 * 60 * 60 * 24 * expirationType.value + expirationDate
             trail.expirationDate = new Date(date)
         } else if (expirationType && expirationType.type === 'fixed') {
             trail.expirationDate = new Date(expirationType.value)
