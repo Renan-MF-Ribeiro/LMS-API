@@ -376,7 +376,7 @@ module.exports = {
         const expirationType = trail.expirationType
         const userCreationDate = new Date(user.createdAt).getTime()
 
-        if (expirationType && expirationType.type === 'eligibility') {
+        if (expirationType && expirationType.type === 'availability') {
             const date = 1000 * 60 * 60 * 24 * expirationType.value + userCreationDate
             trail.expirationDate = new Date(date)
         } else if (expirationType && expirationType.type === 'fixed') {
