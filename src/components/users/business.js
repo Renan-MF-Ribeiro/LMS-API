@@ -25,6 +25,7 @@ const kafka = require('../../utils/kafka')
 const { Trail } = require('../trails/model')
 const config = require('../../../config.json')
 const axios = require('axios')
+const { Tracking } = require('../tracking/model')
 const emailTemplate = config.messenger.emailTemplate
 require('dotenv').config()
 
@@ -131,23 +132,21 @@ module.exports = {
         })
     },
 
-    returnDateSinceFirstLogin(userID){
-        return new Promise(async(resolve, reject)=>{
-            try{
+    returnDateSinceFirstLogin (userID) {
+        return new Promise(async (resolve, reject) => {
+            try {
                 const userLastLogin = await LastLogin.find({ user: userID })
-                const userFirstLogin = userLastLogin[0].createdAt;
-                const today = new Date();
-                const firstLogin = new Date(userFirstLogin);
-                let daysSinceFirstLogin = Math.floor((firstLogin-today)/(24*3600*1000))
+                const userFirstLogin = userLastLogin[0].createdAt
+                const today = new Date()
+                const firstLogin = new Date(userFirstLogin)
+                let daysSinceFirstLogin = Math.floor((firstLogin - today) / (24 * 3600 * 1000))
                 daysSinceFirstLogin *= -1
                 resolve(daysSinceFirstLogin)
-            }catch(error){
+            } catch (error) {
                 reject(error)
             }
         })
     },
-
-    
 
     updateGroupsOfUser (userID, groups) {
         return new Promise(async (resolve, reject) => {
@@ -329,7 +328,7 @@ module.exports = {
         }
     },
 
-    async getUsersByTrail (trailId) {
+    async getUsersByTrail (trailId, category) {
         try {
             const trail = await Trail.findOne({ _id: trailId })
 
@@ -344,7 +343,34 @@ module.exports = {
             groups = groups.map(group => group.name)
 
             const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin'])
-            return users
+
+            const usersToReturn = []
+            if (category === 'charge') {
+                const items = trail.items.map(item => {
+                    return item.itemID._id
+                })
+
+                for (const user of users) {
+                    let completedTracking = 0
+                    const allTrackingUser = await Tracking.find({
+                        userLogin: { $eq: user.networkLogin }, item: { $in: items },
+                    })
+                    for (const tracking of allTrackingUser) {
+                        if (tracking.completionAt !== null) {
+                            completedTracking++
+                        }
+                    }
+
+                    if (completedTracking !== items.length) {
+                        usersToReturn.push(user)
+                    }
+                }
+
+                return usersToReturn
+            } else {
+                usersToReturn.push(...users)
+                return usersToReturn
+            }
         } catch (error) {
             return error
         }
