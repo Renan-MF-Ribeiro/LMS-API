@@ -4,11 +4,11 @@ const clientid = process.env.CLIENT_ID
 const kafka = require('../../utils/kafka')
 
 module.exports = {
-    async processTargetUsers (target) {
+    async processTargetUsers (target, category) {
         try {
             const { type, value } = target
 
-            const users = await returnUsersBasedOnTarget(type, value)
+            const users = await returnUsersBasedOnTarget(type, value, category)
             return users
         } catch (error) {
 
@@ -42,11 +42,11 @@ module.exports = {
     },
 }
 
-async function returnUsersBasedOnTarget (type, value) {
+async function returnUsersBasedOnTarget (type, value, category) {
     try {
         const users = []
         if (type === 'trail') {
-            users.push(...(await getUsersByTrail(value.trailId)))
+            users.push(...(await getUsersByTrail(value.trailId, category)))
         } else if (type === 'group') {
             users.push(...(await getUsersByGroups(value.group)))
         } else if (type === 'tag') {
