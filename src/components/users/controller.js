@@ -1094,4 +1094,24 @@ module.exports = {
         }
     },
 
+    async deleteGroups(req,res){
+        const {tag, userId} = req.body
+
+        try{
+            await User.findByIdAndUpdate(userId, { $pull: { groupsAD: tag } })
+            _messages.success(res, req, { message: 'Tag de permissão removida' })
+        } catch(error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users')
+        }
+    },
+
+    async addGroups(req,res){
+        const {tag, userId} = req.body
+            try {
+                await User.findByIdAndUpdate(userId, { $addToSet: { groupsAD: tag } })
+                _messages.success(res, req, { message: 'Tag de permissão adicionada ao usuário' })
+            } catch(error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users')
+        }
+    }
 }

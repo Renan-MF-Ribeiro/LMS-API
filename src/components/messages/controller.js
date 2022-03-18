@@ -10,7 +10,7 @@ module.exports = {
             const target = campaign.target
 
             const message = await Message.create(campaign)
-            const targetUsers = await processTargetUsers(target)
+            const targetUsers = await processTargetUsers(target, campaign.category)
             console.log(targetUsers)
             await sendMessageToKafka(campaign, targetUsers)
 
