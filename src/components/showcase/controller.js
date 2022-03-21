@@ -22,6 +22,12 @@ module.exports = {
 
             resultSections = arrSections.concat(arrRecentsSections)
 
+            if (resultSections.length > 0) {
+                resultSections.sort((a, b) =>
+                    a.position < b.position ? -1 : 1,
+                )
+            }
+
             _messages.success(res, req, resultSections)
         } catch (error) {
             console.log(error)
