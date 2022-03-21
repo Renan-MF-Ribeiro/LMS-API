@@ -60,6 +60,12 @@ module.exports = {
                 return prepareObject(trail)
             })
 
+            if (trails.length > 0) {
+                trails.sort((a, b) =>
+                    new Date(a.startDate).getTime() < new Date(b.startDate).getTime() ? -1 : 1,
+                )
+            }
+
             _messages.success(res, req, trails)
         } catch (error) {
 
