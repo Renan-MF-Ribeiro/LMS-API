@@ -7,7 +7,7 @@ const {
 } = require('../../utils/middlewares')
 
 router
-    .get('/', isAccountant, _controller.returnSections)
+    .get('/', isStudent, _controller.returnSections)
     .get('/elegibles-contents', isStudent, _controller.getSectionsElegibles)
     // .get('/mandatory', isStudent, _controller.mandatorySections)
     // .get('/recents', isStudent, _controller.recentsSections)

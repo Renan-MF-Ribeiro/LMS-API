@@ -83,6 +83,12 @@ module.exports = {
                 return val != null
             })
 
+            if (resultSections.length > 0) {
+                resultSections.sort((a, b) =>
+                    a.position < b.position ? -1 : 1,
+                )
+            }
+
             _messages.success(res, req, { sections: resultSections, total })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'trails', 'getColaborativo')
@@ -353,18 +359,18 @@ module.exports = {
     },
 
     async findAll (req, res) {
-        try { 
+        try {
             const { skip, limit } = pagination(req)
             const { order, sort } = ordernation(req)
             const searchBy = req.query.searchBy
-            
+
             const total = await Trail.countDocuments()
-            if(req.query.type){
+            if (req.query.type) {
                 const trails = await Trail.find()
                 _messages.success(res, req, {
-                data: trails,
-                total,
-            })
+                    data: trails,
+                    total,
+                })
             } else {
                 const trails = await Trail
                     .find(searchBy ? {
