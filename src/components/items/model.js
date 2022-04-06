@@ -47,6 +47,7 @@ const ItemSchema = new mongoose.Schema({
     startDate: { type: Date },
     endDate: { type: Date },
     survey: { type: String, enum: ['required', 'optional', 'none'] },
+    notes: { type: String, required: false },
 }, {
     ...schemaOptions,
     discriminatorKey: 'kind',
@@ -94,7 +95,7 @@ const MediaItem = Item.discriminator('MediaItem', new mongoose.Schema({
         //     message: props => `${props.value} não é um caminho válido ou uma URL suportada.`,
         // },
     },
-    vimeoId: {type: String, required: false },
+    vimeoId: { type: String, required: false },
     ...endpointOptions,
 }, {
     ...schemaOptions,
