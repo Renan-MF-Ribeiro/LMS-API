@@ -42,6 +42,7 @@ const ItemSchema = new mongoose.Schema({
     collaborative: { type: Boolean, default: false },
     mobile: { type: Number, default: 1 },
     certificate: { type: Number, default: 0 },
+    certificateLayout: { type: 'ObjectId' },
     bannerPath: { type: String, required: false },
     highlighted: { type: Boolean, default: false },
     startDate: { type: Date },
