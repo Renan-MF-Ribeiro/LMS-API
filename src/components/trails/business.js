@@ -41,19 +41,19 @@ module.exports = {
                 }
                 if (skip !== null) {
                     trails = await Trail.find(findObj)
-                    .populate({
-                        path:'author',
-                    })
-                    .populate({
-                        path: 'items.itemID',
-                        match: matchObj,
-                    })
+                        .populate({
+                            path: 'author',
+                        })
+                        .populate({
+                            path: 'items.itemID',
+                            match: matchObj,
+                        })
                         .sort(sortObj)
                         .skip(skip)
                         .limit(limit)
                 } else {
                     trails = await Trail.find(findObj).populate({
-                        path:'author'
+                        path: 'author',
                     }).populate({
                         path: 'items.itemID',
                         match: matchObj,
@@ -68,8 +68,8 @@ module.exports = {
                             if (item !== null) arrItems.push(item)
                         }
 
-                        let userName = ""
-                        if(trail.author){
+                        let userName = ''
+                        if (trail.author) {
                             userName = trail.author.name
                         }
 
@@ -98,6 +98,7 @@ module.exports = {
                             complaints: trail.complaints,
                             certificate: trail.certificate,
                             externalPlayer: trail.externalPlayer,
+                            certificateLayout: trail.certificateLayout,
                         })
                     }
                 } else {
@@ -115,8 +116,8 @@ module.exports = {
                             }
                         }
 
-                        let userName = ""
-                        if(trail.author){
+                        let userName = ''
+                        if (trail.author) {
                             userName = trail.author.name
                         }
 
@@ -145,6 +146,7 @@ module.exports = {
                             complaints: trail.complaints,
                             certificate: trail.certificate,
                             externalPlayer: trail.externalPlayer,
+                            certificateLayout: trail.certificateLayout,
                         })
                     }
                 }
