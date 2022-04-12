@@ -245,7 +245,7 @@ module.exports = {
                             const concludedAt = tracking.completionAt
                             const { completion } = item
                             const { durationHours, title, thumbPath } = item.itemID
-                            certs.push({ duration: durationHours, concludedAt, title, userName: user.name, thumbPath, completion, score: tracking.score, type: 'item' })
+                            certs.push({ duration: durationHours, concludedAt, title, userName: user.name, thumbPath, completion, score: tracking.score, type: 'item', itemId: item.itemID.id })
                             itemsID.push(item.itemID.id)
                         }
                     }
@@ -259,7 +259,7 @@ module.exports = {
                             duration += item.itemID.durationHours
                         }
                         const { title, thumbPath, completion } = trail
-                        certs.push({ duration, title, concludedAt: mostRecentDate, userName: user.name, thumbPath, completion, scoreAverage: trail.scoreAverage, type: 'trail' })
+                        certs.push({ duration, title, concludedAt: mostRecentDate, userName: user.name, thumbPath, completion, scoreAverage: trail.scoreAverage, type: 'trail', trailId: trail._id })
                     }
                 }
                 resolve(certs)
