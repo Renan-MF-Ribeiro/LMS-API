@@ -240,13 +240,12 @@ module.exports = {
                                 $text: { $search: user.networkLogin },
                                 item: item.itemID._id,
                             }).sort({ createdAt: -1 })
-
                             item.itemID.completionAt = tracking.completionAt
 
                             const concludedAt = tracking.completionAt
                             const { completion } = item
                             const { durationHours, title, thumbPath } = item.itemID
-                            certs.push({ duration: durationHours, concludedAt, title, userName: user.name, thumbPath, completion, score: tracking.score })
+                            certs.push({ duration: durationHours, concludedAt, title, userName: user.name, thumbPath, completion, score: tracking.score, type: 'item' })
                             itemsID.push(item.itemID.id)
                         }
                     }
@@ -260,7 +259,7 @@ module.exports = {
                             duration += item.itemID.durationHours
                         }
                         const { title, thumbPath, completion } = trail
-                        certs.push({ duration, title, concludedAt: mostRecentDate, userName: user.name, thumbPath, completion, scoreAverage: trail.scoreAverage })
+                        certs.push({ duration, title, concludedAt: mostRecentDate, userName: user.name, thumbPath, completion, scoreAverage: trail.scoreAverage, type: 'trail' })
                     }
                 }
                 resolve(certs)
