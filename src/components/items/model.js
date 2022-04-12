@@ -42,11 +42,13 @@ const ItemSchema = new mongoose.Schema({
     collaborative: { type: Boolean, default: false },
     mobile: { type: Number, default: 1 },
     certificate: { type: Number, default: 0 },
+    certificateLayout: { type: 'ObjectId' },
     bannerPath: { type: String, required: false },
     highlighted: { type: Boolean, default: false },
     startDate: { type: Date },
     endDate: { type: Date },
     survey: { type: String, enum: ['required', 'optional', 'none'] },
+    notes: { type: String, required: false },
 }, {
     ...schemaOptions,
     discriminatorKey: 'kind',
@@ -94,7 +96,7 @@ const MediaItem = Item.discriminator('MediaItem', new mongoose.Schema({
         //     message: props => `${props.value} não é um caminho válido ou uma URL suportada.`,
         // },
     },
-    vimeoId: {type: String, required: false },
+    vimeoId: { type: String, required: false },
     ...endpointOptions,
 }, {
     ...schemaOptions,

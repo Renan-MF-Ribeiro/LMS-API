@@ -88,7 +88,9 @@ const TrackingController = {
                 completionAt = new Date()
             } else {
                 // req.body.completionAt = tracking ? tracking.completionAt : null;
-                completionAt = tracking ? tracking.completionAt : null
+                let newCompletion = req.body.lessonStatus ? req.body.lessonStatus : SCORMLessonStatus.INCOMPLETE
+                let setNewDate = (TrackingModel === SCORMTracking) && (newCompletion == SCORMLessonStatus.COMPLETED || newCompletion == SCORMLessonStatus.FAILED || newCompletion == SCORMLessonStatus.PASSED)
+                completionAt = tracking ? tracking.completionAt : (setNewDate ? new Date() : null)
             }
 
             if (tracking && (TrackingModel === SCORMTracking || TrackingModel === ExamTracking)) {
