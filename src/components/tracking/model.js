@@ -47,6 +47,13 @@ const AudioTracking = Tracking.discriminator('AudioTracking', new mongoose.Schem
     ...schemaOptions,
 }))
 
+const EventTracking = Tracking.discriminator('EventTracking', new mongoose.Schema({
+    watchedStatus: [{ name: String, completion: String }], default: [],
+    completion: { type: Number, min: 0, max: 1 },
+}, {
+    ...schemaOptions,
+}))
+
 const SCORMLessonStatus = Object.freeze({
     NOT_ATTEMPTED: 'not attempted',
     BROWSED: 'browsed',
@@ -91,4 +98,5 @@ module.exports = {
     SCORMTrackingHistory,
     ExamTracking,
     AudioTracking,
+    EventTracking
 }
