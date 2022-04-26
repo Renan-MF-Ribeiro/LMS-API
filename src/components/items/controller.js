@@ -328,6 +328,7 @@ const ItemController = {
                     if (payload.kind !== 'MediaItem') {
                         if (content) {
                             contentPath = await azureBlob(content, 'items/content')
+                            contentPath = process.env.NODE_ENV === 'local' ? contentPath : contentPath.replace(AZURE_BLOB_URL, DOMAIN)
                         }
                     }
 
