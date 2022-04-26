@@ -323,6 +323,7 @@ const ItemController = {
 
                     if (banner) {
                         bannerPath = await azureBlob(banner, 'items/banners')
+                        bannerPath = process.env.NODE_ENV === 'local' ? bannerPath : bannerPath.replace(AZURE_BLOB_URL, DOMAIN)
                     }
 
                     if (payload.kind !== 'MediaItem') {
