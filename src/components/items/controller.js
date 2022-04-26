@@ -15,7 +15,7 @@ const { error } = require('../../utils/logger')
 const _errors = require('../../utils/errors')
 const _messages = require('../../utils/messages')
 const _functions = require('../../utils/functions')
-const { Item, DocumentItem, MediaItem, SCORMItem, ExamItem, AudioItem, SoundcloudItem } = require('./model')
+const { Item, DocumentItem, MediaItem, SCORMItem, ExamItem, AudioItem, SoundcloudItem, EventItem } = require('./model')
 const { Tracking } = require('../tracking/model')
 const {
     awsAmazon,
@@ -39,6 +39,7 @@ const ITEM_KINDS = Object.freeze({
     ExamItem: ExamItem,
     AudioItem: AudioItem,
     SoundcloudItem: SoundcloudItem,
+    EventItem: EventItem,
 })
 
 const ItemController = {
@@ -205,6 +206,8 @@ const ItemController = {
             if (verify.length === 0) {
                 const ItemModel = ITEM_KINDS[req.body.kind || payload.kind] || Item
 
+                console.log('itemModel:', ItemModel)
+                
                 try {
                     const { thumb, content, banner } = req.files
                     let thumbPath
@@ -320,11 +323,13 @@ const ItemController = {
 
                     if (banner) {
                         bannerPath = await azureBlob(banner, 'items/banners')
+                        bannerPath = process.env.NODE_ENV === 'local' ? bannerPath : bannerPath.replace(AZURE_BLOB_URL, DOMAIN)
                     }
 
                     if (payload.kind !== 'MediaItem') {
                         if (content) {
                             contentPath = await azureBlob(content, 'items/content')
+                            contentPath = process.env.NODE_ENV === 'local' ? contentPath : contentPath.replace(AZURE_BLOB_URL, DOMAIN)
                         }
                     }
 

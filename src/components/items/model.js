@@ -148,6 +148,17 @@ const SoundcloudItem = Item.discriminator('SoundcloudItem', new mongoose.Schema(
     ...schemaOptions,
 }))
 
+const EventItem = Item.discriminator('EventItem', new mongoose.Schema({
+    events: [{ name: String, url: String }], default: [],
+    description: {
+        type: String,
+        required: true
+    },
+    ...endpointOptions,
+}, {
+    ...schemaOptions,
+}))
+
 module.exports = {
     Item,
     DocumentItem,
@@ -156,4 +167,5 @@ module.exports = {
     ExamItem,
     AudioItem,
     SoundcloudItem,
+    EventItem
 }
