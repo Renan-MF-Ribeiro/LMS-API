@@ -92,7 +92,7 @@ module.exports = {
         })
     },
 
-    async azureBlob (file, folder) {
+    async azureBlob (file, folder, ignoreStream = false) {
         // return new Promise((resolve, reject) => {
         const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STRINGCONN)
         blobServiceClient.get
@@ -104,7 +104,8 @@ module.exports = {
         let file$
         let filePath
         let fileType
-        if (isStream(file)) {
+        
+        if (isStream(file) || ignoreStream) {
             file$ = file
             filePath = folder + '/' + file.path
             fileType = mime.lookup(file.path) || 'text/plain'
@@ -114,6 +115,7 @@ module.exports = {
             fileType = file.type
             filePath = folder + '/' + path.basename(`${file.path}.${ext}`)
         }
+    
 
         const blockBlobClient = containerClient.getBlockBlobClient(filePath)
         const blobOptions = { blobHTTPHeaders: { blobContentType: fileType } }

@@ -8,6 +8,7 @@ const mongoose = require('mongoose')
 const Busboy = require('busboy')
 const unzipper = require('unzipper')
 const etl = require('etl')
+const { createWriteStream } = require("fs")
 const parseXml = require('@rgrove/parse-xml')
 const { filter, reduce, pipe } = require('ramda')
 const { Trail } = require('../trails/model')
@@ -158,7 +159,7 @@ const ItemController = {
                     if (error.message === 'Something went wrong') {
                         _messages.internalServer(res, req, error.error, error, 'itemColaborativo')
                     }
-                    console.log(error)
+                    
                     if (error.name === 'ValidationError') {
                         const messages = {}
                         for (const k in error.errors) messages[k] = error.errors[k].message
@@ -205,8 +206,6 @@ const ItemController = {
                 })
             if (verify.length === 0) {
                 const ItemModel = ITEM_KINDS[req.body.kind || payload.kind] || Item
-
-                console.log('itemModel:', ItemModel)
                 
                 try {
                     const { thumb, content, banner } = req.files
@@ -363,6 +362,7 @@ const ItemController = {
 
                     if (payload.kind === 'SCORMItem' && content) {
                         const { contentPath } = await ItemModel.findById(payload._id)
+                        
                         await ItemModel.findByIdAndUpdate(payload._id, payload)
                         await ItemModel.findByIdAndUpdate(payload._id, { contentPath })
                     } else {
@@ -371,7 +371,6 @@ const ItemController = {
 
                     _messages.success(res, req, 'Atualizado com sucesso')
                 } catch (error) {
-                    console.log(error)
                     if (error.name === 'ValidationError') {
                         const messages = {}
                         for (const k in error.errors) messages[k] = error.errors[k].message
@@ -547,6 +546,9 @@ const ItemController = {
                 busboy.on('file', function (field, file, filename, encoding, mimetype) {
                     if (field !== 'content') return
 
+                    file.path = filename;
+                    azureBlob(file,`scorm/${packageId}`, true)
+
                     file
                         .pipe(unzipper.Parse())
                         .on('error', function (err) {
@@ -663,6 +665,9 @@ const ItemController = {
             const contentPathExplode = contentPath.split('/')
             const explodeUrl = contentPathExplode[0].split('_')
 
+            contentPathExplode.shift()
+            const href = contentPathExplode.join("/")
+
             if (!explodeUrl[1]) {
                 packageId = packageId + '_1'
             } else {
@@ -679,9 +684,13 @@ const ItemController = {
             })
 
             const filesP = []
+            
             const contentP = new Promise((resolve, reject) => {
                 busboy.on('file', function (field, file, filename, encoding, mimetype) {
                     if (field !== 'content') return
+                    
+                    file.path = filename;
+                    azureBlob(file,`scorm/${packageId}`, true)
 
                     file
                         .pipe(unzipper.Parse())
@@ -708,13 +717,12 @@ const ItemController = {
                     .on('error', reject)
             })
             req.pipe(busboy)
-
             await Promise.all([
                 ...filesP,
                 contentP,
             ])
 
-            await SCORMItem.findByIdAndUpdate(_id, { contentPath: `${packageId}/${contentPathExplode[1]}` })
+            await SCORMItem.findByIdAndUpdate(_id, { contentPath: `${packageId}/${href}` })
 
             res.status(httpStatus.NO_CONTENT).send()
         } catch (err) {
@@ -829,7 +837,6 @@ const ItemController = {
 
             _messages.success(res, req, { item, tracking })
         } catch (error) {
-            console.log(error)
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'items', 'getItemWithTracking')
         }
     },
