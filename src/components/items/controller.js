@@ -546,6 +546,9 @@ const ItemController = {
                 busboy.on('file', function (field, file, filename, encoding, mimetype) {
                     if (field !== 'content') return
 
+                    file.path = filename;
+                    azureBlob(file,`scorm/${packageId}`, true)
+
                     file
                         .pipe(unzipper.Parse())
                         .on('error', function (err) {
@@ -686,6 +689,9 @@ const ItemController = {
                 busboy.on('file', function (field, file, filename, encoding, mimetype) {
                     if (field !== 'content') return
                     
+                    file.path = filename;
+                    azureBlob(file,`scorm/${packageId}`, true)
+
                     file
                         .pipe(unzipper.Parse())
                         .on('error', function (err) {
