@@ -108,14 +108,14 @@ module.exports = {
         try {
             const _id = req.params.trailId
             const trail = await Trail
-                .findOne({ _id })
+                .findOne({ _id }, "-innerText")
             _messages.success(res, req, trail)
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'trails', 'findById')
         }
     },
 
-    async findByIdWithTracking (req, res) {
+    async findByIdWithTrackingAndInnerText (req, res) {
         try {
             const _id = req.params.trailId
             const user = await getUserByToken(req)
@@ -132,7 +132,6 @@ module.exports = {
             }
             trail.durationHours = durationHours
             const processedTrail = processTrailTracking(trail, allTrackingUser)
-
             _messages.success(res, req, processedTrail.trail)
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'trails', 'findByIdWithTracking')
@@ -366,7 +365,7 @@ module.exports = {
 
             const total = await Trail.countDocuments()
             if (req.query.type) {
-                const trails = await Trail.find()
+                const trails = await Trail.find("-innerText")
                 _messages.success(res, req, {
                     data: trails,
                     total,
@@ -378,7 +377,7 @@ module.exports = {
                             { description: { $regex: searchBy, $options: 'i' } },
                             { title: { $regex: searchBy, $options: 'i' } },
                         ],
-                    } : {})
+                    } : {}, "-innerText")
                     .sort({ [order]: sort })
                     .skip(parseInt(skip))
                     .limit(parseInt(limit))
