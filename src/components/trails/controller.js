@@ -365,7 +365,7 @@ module.exports = {
 
             const total = await Trail.countDocuments()
             if (req.query.type) {
-                const trails = await Trail.find("-innerText")
+                const trails = await Trail.find()
                 _messages.success(res, req, {
                     data: trails,
                     total,
@@ -377,7 +377,7 @@ module.exports = {
                             { description: { $regex: searchBy, $options: 'i' } },
                             { title: { $regex: searchBy, $options: 'i' } },
                         ],
-                    } : {}, "-innerText")
+                    } : {})
                     .sort({ [order]: sort })
                     .skip(parseInt(skip))
                     .limit(parseInt(limit))
