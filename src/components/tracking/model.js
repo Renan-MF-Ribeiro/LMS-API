@@ -48,7 +48,7 @@ const AudioTracking = Tracking.discriminator('AudioTracking', new mongoose.Schem
 }))
 
 const EventTracking = Tracking.discriminator('EventTracking', new mongoose.Schema({
-    watchedStatus: [{ name: String, completion: String }], default: [],
+    clickedStatus: [{ id: String, title: String, completion: String }], default: [],
     completion: { type: Number, min: 0, max: 1 },
 }, {
     ...schemaOptions,
