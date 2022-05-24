@@ -377,7 +377,7 @@ module.exports = {
                         section &&
                             section.ordination !== undefined && section.ordination === 0
                             ? function (a, b) { return b.createdAt - a.createdAt }
-                            : function (a, b) { var x = a.title.toLowerCase(); var y = b.title.toLowerCase(); return x < y ? -1 : x > y ? 1 : 0 }
+                            : function (a, b) { return a.title.localeCompare(b.title); }
 
                     for (const trail of trails) {
                         if (trail.completion === 0) {
