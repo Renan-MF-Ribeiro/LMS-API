@@ -1113,5 +1113,26 @@ module.exports = {
             } catch(error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users')
         }
+    },
+
+    async deleteClassTag(req,res){
+        const {tag, userId} = req.body
+
+        try{
+            await User.findByIdAndUpdate(userId, { $pull: { classGroups: tag } })
+            _messages.success(res, req, { message: 'Tag de curso removida' })
+        } catch(error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users')
+        }
+    },
+
+    async addClassTag(req,res){
+        const {tag, userId} = req.body
+            try {
+                await User.findByIdAndUpdate(userId, { $addToSet: { classGroups: tag } })
+                _messages.success(res, req, { message: 'Tag de curso adicionada ao usuário' })
+            } catch(error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users')
+        }
     }
 }
