@@ -11,8 +11,9 @@ mongoose.set('useUnifiedTopology', true)
 
 module.exports = {
     async connect () {
+        let strConn
         try {
-            if (DB_USER == '') {
+            if (DB_USER === '') {
                 strConn = `mongodb://${DB_HOST}`
             } else {
                 strConn = `mongodb://${DB_USER}:${DB_PASSWORD}@${DB_HOST}/${DB_NAME}`
