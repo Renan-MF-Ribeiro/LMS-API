@@ -35,7 +35,7 @@ module.exports = {
         if (!date) {
             return null
         }
-        return momentz(date).format('DD/MM/YYYY')
+        return momentz(date, 'DD/MM/YYYY')
     },
 
     getDateTodayWithoutHours () {
@@ -345,18 +345,18 @@ module.exports = {
                     tmpCompletion = objTracking.completion
                 }
             }
-            if(item.itemID.passingScore && item.itemID.passingScore !== 0){
+            if (item.itemID.passingScore && item.itemID.passingScore !== 0) {
                 if (objTracking && objTracking.kind === 'ExamTracking') {
                     scoreArr.push(objTracking.score)
                 }
             }
-            
+
             item.completion = tmpCompletion
             if (item.completion === 1) {
                 containsACompletedItem = true
             }
         }
-        
+
         let scoreAverage = 0
         for (const score of scoreArr) {
             scoreAverage += score

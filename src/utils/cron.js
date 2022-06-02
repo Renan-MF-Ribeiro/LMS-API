@@ -36,7 +36,7 @@ const {
     processUserAccount,
 } = require('../components/users/business')
 
-const { getAzureFile, readCSVUsersBuffer, moveUserLoadToProcessed } = require('../utils/files')
+const { getAzureFile, readXLSXUsersBuffer, moveUserLoadToProcessed } = require('../utils/files')
 const { sendMessageToKafka } = require('../components/messages/business')
 const ExcelJS = require('exceljs')
 
@@ -339,7 +339,7 @@ async function getUsersLoad () {
     try {
         const usersLoad = await getAzureFile()
         if (usersLoad) {
-            const users = await readCSVUsersBuffer(usersLoad.readableStream)
+            const users = await readXLSXUsersBuffer(usersLoad.buffer)
             const newUsers = []
             const existingUsers = []
             const usersToSend = []

@@ -95,7 +95,6 @@ module.exports = {
     async azureBlob (file, folder, ignoreStream = false) {
         // return new Promise((resolve, reject) => {
         const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STRINGCONN)
-        blobServiceClient.get
 
         const containerClient = blobServiceClient.getContainerClient('lmsassets')
         // containerClient.create();
@@ -104,7 +103,7 @@ module.exports = {
         let file$
         let filePath
         let fileType
-        
+
         if (isStream(file) || ignoreStream) {
             file$ = file
             filePath = folder + '/' + file.path
@@ -115,7 +114,6 @@ module.exports = {
             fileType = file.type
             filePath = folder + '/' + path.basename(`${file.path}.${ext}`)
         }
-    
 
         const blockBlobClient = containerClient.getBlockBlobClient(filePath)
         const blobOptions = { blobHTTPHeaders: { blobContentType: fileType } }
@@ -129,14 +127,15 @@ module.exports = {
         try {
             const env = process.env.NODE_ENV
             const directory = env === 'production' ? 'producao' : 'homologacao'
-            const fileShareServiceClient = ShareServiceClient.fromConnectionString(AZURE_STRINGCONN)
-            const fileShareClient = fileShareServiceClient.getShareClient('sftpfileshare').getDirectoryClient(directory).getFileClient('Happmobi_Carga.xlsx')
-            const downloadBufferResponse = await fileShareClient.downloadToBuffer(0, 0)
+            const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STRINGCONN)
+            const containerClient = blobServiceClient.getContainerClient('sftp')
+            const blockBlobClient = containerClient.getBlockBlobClient(`${directory}/Happmobi_Carga.xlsx`)
+            const downloadBlobResponse = await blockBlobClient.downloadToBuffer()
 
-            const decodedFile = await iconv.decode(downloadBufferResponse, 'iso88591')
+            const decodedFile = await iconv.decode(downloadBlobResponse, 'iso88591')
             const decodedReadStream = bufferToStream(decodedFile)
 
-            return { readableStream: decodedReadStream, buffer: downloadBufferResponse }
+            return { readableStream: decodedReadStream, buffer: downloadBlobResponse }
         } catch (error) {
             console.log('Carga de usuários não encontrada no compartilhamento de arquivos')
             return null
@@ -148,17 +147,17 @@ module.exports = {
         try {
             const env = process.env.NODE_ENV
             const directory = env === 'production' ? 'producao' : 'homologacao'
-            const fileShareServiceClient = ShareServiceClient.fromConnectionString(AZURE_STRINGCONN)
 
-            await fileShareServiceClient.getShareClient('sftpfileshare').getDirectoryClient(directory).deleteFile('Happmobi_Carga.xlsx')
+            const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STRINGCONN)
+            const containerClient = blobServiceClient.getContainerClient('sftp')
+            const blockBlobClient = containerClient.getBlobClient(`${directory}/Happmobi_Carga.xlsx`)
+            await blockBlobClient.delete()
 
             const completeDate = new Date().toLocaleString('pt-BR').split(' ')
             const date = completeDate[0].replace('/', '').replace('/', '')
             const hours = completeDate[1].replace(':', '').replace(':', '')
             const fileName = `Happmobi_${date}_${hours}.xlsx`
-            await fileShareServiceClient.getShareClient('sftpfileshare').getDirectoryClient(directory).getDirectoryClient('processados').createFile(fileName, 4000000)
-
-            await fileShareServiceClient.getShareClient('sftpfileshare').getDirectoryClient(directory).getDirectoryClient('processados').getFileClient(fileName).uploadData(buffer)
+            await containerClient.getBlockBlobClient(`${directory}/processados/${fileName}`).uploadData(buffer)
         } catch (error) {
             console.log('Error', error)
         }
@@ -395,7 +394,6 @@ module.exports = {
                                 labelCarga = String(labelCarga).toUpperCase()
 
                                 const labelDB = mapUser[labelCarga]
-                                console.log(labelDB)
 
                                 objPattern.push(labelDB)
                             }
@@ -524,25 +522,5 @@ module.exports = {
         ].join('')
 
         return csvString
-    },
-
-    async moveUserLoadToProcessed (buffer) {
-        try {
-            const env = process.env.NODE_ENV
-            const directory = env === 'production' ? 'producao' : 'homologacao'
-            const fileShareServiceClient = ShareServiceClient.fromConnectionString(AZURE_STRINGCONN)
-
-            await fileShareServiceClient.getShareClient('sftpfileshare').getDirectoryClient(directory).deleteFile('Happmobi_Carga.csv')
-
-            const completeDate = new Date().toLocaleString('pt-BR').split(' ')
-            const date = completeDate[0].replace('/', '').replace('/', '')
-            const hours = completeDate[1].replace(':', '').replace(':', '')
-            const fileName = `Happmobi_${date}_${hours}.csv`
-            await fileShareServiceClient.getShareClient('sftpfileshare').getDirectoryClient(directory).getDirectoryClient('processados').createFile(fileName, 4000000)
-
-            await fileShareServiceClient.getShareClient('sftpfileshare').getDirectoryClient(directory).getDirectoryClient('processados').getFileClient(fileName).uploadData(buffer)
-        } catch (error) {
-            console.log('Error', error)
-        }
     },
 }
