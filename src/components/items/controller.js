@@ -262,6 +262,10 @@ const ItemController = {
                         }
                     }
 
+                    if (payload.kind === 'EventItem'){
+                        delete payload.contentPath
+                    }
+
                     delete payload.thumb
                     delete payload.banner
                     delete payload.content

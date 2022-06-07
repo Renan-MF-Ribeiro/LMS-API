@@ -15,35 +15,39 @@ module.exports = {
                 } else {
                     message = `Olá, o usuário ${userData.name} com número de CPF ${userData.cpf} requisitou troca de senha. A nova senha gerada para o usuário é: <b> ${newPass} </b> <br> Ao entrar na plataforma o mesmo deverá obrigatoriamente trocar a senha <br> Acesse a <a href="${resetPasswordUrl}">plataforma</a> e bons estudos.`
                 }
-                const html = `<table align="center" border="0" cellpadding="0" cellspacing="0" style="height: 600px; width: 800px;">
-                                <tbody>
-                                    <tr>
-                                        <td height=" 328"><img data-imagetype="External"
-                                                src="${emailTemplate.messenger.emailTemplate.thumbnail}" alt="Thumbnail"
-                                                style="width:100%; height:100%"> </td>
-                                    </tr>
-                                    <tr>
-                                        <td height="100" style="text-align: center; vertical-align: middle;">
-                                            <div class="content"
-                                                style="font-size:1.5rem; font-weight:bold; text-align:center; font-family:ubuntu,Roboto,sans-serif; width:60%; margin-left:20%">
-                                                ${message}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td height="100" style="text-align: center;"><a
-                                                href="${resetPasswordUrl}"
-                                                target="_blank"
-                                                style="font-size: 1rem; border: 0px; text-transform: uppercase; text-align: center; text-decoration: none; border-radius: 5px; color: rgb(255, 255, 255); font-weight: bold; font-family: Ubuntu, Roboto, sans-serif; padding: 1rem; background-color: ${emailTemplate.messenger.emailTemplate.primary} !important;">Acessar</a>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td height="75"><img data-imagetype="External"
-                                                src="${emailTemplate.messenger.emailTemplate.footer}" alt="Footer"
-                                                style="width:100%; height:100%"> </td>
-                                    </tr>
-                                </tbody>
-                            </table>`
+                const html = `<center>
+                    <div border="0" cellpadding="0" cellspacing="0" style="max-height: 800px; max-width: 1000px;">
+                        <div>
+                            <div max-height="328"><img data-imagetype="External"
+                                    src="${emailTemplate.messenger.emailTemplate.thumbnail}" alt="Thumbnail"
+                                    style="width:100%; height:100%">
+                            </div>
+                        </div>
+                        <div>
+                            <center>
+                                <div style="vertical-align: middle; height: 110px;">
+                                    <div class="content"
+                                    style="font-size:1.5rem; font-weight:bold; text-align:center; font-family:ubuntu,Roboto,sans-serif;">
+                                    ${message}
+                                    </div>
+                                </div>
+                            </center>
+                        </div>
+                        <div>
+                        <center>
+                            <div style="height: 50px;">
+                                    <a href="${resetPasswordUrl}" target="_blank" style="font-size: 1rem; border: 0px; text-transform: uppercase; text-align: center;
+                                    text-decoration: none; border-radius: 5px; color: rgb(255, 255, 255); font-weight: bold; font-family: Ubuntu, Roboto, sans-serif;
+                                    padding: 1rem; background-color: ${emailTemplate.messenger.emailTemplate.primary} !important;">Acessar</a>
+                            </div>
+                        </center>
+                        </div>
+                        <div height="75"><img data-imagetype="External"
+                                src="${emailTemplate.messenger.emailTemplate.footer}" alt="Footer"
+                                style="width:100%; height:100%">
+                        </div>
+                    </div>
+                    </center>`
                 await sgMail.send({
                     from: 'Happlearning <noreply@happmobi.com.br>',
                     to: strTo,
@@ -99,7 +103,7 @@ module.exports = {
                   <title>Demystifying Email Design</title>
                   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 </head>
-                
+
                 <body style="font-family: Arial, sans-serif;">
                   <table align="center" cellpadding="0" cellspacing="0" width="600">
                   <tr bgcolor="red">
@@ -134,7 +138,7 @@ module.exports = {
                     </tr>
                   </table>
                 </body>
-                
+
                 </html>`
                 await sgMail.send({
                     from: 'Happlearning <suporte.happlearning@happmobi.com.br>',
@@ -163,7 +167,7 @@ module.exports = {
                   <title>"${strTitle}"</title>
                   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 </head>
-                
+
                 <body style="font-family: Arial, sans-serif;">
                   <table align="center" cellpadding="0" cellspacing="0" width="600">
                   <tr bgcolor="red">
@@ -193,7 +197,7 @@ module.exports = {
                     </tr>
                   </table>
                 </body>
-                
+
                 </html>`
                 await sgMail.send({
                     from: 'Happlearning <suporte.happlearning@happmobi.com.br>',

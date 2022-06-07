@@ -130,6 +130,7 @@ function prepareObject (trail) {
         duration: trail.duration,
         thumbPath: trail.thumbPath,
         externalPlayer: trail.externalPlayer,
-
+        innerTextStatus: trail.innerTextStatus,
+        innerText: trail.innerText,
     }
 }
