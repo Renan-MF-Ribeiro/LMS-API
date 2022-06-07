@@ -8,7 +8,7 @@ const mongoose = require('mongoose')
 const Busboy = require('busboy')
 const unzipper = require('unzipper')
 const etl = require('etl')
-const { createWriteStream } = require("fs")
+const { createWriteStream } = require('fs')
 const parseXml = require('@rgrove/parse-xml')
 const { filter, reduce, pipe } = require('ramda')
 const { Trail } = require('../trails/model')
@@ -159,7 +159,7 @@ const ItemController = {
                     if (error.message === 'Something went wrong') {
                         _messages.internalServer(res, req, error.error, error, 'itemColaborativo')
                     }
-                    
+
                     if (error.name === 'ValidationError') {
                         const messages = {}
                         for (const k in error.errors) messages[k] = error.errors[k].message
@@ -206,7 +206,7 @@ const ItemController = {
                 })
             if (verify.length === 0) {
                 const ItemModel = ITEM_KINDS[req.body.kind || payload.kind] || Item
-                
+
                 try {
                     const { thumb, content, banner } = req.files
                     let thumbPath
@@ -362,7 +362,7 @@ const ItemController = {
 
                     if (payload.kind === 'SCORMItem' && content) {
                         const { contentPath } = await ItemModel.findById(payload._id)
-                        
+
                         await ItemModel.findByIdAndUpdate(payload._id, payload)
                         await ItemModel.findByIdAndUpdate(payload._id, { contentPath })
                     } else {
@@ -546,8 +546,8 @@ const ItemController = {
                 busboy.on('file', function (field, file, filename, encoding, mimetype) {
                     if (field !== 'content') return
 
-                    file.path = filename;
-                    azureBlob(file,`scorm/${packageId}`, true)
+                    file.path = filename
+                    azureBlob(file, `scorm/${packageId}`, true)
 
                     file
                         .pipe(unzipper.Parse())
@@ -666,7 +666,7 @@ const ItemController = {
             const explodeUrl = contentPathExplode[0].split('_')
 
             contentPathExplode.shift()
-            const href = contentPathExplode.join("/")
+            const href = contentPathExplode.join('/')
 
             if (!explodeUrl[1]) {
                 packageId = packageId + '_1'
@@ -684,13 +684,13 @@ const ItemController = {
             })
 
             const filesP = []
-            
+
             const contentP = new Promise((resolve, reject) => {
                 busboy.on('file', function (field, file, filename, encoding, mimetype) {
                     if (field !== 'content') return
-                    
-                    file.path = filename;
-                    azureBlob(file,`scorm/${packageId}`, true)
+
+                    file.path = filename
+                    azureBlob(file, `scorm/${packageId}`, true)
 
                     file
                         .pipe(unzipper.Parse())
@@ -747,6 +747,7 @@ const ItemController = {
                 $or: [
                     { description: { $regex: searchBy, $options: 'i' } },
                     { title: { $regex: searchBy, $options: 'i' } },
+                    { notes: { $regex: searchBy, $options: 'i' } },
                 ],
                 deleted: { $eq: 0 },
             } : {

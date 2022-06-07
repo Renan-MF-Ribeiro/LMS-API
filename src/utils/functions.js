@@ -395,6 +395,16 @@ module.exports = {
         return value
     },
 
+    formatNumberRegistration (value) {
+        const registrationLength = 6
+        if (value.length < registrationLength) {
+            for (let i = value.length; i < registrationLength; i++) {
+                value = '0' + value
+            }
+        }
+        return value
+    },
+
 }
 
 function nameMonth (month) {

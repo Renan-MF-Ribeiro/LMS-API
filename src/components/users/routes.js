@@ -55,9 +55,8 @@ module.exports = express.Router()
     .post('/password/reset', validateTokenRoute, isAdmin, _controller.resetUserPassword)
     .put('/update', validateTokenRoute, _controller.updateUserById)
     .get('/details', validateTokenRoute, _controller.returnUserById)
-    .get('/feedbackelegibility', validateTokenRoute,_controller.feedbackElegible)
-    .post('/remove-permission', validateTokenRoute,_controller.deleteGroups)
-    .post('/add-permission', validateTokenRoute,_controller.addGroups)
-
+    .get('/feedbackelegibility', validateTokenRoute, _controller.feedbackElegible)
+    .post('/remove-permission', validateTokenRoute, _controller.deleteGroups)
+    .post('/add-permission', validateTokenRoute, _controller.addGroups)
 
 // .get('/script-users', validateTokenRoute, _controller.scriptUsers)
