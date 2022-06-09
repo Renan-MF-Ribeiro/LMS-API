@@ -1153,7 +1153,7 @@ module.exports = {
                 const message = 'Histórico da avaliação informada não pode ser encontrado'
                 _messages.badRequest(res, req, message, { message })
             } else {
-                const attempts = await Promise.all(evaluationsHistoric.map(async evaluationHistoric => {
+                const userAttempts = await Promise.all(evaluationsHistoric.map(async evaluationHistoric => {
                     const questionResponse = await Promise.all(evaluationHistoric.answers.map(
                         async answer => {
                             const question = await Question.findOne({ _id: { $eq: answer.idQuestion } })
@@ -1186,7 +1186,7 @@ module.exports = {
                 const evaluationProgress = {
                     _id: evaluation._id,
                     description: evaluation.description,
-                    attempts,
+                    userAttempts,
                 }
 
                 _messages.success(res, req, evaluationProgress)
