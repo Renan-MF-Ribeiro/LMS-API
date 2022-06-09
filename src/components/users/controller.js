@@ -220,7 +220,6 @@ module.exports = {
 
                     // sendNotificationEmail(user.email, "Acesso a sua conta", `Olá ${user.name}, foi feito uma novo acesso a sua conta, se você não reconhece esse acesso, por favor, acesse a sua conta e troque a sua senha.`);
                     var tokenEncript = cryptoJS.AES.encrypt(token, login)
-                    console.log('TOKEN', token)
 
                     var tk = tokenEncript.toString()
                     var key = login + ':' + password
