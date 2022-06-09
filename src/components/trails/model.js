@@ -6,6 +6,7 @@ connect()
 
 function ifEnabledAndHighlighted () { return this.enabled && this.highlighted }
 function ifEnabledAndNotHighlighted () { return this.enabled && !this.highlighted }
+function ifInnerTextEnabled () { return this.innerTextStatus }
 
 const ComplaintSchema = new mongoose.Schema({
     reason: { type: String },
@@ -55,6 +56,8 @@ const TrailSchema = new mongoose.Schema({
     updatedAt: { type: Date },
     externalPlayer: { type: Boolean, default: false },
     clientId: { type: Number, default: CLIENT_ID },
+    innerTextStatus: { type: Boolean, default: false },
+    innerText: { type: String, required: ifInnerTextEnabled }
 }, {
     strict: 'throw',
     timestamps: true,

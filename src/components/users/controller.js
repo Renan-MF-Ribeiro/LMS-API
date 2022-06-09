@@ -443,14 +443,14 @@ module.exports = {
             const user = await User.findOne({ _id: _id }, ['password'])
 
             // const passChecked = bcrypt.compareSync(password_old, user.password)
-            if(password_old){
+            if (password_old) {
                 var pass = user.password.filter(function (obj) {
-                if (obj.valid === true && bcrypt.compareSync(password_old, obj.hash)) {
-                    return true
-                }
+                    if (obj.valid === true && bcrypt.compareSync(password_old, obj.hash)) {
+                        return true
+                    }
 
-                return false
-            })
+                    return false
+                })
             }
 
             var Oldpass = user.password.filter(function (obj) {
@@ -1094,22 +1094,43 @@ module.exports = {
         }
     },
 
-    async deleteGroups(req,res){
+    async deleteGroups (req, res) {
+        const { tag, userId } = req.body
+
+        try {
+            await User.findByIdAndUpdate(userId, { $pull: { groupsAD: tag } })
+            _messages.success(res, req, { message: 'Tag de permissão removida' })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users')
+        }
+    },
+
+    async addGroups (req, res) {
+        const { tag, userId } = req.body
+        try {
+            await User.findByIdAndUpdate(userId, { $addToSet: { groupsAD: tag } })
+            _messages.success(res, req, { message: 'Tag de permissão adicionada ao usuário' })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users')
+        }
+    },
+
+    async deleteClassTag(req,res){
         const {tag, userId} = req.body
 
         try{
-            await User.findByIdAndUpdate(userId, { $pull: { groupsAD: tag } })
-            _messages.success(res, req, { message: 'Tag de permissão removida' })
+            await User.findByIdAndUpdate(userId, { $pull: { classGroups: tag } })
+            _messages.success(res, req, { message: 'Tag de curso removida' })
         } catch(error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users')
         }
     },
 
-    async addGroups(req,res){
+    async addClassTag(req,res){
         const {tag, userId} = req.body
             try {
-                await User.findByIdAndUpdate(userId, { $addToSet: { groupsAD: tag } })
-                _messages.success(res, req, { message: 'Tag de permissão adicionada ao usuário' })
+                await User.findByIdAndUpdate(userId, { $addToSet: { classGroups: tag } })
+                _messages.success(res, req, { message: 'Tag de curso adicionada ao usuário' })
             } catch(error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users')
         }

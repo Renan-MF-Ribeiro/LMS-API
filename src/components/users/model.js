@@ -66,6 +66,7 @@ const userSchema = new mongoose.Schema({
     acceptTerms: { type: Boolean, default: false },
     acceptTermsCollaboration: { type: Boolean, default: false },
     groupsAD: { type: Array, default: [] },
+    classGroups: {type: Array, default: [] },
     clientId: { type: Number, default: CLIENT_ID },
     clientUserKey: { type: String, trim: true },
     averageRating: { type: Number, default: 0 },

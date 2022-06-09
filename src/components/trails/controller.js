@@ -108,14 +108,14 @@ module.exports = {
         try {
             const _id = req.params.trailId
             const trail = await Trail
-                .findOne({ _id })
+                .findOne({ _id }, "-innerText")
             _messages.success(res, req, trail)
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'trails', 'findById')
         }
     },
 
-    async findByIdWithTracking (req, res) {
+    async findByIdWithTrackingAndInnerText (req, res) {
         try {
             const _id = req.params.trailId
             const user = await getUserByToken(req)
@@ -132,7 +132,6 @@ module.exports = {
             }
             trail.durationHours = durationHours
             const processedTrail = processTrailTracking(trail, allTrackingUser)
-
             _messages.success(res, req, processedTrail.trail)
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'trails', 'findByIdWithTracking')
