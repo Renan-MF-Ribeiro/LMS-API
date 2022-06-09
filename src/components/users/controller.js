@@ -60,6 +60,9 @@ const { sendMessageToKafka } = require('../messages/business')
 
 const config = require('../../../config.json')
 const { getNumberOfItemsCompletedOrInProgressOrNotStarted } = require('../home/business')
+const { HistoricEvaluation, Evaluation } = require('../assessments/model')
+const { Question } = require('../assessments/questions/model')
+const { Alternative } = require('../assessments/alternatives/model')
 const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadsheet
 const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail
 
@@ -217,6 +220,7 @@ module.exports = {
 
                     // sendNotificationEmail(user.email, "Acesso a sua conta", `Olá ${user.name}, foi feito uma novo acesso a sua conta, se você não reconhece esse acesso, por favor, acesse a sua conta e troque a sua senha.`);
                     var tokenEncript = cryptoJS.AES.encrypt(token, login)
+                    console.log('TOKEN', token)
 
                     var tk = tokenEncript.toString()
                     var key = login + ':' + password
@@ -1115,24 +1119,81 @@ module.exports = {
         }
     },
 
-    async deleteClassTag(req,res){
-        const {tag, userId} = req.body
+    async deleteClassTag (req, res) {
+        const { tag, userId } = req.body
 
-        try{
+        try {
             await User.findByIdAndUpdate(userId, { $pull: { classGroups: tag } })
             _messages.success(res, req, { message: 'Tag de curso removida' })
-        } catch(error) {
+        } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users')
         }
     },
 
-    async addClassTag(req,res){
-        const {tag, userId} = req.body
-            try {
-                await User.findByIdAndUpdate(userId, { $addToSet: { classGroups: tag } })
-                _messages.success(res, req, { message: 'Tag de curso adicionada ao usuário' })
-            } catch(error) {
+    async addClassTag (req, res) {
+        const { tag, userId } = req.body
+        try {
+            await User.findByIdAndUpdate(userId, { $addToSet: { classGroups: tag } })
+            _messages.success(res, req, { message: 'Tag de curso adicionada ao usuário' })
+        } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users')
         }
-    }
+    },
+
+    async evaluationProgress (req, res) {
+        try {
+            const { idEvaluation } = req.params
+            const user = await getUserByToken(req)
+            const evaluation = await Evaluation.findOne({ _id: { $eq: idEvaluation } })
+            const evaluationsHistoric = await HistoricEvaluation.find({
+                idEvaluation: { $eq: evaluation._id },
+                user: { $eq: user._id },
+            })
+
+            if (!evaluationsHistoric.length) {
+                const message = 'Histórico da avaliação informada não pode ser encontrado'
+                _messages.badRequest(res, req, message, { message })
+            } else {
+                const attempts = await Promise.all(evaluationsHistoric.map(async evaluationHistoric => {
+                    const questionResponse = await Promise.all(evaluationHistoric.answers.map(
+                        async answer => {
+                            const question = await Question.findOne({ _id: { $eq: answer.idQuestion } })
+                            const alternative = await Alternative.findOne({ _id: { $eq: answer.idAlternative } })
+
+                            return {
+                                question: {
+                                    _id: question._id,
+                                    description: question.description,
+                                },
+                                alternative: {
+                                    _id: alternative._id,
+                                    description: alternative.description,
+                                },
+                                correct: answer.correct,
+                                createdAt: answer.createdAt,
+                            }
+                        },
+                    ))
+
+                    return {
+                        _id: evaluationHistoric._id,
+                        questionResponse,
+                        performance: evaluationHistoric.amountQuestionsCorrect / evaluationHistoric.amountOfQuestions,
+                        startedAt: evaluationHistoric.createdAt,
+                        finishedAt: evaluationHistoric.updatedAt,
+                    }
+                }))
+
+                const evaluationProgress = {
+                    _id: evaluation._id,
+                    description: evaluation.description,
+                    attempts,
+                }
+
+                _messages.success(res, req, evaluationProgress)
+            }
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'create')
+        }
+    },
 }

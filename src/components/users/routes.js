@@ -58,7 +58,10 @@ module.exports = express.Router()
     .get('/feedbackelegibility', validateTokenRoute, _controller.feedbackElegible)
     .post('/remove-permission', validateTokenRoute, _controller.deleteGroups)
     .post('/add-permission', validateTokenRoute, _controller.addGroups)
-    .post('/remove-class-tag', validateTokenRoute,_controller.deleteClassTag)
-    .post('/add-class-tag', validateTokenRoute,_controller.addClassTag)
+    .post('/remove-class-tag', validateTokenRoute, _controller.deleteClassTag)
+    .post('/add-class-tag', validateTokenRoute, _controller.addClassTag)
+
+    // HL-1263
+    .get('/evaluations/:idEvaluation', validateTokenRoute, _controller.evaluationProgress)
 
 // .get('/script-users', validateTokenRoute, _controller.scriptUsers)
