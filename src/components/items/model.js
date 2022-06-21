@@ -149,7 +149,7 @@ const SoundcloudItem = Item.discriminator('SoundcloudItem', new mongoose.Schema(
 }))
 
 const EventItem = Item.discriminator('EventItem', new mongoose.Schema({
-    event: [{ status: String, name: String, url: String }], default: [],
+    event: [{ name: String, url: String }], default: [],
     ...endpointOptions,
 }, {
     ...schemaOptions,
