@@ -133,6 +133,14 @@ module.exports = {
                 const user = await getUserByToken(req)
                 const tags = await getTagsGroupsByToken(req)
 
+                if(user.classGroups.length > 0){
+                    for(let classGroup of user.classGroups){
+                        if(classGroup.status === 1){
+                            tags.push({display: classGroup.groupCode, value: classGroup.groupCode})
+                        }
+                    }
+                }
+
                 if (user.tags.length > 0) {
                     const today = getDateTodayWithoutHours()
 
@@ -142,13 +150,36 @@ module.exports = {
                         if (diff <= 30) tags.push(tag)
                     }
                 }
-
                 resolve(tags)
             } catch (error) {
                 reject(error)
             }
         })
     },
+
+    getGroupCodesByToken (req, tags) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const user = await getUserByToken(req)
+                const classGroups = []
+                
+                if(user.classGroups.length > 0){
+                    for(let tag of tags){
+                        for(let classGroup of user.classGroups){
+                            if( classGroup.groupCode === tag.value && classGroup.status === 1){
+                                classGroups.push(classGroup)
+                            }
+                        }
+                    }
+                }
+               
+                resolve(classGroups)
+            } catch (error) {
+                reject(error)
+            }
+        })
+    },
+
 
     getTagsElegibles (user) {
         return new Promise(async (resolve, reject) => {
