@@ -44,7 +44,7 @@ router
     .get('/check-evaluation-started/:idItem/:id', isStudent, _controller.checkEvaluationStarted)
     .get('/start-evaluation/:idItem/:id', isStudent, _controller.startEvaluation)
     .get('/next-question/:id', isStudent, _controller.nextQuestion)
-    .get('/evaluation/:id', isStudent, _controller.returnEvaluation)
+    .get('/evaluation/:id/:categoryId', isStudent, _controller.returnEvaluation)
     .get('/actives', isAccountant, _controller.getActivesEvaluations)
     .get('/', isAccountant, _controller.getAllEvaluations)
     .delete('/:id', isAccountant, _controller.deleteEvaluation)

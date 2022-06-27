@@ -12,7 +12,6 @@ module.exports = {
             const { order, sort } = _functions.ordernation(req)
             const { id } = req.params
             const searchBy = req.query.searchBy
-
             const total = await Question
                 .find({
                     idEvaluation: { $eq: id },
@@ -24,8 +23,6 @@ module.exports = {
                 .find( searchBy ? {
                     $or: [
                         { description: { $regex: searchBy, $options: 'i' } },
-                        { idCategory: { $regex: searchBy, $options: 'i' } },
-                        { alternatives: [ searchBy ] },
                     ],
                     deleted: { $eq: 0 },
                 } : {
@@ -43,6 +40,7 @@ module.exports = {
                 total,
             })
         } catch (error) {
+            console.log(error)
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'questions', 'returnQuestions')
         }
     },
