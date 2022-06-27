@@ -11,6 +11,7 @@ module.exports = {
             const { skip, limit } = _functions.pagination(req)
             const { order, sort } = _functions.ordernation(req)
             const { id } = req.params
+            const searchBy = req.query.searchBy
 
             const total = await Question
                 .find({
@@ -20,7 +21,14 @@ module.exports = {
                 }).countDocuments()
 
             const questions = await Question
-                .find({
+                .find( searchBy ? {
+                    $or: [
+                        { description: { $regex: searchBy, $options: 'i' } },
+                        { idCategory: { $regex: searchBy, $options: 'i' } },
+                        { alternatives: [ searchBy ] },
+                    ],
+                    deleted: { $eq: 0 },
+                } : {
                     idEvaluation: { $eq: id },
                     deleted: { $eq: 0 },
                     repealed: { $eq: 0 },
