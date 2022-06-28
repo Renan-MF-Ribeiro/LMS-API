@@ -21,7 +21,7 @@ router
     .delete('/categories/:id', isAccountant, _controllerCategories.deleteCategory)
 
     // QUESTIONS
-    .get('/questions/:id', isAccountant, _controllerQuestions.returnQuestions)
+    .get('/questions/:id/:categoryId', isAccountant, _controllerQuestions.returnQuestions)
     .post('/questions', isAccountant, _controllerQuestions.createQuestion)
     .put('/questions', isAccountant, _controllerQuestions.updateQuestion)
     .put('/question/rigth-answer', isAccountant, _controllerQuestions.rigthAnswer)
@@ -44,7 +44,7 @@ router
     .get('/check-evaluation-started/:idItem/:id', isStudent, _controller.checkEvaluationStarted)
     .get('/start-evaluation/:idItem/:id', isStudent, _controller.startEvaluation)
     .get('/next-question/:id', isStudent, _controller.nextQuestion)
-    .get('/evaluation/:id/:categoryId', isStudent, _controller.returnEvaluation)
+    .get('/evaluation/:id', isStudent, _controller.returnEvaluation)
     .get('/actives', isAccountant, _controller.getActivesEvaluations)
     .get('/', isAccountant, _controller.getAllEvaluations)
     .delete('/:id', isAccountant, _controller.deleteEvaluation)
