@@ -1195,4 +1195,13 @@ module.exports = {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'create')
         }
     },
+
+    async getAllConteudistas(req, res){
+        try {
+            const users = await User.find({ groupsAD: { $in: ['PERFIL_Conteudista'] } })
+            _messages.success(res, req, users)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'conteudistas')
+        }
+    }
 }
