@@ -5,13 +5,11 @@ const mongoose = require("mongoose");
 
 module.exports = {
     async getActiveUsers() {
-        const activeUsers = await User.find({'status': 'ATIVO'}).lean();
-        return activeUsers.length;
+        return User.countDocuments({'status': 'ATIVO'});
     },
 
     async getInactiveUsers() {
-        const inactiveUsers = await User.find({'status':'INATIVO'}).lean();
-        return inactiveUsers.length;
+        return User.countDocuments({'status':'INATIVO'})
     },
 
     async getLastConclusion() {

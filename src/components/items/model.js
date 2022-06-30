@@ -49,6 +49,12 @@ const ItemSchema = new mongoose.Schema({
     endDate: { type: Date },
     survey: { type: String, enum: ['required', 'optional', 'none'] },
     notes: { type: String, required: false },
+    courseIdentifier:  { type: String, required: false },
+    alias: { type: String, required: false },
+    provider:  { type: String, required: false },
+    keywords:  { type: String, required: false },
+    expirationDate:  { type: Date, required: false },
+    responsible :  { type: String, required: false },
 }, {
     ...schemaOptions,
     discriminatorKey: 'kind',
@@ -149,7 +155,7 @@ const SoundcloudItem = Item.discriminator('SoundcloudItem', new mongoose.Schema(
 }))
 
 const EventItem = Item.discriminator('EventItem', new mongoose.Schema({
-    event: [{ status: String, name: String, url: String }], default: [],
+    event: [{ name: String, url: String }], default: [],
     ...endpointOptions,
 }, {
     ...schemaOptions,

@@ -5,12 +5,14 @@ const _messages = require('../../../utils/messages')
 const _business = require('../business')
 const _functions = require('../../../utils/functions')
 
+
 module.exports = {
     async returnQuestions (req, res) {
         try {
             const { skip, limit } = _functions.pagination(req)
             const { order, sort } = _functions.ordernation(req)
-            const { id } = req.params
+            const { id, categoryId } = req.params
+            const searchBy = req.query.searchBy
 
             const total = await Question
                 .find({
@@ -20,11 +22,31 @@ module.exports = {
                 }).countDocuments()
 
             const questions = await Question
-                .find({
-                    idEvaluation: { $eq: id },
-                    deleted: { $eq: 0 },
-                    repealed: { $eq: 0 },
-                })
+                .find(
+                    searchBy
+                    ? Number(categoryId) !== 1
+                        ? {
+                            $or: [
+                                { description: { $regex: searchBy, $options: 'i' } },
+                            ],
+                            idCategory: { $eq: categoryId },
+                            deleted: { $eq: 0 },
+                            }
+                        : {
+                            $or: [{ description: { $regex: searchBy, $options: 'i' } }],
+                            deleted: { $eq: 0 },
+                            }
+                    : Number(categoryId) !== 1
+                        ? {
+                            idCategory: { $eq: categoryId },
+                            deleted: { $eq: 0 },
+                        }
+                        : {
+                            idEvaluation: { $eq: id },
+                            deleted: { $eq: 0 },
+                            repealed: { $eq: 0 },
+                        }
+                    )
                 .populate('idCategory', 'description')
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
@@ -35,6 +57,7 @@ module.exports = {
                 total,
             })
         } catch (error) {
+            console.log(error)
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'questions', 'returnQuestions')
         }
     },

@@ -13,6 +13,7 @@ const {
     recentsSections,
     keepLearningSections,
     concludedSections,
+    getGroupCodesByToken,
 } = require('./business')
 const { getUserByToken, processTrailTracking, processExpirationDate } = require('../../utils/functions')
 
@@ -181,6 +182,7 @@ module.exports = {
         try {
             const user = await getUserByToken(req)
             const tags = await getTagsElegiblesByToken(req)
+            const classGroups = await getGroupCodesByToken(req, tags)
 
             let resultSections = []
 
@@ -207,7 +209,16 @@ module.exports = {
                     }
 
                     trail = processedTrail.trail
+                    for (let tag of trail.tags){
+                        for (let classGroup of classGroups){
+                                if(classGroup.groupCode === tag.value){
+                                    trail['classGroup'] = classGroup;
+                                }
+                        }
+                    }
                 }
+
+                
 
                 const arrSections = await elegiblesContents(trails)
                 const arrMandatorySections = await mandatorySections(trails, tags)
@@ -246,7 +257,7 @@ module.exports = {
 
                     resultSections = arrResultSections
                 }
-                // Seta a obrigatoriedade.
+
                 for (const section of resultSections) {
                     for (const trail of section.trails) {
                         setTrailMandatory(trail, tags)

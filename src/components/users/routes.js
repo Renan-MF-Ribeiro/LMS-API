@@ -54,11 +54,15 @@ module.exports = express.Router()
     .put('/collaboration/moderation', validateTokenRoute, isAdmin, _controller.toggleCollaboratorModeration)
     .post('/password/reset', validateTokenRoute, isAdmin, _controller.resetUserPassword)
     .put('/update', validateTokenRoute, _controller.updateUserById)
+    .get('/conteudistas', validateTokenRoute, _controller.getAllConteudistas)
     .get('/details', validateTokenRoute, _controller.returnUserById)
     .get('/feedbackelegibility', validateTokenRoute, _controller.feedbackElegible)
     .post('/remove-permission', validateTokenRoute, _controller.deleteGroups)
     .post('/add-permission', validateTokenRoute, _controller.addGroups)
-    .post('/remove-class-tag', validateTokenRoute,_controller.deleteClassTag)
-    .post('/add-class-tag', validateTokenRoute,_controller.addClassTag)
+    .post('/remove-class-tag', validateTokenRoute, _controller.deleteClassTag)
+    .post('/add-class-tag', validateTokenRoute, _controller.addClassTag)
+
+    // HL-1263
+    .get('/evaluations/:idEvaluation', validateTokenRoute, _controller.evaluationProgress)
 
 // .get('/script-users', validateTokenRoute, _controller.scriptUsers)

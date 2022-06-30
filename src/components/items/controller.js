@@ -752,6 +752,10 @@ const ItemController = {
                     { description: { $regex: searchBy, $options: 'i' } },
                     { title: { $regex: searchBy, $options: 'i' } },
                     { notes: { $regex: searchBy, $options: 'i' } },
+                    { courseIdentifier: { $regex: searchBy, $options: 'i' } },
+                    { alias: { $regex: searchBy, $options: 'i' } },
+                    { keywords: { $regex: searchBy, $options: 'i' } },
+                    { responsible: { $regex: searchBy, $options: 'i' } },
                 ],
                 deleted: { $eq: 0 },
             } : {
@@ -768,6 +772,11 @@ const ItemController = {
                     $or: [
                         { description: { $regex: searchBy, $options: 'i' } },
                         { title: { $regex: searchBy, $options: 'i' } },
+                        { notes: { $regex: searchBy, $options: 'i' } },
+                        { courseIdentifier: { $regex: searchBy, $options: 'i' } },
+                        { alias: { $regex: searchBy, $options: 'i' } },
+                        { keywords: { $regex: searchBy, $options: 'i' } },
+                        { responsible: { $regex: searchBy, $options: 'i' } },
                     ],
                     deleted: { $eq: 0 },
                 } : {
@@ -843,6 +852,19 @@ const ItemController = {
             _messages.success(res, req, { item, tracking })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'items', 'getItemWithTracking')
+        }
+    },
+
+    async getProviders (req, res) {
+        try {
+            const items = await Item.find({})
+            const providers = items.filter(item => item.provider).map(item => item.provider)
+
+            const uniqueProviders = [...new Set(providers)]
+
+            _messages.success(res, req, uniqueProviders)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor')
         }
     },
 }
