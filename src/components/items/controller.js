@@ -752,6 +752,10 @@ const ItemController = {
                     { description: { $regex: searchBy, $options: 'i' } },
                     { title: { $regex: searchBy, $options: 'i' } },
                     { notes: { $regex: searchBy, $options: 'i' } },
+                    { courseIdentifier: { $regex: searchBy, $options: 'i' } },
+                    { alias: { $regex: searchBy, $options: 'i' } },
+                    { keywords: { $regex: searchBy, $options: 'i' } },
+                    { responsible: { $regex: searchBy, $options: 'i' } },
                 ],
                 deleted: { $eq: 0 },
             } : {
@@ -768,6 +772,11 @@ const ItemController = {
                     $or: [
                         { description: { $regex: searchBy, $options: 'i' } },
                         { title: { $regex: searchBy, $options: 'i' } },
+                        { notes: { $regex: searchBy, $options: 'i' } },
+                        { courseIdentifier: { $regex: searchBy, $options: 'i' } },
+                        { alias: { $regex: searchBy, $options: 'i' } },
+                        { keywords: { $regex: searchBy, $options: 'i' } },
+                        { responsible: { $regex: searchBy, $options: 'i' } },
                     ],
                     deleted: { $eq: 0 },
                 } : {
