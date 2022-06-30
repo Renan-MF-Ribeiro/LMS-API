@@ -15,6 +15,8 @@ const { PUBLIC_PATH } = process.env
 const app = express()
 const passport = require('./utils/passport')
 const config = require('../config.json')
+const { notifyResponsibleUsers } = require('./components/users/business')
+
 
 var corsOptions = {
     origin: [process.env.DOMAIN, 'http://localhost:4200', 'https://monitoring.happlearning.com.br'],
@@ -26,6 +28,10 @@ var corsOptions = {
 // if (process.env.NODE_ENV === 'local') {
 //     corsOptions = Object.assign(corsOptions, { origin: 'http://localhost:4200' })
 // }
+
+setInterval(()=>{
+    notifyResponsibleUsers()
+}, 86400)
 
 app.use(cors(corsOptions))
 

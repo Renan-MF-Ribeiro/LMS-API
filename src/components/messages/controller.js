@@ -21,6 +21,20 @@ module.exports = {
         }
     },
 
+    async createMessagesFromBackend (message) {
+        try {
+            const campaign = message
+            const target = campaign.target
+
+            const message = await Message.create(campaign)
+            const targetUsers = await processTargetUsers(target, campaign.category)
+            await sendMessageToKafka(campaign, targetUsers)
+
+        } catch (error) {
+            console.log(error)
+        }
+    },
+
     async getMessages (req, res) {
         try {
             const { skip, limit } = pagination(req)
