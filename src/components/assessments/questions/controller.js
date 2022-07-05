@@ -28,12 +28,17 @@ module.exports = {
                         ? {
                             $or: [
                                 { description: { $regex: searchBy, $options: 'i' } },
+                                {'alternatives.description': { $eq: searchBy }}
                             ],
+                            
                             idCategory: { $eq: categoryId },
                             deleted: { $eq: 0 },
                             }
                         : {
-                            $or: [{ description: { $regex: searchBy, $options: 'i' } }],
+                            $or: [
+                                { description: { $regex: searchBy, $options: 'i' } },
+                                {'alternatives.description': { $eq: searchBy }}
+                            ],
                             deleted: { $eq: 0 },
                             }
                     : Number(categoryId) !== 1
@@ -48,6 +53,7 @@ module.exports = {
                         }
                     )
                 .populate('idCategory', 'description')
+                .populate({path: 'alternatives', model: 'alternatives'})
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
