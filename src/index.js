@@ -15,7 +15,7 @@ const { PUBLIC_PATH } = process.env
 const app = express()
 const passport = require('./utils/passport')
 const config = require('../config.json')
-const { notifyResponsibleUsers } = require('./components/users/business')
+const { notifyResponsibleUsers } = require('./components/messages/controller')
 
 
 var corsOptions = {

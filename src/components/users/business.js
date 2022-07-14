@@ -26,7 +26,6 @@ const { Trail } = require('../trails/model')
 const { Item } = require('../items/model')
 const config = require('../../../config.json')
 const axios = require('axios')
-const { createMessagesFromBackend } = require('../messages/controller')
 const { Tracking } = require('../tracking/model')
 const emailTemplate = config.messenger.emailTemplate
 require('dotenv').config()
@@ -437,33 +436,4 @@ module.exports = {
         const category = 'notify'
         return { title, text, communication, category, mode, ...emailTemplate }
     },
-
-    async notifyResponsibleUsers () {
-        const today = new Date()
-        const items = await Item.find({ expirationDate: { $exists: true } })
-        for(let item of items){
-            if(item.responsible){
-                const diffTime = Math.abs(today - item.expirationDate);
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-                if(diffDays === 10){
-                const message = {
-                    category: "notify",
-                    communication: ["notification", "email"],
-                    mode: "manual",
-                    target: {
-                        type: "users",
-                        value: {
-                            users: [item.responsible]
-                        }
-                    },
-                        text: `O item ${item.title} perderá a validade em 10 dias!\n`,
-                        textHtml: `<p>O item ${item.title} perderá a validade em 10 dias!<p>`,
-                        thumbnail: "https://happlearning.blob.core.windows.net/logo/thumbnailHapp.png",
-                        title: `O item ${item.title} perderá a validade em 10 dias!`
-                    }
-                    createMessagesFromBackend(message)
-                }
-            }
-        }
-    }
 }
