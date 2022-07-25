@@ -40,6 +40,8 @@ module.exports = {
             throw error
         }
     },
+
+    
 }
 
 async function returnUsersBasedOnTarget (type, value, category) {

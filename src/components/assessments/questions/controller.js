@@ -1,4 +1,4 @@
-const { Question } = require('./model')
+const { Question, QuestionsAlternatives } = require('./model')
 const { Alternative } = require('../alternatives/model')
 const { Category } = require('../categories/model')
 const _messages = require('../../../utils/messages')
@@ -21,19 +21,23 @@ module.exports = {
                     repealed: { $eq: 0 },
                 }).countDocuments()
 
-            const questions = await Question
+            const questions = await QuestionsAlternatives
                 .find(
                     searchBy
                     ? Number(categoryId) !== 1
                         ? {
                             $or: [
                                 { description: { $regex: searchBy, $options: 'i' } },
+                                { "alternatives.description": { $regex: searchBy, $options: 'i' } },
                             ],
+                            
                             idCategory: { $eq: categoryId },
                             deleted: { $eq: 0 },
                             }
                         : {
-                            $or: [{ description: { $regex: searchBy, $options: 'i' } }],
+                            $or: [
+                                { description: { $regex: searchBy, $options: 'i' } },
+                                { "alternatives.description": { $regex: searchBy, $options: 'i' } }],
                             deleted: { $eq: 0 },
                             }
                     : Number(categoryId) !== 1
@@ -48,6 +52,7 @@ module.exports = {
                         }
                     )
                 .populate('idCategory', 'description')
+                .populate({path: 'alternatives', model: 'alternatives'})
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
