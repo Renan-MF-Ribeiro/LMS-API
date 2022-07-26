@@ -255,6 +255,10 @@ module.exports = {
                 } catch { }
             }
 
+            if(typeof payload.backgroundPath === "object"){
+                payload.backgroundPath = ''
+            }
+
             const flag = checksIfTheEndDateIsLessThanTheStartDate(payload.startDate, payload.endDate)
             if (!flag) {
                 _messages.badRequest(res, req, 'A data final não pode ser menor que a data inicial!', 'A data final não pode ser menor que a data inicial!', 'items', 'multiUploadCreate')
