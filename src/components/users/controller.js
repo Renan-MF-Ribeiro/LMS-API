@@ -930,53 +930,6 @@ module.exports = {
         }
     },
 
-    async scriptUsers (req, res, next) {
-        try {
-            const obj = {
-                networkLogin: 'OFICINA5DEV',
-                tags: [],
-                acceptTerms: true,
-                profilePhoto: 'https://happlearning.s3.sa-east-1.amazonaws.com/photos/5db1e70c58fbcb274cba006d/ZYvYsCYbX3PoE8C5wHBXb7kL.jpeg.jpeg',
-                groupsAD: [
-                    'GL_ACADMODA_PF_ANALISTA',
-                    'GL_ACADMODA_PF_INTEGRADOR',
-                    'GL_ACADMODA_PF_INSTRUTOR',
-                    'GL_ACADMODA_PF_ALUNO',
-                    'GL_ACADMODA_PF_CONTEUDISTA',
-                    'GL_ACADMODA_PF_ADM',
-                    'GL_ACADMODA_LJ_BACKOFFICE',
-                    'GL_ACADMODA_LJ_SUP',
-                    'GL_ACADMODA_LJ_RFS',
-                    'GL_ACADMODA_LJ_LIDER',
-                    'GL_ACADMODA_LJ_FISCAL',
-                    'GL_ACADMODA_EC_ASSOCIADO',
-                    'GL_ACADMODA_EC_SUPVM',
-                    'GL_ACADMODA_EC_GERDIST',
-                    'GL_ACADMODA_EC_LIDRFS',
-                    'GL_APP_JIRA_PROD',
-                    'GL_ACADMODA_EC_ASSOCIADO',
-                    'GL_ACADMODA_LJ_SUPTREIN',
-                ],
-                store: '3',
-                status: 'ATIVO',
-                averageRating: 0,
-                numberTrailsCompleted: 0,
-                numberTrailsElegibles: 0,
-            }
-
-            for (let i = 0; i < 1000; i++) {
-                obj.name = `OFICINA5${i}`
-                obj.initials = `O${i}`
-                await User.create(obj)
-            }
-
-            res.status(200).json('OK')
-        } catch (error) {
-            console.log(error)
-            res.status(500).json('Erro no servidor!')
-        }
-    },
-
     async ssoCallback (req, res) {
         const email = req.samlUserObject.httpSchemasXmlsoapOrgWs200505IdentityClaimsEmailaddress
         const token = await jwt.sign({ email }, process.env.JWT_SECRET)
