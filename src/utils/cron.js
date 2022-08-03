@@ -44,6 +44,7 @@ const config = require('../../config.json')
 const { Item } = require('../components/items/model')
 const { HistoricEvaluation } = require('../components/assessments/model')
 const { uploadFileDegreed } = require('./ftp')
+const { notifyResponsibleUsers } = require('../components/messages/controller')
 
 const emailTemplate = config.messenger.emailTemplate
 const groupingA = config.cron.average.groupA
@@ -51,6 +52,14 @@ const groupingB = config.cron.average.groupB
 const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadsheet
 
 module.exports = {
+    cronNotifyResponsibleUsers () {
+        if (config.cron.notifyResponsibleUsers.active) {
+            new CronJob('00 00 * * * *', () => {
+                notifyResponsibleUsers()
+            }, null, true, 'America/Sao_Paulo')
+        }
+    },
+
     updateAverageCourses () {
         if (config.cron.average.active) {
             new CronJob('*/30 * * * * ', () => {
