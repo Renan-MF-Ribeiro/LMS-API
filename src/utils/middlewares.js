@@ -78,7 +78,7 @@ module.exports = {
 
     isAccountantOrIntegrator: async (req, res, next) => {
         const profiles = await returnProfileByToken(req.headers.authorization)
-        if (profiles.indexOf('PERFIL_Conteudista') >= 0 || profiles.indexOf('PERFIL_Integrador') >= 0 {
+        if (profiles.indexOf('PERFIL_Conteudista') >= 0 || profiles.indexOf('PERFIL_Integrador') >= 0) {
             next()
         } else {
             _messages.forbidden(res, req, 'Sem permissão de acesso', 'Você não tem permissão para prosseguir com a ação!', '', req.originalUrl)
