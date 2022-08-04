@@ -666,13 +666,11 @@ async function cronDegreedCharge (hours) {
 
             await workbook.csv.writeFile(strLocalPath + strFileName, { encoding: 'utf8' })
 
-            // await workbook.xlsx.writeFile("src/public/cargas-degreed/cargaAcadModa-"+getDateTodayWithoutHours()+".xlsx");
-
             uploadFileDegreed('./' + strLocalPath + strFileName, '/' + strFileName)
 
             storageLog('SINCRONIZAÇÃO COM DEGREED ' + strFileName, '', '', 'DAILY_CHARGE_DEGREED')
         }
-        // sendLogEmail('success', '', result.length, totalUsersCreated, totalUsersUpdated, totalUsersWithoutLogin, getDateTodayWithoutHours(), totalUsersInactive, totalUsersActiveBD, totalUsersInactiveBD)
+
     } catch (error) {
         console.log(error)
         // sendLogEmail('error', error)

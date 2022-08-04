@@ -362,8 +362,8 @@ module.exports = {
                     </html>`
 
                 await sgMail.send({
-                    from: '<academiadamodacea@happmobi.com.br>',
-                    to: 'academiadamodacea@happmobi.com.br',
+                    from: 'Happlearning <suporte.happlearning@happmobi.com.br>',
+                    to: 'suporte.happlearning@happmobi.com.br',
                     subject: 'RELATÓRIO DA CARGA DIÁRIA',
                     text: 'Relatório da carga diária',
                     category: `${process.env.CLIENT_ID}`,

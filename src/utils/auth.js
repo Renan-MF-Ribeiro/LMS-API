@@ -209,23 +209,18 @@ module.exports = {
 function returnNumberOfProfile (profile) {
     let number
     switch (profile) {
-        case 'GL_ACADMODA_PF_INTEGRADOR':
         case 'PERFIL_Integrador':
             number = 1
             break
-        case 'GL_ACADMODA_PF_INSTRUTOR':
         case 'PERFIL_Intrutor':
             number = 2
             break
-        case 'GL_ACADMODA_PF_ADM':
         case 'PERFIL_Admin':
             number = 3
             break
-        case 'GL_ACADMODA_PF_ANALISTA':
         case 'PERFIL_Analista':
             number = 4
             break
-        case 'GL_ACADMODA_PF_CONTEUDISTA':
         case 'PERFIL_Conteudista':
             number = 5
             break
