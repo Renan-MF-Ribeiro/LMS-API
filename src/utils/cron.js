@@ -44,6 +44,7 @@ const config = require('../../config.json')
 const { Item } = require('../components/items/model')
 const { HistoricEvaluation } = require('../components/assessments/model')
 const { uploadFileDegreed } = require('./ftp')
+const { notifyResponsibleUsers } = require('../components/messages/controller')
 
 const emailTemplate = config.messenger.emailTemplate
 const groupingA = config.cron.average.groupA
@@ -51,6 +52,14 @@ const groupingB = config.cron.average.groupB
 const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadsheet
 
 module.exports = {
+    cronNotifyResponsibleUsers () {
+        if (config.cron.notifyResponsibleUsers.active) {
+            new CronJob('00 00 * * * *', () => {
+                notifyResponsibleUsers()
+            }, null, true, 'America/Sao_Paulo')
+        }
+    },
+
     updateAverageCourses () {
         if (config.cron.average.active) {
             new CronJob('*/30 * * * * ', () => {
@@ -657,13 +666,11 @@ async function cronDegreedCharge (hours) {
 
             await workbook.csv.writeFile(strLocalPath + strFileName, { encoding: 'utf8' })
 
-            // await workbook.xlsx.writeFile("src/public/cargas-degreed/cargaAcadModa-"+getDateTodayWithoutHours()+".xlsx");
-
             uploadFileDegreed('./' + strLocalPath + strFileName, '/' + strFileName)
 
             storageLog('SINCRONIZAÇÃO COM DEGREED ' + strFileName, '', '', 'DAILY_CHARGE_DEGREED')
         }
-        // sendLogEmail('success', '', result.length, totalUsersCreated, totalUsersUpdated, totalUsersWithoutLogin, getDateTodayWithoutHours(), totalUsersInactive, totalUsersActiveBD, totalUsersInactiveBD)
+
     } catch (error) {
         console.log(error)
         // sendLogEmail('error', error)

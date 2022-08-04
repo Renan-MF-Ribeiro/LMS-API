@@ -12,10 +12,12 @@ const {
     updateUserTemporaryTags,
     executeCronAverageCourses,
     deleteReprovedExamTracking,
+    cronNotifyResponsibleUsers,
 } = require('./src/utils/cron')
 
 const server = app.listen(port, async () => {
     log('Listening on port: ' + port)
+    cronNotifyResponsibleUsers()
     updateAverageCourses()
     updateAverageRatings()
     sendCourseReleaseNotification()
