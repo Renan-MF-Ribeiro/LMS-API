@@ -26,9 +26,12 @@ module.exports = {
             const { skip, limit } = _functions.pagination(req)
             const searchBy = req.query.searchBy
 
-            const total = await Group.find({
+            const total = await Group.find(searchBy ? {
+                $or: [
+                    { name: { $regex: searchBy, $options: 'i' } },
+                ],
                 deleted: { $eq: 0 },
-            }).countDocuments()
+            } : { deleted: { $eq: 0 } }).countDocuments()
 
             const groups = await Group.find(searchBy ? {
                 $or: [
