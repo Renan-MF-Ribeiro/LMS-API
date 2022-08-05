@@ -638,10 +638,12 @@ module.exports = {
 
             const total = await User.find(searchBy ? {
                 $or: [
-                    { NOME: { $regex: searchBy, $options: 'i' } },
-                    { MATRICULA: { $regex: searchBy, $options: 'i' } },
-                    { cpf: { $regex: searchBy, $options: 'i' } }],
+                    { name: { $regex: searchBy, $options: 'i' } },
+                    { registration: { $regex: searchBy, $options: 'i' } },
+                    { email: { $regex: searchBy, $options: 'i' } }],
             } : {}).countDocuments()
+
+            console.log(total)
 
             const totalActive = await User.find({ status: 'ATIVO' }).countDocuments()
             const totalInactive = await User.find({ status: 'INATIVO' }).countDocuments()
