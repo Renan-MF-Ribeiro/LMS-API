@@ -367,14 +367,22 @@ module.exports = {
             const { order, sort } = ordernation(req)
             const searchBy = req.query.searchBy
 
-            const total = await Trail.countDocuments()
+            let total = 0
             if (req.query.type) {
+                total = await Trail.countDocuments()
                 const trails = await Trail.find()
                 _messages.success(res, req, {
                     data: trails,
                     total,
                 })
             } else {
+                total = await Trail.find(searchBy ? {
+                    $or: [
+                        { description: { $regex: searchBy, $options: 'i' } },
+                        { title: { $regex: searchBy, $options: 'i' } },
+                    ],
+                } : {}).countDocuments()
+                
                 const trails = await Trail
                     .find(searchBy ? {
                         $or: [
