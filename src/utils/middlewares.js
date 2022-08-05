@@ -51,7 +51,7 @@ module.exports = {
 
     isAccountant: async (req, res, next) => {
         const profiles = await returnProfileByToken(req.headers.authorization)
-        if (profiles.indexOf('GL_ACADMODA_PF_CONTEUDISTA') >= 0 || profiles.indexOf('PERFIL_Conteudista') >= 0) {
+        if (profiles.indexOf('PERFIL_Conteudista') >= 0) {
             next()
         } else {
             _messages.forbidden(res, req, 'Sem permissão de acesso', 'Você não tem permissão para prosseguir com a ação!', '', req.originalUrl)
@@ -60,7 +60,7 @@ module.exports = {
 
     isCollaborator: async (req, res, next) => {
         const profiles = await returnProfileByToken(req.headers.authorization)
-        if (profiles.indexOf('GL_ACADMODA_PF_COLABORADOR') >= 0 || profiles.indexOf('PERFIL_Colaborador') >= 0) {
+        if (profiles.indexOf('PERFIL_Colaborador') >= 0) {
             next()
         } else {
             _messages.forbidden(res, req, 'Sem permissão de acesso', 'Você não tem permissão para prosseguir com a ação!', '', req.originalUrl)
@@ -69,7 +69,7 @@ module.exports = {
 
     isAdmin: async (req, res, next) => {
         const profiles = await returnProfileByToken(req.headers.authorization)
-        if (profiles.indexOf('GL_ACADMODA_PF_ADM') >= 0 || profiles.indexOf('PERFIL_Admin') >= 0) {
+        if (profiles.indexOf('PERFIL_Admin') >= 0) {
             next()
         } else {
             _messages.forbidden(res, req, 'Sem permissão de acesso', 'Você não tem permissão para prosseguir com a ação!', '', req.originalUrl)
@@ -78,7 +78,7 @@ module.exports = {
 
     isAccountantOrIntegrator: async (req, res, next) => {
         const profiles = await returnProfileByToken(req.headers.authorization)
-        if (profiles.indexOf('GL_ACADMODA_PF_CONTEUDISTA') >= 0 || profiles.indexOf('PERFIL_Conteudista') >= 0 || profiles.indexOf('PERFIL_Integrador') >= 0 || profiles.indexOf('GL_ACADMODA_PF_INTEGRADOR') >= 0) {
+        if (profiles.indexOf('PERFIL_Conteudista') >= 0 || profiles.indexOf('PERFIL_Integrador') >= 0) {
             next()
         } else {
             _messages.forbidden(res, req, 'Sem permissão de acesso', 'Você não tem permissão para prosseguir com a ação!', '', req.originalUrl)
@@ -87,7 +87,7 @@ module.exports = {
 
     isIntegrator: async (req, res, next) => {
         const profiles = await returnProfileByToken(req.headers.authorization)
-        if (profiles.indexOf('GL_ACADMODA_PF_INTEGRADOR') >= 0) {
+        if (profiles.indexOf('PERFIL_Integrador') >= 0) {
             next()
         } else {
             _messages.forbidden(res, req, 'Sem permissão de acesso', 'Você não tem permissão para prosseguir com a ação!', '', req.originalUrl)
@@ -96,7 +96,7 @@ module.exports = {
 
     isAccountantOrInstructor: async (req, res, next) => {
         const profiles = await returnProfileByToken(req.headers.authorization)
-        if (profiles.indexOf('GL_ACADMODA_PF_CONTEUDISTA') >= 0 || profiles.indexOf('PERFIL_Conteudista') >= 0 || profiles.indexOf('PERFIL_Instrutor') >= 0 || profiles.indexOf('GL_ACADMODA_PF_INSTRUTOR') >= 0) {
+        if (profiles.indexOf('PERFIL_Conteudista') >= 0 || profiles.indexOf('PERFIL_Instrutor') >= 0) {
             next()
         } else {
             _messages.forbidden(res, req, 'Sem permissão de acesso', 'Você não tem permissão para prosseguir com a ação!', '', req.originalUrl)
@@ -105,7 +105,7 @@ module.exports = {
 
     isInstructor: async (req, res, next) => {
         const profiles = await returnProfileByToken(req.headers.authorization)
-        if (profiles.indexOf('GL_ACADMODA_PF_INSTRUTOR') >= 0 || profiles.indexOf('PERFIL_Instrutor') >= 0) {
+        if (profiles.indexOf('PERFIL_Instrutor') >= 0) {
             next()
         } else {
             _messages.forbidden(res, req, 'Sem permissão de acesso', 'Você não tem permissão para prosseguir com a ação!', '', req.originalUrl)
@@ -114,7 +114,7 @@ module.exports = {
 
     isAnalyst: async (req, res, next) => {
         const profiles = await returnProfileByToken(req.headers.authorization)
-        if (profiles.indexOf('GL_ACADMODA_PF_ANALISTA') >= 0 || profiles.indexOf('PERFIL_Analista') >= 0) {
+        if (profiles.indexOf('PERFIL_Analista') >= 0) {
             next()
         } else {
             _messages.forbidden(res, req, 'Sem permissão de acesso', 'Você não tem permissão para prosseguir com a ação!', '', req.originalUrl)
@@ -123,7 +123,7 @@ module.exports = {
 
     isStudent: async (req, res, next) => {
         const profiles = await returnProfileByToken(req.headers.authorization)
-        if (profiles.indexOf('GL_ACADMODA_PF_ALUNO') >= 0 || profiles.indexOf('PERFIL_Aluno') >= 0) {
+        if (profiles.indexOf('PERFIL_Aluno') >= 0) {
             next()
         } else {
             _messages.forbidden(res, req, 'Sem permissão de acesso', 'Você não tem permissão para prosseguir com a ação!', '', req.originalUrl)
@@ -132,7 +132,7 @@ module.exports = {
 
     isAdminOrInstructor: async (req, res, next) => {
         const profiles = await returnProfileByToken(req.headers.authorization)
-        if (profiles.indexOf('GL_ACADMODA_PF_ADM') >= 0 || profiles.indexOf('PERFIL_Admin') >= 0 || profiles.indexOf('PERFIL_Instrutor') >= 0 || profiles.indexOf('GL_ACADMODA_PF_INSTRUTOR') >= 0) {
+        if (profiles.indexOf('PERFIL_Admin') >= 0 || profiles.indexOf('PERFIL_Instrutor') >= 0) {
             next()
         } else {
             _messages.forbidden(res, req, 'Sem permissão de acesso', 'Você não tem permissão para prosseguir com a ação!', '', req.originalUrl)

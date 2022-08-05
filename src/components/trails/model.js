@@ -24,7 +24,7 @@ const TrailSchema = new mongoose.Schema({
     certificateLayout: { type: 'ObjectId' },
     author: { type: 'ObjectId', ref: 'users', required: true },
     thumbPath: { type: String, required: ifEnabledAndNotHighlighted },
-    backgroundPath: { type: String },
+    backgroundPath: { type: String, required: false },
     bannerPath: { type: String, required: ifEnabledAndHighlighted },
     expirationType: { type: Object },
     complaints: [ComplaintSchema],

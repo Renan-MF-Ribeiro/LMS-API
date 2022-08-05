@@ -64,5 +64,3 @@ module.exports = express.Router()
 
     // HL-1263
     .get('/evaluations/:idEvaluation', validateTokenRoute, _controller.evaluationProgress)
-
-// .get('/script-users', validateTokenRoute, _controller.scriptUsers)

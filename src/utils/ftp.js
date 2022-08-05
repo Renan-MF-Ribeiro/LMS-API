@@ -17,7 +17,7 @@ const configDegreed = {
     password: process.env.SFTP_PASSWORD_DEGREED,
 }
 
-const remotePath = '/home/happmobi/prod/AcademiaModaCEA_cargaUsuarios.csv'
+const remotePath = process.env.SFTP_PATH
 const localPath = path.resolve() + '/src/public/cargas/'
 
 module.exports = {
@@ -32,10 +32,10 @@ module.exports = {
                             if (count >= 14) {
                                 count = await getLastFile()
                             }
-                            sftp.fastGet(remotePath, localPath + `AcademiaModaCEA_cargaUsuarios_${count + 1}.CSV`)
+                            sftp.fastGet(remotePath, localPath + `${process.env.SFTP_FILENAME_CLIENT}_cargaUsuarios_${count + 1}.CSV`)
                                 .then(async () => {
                                     sftp.end()
-                                    resolve(localPath + `AcademiaModaCEA_cargaUsuarios_${count + 1}.CSV`)
+                                    resolve(localPath + `${process.env.SFTP_FILENAME_CLIENT}_cargaUsuarios_${count + 1}.CSV`)
                                 })
                                 .catch(error => {
                                     sftp.end()
@@ -63,7 +63,7 @@ module.exports = {
     },
     deleteFile (file) {
         return new Promise((resolve, reject) => {
-            fs.unlink(localPath + `AcademiaModaCEA_cargaUsuarios_${file}.CSV`, err => {
+            fs.unlink(localPath + `${process.env.SFTP_FILENAME_CLIENT}_cargaUsuarios_${file}.CSV`, err => {
                 if (err) reject(err)
                 resolve()
             })

@@ -3,6 +3,7 @@ const _messages = require('../../utils/messages')
 const { Message } = require('./model')
 const { pagination, ordernation } = require('../../utils/functions')
 const { Item } = require('../items/model')
+const config = require('../../../config.json')
 
 module.exports = {
     async createMessages (req, res) {
@@ -77,32 +78,35 @@ module.exports = {
         }
     },
 
+
     async notifyResponsibleUsers () {
         const today = new Date()
         const items = await Item.find({ expirationDate: { $exists: true } })
-        for(let item of items){
-            if(item.responsible){
-                const diffTime = Math.abs(today - item.expirationDate);
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-                if(diffDays === 10){
-                const message = {
-                    category: "notify",
-                    communication: ["notification", "email"],
-                    mode: "manual",
-                    target: {
-                        type: "users",
-                        value: {
-                            users: [item.responsible]
-                        }
-                    },
-                        text: `O item ${item.title} perderá a validade em 10 dias!\n`,
-                        textHtml: `<p>O item ${item.title} perderá a validade em 10 dias!<p>`,
-                        thumbnail: "https://happlearning.blob.core.windows.net/logo/thumbnailHapp.png",
-                        title: `O item ${item.title} perderá a validade em 10 dias!`
+        const notificationDays = config.cron.notifyResponsibleUsers.notificationDays
+
+        for (const item of items) {
+            if (item.responsible) {
+                const diffTime = Math.abs(today - item.expirationDate)
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                if (notificationDays.includes(diffDays)) {
+                    const message = {
+                        category: 'notify',
+                        communication: ['notification', 'email'],
+                        mode: 'manual',
+                        target: {
+                            type: 'users',
+                            value: {
+                                users: [item.responsible],
+                            },
+                        },
+                        text: `O item ${item.title} perderá a validade em ${diffDays} dias!\n`,
+                        textHtml: `<p>O item ${item.title} perderá a validade em ${diffDays} dias!<p>`,
+                        thumbnail: config.messenger.emailTemplate.thumbnail,
+                        title: `${item.title}`,
                     }
                     createMessagesFromBackend(message)
                 }
             }
         }
-    }
+    },
 }
