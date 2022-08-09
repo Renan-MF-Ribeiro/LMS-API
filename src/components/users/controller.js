@@ -638,9 +638,9 @@ module.exports = {
 
             const total = await User.find(searchBy ? {
                 $or: [
-                    { NOME: { $regex: searchBy, $options: 'i' } },
-                    { MATRICULA: { $regex: searchBy, $options: 'i' } },
-                    { cpf: { $regex: searchBy, $options: 'i' } }],
+                    { name: { $regex: searchBy, $options: 'i' } },
+                    { registration: { $regex: searchBy, $options: 'i' } },
+                    { email: { $regex: searchBy, $options: 'i' } }],
             } : {}).countDocuments()
 
             const totalActive = await User.find({ status: 'ATIVO' }).countDocuments()
@@ -950,8 +950,44 @@ module.exports = {
 
     async returnCollaborativeUsers (req, res) {
         try {
-            const collaborativeUsers = await User.find({ groupsAD: { $in: ['PERFIL_Colaborador'] } })
-            _messages.success(res, req, { collaborativeUsers })
+            const { skip, limit } = pagination(req)
+            const { order, sort } = ordernation(req)
+            const searchBy = req.query.searchBy
+            
+            const collaborativeUsers = await User
+                .find(searchBy ? { 
+                    $and: [
+                        {
+                            groupsAD: { $in: ['PERFIL_Colaborador'] } 
+                        },
+                        {   
+                            $or : [{ name: { $regex: searchBy, $options: 'i' } },
+                                    { registration: { $regex: searchBy, $options: 'i' } },
+                                    { email: { $regex: searchBy, $options: 'i' } }]
+                        }
+                    ]
+                    } : {groupsAD: { $in: ['PERFIL_Colaborador'] } })
+                .sort({ [order]: sort })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit))
+
+            const total = await User
+                .countDocuments(searchBy ? { 
+                    $and: [
+                        {
+                            groupsAD: { $in: ['PERFIL_Colaborador'] } 
+                        },
+                        {
+                            $or : [{ name: { $regex: searchBy, $options: 'i' } },
+                                    { registration: { $regex: searchBy, $options: 'i' } },
+                                    { email: { $regex: searchBy, $options: 'i' } }]
+                        }
+                        ]} : {groupsAD: { $in: ['PERFIL_Colaborador'] } })
+
+            _messages.success(res, req, {
+                data: collaborativeUsers,
+                total
+            })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor')
         }

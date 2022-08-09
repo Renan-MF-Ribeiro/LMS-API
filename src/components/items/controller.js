@@ -747,7 +747,21 @@ const ItemController = {
             const q = {}
             if (req.query.enabled !== undefined) q.enabled = true
             const searchBy = req.query.searchBy
-            let total = await Item.count(q)
+            let total = await Item.find(searchBy ? {
+                $or: [
+                    { description: { $regex: searchBy, $options: 'i' } },
+                    { title: { $regex: searchBy, $options: 'i' } },
+                    { notes: { $regex: searchBy, $options: 'i' } },
+                    { courseIdentifier: { $regex: searchBy, $options: 'i' } },
+                    { alias: { $regex: searchBy, $options: 'i' } },
+                    { keywords: { $regex: searchBy, $options: 'i' } },
+                    { responsible: { $regex: searchBy, $options: 'i' } },
+                ],
+                deleted: { $eq: 0 },
+            } : {
+                deleted: { $eq: 0 },
+            }).count();
+
             let itens = await Item.find(searchBy ? {
                 $or: [
                     { description: { $regex: searchBy, $options: 'i' } },
@@ -794,7 +808,7 @@ const ItemController = {
 
                 total = dataItens.length
                 itens = dataItens.slice(parseInt(skip)).slice(0, parseInt(limit))
-            }
+            } 
 
             _messages.success(res, req, {
                 total,
