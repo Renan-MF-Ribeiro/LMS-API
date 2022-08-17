@@ -253,7 +253,7 @@ module.exports = {
             const { numberOfItemsCompleted } = await getNumberOfItemsCompletedOrInProgressOrNotStarted(req)
             if (response.data[0]) {
                 const latestFeedback = response.data.slice(-1)
-                const latestFeedbackDate = new Date(latestFeedback[0].createdAt)
+                const latestFeedbackDate = new Date(latestFeedback[0].updatedAt)
                 let daysSinceLastFeedback = Math.floor((latestFeedbackDate - today) / (24 * 3600 * 1000))
                 daysSinceLastFeedback *= -1
 
