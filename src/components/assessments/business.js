@@ -107,7 +107,7 @@ module.exports = {
 
                     const questionsOfCategory = await Question
                         .find(
-                            { idCategory: { $eq: category._id }, repealed: { $eq: 0 }, deleted: { $eq: 0 } },
+                            { idCategory: { $eq: category._id }, repealed: { $eq: 0 }, deleted: { $eq: 0 }, active: { $eq: 1} },
                             ['description'],
                         )
                         .populate('alternatives', ['description'])
