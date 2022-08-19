@@ -154,6 +154,7 @@ const ItemController = {
                             title: item.title,
                         })
                     }
+                    //Evento novo conteúdo colaborativo
                     _messages.success(res, req, item._id)
                 } catch (error) {
                     if (error.message === 'Something went wrong') {
