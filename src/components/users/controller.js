@@ -33,6 +33,7 @@ const {
     sendUpdatedDeviceIdToMessenger,
     createWelcomeCampaign,
     returnDateSinceFirstLogin,
+    validateBody,
 } = require('./business')
 
 const {
@@ -69,10 +70,70 @@ const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail
 module.exports = {
     async create (req, res) {
         try {
-            const { _id } = await User.create(req.body)
-            _messages.success(res, req, { _id })
+            const userValue = await validateBody(req.body)
+            const processedUser = processUsersLoad(userValue)
+            const userFound = await User.findOne({
+                $or: [
+                    { cpf: processedUser.cpf },
+                    { email: processedUser.email },
+                    { networkLogin: processedUser.networkLogin },
+                ],
+            })
+
+            if (userFound) {
+                return _messages.forbidden(
+                    res,
+                    req,
+                    'User already exists',
+                    { error: 'User already exists' },
+                    'users', 'create',
+                )
+            }
+
+            const {
+                name,
+                cpf,
+                email,
+                networkLogin,
+                groupsAD,
+                classGroups,
+                enabled,
+                acceptTerms,
+                averageRating,
+                numberTrailsCompleted,
+                numberTrailsElegibles,
+                status,
+                birthDate,
+                admission,
+                tags,
+            } = await User.create(processedUser)
+
+            return _messages.success(res, req, {
+                name,
+                cpf,
+                email,
+                networkLogin,
+                groupsAD,
+                classGroups,
+                enabled,
+                acceptTerms,
+                averageRating,
+                numberTrailsCompleted,
+                numberTrailsElegibles,
+                status,
+                birthDate,
+                admission,
+                tags,
+            })
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'create')
+            return _messages.internalServer(
+                res,
+                req,
+                !error.details ? 'Internal Server Error' : error.details[0].message,
+                { error: !error.details ? 'Internal Server Error' : error.details[0].message.replace(/"/g, "'") },
+                'users',
+                'create',
+            )
         }
     },
 
@@ -674,7 +735,7 @@ module.exports = {
 
     async updateUser (req, res) {
         try {
-            const { _id, tags } = req.body
+            const { _id, email, cpf, tags } = req.body
             const user = await User.findOne({
                 _id: { $eq: _id },
             })
@@ -691,8 +752,22 @@ module.exports = {
                     }
                 }
             }
-            await User.findByIdAndUpdate(_id, req.body)
-            _messages.success(res, req, 'Atualizado com sucesso')
+
+            if (await User.findOne({
+                $or: [
+                    { _id: { $ne: _id }, cpf: { $eq: cpf } },
+                    { _id: { $ne: _id }, email: { $eq: email } },
+                ],
+            })) {
+                return _messages.internalServer(
+                    res,
+                    req,
+                    'CPF ou email informado já está sendo utilizado',
+                    'Erro interno no servidor',
+                    'users',
+                    'updateUser',
+                )
+            }
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'updateUser')
         }
@@ -1149,12 +1224,12 @@ module.exports = {
         }
     },
 
-    async getAllConteudistas(req, res){
+    async getAllConteudistas (req, res) {
         try {
             const users = await User.find({ groupsAD: { $in: ['PERFIL_Conteudista'] } })
             _messages.success(res, req, users)
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'conteudistas')
         }
-    }
+    },
 }

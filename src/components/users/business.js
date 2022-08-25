@@ -27,6 +27,7 @@ const { Item } = require('../items/model')
 const config = require('../../../config.json')
 const axios = require('axios')
 const { Tracking } = require('../tracking/model')
+const Joi = require('joi')
 const emailTemplate = config.messenger.emailTemplate
 require('dotenv').config()
 
@@ -254,7 +255,7 @@ module.exports = {
 
         const groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO']
 
-        const elegibility = [
+        const elegibility = !data.company && !data.office ? [] : [
             `ELEGE_${_functions.clearString(data.company)}`,
             `ELEGE_${_functions.clearString(data.office)}`,
         ]
@@ -435,5 +436,22 @@ module.exports = {
         const mode = 'automatic'
         const category = 'notify'
         return { title, text, communication, category, mode, ...emailTemplate }
+    },
+
+    async validateBody (value) {
+        const validator = Joi.object({
+            name: Joi.string().required(),
+            email: Joi.string().email().required(),
+            cpf: Joi.string().length(11).required(),
+            registration: Joi.number(),
+            admission: Joi.date(),
+            birthDate: Joi.date(),
+            gender: Joi.string(),
+            status: Joi.string().valid('ATIVO', 'INATIVO').default('ATIVO'),
+            state: Joi.string(),
+            city: Joi.string(),
+        })
+
+        return await validator.validateAsync(value)
     },
 }

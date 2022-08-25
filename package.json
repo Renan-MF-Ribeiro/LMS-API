@@ -47,6 +47,7 @@
         "http-status-codes": "^1.4.0",
         "iconv-lite": "^0.5.2",
         "is-stream": "^2.0.1",
+        "joi": "^17.6.0",
         "jsonwebtoken": "^8.5.1",
         "kafkajs": "^1.16.0",
         "ldapjs": "^1.0.2",
