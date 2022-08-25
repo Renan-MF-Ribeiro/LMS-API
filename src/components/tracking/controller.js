@@ -105,7 +105,9 @@ const TrackingController = {
             }
 
             await TrackingModel.updateOne(q, { ...req.body, totalTime, isAllowedToSendXAPI, completionAt }, { upsert: true, omitUndefined: true })
-
+            // Assistiu uma colaboração no mesmo dia do lançamento
+            // Assistiu X colaborações
+            // Eventos de treinamento
             res.status(httpStatus.NO_CONTENT).send()
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'tracking', 'createOrUpdate')

@@ -86,7 +86,12 @@ module.exports = {
             const { order, sort } = _functions.ordernation(req)
             const searchBy = req.query.searchBy
 
-            const total = await Evaluation.find({
+            const total = await Evaluation.find(searchBy ? {
+                $or: [
+                    { description: { $regex: searchBy, $options: 'i' } },
+                ],
+                deleted: { $eq: 0 },
+            } : {
                 deleted: { $eq: 0 },
             }).countDocuments()
             const evaluations = await Evaluation

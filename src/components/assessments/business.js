@@ -44,11 +44,9 @@ module.exports = {
                         }],
                     )
                 const respondida = await HistoricEvaluation.find({ questions: id })
-
                 if (respondida != '') {
                     await Question.findByIdAndUpdate(id, { repealed: 1 })
                     const arrIdAlternatives = []
-
                     var strDescription = ((body.description && body.description != 'undefined') ? body.description : question.description)
 
                     const questionCreated = await Question.create({
@@ -88,8 +86,7 @@ module.exports = {
                     await Question.findByIdAndUpdate(questionCreated._id, { alternatives: arrIdAlternatives, rigthAnswer: idRigthAnswer, description: strDescription })
                 } else {
                     if (body) {
-                        console.log(question.description)
-                        await Question.findByIdAndUpdate(id, { description: body.description ? body.description : question.description })
+                        await Question.findByIdAndUpdate(id, { description: body.description ? body.description : question.description,  idCategory: body.idCategory ? body.idCategory : question.idCategory })
                     }
                 }
                 resolve()
@@ -110,7 +107,7 @@ module.exports = {
 
                     const questionsOfCategory = await Question
                         .find(
-                            { idCategory: { $eq: category._id }, repealed: { $eq: 0 }, deleted: { $eq: 0 } },
+                            { idCategory: { $eq: category._id }, repealed: { $eq: 0 }, deleted: { $eq: 0 }, active: { $eq: 1} },
                             ['description'],
                         )
                         .populate('alternatives', ['description'])
