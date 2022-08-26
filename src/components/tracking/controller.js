@@ -4,6 +4,8 @@ const { decodeToken } = require('../../utils/auth')
 
 const _messages = require('../../utils/messages')
 const { User } = require('../users/model')
+const { Trail } = require('../trails/model')
+const { processTrailTracking } = require('../../utils/functions')
 const { Tracking, DocumentTracking, MediaTracking, AudioTracking, SCORMTracking, ExamTracking, SCORMTrackingHistory, SCORMLessonStatus, EventTracking } = require('./model')
 const { HistoricEvaluation } = require('../assessments/model')
 
@@ -140,19 +142,52 @@ const TrackingController = {
             const { order, sort } = ordernation(req)
 
             const { userLogin } = req.query
-            const query = { userLogin }
 
-            const [total, data] = await Promise.all([
-                Tracking.countDocuments(query),
-                Tracking
-                    .find(query)
-                    .populate('item', 'title')
-                    .sort({ [order]: sort })
-                    .skip(parseInt(skip))
-                    .limit(parseInt(limit)),
-            ])
+            let trailsWithTracking = []
+            let processedTrailsWithTracking = []
+            let allItems = 0
+            let data
 
-            _messages.success(res, req, { total, data })
+            const allTrackingUser = await Tracking.find({
+                userLogin: { $eq: userLogin },
+            })
+
+            const trails = await Trail.find({"items.itemID": { $in: allTrackingUser.map(v => v.item) }}).populate({
+                path:'items',			
+                populate: { 
+                    path:'itemID',
+                    model: 'Item' 
+                }
+            })
+            .sort({ [order]: sort })
+            .skip(parseInt(skip))
+            .limit(parseInt(limit))
+        
+            for(let trail of trails){
+                let processedTrail = processTrailTracking(trail, allTrackingUser)
+                trailsWithTracking.push(processedTrail)
+            }
+
+            for(let v of trailsWithTracking){
+                const trail = v.trail
+                const completedTrails = []
+                allItems = trail.items.length
+                for(let item in trail.items){
+                    if(trail.items[item].itemID.completion) {
+                        completedTrails.push(trail.items[item])
+                    }
+                    trail.items[item] = trail.items[item].itemID
+                }
+
+                data = {
+                    trailName: trail.title,
+                    items: trail.items,
+                    trailConclusionPercent: (100 * completedTrails.length) / allItems,
+                }
+                processedTrailsWithTracking.push(data)
+            }
+
+            _messages.success(res, req, { allItems, processedTrailsWithTracking })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'tracking', 'list')
         }

@@ -351,6 +351,11 @@ module.exports = {
                 }
             }
 
+            if(item.itemID){
+                item.itemID['completionAt'] = completionAt
+                item.itemID.completion = tmpCompletion
+            }
+
             item.completion = tmpCompletion
             if (item.completion === 1) {
                 containsACompletedItem = true
