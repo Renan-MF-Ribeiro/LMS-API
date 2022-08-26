@@ -172,11 +172,14 @@ const TrackingController = {
                 const trail = v.trail
                 const completedTrails = []
                 allItems = trail.items.length
+                
                 for(let item in trail.items){
                     if(trail.items[item].itemID.completion) {
                         completedTrails.push(trail.items[item])
                     }
-                    trail.items[item] = trail.items[item].itemID
+                    const itemData = trail.items[item].itemID
+                    const completionAt = trail.items[item].completionAt
+                    trail.items[item] = { itemData: itemData, completionAt }
                 }
 
                 data = {
@@ -186,7 +189,6 @@ const TrackingController = {
                 }
                 processedTrailsWithTracking.push(data)
             }
-
             _messages.success(res, req, { allItems, processedTrailsWithTracking })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'tracking', 'list')

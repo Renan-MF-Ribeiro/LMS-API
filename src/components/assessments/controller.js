@@ -80,6 +80,28 @@ module.exports = {
         }
     },
 
+    async returnEvaluationWithDetails (req, res) {
+        try {
+            const { id } = req.params
+            const { userId } = req.query
+            const { idEvaluation } = await Item.findOne({ _id: { $eq: id } }, 'idEvaluation')
+            const historicEvaluation = await HistoricEvaluation.find({ user: { $eq: userId }, idEvaluation: { $eq: idEvaluation } }).populate('questions')
+            const allAttempts = []
+            for(let eval of historicEvaluation){
+                const attempt = {
+                    score: (100 * eval.amountQuestionsCorrect) / eval.amountOfQuestions,
+                    evalStart: eval.createdAt,
+                    evalEnd: eval.updatedAt,    
+                    answers: eval.answers,
+                }
+                allAttempts.push(attempt)
+            }
+            _messages.success(res, req, allAttempts)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'returnEvaluation')
+        }
+    },
+
     async getAllEvaluations (req, res) {
         try {
             const { skip, limit } = _functions.pagination(req)

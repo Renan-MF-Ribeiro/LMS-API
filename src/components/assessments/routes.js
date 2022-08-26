@@ -41,6 +41,7 @@ router
     .post('/countdown-evaluation', isStudent, _controller.countdownEvaluation)
     .post('/finalize-evaluation', isStudent, _controller.finalizeEvaluation)
     .put('/', isAccountant, _controller.updateEvaluation)
+    .get('/evaluation-details/:id', _controller.returnEvaluationWithDetails)
     .get('/check-evaluation-started/:idItem/:id', isStudent, _controller.checkEvaluationStarted)
     .get('/start-evaluation/:idItem/:id', isStudent, _controller.startEvaluation)
     .get('/next-question/:id', isStudent, _controller.nextQuestion)
