@@ -1,5 +1,6 @@
 /* eslint-disable handle-callback-err */
 require('dotenv').config()
+const mongoose = require('mongoose')
 const { CLIENT_ID, DOMAIN, AZURE_BLOB_URL, NODE_ENV } = process.env
 const _messages = require('../../utils/messages')
 const _files = require('../../utils/files')
@@ -8,6 +9,8 @@ const {
     User,
     UserTest,
     Block,
+    userSchema,
+    userProjection,
 } = require('./model')
 
 const {
@@ -33,7 +36,6 @@ const {
     sendUpdatedDeviceIdToMessenger,
     createWelcomeCampaign,
     returnDateSinceFirstLogin,
-    validateBody,
 } = require('./business')
 
 const {
@@ -68,9 +70,17 @@ const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadshe
 const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail
 
 module.exports = {
+    temp (req, res) {
+        const paths = userSchema.paths
+        const keys = Object.keys(paths)
+        const requiredOnes = keys.filter(prop => !!paths[prop].options.required).map(prop => ({ [prop]: paths[prop] }))
+
+        return _messages.success(res, req, { paths: requiredOnes })
+    },
     async create (req, res) {
         try {
-            const userValue = await validateBody(req.body)
+            const userValue = new User(req.body)
+            await userValue.validate()
             const processedUser = processUsersLoad(userValue)
             const userFound = await User.findOne({
                 $or: [
@@ -90,47 +100,29 @@ module.exports = {
                 )
             }
 
-            const {
-                name,
-                cpf,
-                email,
-                networkLogin,
-                groupsAD,
-                classGroups,
-                enabled,
-                acceptTerms,
-                averageRating,
-                numberTrailsCompleted,
-                numberTrailsElegibles,
-                status,
-                birthDate,
-                admission,
-                tags,
-            } = await User.create(processedUser)
+            await User.create(processedUser)
+            const created = await User.findOne(
+                { cpf: processedUser.cpf },
+                { ...userProjection },
+            )
 
-            return _messages.success(res, req, {
-                name,
-                cpf,
-                email,
-                networkLogin,
-                groupsAD,
-                classGroups,
-                enabled,
-                acceptTerms,
-                averageRating,
-                numberTrailsCompleted,
-                numberTrailsElegibles,
-                status,
-                birthDate,
-                admission,
-                tags,
-            })
+            return _messages.success(res, req, created)
         } catch (error) {
+            let validationErrorKeys
+            let validationError
+
+            if (error instanceof mongoose.Error.ValidationError) {
+                validationErrorKeys = Object.keys(error.errors)
+                validationError = validationErrorKeys.map(
+                    key => ({ [key]: error.errors[key].properties }),
+                )
+            }
+
             return _messages.internalServer(
                 res,
                 req,
-                !error.details ? 'Internal Server Error' : error.details[0].message,
-                { error: !error.details ? 'Internal Server Error' : error.details[0].message.replace(/"/g, "'") },
+                !validationError ? 'Internal Server Error' : 'Validation Error',
+                { error: !validationError ? 'Internal Server Error' : validationError },
                 'users',
                 'create',
             )
@@ -1028,40 +1020,41 @@ module.exports = {
             const { skip, limit } = pagination(req)
             const { order, sort } = ordernation(req)
             const searchBy = req.query.searchBy
-            
+
             const collaborativeUsers = await User
-                .find(searchBy ? { 
+                .find(searchBy ? {
                     $and: [
                         {
-                            groupsAD: { $in: ['PERFIL_Colaborador'] } 
+                            groupsAD: { $in: ['PERFIL_Colaborador'] },
                         },
-                        {   
-                            $or : [{ name: { $regex: searchBy, $options: 'i' } },
-                                    { registration: { $regex: searchBy, $options: 'i' } },
-                                    { email: { $regex: searchBy, $options: 'i' } }]
-                        }
-                    ]
-                    } : {groupsAD: { $in: ['PERFIL_Colaborador'] } })
+                        {
+                            $or: [{ name: { $regex: searchBy, $options: 'i' } },
+                                { registration: { $regex: searchBy, $options: 'i' } },
+                                { email: { $regex: searchBy, $options: 'i' } }],
+                        },
+                    ],
+                } : { groupsAD: { $in: ['PERFIL_Colaborador'] } })
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
 
             const total = await User
-                .countDocuments(searchBy ? { 
+                .countDocuments(searchBy ? {
                     $and: [
                         {
-                            groupsAD: { $in: ['PERFIL_Colaborador'] } 
+                            groupsAD: { $in: ['PERFIL_Colaborador'] },
                         },
                         {
-                            $or : [{ name: { $regex: searchBy, $options: 'i' } },
-                                    { registration: { $regex: searchBy, $options: 'i' } },
-                                    { email: { $regex: searchBy, $options: 'i' } }]
-                        }
-                        ]} : {groupsAD: { $in: ['PERFIL_Colaborador'] } })
+                            $or: [{ name: { $regex: searchBy, $options: 'i' } },
+                                { registration: { $regex: searchBy, $options: 'i' } },
+                                { email: { $regex: searchBy, $options: 'i' } }],
+                        },
+                    ],
+                } : { groupsAD: { $in: ['PERFIL_Colaborador'] } })
 
             _messages.success(res, req, {
                 data: collaborativeUsers,
-                total
+                total,
             })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor')

@@ -34,13 +34,13 @@ const optionsSchema = {
 
 const userSchema = new mongoose.Schema({
     createDate: { type: String, trim: true },
-    cpf: { type: String, trim: true },
+    cpf: { type: String, required: true, trim: true },
     birthDate: { type: String, trim: true },
     admission: { type: String, trim: true },
     registration: { type: String, trim: true },
     company: { type: String, trim: true },
-    name: { type: String, trim: true },
-    email: { type: String, trim: true },
+    name: { type: String, required: true, trim: true },
+    email: { type: String, required: true, trim: true },
     gender: { type: String, trim: true },
     pcd: { type: String, trim: true },
     manager: { type: String, trim: true },
@@ -56,7 +56,7 @@ const userSchema = new mongoose.Schema({
     state: { type: String, trim: true },
     city: { type: String, trim: true },
     timeFunction: { type: String, trim: true },
-    status: { type: String, trim: true },
+    status: { type: String, trim: true, default: 'ATIVO' },
     tags: { type: Array, default: [] },
     roles: { type: String, trim: true },
     networkLogin: { type: String, trim: true },
@@ -154,6 +154,24 @@ const mapUser = {
     PAPEL: 'roles',
 }
 
+const userProjection = {
+    name: 1,
+    cpf: 1,
+    email: 1,
+    networkLogin: 1,
+    groupsAD: 1,
+    classGroups: 1,
+    enabled: 1,
+    acceptTerms: 1,
+    averageRating: 1,
+    numberTrailsCompleted: 1,
+    numberTrailsElegibles: 1,
+    status: 1,
+    birthDate: 1,
+    admission: 1,
+    tags: 1,
+}
+
 const User = mongoose.model('users', userSchema)
 const UserTest = mongoose.model('users_test', userTestSchema)
 // const UserVolume = mongoose.model('users_volume', userSchemaVolume)
@@ -169,4 +187,6 @@ module.exports = {
     mapUser,
     Block,
     LastLogin,
+    userSchema,
+    userProjection,
 }
