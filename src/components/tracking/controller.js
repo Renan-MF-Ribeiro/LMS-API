@@ -177,9 +177,7 @@ const TrackingController = {
                     if(trail.items[item].itemID.completion) {
                         completedTrails.push(trail.items[item])
                     }
-                    const itemData = trail.items[item].itemID
-                    const completionAt = trail.items[item].completionAt
-                    trail.items[item] = { itemData: itemData, completionAt }
+                    trail.items[item] = trail.items[item].itemID
                 }
 
                 data = {

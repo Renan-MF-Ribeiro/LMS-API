@@ -37,6 +37,7 @@ const ItemSchema = new mongoose.Schema({
     thumbPath: { type: String, get: pathResolver, required: ifEnabled, default: '' },
     deleted: { type: Number, default: 0 },
     completion: { type: Number, default: null },
+    completionAt: { type: Date, default: null, required: false },
     descriptionEvaluation: { type: String },
     author: { type: 'ObjectId', ref: 'users', required: true },
     collaborative: { type: Boolean, default: false },
