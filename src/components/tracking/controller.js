@@ -185,6 +185,8 @@ const TrackingController = {
                 data = {
                     trailName: trail.title,
                     items: trail.items,
+                    trailConclusionDate: trail.completionAt,
+                    lastTrackingUpdate: trail.lastTrackingUpdate,
                     trailConclusionPercent: (100 * completedTrails.length) / allItems,
                 }
                 processedTrailsWithTracking.push(data)

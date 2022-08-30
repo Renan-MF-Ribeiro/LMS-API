@@ -321,6 +321,7 @@ module.exports = {
         let containsACompletedItem = false
         const completionDate = []
         const scoreArr = []
+        let lastTrackingUpdate
 
         for (const item of trail.items) {
             const objTracking = allTrackingUser.filter(obj => {
@@ -328,7 +329,7 @@ module.exports = {
                     return true
                 }
             })[0]
-
+            lastTrackingUpdate = objTracking ? objTracking.updatedAt : null
             const completionAt = objTracking ? objTracking.completionAt : null
             item.completionAt = completionAt
             completionDate.push(completionAt)
@@ -372,6 +373,7 @@ module.exports = {
         var mostRecentDate = new Date(Math.max.apply(null, completionDate.map(e => {
             return new Date(e)
         })))
+        trail.lastTrackingUpdate = lastTrackingUpdate
         trail.completionAt = mostRecentDate
         trail.completion = getTrailCompletion(trail)
         return { trail, containsACompletedItem }
