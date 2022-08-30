@@ -169,23 +169,26 @@ const TrackingController = {
             }
 
             for(let v of trailsWithTracking){
-                const trail = v.trail
+                let trail = v.trail
                 const completedTrails = []
                 allItems = trail.items.length
                 
                 for(let item in trail.items){
+
                     if(trail.items[item].itemID.completion) {
                         completedTrails.push(trail.items[item])
                     }
+
                     trail.items[item] = trail.items[item].itemID
+                    console.log(trail.items[item].completion)
                 }
 
                 data = {
                     trailName: trail.title,
                     items: trail.items,
-                    trailConclusionDate: trail.completionAt,
-                    lastTrackingUpdate: trail.lastTrackingUpdate,
-                    trailConclusionPercent: (100 * completedTrails.length) / allItems,
+                    completionAt: trail.completionAt,
+                    updatedAt: trail.lastTrackingUpdate,
+                    completion: (100 * completedTrails.length) / allItems,
                 }
                 processedTrailsWithTracking.push(data)
             }
