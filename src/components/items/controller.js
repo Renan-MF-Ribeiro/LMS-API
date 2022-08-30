@@ -134,7 +134,7 @@ const ItemController = {
                             enabled: true,
                             endDate: item.endDate,
                             highlighted: false,
-                            isSequenceEnabled: false,
+                            isSequenceEnabled: 'NONE',
                             items: [
                                 {
                                     itemID: item._id,

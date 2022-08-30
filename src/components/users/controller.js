@@ -1,5 +1,6 @@
 /* eslint-disable handle-callback-err */
 require('dotenv').config()
+const mongoose = require('mongoose')
 const { CLIENT_ID, DOMAIN, AZURE_BLOB_URL, NODE_ENV } = process.env
 const _messages = require('../../utils/messages')
 const _files = require('../../utils/files')
@@ -8,6 +9,8 @@ const {
     User,
     UserTest,
     Block,
+    userSchema,
+    userProjection,
 } = require('./model')
 
 const {
@@ -67,12 +70,62 @@ const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadshe
 const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail
 
 module.exports = {
+    temp (req, res) {
+        const paths = userSchema.paths
+        const keys = Object.keys(paths)
+        const requiredOnes = keys.filter(prop => !!paths[prop].options.required).map(prop => ({ [prop]: paths[prop] }))
+
+        return _messages.success(res, req, { paths: requiredOnes })
+    },
     async create (req, res) {
         try {
-            const { _id } = await User.create(req.body)
-            _messages.success(res, req, { _id })
+            const userValue = new User(req.body)
+            await userValue.validate()
+            const processedUser = processUsersLoad(userValue)
+            const userFound = await User.findOne({
+                $or: [
+                    { cpf: processedUser.cpf },
+                    { email: processedUser.email },
+                    { networkLogin: processedUser.networkLogin },
+                ],
+            })
+
+            if (userFound) {
+                return _messages.forbidden(
+                    res,
+                    req,
+                    'User already exists',
+                    { error: 'User already exists' },
+                    'users', 'create',
+                )
+            }
+
+            await User.create(processedUser)
+            const created = await User.findOne(
+                { cpf: processedUser.cpf },
+                { ...userProjection },
+            )
+
+            return _messages.success(res, req, created)
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'create')
+            let validationErrorKeys
+            let validationError
+
+            if (error instanceof mongoose.Error.ValidationError) {
+                validationErrorKeys = Object.keys(error.errors)
+                validationError = validationErrorKeys.map(
+                    key => ({ [key]: error.errors[key].properties }),
+                )
+            }
+
+            return _messages.internalServer(
+                res,
+                req,
+                !validationError ? 'Internal Server Error' : 'Validation Error',
+                { error: !validationError ? 'Internal Server Error' : validationError },
+                'users',
+                'create',
+            )
         }
     },
 
@@ -674,7 +727,7 @@ module.exports = {
 
     async updateUser (req, res) {
         try {
-            const { _id, tags } = req.body
+            const { _id, email, cpf, tags } = req.body
             const user = await User.findOne({
                 _id: { $eq: _id },
             })
@@ -691,8 +744,22 @@ module.exports = {
                     }
                 }
             }
-            await User.findByIdAndUpdate(_id, req.body)
-            _messages.success(res, req, 'Atualizado com sucesso')
+
+            if (await User.findOne({
+                $or: [
+                    { _id: { $ne: _id }, cpf: { $eq: cpf } },
+                    { _id: { $ne: _id }, email: { $eq: email } },
+                ],
+            })) {
+                return _messages.internalServer(
+                    res,
+                    req,
+                    'CPF ou email informado já está sendo utilizado',
+                    'Erro interno no servidor',
+                    'users',
+                    'updateUser',
+                )
+            }
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'updateUser')
         }
@@ -953,40 +1020,41 @@ module.exports = {
             const { skip, limit } = pagination(req)
             const { order, sort } = ordernation(req)
             const searchBy = req.query.searchBy
-            
+
             const collaborativeUsers = await User
-                .find(searchBy ? { 
+                .find(searchBy ? {
                     $and: [
                         {
-                            groupsAD: { $in: ['PERFIL_Colaborador'] } 
+                            groupsAD: { $in: ['PERFIL_Colaborador'] },
                         },
-                        {   
-                            $or : [{ name: { $regex: searchBy, $options: 'i' } },
-                                    { registration: { $regex: searchBy, $options: 'i' } },
-                                    { email: { $regex: searchBy, $options: 'i' } }]
-                        }
-                    ]
-                    } : {groupsAD: { $in: ['PERFIL_Colaborador'] } })
+                        {
+                            $or: [{ name: { $regex: searchBy, $options: 'i' } },
+                                { registration: { $regex: searchBy, $options: 'i' } },
+                                { email: { $regex: searchBy, $options: 'i' } }],
+                        },
+                    ],
+                } : { groupsAD: { $in: ['PERFIL_Colaborador'] } })
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
 
             const total = await User
-                .countDocuments(searchBy ? { 
+                .countDocuments(searchBy ? {
                     $and: [
                         {
-                            groupsAD: { $in: ['PERFIL_Colaborador'] } 
+                            groupsAD: { $in: ['PERFIL_Colaborador'] },
                         },
                         {
-                            $or : [{ name: { $regex: searchBy, $options: 'i' } },
-                                    { registration: { $regex: searchBy, $options: 'i' } },
-                                    { email: { $regex: searchBy, $options: 'i' } }]
-                        }
-                        ]} : {groupsAD: { $in: ['PERFIL_Colaborador'] } })
+                            $or: [{ name: { $regex: searchBy, $options: 'i' } },
+                                { registration: { $regex: searchBy, $options: 'i' } },
+                                { email: { $regex: searchBy, $options: 'i' } }],
+                        },
+                    ],
+                } : { groupsAD: { $in: ['PERFIL_Colaborador'] } })
 
             _messages.success(res, req, {
                 data: collaborativeUsers,
-                total
+                total,
             })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor')
@@ -1185,12 +1253,12 @@ module.exports = {
         }
     },
 
-    async getAllConteudistas(req, res){
+    async getAllConteudistas (req, res) {
         try {
             const users = await User.find({ groupsAD: { $in: ['PERFIL_Conteudista'] } })
             _messages.success(res, req, users)
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'conteudistas')
         }
-    }
+    },
 }

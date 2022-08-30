@@ -51,7 +51,7 @@ const TrailSchema = new mongoose.Schema({
     tags: { type: Array },
     completion: { type: Number, default: null },
     certificate: { type: Number, default: 0 },
-    isSequenceEnabled: { type: Boolean, default: false, required: true },
+    isSequenceEnabled: { type: String, enum: ['NONE', 'ALL', 'EXAME'], default: 'NONE', required: true },
     createdAt: { type: Date },
     updatedAt: { type: Date },
     externalPlayer: { type: Boolean, default: false },
