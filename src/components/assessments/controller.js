@@ -94,13 +94,13 @@ module.exports = {
             const objHistoricEvaluation = JSON.parse(JSON.stringify(historicEvaluation))
             const allAttempts = []
             for(let evaluation of objHistoricEvaluation){
-                let questionObj
-                let alternativeObj
+                let questionObj = {}
                 let questions = []
-                let alternatives = []
 
                 for(let question of evaluation.questions){
                     let correctAnswerWasGiven = false;
+                    let alternatives = []
+                    let alternativeObj = {}
 
                     for(let answer of evaluation.answers){
                         const indexOfAnswer = question.alternatives.findIndex(v => {
@@ -112,17 +112,19 @@ module.exports = {
                         if(indexOfAnswer > -1){
                             question.alternatives[indexOfAnswer].isUserGuess = true
                         }
-                        question.alternatives.map(v=>{
-                            alternativeObj = {
-                                _id: v._id,
-                                description: v.description,
-                                idQuestion: v.idQuestion,
-                                correct: v.correct,
-                                isUserGuess: v.isUserGuess,
-                            }
-                            alternatives.push(alternativeObj)
-                        })
                     }
+                
+                    question.alternatives.map(v=>{
+                        alternativeObj = {
+                            _id: v._id,
+                            description: v.description,
+                            idQuestion: v.idQuestion,
+                            correct: v.correct,
+                            isUserGuess: v.isUserGuess,
+                        }
+                        alternatives.push(alternativeObj)
+                    })
+                    
                     questionObj = {
                         _id: question._id,
                         description: question.description,
