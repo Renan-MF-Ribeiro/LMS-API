@@ -162,6 +162,7 @@ const TrackingController = {
             .sort({ [order]: sort })
             .skip(parseInt(skip))
             .limit(parseInt(limit))
+            .lean()
         
             for(let trail of trails){
                 let processedTrail = processTrailTracking(trail, allTrackingUser)
@@ -172,20 +173,28 @@ const TrackingController = {
                 let trail = v.trail
                 const completedTrails = []
                 allItems = trail.items.length
+                let itemData
                 
                 for(let item in trail.items){
-
                     if(trail.items[item].itemID.completion) {
                         completedTrails.push(trail.items[item])
                     }
-
                     trail.items[item] = trail.items[item].itemID
-                    console.log(trail.items[item].completion)
+                    itemData = {
+                        completion: trail.items[item].completion === 1 ? true : false,
+                        completionAt: trail.items[item].completionAt,
+                        kind: trail.items[item].kind,
+                        _id: trail.items[item]._id,
+                        score: trail.items[item].score,
+                        createdAt: trail.items[item].createdAt,
+                        updatedAt: trail.items[item].updatedAt,
+                        title: trail.items[item].title,
+                    }
                 }
 
                 data = {
                     trailName: trail.title,
-                    items: trail.items,
+                    items: itemData,
                     completionAt: trail.completionAt,
                     updatedAt: trail.lastTrackingUpdate,
                     completion: (100 * completedTrails.length) / allItems,
