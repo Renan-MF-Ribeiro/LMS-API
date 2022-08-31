@@ -84,7 +84,8 @@ module.exports = {
         try {
             const { id } = req.params
             const { userId } = req.query
-            const historicEvaluation = await HistoricEvaluation.find({ user: { $eq: userId }, idEvaluation: { $eq: id } }).populate({
+            const { idEvaluation } = await Item.findOne({ _id: { $eq: id } }, 'idEvaluation')
+            const historicEvaluation = await HistoricEvaluation.find({ user: { $eq: userId }, idEvaluation: { $eq: idEvaluation } }).populate({
             path:'questions',			
             populate: { 
                 path:'alternatives',
@@ -136,10 +137,12 @@ module.exports = {
                     }
                     questions.push(questionObj)
                 }
+                console.log(evaluation)
                 const attempt = {
                     score: (100 * evaluation.amountQuestionsCorrect) / evaluation.amountOfQuestions,
                     evalStart: evaluation.createdAt,
                     evalEnd: evaluation.updatedAt,    
+                    passingScore: evaluation.passingScore,    
                     questions: questions
                 }
                 allAttempts.push(attempt)
