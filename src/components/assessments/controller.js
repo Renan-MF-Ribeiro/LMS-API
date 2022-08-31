@@ -100,8 +100,13 @@ module.exports = {
                 let alternatives = []
 
                 for(let question of evaluation.questions){
+                    let correctAnswerWasGiven = false;
+
                     for(let answer of evaluation.answers){
                         const indexOfAnswer = question.alternatives.findIndex(v => {
+                            if(!!answer.correct && !!v.correct){
+                                correctAnswerWasGiven = true;
+                            }
                             return String(v._id) == String(answer.idAlternative)
                         })
                         if(indexOfAnswer > -1){
@@ -118,11 +123,11 @@ module.exports = {
                             alternatives.push(alternativeObj)
                         })
                     }
-
                     questionObj = {
                         _id: question._id,
                         description: question.description,
                         idQuestion: question.idQuestion,
+                        correct: correctAnswerWasGiven,
                         alternatives: alternatives,
                     }
                     questions.push(questionObj)
