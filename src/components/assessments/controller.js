@@ -84,8 +84,7 @@ module.exports = {
         try {
             const { id } = req.params
             const { userId } = req.query
-            const { idEvaluation } = await Item.findOne({ _id: { $eq: id } }, 'idEvaluation')
-            const historicEvaluation = await HistoricEvaluation.find({ user: { $eq: userId }, idEvaluation: { $eq: idEvaluation } }).populate({
+            const historicEvaluation = await HistoricEvaluation.find({ user: { $eq: userId }, idEvaluation: { $eq: id } }).populate({
             path:'questions',			
             populate: { 
                 path:'alternatives',
@@ -119,9 +118,6 @@ module.exports = {
                             alternatives.push(alternativeObj)
                         })
                     }
-
-                    
-
 
                     questionObj = {
                         _id: question._id,
