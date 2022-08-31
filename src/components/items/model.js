@@ -41,6 +41,7 @@ const ItemSchema = new mongoose.Schema({
     descriptionEvaluation: { type: String },
     author: { type: 'ObjectId', ref: 'users', required: true },
     collaborative: { type: Boolean, default: false },
+    score: { type: Number, default: null, required: false },
     mobile: { type: Number, default: 1 },
     certificate: { type: Number, default: 0 },
     certificateLayout: { type: 'ObjectId' },

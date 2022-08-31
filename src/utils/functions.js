@@ -330,6 +330,7 @@ module.exports = {
                 }
             })[0]
             lastTrackingUpdate = objTracking ? objTracking.updatedAt : null
+            const score = objTracking && objTracking.score ? objTracking.score : null
             const completionAt = objTracking ? objTracking.completionAt : null
             item.completionAt = completionAt
             completionDate.push(completionAt)
@@ -353,6 +354,7 @@ module.exports = {
             }
 
             if(item.itemID){
+                item.itemID['score'] = score
                 item.itemID['completionAt'] = completionAt
                 item.itemID.completion = tmpCompletion
             }
