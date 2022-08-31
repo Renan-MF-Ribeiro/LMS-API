@@ -85,14 +85,57 @@ module.exports = {
             const { id } = req.params
             const { userId } = req.query
             const { idEvaluation } = await Item.findOne({ _id: { $eq: id } }, 'idEvaluation')
-            const historicEvaluation = await HistoricEvaluation.find({ user: { $eq: userId }, idEvaluation: { $eq: idEvaluation } }).populate('questions')
+            const historicEvaluation = await HistoricEvaluation.find({ user: { $eq: userId }, idEvaluation: { $eq: idEvaluation } }).populate({
+            path:'questions',			
+            populate: { 
+                path:'alternatives',
+                model: 'alternatives' 
+            }})
+            .lean()
+            const objHistoricEvaluation = JSON.parse(JSON.stringify(historicEvaluation))
             const allAttempts = []
-            for(let eval of historicEvaluation){
+            for(let evaluation of objHistoricEvaluation){
+                let questionObj
+                let alternativeObj
+                let questions = []
+                let alternatives = []
+
+                for(let question of evaluation.questions){
+                    for(let answer of evaluation.answers){
+                        const indexOfAnswer = question.alternatives.findIndex(v => {
+                            return String(v._id) == String(answer.idAlternative)
+                        })
+                        if(indexOfAnswer > -1){
+                            question.alternatives[indexOfAnswer].isUserGuess = true
+                        }
+                        question.alternatives.map(v=>{
+                            alternativeObj = {
+                                _id: v._id,
+                                description: v.description,
+                                idQuestion: v.idQuestion,
+                                correct: v.correct,
+                                isUserGuess: v.isUserGuess,
+                            }
+                            alternatives.push(alternativeObj)
+                        })
+                    }
+
+                    
+
+
+                    questionObj = {
+                        _id: question._id,
+                        description: question.description,
+                        idQuestion: question.idQuestion,
+                        alternatives: alternatives,
+                    }
+                    questions.push(questionObj)
+                }
                 const attempt = {
-                    score: (100 * eval.amountQuestionsCorrect) / eval.amountOfQuestions,
-                    evalStart: eval.createdAt,
-                    evalEnd: eval.updatedAt,    
-                    answers: eval.answers,
+                    score: (100 * evaluation.amountQuestionsCorrect) / evaluation.amountOfQuestions,
+                    evalStart: evaluation.createdAt,
+                    evalEnd: evaluation.updatedAt,    
+                    questions: questions
                 }
                 allAttempts.push(attempt)
             }
