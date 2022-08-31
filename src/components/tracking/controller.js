@@ -174,6 +174,7 @@ const TrackingController = {
                 const completedTrails = []
                 allItems = trail.items.length
                 let itemData
+                let itemDataArr
                 
                 for(let item in trail.items){
                     if(trail.items[item].itemID.completion) {
@@ -190,11 +191,12 @@ const TrackingController = {
                         updatedAt: trail.items[item].updatedAt,
                         title: trail.items[item].title,
                     }
+                    itemDataArr.push(itemData)
                 }
 
                 data = {
                     trailName: trail.title,
-                    items: itemData,
+                    items: itemDataArr,
                     completionAt: trail.completionAt,
                     updatedAt: trail.lastTrackingUpdate,
                     completion: (100 * completedTrails.length) / allItems,
