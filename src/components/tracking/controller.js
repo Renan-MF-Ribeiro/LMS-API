@@ -174,7 +174,7 @@ const TrackingController = {
                 const completedTrails = []
                 allItems = trail.items.length
                 let itemData
-                let itemDataArr
+                let itemDataArr = []
                 
                 for(let item in trail.items){
                     if(trail.items[item].itemID.completion) {
