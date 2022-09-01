@@ -373,7 +373,7 @@ module.exports = {
         trail.scoreAverage = scoreAverage
 
         var mostRecentDate = new Date(Math.max.apply(null, completionDate.map(e => {
-            return new Date(e)
+            if(e !== null) return new Date(e)
         })))
         trail.lastTrackingUpdate = lastTrackingUpdate
         trail.completionAt = mostRecentDate
