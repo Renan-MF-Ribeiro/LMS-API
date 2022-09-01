@@ -97,7 +97,7 @@ module.exports = {
             for(let evaluation of objHistoricEvaluation){
                 let questionObj = {}
                 let questions = []
-
+                
                 for(let question of evaluation.questions){
                     let correctAnswerWasGiven = false;
                     let alternatives = []
@@ -105,8 +105,9 @@ module.exports = {
                     let answerDate
                     for(let answer of evaluation.answers){
                         const indexOfAnswer = question.alternatives.findIndex(v => {
-                            if(!!answer.correct && !!v.correct){
-                                correctAnswerWasGiven = true;
+                            correctAnswerWasGiven = false;
+                            if(v.correct === true && answer.correct === true){
+                                correctAnswerWasGiven = v._id == answer.idAlternative ? true : false;
                             }
                             return String(v._id) == String(answer.idAlternative)
                         })
@@ -137,7 +138,6 @@ module.exports = {
                     }
                     questions.push(questionObj)
                 }
-                console.log(passingScore)
                 const attempt = {
                     score: (100 * evaluation.amountQuestionsCorrect) / evaluation.amountOfQuestions,
                     evalStart: evaluation.createdAt,
