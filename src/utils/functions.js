@@ -321,6 +321,7 @@ module.exports = {
         let containsACompletedItem = false
         const completionDate = []
         const scoreArr = []
+        let lastTrackingUpdate
 
         for (const item of trail.items) {
             const objTracking = allTrackingUser.filter(obj => {
@@ -328,8 +329,11 @@ module.exports = {
                     return true
                 }
             })[0]
-
+            lastTrackingUpdate = objTracking ? objTracking.updatedAt : null
+            const score = objTracking && objTracking.score ? objTracking.score : null
             const completionAt = objTracking ? objTracking.completionAt : null
+            const updatedAt = objTracking ? objTracking.updatedAt : null
+            const createdAt = objTracking ? objTracking.createdAt : null
             item.completionAt = completionAt
             completionDate.push(completionAt)
 
@@ -349,6 +353,14 @@ module.exports = {
                 if (objTracking && objTracking.kind === 'ExamTracking') {
                     scoreArr.push(objTracking.score)
                 }
+            }   
+
+            if(item.itemID){
+                item.itemID['score'] = score
+                item.itemID['completionAt'] = completionAt
+                item.itemID['updatedAt'] = updatedAt
+                item.itemID['createdAt'] = createdAt
+                item.itemID.completion = tmpCompletion
             }
 
             item.completion = tmpCompletion
@@ -365,8 +377,9 @@ module.exports = {
         trail.scoreAverage = scoreAverage
 
         var mostRecentDate = new Date(Math.max.apply(null, completionDate.map(e => {
-            return new Date(e)
+            if(e !== null) return new Date(e)
         })))
+        trail.lastTrackingUpdate = lastTrackingUpdate
         trail.completionAt = mostRecentDate
         trail.completion = getTrailCompletion(trail)
         return { trail, containsACompletedItem }
