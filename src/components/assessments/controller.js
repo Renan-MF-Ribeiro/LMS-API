@@ -103,18 +103,18 @@ module.exports = {
                     let alternatives = []
                     let alternativeObj = {}
                     let answerDate
+                    let indexOfAnswer
                     for(let answer of evaluation.answers){
-                        const indexOfAnswer = question.alternatives.findIndex(v => {
-                            correctAnswerWasGiven = false;
-                            if(v.correct === true && answer.correct === true){
-                                correctAnswerWasGiven = v._id == answer.idAlternative ? true : false;
-                            }
+                        indexOfAnswer = question.alternatives.findIndex(v => {
                             return String(v._id) == String(answer.idAlternative)
                         })
                         if(indexOfAnswer > -1){
                             answerDate = answer.createdAt
                             question.alternatives[indexOfAnswer].isUserGuess = true
                         }
+                        question.alternatives.map(v => {
+                            correctAnswerWasGiven = v.isUserGuess && v.isUserGuess === v.correct ? true : false;
+                        })
                     }
                 
                     question.alternatives.map(v=>{
