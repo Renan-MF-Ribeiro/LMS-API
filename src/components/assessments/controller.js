@@ -109,7 +109,7 @@ module.exports = {
                             return String(v._id) == String(answer.idAlternative)
                         })
                         if(indexOfAnswer > -1){
-                            answerDate = new Date(answer.createdAt)
+                            answerDate = new Date(answer.createdAt + 'Z')
                             question.alternatives[indexOfAnswer].isUserGuess = true
                         }
                         question.alternatives.map(v => {
