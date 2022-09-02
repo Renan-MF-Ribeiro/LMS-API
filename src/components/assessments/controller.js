@@ -85,7 +85,7 @@ module.exports = {
             const { id } = req.params
             const { userId } = req.query
             const { idEvaluation, passingScore } = await Item.findOne({ _id: { $eq: id } })
-            const historicEvaluation = await HistoricEvaluation.find({ user: { $eq: userId }, idEvaluation: { $eq: idEvaluation } }).populate({
+            const historicEvaluation = await HistoricEvaluation.find({ user: { $eq: userId }, idEvaluation: { $eq: idEvaluation }, item: { $eq: id }}).populate({
             path:'questions',			
             populate: { 
                 path:'alternatives',
@@ -156,7 +156,6 @@ module.exports = {
     async getAllEvaluations (req, res) {
         try {
             const { skip, limit } = _functions.pagination(req)
-            const { order, sort } = _functions.ordernation(req)
             const searchBy = req.query.searchBy
 
             const total = await Evaluation.find(searchBy ? {
@@ -176,7 +175,6 @@ module.exports = {
                 } : {
                     deleted: { $eq: 0 },
                 })
-                .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
 
