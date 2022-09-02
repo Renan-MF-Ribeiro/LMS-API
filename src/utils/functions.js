@@ -332,6 +332,8 @@ module.exports = {
             lastTrackingUpdate = objTracking ? objTracking.updatedAt : null
             const score = objTracking && objTracking.score ? objTracking.score : null
             const completionAt = objTracking ? objTracking.completionAt : null
+            const updatedAt = objTracking ? objTracking.updatedAt : null
+            const createdAt = objTracking ? objTracking.createdAt : null
             item.completionAt = completionAt
             completionDate.push(completionAt)
 
@@ -351,11 +353,13 @@ module.exports = {
                 if (objTracking && objTracking.kind === 'ExamTracking') {
                     scoreArr.push(objTracking.score)
                 }
-            }
+            }   
 
             if(item.itemID){
                 item.itemID['score'] = score
                 item.itemID['completionAt'] = completionAt
+                item.itemID['updatedAt'] = updatedAt
+                item.itemID['createdAt'] = createdAt
                 item.itemID.completion = tmpCompletion
             }
 
