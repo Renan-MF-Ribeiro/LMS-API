@@ -80,10 +80,82 @@ module.exports = {
         }
     },
 
+    async returnEvaluationWithDetails (req, res) {
+        try {
+            const { id } = req.params
+            const { userId } = req.query
+            const { idEvaluation, passingScore } = await Item.findOne({ _id: { $eq: id } })
+            const historicEvaluation = await HistoricEvaluation.find({ user: { $eq: userId }, idEvaluation: { $eq: idEvaluation }, item: { $eq: id }}).populate({
+            path:'questions',			
+            populate: { 
+                path:'alternatives',
+                model: 'alternatives' 
+            }})
+            .lean()
+            const objHistoricEvaluation = JSON.parse(JSON.stringify(historicEvaluation))
+            const allAttempts = []
+            for(let evaluation of objHistoricEvaluation){
+                let questionObj = {}
+                let questions = []
+                
+                for(let question of evaluation.questions){
+                    let correctAnswerWasGiven = false;
+                    let alternatives = []
+                    let alternativeObj = {}
+                    let answerDate
+                    let indexOfAnswer
+                    for(let answer of evaluation.answers){
+                        indexOfAnswer = question.alternatives.findIndex(v => {
+                            return String(v._id) == String(answer.idAlternative)
+                        })
+                        if(indexOfAnswer > -1){
+                            answerDate = new Date(answer.createdAt + 'Z')
+                            question.alternatives[indexOfAnswer].isUserGuess = true
+                        }
+                        question.alternatives.map(v => {
+                            correctAnswerWasGiven = v.isUserGuess && v.isUserGuess === v.correct ? true : false;
+                        })
+                    }
+                
+                    question.alternatives.map(v=>{
+                        alternativeObj = {
+                            _id: v._id,
+                            description: v.description,
+                            idQuestion: v.idQuestion,
+                            correct: v.correct,
+                            isUserGuess: v.isUserGuess,
+                        }
+                        alternatives.push(alternativeObj)
+                    })
+
+                    questionObj = {
+                        _id: question._id,
+                        answerDate: answerDate,
+                        description: question.description,
+                        idQuestion: question.idQuestion,
+                        correct: correctAnswerWasGiven,
+                        alternatives: alternatives,
+                    }
+                    questions.push(questionObj)
+                }
+                const attempt = {
+                    score: (100 * evaluation.amountQuestionsCorrect) / evaluation.amountOfQuestions,
+                    evalStart: evaluation.createdAt,
+                    evalEnd: evaluation.updatedAt,    
+                    passingScore: passingScore,    
+                    questions: questions
+                }
+                allAttempts.push(attempt)
+            }
+            _messages.success(res, req, allAttempts)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'returnEvaluation')
+        }
+    },
+
     async getAllEvaluations (req, res) {
         try {
             const { skip, limit } = _functions.pagination(req)
-            const { order, sort } = _functions.ordernation(req)
             const searchBy = req.query.searchBy
 
             const total = await Evaluation.find(searchBy ? {
@@ -103,7 +175,6 @@ module.exports = {
                 } : {
                     deleted: { $eq: 0 },
                 })
-                .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
 

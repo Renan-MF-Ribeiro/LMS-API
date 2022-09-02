@@ -4,6 +4,8 @@ const { decodeToken } = require('../../utils/auth')
 
 const _messages = require('../../utils/messages')
 const { User } = require('../users/model')
+const { Trail } = require('../trails/model')
+const { processTrailTracking } = require('../../utils/functions')
 const { Tracking, DocumentTracking, MediaTracking, AudioTracking, SCORMTracking, ExamTracking, SCORMTrackingHistory, SCORMLessonStatus, EventTracking } = require('./model')
 const { HistoricEvaluation } = require('../assessments/model')
 
@@ -139,20 +141,80 @@ const TrackingController = {
             const { skip, limit } = pagination(req)
             const { order, sort } = ordernation(req)
 
-            const { userLogin } = req.query
-            const query = { userLogin }
+            const { userLogin, searchBy } = req.query
 
-            const [total, data] = await Promise.all([
-                Tracking.countDocuments(query),
-                Tracking
-                    .find(query)
-                    .populate('item', 'title')
-                    .sort({ [order]: sort })
-                    .skip(parseInt(skip))
-                    .limit(parseInt(limit)),
-            ])
+            let trailsWithTracking = []
+            let processedTrailsWithTracking = []
+            let allItems = 0
+            let data
 
-            _messages.success(res, req, { total, data })
+            const allTrackingUser = await Tracking.find({
+                userLogin: { $eq: userLogin },
+            })
+
+            const query = searchBy ? {
+                $or: [
+                    { title: { $regex: searchBy, $options: 'i' } },
+                ],
+                "items.itemID": { $in: allTrackingUser.map(v => v.item) }
+            } : {
+                "items.itemID": { $in: allTrackingUser.map(v => v.item) }
+            }
+
+            const totalTrails = await Trail.countDocuments(query)
+
+            const trails = await Trail.find(query).populate({
+                path:'items',			
+                populate: { 
+                    path:'itemID',
+                    model: 'Item' 
+                }
+            })
+            .sort({ [order]: sort })
+            .skip(parseInt(skip))
+            .limit(parseInt(limit))
+            .lean()
+        
+            for(let trail of trails){
+                let processedTrail = processTrailTracking(trail, allTrackingUser)
+                trailsWithTracking.push(processedTrail)
+            }
+
+            for(let v of trailsWithTracking){
+                let trail = v.trail
+                const completedTrails = []
+                allItems = trail.items.length
+                let itemData
+                let itemDataArr = []
+                
+                for(let item in trail.items){
+                    if(trail.items[item].itemID.completion) {
+                        completedTrails.push(trail.items[item])
+                    }
+                    trail.items[item] = trail.items[item].itemID
+                    itemData = {
+                        completion: trail.items[item].completion === 1 ? true : false,
+                        completionAt: trail.items[item].completionAt,
+                        kind: trail.items[item].kind,
+                        _id: trail.items[item]._id,
+                        score: trail.items[item].score,
+                        createdAt: trail.items[item].createdAt,
+                        updatedAt: trail.items[item].updatedAt,
+                        title: trail.items[item].title,
+                    }
+                    itemDataArr.push(itemData)
+                }
+
+                data = {
+                    trailName: trail.title,
+                    items: itemDataArr,
+                    completionAt: trail.completionAt,
+                    updatedAt: trail.lastTrackingUpdate,
+                    completion: (100 * completedTrails.length) / allItems,
+                }
+                processedTrailsWithTracking.push(data)
+            }
+            _messages.success(res, req, { totalTrails, processedTrailsWithTracking })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'tracking', 'list')
         }
