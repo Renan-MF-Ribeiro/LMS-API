@@ -141,7 +141,7 @@ const TrackingController = {
             const { skip, limit } = pagination(req)
             const { order, sort } = ordernation(req)
 
-            const { userLogin } = req.query
+            const { userLogin, searchBy } = req.query
 
             let trailsWithTracking = []
             let processedTrailsWithTracking = []
@@ -152,7 +152,18 @@ const TrackingController = {
                 userLogin: { $eq: userLogin },
             })
 
-            const trails = await Trail.find({"items.itemID": { $in: allTrackingUser.map(v => v.item) }}).populate({
+            const query = searchBy ? {
+                $or: [
+                    { title: { $regex: searchBy, $options: 'i' } },
+                ],
+                "items.itemID": { $in: allTrackingUser.map(v => v.item) }
+            } : {
+                "items.itemID": { $in: allTrackingUser.map(v => v.item) }
+            }
+
+            const totalTrails = await Trail.countDocuments(query)
+
+            const trails = await Trail.find(query).populate({
                 path:'items',			
                 populate: { 
                     path:'itemID',
@@ -203,7 +214,7 @@ const TrackingController = {
                 }
                 processedTrailsWithTracking.push(data)
             }
-            _messages.success(res, req, { allItems, processedTrailsWithTracking })
+            _messages.success(res, req, { totalTrails, processedTrailsWithTracking })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'tracking', 'list')
         }
