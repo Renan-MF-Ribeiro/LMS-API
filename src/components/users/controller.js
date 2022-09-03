@@ -70,17 +70,11 @@ const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadshe
 const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail
 
 module.exports = {
-    temp (req, res) {
-        const paths = userSchema.paths
-        const keys = Object.keys(paths)
-        const requiredOnes = keys.filter(prop => !!paths[prop].options.required).map(prop => ({ [prop]: paths[prop] }))
-
-        return _messages.success(res, req, { paths: requiredOnes })
-    },
     async create (req, res) {
         try {
             const userValue = new User(req.body)
             await userValue.validate()
+
             const processedUser = processUsersLoad(userValue)
             const userFound = await User.findOne({
                 $or: [
