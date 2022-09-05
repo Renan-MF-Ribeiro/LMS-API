@@ -13,14 +13,14 @@ resources:
 variables:
   # Container registry service connection established during pipeline creation
   name: "happlearning"
-  dockerRegistryServiceConnection: "84aab9b3-fcd3-410b-b505-931bb62751c0"
+  dockerRegistryServiceConnection: "75b53dae-446c-4ffe-92f5-6d232b74b91e"
   # devRunningPort: "3009"
   stagingRunningPort: "3009"
   prodRunningPort: "3009"
   imageRepositoryProd: "happlearning-backend-prod"
   imageRepositoryStaging: "happlearning-backend-staging"
   # imageRepositoryDev: "happlearning-backend-dev"
-  containerRegistry: "happlearning.azurecr.io"
+  containerRegistry: "happlearning2.azurecr.io"
   dockerfilePath: "$(Build.SourcesDirectory)/Dockerfile"
   tag: "latest"
 
@@ -33,8 +33,7 @@ stages:
     jobs:
       - job: Build
         displayName: Build
-        pool:
-          vmImage: $(vmImageName)
+        pool: SelfHostedAgentPool
         steps:
           # - task: DownloadSecureFile@1
           #   displayName: "Download secure file"
@@ -61,11 +60,11 @@ stages:
           #   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/development'))
           - task: CmdLine@2
             inputs:
-              script: "mv $(dotenvstaging.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
+              script: "move $(dotenvstaging.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
           - task: CmdLine@2
             inputs:
-              script: "mv $(dotenvprod.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
+              script: "move $(dotenvprod.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
           # - task: Docker@2
           #   displayName: Build and push an image to container registry
