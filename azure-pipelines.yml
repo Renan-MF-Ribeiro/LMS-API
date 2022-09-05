@@ -12,15 +12,15 @@ resources:
 
 variables:
   # Container registry service connection established during pipeline creation
-  name: "happlearning"
-  dockerRegistryServiceConnection: "84aab9b3-fcd3-410b-b505-931bb62751c0"
+  name: "DockerRegistryHapplearning2"
+  dockerRegistryServiceConnection: "75b53dae-446c-4ffe-92f5-6d232b74b91e"
   # devRunningPort: "3009"
   stagingRunningPort: "3009"
   prodRunningPort: "3009"
   imageRepositoryProd: "happlearning-backend-prod"
   imageRepositoryStaging: "happlearning-backend-staging"
   # imageRepositoryDev: "happlearning-backend-dev"
-  containerRegistry: "happlearning.azurecr.io"
+  containerRegistry: "happlearning2.azurecr.io"
   dockerfilePath: "$(Build.SourcesDirectory)/Dockerfile"
   tag: "latest"
 
