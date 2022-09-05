@@ -33,8 +33,7 @@ stages:
     jobs:
       - job: Build
         displayName: Build
-        pool:
-          vmImage: $(vmImageName)
+        pool: SelfHostedAgentPool
         steps:
           # - task: DownloadSecureFile@1
           #   displayName: "Download secure file"
