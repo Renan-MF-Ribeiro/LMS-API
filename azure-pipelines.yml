@@ -12,7 +12,7 @@ resources:
 
 variables:
   # Container registry service connection established during pipeline creation
-  name: "DockerRegistryHapplearning2"
+  name: "happlearning"
   dockerRegistryServiceConnection: "75b53dae-446c-4ffe-92f5-6d232b74b91e"
   # devRunningPort: "3009"
   stagingRunningPort: "3009"
