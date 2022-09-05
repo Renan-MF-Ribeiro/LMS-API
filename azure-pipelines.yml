@@ -60,11 +60,11 @@ stages:
           #   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/development'))
           - task: CmdLine@2
             inputs:
-              script: "mv $(dotenvstaging.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
+              script: "move $(dotenvstaging.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
           - task: CmdLine@2
             inputs:
-              script: "mv $(dotenvprod.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
+              script: "move $(dotenvprod.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
           # - task: Docker@2
           #   displayName: Build and push an image to container registry
