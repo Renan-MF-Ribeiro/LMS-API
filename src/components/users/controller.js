@@ -721,7 +721,7 @@ module.exports = {
 
     async updateUser (req, res) {
         try {
-            const { _id, email, cpf, tags } = req.body
+            const { _id, email, cpf, tags, ...props } = req.body
             const user = await User.findOne({
                 _id: { $eq: _id },
             })
@@ -739,7 +739,7 @@ module.exports = {
                 }
             }
 
-            if (await User.findOne({
+            if (!!cpf && !!email && await User.findOne({
                 $or: [
                     { _id: { $ne: _id }, cpf: { $eq: cpf } },
                     { _id: { $ne: _id }, email: { $eq: email } },
@@ -754,6 +754,9 @@ module.exports = {
                     'updateUser',
                 )
             }
+
+            const updated = await User.findByIdAndUpdate(_id, { ...props }, { projection: { ...userProjection }})
+            _messages.success(res, req, updated, 'Usuário(a) atualizado com sucesso!')
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'updateUser')
         }
