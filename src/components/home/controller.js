@@ -1,6 +1,7 @@
 const _messages = require('../../utils/messages')
 const { Item } = require('../items/model')
 const { Tracking } = require('../tracking/model')
+const { Trail } = require('../trails/model')
 const { checkIfTheTrackIsValid } = require('../sections/business')
 const { User } = require('../users/model')
 const {
@@ -104,6 +105,8 @@ const ItemController = {
             const user = await getUserByToken(req)
             const courses = await getStudentCourses(req)
 
+            const allTrails = await Trail.countDocuments()
+
             const resultTrails = await trailsCompletedOrInProgress(req)
             const certificates = await returnCertificates(resultTrails.trailsCompleted, user)
             const { numberOfItemsCompleted, numberOfItemsInProgress, numberOfItemsNotStarted, numberOfItemsMandatoryNotStarted, numberOfItemsMandatoryCompleted, numberOfItemsMandatoryInProgress } = await getNumberOfItemsCompletedOrInProgressOrNotStarted(req)
@@ -138,6 +141,7 @@ const ItemController = {
                 averageGroupBRatings,
                 courses,
                 certificates,
+                allTrails,
             })
         } catch (error) {
             console.log(error)
