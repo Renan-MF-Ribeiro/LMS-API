@@ -112,12 +112,12 @@ module.exports = {
                             answerDate = new Date(answer.createdAt + 'Z')
                             question.alternatives[indexOfAnswer].isUserGuess = true
                         }
-                        question.alternatives.map(v => {
-                            correctAnswerWasGiven = v.isUserGuess && v.isUserGuess === v.correct ? true : false;
-                        })
                     }
-                
+                    
                     question.alternatives.map(v=>{
+                        if(v.isUserGuess){
+                            correctAnswerWasGiven = v.correct === v.isUserGuess ? true : false;
+                        }
                         alternativeObj = {
                             _id: v._id,
                             description: v.description,
