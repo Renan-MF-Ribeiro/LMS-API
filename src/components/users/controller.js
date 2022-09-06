@@ -739,7 +739,7 @@ module.exports = {
                 }
             }
 
-            if (!!cpf && !!email && await User.findOne({
+            if (cpf && email && await User.findOne({
                 $or: [
                     { _id: { $ne: _id }, cpf: { $eq: cpf } },
                     { _id: { $ne: _id }, email: { $eq: email } },
