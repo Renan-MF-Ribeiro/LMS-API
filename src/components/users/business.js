@@ -20,12 +20,10 @@ const { Log } = require('../logs/model')
 const bcrypt = require('bcryptjs')
 const _functions = require('../../utils/functions')
 const { Group } = require('../groups/model')
-const { CLIENT_ID, API_SURVEY } = process.env
+const { CLIENT_ID } = process.env
 const kafka = require('../../utils/kafka')
 const { Trail } = require('../trails/model')
-const { Item } = require('../items/model')
 const config = require('../../../config.json')
-const axios = require('axios')
 const { Tracking } = require('../tracking/model')
 const emailTemplate = config.messenger.emailTemplate
 require('dotenv').config()
@@ -254,7 +252,7 @@ module.exports = {
 
         const groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO']
 
-        const elegibility = [
+        const elegibility = !data.company && !data.office ? [] : [
             `ELEGE_${_functions.clearString(data.company)}`,
             `ELEGE_${_functions.clearString(data.office)}`,
         ]
