@@ -753,10 +753,10 @@ module.exports = {
             }))) {
                 const field =
                     found.email === email
-                        ? 'e-mail'
+                        ? 'E-MAIL'
                         : found.networkLogin === networkLogin
-                        ? 'login'
-                        : 'cpf'
+                        ? 'LOGIN'
+                        : 'CPF'
 
                 return _messages.internalServer(
                     res,
