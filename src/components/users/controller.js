@@ -744,6 +744,7 @@ module.exports = {
                 }
             }
 
+            let found
             if ((cpf || email || networkLogin) && (found = await User.findOne({
                 $or: [
                     { _id: { $ne: _id }, email: { $eq: email || undefined } },
