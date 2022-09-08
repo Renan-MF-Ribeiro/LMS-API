@@ -22,6 +22,7 @@ const {
     returnIdProfileUser,
     returnIdGroupUser,
     generateTokenAnalytics,
+    generateSASToken,
 } = require('../../utils/auth')
 
 const {
@@ -262,6 +263,8 @@ module.exports = {
                         clientID: CLIENT_ID,
                     })
 
+                    const SAS = generateSASToken();
+
                     await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups))
                     await updateLastLoginUser(user._id)
 
@@ -271,7 +274,7 @@ module.exports = {
                     var tk = tokenEncript.toString()
                     var key = login + ':' + password
                     key = cryptoJS.AES.encrypt(key, password).toString()
-                    _messages.success(res, req, { tk, key, accept: user.acceptTerms, acceptCollaboration: user.acceptTermsCollaboration, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
+                    _messages.success(res, req, { SAS, tk, key, accept: user.acceptTerms, acceptCollaboration: user.acceptTermsCollaboration, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
                 } else {
                     await sleep(3000)
                     _messages.forbidden(res, req, 'Usuário ou senha inválidos.', 'Usuário ou senha inválidos.', 'users', 'ldapSignIn')
@@ -370,6 +373,8 @@ module.exports = {
                         clientID: CLIENT_ID,
                     })
 
+                    const SAS = generateSASToken();
+
                     await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups))
                     await updateLastLoginUser(user._id)
 
@@ -379,7 +384,7 @@ module.exports = {
                     var tk = tokenEncript.toString()
                     key = cryptoJS.AES.encrypt(key, '25KP76yNnhiGH9bSj').toString()
 
-                    _messages.success(res, req, { tk, key, accept: user.acceptTerms, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
+                    _messages.success(res, req, { SAS, tk, key, accept: user.acceptTerms, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
                 } else {
                     await sleep(3000)
                     _messages.forbidden(res, req, 'Usuário ou senha inválidos.', 'Usuário ou senha inválidos.', 'users', 'ldapSignIn')
@@ -721,7 +726,7 @@ module.exports = {
 
     async updateUser (req, res) {
         try {
-            const { _id, email, cpf, tags, ...props } = req.body
+            const { _id, email, cpf, networkLogin, tags, ...props } = req.body
             const user = await User.findOne({
                 _id: { $eq: _id },
             })
@@ -739,26 +744,39 @@ module.exports = {
                 }
             }
 
-            if (cpf && email && await User.findOne({
+            if ((cpf || email || networkLogin) && (found = await User.findOne({
                 $or: [
-                    { _id: { $ne: _id }, cpf: { $eq: cpf } },
                     { _id: { $ne: _id }, email: { $eq: email } },
+                    { _id: { $ne: _id }, networkLogin: { $eq: networkLogin } },
+                    { _id: { $ne: _id }, cpf: { $eq: cpf } },
                 ],
-            })) {
+            }))) {
+                const field =
+                    found.email === email
+                        ? 'e-mail'
+                        : found.networkLogin === networkLogin
+                        ? 'login'
+                        : 'cpf'
+
                 return _messages.internalServer(
                     res,
                     req,
-                    'CPF ou email informado já está sendo utilizado',
                     'Erro interno no servidor',
+                    `O ${field} informado já está sendo utilizado`,
                     'users',
                     'updateUser',
                 )
             }
 
-            const updated = await User.findByIdAndUpdate(_id, { ...props }, { projection: { ...userProjection }})
-            _messages.success(res, req, updated, 'Usuário(a) atualizado com sucesso!')
+            const updated = await User.findByIdAndUpdate(
+                _id,
+                { cpf, email, networkLogin, tags, ...props },
+                { projection: { ...userProjection } }
+            )
+
+            return _messages.success(res, req, updated, 'Usuário(a) atualizado(a) com sucesso!')
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'updateUser')
+            return _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'updateUser')
         }
     },
 
@@ -962,8 +980,8 @@ module.exports = {
                     ref: body._id,
                     ...dataToken,
                 })
-
-                _messages.success(res, req, { token, accept: acceptTerms, numbers: result.token.numbers, name, profilePhoto })
+                const SAS = generateSASToken();
+                _messages.success(res, req, { SAS, token, accept: acceptTerms, numbers: result.token.numbers, name, profilePhoto })
             } else {
                 _messages.badRequest(res, req, 'Sem perfil vinculado', 'O usuário não possui algum perfil vinculado!', 'users', '/emulation')
             }
