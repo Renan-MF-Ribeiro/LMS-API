@@ -12,8 +12,10 @@ const {
     PROJECT_SECRET_KEY,
     LDAP_HOST,
     ANALYTICS_SECRET_KEY,
-    MONITORING_SECRET_KEY
+    MONITORING_SECRET_KEY,
+    AZURE_BLOBNAME, AZURE_ACCESSKEY
 } = process.env
+var storage = require("@azure/storage-blob")
 const {
     Profile,
 } = require('../components/profiles/model')
@@ -69,6 +71,22 @@ module.exports = {
         )
 
         return token
+    },
+    generateSASToken: () => {
+        //PUBLIC_PATH, UPLOADS_PATH, AZURE_STRINGCONN, AZURE_BLOBNAME, AZURE_ACCESSKEY
+        const credentials = new storage.StorageSharedKeyCredential(AZURE_BLOBNAME, AZURE_ACCESSKEY);
+        const containerName="lmsassets";
+        const blobSAS = storage.generateBlobSASQueryParameters({
+            containerName, 
+            AZURE_BLOBNAME, 
+            permissions: storage.BlobSASPermissions.parse("r"), 
+            startsOn: new Date(),
+            expiresOn: new Date(new Date().valueOf() + 86400)
+          },
+          credentials 
+        ).toString();
+
+        return blobSAS
     },
 
     decodeToken: token => {
