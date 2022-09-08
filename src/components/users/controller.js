@@ -741,9 +741,9 @@ module.exports = {
 
             if ((cpf || email || networkLogin) && (found = await User.findOne({
                 $or: [
-                    { _id: { $ne: _id }, email: { $eq: email } },
-                    { _id: { $ne: _id }, networkLogin: { $eq: networkLogin } },
-                    { _id: { $ne: _id }, cpf: { $eq: cpf } },
+                    { _id: { $ne: _id }, email: { $eq: email || undefined } },
+                    { _id: { $ne: _id }, networkLogin: { $eq: networkLogin || undefined } },
+                    { _id: { $ne: _id }, cpf: { $eq: cpf || undefined } },
                 ],
             }))) {
                 const field =
