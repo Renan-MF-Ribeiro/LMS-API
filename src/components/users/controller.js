@@ -967,8 +967,8 @@ module.exports = {
                     ref: body._id,
                     ...dataToken,
                 })
-
-                _messages.success(res, req, { token, accept: acceptTerms, numbers: result.token.numbers, name, profilePhoto })
+                const SAS = generateSASToken();
+                _messages.success(res, req, { SAS, token, accept: acceptTerms, numbers: result.token.numbers, name, profilePhoto })
             } else {
                 _messages.badRequest(res, req, 'Sem perfil vinculado', 'O usuário não possui algum perfil vinculado!', 'users', '/emulation')
             }
