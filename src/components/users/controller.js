@@ -721,7 +721,7 @@ module.exports = {
 
     async updateUser (req, res) {
         try {
-            const { _id, email, cpf, tags, ...props } = req.body
+            const { _id, email, cpf, networkLogin, tags, ...props } = req.body
             const user = await User.findOne({
                 _id: { $eq: _id },
             })
@@ -739,26 +739,39 @@ module.exports = {
                 }
             }
 
-            if (cpf && email && await User.findOne({
+            if ((cpf || email || networkLogin) && (found = await User.findOne({
                 $or: [
-                    { _id: { $ne: _id }, cpf: { $eq: cpf } },
                     { _id: { $ne: _id }, email: { $eq: email } },
+                    { _id: { $ne: _id }, networkLogin: { $eq: networkLogin } },
+                    { _id: { $ne: _id }, cpf: { $eq: cpf } },
                 ],
-            })) {
+            }))) {
+                const field =
+                    found.email === email
+                        ? 'e-mail'
+                        : found.networkLogin === networkLogin
+                        ? 'login'
+                        : 'cpf'
+
                 return _messages.internalServer(
                     res,
                     req,
-                    'CPF ou email informado já está sendo utilizado',
                     'Erro interno no servidor',
+                    `O ${field} informado já está sendo utilizado`,
                     'users',
                     'updateUser',
                 )
             }
 
-            const updated = await User.findByIdAndUpdate(_id, { ...props }, { projection: { ...userProjection }})
-            _messages.success(res, req, updated, 'Usuário(a) atualizado com sucesso!')
+            const updated = await User.findByIdAndUpdate(
+                _id,
+                { cpf, email, networkLogin, tags, ...props },
+                { projection: { ...userProjection } }
+            )
+
+            return _messages.success(res, req, updated, 'Usuário(a) atualizado(a) com sucesso!')
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'updateUser')
+            return _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'updateUser')
         }
     },
 
