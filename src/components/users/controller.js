@@ -22,6 +22,7 @@ const {
     returnIdProfileUser,
     returnIdGroupUser,
     generateTokenAnalytics,
+    generateSASToken,
 } = require('../../utils/auth')
 
 const {
@@ -262,6 +263,8 @@ module.exports = {
                         clientID: CLIENT_ID,
                     })
 
+                    const SAS = generateSASToken();
+
                     await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups))
                     await updateLastLoginUser(user._id)
 
@@ -271,7 +274,7 @@ module.exports = {
                     var tk = tokenEncript.toString()
                     var key = login + ':' + password
                     key = cryptoJS.AES.encrypt(key, password).toString()
-                    _messages.success(res, req, { tk, key, accept: user.acceptTerms, acceptCollaboration: user.acceptTermsCollaboration, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
+                    _messages.success(res, req, { SAS, tk, key, accept: user.acceptTerms, acceptCollaboration: user.acceptTermsCollaboration, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
                 } else {
                     await sleep(3000)
                     _messages.forbidden(res, req, 'Usuário ou senha inválidos.', 'Usuário ou senha inválidos.', 'users', 'ldapSignIn')
@@ -370,6 +373,8 @@ module.exports = {
                         clientID: CLIENT_ID,
                     })
 
+                    const SAS = generateSASToken();
+
                     await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups))
                     await updateLastLoginUser(user._id)
 
@@ -379,7 +384,7 @@ module.exports = {
                     var tk = tokenEncript.toString()
                     key = cryptoJS.AES.encrypt(key, '25KP76yNnhiGH9bSj').toString()
 
-                    _messages.success(res, req, { tk, key, accept: user.acceptTerms, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
+                    _messages.success(res, req, { SAS, tk, key, accept: user.acceptTerms, passwordValid: user.passwordValid, numbers: profilesIDS.numbers, name: user.name, profilePhoto: user.profilePhoto, tokenAnalytics: token_analytics, networkLogin: user.networkLogin, userId: user._id }, 'Sucesso ao logar', 'users', 'ldapSignIn', [], [], true, 'LOGIN', namesProfiles.concat(namesGroups))
                 } else {
                     await sleep(3000)
                     _messages.forbidden(res, req, 'Usuário ou senha inválidos.', 'Usuário ou senha inválidos.', 'users', 'ldapSignIn')
@@ -975,8 +980,8 @@ module.exports = {
                     ref: body._id,
                     ...dataToken,
                 })
-
-                _messages.success(res, req, { token, accept: acceptTerms, numbers: result.token.numbers, name, profilePhoto })
+                const SAS = generateSASToken();
+                _messages.success(res, req, { SAS, token, accept: acceptTerms, numbers: result.token.numbers, name, profilePhoto })
             } else {
                 _messages.badRequest(res, req, 'Sem perfil vinculado', 'O usuário não possui algum perfil vinculado!', 'users', '/emulation')
             }
