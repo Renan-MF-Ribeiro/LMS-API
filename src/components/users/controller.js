@@ -744,19 +744,20 @@ module.exports = {
                 }
             }
 
+            let found
             if ((cpf || email || networkLogin) && (found = await User.findOne({
                 $or: [
-                    { _id: { $ne: _id }, email: { $eq: email } },
-                    { _id: { $ne: _id }, networkLogin: { $eq: networkLogin } },
-                    { _id: { $ne: _id }, cpf: { $eq: cpf } },
+                    { _id: { $ne: _id }, email: { $eq: email || undefined } },
+                    { _id: { $ne: _id }, networkLogin: { $eq: networkLogin || undefined } },
+                    { _id: { $ne: _id }, cpf: { $eq: cpf || undefined } },
                 ],
             }))) {
                 const field =
                     found.email === email
-                        ? 'e-mail'
+                        ? 'E-MAIL'
                         : found.networkLogin === networkLogin
-                        ? 'login'
-                        : 'cpf'
+                        ? 'LOGIN'
+                        : 'CPF'
 
                 return _messages.internalServer(
                     res,
