@@ -16,7 +16,17 @@ const { error } = require('../../utils/logger')
 const _errors = require('../../utils/errors')
 const _messages = require('../../utils/messages')
 const _functions = require('../../utils/functions')
-const { Item, DocumentItem, MediaItem, SCORMItem, ExamItem, AudioItem, SoundcloudItem, EventItem } = require('./model')
+const {
+    Item,
+    DocumentItem,
+    MediaItem,
+    SCORMItem,
+    ExamItem,
+    AudioItem,
+    SoundcloudItem,
+    EventItem,
+    ActivityItem
+} = require('./model')
 const { Tracking } = require('../tracking/model')
 const {
     awsAmazon,
@@ -41,6 +51,7 @@ const ITEM_KINDS = Object.freeze({
     AudioItem: AudioItem,
     SoundcloudItem: SoundcloudItem,
     EventItem: EventItem,
+    ActivityItem: ActivityItem
 })
 
 const ItemController = {

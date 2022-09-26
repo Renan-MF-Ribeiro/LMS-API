@@ -89,6 +89,36 @@ const SCORMTrackingHistory = mongoose.model('SCORMTrackingHistory', new mongoose
     ...schemaOptions,
 }))
 
+const fileFormats = Object.freeze({
+    COMPACT_FILES: 'compact_files'
+})
+const activityLessonStatus = Object.freeze({
+    NOT_ATTEMPTED: 'not attempted',
+    INCOMPLETE: 'incomplete',
+    FAILED: 'failed',
+    PASSED: 'passed',
+})
+
+const ActivityTracking = Tracking.discriminator('ActivityTracking', new mongoose.Schema({
+    item: { type: 'ObjectId', ref: 'Item', required: true },
+    format: { type: String, enum: Object.values(fileFormats), default: fileFormats.COMPACT_FILES, required: true },
+    contentPath: { type: String, required: false  },
+    completion: { type: Number, min: 0, max: 1 },
+    score: { type: Number, min: 0, max: 100 },
+    reviewerComment: { type: String },
+    reviewer: { type: String },
+    sentAt: { type: [{ type: Date }] },
+    correctedAt: { type: [{ type: Date }] },
+    lessonStatus: {
+        type: String,
+        enum: Object.values(activityLessonStatus),
+        default: activityLessonStatus.NOT_ATTEMPTED,
+        required: true
+    }
+}, {
+    ...schemaOptions
+}))
+
 module.exports = {
     Tracking,
     DocumentTracking,
@@ -98,5 +128,6 @@ module.exports = {
     SCORMTrackingHistory,
     ExamTracking,
     AudioTracking,
-    EventTracking
+    EventTracking,
+    ActivityTracking
 }
