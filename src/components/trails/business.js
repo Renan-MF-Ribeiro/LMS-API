@@ -47,6 +47,10 @@ module.exports = {
                         .populate({
                             path: 'items.itemID',
                             match: matchObj,
+                            populate: {
+                                path: 'idEvaluation',
+                                select: 'description'
+                            }
                         })
                         .sort(sortObj)
                         .skip(skip)
@@ -57,6 +61,10 @@ module.exports = {
                     }).populate({
                         path: 'items.itemID',
                         match: matchObj,
+                        populate: {
+                            path: 'idEvaluation',
+                            select: 'description'
+                        }
                     }).sort(sortObj)
                 }
                 const arrTrails = []
