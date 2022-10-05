@@ -76,6 +76,8 @@ module.exports = {
             const userValue = new User(req.body)
             await userValue.validate()
 
+            const {admission, birthDate} = userValue
+
             const processedUser = processUsersLoad(userValue)
             const userFound = await User.findOne({
                 $or: [
@@ -84,6 +86,9 @@ module.exports = {
                     { networkLogin: processedUser.networkLogin },
                 ],
             })
+
+            processedUser.birthDate = admission
+            processedUser.admission = birthDate
 
             if (userFound) {
                 return _messages.forbidden(
@@ -94,6 +99,7 @@ module.exports = {
                     'users', 'create',
                 )
             }
+
 
             await User.create(processedUser)
             const created = await User.findOne(
