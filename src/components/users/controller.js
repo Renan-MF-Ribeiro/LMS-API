@@ -76,6 +76,8 @@ module.exports = {
             const userValue = new User(req.body)
             await userValue.validate()
 
+            const {admission, birthDate} = userValue
+
             const processedUser = processUsersLoad(userValue)
             const userFound = await User.findOne({
                 $or: [
@@ -84,6 +86,9 @@ module.exports = {
                     { networkLogin: processedUser.networkLogin },
                 ],
             })
+
+            processedUser.birthDate = admission
+            processedUser.admission = birthDate
 
             if (userFound) {
                 return _messages.forbidden(
@@ -94,6 +99,7 @@ module.exports = {
                     'users', 'create',
                 )
             }
+
 
             await User.create(processedUser)
             const created = await User.findOne(
@@ -744,22 +750,20 @@ module.exports = {
                 }
             }
 
-            let found
-            if ((cpf || email || networkLogin) && (found = await User.findOne({
-                $or: [
-                    { _id: { $ne: _id }, email: { $eq: email || undefined } },
-                    { _id: { $ne: _id }, networkLogin: { $eq: networkLogin || undefined } },
-                    { _id: { $ne: _id }, cpf: { $eq: cpf || undefined } },
-                ],
-            }))) {
+            const filter = []
+            const fields = ['cpf', 'email', 'networkLogin']
+            fields.map(f => req.body[f] && filter.push({ _id: { $ne: _id }, [f]: { $eq: req.body[f] } }))
+            const found = filter.length && await User.findOne({ $or: filter })
+
+            if (found) {
                 const field =
                     found.email === email
                         ? 'E-MAIL'
                         : found.networkLogin === networkLogin
-                        ? 'LOGIN'
-                        : 'CPF'
+                            ? 'LOGIN'
+                            : 'CPF'
 
-                return _messages.internalServer(
+                return _messages.forbidden(
                     res,
                     req,
                     'Erro interno no servidor',
@@ -771,8 +775,8 @@ module.exports = {
 
             const updated = await User.findByIdAndUpdate(
                 _id,
-                { cpf, email, networkLogin, tags, ...props },
-                { projection: { ...userProjection } }
+                req.body,
+                { projection: { ...userProjection } },
             )
 
             return _messages.success(res, req, updated, 'Usuário(a) atualizado(a) com sucesso!')

@@ -163,7 +163,22 @@ const EventItem = Item.discriminator('EventItem', new mongoose.Schema({
     ...schemaOptions,
 }))
 
+const fileFormats = Object.freeze({
+    COMPACT_FILES: 'compact_files'
+})
+
+const ActivityItem = Item.discriminator('ActivityItem', new mongoose.Schema({
+    format: { type: String, enum: Object.values(fileFormats), default: fileFormats.COMPACT_FILES, required: true },
+    passingScore: { type: Number },
+    contentPath: { type: String, get: pathResolver, required: ifEnabled },
+    ...endpointOptions,
+}, {
+    ...schemaOptions
+}))
+
 module.exports = {
+    pathResolver,
+    ifEnabled,
     Item,
     DocumentItem,
     MediaItem,
@@ -171,5 +186,6 @@ module.exports = {
     ExamItem,
     AudioItem,
     SoundcloudItem,
-    EventItem
+    EventItem,
+    ActivityItem,
 }

@@ -262,6 +262,201 @@ const TrackingController = {
         req.body.kind = 'SCORMTracking'
         return TrackingController.createOrUpdate(req, res)
     },
+    async listActivitiesHistoric (req, res) {
+        try {
+            const { skip, limit } = pagination(req)
+            const { order, sort } = ordernation(req)
+
+            const searchBy = req.query.searchBy
+
+            const query = searchBy ? {
+                $and: [
+                    {
+                        $or: [
+                            { itemName: { $regex: searchBy, $options: 'i' } },
+                            { score: { $regex: searchBy, $options: 'i' } },
+                            { studentName: { $regex: searchBy, $options: 'i' } },
+                        ],
+                    },
+                    {
+                        $or: [
+                            { lessonStatus: 'failed' },
+                            { lessonStatus: 'passed' },
+                        ],
+                    },
+                    { kind: 'ActivityTracking' },
+                ],
+            } : {
+                $or: [
+                    { lessonStatus: 'failed' },
+                    { lessonStatus: 'passed' },
+                ],
+                kind: 'ActivityTracking',
+            }
+
+            const tracking = await Tracking.find(query).populate({
+                path: 'item',
+                populate: {
+                    path: 'itemID',
+                    model: 'Item',
+                },
+            })
+                .sort({ [order]: sort })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit))
+                .lean()
+
+            const activities = []
+            for (const activity of tracking) {
+                const user = await User.findOne({ networkLogin: activity.userLogin })
+                const activityObj = {
+                    trackingId: activity._id,
+                    itemId: activity.item._id,
+                    itemName: activity.item.title,
+                    studentName: user.name,
+                    studentEmail: user.email,
+                    sentAt: activity.sentAt,
+                    reviewer: activity.reviewer,
+                    correctedAt: activity.correctedAt,
+                    contentPath: activity.contentPath,
+                    passingScore: activity.item.passingScore,
+                    score: activity.score,
+                    reviewerComment: activity.reviewerComment,
+                }
+                activities.push(activityObj)
+            }
+            _messages.success(res, req, activities)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'listActivities')
+        }
+    },
+
+    async listActivitiesForCorrection (req, res) {
+        try {
+            const { skip, limit } = pagination(req)
+            const { order, sort } = ordernation(req)
+
+            const searchBy = req.query.searchBy
+
+            const query = searchBy ? {
+                $or: [
+                    { itemName: { $regex: searchBy, $options: 'i' } },
+                    { score: { $regex: searchBy, $options: 'i' } },
+                    { studentName: { $regex: searchBy, $options: 'i' } },
+                ],
+                kind: 'ActivityTracking',
+                lessonStatus: 'incomplete',
+            } : {
+                lessonStatus: 'incomplete',
+                kind: 'ActivityTracking',
+            }
+
+            const tracking = await Tracking.find(query).populate({
+                path: 'item',
+                populate: {
+                    path: 'itemID',
+                    model: 'Item',
+                },
+            })
+                .sort({ [order]: sort })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit))
+                .lean()
+
+            const activities = []
+            for (const activity of tracking) {
+                const user = await User.findOne({ networkLogin: activity.userLogin })
+                const activityObj = {
+                    trackingId: activity._id,
+                    itemId: activity.item._id,
+                    itemName: activity.item.title,
+                    studentName: user.name,
+                    studentEmail: user.email,
+                    sentAt: activity.sentAt,
+                    correctedAt: activity.correctedAt,
+                    contentPath: activity.contentPath,
+                    passingScore: activity.passingScore,
+                    score: activity.score,
+                    reviewerComment: activity.reviewerComment,
+                }
+                activities.push(activityObj)
+            }
+            _messages.success(res, req, activities)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'listActivities')
+        }
+    },
+
+    async updateActivityAdmin (req, res) {
+        try {
+            const { trackingId } = req.query
+            const todayDate = new Date()
+            const body = req.body
+            const tracking = await Tracking.findOne({ _id: trackingId }).populate({
+                path: 'item',
+                populate: {
+                    path: 'itemID',
+                    model: 'Item',
+                },
+            })
+                .lean()
+
+            const queryStatus = body.score >= tracking.item.passingScore ? {
+                lessonStatus: 'passed',
+                completion: 1,
+            } : body.score < tracking.item.passingScore ? {
+                lessonStatus: 'failed',
+                completion: 0,
+            } : undefined
+
+            if (queryStatus) {
+                await ActivityTracking.findOneAndUpdate({ _id: trackingId }, {
+                    score: body.score,
+                    reviewer: body.name,
+                    reviewerComment: body.reviewerComment,
+                    $push: { correctedAt: todayDate },
+                    ...queryStatus,
+                })
+            }
+
+            _messages.success(res, req, 'Atividade atualizada com sucesso!')
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'updateActivityAdmin')
+        }
+    },
+
+    async updateActivityUser (req, res) {
+        try {
+            const { item, userLogin } = req.query
+            const todayDate = new Date()
+            const tracking = await Tracking.findOne({ item, userLogin }).populate({
+                path: 'item',
+                populate: {
+                    path: 'itemID',
+                    model: 'Item',
+                },
+            })
+                .lean()
+
+            const { file } = req.files
+            activityPath = await azureBlob(file, 'items/activity')
+            activityPath = process.env.NODE_ENV === 'local' ? activityPath : activityPath.replace(AZURE_BLOB_URL, DOMAIN)
+
+            if (tracking.completion !== 1) {
+                if (tracking.lessonStatus == 'failed') {
+                    await ActivityTracking.findOneAndUpdate({ _id: tracking._id }, { lessonStatus: 'incomplete', contentPath: activityPath, $unset: { score: 1 }, $push: { sentAt: todayDate } })
+                } else {
+                    await ActivityTracking.findOneAndUpdate({ _id: tracking._id }, { contentPath: activityPath, $push: { sentAt: todayDate } })
+                }
+            } else {
+                _messages.badRequest(res, req, 'Esta atividade já foi concluida')
+            }
+
+            _messages.success(res, req, 'Atividade enviada com sucesso!')
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'updateActivityUser')
+        }
+    },
 }
 
 module.exports = TrackingController
