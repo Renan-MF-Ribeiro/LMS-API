@@ -27,49 +27,39 @@ module.exports = {
                 const allTrackingUser = await Tracking.find({
                     userLogin: { $eq: user.networkLogin },
                 })
-                const numberTrackings = await Tracking.find().countDocuments()
-
-                if (numberTrackings > 0) {
-                    const trackings = await Tracking.find({
-                        $text: { $search: user.networkLogin },
+               
+                for (const t of allTrackingUser) {
+                    const trails = await Trail.find({
+                        'items.itemID': { $in: t.item },
                     })
 
-                    for (const t of trackings) {
-                        const trails = await Trail.find({
-                            'items.itemID': { $in: t.item },
-                        })
-
-                        for (const trail of trails) {
-                            // if (t.completion === 1 || isSCORMCompleted(t.lessonStatus)) arrTrails.push(trail._id.toString())
-                            arrTrails.push(trail._id.toString())
-                        }
+                    for (const trail of trails) {
+                        // if (t.completion === 1 || isSCORMCompleted(t.lessonStatus)) arrTrails.push(trail._id.toString())
+                        arrTrails.push(trail._id.toString())
                     }
-
-                    const newArrTrails = [...new Set(arrTrails)]
-
-                    for (const p in newArrTrails) {
-                        const trailFilter = await populateTrails(true, {
-                            _id: { $eq: newArrTrails[p] },
-                        })
-                        let trail = trailFilter[0]
-
-                        if (trail) {
-                            const processedTrail = processTrailTracking(trail, allTrackingUser)
-                            trail = processedTrail.trail
-                            if (processedTrail.containsACompletedItem) {
-                                arrTrailsCompletedOrProgress.push(trail)
-                            }
-                        }
-                    }
-
-                    resolve({
-                        trailsCompleted: arrTrailsCompletedOrProgress,
-                    })
-                } else {
-                    resolve({
-                        trailsCompleted: arrTrailsCompletedOrProgress,
-                    })
                 }
+
+                const newArrTrails = [...new Set(arrTrails)]
+
+                for (const p in newArrTrails) {
+                    const trailFilter = await populateTrails(true, {
+                        _id: { $eq: newArrTrails[p] },
+                    })
+                    let trail = trailFilter[0]
+
+                    if (trail) {
+                        const processedTrail = processTrailTracking(trail, allTrackingUser)
+                        trail = processedTrail.trail
+                        if (processedTrail.containsACompletedItem) {
+                            arrTrailsCompletedOrProgress.push(trail)
+                        }
+                    }
+                }
+
+                resolve({
+                    trailsCompleted: arrTrailsCompletedOrProgress,
+                })
+              
             } catch (error) {
                 reject(error)
             }
