@@ -6,7 +6,7 @@ const _messages = require('../../utils/messages')
 const { User } = require('../users/model')
 const { Trail } = require('../trails/model')
 const { processTrailTracking } = require('../../utils/functions')
-const { Tracking, DocumentTracking, MediaTracking, AudioTracking, SCORMTracking, ExamTracking, SCORMTrackingHistory, SCORMLessonStatus, EventTracking } = require('./model')
+const { Tracking, DocumentTracking, MediaTracking, AudioTracking, SCORMTracking, ExamTracking, SCORMTrackingHistory, SCORMLessonStatus, EventTracking, ActivityTracking } = require('./model')
 const { HistoricEvaluation } = require('../assessments/model')
 
 const {
@@ -21,7 +21,8 @@ const TRACKING_KINDS = Object.freeze({
     SCORMTracking: SCORMTracking,
     ExamTracking: ExamTracking,
     AudioTracking: AudioTracking,
-    EventTracking: EventTracking
+    EventTracking: EventTracking,
+    ActivityTracking: ActivityTracking,
 })
 
 const TrackingController = {
