@@ -82,6 +82,14 @@ const TrackingController = {
                 }
             } else {
                 isAllowedToSendXAPI = false
+
+                if((TrackingModel == DocumentTracking || TrackingModel == MediaTracking) && req.body.completion == 1 ){
+                    registerCompletationAt = true
+                } 
+                
+                if((TrackingModel == SCORMTracking) && (req.body.lessonStatus == "completed" || req.body.lessonStatus == "passed" || req.body.lessonStatus == "failed") ){
+                    registerCompletationAt = true
+                } 
             }
 
             let totalTime = tracking ? tracking.totalTime : 0
