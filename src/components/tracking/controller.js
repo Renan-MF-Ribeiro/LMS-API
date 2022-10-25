@@ -422,6 +422,7 @@ const TrackingController = {
                 await ActivityTracking.findOneAndUpdate({ _id: trackingId }, {
                     score: body.score,
                     reviewer: body.name,
+                    completionAt: todayDate,
                     reviewerComment: body.reviewerComment,
                     $push: { correctedAt: todayDate },
                     ...queryStatus,
