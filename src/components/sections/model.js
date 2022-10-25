@@ -21,6 +21,7 @@ const SectionSchema = new mongoose.Schema({
     trails: { type: Array, required: false, default: [] },
     position: { type: Number, default: 0 },
     ordination: { type: Number, required: false }, // 0 - DATA / 1 - ORDEM ALFABÉTICA
+    trails: { type: Array, default: [] }
 }, {
     ...schemaOptions,
 })

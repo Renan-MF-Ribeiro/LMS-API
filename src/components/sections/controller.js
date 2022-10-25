@@ -14,6 +14,7 @@ const {
     keepLearningSections,
     concludedSections,
     getGroupCodesByToken,
+    populateSectionTrails
 } = require('./business')
 const { getUserByToken, processTrailTracking, processExpirationDate } = require('../../utils/functions')
 
@@ -35,6 +36,10 @@ module.exports = {
                         deleted: { $eq: 0 },
                     },
             ).sort({ position: 'asc' })
+
+            for (const section of sections) {
+                section.trails = await populateSectionTrails(section)
+            }
 
             _messages.success(res, req, {
                 data: sections,
@@ -59,10 +64,11 @@ module.exports = {
             })
             if (verify.length === 0) {
                 const section = await Section.create(req.body)
+                const sectionWithTrails = await populateSectionTrails(section)
                 _messages.success(
                     res,
                     req,
-                    section,
+                    sectionWithTrails,
                     'Criação de dados',
                     'sections',
                     'createSection',
@@ -101,20 +107,16 @@ module.exports = {
                 _id: { $ne: _id },
             })
             if (verify.length === 0) {
-                const oldData = await Section.findByIdAndUpdate(_id, req.body)
-                const newData = await Section.find({ _id: { $eq: _id } })
+                const section = await Section.findByIdAndUpdate(_id, req.body, { new: true })
+                const sectionWithTrails = await populateSectionTrails(section)
 
                 _messages.success(
                     res,
                     req,
-                    'Atualizado com sucesso',
+                    sectionWithTrails,
                     'Atualização de dados',
                     'sections',
-                    'updateSection',
-                    newData,
-                    oldData,
-                    true,
-                    'UPDATE',
+                    'updateSection'                   
                 )
             } else {
                 _messages.badRequest(
