@@ -29,8 +29,8 @@ const emailTemplate = config.messenger.emailTemplate
 require('dotenv').config()
 
 module.exports = {
-    checkAmountOfLocks (id) {
-        return new Promise(async (resolve, reject) => {
+    checkAmountOfLocks(id) {
+        return new Promise(async(resolve, reject) => {
             try {
                 const quantity = await Block.find({
                     user: { $eq: id },
@@ -44,8 +44,8 @@ module.exports = {
         })
     },
 
-    returnLastLoginAttemp (id) {
-        return new Promise(async (resolve, reject) => {
+    returnLastLoginAttemp(id) {
+        return new Promise(async(resolve, reject) => {
             try {
                 const block = await Block
                     .find({
@@ -60,8 +60,8 @@ module.exports = {
         })
     },
 
-    checkLastAttemptTime (dateTimeBlock) {
-        return new Promise(async (resolve, reject) => {
+    checkLastAttemptTime(dateTimeBlock) {
+        return new Promise(async(resolve, reject) => {
             try {
                 const lastTimeBlock = formatDate(dateTimeBlock)
                 const dateCurrent = getDateToday()
@@ -76,11 +76,11 @@ module.exports = {
 
     // # Exclusivo para validação no LPAD
     // # TODO: Remover
-    signInAndReturnRole (login, password, login2) {
-        return new Promise(async (resolve, reject) => {
+    signInAndReturnRole(login, password, login2) {
+        return new Promise(async(resolve, reject) => {
             try {
                 await ldapClient.bind(login, password)
-                // const ldapResponse = await ldapClient.bind('cn=read-only-admin,dc=example,dc=com', 'password')
+                    // const ldapResponse = await ldapClient.bind('cn=read-only-admin,dc=example,dc=com', 'password')
 
                 const opts = {
                     filter: `(sAMAccountName=${login2})`,
@@ -89,8 +89,8 @@ module.exports = {
                     attributes: ['memberOf'],
                 }
 
-                await ldapClient.search('DC=brasil, DC=latam, DC=cea', opts, function (err, res) {
-                    res.on('searchEntry', async function (entry) {
+                await ldapClient.search('DC=brasil, DC=latam, DC=cea', opts, function(err, res) {
+                    res.on('searchEntry', async function(entry) {
                         const ldapUser = entry.object
                         const groups = ldapUser.memberOf
                         const namesProfiles = []
@@ -121,7 +121,7 @@ module.exports = {
                         })
                     })
 
-                    res.on('error', function (err) {
+                    res.on('error', function(err) {
                         reject(err)
                     })
                 })
@@ -131,8 +131,8 @@ module.exports = {
         })
     },
 
-    returnDateSinceFirstLogin (userID) {
-        return new Promise(async (resolve, reject) => {
+    returnDateSinceFirstLogin(userID) {
+        return new Promise(async(resolve, reject) => {
             try {
                 const userLastLogin = await LastLogin.find({ user: userID })
                 const userFirstLogin = userLastLogin[0].createdAt
@@ -147,8 +147,8 @@ module.exports = {
         })
     },
 
-    updateGroupsOfUser (userID, groups) {
-        return new Promise(async (resolve, reject) => {
+    updateGroupsOfUser(userID, groups) {
+        return new Promise(async(resolve, reject) => {
             try {
                 await User.findByIdAndUpdate(userID, { groupsAD: groups })
                 resolve()
@@ -158,8 +158,8 @@ module.exports = {
         })
     },
 
-    updateLastLoginUser (userID) {
-        return new Promise(async (resolve, reject) => {
+    updateLastLoginUser(userID) {
+        return new Promise(async(resolve, reject) => {
             try {
                 const user = await LastLogin.findOne({ user: userID })
                 if (user) {
@@ -177,8 +177,8 @@ module.exports = {
         })
     },
 
-    lastLoggedInUsers (userID) {
-        return new Promise(async (resolve, reject) => {
+    lastLoggedInUsers(userID) {
+        return new Promise(async(resolve, reject) => {
             try {
                 const arrUsers = []
                 const users = await LastLogin.find().populate('users')
@@ -193,8 +193,8 @@ module.exports = {
         })
     },
 
-    ldapSearch (login, name) {
-        return new Promise(async (resolve, reject) => {
+    ldapSearch(login, name) {
+        return new Promise(async(resolve, reject) => {
             const opts = {
                 filter: `(sAMAccountName=${login})`,
                 scope: 'sub',
@@ -204,14 +204,14 @@ module.exports = {
 
             let response = null
 
-            await ldapClient.search('DC=brasil, DC=latam, DC=cea', opts, function (err, res) {
-                res.on('searchEntry', function (entry) {
+            await ldapClient.search('DC=brasil, DC=latam, DC=cea', opts, function(err, res) {
+                res.on('searchEntry', function(entry) {
                     entry = entry.object
                     response = entry
                     resolve(response)
                 })
 
-                res.on('error', function (err) {
+                res.on('error', function(err) {
                     reject(err)
 
                     Log.create({
@@ -228,13 +228,13 @@ module.exports = {
                     })
                 })
 
-                res.on('end', function (result) {
+                res.on('end', function(result) {
                     resolve(response)
                 })
             })
         })
     },
-    processUsersLoad (data) {
+    processUsersLoad(data) {
         const salt = bcrypt.genSaltSync(10)
 
         const initialPasswordKey = '1234'
@@ -282,9 +282,9 @@ module.exports = {
         return data
     },
 
-    async processUserAccount (data) {
+    async processUserAccount(data) {
         try {
-            const { groupsAD } = data
+            const { groupsAD = [] } = data
 
             let groupsObj = []
 
@@ -314,7 +314,7 @@ module.exports = {
         }
     },
 
-    async sendAccountsToKafka (accounts) {
+    async sendAccountsToKafka(accounts) {
         try {
             const producer = kafka.producer()
             await producer.connect()
@@ -327,7 +327,7 @@ module.exports = {
         }
     },
 
-    async getUsersByTrail (trailId, category) {
+    async getUsersByTrail(trailId, category) {
         try {
             const trail = await Trail.findOne({ _id: trailId })
 
@@ -352,7 +352,8 @@ module.exports = {
                 for (const user of users) {
                     let completedTracking = 0
                     const allTrackingUser = await Tracking.find({
-                        userLogin: { $eq: user.networkLogin }, item: { $in: items },
+                        userLogin: { $eq: user.networkLogin },
+                        item: { $in: items },
                     })
                     for (const tracking of allTrackingUser) {
                         if (tracking.completionAt !== null) {
@@ -375,7 +376,7 @@ module.exports = {
         }
     },
 
-    async getUsersByGroups (groups) {
+    async getUsersByGroups(groups) {
         try {
             const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin'])
             return users
@@ -384,7 +385,7 @@ module.exports = {
         }
     },
 
-    async getUsersByTags (tags) {
+    async getUsersByTags(tags) {
         try {
             let groups = []
 
@@ -402,7 +403,7 @@ module.exports = {
         }
     },
 
-    async getUsersByIds (ids) {
+    async getUsersByIds(ids) {
         try {
             const users = await User.find({ _id: { $in: ids } }, ['networkLogin'])
 
@@ -412,7 +413,7 @@ module.exports = {
         }
     },
 
-    async sendUpdatedDeviceIdToMessenger (device, identifier) {
+    async sendUpdatedDeviceIdToMessenger(device, identifier) {
         try {
             const producer = kafka.producer()
             await producer.connect()
@@ -426,7 +427,7 @@ module.exports = {
         }
     },
 
-    async createWelcomeCampaign () {
+    async createWelcomeCampaign() {
         const title = `Seja bem-vindo(a) à plataforma ${process.env.PROJECT_NAME}!`
         const text = 'Venha conhecer a plataforma!'
         const communication = ['notification']
