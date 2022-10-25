@@ -82,6 +82,9 @@ const TrackingController = {
                 }
             } else {
                 isAllowedToSendXAPI = false
+                if(TrackingModel == DocumentTracking && req.body.completion == 1 ){
+                    registerCompletationAt = true
+                }
             }
 
             let totalTime = tracking ? tracking.totalTime : 0
@@ -312,8 +315,8 @@ const TrackingController = {
                 const user = await User.findOne({ networkLogin: activity.userLogin })
                 const activityObj = {
                     trackingId: activity._id,
-                    itemId: activity.item._id,
-                    itemName: activity.item.title,
+                    itemId: activity.item ? activity.item._id : null,
+                    itemName: activity.item ? activity.item._id : null,
                     studentName: user.name,
                     studentEmail: user.email,
                     sentAt: activity.sentAt,
@@ -369,8 +372,8 @@ const TrackingController = {
                 const user = await User.findOne({ networkLogin: activity.userLogin })
                 const activityObj = {
                     trackingId: activity._id,
-                    itemId: activity.item._id,
-                    itemName: activity.item.title,
+                    itemId: activity.item ? activity.item._id : null,
+                    itemName: activity.item ? activity.item._id : null,
                     studentName: user.name,
                     studentEmail: user.email,
                     sentAt: activity.sentAt,
