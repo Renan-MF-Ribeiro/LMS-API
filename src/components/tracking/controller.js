@@ -82,9 +82,14 @@ const TrackingController = {
                 }
             } else {
                 isAllowedToSendXAPI = false
-                if(TrackingModel == DocumentTracking && req.body.completion == 1 ){
+
+                if((TrackingModel == DocumentTracking || TrackingModel == MediaTracking) && req.body.completion == 1 ){
                     registerCompletationAt = true
-                }
+                } 
+                
+                if((TrackingModel == SCORMTracking) && (req.body.lessonStatus == "completed" || req.body.lessonStatus == "passed" || req.body.lessonStatus == "failed") ){
+                    registerCompletationAt = true
+                } 
             }
 
             let totalTime = tracking ? tracking.totalTime : 0
@@ -417,6 +422,7 @@ const TrackingController = {
                 await ActivityTracking.findOneAndUpdate({ _id: trackingId }, {
                     score: body.score,
                     reviewer: body.name,
+                    completionAt: todayDate,
                     reviewerComment: body.reviewerComment,
                     $push: { correctedAt: todayDate },
                     ...queryStatus,
