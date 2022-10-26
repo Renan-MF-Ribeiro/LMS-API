@@ -1199,7 +1199,14 @@ module.exports = {
                     "updateUser"
                 );
             }
-
+            const userUpdated = { ... req.body }
+            const account = await processUserAccount(userUpdated)
+            const value  = JSON.parse(account.value)
+            value.oldIdentifier = user.networkLogin;
+            account.value = JSON.stringify(value)
+            if (userUpdated?.networkLogin) {
+                await sendAccountsToKafka([account])
+            }
             const updated = await User.findByIdAndUpdate(_id, req.body, {
                 projection: {...userProjection },
             });
