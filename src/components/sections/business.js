@@ -155,12 +155,10 @@ module.exports = {
 
                 if (user.classGroups.length > 0) {
                     for (let classGroup of user.classGroups) {
-                        if (classGroup.status === 1) {
                             tags.push({
                                 display: classGroup.groupCode,
                                 value: classGroup.groupCode,
-                            });
-                        }
+                            });                        
                     }
                 }
 
@@ -194,8 +192,7 @@ module.exports = {
                     for (let tag of tags) {
                         for (let classGroup of user.classGroups) {
                             if (
-                                classGroup.groupCode === tag.value &&
-                                classGroup.status === 1
+                                classGroup.groupCode === tag.value
                             ) {
                                 classGroups.push(classGroup);
                             }
