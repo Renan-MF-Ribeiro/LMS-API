@@ -1860,9 +1860,7 @@ module.exports = {
         const { tag, userId } = req.body;
 
         try {
-            await User.findByIdAndUpdate(userId, {
-                $pull: { classGroups: tag },
-            });
+            await User.findByIdAndUpdate(userId, { $pull: { classGroups: { groupCode: tag } } })
             _messages.success(res, req, { message: "Tag de curso removida" });
         } catch (error) {
             _messages.internalServer(
