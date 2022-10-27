@@ -157,7 +157,8 @@ module.exports = {
                     for (let classGroup of user.classGroups) {
                         const today = getDateTodayWithoutHours()
                         const diff = calculateDiffDate(today, formatDateWithoutHours(classGroup.startDate), 'days')
-                        if(diff < 0){
+                        
+                        if(diff >= 0){
                             tags.push({display: classGroup.groupCode, value: classGroup.groupCode})
                         }                        
                     }
