@@ -303,17 +303,19 @@ const TrackingController = {
                 kind: 'ActivityTracking',
             }
 
-            const tracking = await Tracking.find(query).populate({
+            const trackingCount = await Tracking.find(query).countDocuments()
+            const tracking = await Tracking.find(query)
+            .populate({
                 path: 'item',
                 populate: {
                     path: 'itemID',
                     model: 'Item',
                 },
             })
-                .sort({ [order]: sort })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit))
-                .lean()
+            .skip(parseInt(skip))
+            .limit(parseInt(limit))
+            .sort({ [order]: sort })
+            .lean()
 
             const activities = []
             for (const activity of tracking) {
@@ -334,7 +336,7 @@ const TrackingController = {
                 }
                 activities.push(activityObj)
             }
-            _messages.success(res, req, activities)
+            _messages.success(res, req, { activities, total: trackingCount })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'listActivities')
         }
@@ -361,7 +363,7 @@ const TrackingController = {
                 kind: 'ActivityTracking',
                 sentAt: { $exists: true, $not: { $size: 0 } }
             }
-
+            const trackingCount = await Tracking.find(query).countDocuments()
             const tracking = await Tracking.find(query).populate({
                 path: 'item',
                 populate: {
@@ -369,10 +371,10 @@ const TrackingController = {
                     model: 'Item',
                 },
             })
-                .sort({ [order]: sort })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit))
-                .lean()
+            .skip(parseInt(skip))
+            .limit(parseInt(limit))
+            .sort({ [order]: sort })
+            .lean()
 
             const activities = []
             for (const activity of tracking) {
@@ -392,7 +394,7 @@ const TrackingController = {
                 }
                 activities.push(activityObj)
             }
-            _messages.success(res, req, activities)
+            _messages.success(res, req, { activities, total: trackingCount })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'listActivities')
         }
