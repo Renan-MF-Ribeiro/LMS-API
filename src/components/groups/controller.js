@@ -184,10 +184,9 @@ module.exports = {
         try {
             const groups = await Group.find({})
             const trails = await Trail.find({})
-
-            const groupTags = groups.filter(value => value.tags.length > 0).map(group => group.tags.map(tag => tag.value))
-            const trailTags = trails.filter(value => value.tags.length > 0).map(trail => trail.tags.map(tag => tag.value)).filter(tag => !/(\bSECAO_)/.test(tag))
-
+            
+            const groupTags = groups.filter(value => value.tags?.length > 0).map(group => group.tags.map(tag => tag.value))
+            const trailTags = trails.filter(value => value.tags?.length > 0).map(trail => trail.tags.map(tag => tag.value)).filter(tag => !/(\bSECAO_)/.test(tag))
             let tags = [...groupTags, ...trailTags]
 
             tags = tags.reduce((prev, curr) => prev.concat(curr), [])

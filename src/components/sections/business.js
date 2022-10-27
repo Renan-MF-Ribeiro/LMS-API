@@ -155,10 +155,11 @@ module.exports = {
 
                 if (user.classGroups.length > 0) {
                     for (let classGroup of user.classGroups) {
-                            tags.push({
-                                display: classGroup.groupCode,
-                                value: classGroup.groupCode,
-                            });                        
+                        const today = getDateTodayWithoutHours()
+                        const diff = calculateDiffDate(today, formatDateWithoutHours(classGroup.startDate), 'days')
+                        if(diff < 0){
+                            tags.push({display: classGroup.groupCode, value: classGroup.groupCode})
+                        }                        
                     }
                 }
 
