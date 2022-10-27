@@ -13,8 +13,7 @@ const {
     recentsSections,
     keepLearningSections,
     concludedSections,
-    getGroupCodesByToken,
-    populateSectionTrails
+    getGroupCodesByToken
 } = require('./business')
 const { getUserByToken, processTrailTracking, processExpirationDate } = require('../../utils/functions')
 
@@ -36,12 +35,7 @@ module.exports = {
                         deleted: { $eq: 0 },
                     },
             ).sort({ position: 'asc' })
-
-            for (const section of sections) {
-                section.trails = await populateSectionTrails(section)
-            }
-
-            _messages.success(res, req, {
+           _messages.success(res, req, {
                 data: sections,
                 total,
             })
@@ -64,11 +58,11 @@ module.exports = {
             })
             if (verify.length === 0) {
                 const section = await Section.create(req.body)
-                const sectionWithTrails = await populateSectionTrails(section)
+                
                 _messages.success(
                     res,
                     req,
-                    sectionWithTrails,
+                    section,
                     'Criação de dados',
                     'sections',
                     'createSection',
@@ -187,7 +181,7 @@ module.exports = {
             const classGroups = await getGroupCodesByToken(req, tags)
 
             let resultSections = []
-
+            console.log('tagss ',tags)
             if (tags.length > 0) {
                 const filter = req.query
                 let trails = await populateTrails(true, {
@@ -227,7 +221,7 @@ module.exports = {
                 const arrRecentsSections = await recentsSections(trails)
                 const arrKeepLearningSections = await keepLearningSections(trails)
                 const arrConcludedSections = await concludedSections(trails)
-
+                console.log(resultSections)
                 resultSections = arrSections
                     .concat(arrMandatorySections)
                     .concat(arrRecentsSections)
@@ -236,7 +230,7 @@ module.exports = {
                 resultSections = resultSections.filter(val => {
                     return val != null
                 })
-
+                console.log(resultSections)
                 if (resultSections.length > 0) {
                     resultSections.sort((a, b) =>
                         a.position < b.position ? -1 : 1,
@@ -266,7 +260,7 @@ module.exports = {
                     }
                 }
             }
-
+            
             _messages.success(res, req, resultSections)
         } catch (error) {
             console.log(error)

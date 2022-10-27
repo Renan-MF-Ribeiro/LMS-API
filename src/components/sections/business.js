@@ -523,32 +523,7 @@ module.exports = {
             }
         });
     },
-
-    async populateSectionTrails(section) {
-        const [sectionTrails] = await Section.aggregate([
-            {
-                $match: {
-                    default: false,
-                    _id: section._id,
-                },
-            },
-            {
-                $lookup: {
-                    localField: "tags",
-                    foreignField: "tags",
-                    as: "trilhas",
-                    from: "trails",
-                },
-            },
-            {
-                $project: {
-                    trails: "$trilhas",
-                },
-            },
-        ]);
-
-        return sectionTrails?.trails || [];
-    },
+    
 };
 
 function isNecessary(trail, tags) {
