@@ -185,7 +185,7 @@ module.exports = {
                 if (newUser && sendSignUpActivationEmail) {
                     const emailToken = generateToken({ networkLogin });
 
-                    const activationLink = `${process.env.DOMAIN}/#/login/ativacao?token=${emailToken}`;
+                    const activationLink = `${process.env.DOMAIN}/login/ativacao?token=${emailToken}`;
 
                     await sendSignupActivationEmail(
                         newUser.email,
@@ -716,7 +716,7 @@ module.exports = {
                 password_old: password_new,
             });
 
-            const resetPasswordUrl = `${domain}/#/login/troca-senha?token=${token}`;
+            const resetPasswordUrl = `${domain}/login/troca-senha?token=${token}`;
 
             newPass.push({
                 hash: hashPass,
@@ -1544,7 +1544,7 @@ module.exports = {
         const token = await jwt.sign({ email }, process.env.JWT_SECRET);
         res.redirect(
             302,
-            `${process.env.DOMAIN}/#/login/entrar/sso?token=${token}`
+            `${process.env.DOMAIN}/login/entrar/sso?token=${token}`
         );
     },
 
