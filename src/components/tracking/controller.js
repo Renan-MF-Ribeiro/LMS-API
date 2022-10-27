@@ -6,7 +6,7 @@ const _messages = require('../../utils/messages')
 const { User } = require('../users/model')
 const { Trail } = require('../trails/model')
 const { processTrailTracking } = require('../../utils/functions')
-const { Tracking, DocumentTracking, MediaTracking, AudioTracking, SCORMTracking, ExamTracking, SCORMTrackingHistory, SCORMLessonStatus, EventTracking, ActivityTracking } = require('./model')
+const { Tracking, DocumentTracking, MediaTracking, AudioTracking, SCORMTracking, ExamTracking, SCORMTrackingHistory, SCORMLessonStatus, EventTracking, ActivityTracking,TrackingsItems  } = require('./model')
 const { HistoricEvaluation } = require('../assessments/model')
 
 const {
@@ -282,9 +282,9 @@ const TrackingController = {
                 $and: [
                     {
                         $or: [
-                            { itemName: { $regex: searchBy, $options: 'i' } },
-                            { score: { $regex: searchBy, $options: 'i' } },
-                            { studentName: { $regex: searchBy, $options: 'i' } },
+                        { "item.title": { $regex: searchBy, $options: 'i' }},
+                        { "user.name": { $regex: searchBy, $options: 'i' } },
+                        { reviewer: { $regex: searchBy, $options: 'i' } },
                         ],
                     },
                     {
@@ -292,8 +292,9 @@ const TrackingController = {
                             { lessonStatus: 'failed' },
                             { lessonStatus: 'passed' },
                         ],
+                        kind: 'ActivityTracking',
                     },
-                    { kind: 'ActivityTracking' },
+                
                 ],
             } : {
                 $or: [
@@ -303,15 +304,8 @@ const TrackingController = {
                 kind: 'ActivityTracking',
             }
 
-            const trackingCount = await Tracking.find(query).countDocuments()
-            const tracking = await Tracking.find(query)
-            .populate({
-                path: 'item',
-                populate: {
-                    path: 'itemID',
-                    model: 'Item',
-                },
-            })
+            const trackingCount = await TrackingsItems.find(query).countDocuments()
+            const tracking = await TrackingsItems.find(query)
             .skip(parseInt(skip))
             .limit(parseInt(limit))
             .sort({ [order]: sort })
@@ -351,9 +345,8 @@ const TrackingController = {
 
             const query = searchBy ? {
                 $or: [
-                    { itemName: { $regex: searchBy, $options: 'i' } },
-                    { score: { $regex: searchBy, $options: 'i' } },
-                    { studentName: { $regex: searchBy, $options: 'i' } },
+                    { "item.title": { $regex: searchBy, $options: 'i' }},
+                    { "user.name": { $regex: searchBy, $options: 'i' } },
                 ],
                 kind: 'ActivityTracking',
                 lessonStatus: 'incomplete',
@@ -363,14 +356,8 @@ const TrackingController = {
                 kind: 'ActivityTracking',
                 sentAt: { $exists: true, $not: { $size: 0 } }
             }
-            const trackingCount = await Tracking.find(query).countDocuments()
-            const tracking = await Tracking.find(query).populate({
-                path: 'item',
-                populate: {
-                    path: 'itemID',
-                    model: 'Item',
-                },
-            })
+            const trackingCount = await TrackingsItems.find(query).countDocuments()
+            const tracking = await TrackingsItems.find(query)
             .skip(parseInt(skip))
             .limit(parseInt(limit))
             .sort({ [order]: sort })
