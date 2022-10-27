@@ -53,6 +53,7 @@ module.exports = {
                         idCategory: body.idCategory ? body.idCategory : question.idCategory,
                         idEvaluation: question.idEvaluation,
                         description: strDescription,
+                        rigthAnswer: body.idAlternative
                     })
 
                     for (const alternative of question.alternatives) {
