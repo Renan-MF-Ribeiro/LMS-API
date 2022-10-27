@@ -321,7 +321,7 @@ const TrackingController = {
                 const activityObj = {
                     trackingId: activity._id,
                     itemId: activity.item ? activity.item._id : null,
-                    itemName: activity.item ? activity.item._id : null,
+                    itemName: activity.item ? activity.item.title : null,
                     studentName: user.name,
                     studentEmail: user.email,
                     sentAt: activity.sentAt,
@@ -378,7 +378,7 @@ const TrackingController = {
                 const activityObj = {
                     trackingId: activity._id,
                     itemId: activity.item ? activity.item._id : null,
-                    itemName: activity.item ? activity.item._id : null,
+                    itemName: activity.item ? activity.item.title : null,
                     studentName: user.name,
                     studentEmail: user.email,
                     sentAt: activity.sentAt,
