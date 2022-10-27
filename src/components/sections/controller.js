@@ -101,16 +101,20 @@ module.exports = {
                 _id: { $ne: _id },
             })
             if (verify.length === 0) {
-                const section = await Section.findByIdAndUpdate(_id, req.body, { new: true })
-                const sectionWithTrails = await populateSectionTrails(section)
+                const oldData = await Section.findByIdAndUpdate(_id, req.body)
+                const newData = await Section.find({ _id: { $eq: _id } })
 
                 _messages.success(
                     res,
                     req,
-                    sectionWithTrails,
+                     'Atualizado com sucesso',
                     'Atualização de dados',
                     'sections',
-                    'updateSection'                   
+                    'updateSection',
+                    newData,
+                    oldData,
+                    true,
+                    'UPDATE',                   
                 )
             } else {
                 _messages.badRequest(
@@ -205,11 +209,11 @@ module.exports = {
                     }
 
                     trail = processedTrail.trail
-                    for (let tag of trail.tags){
-                        for (let classGroup of classGroups){
-                                if(classGroup.groupCode === tag.value){
-                                    trail['classGroup'] = classGroup;
-                                }
+                    for (const tag of trail.tags) {
+                        for (const classGroup of classGroups) {
+                            if (classGroup.groupCode === tag.value) {
+                                trail.classGroup = classGroup
+                            }
                         }
                     }
                 }
