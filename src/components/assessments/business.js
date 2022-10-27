@@ -86,7 +86,10 @@ module.exports = {
                     await Question.findByIdAndUpdate(questionCreated._id, { alternatives: arrIdAlternatives, rigthAnswer: idRigthAnswer, description: strDescription })
                 } else {
                     if (body) {
-                        await Question.findByIdAndUpdate(id, { description: body.description ? body.description : question.description,  idCategory: body.idCategory ? body.idCategory : question.idCategory })
+                        const quest = await Question.findByIdAndUpdate(id, { description: body.description ? body.description : question.description, idCategory: body.idCategory ? body.idCategory : question.idCategory, rigthAnswer: body.idAlternative })
+                        for (alternative of quest.alternatives) {
+                            await Alternative.findByIdAndUpdate(alternative, { correct: alternative == body.idAlternative })
+                        }
                     }
                 }
                 resolve()
