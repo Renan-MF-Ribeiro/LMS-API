@@ -355,9 +355,11 @@ const TrackingController = {
                 ],
                 kind: 'ActivityTracking',
                 lessonStatus: 'incomplete',
+                sentAt: { $exists: true, $not: { $size: 0 } }
             } : {
                 lessonStatus: 'incomplete',
                 kind: 'ActivityTracking',
+                sentAt: { $exists: true, $not: { $size: 0 } }
             }
 
             const tracking = await Tracking.find(query).populate({
