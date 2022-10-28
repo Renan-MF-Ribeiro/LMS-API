@@ -127,8 +127,6 @@ const TrackingController = {
                 } else if(attempts && tracking.remainingAttempts && req.body.lessonStatus === 'failed') {
                     req.body.remainingAttempts = tracking.remainingAttempts - 1
                     req.body.lessonStatus = req.body.remainingAttempts ? 'incomplete' : 'failed'
-                } else if(attempts && tracking.remainingAttempts && tracking.remainingAttempts != attempts){
-                    req.body.remainingAttempts = attempts
                 }
             }
 
