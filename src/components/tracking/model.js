@@ -75,6 +75,7 @@ const ExamTracking = Tracking.discriminator('ExamTracking', new mongoose.Schema(
     lessonStatus: { type: String, enum: Object.values(SCORMLessonStatus), default: SCORMLessonStatus.NOT_ATTEMPTED },
     suspendData: { type: String },
     score: { type: Number, min: 0, max: 100 },
+    remainingAttempts: { type: Number, min: -1 }
 }, {
     ...schemaOptions,
 }))
