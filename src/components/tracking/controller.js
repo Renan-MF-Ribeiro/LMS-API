@@ -7,13 +7,14 @@ const { User } = require('../users/model')
 const { Trail } = require('../trails/model')
 const { processTrailTracking } = require('../../utils/functions')
 const { Tracking, DocumentTracking, MediaTracking, AudioTracking, SCORMTracking, ExamTracking, SCORMTrackingHistory, SCORMLessonStatus, EventTracking, ActivityTracking,TrackingsItems  } = require('./model')
-const { HistoricEvaluation } = require('../assessments/model')
+const { HistoricEvaluation, Evaluation } = require('../assessments/model')
 
 const {
     pagination,
     ordernation,
 } = require('../../utils/functions')
 const cryptoJS = require('crypto-js')
+const { Item } = require('../items/model')
 
 const TRACKING_KINDS = Object.freeze({
     DocumentTracking: DocumentTracking,
@@ -36,7 +37,7 @@ const TrackingController = {
             const tracking = await Tracking.findOne(q)
 
             delete req.body.migratedDate
-            
+
             let isAllowedToSendXAPI = false
             let isXAPICompleteSent = false
             let registerCompletationAt = false
@@ -114,6 +115,18 @@ const TrackingController = {
                         ...q,
                         ...pick(['lessonStatus', 'score'], req.body),
                     })
+                }
+            }
+
+            if(TrackingModel === ExamTracking) {
+                const { idEvaluation } = await Item.findOne({ _id: req.body.item })
+                const { attempts } = await Evaluation.findOne({ _id: idEvaluation })
+
+                if(!tracking ) {
+                    req.body.remainingAttempts = attempts || -1
+                } else if(attempts && tracking.remainingAttempts && req.body.lessonStatus === 'failed') {
+                    req.body.remainingAttempts = tracking.remainingAttempts - 1
+                    req.body.lessonStatus = req.body.remainingAttempts ? 'incomplete' : 'failed'
                 }
             }
 
