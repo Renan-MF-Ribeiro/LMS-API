@@ -252,6 +252,8 @@ module.exports = {
 
         const groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO']
 
+        if(data?.actingField) groupsAD.push(`ELEGE_${data.actingField}`)
+        
         const elegibility = !data.company && !data.office ? [] : [
             `ELEGE_${_functions.clearString(data.company)}`,
             `ELEGE_${_functions.clearString(data.office)}`,
