@@ -61,6 +61,7 @@ module.exports = express.Router()
     .post('/add-permission', validateTokenRoute, _controller.addGroups)
     .post('/remove-class-tag', validateTokenRoute, _controller.deleteClassTag)
     .post('/add-class-tag', validateTokenRoute, _controller.addClassTag)
-
+    .post('/update-class-tag', validateTokenRoute, _controller.updateClassTag)
+    
     // HL-1263
     .get('/evaluations/:idEvaluation', validateTokenRoute, _controller.evaluationProgress)

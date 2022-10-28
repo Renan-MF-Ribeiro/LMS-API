@@ -1900,6 +1900,27 @@ module.exports = {
         }
     },
 
+    async updateClassTag(req, res) {
+        const { tag, _id } = req.body
+        try {
+            const { classGroups } = await User.findOne({ _id })
+            const newTags = []
+            for (group of classGroups) {
+                if (group._id == tag._id) {
+                    group = tag
+                    newTags.push(group)
+                } else {
+                    newTags.push(group)
+                }
+            }
+            await User.findByIdAndUpdate(_id, { classGroups: newTags })
+
+            _messages.success(res, req, { message: 'Tag de curso atualizada no usuário' })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users')
+        }
+    },
+
     async evaluationProgress(req, res) {
         try {
             const { idEvaluation } = req.params;
