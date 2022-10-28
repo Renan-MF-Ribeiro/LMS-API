@@ -35,6 +35,8 @@ const TrackingController = {
 
             const tracking = await Tracking.findOne(q)
 
+            delete req.body.migratedDate
+            
             let isAllowedToSendXAPI = false
             let isXAPICompleteSent = false
             let registerCompletationAt = false
