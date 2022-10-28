@@ -1,7 +1,7 @@
 const { Evaluation, HistoricEvaluation, LogsEvaluation } = require('./model')
 const { Category } = require('./categories/model')
 const { Question } = require('./questions/model')
-const { ExamTracking } = require('../tracking/model')
+const { ExamTracking, Tracking } = require('../tracking/model')
 
 const { Alternative } = require('./alternatives/model')
 const { Item } = require('../items/model')
@@ -345,7 +345,9 @@ module.exports = {
                     user: { $eq: user._id },
                 })
 
-            if (!evaluation.attempts || evaluationPerformed.length < evaluation.attempts) {
+            const tracking = await ExamTracking.findOne({ item: idItem, userLogin: user.networkLogin })
+
+            if (!evaluation.attempts || tracking.remainingAttempts <= evaluation.attempts) {
                 const { categories } = await _business.returnCategoriesOfEvaluation(id)
                 const { questions, amount } = await _business.returnRandomQuestionsByCategory(categories)
                 if (questions.length > 0) {
