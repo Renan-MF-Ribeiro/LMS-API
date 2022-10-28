@@ -537,7 +537,7 @@ module.exports = {
                         { _id: { $eq: questions[amountQuestionsAnswered] } },
                         ['description'],
                     )
-                    .populate('alternatives', 'description')
+                    .populate({path:'alternatives', match: { deleted: { $eq: 0 }}, select: 'description deleted'})
 
                 question.number = amountQuestionsAnswered + 1
                 _messages.success(res, req, {
