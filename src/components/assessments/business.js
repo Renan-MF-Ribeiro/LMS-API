@@ -114,7 +114,11 @@ module.exports = {
                             { idCategory: { $eq: category._id }, repealed: { $eq: 0 }, deleted: { $eq: 0 }, active: { $eq: 1} },
                             ['description'],
                         )
-                        .populate('alternatives', ['description'])
+                        .populate({
+                            path: 'alternatives',
+                            match: { deleted: { $eq: 0 } }
+                        }  
+                        , ['description'])
 
                     const questions = returnSliceDataRandom(questionsOfCategory, 0, category.amountOfQuestions)
 
