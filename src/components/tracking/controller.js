@@ -458,15 +458,13 @@ const TrackingController = {
             activityPath = await azureBlob(file, 'items/activity')
             activityPath = process.env.NODE_ENV === 'local' ? activityPath : activityPath.replace(AZURE_BLOB_URL, DOMAIN)
 
-            if (tracking.completion !== 1) {
+           
                 if (tracking.lessonStatus == 'failed') {
                     await ActivityTracking.findOneAndUpdate({ _id: tracking._id }, { lessonStatus: 'incomplete', contentPath: activityPath, $unset: { score: 1 }, $push: { sentAt: todayDate } })
                 } else {
                     await ActivityTracking.findOneAndUpdate({ _id: tracking._id }, { contentPath: activityPath, $push: { sentAt: todayDate } })
                 }
-            } else {
-                _messages.badRequest(res, req, 'Esta atividade já foi concluida')
-            }
+           
 
             _messages.success(res, req, 'Atividade enviada com sucesso!')
         } catch (error) {
