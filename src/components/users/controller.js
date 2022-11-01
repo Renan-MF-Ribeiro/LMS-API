@@ -1864,19 +1864,13 @@ module.exports = {
     },
 
     async deleteClassTag(req, res) {
-        const { tag, userId } = req.body;
+        const { tag, userId } = req.body
 
         try {
             await User.findByIdAndUpdate(userId, { $pull: { classGroups: { groupCode: tag } } })
-            _messages.success(res, req, { message: "Tag de curso removida" });
+            _messages.success(res, req, { message: 'Tag de curso removida' })
         } catch (error) {
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                "Erro interno no servidor",
-                "users"
-            );
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users')
         }
     },
 

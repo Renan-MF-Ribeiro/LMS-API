@@ -26,6 +26,15 @@ const InstructorGroupSchema = new mongoose.Schema({
 }, {
     ...optionsSchema,
 })
+const ClassGroupSchema = new mongoose.Schema({
+    groupCode: { type: String, required: true },
+    startDate: { type: Date, required: false },
+    limitDate: { type: Date, required: false },
+    classId: { type: Number, required: true },
+    status: { type: Number, required: true },
+}, {
+    ...optionsSchema,
+})
 
 GroupSchema.index({
     name: 'text',
@@ -33,8 +42,11 @@ GroupSchema.index({
 
 const Group = mongoose.model('groups', GroupSchema)
 const InstructorGroup = mongoose.model('instructor_groups', InstructorGroupSchema)
+const ClassGroup = mongoose.model('class_groups', ClassGroupSchema)
 
 module.exports = {
     Group,
     InstructorGroup,
+    ClassGroup
+    
 }

@@ -2,7 +2,7 @@ const _messages = require('../../utils/messages')
 const _functions = require('../../utils/functions')
 const { Trail } = require('../../components/trails/model')
 const { Section } = require('../../components/sections/model')
-const { Group, InstructorGroup } = require('./model')
+const { Group, InstructorGroup,ClassGroup } = require('./model')
 const { CourseModel } = require('../courses/model')
 
 module.exports = {
@@ -209,5 +209,76 @@ module.exports = {
             } catch (error) {
                 _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'groups', '/tags') 
             }
-    }
+    },
+
+    async createClassGroup (req, res) {
+        try {
+            const findGroup = await ClassGroup.find({ name: req.body.name, deleted: 0 })
+
+            if (findGroup.length) {
+                return _messages.forbidden(res, req, 'Registro duplicado', 'Este grupo já está cadastrado.', 'groups', 'create')
+            }
+
+            const group = await ClassGroup.create(req.body)
+            _messages.success(res, req, group, 'Criação de dados', 'groups', 'create', group, [], true, 'CREATE')
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'groups', 'create')
+        }
+    },
+
+    async deleteClassGroup (req, res) {
+        try {
+            const { id } = req.params
+            await ClassGroup.deleteOne({_id: id})
+
+            _messages.success(res, req, 'Excluído com sucesso', 'Exclusão de dados', 'groups', 'delete', [], [], true, 'DELETE')
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'groups', 'delete')
+        }
+    },
+
+    async getClassGroups (req, res) {
+        try {
+            const { sort, order } = _functions.ordernation(req)
+            const { skip, limit } = _functions.pagination(req)
+            const searchBy = req.query.searchBy
+
+            const total = await ClassGroup.find({}).countDocuments()
+
+            const groups = await ClassGroup.find(searchBy ? {
+                $or: [
+                    { name: { $regex: searchBy, $options: 'i' } },
+                ],
+            } : {})
+                .sort({ [order]: sort })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit))
+
+            _messages.success(res, req, {
+                data: groups,
+                total,
+            })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'classGroups', 'getClassGroups')
+        }
+    },
+
+    async updateClassGroup (req, res) {
+        try {
+            const { _id } = req.body
+
+            const findGroup = await ClassGroup.find({ name: req.body.name, deleted: 0, _id: { $ne: _id } })
+
+            if (findGroup.length) {
+                return _messages.forbidden(res, req, 'Registro duplicado', 'Este grupo já está cadastrado.', 'groups', 'create')
+            }
+
+            const oldData = await ClassGroup.findByIdAndUpdate(_id, req.body)
+            const newData = await ClassGroup.find({ _id: { $eq: _id } })
+
+            _messages.success(res, req, 'Atualizado com sucesso', 'Atualização de dados', 'groups', 'update', newData, oldData, true, 'UPDATE')
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'groups', 'update')
+        }
+    },
 }
