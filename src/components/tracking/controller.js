@@ -1,7 +1,10 @@
 const httpStatus = require('http-status-codes')
 const { pick } = require('ramda')
 const { decodeToken } = require('../../utils/auth')
-
+const { DOMAIN, AZURE_BLOB_URL } = process.env
+const {
+    azureBlob,
+} = require('../../utils/files')
 const _messages = require('../../utils/messages')
 const { User } = require('../users/model')
 const { Trail } = require('../trails/model')
@@ -15,6 +18,7 @@ const {
 } = require('../../utils/functions')
 const cryptoJS = require('crypto-js')
 const { Item } = require('../items/model')
+
 
 const TRACKING_KINDS = Object.freeze({
     DocumentTracking: DocumentTracking,
@@ -171,11 +175,10 @@ const TrackingController = {
             let processedTrailsWithTracking = []
             let allItems = 0
             let data
-
             const allTrackingUser = await Tracking.find({
                 userLogin: { $eq: userLogin },
             })
-
+            
             const query = searchBy ? {
                 $or: [
                     { title: { $regex: searchBy, $options: 'i' } },
@@ -184,9 +187,9 @@ const TrackingController = {
             } : {
                 "items.itemID": { $in: allTrackingUser.map(v => v.item) }
             }
-
+            
             const totalTrails = await Trail.countDocuments(query)
-
+            
             const trails = await Trail.find(query).populate({
                 path:'items',			
                 populate: { 
@@ -198,19 +201,17 @@ const TrackingController = {
             .skip(parseInt(skip))
             .limit(parseInt(limit))
             .lean()
-        
+            
             for(let trail of trails){
                 let processedTrail = processTrailTracking(trail, allTrackingUser)
                 trailsWithTracking.push(processedTrail)
             }
-
             for(let v of trailsWithTracking){
                 let trail = v.trail
                 const completedTrails = []
                 allItems = trail.items.length
                 let itemData
                 let itemDataArr = []
-                
                 for(let item in trail.items){
                     if(trail.items[item].itemID.completion) {
                         completedTrails.push(trail.items[item])
