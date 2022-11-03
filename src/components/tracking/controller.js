@@ -1,19 +1,24 @@
 const httpStatus = require('http-status-codes')
 const { pick } = require('ramda')
 const { decodeToken } = require('../../utils/auth')
-
+const { DOMAIN, AZURE_BLOB_URL } = process.env
+const {
+    azureBlob,
+} = require('../../utils/files')
 const _messages = require('../../utils/messages')
 const { User } = require('../users/model')
 const { Trail } = require('../trails/model')
 const { processTrailTracking } = require('../../utils/functions')
-const { Tracking, DocumentTracking, MediaTracking, AudioTracking, SCORMTracking, ExamTracking, SCORMTrackingHistory, SCORMLessonStatus, EventTracking, ActivityTracking } = require('./model')
-const { HistoricEvaluation } = require('../assessments/model')
+const { Tracking, DocumentTracking, MediaTracking, AudioTracking, SCORMTracking, ExamTracking, SCORMTrackingHistory, SCORMLessonStatus, EventTracking, ActivityTracking,TrackingsItems  } = require('./model')
+const { HistoricEvaluation, Evaluation } = require('../assessments/model')
 
 const {
     pagination,
     ordernation,
 } = require('../../utils/functions')
 const cryptoJS = require('crypto-js')
+const { Item } = require('../items/model')
+
 
 const TRACKING_KINDS = Object.freeze({
     DocumentTracking: DocumentTracking,
@@ -34,6 +39,8 @@ const TrackingController = {
             delete req.body._id
 
             const tracking = await Tracking.findOne(q)
+
+            delete req.body.migratedDate
 
             let isAllowedToSendXAPI = false
             let isXAPICompleteSent = false
@@ -115,6 +122,18 @@ const TrackingController = {
                 }
             }
 
+            if(TrackingModel === ExamTracking) {
+                const { idEvaluation } = await Item.findOne({ _id: req.body.item })
+                const { attempts } = await Evaluation.findOne({ _id: idEvaluation })
+
+                if(!tracking ) {
+                    req.body.remainingAttempts = attempts || -1
+                } else if(attempts && tracking.remainingAttempts && req.body.lessonStatus === 'failed') {
+                    req.body.remainingAttempts = tracking.remainingAttempts - 1
+                    req.body.lessonStatus = req.body.remainingAttempts ? 'incomplete' : 'failed'
+                }
+            }
+
             await TrackingModel.updateOne(q, { ...req.body, totalTime, isAllowedToSendXAPI, completionAt }, { upsert: true, omitUndefined: true })
             // Assistiu uma colaboração no mesmo dia do lançamento
             // Assistiu X colaborações
@@ -156,11 +175,10 @@ const TrackingController = {
             let processedTrailsWithTracking = []
             let allItems = 0
             let data
-
             const allTrackingUser = await Tracking.find({
                 userLogin: { $eq: userLogin },
             })
-
+            
             const query = searchBy ? {
                 $or: [
                     { title: { $regex: searchBy, $options: 'i' } },
@@ -169,9 +187,9 @@ const TrackingController = {
             } : {
                 "items.itemID": { $in: allTrackingUser.map(v => v.item) }
             }
-
+            
             const totalTrails = await Trail.countDocuments(query)
-
+            
             const trails = await Trail.find(query).populate({
                 path:'items',			
                 populate: { 
@@ -183,19 +201,17 @@ const TrackingController = {
             .skip(parseInt(skip))
             .limit(parseInt(limit))
             .lean()
-        
+            
             for(let trail of trails){
                 let processedTrail = processTrailTracking(trail, allTrackingUser)
                 trailsWithTracking.push(processedTrail)
             }
-
             for(let v of trailsWithTracking){
                 let trail = v.trail
                 const completedTrails = []
                 allItems = trail.items.length
                 let itemData
                 let itemDataArr = []
-                
                 for(let item in trail.items){
                     if(trail.items[item].itemID.completion) {
                         completedTrails.push(trail.items[item])
@@ -282,9 +298,9 @@ const TrackingController = {
                 $and: [
                     {
                         $or: [
-                            { itemName: { $regex: searchBy, $options: 'i' } },
-                            { score: { $regex: searchBy, $options: 'i' } },
-                            { studentName: { $regex: searchBy, $options: 'i' } },
+                        { "item.title": { $regex: searchBy, $options: 'i' }},
+                        { "user.name": { $regex: searchBy, $options: 'i' } },
+                        { reviewer: { $regex: searchBy, $options: 'i' } },
                         ],
                     },
                     {
@@ -292,8 +308,9 @@ const TrackingController = {
                             { lessonStatus: 'failed' },
                             { lessonStatus: 'passed' },
                         ],
+                        kind: 'ActivityTracking',
                     },
-                    { kind: 'ActivityTracking' },
+                
                 ],
             } : {
                 $or: [
@@ -303,25 +320,20 @@ const TrackingController = {
                 kind: 'ActivityTracking',
             }
 
-            const tracking = await Tracking.find(query).populate({
-                path: 'item',
-                populate: {
-                    path: 'itemID',
-                    model: 'Item',
-                },
-            })
-                .sort({ [order]: sort })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit))
-                .lean()
+            const trackingCount = await TrackingsItems.find(query).countDocuments()
+            const tracking = await TrackingsItems.find(query)
+            .skip(parseInt(skip))
+            .limit(parseInt(limit))
+            .sort({ [order]: sort })
+            .lean()
 
             const activities = []
             for (const activity of tracking) {
                 const user = await User.findOne({ networkLogin: activity.userLogin })
                 const activityObj = {
                     trackingId: activity._id,
-                    itemId: activity.item._id,
-                    itemName: activity.item.title,
+                    itemId: activity.item ? activity.item._id : null,
+                    itemName: activity.item ? activity.item.title : null,
                     studentName: user.name,
                     studentEmail: user.email,
                     sentAt: activity.sentAt,
@@ -334,7 +346,7 @@ const TrackingController = {
                 }
                 activities.push(activityObj)
             }
-            _messages.success(res, req, activities)
+            _messages.success(res, req, { activities, total: trackingCount })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'listActivities')
         }
@@ -349,36 +361,31 @@ const TrackingController = {
 
             const query = searchBy ? {
                 $or: [
-                    { itemName: { $regex: searchBy, $options: 'i' } },
-                    { score: { $regex: searchBy, $options: 'i' } },
-                    { studentName: { $regex: searchBy, $options: 'i' } },
+                    { "item.title": { $regex: searchBy, $options: 'i' }},
+                    { "user.name": { $regex: searchBy, $options: 'i' } },
                 ],
                 kind: 'ActivityTracking',
                 lessonStatus: 'incomplete',
+                sentAt: { $exists: true, $not: { $size: 0 } }
             } : {
                 lessonStatus: 'incomplete',
                 kind: 'ActivityTracking',
+                sentAt: { $exists: true, $not: { $size: 0 } }
             }
-
-            const tracking = await Tracking.find(query).populate({
-                path: 'item',
-                populate: {
-                    path: 'itemID',
-                    model: 'Item',
-                },
-            })
-                .sort({ [order]: sort })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit))
-                .lean()
+            const trackingCount = await TrackingsItems.find(query).countDocuments()
+            const tracking = await TrackingsItems.find(query)
+            .skip(parseInt(skip))
+            .limit(parseInt(limit))
+            .sort({ [order]: sort })
+            .lean()
 
             const activities = []
             for (const activity of tracking) {
                 const user = await User.findOne({ networkLogin: activity.userLogin })
                 const activityObj = {
                     trackingId: activity._id,
-                    itemId: activity.item._id,
-                    itemName: activity.item.title,
+                    itemId: activity.item ? activity.item._id : null,
+                    itemName: activity.item ? activity.item.title : null,
                     studentName: user.name,
                     studentEmail: user.email,
                     sentAt: activity.sentAt,
@@ -390,7 +397,7 @@ const TrackingController = {
                 }
                 activities.push(activityObj)
             }
-            _messages.success(res, req, activities)
+            _messages.success(res, req, { activities, total: trackingCount })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'listActivities')
         }
@@ -452,15 +459,13 @@ const TrackingController = {
             activityPath = await azureBlob(file, 'items/activity')
             activityPath = process.env.NODE_ENV === 'local' ? activityPath : activityPath.replace(AZURE_BLOB_URL, DOMAIN)
 
-            if (tracking.completion !== 1) {
+           
                 if (tracking.lessonStatus == 'failed') {
                     await ActivityTracking.findOneAndUpdate({ _id: tracking._id }, { lessonStatus: 'incomplete', contentPath: activityPath, $unset: { score: 1 }, $push: { sentAt: todayDate } })
                 } else {
                     await ActivityTracking.findOneAndUpdate({ _id: tracking._id }, { contentPath: activityPath, $push: { sentAt: todayDate } })
                 }
-            } else {
-                _messages.badRequest(res, req, 'Esta atividade já foi concluida')
-            }
+           
 
             _messages.success(res, req, 'Atividade enviada com sucesso!')
         } catch (error) {

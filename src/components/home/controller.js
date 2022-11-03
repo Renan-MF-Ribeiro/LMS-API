@@ -47,8 +47,9 @@ const ItemController = {
             }
 
             filterTrails = await populateTrails(true, {
-                $text: { $search: `"${searchBy}"` },
                 $or: [
+                    { title: new RegExp(`.${searchBy}.`, 'i')},
+                    { description: new RegExp(`.${searchBy}.`, 'i')},
                     { tags: { $in: tags } },
                     { mandatory: { $in: tags } },
                 ],
@@ -57,7 +58,7 @@ const ItemController = {
             filterTrails = filterTrails.filter(trail => checkIfTheTrackIsValid(trail))
 
             const items = await Item.find({
-                $text: { $search: `"${searchBy}"` },
+                description: new RegExp(`.${searchBy}.`, 'i'),
                 enabled: true,
                 deleted: { $eq: 0 },
             })

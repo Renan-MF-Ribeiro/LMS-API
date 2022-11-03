@@ -110,7 +110,7 @@ module.exports = {
                 idCategory: { $eq: req.body.idCategory },
                 deleted: { $eq: 0 },
                 repealed: { $eq: 0 },
-            })
+            }).collation({ locale: "pt", strength: 2 })
             if (verify.length === 0) {
                 let alert = ''
                 const category = await Category.findOne({

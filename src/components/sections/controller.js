@@ -13,7 +13,7 @@ const {
     recentsSections,
     keepLearningSections,
     concludedSections,
-    getGroupCodesByToken,
+    getGroupCodesByToken
 } = require('./business')
 const { getUserByToken, processTrailTracking, processExpirationDate } = require('../../utils/functions')
 
@@ -35,8 +35,7 @@ module.exports = {
                         deleted: { $eq: 0 },
                     },
             ).sort({ position: 'asc' })
-
-            _messages.success(res, req, {
+           _messages.success(res, req, {
                 data: sections,
                 total,
             })
@@ -59,6 +58,7 @@ module.exports = {
             })
             if (verify.length === 0) {
                 const section = await Section.create(req.body)
+                
                 _messages.success(
                     res,
                     req,
@@ -107,14 +107,14 @@ module.exports = {
                 _messages.success(
                     res,
                     req,
-                    'Atualizado com sucesso',
+                     'Atualizado com sucesso',
                     'Atualização de dados',
                     'sections',
                     'updateSection',
                     newData,
                     oldData,
                     true,
-                    'UPDATE',
+                    'UPDATE',                   
                 )
             } else {
                 _messages.badRequest(
@@ -185,7 +185,6 @@ module.exports = {
             const classGroups = await getGroupCodesByToken(req, tags)
 
             let resultSections = []
-
             if (tags.length > 0) {
                 const filter = req.query
                 let trails = await populateTrails(true, {
@@ -209,11 +208,11 @@ module.exports = {
                     }
 
                     trail = processedTrail.trail
-                    for (let tag of trail.tags){
-                        for (let classGroup of classGroups){
-                                if(classGroup.groupCode === tag.value){
-                                    trail['classGroup'] = classGroup;
-                                }
+                    for (const tag of trail.tags) {
+                        for (const classGroup of classGroups) {
+                            if (classGroup.groupCode === tag.value) {
+                                trail.classGroup = classGroup
+                            }
                         }
                     }
                 }
@@ -225,7 +224,6 @@ module.exports = {
                 const arrRecentsSections = await recentsSections(trails)
                 const arrKeepLearningSections = await keepLearningSections(trails)
                 const arrConcludedSections = await concludedSections(trails)
-
                 resultSections = arrSections
                     .concat(arrMandatorySections)
                     .concat(arrRecentsSections)
@@ -234,7 +232,6 @@ module.exports = {
                 resultSections = resultSections.filter(val => {
                     return val != null
                 })
-
                 if (resultSections.length > 0) {
                     resultSections.sort((a, b) =>
                         a.position < b.position ? -1 : 1,
@@ -264,7 +261,7 @@ module.exports = {
                     }
                 }
             }
-
+            
             _messages.success(res, req, resultSections)
         } catch (error) {
             console.log(error)

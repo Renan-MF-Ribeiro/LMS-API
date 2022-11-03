@@ -108,7 +108,7 @@ module.exports = {
         try {
             const _id = req.params.trailId
             const trail = await Trail
-                .findOne({ _id }, "-innerText")
+                .findOne({ _id }, '-innerText')
             _messages.success(res, req, trail)
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'trails', 'findById')
@@ -255,7 +255,7 @@ module.exports = {
                 } catch { }
             }
 
-            if(typeof payload.backgroundPath === "object"){
+            if(typeof payload.backgroundPath === 'object'){
                 payload.backgroundPath = ''
             }
 
