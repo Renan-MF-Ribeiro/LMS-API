@@ -290,8 +290,7 @@ const TrackingController = {
     async listActivitiesHistoric (req, res) {
         try {
             const { skip, limit } = pagination(req)
-            const { order, sort } = ordernation(req)
-
+            let { order, sort } = ordernation(req)
             const searchBy = req.query.searchBy
 
             const query = searchBy ? {
@@ -301,17 +300,16 @@ const TrackingController = {
                         { "item.title": { $regex: searchBy, $options: 'i' }},
                         { "user.name": { $regex: searchBy, $options: 'i' } },
                         { reviewer: { $regex: searchBy, $options: 'i' } },
-                        ],
+                    ],
                     },
                     {
                         $or: [
-                            { lessonStatus: 'failed' },
-                            { lessonStatus: 'passed' },
-                        ],
-                        kind: 'ActivityTracking',
-                    },
-                
-                ],
+                        { lessonStatus: 'failed' },
+                        { lessonStatus: 'passed' },
+                    ],
+                    kind: 'ActivityTracking',
+                    }
+                ]
             } : {
                 $or: [
                     { lessonStatus: 'failed' },
@@ -319,6 +317,11 @@ const TrackingController = {
                 ],
                 kind: 'ActivityTracking',
             }
+
+            order = order === "maxCorrectedAt" ? "correctedAt" : order
+            order = order === "itemName" ? "item.title" : order
+            order = order === "studentName" ? "user.name" : order
+            order = order === "maxSentAt" ? "sentAt" : order
 
             const trackingCount = await TrackingsItems.find(query).countDocuments()
             const tracking = await TrackingsItems.find(query)
@@ -330,6 +333,7 @@ const TrackingController = {
             const activities = []
             for (const activity of tracking) {
                 const user = await User.findOne({ networkLogin: activity.userLogin })
+
                 const activityObj = {
                     trackingId: activity._id,
                     itemId: activity.item ? activity.item._id : null,
@@ -348,6 +352,7 @@ const TrackingController = {
             }
             _messages.success(res, req, { activities, total: trackingCount })
         } catch (error) {
+            console.log(error)
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'listActivities')
         }
     },
@@ -355,15 +360,15 @@ const TrackingController = {
     async listActivitiesForCorrection (req, res) {
         try {
             const { skip, limit } = pagination(req)
-            const { order, sort } = ordernation(req)
+            let { order, sort } = ordernation(req)
 
             const searchBy = req.query.searchBy
 
             const query = searchBy ? {
-                $or: [
-                    { "item.title": { $regex: searchBy, $options: 'i' }},
-                    { "user.name": { $regex: searchBy, $options: 'i' } },
-                ],
+                 $or: [
+                        { "item.title": { $regex: searchBy, $options: 'i' }},
+                        { "user.name": { $regex: searchBy, $options: 'i' } },
+                    ],
                 kind: 'ActivityTracking',
                 lessonStatus: 'incomplete',
                 sentAt: { $exists: true, $not: { $size: 0 } }
@@ -372,6 +377,11 @@ const TrackingController = {
                 kind: 'ActivityTracking',
                 sentAt: { $exists: true, $not: { $size: 0 } }
             }
+
+            order = order === "maxSentAt" ? "sentAt" : order
+            order = order === "itemName" ? "item.title" : order
+            order = order === "studentName" ? "user.name" : order
+
             const trackingCount = await TrackingsItems.find(query).countDocuments()
             const tracking = await TrackingsItems.find(query)
             .skip(parseInt(skip))
@@ -399,9 +409,11 @@ const TrackingController = {
             }
             _messages.success(res, req, { activities, total: trackingCount })
         } catch (error) {
+            console.log(error)
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'listActivities')
         }
     },
+
 
     async updateActivityAdmin (req, res) {
         try {

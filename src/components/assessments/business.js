@@ -105,7 +105,8 @@ module.exports = {
             try {
                 const questionsOfEvaluations = []
                 let amountOfQuestions = 0
-
+                
+                console.log(categories)
                 for (const category of categories) {
                     amountOfQuestions += category.amountOfQuestions
 
@@ -116,7 +117,7 @@ module.exports = {
                         )
                         .populate({path:'alternatives', match: { deleted: { $eq: 0 }}, select: 'description deleted'})
                         
-
+console.log(questionsOfCategory)
                     const questions = returnSliceDataRandom(questionsOfCategory, 0, category.amountOfQuestions)
 
                     for (const question of questions) {
