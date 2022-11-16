@@ -350,7 +350,6 @@ module.exports = {
             if (!evaluation.attempts || tracking.remainingAttempts <= evaluation.attempts) {
                 const { categories } = await _business.returnCategoriesOfEvaluation(id)
                 const { questions, amount } = await _business.returnRandomQuestionsByCategory(categories)
-                console.log(questions)
                 if (questions.length > 0) {
                     const { _id } = await _business.insertEvaluationHistory(questions, amount, id, idItem, user._id, evaluation.duration)
                     await LogsEvaluation.create({ idHistoricEvaluation: _id })

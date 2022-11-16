@@ -792,6 +792,32 @@ const ItemController = {
                 .limit(parseInt(limit))
                 .sort({ [order]: sort })
 
+                if (req.query.activityItemFilter === 'true') {
+                    const dataItens = []
+                    const filterItens = await Item.find(searchBy ? {
+                        $or: [
+                            { description: { $regex: searchBy, $options: 'i' } },
+                            { title: { $regex: searchBy, $options: 'i' } },
+                            { notes: { $regex: searchBy, $options: 'i' } },
+                            { courseIdentifier: { $regex: searchBy, $options: 'i' } },
+                            { alias: { $regex: searchBy, $options: 'i' } },
+                            { keywords: { $regex: searchBy, $options: 'i' } },
+                            { responsible: { $regex: searchBy, $options: 'i' } },
+                        ],
+                        deleted: { $eq: 0 },
+                    } : {
+                        deleted: { $eq: 0 },
+                    })
+    
+                    await Promise.all(filterItens.reverse().map(async item => {
+                        if(item.kind != 'ActivityItem'){
+                            dataItens.push(item)
+                        }
+                    }))
+    
+                    total = dataItens.length
+                    itens = dataItens.slice(parseInt(skip)).slice(0, parseInt(limit))
+                }  
             if (req.query.filterNotRelated === 'true') {
                 const dataItens = []
                 const filterItens = await Item.find(searchBy ? {
@@ -814,12 +840,19 @@ const ItemController = {
                         'items.itemID': { $in: item._id },
                     }).countDocuments()
 
-                    if (trail !== 0) dataItens.push(item)
+                if(req.query.activityItemFilter === 'true'){
+                    if(item.kind != 'ActivityItem'){
+                        if (trail === 0) dataItens.push(item)
+                    }
+                }else{
+                    if (trail === 0) dataItens.push(item)
+                }
                 }))
-
                 total = dataItens.length
-                itens = dataItens.slice(parseInt(skip)).slice(0, parseInt(limit))
+                itens = dataItens.reverse().slice(parseInt(skip)).slice(0, parseInt(limit))
             } 
+
+            
 
             _messages.success(res, req, {
                 total,
