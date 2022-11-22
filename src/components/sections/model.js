@@ -9,6 +9,13 @@ const schemaOptions = {
     collation: { locale: 'en_US', strength: 1 },
 }
 
+const DEFAULT_TYPES = Object.freeze({
+    MANDATORY: 'mandatory',
+    RECENTS: 'recents',
+    KEEP_LEARNING: 'keep_learning',
+    CONCLUDED: 'concluded',
+})
+
 const SectionSchema = new mongoose.Schema({
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true, trim: true },
@@ -18,9 +25,10 @@ const SectionSchema = new mongoose.Schema({
     order: { type: Number, default: 0 },
     deleted: { type: Number, default: 0 },
     active: { type: Number, default: 1 },
-    trails: { type: Array, required: false, default: [] },
+    trails: { type: [{ type: 'ObjectId', ref: 'trails' }] },
     position: { type: Number, default: 0 },
     ordination: { type: Number, required: false }, // 0 - DATA / 1 - ORDEM ALFABÉTICA
+    defaultType: { type: String, enum: Object.values(DEFAULT_TYPES), required: false },
 }, {
     ...schemaOptions,
 })
@@ -29,4 +37,5 @@ const Section = mongoose.model('sections', SectionSchema)
 
 module.exports = {
     Section,
+    DEFAULT_TYPES,
 }

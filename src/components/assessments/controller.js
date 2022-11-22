@@ -511,6 +511,9 @@ module.exports = {
             const { amountQuestionsAnswered, questions, amountOfQuestions, amountQuestionsCorrect, answers, item, duration } = await HistoricEvaluation
                 .findOne({ _id: { $eq: id } })
 
+            const answeredQuestions = amountQuestionsAnswered
+            const amountQuestions = amountOfQuestions
+
             const { passingScore } = await Item.findOne({ _id: { $eq: item } })
             const result = await _business.calculateRatingEvaluation(amountQuestionsCorrect, amountOfQuestions)
 
@@ -540,11 +543,13 @@ module.exports = {
                         ['description'],
                     )
                     .populate({path:'alternatives', match: { deleted: { $eq: 0 }}, select: 'description deleted'})
-
+                        
                 question.number = amountQuestionsAnswered + 1
                 _messages.success(res, req, {
                     question: question,
                     duration,
+                    answeredQuestions,
+                    amountQuestions
                 })
             }
         } catch (error) {
