@@ -13,7 +13,7 @@ const {
     recentsSections,
     keepLearningSections,
     concludedSections,
-    getGroupCodesByToken
+    getGroupCodesByToken,
 } = require('./business')
 const { getUserByToken, processTrailTracking, processExpirationDate } = require('../../utils/functions')
 
@@ -25,17 +25,21 @@ module.exports = {
                 deleted: { $eq: 0 },
             }).countDocuments()
 
+            const populateTrails = {
+                path: 'trails',
+                model: 'Trail',
+                select: ['_id', 'title', 'thumbPath'],
+            }
             const sections = await Section.find(
-                searchBy
-                    ? {
-                        $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-                        deleted: { $eq: 0 },
-                    }
-                    : {
-                        deleted: { $eq: 0 },
-                    },
-            ).sort({ position: 'asc' })
-           _messages.success(res, req, {
+                searchBy ? {
+                    $or: [{ title: { $regex: searchBy, $options: 'i' } }],
+                    deleted: { $eq: 0 },
+                } : {
+                    deleted: { $eq: 0 },
+                },
+            ).sort({ position: 'asc' }).populate(populateTrails)
+
+            _messages.success(res, req, {
                 data: sections,
                 total,
             })
@@ -58,7 +62,6 @@ module.exports = {
             })
             if (verify.length === 0) {
                 const section = await Section.create(req.body)
-                
                 _messages.success(
                     res,
                     req,
@@ -66,8 +69,7 @@ module.exports = {
                     'Criação de dados',
                     'sections',
                     'createSection',
-                    section,
-                    [],
+                    section, [],
                     true,
                     'CREATE',
                 )
@@ -107,14 +109,14 @@ module.exports = {
                 _messages.success(
                     res,
                     req,
-                     'Atualizado com sucesso',
+                    'Atualizado com sucesso',
                     'Atualização de dados',
                     'sections',
                     'updateSection',
                     newData,
                     oldData,
                     true,
-                    'UPDATE',                   
+                    'UPDATE',
                 )
             } else {
                 _messages.badRequest(
@@ -127,6 +129,7 @@ module.exports = {
                 )
             }
         } catch (error) {
+            console.log(error)
             _messages.internalServer(
                 res,
                 req,
@@ -159,9 +162,7 @@ module.exports = {
                     'Excluído com sucesso',
                     'Exclusão de dados',
                     'sections',
-                    'deleteSection',
-                    [],
-                    [],
+                    'deleteSection', [], [],
                     true,
                     'DELETE',
                 )
@@ -180,11 +181,13 @@ module.exports = {
 
     async getSectionsElegibles (req, res) {
         try {
+
+            
             const user = await getUserByToken(req)
             const tags = await getTagsElegiblesByToken(req)
             const classGroups = await getGroupCodesByToken(req, tags)
-
             let resultSections = []
+
             if (tags.length > 0) {
                 const filter = req.query
                 let trails = await populateTrails(true, {
@@ -217,13 +220,12 @@ module.exports = {
                     }
                 }
 
-                
-
                 const arrSections = await elegiblesContents(trails)
                 const arrMandatorySections = await mandatorySections(trails, tags)
                 const arrRecentsSections = await recentsSections(trails)
                 const arrKeepLearningSections = await keepLearningSections(trails)
                 const arrConcludedSections = await concludedSections(trails)
+
                 resultSections = arrSections
                     .concat(arrMandatorySections)
                     .concat(arrRecentsSections)
@@ -232,6 +234,7 @@ module.exports = {
                 resultSections = resultSections.filter(val => {
                     return val != null
                 })
+
                 if (resultSections.length > 0) {
                     resultSections.sort((a, b) =>
                         a.position < b.position ? -1 : 1,
