@@ -181,8 +181,6 @@ module.exports = {
 
     async getSectionsElegibles (req, res) {
         try {
-
-            
             const user = await getUserByToken(req)
             const tags = await getTagsElegiblesByToken(req)
             const classGroups = await getGroupCodesByToken(req, tags)
@@ -198,9 +196,13 @@ module.exports = {
                     },
                 })
                 trails = trails.filter(trail => checkIfTheTrackIsValid(trail))
-
                 const allTrackingUser = await Tracking.find({
                     userLogin: { $eq: user.networkLogin },
+                    $or: [
+                        { expiredCompletion: { $exists: false } }, 
+                        { expiredCompletion: { $eq: null } }
+                    ]
+
                 })
 
                 for (let trail of trails) {
