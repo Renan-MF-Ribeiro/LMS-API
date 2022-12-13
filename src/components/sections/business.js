@@ -106,7 +106,7 @@ module.exports = {
     setTrailMandatory (trail, tags) {
         const mandatoryTags = trail.mandatory
 
-        if (mandatoryTags.length === 0) {
+        if (!mandatoryTags || !mandatoryTags.length) {
             return
         }
 
@@ -301,7 +301,7 @@ module.exports = {
                 const section = await Section.findOne({
                     defaultType: DEFAULT_TYPES.MANDATORY,
                     active: 1,
-                })
+                }).lean()
 
                 if (section) {
                     const sortFnc =
@@ -347,10 +347,7 @@ module.exports = {
                 const section = await Section.findOne({
                     defaultType: DEFAULT_TYPES.RECENTS,
                     active: 1,
-                }).populate({
-                    path: 'trails',
-                    model: 'Trail'
-                })
+                }).lean()
 
                 if (section) {
                     const sortFnc =
@@ -382,10 +379,7 @@ module.exports = {
                 const section = await Section.findOne({
                     defaultType: DEFAULT_TYPES.KEEP_LEARNING,
                     active: 1,
-                }).populate({
-                    path: 'trails',
-                    model: 'Trail'
-                })
+                }).lean()
 
                 if (section) {
                     const sortFnc =
@@ -417,10 +411,7 @@ module.exports = {
                 const section = await Section.findOne({
                     defaultType: DEFAULT_TYPES.CONCLUDED,
                     active: 1,
-                }).populate({
-                    path: 'trails',
-                    model: 'Trail'
-                })
+                }).lean()
                 
                 if (section) {
                     const sortFnc =
