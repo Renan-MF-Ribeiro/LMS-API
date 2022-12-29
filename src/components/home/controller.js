@@ -107,7 +107,7 @@ const ItemController = {
             const courses = await getStudentCourses(req)
 
             const allTrails = await Trail.countDocuments()
-
+            
             const resultTrails = await trailsCompletedOrInProgress(req)
             const certificates = await returnCertificates(resultTrails.trailsCompleted, user)
             const { numberOfItemsCompleted, numberOfItemsInProgress, numberOfItemsNotStarted, numberOfItemsMandatoryNotStarted, numberOfItemsMandatoryCompleted, numberOfItemsMandatoryInProgress } = await getNumberOfItemsCompletedOrInProgressOrNotStarted(req)
@@ -118,11 +118,20 @@ const ItemController = {
 
             const averageGroupACourses = await averageGroupCourses(user, groupA)
             const averageGroupBCourses = await averageGroupCourses(user, groupB)
-
+            
             const averageStudent = await calculateAverageStudent(user) // Não necessita de mudanças
-
+            
             const averageGroupARatings = await averageGroupRatings(user, groupA)
             const averageGroupBRatings = await averageGroupRatings(user, groupB)
+            
+            const tags = await getTagsGroupsByToken(req)
+            
+            for (const tag of user.tags) {
+                delete tag.createdAt
+                tags.push(tag)
+            }
+
+            const allTrailsElegibles = await Trail.find({tags:{$in:tags}}).countDocuments()
 
             await User.findByIdAndUpdate(user._id, { averageRating: averageStudent.toFixed(2), numberTrailsCompleted, numberTrailsElegibles })
 
@@ -143,6 +152,39 @@ const ItemController = {
                 courses,
                 certificates,
                 allTrails,
+                allTrailsElegibles,
+            })
+        } catch (error) {
+            console.log(error)
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'home', 'dashboardStudent')
+        }
+    },
+    async dashboardStudentv2 (req, res) {
+        try {
+            const user = await getUserByToken(req)
+
+            const allTrails = await Trail.countDocuments()
+            
+            const resultTrails = await trailsCompletedOrInProgress(req)
+            const certificates = await returnCertificates(resultTrails.trailsCompleted, user)
+           
+            
+            const tags = await getTagsGroupsByToken(req)
+            
+            for (const tag of user.tags) {
+                delete tag.createdAt
+                tags.push(tag)
+            }
+
+            const allTrailsElegibles = await Trail.find({tags:{$in:tags}}).countDocuments()
+
+            // await User.findByIdAndUpdate(user._id, { averageRating: averageStudent.toFixed(2), numberTrailsCompleted, numberTrailsElegibles })
+
+            _messages.success(res, req, {
+                resultTrails,               
+                certificates,
+                allTrails,
+                allTrailsElegibles,
             })
         } catch (error) {
             console.log(error)
