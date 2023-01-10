@@ -8,9 +8,11 @@ const {
 const _messages = require('../../utils/messages')
 const { User } = require('../users/model')
 const { Trail } = require('../trails/model')
-const { processTrailTracking } = require('../../utils/functions')
+const { processTrailTracking,isValidDate } = require('../../utils/functions')
 const { Tracking, DocumentTracking, MediaTracking, AudioTracking, SCORMTracking, ExamTracking, SCORMTrackingHistory, SCORMLessonStatus, EventTracking, ActivityTracking,TrackingsItems  } = require('./model')
 const { HistoricEvaluation, Evaluation } = require('../assessments/model')
+const {getTagsElegiblesByToken } = require('../sections/business')
+const { populateTrails } = require("../trails/business");
 
 const {
     pagination,

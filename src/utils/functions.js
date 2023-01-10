@@ -418,6 +418,11 @@ module.exports = {
         return value
     },
 
+    isValidDate(date) {
+        let d = new Date(date)
+        return d instanceof Date && !isNaN(d);
+      }
+
 }
 
 function nameMonth (month) {
