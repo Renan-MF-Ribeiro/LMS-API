@@ -32,6 +32,7 @@ const HistoricEvaluationSchema = new mongoose.Schema({
     user: { type: 'ObjectId', ref: 'users' },
     item: { type: 'ObjectId', ref: 'Item' },
     duration: { type: Number, default: 0 },
+    expiredCompletion: { type: Date, default: null }
 }, {
     ...optionsSchema,
 })

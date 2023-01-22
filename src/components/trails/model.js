@@ -57,7 +57,8 @@ const TrailSchema = new mongoose.Schema({
     externalPlayer: { type: Boolean, default: false },
     clientId: { type: Number, default: CLIENT_ID },
     innerTextStatus: { type: Boolean, default: false },
-    innerText: { type: String, required: ifInnerTextEnabled }
+    innerText: { type: String, required: ifInnerTextEnabled },
+    certificateDue: { type: Object, defaultValue: null }
 }, {
     strict: 'throw',
     timestamps: true,

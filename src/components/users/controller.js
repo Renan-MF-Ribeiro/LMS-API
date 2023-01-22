@@ -1,17 +1,17 @@
 /* eslint-disable handle-callback-err */
 require('dotenv').config();
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 const { CLIENT_ID, DOMAIN, AZURE_BLOB_URL, NODE_ENV } = process.env;
-const _messages = require("../../utils/messages");
-const _files = require("../../utils/files");
-const { Message } = require("../messages/model");
+const _messages = require('../../utils/messages');
+const _files = require('../../utils/files');
+const { Message } = require('../messages/model');
 const {
     User,
     UserTest,
     Block,
     userSchema,
     userProjection,
-} = require("./model");
+} = require('./model');
 
 const {
     generateToken,
@@ -23,7 +23,7 @@ const {
     returnIdGroupUser,
     generateTokenAnalytics,
     generateSASToken,
-} = require("../../utils/auth");
+} = require('../../utils/auth');
 
 const {
     checkAmountOfLocks,
@@ -37,7 +37,7 @@ const {
     sendUpdatedDeviceIdToMessenger,
     createWelcomeCampaign,
     returnDateSinceFirstLogin,
-} = require("./business");
+} = require('./business');
 
 const {
     sleep,
@@ -46,7 +46,7 @@ const {
     ordernation,
     getUserByToken,
     formatNumberCpf,
-} = require("../../utils/functions");
+} = require('../../utils/functions');
 
 const {
     sendEmailRecoryPassword,
@@ -54,24 +54,26 @@ const {
     sendSignupActivationEmail,
     sendNotificationEmail,
     sendResetedPasswordToUser,
-} = require("../../utils/email");
+} = require('../../utils/email');
 
-const axios = require("axios");
-const bcrypt = require("bcryptjs");
-const cryptoJS = require("crypto-js");
-const jwt = require("jsonwebtoken");
-const { sendMessageToKafka } = require("../messages/business");
+const axios = require('axios');
+const bcrypt = require('bcryptjs');
+const cryptoJS = require('crypto-js');
+const jwt = require('jsonwebtoken');
+const { sendMessageToKafka } = require('../messages/business');
 
-const config = require("../../../config.json");
+const config = require('../../../config.json');
 const {
     getNumberOfItemsCompletedOrInProgressOrNotStarted,
-} = require("../home/business");
-const { HistoricEvaluation, Evaluation } = require("../assessments/model");
-const { Question } = require("../assessments/questions/model");
-const { Alternative } = require("../assessments/alternatives/model");
+} = require('../home/business');
+const { HistoricEvaluation, Evaluation } = require('../assessments/model');
+const { Question } = require('../assessments/questions/model');
+const { Alternative } = require('../assessments/alternatives/model');
 const inactivateIfNotInSpreadsheet =
     config.usersData.inactivateIfNotInSpreadsheet;
 const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail;
+const { EVENTS_CATEGORY } = require('../gamification/model');
+const GamificationController = require('../gamification/controller');
 
 module.exports = {
     async create(req, res) {
@@ -97,14 +99,18 @@ module.exports = {
                 return _messages.forbidden(
                     res,
                     req,
-                    "User already exists", { error: "User already exists" },
-                    "users",
-                    "create"
+                    'User already exists',
+                    { error: 'User already exists' },
+                    'users',
+                    'create'
                 );
             }
 
             await User.create(processedUser);
-            const created = await User.findOne({ cpf: processedUser.cpf }, {...userProjection });
+            const created = await User.findOne(
+                { cpf: processedUser.cpf },
+                { ...userProjection }
+            );
 
             return _messages.success(res, req, created);
         } catch (error) {
@@ -120,12 +126,15 @@ module.exports = {
 
             return _messages.internalServer(
                 res,
-                req, !validationError ? "Internal Server Error" : "Validation Error", {
-                    error: !validationError ?
-                        "Internal Server Error" : validationError,
+                req,
+                !validationError ? 'Internal Server Error' : 'Validation Error',
+                {
+                    error: !validationError
+                        ? 'Internal Server Error'
+                        : validationError,
                 },
-                "users",
-                "create"
+                'users',
+                'create'
             );
         }
     },
@@ -140,9 +149,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "findById"
+                'Erro interno no servidor',
+                'users',
+                'findById'
             );
         }
     },
@@ -159,10 +168,10 @@ module.exports = {
                 _messages.badRequest(
                     res,
                     req,
-                    "Usuário já cadastrado",
-                    "Já existe um usuário cadastrado para este usuário",
-                    "users",
-                    "signup"
+                    'Usuário já cadastrado',
+                    'Já existe um usuário cadastrado para este usuário',
+                    'users',
+                    'signup'
                 );
             } else {
                 const hashPassword = {
@@ -174,9 +183,9 @@ module.exports = {
                     networkLogin,
                     password: hashPassword,
                     passwordValid: true,
-                    clientUserKey: CLIENT_ID + "@@" + networkLogin,
-                    groupsAD: ["PERFIL_Aluno", "ELEGE_CURSO"],
-                    status: sendSignUpActivationEmail ? "INATIVO" : "ATIVO",
+                    clientUserKey: CLIENT_ID + '@@' + networkLogin,
+                    groupsAD: ['PERFIL_Aluno', 'ELEGE_CURSO'],
+                    status: sendSignUpActivationEmail ? 'INATIVO' : 'ATIVO',
                     ...data,
                 };
 
@@ -202,9 +211,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "signup"
+                'Erro interno no servidor',
+                'users',
+                'signup'
             );
         }
     },
@@ -214,14 +223,17 @@ module.exports = {
             const { token, email } = req.body;
             const isUser = await bcrypt.compare(email, token);
             if (isUser) {
-                const activate = await User.updateOne({ email }, { status: "ATIVO" });
+                const activate = await User.updateOne(
+                    { email },
+                    { status: 'ATIVO' }
+                );
                 _messages.success(res, req, activate);
             } else {
                 _messages.badRequest(
                     res,
                     req,
-                    "Token inválido",
-                    "O token fornecido é inválido"
+                    'Token inválido',
+                    'O token fornecido é inválido'
                 );
             }
         } catch (error) {
@@ -229,9 +241,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "signup"
+                'Erro interno no servidor',
+                'users',
+                'signup'
             );
         }
     },
@@ -241,23 +253,26 @@ module.exports = {
         try {
             const { login, password } = req.body;
 
-            var decrypted = cryptoJS.AES.decrypt(password, "pass");
+            var decrypted = cryptoJS.AES.decrypt(password, 'pass');
 
             const passwordDecripty = decrypted.toString(cryptoJS.enc.Utf8);
 
             if (login !== undefined && password !== undefined) {
-                user = await User.findOne({ networkLogin: { $eq: login }, status: "ATIVO" }, [
-                    "_id",
-                    "networkLogin",
-                    "password",
-                    "acceptTerms",
-                    "acceptTermsCollaboration",
-                    "passwordValid",
-                    "name",
-                    "profilePhoto",
-                    "groupsAD",
-                    "email",
-                ]);
+                user = await User.findOne(
+                    { networkLogin: { $eq: login }, status: 'ATIVO' },
+                    [
+                        '_id',
+                        'networkLogin',
+                        'password',
+                        'acceptTerms',
+                        'acceptTermsCollaboration',
+                        'passwordValid',
+                        'name',
+                        'profilePhoto',
+                        'groupsAD',
+                        'email',
+                    ]
+                );
 
                 if (user) {
                     const amountOfLocks = await checkAmountOfLocks(user._id);
@@ -272,26 +287,29 @@ module.exports = {
 
                         // 30min
                         if (resultDiff >= 1) {
-                            await Block.updateMany({ user: { $eq: user._id } }, { unblocked: true });
+                            await Block.updateMany(
+                                { user: { $eq: user._id } },
+                                { unblocked: true }
+                            );
                         } else {
                             sendNotificationEmail(
                                 user.email,
-                                "Conta bloqueada",
+                                'Conta bloqueada',
                                 `Olá ${user.name}, uma nova tentativa de acesso a sua conta não foi permita pois sua conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
                             );
                             _messages.forbidden(
                                 res,
                                 req,
-                                "Usuário bloqueado temporariamente",
-                                "Por favor tente novamente mais tarde!",
-                                "users",
-                                "ldapSignIn"
+                                'Usuário bloqueado temporariamente',
+                                'Por favor tente novamente mais tarde!',
+                                'users',
+                                'ldapSignIn'
                             );
                             return;
                         }
                     }
 
-                    var pass = user.password.filter(function(obj) {
+                    var pass = user.password.filter(function (obj) {
                         if (
                             obj.valid === true &&
                             bcrypt.compareSync(passwordDecripty, obj.hash)
@@ -304,7 +322,7 @@ module.exports = {
 
                     if (pass.length === 0) {
                         // sendNotificationEmail(user.email, "Falha na sua conta", `Olá ${user.name}, foi feita uma nova tentativa de acesso acesso a sua conta, se você não reconhece esse acesso, por favor, acesse a sua conta e troque a sua senha.`);
-                        throw new Error("Senha inválida");
+                        throw new Error('Senha inválida');
                     } else {
                         if (
                             new Date(pass[0].createdAt).getTime() <
@@ -321,10 +339,10 @@ module.exports = {
                     for (const p in groups) {
                         const strGroup = groups[p];
 
-                        if (strGroup.indexOf("PERFIL_") >= 0)
+                        if (strGroup.indexOf('PERFIL_') >= 0)
                             namesProfiles.push(strGroup);
 
-                        if (strGroup.indexOf("ELEGE") >= 0)
+                        if (strGroup.indexOf('ELEGE') >= 0)
                             namesGroups.push(strGroup);
                     }
 
@@ -357,11 +375,18 @@ module.exports = {
                     var tokenEncript = cryptoJS.AES.encrypt(token, login);
 
                     var tk = tokenEncript.toString();
-                    var key = login + ":" + password;
+                    var key = login + ':' + password;
                     key = cryptoJS.AES.encrypt(key, password).toString();
+
+                    // GAMIFICATION DISPATCH
+                    await GamificationController.dispatch(login, [
+                        EVENTS_CATEGORY.LOGIN,
+                    ]);
+
                     _messages.success(
                         res,
-                        req, {
+                        req,
+                        {
                             SAS,
                             tk,
                             key,
@@ -375,11 +400,13 @@ module.exports = {
                             networkLogin: user.networkLogin,
                             userId: user._id,
                         },
-                        "Sucesso ao logar",
-                        "users",
-                        "ldapSignIn", [], [],
+                        'Sucesso ao logar',
+                        'users',
+                        'ldapSignIn',
+                        [],
+                        [],
                         true,
-                        "LOGIN",
+                        'LOGIN',
                         namesProfiles.concat(namesGroups)
                     );
                 } else {
@@ -387,20 +414,20 @@ module.exports = {
                     _messages.forbidden(
                         res,
                         req,
-                        "Usuário ou senha inválidos.",
-                        "Usuário ou senha inválidos.",
-                        "users",
-                        "ldapSignIn"
+                        'Usuário ou senha inválidos.',
+                        'Usuário ou senha inválidos.',
+                        'users',
+                        'ldapSignIn'
                     );
                 }
             } else {
                 _messages.forbidden(
                     res,
                     req,
-                    "Usuário ou senha não informados",
-                    "Erro de validação",
-                    "users",
-                    "ldapSignIn"
+                    'Usuário ou senha não informados',
+                    'Erro de validação',
+                    'users',
+                    'ldapSignIn'
                 );
             }
         } catch (error) {
@@ -414,10 +441,10 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Usuário ou senha inválidos.",
-                "Usuário ou senha inválidos.",
-                "users",
-                "ldapSignIn"
+                'Usuário ou senha inválidos.',
+                'Usuário ou senha inválidos.',
+                'users',
+                'ldapSignIn'
             );
         }
     },
@@ -430,7 +457,7 @@ module.exports = {
             const response = await axios.get(uri);
             const firstLogin = await returnDateSinceFirstLogin(user._id);
             const { numberOfItemsCompleted } =
-            await getNumberOfItemsCompletedOrInProgressOrNotStarted(req);
+                await getNumberOfItemsCompletedOrInProgressOrNotStarted(req);
             if (response.data[0]) {
                 const latestFeedback = response.data.slice(-1);
                 const latestFeedbackDate = new Date(
@@ -444,7 +471,7 @@ module.exports = {
                 if (
                     firstLogin >= 1 &&
                     daysSinceLastFeedback >=
-                    config.usersData.daysSinceLastFeedback &&
+                        config.usersData.daysSinceLastFeedback &&
                     numberOfItemsCompleted >= 1
                 ) {
                     _messages.success(res, req, true);
@@ -467,17 +494,17 @@ module.exports = {
 
         try {
             if (networkLogin) {
-                user = await User.findOne({ networkLogin, status: "ATIVO" }, [
-                    "_id",
-                    "networkLogin",
-                    "user",
-                    "password",
-                    "acceptTerms",
-                    "passwordValid",
-                    "name",
-                    "profilePhoto",
-                    "groupsAD",
-                    "email",
+                user = await User.findOne({ networkLogin, status: 'ATIVO' }, [
+                    '_id',
+                    'networkLogin',
+                    'user',
+                    'password',
+                    'acceptTerms',
+                    'passwordValid',
+                    'name',
+                    'profilePhoto',
+                    'groupsAD',
+                    'email',
                 ]);
                 if (user) {
                     const amountOfLocks = await checkAmountOfLocks(user._id);
@@ -492,20 +519,23 @@ module.exports = {
 
                         // 30min
                         if (resultDiff >= 1) {
-                            await Block.updateMany({ user: { $eq: user._id } }, { unblocked: true });
+                            await Block.updateMany(
+                                { user: { $eq: user._id } },
+                                { unblocked: true }
+                            );
                         } else {
                             sendNotificationEmail(
                                 user.email,
-                                "Conta bloqueada",
+                                'Conta bloqueada',
                                 `Olá ${user.name}, uma nova tentativa de acesso a sua conta não foi permita pois sua conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
                             );
                             _messages.forbidden(
                                 res,
                                 req,
-                                "Usuário bloqueado temporariamente",
-                                "Por favor tente novamente mais tarde!",
-                                "users",
-                                "ldapSignIn"
+                                'Usuário bloqueado temporariamente',
+                                'Por favor tente novamente mais tarde!',
+                                'users',
+                                'ldapSignIn'
                             );
                             return;
                         }
@@ -518,10 +548,10 @@ module.exports = {
                     for (const p in groups) {
                         const strGroup = groups[p];
 
-                        if (strGroup.indexOf("PERFIL_") >= 0)
+                        if (strGroup.indexOf('PERFIL_') >= 0)
                             namesProfiles.push(strGroup);
 
-                        if (strGroup.indexOf("ELEGE") >= 0)
+                        if (strGroup.indexOf('ELEGE') >= 0)
                             namesGroups.push(strGroup);
                     }
 
@@ -552,19 +582,20 @@ module.exports = {
 
                     var tokenEncript = cryptoJS.AES.encrypt(
                         token,
-                        "happlearning"
+                        'happlearning'
                     );
-                    var key = "happlearning" + ":" + "25KP76yNnhiGH9bSj";
+                    var key = 'happlearning' + ':' + '25KP76yNnhiGH9bSj';
 
                     var tk = tokenEncript.toString();
                     key = cryptoJS.AES.encrypt(
                         key,
-                        "25KP76yNnhiGH9bSj"
+                        '25KP76yNnhiGH9bSj'
                     ).toString();
 
                     _messages.success(
                         res,
-                        req, {
+                        req,
+                        {
                             SAS,
                             tk,
                             key,
@@ -577,11 +608,13 @@ module.exports = {
                             networkLogin: user.networkLogin,
                             userId: user._id,
                         },
-                        "Sucesso ao logar",
-                        "users",
-                        "ldapSignIn", [], [],
+                        'Sucesso ao logar',
+                        'users',
+                        'ldapSignIn',
+                        [],
+                        [],
                         true,
-                        "LOGIN",
+                        'LOGIN',
                         namesProfiles.concat(namesGroups)
                     );
                 } else {
@@ -589,20 +622,20 @@ module.exports = {
                     _messages.forbidden(
                         res,
                         req,
-                        "Usuário ou senha inválidos.",
-                        "Usuário ou senha inválidos.",
-                        "users",
-                        "ldapSignIn"
+                        'Usuário ou senha inválidos.',
+                        'Usuário ou senha inválidos.',
+                        'users',
+                        'ldapSignIn'
                     );
                 }
             } else {
                 _messages.forbidden(
                     res,
                     req,
-                    "Usuário ou senha não informados",
-                    "Erro de validação",
-                    "users",
-                    "ldapSignIn"
+                    'Usuário ou senha não informados',
+                    'Erro de validação',
+                    'users',
+                    'ldapSignIn'
                 );
             }
         } catch (error) {
@@ -616,10 +649,10 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Usuário ou senha inválidos.",
-                "<strong>Usuário ou senha inválidos. </strong>",
-                "users",
-                "ldapSignIn"
+                'Usuário ou senha inválidos.',
+                '<strong>Usuário ou senha inválidos. </strong>',
+                'users',
+                'ldapSignIn'
             );
         }
     },
@@ -631,21 +664,23 @@ module.exports = {
             _messages.success(
                 res,
                 req,
-                "Sucesso",
-                "Aceitação dos termos de uso",
-                "users",
-                "acceptTerms", [], [],
+                'Sucesso',
+                'Aceitação dos termos de uso',
+                'users',
+                'acceptTerms',
+                [],
+                [],
                 true,
-                "TERMS OF USE"
+                'TERMS OF USE'
             );
         } catch (error) {
             _messages.internalServer(
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "acceptTerms"
+                'Erro interno no servidor',
+                'users',
+                'acceptTerms'
             );
         }
     },
@@ -659,21 +694,23 @@ module.exports = {
             _messages.success(
                 res,
                 req,
-                "Sucesso",
-                "Aceitação dos termos de uso de colaboração",
-                "users",
-                "acceptTermsCollaboration", [], [],
+                'Sucesso',
+                'Aceitação dos termos de uso de colaboração',
+                'users',
+                'acceptTermsCollaboration',
+                [],
+                [],
                 true,
-                "TERMS OF USE"
+                'TERMS OF USE'
             );
         } catch (error) {
             _messages.internalServer(
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "acceptTermsCollaboration"
+                'Erro interno no servidor',
+                'users',
+                'acceptTermsCollaboration'
             );
         }
     },
@@ -692,18 +729,18 @@ module.exports = {
             const user = await User.findOne(search);
 
             if (!user) {
-                throw "user not found";
+                throw 'user not found';
             }
 
             const password_new = Math.random()
                 .toString(36)
-                .replace(/[^a-zA-Z0-9_]+/g, "")
+                .replace(/[^a-zA-Z0-9_]+/g, '')
                 .substring(0, 6);
 
             var salt = bcrypt.genSaltSync(10);
             var hashPass = bcrypt.hashSync(password_new, salt);
 
-            var newPass = user.password.map(function(item, indice) {
+            var newPass = user.password.map(function (item, indice) {
                 item.valid = false;
                 return item;
             });
@@ -730,12 +767,12 @@ module.exports = {
             });
 
             if (isUser.email && changeByEmail) {
-                const email = isUser.email.split("@");
+                const email = isUser.email.split('@');
                 const emailName = email[0];
-                let newEmail = "";
+                let newEmail = '';
                 for (const i in emailName) {
                     if (i > 2 && i < emailName.length) {
-                        newEmail += "*";
+                        newEmail += '*';
                     } else {
                         newEmail += emailName[i];
                     }
@@ -743,26 +780,31 @@ module.exports = {
                 newEmail = `${newEmail}@${email[1]}`;
 
                 await sendEmailRecoryPassword(
-                    user.email ? user.email : emails, !!user.email,
+                    user.email ? user.email : emails,
+                    !!user.email,
                     password_new,
-                    resetPasswordUrl, { name: user.name, cpf: user.cpf }
+                    resetPasswordUrl,
+                    { name: user.name, cpf: user.cpf }
                 );
                 // $2a$10$G06bQZrp8R8kn2cnImS47eHQv./K4i0bp1yBaNDyj3WSrsCH/639G --> senha
                 return await _messages.success(
                     res,
-                    req, { status: "Sucesso", userEmail: newEmail },
-                    "Email para recupera senha disparado",
-                    "users",
-                    "recoveryPassword", [], [],
+                    req,
+                    { status: 'Sucesso', userEmail: newEmail },
+                    'Email para recupera senha disparado',
+                    'users',
+                    'recoveryPassword',
+                    [],
+                    [],
                     true,
-                    "RECOVERY PASSWORD"
+                    'RECOVERY PASSWORD'
                 );
             } else {
                 return await _messages.success(res, req, password_new);
                 // _messages.badRequest(res, req, 'Email não existe', 'Não existe uma conta associada a este email')
             }
         } catch (error) {
-            if (error === "user not found") {
+            if (error === 'user not found') {
                 return await _messages.notFound(res, req, error, error);
             }
             console.log(error);
@@ -770,9 +812,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "recoveryPassword"
+                'Erro interno no servidor',
+                'users',
+                'recoveryPassword'
             );
         }
     },
@@ -780,13 +822,13 @@ module.exports = {
     async changePassword(req, res) {
         try {
             const { password_old, password_new, password_newConfirm } =
-            req.body;
+                req.body;
             const { _id } = await getUserByToken(req);
-            const user = await User.findOne({ _id: _id }, ["password"]);
+            const user = await User.findOne({ _id: _id }, ['password']);
 
             // const passChecked = bcrypt.compareSync(password_old, user.password)
             if (password_old) {
-                var pass = user.password.filter(function(obj) {
+                var pass = user.password.filter(function (obj) {
                     if (
                         obj.valid === true &&
                         bcrypt.compareSync(password_old, obj.hash)
@@ -798,7 +840,7 @@ module.exports = {
                 });
             }
 
-            var Oldpass = user.password.filter(function(obj) {
+            var Oldpass = user.password.filter(function (obj) {
                 if (bcrypt.compareSync(password_new, obj.hash)) {
                     return true;
                 }
@@ -810,27 +852,27 @@ module.exports = {
                 _messages.unauthorized(
                     res,
                     req,
-                    new Error("ErrorAoTrocarSenha"),
-                    "Erro ao trocar senha.",
-                    "users",
-                    "changePassword"
+                    new Error('ErrorAoTrocarSenha'),
+                    'Erro ao trocar senha.',
+                    'users',
+                    'changePassword'
                 );
                 return;
             } else if (Oldpass.length > 0) {
                 _messages.unauthorized(
                     res,
                     req,
-                    new Error("ErrorAoTrocarSenha"),
-                    "Essa senha já foi utilizada anteriormente, por favor, crie uma nova senha.",
-                    "users",
-                    "changePassword"
+                    new Error('ErrorAoTrocarSenha'),
+                    'Essa senha já foi utilizada anteriormente, por favor, crie uma nova senha.',
+                    'users',
+                    'changePassword'
                 );
                 return;
             } else {
                 if (
                     pass &&
                     new Date(pass[0].createdAt).getTime() <
-                    Date.now() - 90 * 24 * 60 * 60 * 1000
+                        Date.now() - 90 * 24 * 60 * 60 * 1000
                 ) {
                     user.passwordValid = false;
                 }
@@ -839,7 +881,7 @@ module.exports = {
             var salt = bcrypt.genSaltSync(10);
             var hashPass = bcrypt.hashSync(password_new, salt);
 
-            var newPass = user.password.map(function(item, indice) {
+            var newPass = user.password.map(function (item, indice) {
                 item.valid = false;
                 return item;
             });
@@ -858,21 +900,23 @@ module.exports = {
             _messages.success(
                 res,
                 req,
-                "Sucesso",
-                "Senha alterada com sucesso",
-                "users",
-                "changePassword", [], [],
+                'Sucesso',
+                'Senha alterada com sucesso',
+                'users',
+                'changePassword',
+                [],
+                [],
                 true,
-                "CHANGE PASSWORD"
+                'CHANGE PASSWORD'
             );
         } catch (error) {
             _messages.internalServer(
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "recoveryPassword"
+                'Erro interno no servidor',
+                'users',
+                'recoveryPassword'
             );
         }
     },
@@ -882,9 +926,9 @@ module.exports = {
             const { password_new, password_newConfirm } = req.body;
             const { data } = decodeToken(req.headers.authorization);
             const { _id, password_old } = data;
-            const user = await User.findOne({ _id: _id }, ["password"]);
+            const user = await User.findOne({ _id: _id }, ['password']);
 
-            var pass = user.password.filter(function(obj) {
+            var pass = user.password.filter(function (obj) {
                 if (
                     obj.valid === true &&
                     bcrypt.compareSync(password_old, obj.hash)
@@ -895,7 +939,7 @@ module.exports = {
                 return false;
             });
 
-            var Oldpass = user.password.filter(function(obj) {
+            var Oldpass = user.password.filter(function (obj) {
                 if (bcrypt.compareSync(password_new, obj.hash)) {
                     return true;
                 }
@@ -907,20 +951,20 @@ module.exports = {
                 _messages.unauthorized(
                     res,
                     req,
-                    new Error("ErrorAoTrocarSenha"),
-                    "Erro ao trocar senha.",
-                    "users",
-                    "changePassword"
+                    new Error('ErrorAoTrocarSenha'),
+                    'Erro ao trocar senha.',
+                    'users',
+                    'changePassword'
                 );
                 return;
             } else if (Oldpass.length > 0) {
                 _messages.unauthorized(
                     res,
                     req,
-                    new Error("ErrorAoTrocarSenha"),
-                    "Essa senha já foi utilizada anteriormente, por favor, crie uma nova senha.",
-                    "users",
-                    "changePassword"
+                    new Error('ErrorAoTrocarSenha'),
+                    'Essa senha já foi utilizada anteriormente, por favor, crie uma nova senha.',
+                    'users',
+                    'changePassword'
                 );
                 return;
             } else {
@@ -935,7 +979,7 @@ module.exports = {
             var salt = bcrypt.genSaltSync(10);
             var hashPass = bcrypt.hashSync(password_new, salt);
 
-            var newPass = user.password.map(function(item, indice) {
+            var newPass = user.password.map(function (item, indice) {
                 item.valid = false;
                 return item;
             });
@@ -954,26 +998,28 @@ module.exports = {
             _messages.success(
                 res,
                 req,
-                "Sucesso",
-                "Senha alterada com sucesso",
-                "users",
-                "changePassword", [], [],
+                'Sucesso',
+                'Senha alterada com sucesso',
+                'users',
+                'changePassword',
+                [],
+                [],
                 true,
-                "CHANGE PASSWORD"
+                'CHANGE PASSWORD'
             );
         } catch (error) {
             _messages.internalServer(
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "recoveryPassword"
+                'Erro interno no servidor',
+                'users',
+                'recoveryPassword'
             );
         }
     },
 
-    async import (req, res) {
+    async import(req, res) {
         try {
             var file = null;
             const newUsers = [];
@@ -987,7 +1033,7 @@ module.exports = {
             const preProcessedUsers = await _files.readXLSXUsers(file.path);
             const results = preProcessedUsers.map((user) => {
                 if (user.cpf) {
-                    user.cpf = user.cpf.replace(/[^a-z0-9]/gi, "");
+                    user.cpf = user.cpf.replace(/[^a-z0-9]/gi, '');
                     user.cpf = formatNumberCpf(user.cpf);
                 }
                 return user;
@@ -1003,9 +1049,9 @@ module.exports = {
 
                     const account = await processUserAccount(processedUser);
 
-                    processedUser.password = existingUser ?
-                        existingUser.password :
-                        processedUser.password;
+                    processedUser.password = existingUser
+                        ? existingUser.password
+                        : processedUser.password;
 
                     if (existingUser) {
                         existingUsers.push({
@@ -1030,7 +1076,11 @@ module.exports = {
             }
 
             if (inactivateIfNotInSpreadsheet) {
-                await User.update({ updatedAt: { $lt: data_start } }, { $set: { status: "INATIVO" } }, { multi: true });
+                await User.update(
+                    { updatedAt: { $lt: data_start } },
+                    { $set: { status: 'INATIVO' } },
+                    { multi: true }
+                );
             }
 
             if (newUsers.length > 0) {
@@ -1047,16 +1097,16 @@ module.exports = {
                 }
             }
 
-            _messages.success(res, req, "Importado com sucesso");
+            _messages.success(res, req, 'Importado com sucesso');
         } catch (error) {
             console.log(error);
             _messages.internalServer(
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "import"
+                'Erro interno no servidor',
+                'users',
+                'import'
             );
         }
     },
@@ -1068,19 +1118,21 @@ module.exports = {
             const searchBy = req.query.searchBy;
 
             const users = await User.find(
-                    searchBy ? {
-                        $or: [
-                            { name: { $regex: searchBy, $options: "i" } },
-                            {
-                                registration: {
-                                    $regex: searchBy,
-                                    $options: "i",
-                                },
-                            },
-                            { email: { $regex: searchBy, $options: "i" } },
-                        ],
-                    } : {}
-                )
+                searchBy
+                    ? {
+                          $or: [
+                              { name: { $regex: searchBy, $options: 'i' } },
+                              {
+                                  registration: {
+                                      $regex: searchBy,
+                                      $options: 'i',
+                                  },
+                              },
+                              { email: { $regex: searchBy, $options: 'i' } },
+                          ],
+                      }
+                    : {}
+            )
                 .sort({
                     [order]: sort,
                 })
@@ -1088,25 +1140,27 @@ module.exports = {
                 .limit(parseInt(limit));
 
             const total = await User.find(
-                searchBy ? {
-                    $or: [
-                        { name: { $regex: searchBy, $options: "i" } },
-                        {
-                            registration: {
-                                $regex: searchBy,
-                                $options: "i",
-                            },
-                        },
-                        { email: { $regex: searchBy, $options: "i" } },
-                    ],
-                } : {}
+                searchBy
+                    ? {
+                          $or: [
+                              { name: { $regex: searchBy, $options: 'i' } },
+                              {
+                                  registration: {
+                                      $regex: searchBy,
+                                      $options: 'i',
+                                  },
+                              },
+                              { email: { $regex: searchBy, $options: 'i' } },
+                          ],
+                      }
+                    : {}
             ).countDocuments();
 
             const totalActive = await User.find({
-                status: "ATIVO",
+                status: 'ATIVO',
             }).countDocuments();
             const totalInactive = await User.find({
-                status: "INATIVO",
+                status: 'INATIVO',
             }).countDocuments();
 
             _messages.success(res, req, {
@@ -1120,9 +1174,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "returnUsers"
+                'Erro interno no servidor',
+                'users',
+                'returnUsers'
             );
         }
     },
@@ -1142,9 +1196,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "returnUsers"
+                'Erro interno no servidor',
+                'users',
+                'returnUsers'
             );
         }
     },
@@ -1170,61 +1224,61 @@ module.exports = {
             }
 
             const filter = [];
-            const fields = ["cpf", "email", "networkLogin"];
+            const fields = ['cpf', 'email', 'networkLogin'];
             fields.map(
                 (f) =>
-                req.body[f] &&
-                filter.push({
-                    _id: { $ne: _id },
-                    [f]: { $eq: req.body[f] },
-                })
+                    req.body[f] &&
+                    filter.push({
+                        _id: { $ne: _id },
+                        [f]: { $eq: req.body[f] },
+                    })
             );
             const found =
                 filter.length && (await User.findOne({ $or: filter }));
 
             if (found) {
                 const field =
-                    found.email === email ?
-                    "E-MAIL" :
-                    found.networkLogin === networkLogin ?
-                    "LOGIN" :
-                    "CPF";
+                    found.email === email
+                        ? 'E-MAIL'
+                        : found.networkLogin === networkLogin
+                        ? 'LOGIN'
+                        : 'CPF';
 
                 return _messages.forbidden(
                     res,
                     req,
-                    "Erro interno no servidor",
+                    'Erro interno no servidor',
                     `O ${field} informado já está sendo utilizado`,
-                    "users",
-                    "updateUser"
+                    'users',
+                    'updateUser'
                 );
             }
-            const userUpdated = { ... req.body }
-            const account = await processUserAccount(userUpdated)
-            const value  = JSON.parse(account.value)
+            const userUpdated = { ...req.body };
+            const account = await processUserAccount(userUpdated);
+            const value = JSON.parse(account.value);
             value.oldIdentifier = user.networkLogin;
-            account.value = JSON.stringify(value)
+            account.value = JSON.stringify(value);
             if (userUpdated?.networkLogin) {
-                await sendAccountsToKafka([account])
+                await sendAccountsToKafka([account]);
             }
             const updated = await User.findByIdAndUpdate(_id, req.body, {
-                projection: {...userProjection },
+                projection: { ...userProjection },
             });
 
             return _messages.success(
                 res,
                 req,
                 updated,
-                "Usuário(a) atualizado(a) com sucesso!"
+                'Usuário(a) atualizado(a) com sucesso!'
             );
         } catch (error) {
             return _messages.internalServer(
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "updateUser"
+                'Erro interno no servidor',
+                'users',
+                'updateUser'
             );
         }
     },
@@ -1233,15 +1287,15 @@ module.exports = {
         try {
             const { _id } = req.body;
             await User.findByIdAndUpdate(_id, req.body);
-            _messages.success(res, req, "Atualizado com sucesso");
+            _messages.success(res, req, 'Atualizado com sucesso');
         } catch (error) {
             _messages.internalServer(
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "updateUser"
+                'Erro interno no servidor',
+                'users',
+                'updateUser'
             );
         }
     },
@@ -1252,7 +1306,7 @@ module.exports = {
             const file = req.files.file;
             // const photoPath = await _files.awsAmazon(file, `photos/${user._id}`)
             let photoPath = await _files.azureBlob(file, `photos/${user._id}`);
-            if (NODE_ENV != "local") {
+            if (NODE_ENV != 'local') {
                 photoPath = photoPath.replace(AZURE_BLOB_URL, DOMAIN);
             }
             await User.findByIdAndUpdate(user._id, { profilePhoto: photoPath });
@@ -1263,9 +1317,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "changePhoto"
+                'Erro interno no servidor',
+                'users',
+                'changePhoto'
             );
         }
     },
@@ -1277,10 +1331,10 @@ module.exports = {
             _messages.forbidden(
                 res,
                 req,
-                "Sem permissão de acesso",
+                'Sem permissão de acesso',
                 false,
-                "users",
-                "isAuthenticated"
+                'users',
+                'isAuthenticated'
             );
         }
     },
@@ -1292,10 +1346,10 @@ module.exports = {
             _messages.forbidden(
                 res,
                 req,
-                "Sem permissão de acesso",
+                'Sem permissão de acesso',
                 false,
-                "users",
-                "isAuthenticatedNginx"
+                'users',
+                'isAuthenticatedNginx'
             );
         }
     },
@@ -1303,8 +1357,9 @@ module.exports = {
     async selfData(req, res) {
         try {
             const { data } = await decodeToken(req.headers.authorization);
-            const user = await User.findOne({ _id: data.ref },
-                "registration networkLogin name birthday admission typeHiring cargoCode cargo state costCenter hierarchical education gender email board department manager status"
+            const user = await User.findOne(
+                { _id: data.ref },
+                'registration networkLogin name birthday admission typeHiring cargoCode cargo state costCenter hierarchical education gender email board department manager status'
             );
             _messages.success(res, req, user);
         } catch (error) {
@@ -1312,9 +1367,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "changePhoto"
+                'Erro interno no servidor',
+                'users',
+                'changePhoto'
             );
         }
     },
@@ -1371,7 +1426,7 @@ module.exports = {
                 }
             }
 
-            res.status(200).json("Migração realizada com sucesso");
+            res.status(200).json('Migração realizada com sucesso');
         } catch (error) {
             res.status(500).json(error.message);
         }
@@ -1391,36 +1446,36 @@ module.exports = {
             }
 
             const header = [
-                { id: "nome", title: "NOME" },
-                { id: "login", title: "LOGIN" },
-                { id: "matricula", title: "MATRICULA" },
+                { id: 'nome', title: 'NOME' },
+                { id: 'login', title: 'LOGIN' },
+                { id: 'matricula', title: 'MATRICULA' },
             ];
 
             await _files.writeFile(header, records);
-            res.status(200).json("Exportado com sucesso");
+            res.status(200).json('Exportado com sucesso');
         } catch (error) {
-            res.status(500).json("Erro interno no servidor");
+            res.status(500).json('Erro interno no servidor');
         }
     },
 
     async email(req, res) {
         try {
-            const error = { message: "ERRO NA CARGA DIÁRIA", stack: "erro" };
+            const error = { message: 'ERRO NA CARGA DIÁRIA', stack: 'erro' };
             await sendLogEmail(
-                "success",
+                'success',
                 error,
                 100,
                 10,
                 40,
                 50,
-                "13/01/2020",
+                '13/01/2020',
                 10,
                 20,
                 30
             );
-            res.status(200).json("e-mail enviado");
+            res.status(200).json('e-mail enviado');
         } catch (error) {
-            await sendLogEmail("error", error);
+            await sendLogEmail('error', error);
             res.status(500).json(error.message);
         }
     },
@@ -1440,7 +1495,7 @@ module.exports = {
                     });
                 }
             }
-            res.status(200).json("ok");
+            res.status(200).json('ok');
         } catch (error) {
             res.status(500).json(error.message);
         }
@@ -1450,19 +1505,19 @@ module.exports = {
         try {
             const { body } = req;
             const { groupsAD, name, acceptTerms, profilePhoto } =
-            await User.findById(body._id);
+                await User.findById(body._id);
 
             const namesProfiles = [];
             const namesGroups = [];
 
             for (const p in groupsAD) {
                 const cnSplit =
-                    groupsAD[p].split("_")[0] +
-                    "_" +
-                    groupsAD[p].split("_")[1] +
-                    "_" +
-                    groupsAD[p].split("_")[2];
-                if (cnSplit.indexOf("PERFIL_") >= 0)
+                    groupsAD[p].split('_')[0] +
+                    '_' +
+                    groupsAD[p].split('_')[1] +
+                    '_' +
+                    groupsAD[p].split('_')[2];
+                if (cnSplit.indexOf('PERFIL_') >= 0)
                     namesProfiles.push(groupsAD[p]);
                 namesGroups.push(groupsAD[p]);
             }
@@ -1497,10 +1552,10 @@ module.exports = {
                 _messages.badRequest(
                     res,
                     req,
-                    "Sem perfil vinculado",
-                    "O usuário não possui algum perfil vinculado!",
-                    "users",
-                    "/emulation"
+                    'Sem perfil vinculado',
+                    'O usuário não possui algum perfil vinculado!',
+                    'users',
+                    '/emulation'
                 );
             }
         } catch (error) {
@@ -1508,9 +1563,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "emulation"
+                'Erro interno no servidor',
+                'users',
+                'emulation'
             );
         }
     },
@@ -1526,21 +1581,21 @@ module.exports = {
 
                 if (user[0]) {
                     await User.findByIdAndUpdate(user[0].id, {
-                        status: "INATIVO",
+                        status: 'INATIVO',
                         reasonCode: r.CODIGO_MOTIVO,
                     });
                 }
             }
-            res.status(200).json("ok");
+            res.status(200).json('ok');
         } catch (error) {
-            res.status(500).json("Erro no servidor");
+            res.status(500).json('Erro no servidor');
         }
     },
 
     async ssoCallback(req, res) {
         const email =
             req.samlUserObject
-            .httpSchemasXmlsoapOrgWs200505IdentityClaimsEmailaddress;
+                .httpSchemasXmlsoapOrgWs200505IdentityClaimsEmailaddress;
         const token = await jwt.sign({ email }, process.env.JWT_SECRET);
         res.redirect(
             302,
@@ -1560,9 +1615,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "device"
+                'Erro interno no servidor',
+                'users',
+                'device'
             );
         }
     },
@@ -1574,34 +1629,38 @@ module.exports = {
             const searchBy = req.query.searchBy;
 
             const collaborativeUsers = await User.find(
-                    searchBy ? {
-                        $and: [{
-                                groupsAD: { $in: ["PERFIL_Colaborador"] },
-                            },
-                            {
-                                $or: [{
-                                        name: {
-                                            $regex: searchBy,
-                                            $options: "i",
-                                        },
-                                    },
-                                    {
-                                        registration: {
-                                            $regex: searchBy,
-                                            $options: "i",
-                                        },
-                                    },
-                                    {
-                                        email: {
-                                            $regex: searchBy,
-                                            $options: "i",
-                                        },
-                                    },
-                                ],
-                            },
-                        ],
-                    } : { groupsAD: { $in: ["PERFIL_Colaborador"] } }
-                )
+                searchBy
+                    ? {
+                          $and: [
+                              {
+                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
+                              },
+                              {
+                                  $or: [
+                                      {
+                                          name: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          registration: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          email: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                  ],
+                              },
+                          ],
+                      }
+                    : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
+            )
                 .sort({
                     [order]: sort,
                 })
@@ -1609,33 +1668,37 @@ module.exports = {
                 .limit(parseInt(limit));
 
             const total = await User.countDocuments(
-                searchBy ? {
-                    $and: [{
-                            groupsAD: { $in: ["PERFIL_Colaborador"] },
-                        },
-                        {
-                            $or: [{
-                                    name: {
-                                        $regex: searchBy,
-                                        $options: "i",
-                                    },
-                                },
-                                {
-                                    registration: {
-                                        $regex: searchBy,
-                                        $options: "i",
-                                    },
-                                },
-                                {
-                                    email: {
-                                        $regex: searchBy,
-                                        $options: "i",
-                                    },
-                                },
-                            ],
-                        },
-                    ],
-                } : { groupsAD: { $in: ["PERFIL_Colaborador"] } }
+                searchBy
+                    ? {
+                          $and: [
+                              {
+                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
+                              },
+                              {
+                                  $or: [
+                                      {
+                                          name: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          registration: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          email: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                  ],
+                              },
+                          ],
+                      }
+                    : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             );
 
             _messages.success(res, req, {
@@ -1647,7 +1710,7 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor"
+                'Erro interno no servidor'
             );
         }
     },
@@ -1656,28 +1719,30 @@ module.exports = {
         try {
             const { userId, moderation } = req.body;
             if (!userId || !moderation) {
-                _messages.badRequest(res, req, "Payload inválido", {
-                    message: "Payload inválido",
+                _messages.badRequest(res, req, 'Payload inválido', {
+                    message: 'Payload inválido',
                 });
             }
 
-            const profiles = moderation ? ["PERFIL_Colaborador_Livre", "PERFIL_Colaborador"] : ["PERFIL_Colaborador"];
+            const profiles = moderation
+                ? ['PERFIL_Colaborador_Livre', 'PERFIL_Colaborador']
+                : ['PERFIL_Colaborador'];
 
             await User.findByIdAndUpdate(userId, {
                 $addToSet: { groupsAD: profiles },
             });
 
             _messages.success(res, req, {
-                message: "Usuário adicionado ao grupo de colaboradores",
+                message: 'Usuário adicionado ao grupo de colaboradores',
             });
         } catch (error) {
             _messages.internalServer(
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "setCollaborator"
+                'Erro interno no servidor',
+                'users',
+                'setCollaborator'
             );
         }
     },
@@ -1687,25 +1752,27 @@ module.exports = {
             const { userId, moderation } = req.body;
 
             if (!userId) {
-                _messages.badRequest(res, req, "Payload inválido", {
-                    message: "Payload inválido",
+                _messages.badRequest(res, req, 'Payload inválido', {
+                    message: 'Payload inválido',
                 });
             }
 
-            const profiles = ["PERFIL_Colaborador_Livre"];
+            const profiles = ['PERFIL_Colaborador_Livre'];
             if (!moderation) {
                 await User.findByIdAndUpdate(userId, {
                     $pullAll: { groupsAD: profiles },
                 });
                 _messages.success(res, req, {
-                    message: "Usuário removido do grupo de colaboradores livres",
+                    message:
+                        'Usuário removido do grupo de colaboradores livres',
                 });
             } else {
                 await User.findByIdAndUpdate(userId, {
                     $addToSet: { groupsAD: profiles },
                 });
                 _messages.success(res, req, {
-                    message: "Usuário adicionado ao grupo de colaboradores livres",
+                    message:
+                        'Usuário adicionado ao grupo de colaboradores livres',
                 });
             }
         } catch (error) {
@@ -1713,9 +1780,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "setCollaborator"
+                'Erro interno no servidor',
+                'users',
+                'setCollaborator'
             );
         }
     },
@@ -1725,28 +1792,28 @@ module.exports = {
             const { userId } = req.body;
 
             if (!userId) {
-                _messages.badRequest(res, req, "Payload inválido", {
-                    message: "Payload inválido",
+                _messages.badRequest(res, req, 'Payload inválido', {
+                    message: 'Payload inválido',
                 });
             }
 
-            const profiles = ["PERFIL_Colaborador", "PERFIL_Colaborador_Livre"];
+            const profiles = ['PERFIL_Colaborador', 'PERFIL_Colaborador_Livre'];
 
             await User.findByIdAndUpdate(userId, {
                 $pullAll: { groupsAD: profiles },
             });
 
             _messages.success(res, req, {
-                message: "Usuário removido do grupo de colaboradores",
+                message: 'Usuário removido do grupo de colaboradores',
             });
         } catch (error) {
             _messages.internalServer(
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "removeCollaborator"
+                'Erro interno no servidor',
+                'users',
+                'removeCollaborator'
             );
         }
     },
@@ -1756,8 +1823,8 @@ module.exports = {
             const { userId, password, generate } = req.body;
 
             if (!userId || generate === null) {
-                _messages.badRequest(res, req, "Payload inválido", {
-                    message: "Payload inválido",
+                _messages.badRequest(res, req, 'Payload inválido', {
+                    message: 'Payload inválido',
                 });
             }
 
@@ -1773,7 +1840,7 @@ module.exports = {
             } else {
                 generatedPassword = Math.random()
                     .toString(36)
-                    .replace(/[^a-zA-Z0-9_]+/g, "")
+                    .replace(/[^a-zA-Z0-9_]+/g, '')
                     .substring(0, 12);
                 hashPassword = {
                     hash: bcrypt.hashSync(generatedPassword, 10),
@@ -1782,9 +1849,17 @@ module.exports = {
                 };
             }
 
-            await User.findOneAndUpdate({ _id: userId, "password.valid": true }, { $set: { "password.$[].valid": false } }, { new: true });
+            await User.findOneAndUpdate(
+                { _id: userId, 'password.valid': true },
+                { $set: { 'password.$[].valid': false } },
+                { new: true }
+            );
 
-            const user = await User.findOneAndUpdate({ _id: userId }, { $push: { password: hashPassword } }, { new: true });
+            const user = await User.findOneAndUpdate(
+                { _id: userId },
+                { $push: { password: hashPassword } },
+                { new: true }
+            );
 
             if (user && user.email && generate) {
                 await sendResetedPasswordToUser(
@@ -1794,7 +1869,7 @@ module.exports = {
                     user
                 );
                 _messages.success(res, req, {
-                    message: "Senha alterada e enviada para o usuário.",
+                    message: 'Senha alterada e enviada para o usuário.',
                 });
             } else if (user && user.email && !generate && password) {
                 await sendResetedPasswordToUser(
@@ -1804,11 +1879,12 @@ module.exports = {
                     user
                 );
                 _messages.success(res, req, {
-                    message: "Senha alterada e enviada para o usuário.",
+                    message: 'Senha alterada e enviada para o usuário.',
                 });
             } else {
                 _messages.success(res, req, {
-                    message: "Senha alterada, porém o usuário não possui email. ",
+                    message:
+                        'Senha alterada, porém o usuário não possui email. ',
                 });
             }
         } catch (error) {
@@ -1817,9 +1893,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "resetUserPassword"
+                'Erro interno no servidor',
+                'users',
+                'resetUserPassword'
             );
         }
     },
@@ -1830,15 +1906,15 @@ module.exports = {
         try {
             await User.findByIdAndUpdate(userId, { $pull: { groupsAD: tag } });
             _messages.success(res, req, {
-                message: "Tag de permissão removida",
+                message: 'Tag de permissão removida',
             });
         } catch (error) {
             _messages.internalServer(
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users"
+                'Erro interno no servidor',
+                'users'
             );
         }
     },
@@ -1850,27 +1926,35 @@ module.exports = {
                 $addToSet: { groupsAD: tag },
             });
             _messages.success(res, req, {
-                message: "Tag de permissão adicionada ao usuário",
+                message: 'Tag de permissão adicionada ao usuário',
             });
         } catch (error) {
             _messages.internalServer(
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users"
+                'Erro interno no servidor',
+                'users'
             );
         }
     },
 
     async deleteClassTag(req, res) {
-        const { tag, userId } = req.body
+        const { tag, userId } = req.body;
 
         try {
-            await User.findByIdAndUpdate(userId, { $pull: { classGroups: { groupCode: tag } } })
-            _messages.success(res, req, { message: 'Tag de curso removida' })
+            await User.findByIdAndUpdate(userId, {
+                $pull: { classGroups: { groupCode: tag } },
+            });
+            _messages.success(res, req, { message: 'Tag de curso removida' });
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users')
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'users'
+            );
         }
     },
 
@@ -1881,37 +1965,45 @@ module.exports = {
                 $addToSet: { classGroups: tag },
             });
             _messages.success(res, req, {
-                message: "Tag de curso adicionada ao usuário",
+                message: 'Tag de curso adicionada ao usuário',
             });
         } catch (error) {
             _messages.internalServer(
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users"
+                'Erro interno no servidor',
+                'users'
             );
         }
     },
 
     async updateClassTag(req, res) {
-        const { tag, _id } = req.body
+        const { tag, _id } = req.body;
         try {
-            const { classGroups } = await User.findOne({ _id })
-            const newTags = []
+            const { classGroups } = await User.findOne({ _id });
+            const newTags = [];
             for (group of classGroups) {
                 if (group._id == tag._id) {
-                    group = tag
-                    newTags.push(group)
+                    group = tag;
+                    newTags.push(group);
                 } else {
-                    newTags.push(group)
+                    newTags.push(group);
                 }
             }
-            await User.findByIdAndUpdate(_id, { classGroups: newTags })
+            await User.findByIdAndUpdate(_id, { classGroups: newTags });
 
-            _messages.success(res, req, { message: 'Tag de curso atualizada no usuário' })
+            _messages.success(res, req, {
+                message: 'Tag de curso atualizada no usuário',
+            });
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users')
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'users'
+            );
         }
     },
 
@@ -1929,13 +2021,13 @@ module.exports = {
 
             if (!evaluationsHistoric.length) {
                 const message =
-                    "Histórico da avaliação informada não pode ser encontrado";
+                    'Histórico da avaliação informada não pode ser encontrado';
                 _messages.badRequest(res, req, message, { message });
             } else {
                 const userAttempts = await Promise.all(
-                    evaluationsHistoric.map(async(evaluationHistoric) => {
+                    evaluationsHistoric.map(async (evaluationHistoric) => {
                         const questionResponse = await Promise.all(
-                            evaluationHistoric.answers.map(async(answer) => {
+                            evaluationHistoric.answers.map(async (answer) => {
                                 const question = await Question.findOne({
                                     _id: { $eq: answer.idQuestion },
                                 });
@@ -1961,7 +2053,8 @@ module.exports = {
                         return {
                             _id: evaluationHistoric._id,
                             questionResponse,
-                            performance: evaluationHistoric.amountQuestionsCorrect /
+                            performance:
+                                evaluationHistoric.amountQuestionsCorrect /
                                 evaluationHistoric.amountOfQuestions,
                             startedAt: evaluationHistoric.createdAt,
                             finishedAt: evaluationHistoric.updatedAt,
@@ -1982,9 +2075,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "create"
+                'Erro interno no servidor',
+                'users',
+                'create'
             );
         }
     },
@@ -1992,7 +2085,7 @@ module.exports = {
     async getAllConteudistas(req, res) {
         try {
             const users = await User.find({
-                groupsAD: { $in: ["PERFIL_Conteudista"] },
+                groupsAD: { $in: ['PERFIL_Conteudista'] },
             });
             _messages.success(res, req, users);
         } catch (error) {
@@ -2000,9 +2093,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "users",
-                "conteudistas"
+                'Erro interno no servidor',
+                'users',
+                'conteudistas'
             );
         }
     },

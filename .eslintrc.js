@@ -13,6 +13,7 @@ module.exports = {
   extends: ['standard'],
 
   rules: {
+    semi: ['always', 'error'],
     'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
     'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
     'camelcase': 'off',

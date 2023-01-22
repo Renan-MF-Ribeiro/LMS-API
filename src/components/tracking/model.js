@@ -18,6 +18,7 @@ const TrackingSchema = new mongoose.Schema({
     isAllowedToSendXAPI: { type: Boolean, required: false },
     isXAPICompleteSent: { type: Boolean, required: false },
     completionAt: { type: Date, required: true, default: null },
+    expiredCompletion: { type: Date, default: null }
 }, {
     ...schemaOptions,
     discriminatorKey: 'kind',
