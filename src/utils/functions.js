@@ -350,10 +350,11 @@ module.exports = {
                 }
             }
             if (item.itemID.passingScore && item.itemID.passingScore !== 0) {
-                if (objTracking && objTracking.kind === 'ExamTracking') {
-                    scoreArr.push(objTracking.score)
+                const trackingKinds = ["ExamTracking", "ActivityTracking"];
+                if (objTracking && trackingKinds.includes(objTracking.kind)) {
+                    scoreArr.push(objTracking.score);
                 }
-            }   
+            }
 
             if(item.itemID){
                 item.itemID['score'] = score
