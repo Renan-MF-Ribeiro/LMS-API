@@ -43,6 +43,8 @@ const {
 const {
     getUserByToken,
 } = require('../../utils/functions')
+const GamificationController = require('../gamification/controller')
+const { EVENTS_CATEGORY } = require('../gamification/model')
 const ITEM_KINDS = Object.freeze({
     DocumentItem: DocumentItem,
     MediaItem: MediaItem,
@@ -165,6 +167,13 @@ const ItemController = {
                             title: item.title,
                         })
                     }
+
+                    // GAMIFICATION DISPATCH
+                    await GamificationController.dispatch(
+                        user.networkLogin, 
+                        [EVENTS_CATEGORY.UPLOADED_CONTENT]
+                    )
+
                     //Evento novo conteúdo colaborativo
                     _messages.success(res, req, item._id)
                 } catch (error) {
