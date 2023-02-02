@@ -1137,7 +1137,7 @@ module.exports = {
                     [order]: sort,
                 })
                 .skip(parseInt(skip))
-                .limit(!req.pageIndex ? undefined : parseInt(limit));
+                .limit(parseInt(limit));
 
             const total = await User.find(
                 searchBy
