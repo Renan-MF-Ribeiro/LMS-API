@@ -6,11 +6,12 @@ const { azureBlob } = require('../../utils/files');
 const _messages = require('../../utils/messages');
 const { User } = require('../users/model');
 const { Trail } = require('../trails/model');
-const { processTrailTracking, isValidDate } = require('../../utils/functions');
-const _messages = require('../../utils/messages');
-const { User } = require('../users/model');
-const { Trail } = require('../trails/model');
-const { processTrailTracking, isValidDate } = require('../../utils/functions');
+const {
+    processTrailTracking,
+    isValidDate,
+    pagination,
+    ordernation,
+} = require('../../utils/functions');
 const {
     Tracking,
     DocumentTracking,
@@ -27,8 +28,6 @@ const {
 const { HistoricEvaluation, Evaluation } = require('../assessments/model');
 const { getTagsElegiblesByToken } = require('../sections/business');
 const { populateTrails } = require('../trails/business');
-
-const { pagination, ordernation } = require('../../utils/functions');
 const cryptoJS = require('crypto-js');
 const { Item } = require('../items/model');
 
