@@ -7,24 +7,30 @@ const _messages = require('../../utils/messages');
 const { User } = require('../users/model');
 const { Trail } = require('../trails/model');
 const { processTrailTracking, isValidDate } = require('../../utils/functions');
+const _messages = require('../../utils/messages');
+const { User } = require('../users/model');
+const { Trail } = require('../trails/model');
+const { processTrailTracking, isValidDate } = require('../../utils/functions');
 const {
-    azureBlob,
-} = require('../../utils/files')
-const _messages = require('../../utils/messages')
-const { User } = require('../users/model')
-const { Trail } = require('../trails/model')
-const { processTrailTracking, isValidDate } = require('../../utils/functions')
-const { Tracking, DocumentTracking, MediaTracking, AudioTracking, SCORMTracking, ExamTracking, SCORMTrackingHistory, SCORMLessonStatus, EventTracking, ActivityTracking, TrackingsItems } = require('./model')
-const { HistoricEvaluation, Evaluation } = require('../assessments/model')
-const { getTagsElegiblesByToken } = require('../sections/business')
-const { populateTrails } = require('../trails/business')
+    Tracking,
+    DocumentTracking,
+    MediaTracking,
+    AudioTracking,
+    SCORMTracking,
+    ExamTracking,
+    SCORMTrackingHistory,
+    SCORMLessonStatus,
+    EventTracking,
+    ActivityTracking,
+    TrackingsItems,
+} = require('./model');
+const { HistoricEvaluation, Evaluation } = require('../assessments/model');
+const { getTagsElegiblesByToken } = require('../sections/business');
+const { populateTrails } = require('../trails/business');
 
-const {
-    pagination,
-    ordernation,
-} = require('../../utils/functions')
-const cryptoJS = require('crypto-js')
-const { Item } = require('../items/model')
+const { pagination, ordernation } = require('../../utils/functions');
+const cryptoJS = require('crypto-js');
+const { Item } = require('../items/model');
 
 const TRACKING_KINDS = Object.freeze({
     DocumentTracking: DocumentTracking,
@@ -119,12 +125,21 @@ const TrackingController = {
             } else {
                 isAllowedToSendXAPI = false;
 
-                if ((TrackingModel == DocumentTracking || TrackingModel == MediaTracking) && req.body.completion == 1) {
-                    registerCompletationAt = true
+                if (
+                    (TrackingModel == DocumentTracking ||
+                        TrackingModel == MediaTracking) &&
+                    req.body.completion == 1
+                ) {
+                    registerCompletationAt = true;
                 }
 
-                if ((TrackingModel == SCORMTracking) && (req.body.lessonStatus == 'completed' || req.body.lessonStatus == 'passed' || req.body.lessonStatus == 'failed')) {
-                    registerCompletationAt = true
+                if (
+                    TrackingModel == SCORMTracking &&
+                    (req.body.lessonStatus == 'completed' ||
+                        req.body.lessonStatus == 'passed' ||
+                        req.body.lessonStatus == 'failed')
+                ) {
+                    registerCompletationAt = true;
                 }
             }
 
@@ -136,9 +151,19 @@ const TrackingController = {
                 completionAt = new Date();
             } else {
                 // req.body.completionAt = tracking ? tracking.completionAt : null;
-                const newCompletion = req.body.lessonStatus ? req.body.lessonStatus : SCORMLessonStatus.INCOMPLETE
-                const setNewDate = (TrackingModel === SCORMTracking) && (newCompletion == SCORMLessonStatus.COMPLETED || newCompletion == SCORMLessonStatus.FAILED || newCompletion == SCORMLessonStatus.PASSED)
-                completionAt = tracking ? tracking.completionAt : (setNewDate ? new Date() : null)
+                const newCompletion = req.body.lessonStatus
+                    ? req.body.lessonStatus
+                    : SCORMLessonStatus.INCOMPLETE;
+                const setNewDate =
+                    TrackingModel === SCORMTracking &&
+                    (newCompletion == SCORMLessonStatus.COMPLETED ||
+                        newCompletion == SCORMLessonStatus.FAILED ||
+                        newCompletion == SCORMLessonStatus.PASSED);
+                completionAt = tracking
+                    ? tracking.completionAt
+                    : setNewDate
+                    ? new Date()
+                    : null;
             }
 
             if (
@@ -159,14 +184,24 @@ const TrackingController = {
             }
 
             if (TrackingModel === ExamTracking) {
-                const { idEvaluation } = await Item.findOne({ _id: req.body.item })
-                const { attempts } = await Evaluation.findOne({ _id: idEvaluation })
+                const { idEvaluation } = await Item.findOne({
+                    _id: req.body.item,
+                });
+                const { attempts } = await Evaluation.findOne({
+                    _id: idEvaluation,
+                });
 
                 if (!tracking) {
-                    req.body.remainingAttempts = attempts || -1
-                } else if (attempts && tracking.remainingAttempts && req.body.lessonStatus === 'failed') {
-                    req.body.remainingAttempts = tracking.remainingAttempts - 1
-                    req.body.lessonStatus = req.body.remainingAttempts ? 'incomplete' : 'failed'
+                    req.body.remainingAttempts = attempts || -1;
+                } else if (
+                    attempts &&
+                    tracking.remainingAttempts &&
+                    req.body.lessonStatus === 'failed'
+                ) {
+                    req.body.remainingAttempts = tracking.remainingAttempts - 1;
+                    req.body.lessonStatus = req.body.remainingAttempts
+                        ? 'incomplete'
+                        : 'failed';
                 }
             }
 
@@ -230,18 +265,18 @@ const TrackingController = {
         }
     },
 
-    async list (req, res) {
+    async list(req, res) {
         try {
-            const { skip, limit } = pagination(req)
-            const { order, sort } = ordernation(req)
-            const tags = await getTagsElegiblesByToken(req)
-            const { userLogin, searchBy } = req.query
+            const { skip, limit } = pagination(req);
+            const { order, sort } = ordernation(req);
+            const tags = await getTagsElegiblesByToken(req);
+            const { userLogin, searchBy } = req.query;
 
-            const trailsWithTracking = []
-            const processedTrailsWithTracking = []
-            let allItems = 0
-            let data
-            const arrTrailsCompletedOrProgress = []
+            const trailsWithTracking = [];
+            const processedTrailsWithTracking = [];
+            let allItems = 0;
+            let data;
+            const arrTrailsCompletedOrProgress = [];
 
             const allTrackingUser = await Tracking.find({
                 userLogin: { $eq: userLogin },
@@ -249,20 +284,20 @@ const TrackingController = {
                     { expiredCompletion: { $exists: false } },
                     { expiredCompletion: { $eq: null } },
                 ],
-            })
+            });
 
             const query = searchBy
                 ? {
-                    $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-                    'items.itemID': {
-                        $in: allTrackingUser.map(v => v.item),
-                    },
-                }
+                      $or: [{ title: { $regex: searchBy, $options: 'i' } }],
+                      'items.itemID': {
+                          $in: allTrackingUser.map((v) => v.item),
+                      },
+                  }
                 : {
-                    'items.itemID': {
-                        $in: allTrackingUser.map(v => v.item),
-                    },
-                }
+                      'items.itemID': {
+                          $in: allTrackingUser.map((v) => v.item),
+                      },
+                  };
 
             const newArrTrails = await Trail.find(query).populate({
                 path: 'items',
@@ -270,35 +305,37 @@ const TrackingController = {
                     path: 'itemID',
                     model: 'Item',
                 },
-            })
+            });
 
             for (const p in newArrTrails) {
                 const trailFilter = await populateTrails(true, {
                     _id: { $eq: newArrTrails[p] },
-                })
-                let trail = trailFilter[0]
+                });
+                let trail = trailFilter[0];
 
                 if (trail) {
                     const processedTrail = processTrailTracking(
                         trail,
-                        allTrackingUser,
-                    )
-                    trail = processedTrail.trail
+                        allTrackingUser
+                    );
+                    trail = processedTrail.trail;
                     if (
                         processedTrail.containsACompletedItem &&
                         isValidDate(trail.completionAt)
                     ) {
-                        arrTrailsCompletedOrProgress.push(trail)
+                        arrTrailsCompletedOrProgress.push(trail);
                     } else if (processedTrail.containsACompletedItem) {
                         if (trail.tags) {
                             for (tag of trail.tags) {
                                 const include = tags.filter(
-                                    t => t.value == tag.value,
-                                )
-                                if (include.length > 0) { arrTrailsCompletedOrProgress.push(trail) }
+                                    (t) => t.value == tag.value
+                                );
+                                if (include.length > 0) {
+                                    arrTrailsCompletedOrProgress.push(trail);
+                                }
                             }
                         } else {
-                            arrTrailsCompletedOrProgress.push(trail)
+                            arrTrailsCompletedOrProgress.push(trail);
                         }
                     }
                 }
@@ -306,7 +343,7 @@ const TrackingController = {
 
             const trails = await Trail.find({
                 ...query,
-                _id: { $in: arrTrailsCompletedOrProgress.map(t => t._id) },
+                _id: { $in: arrTrailsCompletedOrProgress.map((t) => t._id) },
             })
                 .populate({
                     path: 'items',
@@ -317,33 +354,33 @@ const TrackingController = {
                 })
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
-                .limit(parseInt(limit))
+                .limit(parseInt(limit));
 
             for (const trail of trails) {
                 const processedTrail = processTrailTracking(
                     trail,
-                    allTrackingUser,
-                )
-                trailsWithTracking.push(processedTrail)
+                    allTrackingUser
+                );
+                trailsWithTracking.push(processedTrail);
             }
 
             const totalTrails = await Trail.find({
                 ...query,
-                _id: { $in: arrTrailsCompletedOrProgress.map(t => t._id) },
-            }).countDocuments()
+                _id: { $in: arrTrailsCompletedOrProgress.map((t) => t._id) },
+            }).countDocuments();
 
             for (const v of trailsWithTracking) {
-                const trail = v.trail
-                const completedTrails = []
-                allItems = trail.items.length
-                let itemData
-                const itemDataArr = []
+                const trail = v.trail;
+                const completedTrails = [];
+                allItems = trail.items.length;
+                let itemData;
+                const itemDataArr = [];
 
                 for (const item in trail.items) {
                     if (trail.items[item].itemID.completion) {
-                        completedTrails.push(trail.items[item])
+                        completedTrails.push(trail.items[item]);
                     }
-                    trail.items[item] = trail.items[item].itemID
+                    trail.items[item] = trail.items[item].itemID;
                     itemData = {
                         completion: trail.items[item].completion === 1,
                         completionAt: trail.items[item].completionAt,
@@ -353,8 +390,8 @@ const TrackingController = {
                         createdAt: trail.items[item].createdAt,
                         updatedAt: trail.items[item].updatedAt,
                         title: trail.items[item].title,
-                    }
-                    itemDataArr.push(itemData)
+                    };
+                    itemDataArr.push(itemData);
                 }
 
                 data = {
@@ -364,13 +401,13 @@ const TrackingController = {
                     completionAt: trail.completionAt,
                     updatedAt: trail.lastTrackingUpdate,
                     completion: (100 * completedTrails.length) / allItems,
-                }
-                processedTrailsWithTracking.push(data)
+                };
+                processedTrailsWithTracking.push(data);
             }
             _messages.success(res, req, {
                 totalTrails,
                 processedTrailsWithTracking,
-            })
+            });
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -378,12 +415,12 @@ const TrackingController = {
                 error.message,
                 'Erro interno no servidor',
                 'tracking',
-                'list',
-            )
+                'list'
+            );
         }
     },
 
-    async deleteQuery (req, res) {
+    async deleteQuery(req, res) {
         try {
             const { item, userLogin } = req.query;
             var networkLogin = userLogin;
@@ -438,35 +475,52 @@ const TrackingController = {
             let { order, sort } = ordernation(req);
             const searchBy = req.query.searchBy;
 
-            const query = searchBy ? {
-                $and: [
-                    {
-                        $or: [
-                            { 'item.title': { $regex: searchBy, $options: 'i' } },
-                            { 'user.name': { $regex: searchBy, $options: 'i' } },
-                            { reviewer: { $regex: searchBy, $options: 'i' } },
-                        ],
-                    },
-                    {
-                        $or: [
-                            { lessonStatus: 'failed' },
-                            { lessonStatus: 'passed' },
-                        ],
-                        kind: 'ActivityTracking',
-                    },
-                ],
-            } : {
-                $or: [
-                    { lessonStatus: 'failed' },
-                    { lessonStatus: 'passed' },
-                ],
-                kind: 'ActivityTracking',
-            }
+            const query = searchBy
+                ? {
+                      $and: [
+                          {
+                              $or: [
+                                  {
+                                      'item.title': {
+                                          $regex: searchBy,
+                                          $options: 'i',
+                                      },
+                                  },
+                                  {
+                                      'user.name': {
+                                          $regex: searchBy,
+                                          $options: 'i',
+                                      },
+                                  },
+                                  {
+                                      reviewer: {
+                                          $regex: searchBy,
+                                          $options: 'i',
+                                      },
+                                  },
+                              ],
+                          },
+                          {
+                              $or: [
+                                  { lessonStatus: 'failed' },
+                                  { lessonStatus: 'passed' },
+                              ],
+                              kind: 'ActivityTracking',
+                          },
+                      ],
+                  }
+                : {
+                      $or: [
+                          { lessonStatus: 'failed' },
+                          { lessonStatus: 'passed' },
+                      ],
+                      kind: 'ActivityTracking',
+                  };
 
-            order = order === 'maxCorrectedAt' ? 'correctedAt' : order
-            order = order === 'itemName' ? 'item.title' : order
-            order = order === 'studentName' ? 'user.name' : order
-            order = order === 'maxSentAt' ? 'sentAt' : order
+            order = order === 'maxCorrectedAt' ? 'correctedAt' : order;
+            order = order === 'itemName' ? 'item.title' : order;
+            order = order === 'studentName' ? 'user.name' : order;
+            order = order === 'maxSentAt' ? 'sentAt' : order;
 
             const trackingCount = await TrackingsItems.find(
                 query
@@ -475,7 +529,7 @@ const TrackingController = {
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
                 .sort({ [order]: sort })
-                .lean()
+                .lean();
 
             const activities = [];
             for (const activity of tracking) {
@@ -519,23 +573,25 @@ const TrackingController = {
 
             const searchBy = req.query.searchBy;
 
-            const query = searchBy ? {
-                $or: [
-                    { 'item.title': { $regex: searchBy, $options: 'i' } },
-                    { 'user.name': { $regex: searchBy, $options: 'i' } },
-                ],
-                kind: 'ActivityTracking',
-                lessonStatus: 'incomplete',
-                sentAt: { $exists: true, $not: { $size: 0 } },
-            } : {
-                lessonStatus: 'incomplete',
-                kind: 'ActivityTracking',
-                sentAt: { $exists: true, $not: { $size: 0 } },
-            }
+            const query = searchBy
+                ? {
+                      $or: [
+                          { 'item.title': { $regex: searchBy, $options: 'i' } },
+                          { 'user.name': { $regex: searchBy, $options: 'i' } },
+                      ],
+                      kind: 'ActivityTracking',
+                      lessonStatus: 'incomplete',
+                      sentAt: { $exists: true, $not: { $size: 0 } },
+                  }
+                : {
+                      lessonStatus: 'incomplete',
+                      kind: 'ActivityTracking',
+                      sentAt: { $exists: true, $not: { $size: 0 } },
+                  };
 
-            order = order === 'maxSentAt' ? 'sentAt' : order
-            order = order === 'itemName' ? 'item.title' : order
-            order = order === 'studentName' ? 'user.name' : order
+            order = order === 'maxSentAt' ? 'sentAt' : order;
+            order = order === 'itemName' ? 'item.title' : order;
+            order = order === 'studentName' ? 'user.name' : order;
 
             const trackingCount = await TrackingsItems.find(
                 query
@@ -544,7 +600,7 @@ const TrackingController = {
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
                 .sort({ [order]: sort })
-                .lean()
+                .lean();
 
             const activities = [];
             for (const activity of tracking) {
@@ -579,7 +635,7 @@ const TrackingController = {
         }
     },
 
-    async updateActivityAdmin (req, res) {
+    async updateActivityAdmin(req, res) {
         try {
             const { trackingId } = req.query;
             const todayDate = new Date();
@@ -647,17 +703,31 @@ const TrackingController = {
                 })
                 .lean();
 
-            const { file } = req.files
-            activityPath = await azureBlob(file, 'items/activity')
-            activityPath = process.env.NODE_ENV === 'local' ? activityPath : activityPath.replace(AZURE_BLOB_URL, DOMAIN)
+            const { file } = req.files;
+            activityPath = await azureBlob(file, 'items/activity');
+            activityPath =
+                process.env.NODE_ENV === 'local'
+                    ? activityPath
+                    : activityPath.replace(AZURE_BLOB_URL, DOMAIN);
 
             if (tracking.lessonStatus == 'failed') {
-                await ActivityTracking.findOneAndUpdate({ _id: tracking._id }, { lessonStatus: 'incomplete', contentPath: activityPath, $unset: { score: 1 }, $push: { sentAt: todayDate } })
+                await ActivityTracking.findOneAndUpdate(
+                    { _id: tracking._id },
+                    {
+                        lessonStatus: 'incomplete',
+                        contentPath: activityPath,
+                        $unset: { score: 1 },
+                        $push: { sentAt: todayDate },
+                    }
+                );
             } else {
-                await ActivityTracking.findOneAndUpdate({ _id: tracking._id }, { contentPath: activityPath, $push: { sentAt: todayDate } })
+                await ActivityTracking.findOneAndUpdate(
+                    { _id: tracking._id },
+                    { contentPath: activityPath, $push: { sentAt: todayDate } }
+                );
             }
 
-            _messages.success(res, req, 'Atividade enviada com sucesso!')
+            _messages.success(res, req, 'Atividade enviada com sucesso!');
         } catch (error) {
             _messages.internalServer(
                 res,
