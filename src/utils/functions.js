@@ -339,7 +339,7 @@ module.exports = {
 
             var tmpCompletion = null
             if (objTracking) {
-                if (objTracking.kind === 'SCORMTracking' || objTracking.kind === 'ExamTracking') {
+                if (objTracking.kind === 'SCORMTracking' || objTracking.kind === 'ExamTracking' || objTracking.kind === 'ActivityTracking') {
                     if (objTracking.lessonStatus === 'FAILED' || objTracking.lessonStatus === 'failed') {
                         tmpCompletion = 2
                     } else {
@@ -350,17 +350,17 @@ module.exports = {
                 }
             }
             if (item.itemID.passingScore && item.itemID.passingScore !== 0) {
-                const trackingKinds = ["ExamTracking", "ActivityTracking"];
-                if (objTracking && trackingKinds.includes(objTracking.kind)) {
-                    scoreArr.push(objTracking.score);
+                const kindsWithScore = ['ExamTracking', 'ActivityTracking']
+                if (objTracking && kindsWithScore.includes(objTracking.kind)) {
+                    scoreArr.push(objTracking.score)
                 }
             }
 
-            if(item.itemID){
-                item.itemID['score'] = score
-                item.itemID['completionAt'] = completionAt
-                item.itemID['updatedAt'] = updatedAt
-                item.itemID['createdAt'] = createdAt
+            if (item.itemID) {
+                item.itemID.score = score
+                item.itemID.completionAt = completionAt
+                item.itemID.updatedAt = updatedAt
+                item.itemID.createdAt = createdAt
                 item.itemID.completion = tmpCompletion
             }
 
@@ -375,10 +375,11 @@ module.exports = {
             scoreAverage += score
         }
         scoreAverage = scoreAverage / scoreArr.length
-        trail.scoreAverage = scoreAverage
+        scoreAverage = Number(scoreAverage.toFixed(2))
+        trail.scoreAverage = isNaN(scoreAverage) ? null : scoreAverage
 
         var mostRecentDate = new Date(Math.max.apply(null, completionDate.map(e => {
-            if(e !== null) return new Date(e)
+            if (e !== null) return new Date(e)
         })))
         trail.lastTrackingUpdate = lastTrackingUpdate
         trail.completionAt = mostRecentDate
@@ -419,10 +420,10 @@ module.exports = {
         return value
     },
 
-    isValidDate(date) {
-        let d = new Date(date)
-        return d instanceof Date && !isNaN(d);
-      }
+    isValidDate (date) {
+        const d = new Date(date)
+        return d instanceof Date && !isNaN(d)
+    },
 
 }
 
