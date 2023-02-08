@@ -325,13 +325,11 @@ const TrackingController = {
                         arrTrailsCompletedOrProgress.push(trail);
                     } else if (processedTrail.containsACompletedItem) {
                         if (trail.tags) {
-                            for (tag of trail.tags) {
+                            for (const tag of trail.tags) {
                                 const include = tags.filter(
-                                    (t) => t.value == tag.value
-                                );
-                                if (include.length > 0) {
-                                    arrTrailsCompletedOrProgress.push(trail);
-                                }
+                                    t => t.value === tag.value,
+                                )
+                                if (include.length > 0) { arrTrailsCompletedOrProgress.push(trail) }
                             }
                         } else {
                             arrTrailsCompletedOrProgress.push(trail);
@@ -425,10 +423,10 @@ const TrackingController = {
             var networkLogin = userLogin;
             const tracking = await Tracking.findOne({ item, userLogin });
 
-            if (tracking.kind == 'ExamTracking') {
-                const userFind = await User.findOne({ networkLogin });
-                const user = userFind._id;
-                await HistoricEvaluation.deleteMany({ item, user });
+            if (tracking.kind === 'ExamTracking') {
+                const userFind = await User.findOne({ networkLogin })
+                const user = userFind._id
+                await HistoricEvaluation.deleteMany({ item, user })
             }
 
             await Tracking.deleteMany({ item, userLogin });
