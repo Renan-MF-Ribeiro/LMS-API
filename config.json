@@ -44,7 +44,7 @@
         }
     },
     "showcase": {
-        "active": false
+        "active": true
     },
     "vimeoFolder": "8417388"
 }
