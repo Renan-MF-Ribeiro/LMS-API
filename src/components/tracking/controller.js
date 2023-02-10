@@ -323,7 +323,7 @@ const TrackingController = {
                         isValidDate(trail.completionAt)
                     ) {
                         arrTrailsCompletedOrProgress.push(trail);
-                    } else if (processedTrail.containsACompletedItem) {
+                    } else {
                         if (trail.tags) {
                             for (const tag of trail.tags) {
                                 const include = tags.filter(
