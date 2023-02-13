@@ -15,6 +15,7 @@ const ComplaintSchema = new mongoose.Schema({
 const TrailSchema = new mongoose.Schema({
     enabled: { type: Boolean, default: false },
     title: { type: String, required: true, trim: true },
+    titleURL: { type: String, required: true, trim: true },
     description: { type: String, required: true, trim: true },
     mandatory: { type: Array, default: [] },
     highlighted: { type: Boolean, default: false },
@@ -67,6 +68,7 @@ const TrailSchema = new mongoose.Schema({
 
 TrailSchema.index({
     title: 'text',
+    titleURL: 'text',
     description: 'text',
 })
 
