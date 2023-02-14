@@ -32,6 +32,8 @@ const endpointOptions = {
 const ItemSchema = new mongoose.Schema({
     enabled: { type: Boolean, default: false, required: true },
     title: { type: String, required: true, trim: true },
+    titleURL: { type: String, required: true, trim: true },
+
     description: { type: String, required: ifEnabled, trim: true },
     durationHours: { type: Number, required: ifEnabled },
     thumbPath: { type: String, get: pathResolver, required: ifEnabled, default: '' },
@@ -64,6 +66,7 @@ const ItemSchema = new mongoose.Schema({
 
 ItemSchema.index({
     title: 'text',
+    titleURL: 'text',
     description: 'text',
 })
 
