@@ -2099,4 +2099,22 @@ module.exports = {
             );
         }
     },
+
+    async handleNames(req, res) {
+        try {
+            const { networkLogins } = req.body
+            const users = await User.find({ networkLogin: { $in: networkLogins }}, ['name'])
+
+            return _messages.success(res, req, users);
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'users',
+                'conteudistas'
+            );
+        }
+    }
 };
