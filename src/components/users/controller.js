@@ -2103,7 +2103,7 @@ module.exports = {
     async handleNames(req, res) {
         try {
             const { networkLogins } = req.body
-            const users = await User.find({ networkLogin: { $in: networkLogins }}, ['name'])
+            const users = await User.find({ networkLogin: { $in: networkLogins }}, ['name', 'networkLogin'])
 
             return _messages.success(res, req, users);
         } catch (error) {
