@@ -118,6 +118,15 @@ module.exports = {
             }, null, true, 'America/Sao_Paulo')
         }
     },
+
+    cronRevokeTrail() {
+        if (config.cron.revokeTrail.active) {
+            new CronJob('00 03 * * * ', () => {
+                revokeTrail();
+            }, null, true, 'America/Sao_Paulo');
+        }
+    },
+
     executeCronAverageCourses () {
         // userTemporaryTagsCron()
         // averageCourses()
@@ -127,6 +136,10 @@ module.exports = {
         // courseReleaseCron()
         examTrackingDeleteCron()
         // cronDegreedCharge()
+    },
+
+    executeRevokeTrail() {
+        revokeTrail();
     },
 
     executeCourseReleaseNotification () {
@@ -677,3 +690,150 @@ async function cronDegreedCharge (hours) {
         storageLog('DAILY_CHARGE_DEGREED - ' + error.message)
     }
 }
+
+async function revokeTrail() {
+    const trails = await populateTrails(true, {
+        'certificateDue.type': { $in: ['fixed', 'availability'] },
+    });
+
+    const trailsToBeRevoked = trails.filter((trail) => {
+        const expirationDate = trail.certificateDue.value;
+        const isFixed = trail.certificateDue.type === 'fixed';
+        const today = moment(new Date());
+        const future = moment(
+            new Date(!isFixed ? trail.startDate : expirationDate)
+        );
+        const diff = today.diff(
+            !isFixed ? future.add(expirationDate, 'days') : future,
+            'days',
+            true
+        );
+
+        return diff >= 0;
+    });
+
+    if (trailsToBeRevoked.length) {
+        const groupTags = [];
+        trailsToBeRevoked.forEach((trail) => {
+            trail.tags.forEach(
+                (tag) => !groupTags.includes(tag) && groupTags.push(tag)
+            );
+        });
+
+        trailsToBeRevoked.map(async (trail) => {
+            const trailItems = trail.items
+                .filter(({ itemID }) => !!itemID.enabled)
+                .map(({ itemID }) => itemID._id);
+
+            const trackings = await Tracking.aggregate([
+                {
+                    $match: {
+                        item: {
+                            $in: trailItems,
+                        },
+                        $or: [
+                            {
+                                completionAt: { $exists: true },
+                                completionAt: { $ne: null },
+                            },
+                        ],
+                        $or: [
+                            {
+                                expiredCompletion: { $exists: false },
+                                expiredCompletion: { $eq: null },
+                            },
+                        ],
+                    },
+                },
+                {
+                    $group: {
+                        _id: '$userLogin',
+                        count: { $sum: 1 },
+                        lastCompletionAt: { $max: '$completionAt' },
+                    },
+                },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: '_id',
+                        foreignField: 'networkLogin',
+                        as: 'user',
+                    },
+                },
+                {
+                    $unwind: '$user',
+                },
+                {
+                    $project: {
+                        _id: 1,
+                        count: 1,
+                        lastCompletionAt: 1,
+                        'user._id': 1,
+                    },
+                },
+            ]);
+
+            const usersToBeRevoked = trackings
+                .filter((t) => t.count === trail.items.length)
+                .map(({ _id, lastCompletionAt, user }) => {
+                    const isFixed = trail.certificateDue.type === 'fixed';
+                    const startDate = new Date(lastCompletionAt);
+                    const expirationDate = !isFixed
+                        ? moment(startDate)
+                                .add(trail.certificateDue.value, 'days')
+                                .toDate()
+                        : new Date(trail.certificateDue.value);
+
+                    return {
+                        _id: user._id,
+                        userLogin: _id,
+                        expirationDate,
+                    };
+                })
+                .filter(
+                    ({ expirationDate }) => expirationDate < new Date()
+                );
+
+            usersToBeRevoked.forEach(
+                async ({ _id, expirationDate, userLogin }) => {
+                    await Tracking.updateMany(
+                        {
+                            userLogin: userLogin,
+                            item: { $in: trailItems },
+                            $or: [
+                                {
+                                    expiredCompletion: { $exists: false },
+                                    expiredCompletion: { $eq: null },
+                                },
+                            ],
+                        },
+                        {
+                            $set: {
+                                expiredCompletion: expirationDate,
+                            },
+                        }
+                    );
+
+                    await HistoricEvaluation.updateMany(
+                        {
+                            user: _id,
+                            item: { $in: trailItems },
+                            $or: [
+                                {
+                                    expiredCompletion: { $exists: false },
+                                    expiredCompletion: { $eq: null },
+                                },
+                            ],
+                        },
+                        {
+                            $set: {
+                                expiredCompletion: expirationDate,
+                            },
+                        }
+                    );
+                }
+            );
+        });
+    }
+}
+
