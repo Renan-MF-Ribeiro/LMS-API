@@ -937,12 +937,14 @@ const ItemController = {
                         );
 
                         const title = $title && $title.children[0].text;
+                        const titleURL = title.toLowerCase()
                         const href = $resource.attributes.href;
                         const scoId = $item.attributes.identifier;
 
                         return SCORMItem.create({
                             author: user._id,
                             title,
+                            titleURL,
                             packageId,
                             scoId,
                             contentPath: `${packageId}/${href}`,
