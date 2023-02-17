@@ -205,20 +205,20 @@ const TrackingController = {
             }
 
             // GAMIFICATION DISPATCH
-            // await GamificationController.dispatch(
-            //     q.userLogin,
-            //     [
-            //         EVENTS_CATEGORY.STARTED_TRAIL,
-            //         EVENTS_CATEGORY.FINISHED_ITEM,
-            //         EVENTS_CATEGORY.FINISHED_TRAIL,
-            //         EVENTS_CATEGORY.WATCHED_COLLAB,
-            //     ],
-            //     {
-            //         item: q.item,
-            //         completion: req.body?.completion,
-            //         lessonStatus: req.body?.lessonStatus,
-            //     }
-            // );
+            await GamificationController.dispatch(
+                q.userLogin,
+                [
+                    EVENTS_CATEGORY.STARTED_TRAIL,
+                    EVENTS_CATEGORY.FINISHED_ITEM,
+                    EVENTS_CATEGORY.FINISHED_TRAIL,
+                    EVENTS_CATEGORY.WATCHED_COLLAB,
+                ],
+                {
+                    item: q.item,
+                    completion: req.body?.completion,
+                    lessonStatus: req.body?.lessonStatus,
+                }
+            );
 
             await TrackingModel.findOneAndUpdate(
                 q,
