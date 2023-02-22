@@ -30,6 +30,8 @@ const { getTagsElegiblesByToken } = require('../sections/business');
 const { populateTrails } = require('../trails/business');
 const cryptoJS = require('crypto-js');
 const { Item } = require('../items/model');
+const GamificationController = require('../gamification/controller');
+const { EVENTS_CATEGORY } = require('../gamification/model');
 
 const TRACKING_KINDS = Object.freeze({
     DocumentTracking: DocumentTracking,
@@ -205,20 +207,20 @@ const TrackingController = {
             }
 
             // GAMIFICATION DISPATCH
-            // await GamificationController.dispatch(
-            //     q.userLogin,
-            //     [
-            //         EVENTS_CATEGORY.STARTED_TRAIL,
-            //         EVENTS_CATEGORY.FINISHED_ITEM,
-            //         EVENTS_CATEGORY.FINISHED_TRAIL,
-            //         EVENTS_CATEGORY.WATCHED_COLLAB,
-            //     ],
-            //     {
-            //         item: q.item,
-            //         completion: req.body?.completion,
-            //         lessonStatus: req.body?.lessonStatus,
-            //     }
-            // );
+            await GamificationController.dispatch(
+                q.userLogin,
+                [
+                    EVENTS_CATEGORY.STARTED_TRAIL,
+                    EVENTS_CATEGORY.FINISHED_ITEM,
+                    EVENTS_CATEGORY.FINISHED_TRAIL,
+                    EVENTS_CATEGORY.WATCHED_COLLAB,
+                ],
+                {
+                    item: q.item,
+                    completion: req.body?.completion,
+                    lessonStatus: req.body?.lessonStatus,
+                }
+            );
 
             await TrackingModel.findOneAndUpdate(
                 q,

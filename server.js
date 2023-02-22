@@ -13,6 +13,7 @@ const {
     executeCronAverageCourses,
     deleteReprovedExamTracking,
     cronNotifyResponsibleUsers,
+    cronRevokeTrail
 } = require('./src/utils/cron')
 
 const server = app.listen(port, async () => {
@@ -25,6 +26,7 @@ const server = app.listen(port, async () => {
     updateUserTemporaryTags()
     executeCronAverageCourses()
     deleteReprovedExamTracking()
+    cronRevokeTrail()
 })
 
 createTerminus(server, {
