@@ -79,7 +79,8 @@ module.exports = {
             let fileArray = Object.keys(req.files).map((key) => req.files[key]);
 
             for (let i in body.banners) {
-                const path = await azureBlob(fileArray[i], "channels/banners");
+                let path = await azureBlob(fileArray[i], "channels/banners");
+                path = path.replace(AZURE_BLOB_URL, DOMAIN)
                 body.banners[i].path = path;
             }
 
