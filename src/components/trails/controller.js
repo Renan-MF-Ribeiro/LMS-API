@@ -1231,7 +1231,7 @@ module.exports = {
      */
     async getCourseInformation(req, res) {
         try {
-            const trailId = req.params.trailId;
+            const findValueTrail = req.params.trailId;
             const itemId = req.params.itemId;
 
             const trail = await Trail.findOne(
