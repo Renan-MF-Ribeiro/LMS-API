@@ -74,7 +74,8 @@ module.exports = {
             let fileArray = Object.keys(req.files).map((key) => req.files[key]);
 
             for (let i in body.banners) {
-                const path = await azureBlob(fileArray[i], 'channels/banners');
+                let path = await azureBlob(fileArray[i], "channels/banners");
+                path = path.replace(AZURE_BLOB_URL, DOMAIN)
                 body.banners[i].path = path;
             }
 
@@ -127,18 +128,13 @@ module.exports = {
                     (key) => req.files[key]
                 );
 
-                let indexFirstBannerWithNoPath = body.banners.findIndex((x) => {
-                    if (typeof x.path != "string") {
-                        return true;
-                    }
-                });
-                for (
-                    let i = indexFirstBannerWithNoPath;
-                    i < body.banners.length;
-                    i++
-                ) {
-                    const path = await azureBlob(
-                        fileArray[i - indexFirstBannerWithNoPath],
+                let indexBannersWithNoPath = body.banners.reduce(function (r, v, i) {
+                    return r.concat(typeof v.path != "string" ? i : []);
+                }, []);
+
+                for(let index in indexBannersWithNoPath){
+                    let path = await azureBlob(
+                        fileArray[index],
                         "channels/banners"
                     );
                     path = path.replace(AZURE_BLOB_URL, DOMAIN)
@@ -150,15 +146,15 @@ module.exports = {
 
             if (findChannel.length) {
                 await Channel.findOneAndUpdate({ _id: channelId }, body);
-                _messages.success(res, req, 'Canal Atualizado!');
+                _messages.success(res, req, "Canal Atualizado!");
             } else {
                 return _messages.badRequest(
                     res,
                     req,
-                    'Canal não encontrado',
-                    'Este canal não foi encontrado.',
-                    'channels',
-                    'update'
+                    "Canal não encontrado",
+                    "Este canal não foi encontrado.",
+                    "channels",
+                    "update"
                 );
             }
         } catch (error) {
@@ -166,9 +162,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                'Erro interno no servidor',
-                'channels',
-                '/create'
+                "Erro interno no servidor",
+                "channels",
+                "/create"
             );
         }
     },
