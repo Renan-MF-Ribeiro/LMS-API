@@ -1,7 +1,8 @@
-const _messages = require('../../utils/messages');
-const _functions = require('../../utils/functions');
-const { Channel } = require('./model');
-const { azureBlob } = require('../../utils/files');
+const _messages = require("../../utils/messages");
+const _functions = require("../../utils/functions");
+const { Channel } = require("./model");
+const { azureBlob } = require("../../utils/files");
+const { DOMAIN, AZURE_BLOB_URL } = process.env
 
 module.exports = {
     async getChannels(req, res) {
@@ -127,7 +128,7 @@ module.exports = {
                 );
 
                 let indexFirstBannerWithNoPath = body.banners.findIndex((x) => {
-                    if (typeof x.path != 'string') {
+                    if (typeof x.path != "string") {
                         return true;
                     }
                 });
@@ -138,9 +139,10 @@ module.exports = {
                 ) {
                     const path = await azureBlob(
                         fileArray[i - indexFirstBannerWithNoPath],
-                        'channels/banners'
+                        "channels/banners"
                     );
-                    body.banners[i].path = path;
+                    path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                    body.banners[indexBannersWithNoPath[index]].path = path;
                 }
             }
 
