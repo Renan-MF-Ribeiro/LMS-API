@@ -108,6 +108,7 @@ module.exports = {
                             moderation: trail.moderation,
                             complaints: trail.complaints,
                             certificate: trail.certificate,
+                            certificateDue: trail.certificateDue,
                             externalPlayer: trail.externalPlayer,
                             certificateLayout: trail.certificateLayout,
                         })
@@ -159,6 +160,7 @@ module.exports = {
                             moderation: trail.moderation,
                             complaints: trail.complaints,
                             certificate: trail.certificate,
+                            certificateDue: trail.certificateDue,
                             externalPlayer: trail.externalPlayer,
                             certificateLayout: trail.certificateLayout,
                         })
