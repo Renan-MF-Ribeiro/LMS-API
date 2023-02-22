@@ -13,7 +13,7 @@ module.exports = {
             const total = await Channel.find(
                 searchBy
                     ? {
-                          $or: [{ title: { $regex: searchBy, $options: "i" } }],
+                          $or: [{ title: { $regex: searchBy, $options: 'i' } }],
                       }
                     : {}
             ).countDocuments();
@@ -21,7 +21,7 @@ module.exports = {
             const channels = await Channel.find(
                 searchBy
                     ? {
-                          $or: [{ title: { $regex: searchBy, $options: "i" } }],
+                          $or: [{ title: { $regex: searchBy, $options: 'i' } }],
                       }
                     : {}
             )
@@ -40,24 +40,19 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "channels",
-                "get"
+                'Erro interno no servidor',
+                'channels',
+                'get'
             );
         }
     },
     async getChannelsElegibles(req, res) {
         const tags = await _functions.getTagsGroupsByToken(req);
         try {
-            const searchBy = req.query.searchBy;
-            const channels = await Channel.find(
-                searchBy
-                    ? {
-                          $or: [{ title: { $regex: searchBy, $options: "i" } }],
-                          tags: { $in: tags.map(tag=>tag.value) },
-                      }
-                    : { tags: { $in: tags.map(tag=>tag.value) } }
-            );
+            const channels = await Channel.find({
+                tags: { $in: tags.map((tag) => tag.value) },
+                enabled:true
+            });
 
             _messages.success(res, req, channels);
         } catch (error) {
@@ -65,9 +60,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "channels",
-                "get"
+                'Erro interno no servidor',
+                'channels',
+                'get'
             );
         }
     },
@@ -90,10 +85,10 @@ module.exports = {
                 return _messages.forbidden(
                     res,
                     req,
-                    "Registro duplicado",
-                    "Este canal já está cadastrado.",
-                    "channels",
-                    "create"
+                    'Registro duplicado',
+                    'Este canal já está cadastrado.',
+                    'channels',
+                    'create'
                 );
             }
 
@@ -102,22 +97,22 @@ module.exports = {
                 res,
                 req,
                 channel,
-                "Criação de dados",
-                "channels",
-                "create",
+                'Criação de dados',
+                'channels',
+                'create',
                 channel,
                 [],
                 true,
-                "CREATE"
+                'CREATE'
             );
         } catch (error) {
             _messages.internalServer(
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "channels",
-                "/create"
+                'Erro interno no servidor',
+                'channels',
+                '/create'
             );
         }
     },
@@ -133,13 +128,18 @@ module.exports = {
                     (key) => req.files[key]
                 );
 
-                let indexBannersWithNoPath = body.banners.reduce(function (r, v, i) {
-                    return r.concat(typeof v.path != "string" ? i : []);
-                }, []);
-
-                for(let index in indexBannersWithNoPath){
-                    let path = await azureBlob(
-                        fileArray[index],
+                let indexFirstBannerWithNoPath = body.banners.findIndex((x) => {
+                    if (typeof x.path != "string") {
+                        return true;
+                    }
+                });
+                for (
+                    let i = indexFirstBannerWithNoPath;
+                    i < body.banners.length;
+                    i++
+                ) {
+                    const path = await azureBlob(
+                        fileArray[i - indexFirstBannerWithNoPath],
                         "channels/banners"
                     );
                     path = path.replace(AZURE_BLOB_URL, DOMAIN)
@@ -151,15 +151,15 @@ module.exports = {
 
             if (findChannel.length) {
                 await Channel.findOneAndUpdate({ _id: channelId }, body);
-                _messages.success(res, req, "Canal Atualizado!");
+                _messages.success(res, req, 'Canal Atualizado!');
             } else {
                 return _messages.badRequest(
                     res,
                     req,
-                    "Canal não encontrado",
-                    "Este canal não foi encontrado.",
-                    "channels",
-                    "update"
+                    'Canal não encontrado',
+                    'Este canal não foi encontrado.',
+                    'channels',
+                    'update'
                 );
             }
         } catch (error) {
@@ -167,9 +167,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "channels",
-                "/create"
+                'Erro interno no servidor',
+                'channels',
+                '/create'
             );
         }
     },
@@ -179,15 +179,15 @@ module.exports = {
             const findChannel = await Channel.find({ _id: req.params.id });
             if (findChannel.length) {
                 await Channel.findOneAndDelete({ _id: req.params.id });
-                _messages.success(res, req, "Canal Deletado!");
+                _messages.success(res, req, 'Canal Deletado!');
             } else {
                 return _messages.badRequest(
                     res,
                     req,
-                    "Canal não encontrado",
-                    "Este canal não foi encontrado.",
-                    "channels",
-                    "delete"
+                    'Canal não encontrado',
+                    'Este canal não foi encontrado.',
+                    'channels',
+                    'delete'
                 );
             }
         } catch (error) {
@@ -195,9 +195,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "channels",
-                "/create"
+                'Erro interno no servidor',
+                'channels',
+                '/create'
             );
         }
     },
