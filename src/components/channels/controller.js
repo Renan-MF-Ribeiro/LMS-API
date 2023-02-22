@@ -131,21 +131,17 @@ module.exports = {
                     (key) => req.files[key]
                 );
 
-                let indexFirstBannerWithNoPath = body.banners.findIndex((x) => {
-                    if (typeof x.path != "string") {
-                        return true;
-                    }
-                });
-                for (
-                    let i = indexFirstBannerWithNoPath;
-                    i < body.banners.length;
-                    i++
-                ) {
-                    const path = await azureBlob(
-                        fileArray[i - indexFirstBannerWithNoPath],
+                let indexBannersWithNoPath = body.banners.reduce(function (r, v, i) {
+                    return r.concat(typeof v.path != "string" ? i : []);
+                }, []);
+
+                for(let index in indexBannersWithNoPath){
+                    let path = await azureBlob(
+                        fileArray[index],
                         "channels/banners"
                     );
-                    body.banners[i].path = path;
+                    path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                    body.banners[indexBannersWithNoPath[index]].path = path;
                 }
             }
 
