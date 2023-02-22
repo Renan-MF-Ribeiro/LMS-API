@@ -2,6 +2,7 @@ const _messages = require("../../utils/messages");
 const _functions = require("../../utils/functions");
 const { Channel } = require("./model");
 const { azureBlob } = require("../../utils/files");
+const { DOMAIN, AZURE_BLOB_URL } = process.env
 
 module.exports = {
     async getChannels(req, res) {
