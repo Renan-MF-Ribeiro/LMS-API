@@ -85,6 +85,7 @@ module.exports = {
                             _id: trail._id,
                             enabled: trail.enabled,
                             title: trail.title,
+                            titleURL: trail.titleURL,
                             description: trail.description,
                             mandatory: trail.mandatory,
                             highlighted: trail.highlighted,
@@ -107,6 +108,7 @@ module.exports = {
                             moderation: trail.moderation,
                             complaints: trail.complaints,
                             certificate: trail.certificate,
+                            certificateDue: trail.certificateDue,
                             externalPlayer: trail.externalPlayer,
                             certificateLayout: trail.certificateLayout,
                         })
@@ -135,6 +137,7 @@ module.exports = {
                             _id: trail._id,
                             enabled: trail.enabled,
                             title: trail.title,
+                            titleURL: trail.titleURL,
                             description: trail.description,
                             mandatory: trail.mandatory,
                             highlighted: trail.highlighted,
@@ -157,6 +160,7 @@ module.exports = {
                             moderation: trail.moderation,
                             complaints: trail.complaints,
                             certificate: trail.certificate,
+                            certificateDue: trail.certificateDue,
                             externalPlayer: trail.externalPlayer,
                             certificateLayout: trail.certificateLayout,
                         })

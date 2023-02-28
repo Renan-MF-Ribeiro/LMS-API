@@ -25,16 +25,19 @@ module.exports = {
                 deleted: { $eq: 0 },
             }).countDocuments()
 
+            const populateTrails = {
+                path: 'trails',
+                model: 'Trail',
+                select: ['_id', 'title', 'thumbPath'],
+            }
             const sections = await Section.find(
-                searchBy
-                    ? {
-                        $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-                        deleted: { $eq: 0 },
-                    }
-                    : {
-                        deleted: { $eq: 0 },
-                    },
-            ).sort({ position: 'asc' })
+                searchBy ? {
+                    $or: [{ title: { $regex: searchBy, $options: 'i' } }],
+                    deleted: { $eq: 0 },
+                } : {
+                    deleted: { $eq: 0 },
+                },
+            ).sort({ position: 'asc' }).populate(populateTrails)
 
             _messages.success(res, req, {
                 data: sections,
@@ -66,8 +69,7 @@ module.exports = {
                     'Criação de dados',
                     'sections',
                     'createSection',
-                    section,
-                    [],
+                    section, [],
                     true,
                     'CREATE',
                 )
@@ -127,6 +129,7 @@ module.exports = {
                 )
             }
         } catch (error) {
+            console.log(error)
             _messages.internalServer(
                 res,
                 req,
@@ -159,9 +162,7 @@ module.exports = {
                     'Excluído com sucesso',
                     'Exclusão de dados',
                     'sections',
-                    'deleteSection',
-                    [],
-                    [],
+                    'deleteSection', [], [],
                     true,
                     'DELETE',
                 )
@@ -183,7 +184,6 @@ module.exports = {
             const user = await getUserByToken(req)
             const tags = await getTagsElegiblesByToken(req)
             const classGroups = await getGroupCodesByToken(req, tags)
-
             let resultSections = []
 
             if (tags.length > 0) {
@@ -196,9 +196,13 @@ module.exports = {
                     },
                 })
                 trails = trails.filter(trail => checkIfTheTrackIsValid(trail))
-
                 const allTrackingUser = await Tracking.find({
                     userLogin: { $eq: user.networkLogin },
+                    $or: [
+                        { expiredCompletion: { $exists: false } }, 
+                        { expiredCompletion: { $eq: null } }
+                    ]
+
                 })
 
                 for (let trail of trails) {
@@ -209,16 +213,14 @@ module.exports = {
                     }
 
                     trail = processedTrail.trail
-                    for (let tag of trail.tags){
-                        for (let classGroup of classGroups){
-                                if(classGroup.groupCode === tag.value){
-                                    trail['classGroup'] = classGroup;
-                                }
+                    for (const tag of trail.tags) {
+                        for (const classGroup of classGroups) {
+                            if (classGroup.groupCode === tag.value) {
+                                trail.classGroup = classGroup
+                            }
                         }
                     }
                 }
-
-                
 
                 const arrSections = await elegiblesContents(trails)
                 const arrMandatorySections = await mandatorySections(trails, tags)
@@ -264,7 +266,7 @@ module.exports = {
                     }
                 }
             }
-
+            
             _messages.success(res, req, resultSections)
         } catch (error) {
             console.log(error)

@@ -7,3 +7,4 @@ const {
 module.exports = express.Router()
     .get('/searchBy', isStudent, _controller.searchTrailsItems)
     .get('/dashboard-student', isStudent, _controller.dashboardStudent)
+    .get('/dashboard-studentv2', isStudent, _controller.dashboardStudentv2)

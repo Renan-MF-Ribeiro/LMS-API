@@ -15,6 +15,7 @@ const ComplaintSchema = new mongoose.Schema({
 const TrailSchema = new mongoose.Schema({
     enabled: { type: Boolean, default: false },
     title: { type: String, required: true, trim: true },
+    titleURL: { type: String, required: true, trim: true },
     description: { type: String, required: true, trim: true },
     mandatory: { type: Array, default: [] },
     highlighted: { type: Boolean, default: false },
@@ -57,7 +58,9 @@ const TrailSchema = new mongoose.Schema({
     externalPlayer: { type: Boolean, default: false },
     clientId: { type: Number, default: CLIENT_ID },
     innerTextStatus: { type: Boolean, default: false },
-    innerText: { type: String, required: ifInnerTextEnabled }
+    innerText: { type: String, required: ifInnerTextEnabled },
+    certificateDue: { type: Object, default: null },
+    expirationDate: { type: Date, default: null }
 }, {
     strict: 'throw',
     timestamps: true,
@@ -66,6 +69,7 @@ const TrailSchema = new mongoose.Schema({
 
 TrailSchema.index({
     title: 'text',
+    titleURL: 'text',
     description: 'text',
 })
 

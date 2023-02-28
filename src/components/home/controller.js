@@ -1,14 +1,14 @@
-const _messages = require('../../utils/messages')
-const { Item } = require('../items/model')
-const { Tracking } = require('../tracking/model')
-const { Trail } = require('../trails/model')
-const { checkIfTheTrackIsValid } = require('../sections/business')
-const { User } = require('../users/model')
+const _messages = require("../../utils/messages");
+const { Item } = require("../items/model");
+const { Tracking } = require("../tracking/model");
+const { Trail } = require("../trails/model");
+const { checkIfTheTrackIsValid } = require("../sections/business");
+const { User } = require("../users/model");
 const {
     getUserByToken,
     getTagsGroupsByToken,
     processTrailTracking,
-} = require('../../utils/functions')
+} = require("../../utils/functions");
 const {
     trailsCompletedOrInProgress,
     studentAverageCourses,
@@ -22,14 +22,15 @@ const {
     returnCertificates,
     averageGroupCourses,
     averageGroupRatings,
-} = require('./business')
+    trailsCompletedExpired,
+} = require("./business");
 
-const { populateTrails } = require('../trails/business')
+const { populateTrails } = require("../trails/business");
 
 // const { updateAverageCourses } = require('../../utils/cron')
 
 const ItemController = {
-    async searchTrailsItems (req, res) {
+   async searchTrailsItems (req, res) {
         try {
             const user = await getUserByToken(req)
             const tags = await getTagsGroupsByToken(req)
@@ -39,6 +40,10 @@ const ItemController = {
 
             const allTrackingUser = await Tracking.find({
                 userLogin: { $eq: user.networkLogin },
+                $or: [
+                    { expiredCompletion: { $exists: false } }, 
+                    { expiredCompletion: { $eq: null } }
+                ]
             })
 
             for (const tag of user.tags) {
@@ -47,17 +52,17 @@ const ItemController = {
             }
 
             filterTrails = await populateTrails(true, {
-                $text: { $search: `"${searchBy}"` },
                 $or: [
-                    { tags: { $in: tags } },
-                    { mandatory: { $in: tags } },
+                    { title: new RegExp(searchBy, 'gi')},
+                    { description: new RegExp(searchBy, 'gi')},
                 ],
-                enabled: true,
+                tags: { $in: tags },
+                enabled: true
             })
             filterTrails = filterTrails.filter(trail => checkIfTheTrackIsValid(trail))
 
             const items = await Item.find({
-                $text: { $search: `"${searchBy}"` },
+                description: new RegExp(searchBy, 'gi'),
                 enabled: true,
                 deleted: { $eq: 0 },
             })
@@ -86,12 +91,9 @@ const ItemController = {
             }
 
             for (let trail of filterTrails) {
-                const isValid = checkIfTheTrackIsValid(trail)
-                if (isValid) {
-                    const processedTrail = processTrailTracking(trail, allTrackingUser)
-                    trail = processedTrail.trail
-                    result.push(trail)
-                }
+                const processedTrail = processTrailTracking(trail, allTrackingUser)
+                trail = processedTrail.trail
+                result.push(trail)
             }
 
             _messages.success(res, req, result)
@@ -100,30 +102,71 @@ const ItemController = {
         }
     },
 
-    async dashboardStudent (req, res) {
+    async dashboardStudent(req, res) {
         try {
-            const user = await getUserByToken(req)
-            const courses = await getStudentCourses(req)
+            const user = await getUserByToken(req);
+            const courses = await getStudentCourses(req);
 
-            const allTrails = await Trail.countDocuments()
+            const allTrails = await Trail.countDocuments();
 
-            const resultTrails = await trailsCompletedOrInProgress(req)
-            const certificates = await returnCertificates(resultTrails.trailsCompleted, user)
-            const { numberOfItemsCompleted, numberOfItemsInProgress, numberOfItemsNotStarted, numberOfItemsMandatoryNotStarted, numberOfItemsMandatoryCompleted, numberOfItemsMandatoryInProgress } = await getNumberOfItemsCompletedOrInProgressOrNotStarted(req)
-            const { averageStudentCourses, numberTrailsCompleted, numberTrailsElegibles } = await studentAverageCourses(user, req) // Não necessita de mudanças
+            const resultTrails = await trailsCompletedOrInProgress(req);
+            const certificates = await returnCertificates(
+                resultTrails.trailsCompleted,
+                user
+            );
+            const {
+                numberOfItemsCompleted,
+                numberOfItemsInProgress,
+                numberOfItemsNotStarted,
+                numberOfItemsMandatoryNotStarted,
+                numberOfItemsMandatoryCompleted,
+                numberOfItemsMandatoryInProgress,
+            } = await getNumberOfItemsCompletedOrInProgressOrNotStarted(req);
+            const {
+                averageStudentCourses,
+                numberTrailsCompleted,
+                numberTrailsElegibles,
+            } = await studentAverageCourses(user, req); // Não necessita de mudanças
 
-            const groupA = process.env.groupA
-            const groupB = process.env.groupB
+            const groupA = process.env.groupA;
+            const groupB = process.env.groupB;
 
-            const averageGroupACourses = await averageGroupCourses(user, groupA)
-            const averageGroupBCourses = await averageGroupCourses(user, groupB)
+            const averageGroupACourses = await averageGroupCourses(
+                user,
+                groupA
+            );
+            const averageGroupBCourses = await averageGroupCourses(
+                user,
+                groupB
+            );
 
-            const averageStudent = await calculateAverageStudent(user) // Não necessita de mudanças
+            const averageStudent = await calculateAverageStudent(user); // Não necessita de mudanças
 
-            const averageGroupARatings = await averageGroupRatings(user, groupA)
-            const averageGroupBRatings = await averageGroupRatings(user, groupB)
+            const averageGroupARatings = await averageGroupRatings(
+                user,
+                groupA
+            );
+            const averageGroupBRatings = await averageGroupRatings(
+                user,
+                groupB
+            );
 
-            await User.findByIdAndUpdate(user._id, { averageRating: averageStudent.toFixed(2), numberTrailsCompleted, numberTrailsElegibles })
+            const tags = await getTagsGroupsByToken(req);
+
+            for (const tag of user.tags) {
+                delete tag.createdAt;
+                tags.push(tag);
+            }
+
+            const allTrailsElegibles = await Trail.find({
+                tags: { $in: tags },
+            }).countDocuments();
+
+            await User.findByIdAndUpdate(user._id, {
+                averageRating: averageStudent.toFixed(2),
+                numberTrailsCompleted,
+                numberTrailsElegibles,
+            });
 
             _messages.success(res, req, {
                 resultTrails,
@@ -142,20 +185,85 @@ const ItemController = {
                 courses,
                 certificates,
                 allTrails,
-            })
+                allTrailsElegibles,
+            });
         } catch (error) {
-            console.log(error)
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'home', 'dashboardStudent')
+            console.log(error);
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                "Erro interno no servidor",
+                "home",
+                "dashboardStudent"
+            );
         }
     },
-
-    async searchStudentCourses (req, res) {
+    async dashboardStudentv2(req, res) {
         try {
-            await getStudentCourses(req)
+            const user = await getUserByToken(req);
+
+            const allTrails = await Trail.countDocuments();
+            const resultTrails = await trailsCompletedOrInProgress(req);
+            const resultTrailsExpired = await trailsCompletedExpired(req);
+
+            const certificates = await returnCertificates(
+                resultTrails.trailsCompleted,
+                user
+            );
+            const certificatesExpired = await returnCertificates(
+                resultTrailsExpired.trailsCompleted,
+                user
+            );
+
+            const tags = await getTagsGroupsByToken(req);
+
+            for (const tag of user.tags) {
+                delete tag.createdAt;
+                tags.push(tag);
+            }
+
+            const allTrailsElegibles = await Trail.find({
+                tags: { $in: tags },
+            }).countDocuments();
+
+            // await User.findByIdAndUpdate(user._id, { averageRating: averageStudent.toFixed(2), numberTrailsCompleted, numberTrailsElegibles })
+
+            _messages.success(res, req, {
+                resultTrails,
+                certificates,
+                allTrails,
+                allTrailsElegibles,
+                resultTrailsExpired,
+                certificatesExpired,
+            });
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'home', '/searchStudentCourses')
+            console.log(error);
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                "Erro interno no servidor",
+                "home",
+                "dashboardStudent"
+            );
         }
     },
-}
 
-module.exports = ItemController
+    async searchStudentCourses(req, res) {
+        try {
+            await getStudentCourses(req);
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                "Erro interno no servidor",
+                "home",
+                "/searchStudentCourses"
+            );
+        }
+    },
+};
+
+module.exports = ItemController;

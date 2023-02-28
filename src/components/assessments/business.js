@@ -53,6 +53,7 @@ module.exports = {
                         idCategory: body.idCategory ? body.idCategory : question.idCategory,
                         idEvaluation: question.idEvaluation,
                         description: strDescription,
+                        rigthAnswer: body.idAlternative
                     })
 
                     for (const alternative of question.alternatives) {
@@ -86,7 +87,10 @@ module.exports = {
                     await Question.findByIdAndUpdate(questionCreated._id, { alternatives: arrIdAlternatives, rigthAnswer: idRigthAnswer, description: strDescription })
                 } else {
                     if (body) {
-                        await Question.findByIdAndUpdate(id, { description: body.description ? body.description : question.description,  idCategory: body.idCategory ? body.idCategory : question.idCategory })
+                        const quest = await Question.findByIdAndUpdate(id, { description: body.description ? body.description : question.description, idCategory: body.idCategory ? body.idCategory : question.idCategory, rigthAnswer: body.idAlternative })
+                        for (alternative of quest.alternatives) {
+                            await Alternative.findByIdAndUpdate(alternative, { correct: alternative == body.idAlternative })
+                        }
                     }
                 }
                 resolve()
@@ -101,7 +105,8 @@ module.exports = {
             try {
                 const questionsOfEvaluations = []
                 let amountOfQuestions = 0
-
+                
+                console.log(categories)
                 for (const category of categories) {
                     amountOfQuestions += category.amountOfQuestions
 
@@ -110,8 +115,9 @@ module.exports = {
                             { idCategory: { $eq: category._id }, repealed: { $eq: 0 }, deleted: { $eq: 0 }, active: { $eq: 1} },
                             ['description'],
                         )
-                        .populate('alternatives', ['description'])
-
+                        .populate({path:'alternatives', match: { deleted: { $eq: 0 }}, select: 'description deleted'})
+                        
+console.log(questionsOfCategory)
                     const questions = returnSliceDataRandom(questionsOfCategory, 0, category.amountOfQuestions)
 
                     for (const question of questions) {

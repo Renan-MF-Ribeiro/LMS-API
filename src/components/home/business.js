@@ -1,140 +1,207 @@
 /* eslint-disable no-async-promise-executor */
-const { Tracking } = require('../tracking/model')
-const { Trail } = require('../trails/model')
-const { populateTrails } = require('../trails/business')
-const { checkItemCompleted } = require('../sections/business')
-const { AverageCourses, AverageRating } = require('../logs/model')
+const { Tracking } = require("../tracking/model");
+const { Trail } = require("../trails/model");
+const { populateTrails } = require("../trails/business");
+const { checkItemCompleted } = require("../sections/business");
+const { AverageCourses, AverageRating } = require("../logs/model");
 const {
     getUserByToken,
     calculateAverage,
     processTrailTracking,
-} = require('../../utils/functions')
+    isValidDate
+} = require("../../utils/functions");
 const {
     getTrailCompletion,
     getTagsElegiblesByToken,
     getTagsElegibles,
     checkIfTheTrackIsValid,
-} = require('../sections/business')
-const { getCoursesByUserID } = require('../courses/business')
+} = require("../sections/business");
+const { getCoursesByUserID } = require("../courses/business");
 
 module.exports = {
-    trailsCompletedOrInProgress (req) {
+    trailsCompletedOrInProgress(req) {
         return new Promise(async (resolve, reject) => {
             try {
-                const user = await getUserByToken(req)
-                const arrTrails = []
-                const arrTrailsCompletedOrProgress = []
+                const user = await getUserByToken(req);
+                const arrTrails = [];
+                const arrTrailsCompletedOrProgress = [];
                 const allTrackingUser = await Tracking.find({
                     userLogin: { $eq: user.networkLogin },
-                })
-               
+                });
+
                 for (const t of allTrackingUser) {
                     const trails = await Trail.find({
-                        'items.itemID': { $in: t.item },
-                    })
+                        "items.itemID": { $in: t.item },
+                    });
 
                     for (const trail of trails) {
                         // if (t.completion === 1 || isSCORMCompleted(t.lessonStatus)) arrTrails.push(trail._id.toString())
-                        arrTrails.push(trail._id.toString())
+                        arrTrails.push(trail._id.toString());
                     }
                 }
 
-                const newArrTrails = [...new Set(arrTrails)]
+                const newArrTrails = [...new Set(arrTrails)];
 
                 for (const p in newArrTrails) {
                     const trailFilter = await populateTrails(true, {
                         _id: { $eq: newArrTrails[p] },
-                    })
-                    let trail = trailFilter[0]
+                    });
+                    let trail = trailFilter[0];
 
                     if (trail) {
-                        const processedTrail = processTrailTracking(trail, allTrackingUser)
-                        trail = processedTrail.trail
+                        const processedTrail = processTrailTracking(
+                            trail,
+                            allTrackingUser
+                        );
+                        trail = processedTrail.trail;
                         if (processedTrail.containsACompletedItem) {
-                            arrTrailsCompletedOrProgress.push(trail)
+                            arrTrailsCompletedOrProgress.push(trail);
                         }
                     }
                 }
 
                 resolve({
                     trailsCompleted: arrTrailsCompletedOrProgress,
-                })
-              
+                });
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
-    calculateAverageStudent (user) {
+    trailsCompletedExpired(req) {
         return new Promise(async (resolve, reject) => {
             try {
-                const result = await calculateAverage(user)
-                const average = (result.total * 100) / result.max
-                resolve(average || 0)
+                const user = await getUserByToken(req);
+                const arrTrails = [];
+                const arrTrailsCompletedOrProgress = [];
+                const trackings = await Tracking.find({
+                    userLogin: user.networkLogin,
+                    $and: [
+                        { expiredCompletion: { $exists: true } },
+                        { expiredCompletion: { $ne: null } },
+                    ],
+                });
+
+                for (const t of trackings) {
+                    const trails = await Trail.find({
+                        "items.itemID": { $in: t.item },
+                    });
+
+                    for (const trail of trails) {
+                        arrTrails.push(trail._id.toString());
+                    }
+                }
+
+                const newArrTrails = [...new Set(arrTrails)];
+
+                for (const p in newArrTrails) {
+                    const trailFilter = await populateTrails(true, {
+                        _id: { $eq: newArrTrails[p] },
+                    });
+                    let trail = trailFilter[0];
+
+                    if (trail) {
+                        const processedTrail = processTrailTracking(
+                            trail,
+                            trackings
+                        );
+                        trail = processedTrail.trail;
+                        if (
+                            processedTrail.containsACompletedItem &&
+                            isValidDate(trail.completionAt)
+                        ) {
+                            arrTrailsCompletedOrProgress.push(trail);
+                        }
+                    }
+                }
+
+                resolve({
+                    trailsCompleted: arrTrailsCompletedOrProgress,
+                });
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
-    studentAverageCourses (user, req) {
+    calculateAverageStudent(user) {
         return new Promise(async (resolve, reject) => {
             try {
-                const {
-                    numberTrailsCompleted,
-                    numberTrailsElegibles,
-                } = await numberOfCompleteAndEligibleCourses(user, true, req)
+                const result = await calculateAverage(user);
+                const average = (result.total * 100) / result.max;
+                resolve(average || 0);
+            } catch (error) {
+                reject(error);
+            }
+        });
+    },
+
+    studentAverageCourses(user, req) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const { numberTrailsCompleted, numberTrailsElegibles } =
+                    await numberOfCompleteAndEligibleCourses(user, true, req);
                 const averageStudentCourses =
                     numberTrailsElegibles > 0
                         ? (numberTrailsCompleted * 100) / numberTrailsElegibles
-                        : 0
+                        : 0;
                 resolve({
                     averageStudentCourses,
                     numberTrailsCompleted,
                     numberTrailsElegibles,
-                })
+                });
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
-    averageGroupCourses (user, group) {
+    averageGroupCourses(user, group) {
         return new Promise(async (resolve, reject) => {
             try {
-                const data = user[group]
-                const averageGroupACourses = await AverageCourses.findOne({ 'store.group': group, 'item.tag': data })
-                resolve(averageGroupACourses ? averageGroupACourses.average : 0)
+                const data = user[group];
+                const averageGroupACourses = await AverageCourses.findOne({
+                    "store.group": group,
+                    "item.tag": data,
+                });
+                resolve(
+                    averageGroupACourses ? averageGroupACourses.average : 0
+                );
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
-    averageGroupRatings (user, group) {
+    averageGroupRatings(user, group) {
         return new Promise(async (resolve, reject) => {
             try {
-                const data = user[group]
-                const averageGroupACourses = await AverageRating.findOne({ 'store.group': group, 'item.tag': data })
-                resolve(averageGroupACourses ? averageGroupACourses.average : 0)
+                const data = user[group];
+                const averageGroupACourses = await AverageRating.findOne({
+                    "store.group": group,
+                    "item.tag": data,
+                });
+                resolve(
+                    averageGroupACourses ? averageGroupACourses.average : 0
+                );
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
-    getNumberOfItemsCompletedOrInProgressOrNotStarted (req) {
+    getNumberOfItemsCompletedOrInProgressOrNotStarted(req) {
         return new Promise(async (resolve, reject) => {
             try {
-                const user = await getUserByToken(req)
-                const tags = await getTagsElegiblesByToken(req)
-                const arrTrails = []
-                const arrItemsID = []
+                const user = await getUserByToken(req);
+                const tags = await getTagsElegiblesByToken(req);
+                const arrTrails = [];
+                const arrItemsID = [];
 
-                let numberOfItemsNotStarted = 0
-                let numberOfItemsCompleted = 0
-                let numberOfItemsInProgress = 0
+                let numberOfItemsNotStarted = 0;
+                let numberOfItemsCompleted = 0;
+                let numberOfItemsInProgress = 0;
 
                 // let numberOfItemsMandatoryNotStarted = 0
                 // let numberOfItemsMandatoryCompleted = 0
@@ -148,25 +215,27 @@ module.exports = {
                 const trails = await populateTrails(
                     true,
                     { tags: { $in: tags }, enabled: true },
-                    false,
-                )
+                    false
+                );
 
                 for (const trail of trails) {
-                    if (checkIfTheTrackIsValid(trail)) arrTrails.push(trail)
+                    if (checkIfTheTrackIsValid(trail)) arrTrails.push(trail);
                 }
 
                 for (const trail of arrTrails) {
                     for (const item of trail.items) {
-                        if (arrItemsID.indexOf(item.itemID._id.toString()) < 0) {
+                        if (
+                            arrItemsID.indexOf(item.itemID._id.toString()) < 0
+                        ) {
                             const completion = await checkItemCompleted(
                                 item,
-                                user,
-                            )
+                                user
+                            );
                             if (completion === null) {
-                                numberOfItemsNotStarted++
+                                numberOfItemsNotStarted++;
                             }
                             if (completion === 1) {
-                                numberOfItemsCompleted++
+                                numberOfItemsCompleted++;
                             }
 
                             if (
@@ -174,18 +243,22 @@ module.exports = {
                                 completion >= 0 &&
                                 completion < 1
                             ) {
-                                numberOfItemsInProgress++
+                                numberOfItemsInProgress++;
                             }
                         }
 
-                        arrItemsID.push(item.itemID._id.toString())
+                        arrItemsID.push(item.itemID._id.toString());
                     }
                 }
                 const {
                     numberOfItemsMandatoryNotStarted,
                     numberOfItemsMandatoryCompleted,
                     numberOfItemsMandatoryInProgress,
-                } = await calculateNumberOfMandatoryItems(arrTrails, user, tags)
+                } = await calculateNumberOfMandatoryItems(
+                    arrTrails,
+                    user,
+                    tags
+                );
 
                 resolve({
                     numberOfItemsNotStarted,
@@ -194,31 +267,31 @@ module.exports = {
                     numberOfItemsMandatoryNotStarted,
                     numberOfItemsMandatoryCompleted,
                     numberOfItemsMandatoryInProgress,
-                })
+                });
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
-    getStudentCourses (req) {
+    getStudentCourses(req) {
         return new Promise(async (resolve, reject) => {
             try {
-                const user = await getUserByToken(req)
+                const user = await getUserByToken(req);
 
-                const courses = await getCoursesByUserID(user._id.toString())
+                const courses = await getCoursesByUserID(user._id.toString());
 
-                resolve(courses)
+                resolve(courses);
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
-    returnCertificates (trails, user) {
+    returnCertificates(trails, user) {
         return new Promise(async (resolve, reject) => {
             try {
-                const certs = []
-                const itemsID = []
+                const certs = [];
+                const itemsID = [];
                 for (const trail of trails) {
                     for (const item of trail.items) {
                         if (
@@ -229,77 +302,106 @@ module.exports = {
                             const tracking = await Tracking.findOne({
                                 $text: { $search: user.networkLogin },
                                 item: item.itemID._id,
-                            }).sort({ createdAt: -1 })
-                            item.itemID.completionAt = tracking.completionAt
+                            }).sort({ createdAt: -1 });
+                            item.itemID.completionAt = tracking.completionAt;
 
-                            const concludedAt = tracking.completionAt
-                            const { completion } = item
-                            const { durationHours, title, thumbPath } = item.itemID
-                            certs.push({ duration: durationHours, concludedAt, title, userName: user.name, thumbPath, completion, score: tracking.score, type: 'item', itemId: item.itemID.id, certificateLayout: item.itemID.certificateLayout })
-                            itemsID.push(item.itemID.id)
+                            const concludedAt = tracking.completionAt;
+                            const { completion } = item;
+                            const { durationHours, title, thumbPath } =
+                                item.itemID;
+                            certs.push({
+                                duration: durationHours,
+                                concludedAt,
+                                title,
+                                userName: user.name,
+                                thumbPath,
+                                completion,
+                                score: tracking.score,
+                                type: "item",
+                                itemId: item.itemID.id,
+                                certificateLayout:
+                                    item.itemID.certificateLayout,
+                            });
+                            itemsID.push(item.itemID.id);
                         }
                     }
-                    var mostRecentDate = new Date(Math.max.apply(null, trail.items.map(e => {
-                        return new Date(e.itemID.completionAt)
-                    })))
+                    var mostRecentDate = new Date(
+                        Math.max.apply(
+                            null,
+                            trail.items.map((e) => {
+                                return new Date(e.itemID.completionAt);
+                            })
+                        )
+                    );
 
                     if (trail && trail.completion === 1) {
-                        let duration = 0
+                        let duration = 0;
                         for (const item of trail.items) {
-                            duration += item.itemID.durationHours
+                            duration += item.itemID.durationHours;
                         }
-                        const { title, thumbPath, completion } = trail
-                        certs.push({ duration, title, concludedAt: mostRecentDate, userName: user.name, thumbPath, completion, scoreAverage: trail.scoreAverage, type: 'trail', trailId: trail._id, certificateLayout: trail.certificateLayout })
+                        const { title, thumbPath, completion } = trail;
+                        certs.push({
+                            duration,
+                            title,
+                            concludedAt: mostRecentDate,
+                            userName: user.name,
+                            thumbPath,
+                            completion,
+                            scoreAverage: trail.scoreAverage,
+                            type: "trail",
+                            trailId: trail._id,
+                            certificateLayout: trail.certificateLayout,
+                        });
                     }
                 }
-                resolve(certs)
+                resolve(certs);
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
-}
+};
 
-function numberOfCompleteAndEligibleCourses (user, flagToken, req) {
+function numberOfCompleteAndEligibleCourses(user, flagToken, req) {
     return new Promise(async (resolve, reject) => {
         try {
             const tags = flagToken
                 ? await getTagsElegiblesByToken(req)
-                : await getTagsElegibles(user)
+                : await getTagsElegibles(user);
 
             const trails = await populateTrails(
                 true,
                 { tags: { $in: tags }, enabled: true },
-                false,
-            )
+                false
+            );
             // const trails = await Trail.find({
             //     // enabled: true,
             //     tags: { $in: tags },
             // }).populate('items')
 
-            let numberTrailsCompleted = 0
-            let numberTrailsElegibles = 0
+            let numberTrailsCompleted = 0;
+            let numberTrailsElegibles = 0;
 
             for (const trail of trails) {
-                if (checkIfTheTrackIsValid(trail)) numberTrailsElegibles += 1
+                if (checkIfTheTrackIsValid(trail)) numberTrailsElegibles += 1;
 
                 for (const item of trail.items) {
-                    const completion = await checkItemCompleted(item, user)
-                    item.completion = completion
+                    const completion = await checkItemCompleted(item, user);
+                    item.completion = completion;
                 }
 
-                trail.completion = getTrailCompletion(trail)
-                if (getTrailCompletion(trail) === 1) numberTrailsCompleted += 1
+                trail.completion = getTrailCompletion(trail);
+                if (getTrailCompletion(trail) === 1) numberTrailsCompleted += 1;
             }
 
             resolve({
                 numberTrailsCompleted,
                 numberTrailsElegibles,
-            })
+            });
         } catch (error) {
-            reject(error)
+            reject(error);
         }
-    })
+    });
 }
 
 // function checkIfItemIsMandatory (trail, item, userTags) {
@@ -319,52 +421,56 @@ function numberOfCompleteAndEligibleCourses (user, flagToken, req) {
 //     }, false)
 // }
 
-function calculateNumberOfMandatoryItems (trails, user, userTags) {
+function calculateNumberOfMandatoryItems(trails, user, userTags) {
     return new Promise(async (resolve, reject) => {
         try {
             // Filtra todas as trilhas mandatórias para o usuário.
             const mandatoryTrails = trails
-                .filter(trail => {
-                    const trailMandatoryTags = trail.mandatory
+                .filter((trail) => {
+                    const trailMandatoryTags = trail.mandatory;
                     const hasMandatory = trailMandatoryTags.reduce(
                         (hasMandatory, tag) => {
                             if (hasMandatory) {
-                                return true
+                                return true;
                             }
                             const filter = userTags.filter(
-                                _tag => _tag.value === tag.value,
-                            )
+                                (_tag) => _tag.value === tag.value
+                            );
 
-                            return filter.length > 0
+                            return filter.length > 0;
                         },
-                        false,
-                    )
+                        false
+                    );
 
                     if (hasMandatory) {
-                        return trail
+                        return trail;
                     }
                 })
-                .filter(trail => {
+                .filter((trail) => {
                     return trail.items.reduce((hasMandatoryItems, item) => {
                         if (hasMandatoryItems) {
-                            return true
+                            return true;
                         }
 
                         if (item.mandatory) {
-                            return true
+                            return true;
                         }
-                    }, false)
-                })
+                    }, false);
+                });
 
             // Pega todos os items das trilhas mandatórias.
-            const mandatoryItems = [...new Set(mandatoryTrails
-                .map(trail => {
-                    return trail.items
-                })
-                .flat()
-                .filter(item => {
-                    return item.mandatory === true
-                }))]
+            const mandatoryItems = [
+                ...new Set(
+                    mandatoryTrails
+                        .map((trail) => {
+                            return trail.items;
+                        })
+                        .flat()
+                        .filter((item) => {
+                            return item.mandatory === true;
+                        })
+                ),
+            ];
 
             // console.log(mandatoryItems)
             // Itera sobre os itens mandatórios.
@@ -373,26 +479,26 @@ function calculateNumberOfMandatoryItems (trails, user, userTags) {
                 numberOfItemsMandatoryNotStarted: 0,
                 numberOfItemsMandatoryCompleted: 0,
                 numberOfItemsMandatoryInProgress: 0,
-            }
+            };
 
             for (const item of mandatoryItems) {
-                const completion = await checkItemCompleted(item, user)
+                const completion = await checkItemCompleted(item, user);
 
                 if (completion == null) {
-                    statistics.numberOfItemsMandatoryNotStarted++
+                    statistics.numberOfItemsMandatoryNotStarted++;
                 }
 
                 if (completion === 1) {
-                    statistics.numberOfItemsMandatoryCompleted++
+                    statistics.numberOfItemsMandatoryCompleted++;
                 }
 
                 if (completion !== null && completion >= 0 && completion < 1) {
-                    statistics.numberOfItemsMandatoryInProgress++
+                    statistics.numberOfItemsMandatoryInProgress++;
                 }
             }
-            resolve(statistics)
+            resolve(statistics);
         } catch (error) {
-            reject(error)
+            reject(error);
         }
-    })
+    });
 }

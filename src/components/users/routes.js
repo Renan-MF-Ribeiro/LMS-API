@@ -21,6 +21,7 @@ module.exports = express.Router()
     .get('/auth/isAuthenticated', _controller.isAuthenticated)
     .get('/auth/isAuthenticatedNginx/:token', _controller.isAuthenticatedNginx)
     .get('/me', _controller.selfData)
+    .post('/gamification/names', validateTokenRoute, _controller.handleNames)
     .post('/users', validateTokenRoute, isAdmin, _controller.create)
     .post('/import', validateTokenRoute, formidable(), _controller.import)
     .get('/', validateTokenRoute, isAdminOrInstructor, _controller.returnUsers)
@@ -61,6 +62,7 @@ module.exports = express.Router()
     .post('/add-permission', validateTokenRoute, _controller.addGroups)
     .post('/remove-class-tag', validateTokenRoute, _controller.deleteClassTag)
     .post('/add-class-tag', validateTokenRoute, _controller.addClassTag)
-
+    .post('/update-class-tag', validateTokenRoute, _controller.updateClassTag)
+    
     // HL-1263
     .get('/evaluations/:idEvaluation', validateTokenRoute, _controller.evaluationProgress)

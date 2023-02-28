@@ -18,6 +18,7 @@ const TrackingSchema = new mongoose.Schema({
     isAllowedToSendXAPI: { type: Boolean, required: false },
     isXAPICompleteSent: { type: Boolean, required: false },
     completionAt: { type: Date, required: true, default: null },
+    expiredCompletion: { type: Date, default: null }
 }, {
     ...schemaOptions,
     discriminatorKey: 'kind',
@@ -75,6 +76,7 @@ const ExamTracking = Tracking.discriminator('ExamTracking', new mongoose.Schema(
     lessonStatus: { type: String, enum: Object.values(SCORMLessonStatus), default: SCORMLessonStatus.NOT_ATTEMPTED },
     suspendData: { type: String },
     score: { type: Number, min: 0, max: 100 },
+    remainingAttempts: { type: Number, min: -1 }
 }, {
     ...schemaOptions,
 }))
@@ -119,10 +121,24 @@ const ActivityTracking = Tracking.discriminator('ActivityTracking', new mongoose
     ...schemaOptions
 }))
 
+const vwTrackingsItems = new mongoose.Schema({
+    item: { type: 'Object', ref: 'Item' },
+    sessionTime: { type: Number, required: true },
+    totalTime: { type: Number, required: true, defaultValue: 0 },
+    userLogin: { type: String, required: true },
+    lastState: { type: String, required: true },
+    isAllowedToSendXAPI: { type: Boolean, required: false },
+    isXAPICompleteSent: { type: Boolean, required: false },
+    completionAt: { type: Date, required: true, default: null },
+})
+
+const TrackingsItems = mongoose.model('vwTrackingsItems', vwTrackingsItems, 'vwTrackingsItems')
+
 module.exports = {
     Tracking,
     DocumentTracking,
     MediaTracking,
+    TrackingsItems,
     SCORMLessonStatus,
     SCORMTracking,
     SCORMTrackingHistory,
