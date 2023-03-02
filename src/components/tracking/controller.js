@@ -33,7 +33,6 @@ const { Item } = require('../items/model');
 const GamificationController = require('../gamification/controller');
 const { EVENTS_CATEGORY } = require('../gamification/model');
 
-
 const TRACKING_KINDS = Object.freeze({
     DocumentTracking: DocumentTracking,
     MediaTracking: MediaTracking,

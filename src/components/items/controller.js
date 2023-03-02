@@ -766,7 +766,7 @@ const ItemController = {
                 return;
             }
 
-            _messages.success(res, req, item);
+            _messages.success(res, req, {...item._doc,trailTitle:trail.title});
         } catch (error) {
             _messages.internalServer(
                 res,

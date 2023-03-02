@@ -1231,10 +1231,19 @@ module.exports = {
      */
     async getCourseInformation(req, res) {
         try {
-            const trailId = req.params.trailId;
+            const findValueTrail = req.params.trailId;
             const itemId = req.params.itemId;
 
-            const trail = await Trail.findById(trailId);
+            const trail = await Trail.findOne(
+                findValueTrail.match(/^[0-9a-fA-F]{24}$/)
+                    ? {
+                          $or: [
+                              { _id: findValueTrail },
+                              { titleURL: findValueTrail },
+                          ],
+                      }
+                    : { titleURL: findValueTrail }
+            );
             const item = trail.items.find((i) => i.itemID == itemId);
 
             if (!item) {

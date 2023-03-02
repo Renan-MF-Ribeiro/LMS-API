@@ -2,6 +2,7 @@ const _messages = require("../../utils/messages");
 const _functions = require("../../utils/functions");
 const { Channel } = require("./model");
 const { azureBlob } = require("../../utils/files");
+const { DOMAIN, AZURE_BLOB_URL } = process.env
 
 module.exports = {
     async getChannels(req, res) {
@@ -12,7 +13,7 @@ module.exports = {
             const total = await Channel.find(
                 searchBy
                     ? {
-                          $or: [{ title: { $regex: searchBy, $options: "i" } }],
+                          $or: [{ title: { $regex: searchBy, $options: 'i' } }],
                       }
                     : {}
             ).countDocuments();
@@ -20,7 +21,7 @@ module.exports = {
             const channels = await Channel.find(
                 searchBy
                     ? {
-                          $or: [{ title: { $regex: searchBy, $options: "i" } }],
+                          $or: [{ title: { $regex: searchBy, $options: 'i' } }],
                       }
                     : {}
             )
@@ -39,24 +40,19 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "channels",
-                "get"
+                'Erro interno no servidor',
+                'channels',
+                'get'
             );
         }
     },
     async getChannelsElegibles(req, res) {
         const tags = await _functions.getTagsGroupsByToken(req);
         try {
-            const searchBy = req.query.searchBy;
-            const channels = await Channel.find(
-                searchBy
-                    ? {
-                          $or: [{ title: { $regex: searchBy, $options: "i" } }],
-                          tags: { $in: tags.map(tag=>tag.value) },
-                      }
-                    : { tags: { $in: tags.map(tag=>tag.value) } }
-            );
+            const channels = await Channel.find({
+                tags: { $in: tags.map((tag) => tag.value) },
+                enabled:true
+            });
 
             _messages.success(res, req, channels);
         } catch (error) {
@@ -64,9 +60,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "channels",
-                "get"
+                'Erro interno no servidor',
+                'channels',
+                'get'
             );
         }
     },
@@ -78,7 +74,8 @@ module.exports = {
             let fileArray = Object.keys(req.files).map((key) => req.files[key]);
 
             for (let i in body.banners) {
-                const path = await azureBlob(fileArray[i], "channels/banners");
+                let path = await azureBlob(fileArray[i], "channels/banners");
+                path = path.replace(AZURE_BLOB_URL, DOMAIN)
                 body.banners[i].path = path;
             }
 
@@ -88,10 +85,10 @@ module.exports = {
                 return _messages.forbidden(
                     res,
                     req,
-                    "Registro duplicado",
-                    "Este canal já está cadastrado.",
-                    "channels",
-                    "create"
+                    'Registro duplicado',
+                    'Este canal já está cadastrado.',
+                    'channels',
+                    'create'
                 );
             }
 
@@ -100,22 +97,22 @@ module.exports = {
                 res,
                 req,
                 channel,
-                "Criação de dados",
-                "channels",
-                "create",
+                'Criação de dados',
+                'channels',
+                'create',
                 channel,
                 [],
                 true,
-                "CREATE"
+                'CREATE'
             );
         } catch (error) {
             _messages.internalServer(
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "channels",
-                "/create"
+                'Erro interno no servidor',
+                'channels',
+                '/create'
             );
         }
     },
@@ -131,21 +128,17 @@ module.exports = {
                     (key) => req.files[key]
                 );
 
-                let indexFirstBannerWithNoPath = body.banners.findIndex((x) => {
-                    if (typeof x.path != "string") {
-                        return true;
-                    }
-                });
-                for (
-                    let i = indexFirstBannerWithNoPath;
-                    i < body.banners.length;
-                    i++
-                ) {
-                    const path = await azureBlob(
-                        fileArray[i - indexFirstBannerWithNoPath],
+                let indexBannersWithNoPath = body.banners.reduce(function (r, v, i) {
+                    return r.concat(typeof v.path != "string" ? i : []);
+                }, []);
+
+                for(let index in indexBannersWithNoPath){
+                    let path = await azureBlob(
+                        fileArray[index],
                         "channels/banners"
                     );
-                    body.banners[i].path = path;
+                    path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                    body.banners[indexBannersWithNoPath[index]].path = path;
                 }
             }
 
@@ -181,15 +174,15 @@ module.exports = {
             const findChannel = await Channel.find({ _id: req.params.id });
             if (findChannel.length) {
                 await Channel.findOneAndDelete({ _id: req.params.id });
-                _messages.success(res, req, "Canal Deletado!");
+                _messages.success(res, req, 'Canal Deletado!');
             } else {
                 return _messages.badRequest(
                     res,
                     req,
-                    "Canal não encontrado",
-                    "Este canal não foi encontrado.",
-                    "channels",
-                    "delete"
+                    'Canal não encontrado',
+                    'Este canal não foi encontrado.',
+                    'channels',
+                    'delete'
                 );
             }
         } catch (error) {
@@ -197,9 +190,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "channels",
-                "/create"
+                'Erro interno no servidor',
+                'channels',
+                '/create'
             );
         }
     },
