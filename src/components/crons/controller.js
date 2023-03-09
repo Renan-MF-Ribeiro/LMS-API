@@ -90,9 +90,12 @@ module.exports = {
     },
     
     async executeCronRevokeTrail (req,res) {
-        console.log(" :: executeCronRevokeTrail :: controller :: ");
-        executeRevokeTrail()
-        res.status(200).json('CRON INICIADO COM SUCESSO')
+        if(config.cron.revokeTrail.active) {
+            executeRevokeTrail()
+            res.status(200).json('CRON INICIADO COM SUCESSO')
+        } else {
+            res.status(500).json('FUNCIONALIDADE INATIVA')
+        }
     }
 }
 
