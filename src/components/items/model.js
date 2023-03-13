@@ -179,6 +179,23 @@ const ActivityItem = Item.discriminator('ActivityItem', new mongoose.Schema({
     ...schemaOptions
 }))
 
+const SoonItem = Item.discriminator(
+    "SoonItem",
+    new mongoose.Schema(
+        {
+            contentPath: {
+                type: String,
+                required: false,
+            },
+            description: { type: String, required: false },
+            durationHours: { type: Number, required: false },
+
+            ...endpointOptions,
+        },
+        { ...schemaOptions }
+    )
+);
+
 module.exports = {
     pathResolver,
     ifEnabled,
@@ -191,4 +208,5 @@ module.exports = {
     SoundcloudItem,
     EventItem,
     ActivityItem,
+    SoonItem,
 }

@@ -332,7 +332,8 @@ const ItemController = {
                                 : bannerPath.replace(AZURE_BLOB_URL, DOMAIN);
                     }
 
-                    if (payload.kind !== 'MediaItem') {
+                    if (payload.kind !== 'MediaItem' ||
+                    payload.kind != "SoonItem") {
                         if (content) {
                             contentPath = await azureBlob(
                                 content,
@@ -358,8 +359,9 @@ const ItemController = {
                     }
 
                     if (
-                        payload.kind !== 'SoundcloudItem' ||
-                        payload.kind !== 'MediaItem'
+                       ( payload.kind !== 'SoundcloudItem' ||
+                        payload.kind !== 'MediaItem')  &&
+                        payload.kind != "SoonItem"
                     ) {
                         payload = {
                             ...payload,
@@ -367,6 +369,12 @@ const ItemController = {
                             thumbPath: thumbPath || undefined,
                             bannerPath: bannerPath || undefined,
                             contentPath: contentPath || undefined,
+                        };
+                    } else if (payload.kind == 'SoonItem') {
+                        payload = {
+                            ...payload,
+                            enabled: false,
+                            thumbPath: thumbPath || undefined,
                         };
                     } else {
                         payload = {
@@ -551,6 +559,16 @@ const ItemController = {
 
                     payload.author = user._id;
 
+                    const item = await Item.findById({ _id: payload._id });
+                    if (item.kind == 'SoonItem' && item.kind != payload.kind) {
+                        await Item.findOneAndUpdate(
+                            { _id: item._id },
+                            {
+                                kind: payload.kind,
+                            }
+                        );
+                    }
+
                     if (payload.kind === 'SCORMItem' && content) {
                         const { contentPath } = await ItemModel.findById(
                             payload._id
@@ -626,7 +644,10 @@ const ItemController = {
             const { _id, enabled } = req.body;
             const item = await Item.findOne({ _id });
 
-            if (item.title && item.description && item.durationHours) {
+            if (
+                (item.title && item.description && item.durationHours) ||
+                item.kind === 'SoonItem'
+            ) {
                 await Item.findByIdAndUpdate(_id, { enabled });
                 _messages.success(res, req, 'Atualizado com sucesso');
             } else {
@@ -766,7 +787,10 @@ const ItemController = {
                 return;
             }
 
-            _messages.success(res, req, {...item._doc,trailTitle:trail.title});
+            _messages.success(res, req, {
+                ...item._doc,
+                trailTitle: trail.title,
+            });
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -937,7 +961,7 @@ const ItemController = {
                         );
 
                         const title = $title && $title.children[0].text;
-                        const titleURL = title.toLowerCase()
+                        const titleURL = title.toLowerCase();
                         const href = $resource.attributes.href;
                         const scoId = $item.attributes.identifier;
 
