@@ -81,6 +81,12 @@ module.exports = {
                             userName = trail.author.name
                         }
 
+                        let supportMaterialEnabled = false
+                        const filteredSupportArray = trail.supportMaterial.filter((x)=> x.deleted === false)
+                        if(filteredSupportArray.length > 0){
+                            supportMaterialEnabled = true
+                        }
+
                         arrTrails.push({
                             _id: trail._id,
                             enabled: trail.enabled,
@@ -111,6 +117,7 @@ module.exports = {
                             certificateDue: trail.certificateDue,
                             externalPlayer: trail.externalPlayer,
                             certificateLayout: trail.certificateLayout,
+                            supportMaterialEnabled: supportMaterialEnabled,
                         })
                     }
                 } else {
@@ -133,6 +140,12 @@ module.exports = {
                             userName = trail.author.name
                         }
 
+                        let supportMaterialEnabled = false
+                        const filteredSupportArray = trail.supportMaterial.filter((x)=> x.deleted === false)
+                        if(filteredSupportArray.length > 0){
+                            supportMaterialEnabled = true
+                        }
+
                         arrTrails.push({
                             _id: trail._id,
                             enabled: trail.enabled,
@@ -163,6 +176,7 @@ module.exports = {
                             certificateDue: trail.certificateDue,
                             externalPlayer: trail.externalPlayer,
                             certificateLayout: trail.certificateLayout,
+                            supportMaterialEnabled: supportMaterialEnabled,
                         })
                     }
                 }

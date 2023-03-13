@@ -11,6 +11,8 @@ const { Trail } = require('./model');
 const { Item } = require('../items/model');
 const { populateTrails } = require('../trails/business');
 const { Tracking } = require('../tracking/model');
+const { Log } = require('../logs/model')
+const mongoose = require('mongoose');
 const {
     pagination,
     ordernation,
@@ -1351,6 +1353,92 @@ module.exports = {
                 'trails',
                 'updateModeration'
             );
+        }
+    },
+
+    async uploadMaterial(req, res) {
+        try {
+            let trailId = req.fields.trailId;
+            let fileArray = Object.keys(req.files).map((key) => req.files[key]);
+            const supportMaterial = []
+
+            for (let file of fileArray) {
+                let path = await azureBlob(file, "trails/material");
+                path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                const material = {
+                    _id: new mongoose.Types.ObjectId(),
+                    url: path,
+                    name: file.name,
+                    size: file.size,
+                    deleted: false
+                }
+                supportMaterial.push(material)
+            }
+
+            await Trail.findByIdAndUpdate(trailId,
+                { $push: { supportMaterial: supportMaterial } })
+
+            _messages.success(res, req, { message: 'Upload concluído!' })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'uploadMaterial')
+        }
+    },
+
+    async listMaterial(req, res) {
+        try {
+            let trailId = req.params.id
+            const trail = await Trail.findById(trailId)
+            const filteredSupportArray = trail.supportMaterial.filter((x)=> x.deleted === false)
+            _messages.success(res, req, filteredSupportArray)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'listMaterial')
+        }
+    },
+
+    async downloadMaterial(req, res) {
+        try {
+            let trailId = req.body.trailId
+            let materialId = req.body.materialId
+            const trail = await Trail.findById(trailId)
+            const requestingUser = getUserByToken(req)
+
+            for (let material of trail.supportMaterial) {
+                if (String(material._id) === materialId) {
+                    Log.create({
+                        user: requestingUser._id,
+                        type: 'FILE DOWNLOAD',
+                        message: `TRILHA: ${trail.title} (${material.name})`,
+                        component: 'TRAILS',
+                        dataNew: [],
+                        dataOld: [],
+                        route: null,
+                        ip: null,
+                        login: null,
+                        groups: [],
+                    })
+                }
+            }
+
+            _messages.success(res, req)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'downloadMaterial')
+        }
+    },
+
+    async deleteMaterial(req, res) {
+        try {
+            let trailId = req.body.trailId
+            let materialId = mongoose.Types.ObjectId(req.body.materialId)
+
+            await Trail.findOneAndUpdate({ _id: trailId, "supportMaterial._id": materialId }, {
+                $set: {
+                    "supportMaterial.$.deleted": true
+                }
+            })
+
+            _messages.success(res, req)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'downloadMaterial')
         }
     },
 };

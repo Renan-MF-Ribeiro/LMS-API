@@ -60,7 +60,8 @@ const TrailSchema = new mongoose.Schema({
     innerTextStatus: { type: Boolean, default: false },
     innerText: { type: String, required: ifInnerTextEnabled },
     certificateDue: { type: Object, default: null },
-    expirationDate: { type: Date, default: null }
+    expirationDate: { type: Date, default: null },
+    supportMaterial: { type: Array }
 }, {
     strict: 'throw',
     timestamps: true,
