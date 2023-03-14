@@ -48,7 +48,7 @@ module.exports = {
 
     async getShowCaseTrailById(req, res) {
         try {
-            const { findValue } = req.params;
+            const findValue = req.params.trailId;            
 
             const query = findValue.match(/^[0-9a-fA-F]{24}$/)
                 ? {
@@ -141,10 +141,13 @@ function processTrailAndItems(trail) {
 
     trail.items = trail.items.map((item) => {
         return {
-            _id: item._id,
+            _id: item.itemID._id,
             title: item.itemID.title,
             description: item.itemID.description,
             durationHours: item.itemID.durationHours,
+            kind: item.itemID.kind,
+            contentPath: item.itemID.contentPath,
+            afterSeparator:item.afterSeparator
         };
     });
 
@@ -165,6 +168,7 @@ function prepareObject(trail) {
         createdAt: trail.createdAt,
         updatedAt: trail.updatedAt,
         items: trail.items,
+        separators: trail.separators,
         duration: trail.duration,
         thumbPath: trail.thumbPath,
         externalPlayer: trail.externalPlayer,
