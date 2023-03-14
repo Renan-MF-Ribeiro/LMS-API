@@ -28,7 +28,7 @@ try {
 module.exports = express.Router()
     .post('/', isAccountant, _controller.create)
     .put('/', isAccountant, formidable({ maxFileSize: 1024 * 1024 * 1024 }, events), _controller.multiUploadCreate)
-    .put('/update', formidable(), _controller.update)
+    .put('/update', formidable({ maxFileSize: 1024 * 1024 * 1024 }, events), _controller.update)
     .put('/update-status', isAccountant, _controller.updateStatus)
     .get('/actives', isAccountant, _controller.findItensActives)
     .get('/details/:itemId', _controller.getItemWithTracking)
