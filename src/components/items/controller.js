@@ -373,7 +373,7 @@ const ItemController = {
                     } else if (payload.kind == 'SoonItem') {
                         payload = {
                             ...payload,
-                            enabled: false,
+                            enabled: true,
                             thumbPath: thumbPath || undefined,
                         };
                     } else {
