@@ -332,8 +332,10 @@ const ItemController = {
                                 : bannerPath.replace(AZURE_BLOB_URL, DOMAIN);
                     }
 
-                    if (payload.kind !== 'MediaItem' ||
-                    payload.kind != "SoonItem") {
+                    if (
+                        payload.kind !== 'MediaItem' ||
+                        payload.kind != 'SoonItem'
+                    ) {
                         if (content) {
                             contentPath = await azureBlob(
                                 content,
@@ -359,9 +361,9 @@ const ItemController = {
                     }
 
                     if (
-                       ( payload.kind !== 'SoundcloudItem' ||
-                        payload.kind !== 'MediaItem')  &&
-                        payload.kind != "SoonItem"
+                        (payload.kind !== 'SoundcloudItem' ||
+                            payload.kind !== 'MediaItem') &&
+                        payload.kind != 'SoonItem'
                     ) {
                         payload = {
                             ...payload,
@@ -846,6 +848,8 @@ const ItemController = {
 
             let manifestP = null;
             const filesP = [];
+            let pathFile = null;
+            let scormName = null;
             const contentP = new Promise((resolve, reject) => {
                 busboy
                     .on(
@@ -854,7 +858,12 @@ const ItemController = {
                             if (field !== 'content') return;
 
                             file.path = filename;
-                            azureBlob(file, `scorm/${packageId}`, true);
+                            pathFile = azureBlob(
+                                file,
+                                `scorm/${packageId}`,
+                                true
+                            );
+                            scormName = filename;
 
                             file.pipe(unzipper.Parse())
                                 .on('error', function (err) {
@@ -904,6 +913,12 @@ const ItemController = {
             req.pipe(busboy);
 
             await Promise.all([...filesP, contentP]);
+            let path = await pathFile;
+            path = path.replace(AZURE_BLOB_URL, DOMAIN);
+            const scormPath = {
+                path: path,
+                name: scormName,
+            };
 
             if (!manifestP) {
                 throw _errors.SCORM_UPLOAD.NO_MANIFEST;
@@ -972,6 +987,7 @@ const ItemController = {
                             packageId,
                             scoId,
                             contentPath: `${packageId}/${href}`,
+                            scormPath,
                         });
                     })
                 );
@@ -1035,7 +1051,8 @@ const ItemController = {
             });
 
             const filesP = [];
-
+            let pathFile = null;
+            let scormName = null;
             const contentP = new Promise((resolve, reject) => {
                 busboy
                     .on(
@@ -1044,7 +1061,12 @@ const ItemController = {
                             if (field !== 'content') return;
 
                             file.path = filename;
-                            azureBlob(file, `scorm/${packageId}`, true);
+                            pathFile = azureBlob(
+                                file,
+                                `scorm/${packageId}`,
+                                true
+                            );
+                            scormName = filename;
 
                             file.pipe(unzipper.Parse())
                                 .on('error', function (err) {
@@ -1088,9 +1110,15 @@ const ItemController = {
             });
             req.pipe(busboy);
             await Promise.all([...filesP, contentP]);
-
+            let path = await pathFile;
+            path = path.replace(AZURE_BLOB_URL, DOMAIN);
+            const scormPath = {
+                path: path,
+                name: scormName,
+            };
             await SCORMItem.findByIdAndUpdate(_id, {
                 contentPath: `${packageId}/${href}`,
+                scormPath:scormPath
             });
 
             res.status(httpStatus.NO_CONTENT).send();
