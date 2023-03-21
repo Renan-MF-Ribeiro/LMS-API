@@ -143,6 +143,7 @@ const SCORMItem = Item.discriminator('SCORMItem', new mongoose.Schema({
     scoId: { type: String, required: true },
     masteryScore: { type: Number },
     contentPath: { type: String, required: true },
+    scormPath:{type:{path:String,name:String},required:true},
     ...endpointOptions,
 }, {
     ...schemaOptions,
