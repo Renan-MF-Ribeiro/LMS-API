@@ -11,6 +11,8 @@ const { Trail } = require('./model');
 const { Item } = require('../items/model');
 const { populateTrails } = require('../trails/business');
 const { Tracking } = require('../tracking/model');
+const { Log } = require('../logs/model')
+const mongoose = require('mongoose');
 const {
     pagination,
     ordernation,
@@ -610,6 +612,130 @@ module.exports = {
         }
     },
 
+    async linkSeparators(req, res) {
+        try {
+            const { idTrail, separator } = req.body;
+            const { separators } = await Trail.findOne({
+                _id: { $eq: idTrail },
+            });
+            let oldData;
+            let newData;
+
+            separators.push(separator);
+            oldData = await Trail.findByIdAndUpdate(idTrail, {
+                separators,
+            });
+            newData = await Trail.find({ _id: { $eq: idTrail } });
+
+            _messages.success(
+                res,
+                req,
+                "Sucesso",
+                "Atualização de dados",
+                "trails",
+                "linkSeparators",
+                newData,
+                oldData,
+                true,
+                "UPDATE"
+            );
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                "Erro interno no servidor",
+                "trails",
+                "separators"
+            );
+        }
+    },
+
+    async updateSeparators(req, res) {
+        try {
+            let exist = false;
+            const { idTrail, separator } = req.body;
+            const { separators } = await Trail.findOne({
+                _id: { $eq: idTrail },
+            });
+            let oldData;
+            let newData;
+            const update = separators.map((separatorDB) => {
+                if (separatorDB._id.toString() == separator._id)
+                    separatorDB = separator;
+                return separatorDB;
+            });
+            oldData = await Trail.findByIdAndUpdate(idTrail, {
+                separators: update,
+            });
+            newData = await Trail.find({ _id: { $eq: idTrail } });
+
+            _messages.success(
+                res,
+                req,
+                "Sucesso",
+                "Atualização de dados",
+                "trails",
+                "linkSeparators",
+                newData,
+                oldData,
+                true,
+                "UPDATE"
+            );
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                "Erro interno no servidor",
+                "trails",
+                "separators"
+            );
+        }
+    },
+
+    async unlinkSeparators(req, res) {
+        try {
+            let exist = false;
+            const { idTrail, separator } = req.body;
+            const { separators } = await Trail.findOne({
+                _id: { $eq: idTrail },
+            });
+            let oldData;
+            let newData;
+
+            const update = separators.filter(
+                (separatorDB) => separatorDB._id.toString() !== separator._id
+            );
+            oldData = await Trail.findByIdAndUpdate(idTrail, {
+                separators: update,
+            });
+            newData = await Trail.find({ _id: { $eq: idTrail } });
+
+            _messages.success(
+                res,
+                req,
+                "Sucesso",
+                "Atualização de dados",
+                "trails",
+                "linkSeparators",
+                newData,
+                oldData,
+                true,
+                "UPDATE"
+            );
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                "Erro interno no servidor",
+                "trails",
+                "separators"
+            );
+        }
+    },
+
     async findAll(req, res) {
         try {
             const { skip, limit } = pagination(req);
@@ -717,15 +843,6 @@ module.exports = {
 
             const items = trails[0].items;
 
-            // const { items } = await Trail
-            //     .findOne({
-            //         _id: { $eq: id },
-            //     })
-            //     .sort({ [order]: sort })
-            //     .populate('items')
-            //     .skip(parseInt(skip))
-            //     .limit(parseInt(limit))
-
             for (const item of items) {
                 const tracking = await Tracking.findOne({
                     item: { $eq: item._id },
@@ -754,6 +871,7 @@ module.exports = {
             }
             _messages.success(res, req, {
                 data: items,
+                separators: trails[0].separators,
                 total: total.items.length,
             });
         } catch (error) {
@@ -884,7 +1002,7 @@ module.exports = {
 
     async changeItemOrderFromTrail(req, res) {
         try {
-            const { idTrail, itemsInOrder } = req.body;
+            const { idTrail, order } = req.body;
 
             const { items } = await Trail.findOne(
                 {
@@ -893,24 +1011,28 @@ module.exports = {
                 'items'
             );
 
+            const itemsInOrder = order.items;
+            const separatorsInOrder = order.separators;
+
             // Valida os ids.
             const hasAllItems =
-                items.length == itemsInOrder.length &&
-                itemsInOrder.reduce((hasAllItems, val) => {
-                    if (hasAllItems == false) {
-                        return false;
-                    }
+            // items.length == itemsInOrder.length &&
+            itemsInOrder.reduce((hasAllItems, val) => {
+                if (hasAllItems == false) {
+                    return false;
+                }
 
-                    return (
-                        items.findIndex((i) => val == i.itemID.toString()) >= 0
-                    );
-                }, true);
-
+                return (
+                    items.findIndex(
+                        (i) => val.itemID._id == i.itemID.toString()
+                    ) >= 0
+                );
+            }, true);
             if (hasAllItems) {
                 // Atualiza lista de items.
                 const newTrailItems = itemsInOrder.map((idItem) => {
                     const item = items.find(
-                        (i) => i.itemID.toString() === idItem
+                        (i) => i.itemID.toString() === idItem.itemID._id
                     );
                     if (!item) {
                         throw new Error(
@@ -918,10 +1040,11 @@ module.exports = {
                         );
                     }
 
-                    return item;
+                    return idItem;
                 });
                 const oldData = await Trail.findByIdAndUpdate(idTrail, {
                     items: newTrailItems,
+                    separators: separatorsInOrder,
                 });
                 const newData = await Trail.find({ _id: { $eq: idTrail } });
 
@@ -954,7 +1077,7 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'trails',
-                'unlinkItems'
+                'changeItemOrderFromTrail'
             );
         }
     },
@@ -1351,6 +1474,92 @@ module.exports = {
                 'trails',
                 'updateModeration'
             );
+        }
+    },
+
+    async uploadMaterial(req, res) {
+        try {
+            let trailId = req.fields.trailId;
+            let fileArray = Object.keys(req.files).map((key) => req.files[key]);
+            const supportMaterial = []
+
+            for (let file of fileArray) {
+                let path = await azureBlob(file, "trails/material");
+                path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                const material = {
+                    _id: new mongoose.Types.ObjectId(),
+                    url: path,
+                    name: file.name,
+                    size: file.size,
+                    deleted: false
+                }
+                supportMaterial.push(material)
+            }
+
+            await Trail.findByIdAndUpdate(trailId,
+                { $push: { supportMaterial: supportMaterial } })
+
+            _messages.success(res, req, { message: 'Upload concluído!' })
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'uploadMaterial')
+        }
+    },
+
+    async listMaterial(req, res) {
+        try {
+            let trailId = req.params.id
+            const trail = await Trail.findById(trailId)
+            const filteredSupportArray = trail.supportMaterial.filter((x)=> x.deleted === false)
+            _messages.success(res, req, filteredSupportArray)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'listMaterial')
+        }
+    },
+
+    async downloadMaterial(req, res) {
+        try {
+            let trailId = req.body.trailId
+            let materialId = req.body.materialId
+            const trail = await Trail.findById(trailId)
+            const requestingUser = getUserByToken(req)
+
+            for (let material of trail.supportMaterial) {
+                if (String(material._id) === materialId) {
+                    Log.create({
+                        user: requestingUser._id,
+                        type: 'FILE DOWNLOAD',
+                        message: `TRILHA: ${trail.title} (${material.name})`,
+                        component: 'TRAILS',
+                        dataNew: [],
+                        dataOld: [],
+                        route: null,
+                        ip: null,
+                        login: null,
+                        groups: [],
+                    })
+                }
+            }
+
+            _messages.success(res, req)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'downloadMaterial')
+        }
+    },
+
+    async deleteMaterial(req, res) {
+        try {
+            let trailId = req.body.trailId
+            let materialId = mongoose.Types.ObjectId(req.body.materialId)
+
+            await Trail.findOneAndUpdate({ _id: trailId, "supportMaterial._id": materialId }, {
+                $set: {
+                    "supportMaterial.$.deleted": true
+                }
+            })
+
+            _messages.success(res, req)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'downloadMaterial')
         }
     },
 };

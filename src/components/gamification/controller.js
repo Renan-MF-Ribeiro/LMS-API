@@ -1,17 +1,18 @@
 const GamificationBusiness = require('./business');
 const { User } = require('../users/model');
+const config = require("../../../config.json");
 
 const GamificationController = {
     async dispatch(networkLogin, categories, props) {
-        const user = await User.findOne({ networkLogin });
-        try {
-            await Promise.all(
-                categories.map(async (category) => {
+        if (config.gamification.active) {
+            const user = await User.findOne({ networkLogin });
+            try {
+                for (const category of categories) {
                     await GamificationBusiness[category](user, category, props);
-                })
-            );
-        } catch (err) {
-            console.log(err)
+                }
+            } catch (err) {
+                console.log(err);
+            }
         }
     },
 };

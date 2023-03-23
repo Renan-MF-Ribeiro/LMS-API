@@ -81,6 +81,12 @@ module.exports = {
                             userName = trail.author.name
                         }
 
+                        let supportMaterialEnabled = false
+                        const filteredSupportArray = trail.supportMaterial.filter((x)=> x.deleted === false)
+                        if(filteredSupportArray.length > 0){
+                            supportMaterialEnabled = true
+                        }
+
                         arrTrails.push({
                             _id: trail._id,
                             enabled: trail.enabled,
@@ -103,6 +109,7 @@ module.exports = {
                             completion: trail.completion,
                             isSequenceEnabled: trail.isSequenceEnabled,
                             items: arrItems,
+                            separators: trail.separators,
                             expirationType: trail.expirationType,
                             collaborative: trail.collaborative,
                             moderation: trail.moderation,
@@ -111,6 +118,7 @@ module.exports = {
                             certificateDue: trail.certificateDue,
                             externalPlayer: trail.externalPlayer,
                             certificateLayout: trail.certificateLayout,
+                            supportMaterialEnabled: supportMaterialEnabled,
                         })
                     }
                 } else {
@@ -124,6 +132,7 @@ module.exports = {
                                     urlTrail: i.urlTrail,
                                     itemID: i.itemID,
                                     mandatory: i.mandatory,
+                                    afterSeparator:i.afterSeparator
                                 })
                             }
                         }
@@ -131,6 +140,12 @@ module.exports = {
                         let userName = ''
                         if (trail.author) {
                             userName = trail.author.name
+                        }
+
+                        let supportMaterialEnabled = false
+                        const filteredSupportArray = trail.supportMaterial.filter((x)=> x.deleted === false)
+                        if(filteredSupportArray.length > 0){
+                            supportMaterialEnabled = true
                         }
 
                         arrTrails.push({
@@ -152,6 +167,7 @@ module.exports = {
                             completion: trail.completion,
                             isSequenceEnabled: trail.isSequenceEnabled,
                             items: arrItems,
+                            separators: trail.separators,
                             innerTextStatus: trail.innerTextStatus,
                             innerText: trail.innerText,
                             author: userName,
@@ -163,6 +179,7 @@ module.exports = {
                             certificateDue: trail.certificateDue,
                             externalPlayer: trail.externalPlayer,
                             certificateLayout: trail.certificateLayout,
+                            supportMaterialEnabled: supportMaterialEnabled,
                         })
                     }
                 }

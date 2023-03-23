@@ -143,6 +143,7 @@ const SCORMItem = Item.discriminator('SCORMItem', new mongoose.Schema({
     scoId: { type: String, required: true },
     masteryScore: { type: Number },
     contentPath: { type: String, required: true },
+    scormPath:{type:{path:String,name:String},required:true},
     ...endpointOptions,
 }, {
     ...schemaOptions,
@@ -179,6 +180,23 @@ const ActivityItem = Item.discriminator('ActivityItem', new mongoose.Schema({
     ...schemaOptions
 }))
 
+const SoonItem = Item.discriminator(
+    "SoonItem",
+    new mongoose.Schema(
+        {
+            contentPath: {
+                type: String,
+                required: false,
+            },
+            description: { type: String, required: false },
+            durationHours: { type: Number, required: false },
+
+            ...endpointOptions,
+        },
+        { ...schemaOptions }
+    )
+);
+
 module.exports = {
     pathResolver,
     ifEnabled,
@@ -191,4 +209,5 @@ module.exports = {
     SoundcloudItem,
     EventItem,
     ActivityItem,
+    SoonItem,
 }

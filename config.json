@@ -49,5 +49,8 @@
     "showcase": {
         "active": true
     },
-    "vimeoFolder": "8417388"
+    "vimeoFolder": "8417388",
+    "gamification": {
+        "active": true
+    }
 }
