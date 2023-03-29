@@ -662,7 +662,7 @@ module.exports = {
             let newData;
             const update = separators.map((separatorDB) => {
                 if (separatorDB._id.toString() == separator._id)
-                    separatorDB = separator;
+                separatorDB.title = separator.title;
                 return separatorDB;
             });
             oldData = await Trail.findByIdAndUpdate(idTrail, {
