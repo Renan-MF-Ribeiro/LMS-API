@@ -23,6 +23,9 @@
         "notifyResponsibleUsers": {
             "active": true,
             "notificationDays": [-30, 0, 30, 60, 90]
+        },
+        "revokeTrail": {
+            "active": true
         }
     },
     "usersData": {
@@ -46,5 +49,8 @@
     "showcase": {
         "active": true
     },
-    "vimeoFolder": "8417388"
+    "vimeoFolder": "8417388",
+    "gamification": {
+        "active": true
+    }
 }

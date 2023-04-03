@@ -33,7 +33,7 @@ const ItemSchema = new mongoose.Schema({
     enabled: { type: Boolean, default: false, required: true },
     title: { type: String, required: true, trim: true },
     titleURL: { type: String, required: true, trim: true },
-
+    tags: { type: Array },
     description: { type: String, required: ifEnabled, trim: true },
     durationHours: { type: Number, required: ifEnabled },
     thumbPath: { type: String, get: pathResolver, required: ifEnabled, default: '' },
@@ -143,6 +143,7 @@ const SCORMItem = Item.discriminator('SCORMItem', new mongoose.Schema({
     scoId: { type: String, required: true },
     masteryScore: { type: Number },
     contentPath: { type: String, required: true },
+    scormPath:{type:{path:String,name:String},required:true},
     ...endpointOptions,
 }, {
     ...schemaOptions,
@@ -179,6 +180,23 @@ const ActivityItem = Item.discriminator('ActivityItem', new mongoose.Schema({
     ...schemaOptions
 }))
 
+const SoonItem = Item.discriminator(
+    "SoonItem",
+    new mongoose.Schema(
+        {
+            contentPath: {
+                type: String,
+                required: false,
+            },
+            description: { type: String, required: false },
+            durationHours: { type: Number, required: false },
+
+            ...endpointOptions,
+        },
+        { ...schemaOptions }
+    )
+);
+
 module.exports = {
     pathResolver,
     ifEnabled,
@@ -191,4 +209,5 @@ module.exports = {
     SoundcloudItem,
     EventItem,
     ActivityItem,
+    SoonItem,
 }

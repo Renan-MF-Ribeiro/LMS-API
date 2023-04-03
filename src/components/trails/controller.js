@@ -11,6 +11,8 @@ const { Trail } = require('./model');
 const { Item } = require('../items/model');
 const { populateTrails } = require('../trails/business');
 const { Tracking } = require('../tracking/model');
+const { Log } = require('../logs/model')
+const mongoose = require('mongoose');
 const {
     pagination,
     ordernation,
@@ -613,6 +615,130 @@ module.exports = {
         }
     },
 
+    async linkSeparators(req, res) {
+        try {
+            const { idTrail, separator } = req.body;
+            const { separators } = await Trail.findOne({
+                _id: { $eq: idTrail },
+            });
+            let oldData;
+            let newData;
+
+            separators.push(separator);
+            oldData = await Trail.findByIdAndUpdate(idTrail, {
+                separators,
+            });
+            newData = await Trail.find({ _id: { $eq: idTrail } });
+
+            _messages.success(
+                res,
+                req,
+                "Sucesso",
+                "Atualização de dados",
+                "trails",
+                "linkSeparators",
+                newData,
+                oldData,
+                true,
+                "UPDATE"
+            );
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                "Erro interno no servidor",
+                "trails",
+                "separators"
+            );
+        }
+    },
+
+    async updateSeparators(req, res) {
+        try {
+            let exist = false;
+            const { idTrail, separator } = req.body;
+            const { separators } = await Trail.findOne({
+                _id: { $eq: idTrail },
+            });
+            let oldData;
+            let newData;
+            const update = separators.map((separatorDB) => {
+                if (separatorDB._id.toString() == separator._id)
+                separatorDB.title = separator.title;
+                return separatorDB;
+            });
+            oldData = await Trail.findByIdAndUpdate(idTrail, {
+                separators: update,
+            });
+            newData = await Trail.find({ _id: { $eq: idTrail } });
+
+            _messages.success(
+                res,
+                req,
+                "Sucesso",
+                "Atualização de dados",
+                "trails",
+                "linkSeparators",
+                newData,
+                oldData,
+                true,
+                "UPDATE"
+            );
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                "Erro interno no servidor",
+                "trails",
+                "separators"
+            );
+        }
+    },
+
+    async unlinkSeparators(req, res) {
+        try {
+            let exist = false;
+            const { idTrail, separator } = req.body;
+            const { separators } = await Trail.findOne({
+                _id: { $eq: idTrail },
+            });
+            let oldData;
+            let newData;
+
+            const update = separators.filter(
+                (separatorDB) => separatorDB._id.toString() !== separator._id
+            );
+            oldData = await Trail.findByIdAndUpdate(idTrail, {
+                separators: update,
+            });
+            newData = await Trail.find({ _id: { $eq: idTrail } });
+
+            _messages.success(
+                res,
+                req,
+                "Sucesso",
+                "Atualização de dados",
+                "trails",
+                "linkSeparators",
+                newData,
+                oldData,
+                true,
+                "UPDATE"
+            );
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                "Erro interno no servidor",
+                "trails",
+                "separators"
+            );
+        }
+    },
+
     async findAll(req, res) {
         try {
             const { skip, limit } = pagination(req);
@@ -720,15 +846,6 @@ module.exports = {
 
             const items = trails[0].items;
 
-            // const { items } = await Trail
-            //     .findOne({
-            //         _id: { $eq: id },
-            //     })
-            //     .sort({ [order]: sort })
-            //     .populate('items')
-            //     .skip(parseInt(skip))
-            //     .limit(parseInt(limit))
-
             for (const item of items) {
                 const tracking = await Tracking.findOne({
                     item: { $eq: item._id },
@@ -757,6 +874,7 @@ module.exports = {
             }
             _messages.success(res, req, {
                 data: items,
+                separators: trails[0].separators,
                 total: total.items.length,
             });
         } catch (error) {
@@ -887,7 +1005,7 @@ module.exports = {
 
     async changeItemOrderFromTrail(req, res) {
         try {
-            const { idTrail, itemsInOrder } = req.body;
+            const { idTrail, order } = req.body;
 
             const { items } = await Trail.findOne(
                 {
@@ -896,24 +1014,28 @@ module.exports = {
                 'items'
             );
 
+            const itemsInOrder = order.items;
+            const separatorsInOrder = order.separators;
+
             // Valida os ids.
             const hasAllItems =
-                items.length == itemsInOrder.length &&
-                itemsInOrder.reduce((hasAllItems, val) => {
-                    if (hasAllItems == false) {
-                        return false;
-                    }
+            // items.length == itemsInOrder.length &&
+            itemsInOrder.reduce((hasAllItems, val) => {
+                if (hasAllItems == false) {
+                    return false;
+                }
 
-                    return (
-                        items.findIndex((i) => val == i.itemID.toString()) >= 0
-                    );
-                }, true);
-
+                return (
+                    items.findIndex(
+                        (i) => val.itemID._id == i.itemID.toString()
+                    ) >= 0
+                );
+            }, true);
             if (hasAllItems) {
                 // Atualiza lista de items.
                 const newTrailItems = itemsInOrder.map((idItem) => {
                     const item = items.find(
-                        (i) => i.itemID.toString() === idItem
+                        (i) => i.itemID.toString() === idItem.itemID._id
                     );
                     if (!item) {
                         throw new Error(
@@ -921,10 +1043,11 @@ module.exports = {
                         );
                     }
 
-                    return item;
+                    return idItem;
                 });
                 const oldData = await Trail.findByIdAndUpdate(idTrail, {
                     items: newTrailItems,
+                    separators: separatorsInOrder,
                 });
                 const newData = await Trail.find({ _id: { $eq: idTrail } });
 
@@ -957,7 +1080,7 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'trails',
-                'unlinkItems'
+                'changeItemOrderFromTrail'
             );
         }
     },
@@ -1234,10 +1357,19 @@ module.exports = {
      */
     async getCourseInformation(req, res) {
         try {
-            const trailId = req.params.trailId;
+            const findValueTrail = req.params.trailId;
             const itemId = req.params.itemId;
 
-            const trail = await Trail.findById(trailId);
+            const trail = await Trail.findOne(
+                findValueTrail.match(/^[0-9a-fA-F]{24}$/)
+                    ? {
+                          $or: [
+                              { _id: findValueTrail },
+                              { titleURL: findValueTrail },
+                          ],
+                      }
+                    : { titleURL: findValueTrail }
+            );
             const item = trail.items.find((i) => i.itemID == itemId);
 
             if (!item) {

@@ -109,14 +109,16 @@ module.exports = {
                             completion: trail.completion,
                             isSequenceEnabled: trail.isSequenceEnabled,
                             items: arrItems,
+                            separators: trail.separators,
                             expirationType: trail.expirationType,
                             collaborative: trail.collaborative,
                             moderation: trail.moderation,
                             complaints: trail.complaints,
                             certificate: trail.certificate,
+                            certificateDue: trail.certificateDue,
                             externalPlayer: trail.externalPlayer,
                             certificateLayout: trail.certificateLayout,
-                            supportMaterialEnabled: supportMaterialEnabled
+                            supportMaterialEnabled: supportMaterialEnabled,
                         })
                     }
                 } else {
@@ -130,6 +132,7 @@ module.exports = {
                                     urlTrail: i.urlTrail,
                                     itemID: i.itemID,
                                     mandatory: i.mandatory,
+                                    afterSeparator:i.afterSeparator
                                 })
                             }
                         }
@@ -164,6 +167,7 @@ module.exports = {
                             completion: trail.completion,
                             isSequenceEnabled: trail.isSequenceEnabled,
                             items: arrItems,
+                            separators: trail.separators,
                             innerTextStatus: trail.innerTextStatus,
                             innerText: trail.innerText,
                             author: userName,
@@ -172,9 +176,10 @@ module.exports = {
                             moderation: trail.moderation,
                             complaints: trail.complaints,
                             certificate: trail.certificate,
+                            certificateDue: trail.certificateDue,
                             externalPlayer: trail.externalPlayer,
                             certificateLayout: trail.certificateLayout,
-                            supportMaterialEnabled: supportMaterialEnabled
+                            supportMaterialEnabled: supportMaterialEnabled,
                         })
                     }
                 }

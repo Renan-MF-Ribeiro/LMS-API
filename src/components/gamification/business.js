@@ -92,7 +92,7 @@ const GamificationBusiness = {
             ],
         });
 
-        trails.forEach(async (trail) => {
+        for (const trail of trails) {
             const processedTrail = processTrailTracking(trail, allTrackingUser);
             const isAboutToComplete = {
                 ...processedTrail.trail,
@@ -123,9 +123,10 @@ const GamificationBusiness = {
                     trail,
                     item,
                     completion,
+                    userCreatedAt: user.createdAt
                 });
             }
-        });
+        }
     },
 
     // ✅ DONE
@@ -142,7 +143,7 @@ const GamificationBusiness = {
             ],
         });
 
-        trails.forEach(async (trail) => {
+        for (const trail of trails) {
             const processedTrail = processTrailTracking(trail, allTrackingUser);
             if (getTrailCompletion(processedTrail.trail) === null) {
                 await GamificationBusiness.handleEvent(user, category, {
@@ -150,7 +151,7 @@ const GamificationBusiness = {
                     item,
                 });
             }
-        });
+        }
     },
 
     // ✅ DONE
@@ -227,7 +228,7 @@ const GamificationBusiness = {
                     ],
                 });
 
-                trails.forEach(async (trail) => {
+                for (const trail of trails) {
                     const processedTrail = processTrailTracking(
                         trail,
                         allTrackingUser
@@ -235,7 +236,7 @@ const GamificationBusiness = {
                     await GamificationBusiness.handleEvent(user, category, {
                         trail: processedTrail.trail,
                     });
-                });
+                }
             }
         }
     },

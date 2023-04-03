@@ -43,7 +43,7 @@ module.exports = {
     async createCourse (req, res) {
         try {
             const materials = req.files.materials
-            const { body } = req
+            const body  = req.fields
             const arrMaterials = []
             let flagDate = true
             body.tags = JSON.parse(body.tags)
@@ -196,7 +196,7 @@ module.exports = {
     async updateCourse (req, res) {
         try {
             const materials = req.files.materials
-            const { body } = req
+            const body = req.fields
             const arrMaterials = []
             let flagDate = true
             body.tags = JSON.parse(body.tags)
@@ -410,7 +410,7 @@ module.exports = {
                 dateApplicationFinal,
                 instructor,
                 instructorTemp,
-            } = req.body
+            } = req.fields
 
             let flagDate = true
 
@@ -971,7 +971,7 @@ module.exports = {
 
     async getCourseByQrCode (req, res) {
         try {
-            const { body } = req
+            const body = req.fields
             const course = await ClassModel.findOne({
                 qrcode: { $eq: body.qrcode },
             })

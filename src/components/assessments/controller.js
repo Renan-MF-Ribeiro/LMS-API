@@ -617,9 +617,9 @@ module.exports = {
             result.finished = true
             result.passingScore = passingScore
 
-            if (result.values.correct >= passingScore) {
-                await ExamTracking.findOneAndUpdate({ item: itemID, userLogin: user.networkLogin }, { lessonStatus: 'passed' })
-            }
+            // if (result.values.correct >= passingScore) {
+            //     await ExamTracking.findOneAndUpdate({ item: itemID, userLogin: user.networkLogin }, { lessonStatus: 'passed' })
+            // }
 
             _messages.success(res, req, result)
         } catch (error) {

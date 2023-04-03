@@ -8,6 +8,7 @@ const {
     executeCourseChargeNotification,
     executeCronUsers,
     executeExamDeleteTrackingCron,
+    executeRevokeTrail,
 } = require('../../utils/cron')
 
 module.exports = {
@@ -87,6 +88,15 @@ module.exports = {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', '/last-groups-ad')
         }
     },
+    
+    async executeCronRevokeTrail (req,res) {
+        if(config.cron.revokeTrail.active) {
+            executeRevokeTrail()
+            res.status(200).json('CRON INICIADO COM SUCESSO')
+        } else {
+            res.status(500).json('FUNCIONALIDADE INATIVA')
+        }
+    }
 }
 
 async function verifyLog (log) {

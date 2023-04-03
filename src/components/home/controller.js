@@ -30,61 +30,60 @@ const { populateTrails } = require("../trails/business");
 // const { updateAverageCourses } = require('../../utils/cron')
 
 const ItemController = {
-    async searchTrailsItems(req, res) {
+   async searchTrailsItems (req, res) {
         try {
-            const user = await getUserByToken(req);
-            const tags = await getTagsGroupsByToken(req);
-            const searchBy = req.query.searchBy;
-            let filterTrails = [];
-            const result = [];
+            const user = await getUserByToken(req)
+            const tags = await getTagsGroupsByToken(req)
+            const searchBy = req.query.searchBy
+            let filterTrails = []
+            const result = []
 
             const allTrackingUser = await Tracking.find({
                 userLogin: { $eq: user.networkLogin },
-            });
+                $or: [
+                    { expiredCompletion: { $exists: false } }, 
+                    { expiredCompletion: { $eq: null } }
+                ]
+            })
 
             for (const tag of user.tags) {
-                delete tag.createdAt;
-                tags.push(tag);
+                delete tag.createdAt
+                tags.push(tag)
             }
 
             filterTrails = await populateTrails(true, {
                 $or: [
-                    { title: new RegExp(`.${searchBy}.`, "i") },
-                    { description: new RegExp(`.${searchBy}.`, "i") },
-                    { tags: { $in: tags } },
-                    { mandatory: { $in: tags } },
+                    { title: new RegExp(searchBy, 'gi')},
+                    { description: new RegExp(searchBy, 'gi')},
                 ],
-                enabled: true,
-            });
-            filterTrails = filterTrails.filter((trail) =>
-                checkIfTheTrackIsValid(trail)
-            );
+                tags: { $in: tags },
+                enabled: true
+            })
+            filterTrails = filterTrails.filter(trail => checkIfTheTrackIsValid(trail))
 
             const items = await Item.find({
-                description: new RegExp(`.${searchBy}.`, "i"),
+                description: new RegExp(searchBy, 'gi'),
                 enabled: true,
                 deleted: { $eq: 0 },
-            });
+            })
 
             for (const item of items) {
                 const itemTrail = await populateTrails(true, {
-                    "items.itemID": { $in: item._id },
+                    'items.itemID': { $in: item._id },
                     $or: [
                         { tags: { $in: tags } },
                         { mandatory: { $in: tags } },
                     ],
                     enabled: true,
-                });
+                })
 
                 if (itemTrail) {
                     for (const t of itemTrail) {
-                        const isValidTrail = checkIfTheTrackIsValid(t);
+                        const isValidTrail = checkIfTheTrackIsValid(t)
                         if (isValidTrail) {
-                            const index = filterTrails.findIndex(
-                                (val) => val.id === itemTrail.id
-                            );
+                            const index = filterTrails.findIndex(val => val.id === itemTrail.id)
                             if (index === -1) {
-                                filterTrails.push(t);
+                                filterTrails.push(t)
                             }
                         }
                     }
@@ -92,27 +91,14 @@ const ItemController = {
             }
 
             for (let trail of filterTrails) {
-                const isValid = checkIfTheTrackIsValid(trail);
-                if (isValid) {
-                    const processedTrail = processTrailTracking(
-                        trail,
-                        allTrackingUser
-                    );
-                    trail = processedTrail.trail;
-                    result.push(trail);
-                }
+                const processedTrail = processTrailTracking(trail, allTrackingUser)
+                trail = processedTrail.trail
+                result.push(trail)
             }
 
-            _messages.success(res, req, result);
+            _messages.success(res, req, result)
         } catch (error) {
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                "Erro interno no servidor",
-                "home",
-                "searchTrailsItems"
-            );
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'home', 'searchTrailsItems')
         }
     },
 
