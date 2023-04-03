@@ -20,7 +20,7 @@ const _functions = require('./functions')
 const { mapUser } = require('./../components/users/model')
 const { Item, MediaItem } = require('../components/items/model')
 const { sleep } = require('./functions')
-const { sendMessageToKafka } = require('../../src/components/messages/business')
+const { sendMessageToKafka } = require('../../src/components/new-messages/business')
 const { Readable } = require('stream')
 const configJson = require('../../config.json')
 
