@@ -99,7 +99,7 @@ app.use("/items", validateTokenRoute, itemsRoutes)
     .use("/suppliers", supplierRoutes)
     .use("/terms-of-use", validateTokenRoute, termsOfUseRoutes)
     .use("/messages", validateTokenRoute, messagesRoutes)
-    .use("/new-messages", validateTokenRoute, newMessagesRoutes)
+    .use("/messages/v2", validateTokenRoute, newMessagesRoutes)
     .use("/channels", validateTokenRoute, channelRoutes);
 
 if (config.showcase.active) {
