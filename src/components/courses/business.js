@@ -76,9 +76,9 @@ module.exports = {
                 const users = await User.find(
                     {
                         status: 'ATIVO',
-                        store: { $eq: store },
+                        // store: { $eq: store },
                     },
-                    ['name', 'registration', 'initials'],
+                    ['name', 'registration'],
                 ).sort({ name: 1 })
 
                 resolve(users)

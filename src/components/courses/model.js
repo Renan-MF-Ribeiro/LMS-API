@@ -22,6 +22,8 @@ const CourseSChema = new mongoose.Schema({
     groups: { type: 'ObjectId', ref: 'instructor_groups' },
     passingScore: { type: Number, required: false, default: null },
     isEvaluationAvailable: { type: Boolean, required: true, default: true },
+    isSelfRegistrationEnabled: { type: Boolean, required: true, default: false },
+    qrCode: { type: String, required: true, trim: true },
     tags: { type: Array, required: false },
 }, {
     ...schemaOptions,
@@ -42,10 +44,13 @@ const ClassSchema = new mongoose.Schema({
     instructorTemp: { type: String, required: false },
     materials: { type: [{ type: 'ObjectId', ref: 'material' }], default: [] },
     qrcode: { type: String, required: false },
+    qrCodeSelfRegistration: { type: String, required: false, default: '' },
+    isSelfRegistrationEnabled: { type: Boolean, required: true, default: false },
     dateApplication: { type: Date, required: false },
     dateApplicationInitial: { type: Date, required: false },
     dateApplicationFinal: { type: Date, required: false },
     canCreateClass: { type: Boolean, required: false },
+    
 }, {
     ...schemaOptions,
 })
