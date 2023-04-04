@@ -3,7 +3,7 @@
 require('dotenv').config()
 const CronJob = require('cron').CronJob
 const { User } = require('../components/users/model')
-const { Message } = require('../components/messages/model')
+const { Message } = require('../components/new-messages/model')
 const { Group } = require('../components/groups/model')
 const { populateTrails } = require('../components/trails/business')
 const { Tracking } = require('../components/tracking/model')
@@ -37,14 +37,14 @@ const {
 } = require('../components/users/business')
 
 const { getAzureFile, readXLSXUsersBuffer, moveUserLoadToProcessed } = require('../utils/files')
-const { sendMessageToKafka } = require('../components/messages/business')
+const { sendMessageToKafka } = require('../components/new-messages/business')
 const ExcelJS = require('exceljs')
 
 const config = require('../../config.json')
 const { Item } = require('../components/items/model')
 const { HistoricEvaluation } = require('../components/assessments/model')
 const { uploadFileDegreed } = require('./ftp')
-const { notifyResponsibleUsers } = require('../components/messages/controller')
+const { notifyResponsibleUsers } = require('../components/new-messages/controller')
 
 const emailTemplate = config.messenger.emailTemplate
 const groupingA = config.cron.average.groupA
