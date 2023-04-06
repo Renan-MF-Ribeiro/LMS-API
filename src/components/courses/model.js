@@ -18,8 +18,6 @@ const CourseSChema = new mongoose.Schema({
     materials: { type: [{ type: 'ObjectId', ref: 'material' }], default: [] },
     deleted: { type: Number, default: 0 },
     status: { type: Number, default: 1 },
-    program: { type: 'ObjectId', ref: 'program' },
-    groups: { type: 'ObjectId', ref: 'instructor_groups' },
     passingScore: { type: Number, required: false, default: null },
     isEvaluationAvailable: { type: Boolean, required: true, default: true },
     isSelfRegistrationEnabled: { type: Boolean, required: true, default: false },
