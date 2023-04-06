@@ -4,7 +4,6 @@ const {
     CourseModel,
     ClassModel,
     MaterialModel,
-    ProgramModel,
     CourseEvaluationModel,
 } = require('./model');
 
@@ -174,7 +173,7 @@ module.exports = {
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
-            const programs = await ProgramModel.find().select('title');
+         
 
             courses.map((course) => {
                 course.dateInitial = addHours(course.dateInitial);
@@ -184,7 +183,6 @@ module.exports = {
             success(res, req, {
                 data: courses,
                 total,
-                programs,
             });
         } catch (error) {
             internalServer(

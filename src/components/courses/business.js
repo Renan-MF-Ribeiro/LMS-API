@@ -3,7 +3,7 @@
 const { awsAmazon } = require('../../utils/files')
 const { User } = require('../users/model')
 const { Group } = require('../groups/model')
-const { MaterialModel, ClassModel, ProgramModel } = require('./model')
+const { MaterialModel, ClassModel } = require('./model')
 
 const {
     formatDateWithoutHours,
@@ -186,30 +186,6 @@ module.exports = {
             }
         })
     },
-
-    returnProgramaID (programTitle) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                let programID
-                const title = programTitle || 'Programa Livre'
-
-                const program = await ProgramModel.findOne({
-                    title: { $eq: title },
-                })
-
-                program
-                    ? (programID = program._id)
-                    : (programID = await ProgramModel.create({
-                        title: programTitle,
-                    }))
-
-                resolve(programID)
-            } catch (error) {
-                reject(error)
-            }
-        })
-    },
-
     getCoursesByUserID (userID) {
         return new Promise(async (resolve, reject) => {
             try {
