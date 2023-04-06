@@ -70,13 +70,11 @@ CourseSChema.index({
 const CourseModel = mongoose.model('course', CourseSChema)
 const MaterialModel = mongoose.model('material', MaterialSchema)
 const ClassModel = mongoose.model('classes', ClassSchema)
-const ProgramModel = mongoose.model('program', ProgramsSchema)
 const CourseEvaluationModel = mongoose.model('course_evaluation', CourseEvaluationSchema)
 
 module.exports = {
     CourseModel,
     MaterialModel,
     ClassModel,
-    ProgramModel,
     CourseEvaluationModel,
 }
