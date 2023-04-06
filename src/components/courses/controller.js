@@ -82,8 +82,7 @@ module.exports = {
                         '/createCourse'
                     );
                 } else {
-                    const programID = await returnProgramaID(body.program);
-                    body.program = programID;
+                   
 
                     body.dateInitial = formatDateWithoutHours(body.dateInitial);
                     if (body.dateFinal) {

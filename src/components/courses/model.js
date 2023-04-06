@@ -53,12 +53,6 @@ const ClassSchema = new mongoose.Schema({
     ...schemaOptions,
 })
 
-const ProgramsSchema = new mongoose.Schema({
-    title: { type: String, required: true, trim: true },
-    status: { type: Number, default: 1 },
-}, {
-    ...schemaOptions,
-})
 
 const CourseEvaluationSchema = new mongoose.Schema({
     classID: { type: 'ObjectId', ref: 'classes', required: true },
