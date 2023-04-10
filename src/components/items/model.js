@@ -78,6 +78,7 @@ const documentFormats = Object.freeze({
 
 const DocumentItem = Item.discriminator('DocumentItem', new mongoose.Schema({
     format: { type: String, enum: Object.values(documentFormats), default: documentFormats.PDF, required: true },
+    fileName: { type: String },
     contentPath: { type: String, get: pathResolver, required: ifEnabled },
     ...endpointOptions,
 }, {

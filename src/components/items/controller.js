@@ -337,6 +337,7 @@ const ItemController = {
                         payload.kind != 'SoonItem'
                     ) {
                         if (content) {
+                            payload.fileName = content.name
                             contentPath = await azureBlob(
                                 content,
                                 'items/content'
