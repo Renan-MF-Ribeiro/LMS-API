@@ -52,7 +52,7 @@ module.exports = {
             const channels = await Channel.find({
                 tags: { $in: tags.map((tag) => tag.value) },
                 enabled:true
-            });
+            }).sort({ position: 'asc' });
 
             _messages.success(res, req, channels);
         } catch (error) {
@@ -194,6 +194,28 @@ module.exports = {
                 'channels',
                 '/create'
             );
+        }
+    },
+
+    async updatePosition (req, res) {
+        try {
+            const channels = req.body
+
+            for (const channel of channels) {
+                const { id, position } = channel
+                await Channel.findByIdAndUpdate(id, { position })
+            }
+
+            _messages.success(res, req, 'Atualizado com sucesso!')
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'channels',
+                '/updatePosition',
+            )
         }
     },
 };
