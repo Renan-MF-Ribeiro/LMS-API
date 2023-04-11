@@ -79,8 +79,6 @@ module.exports = {
                         '/createCourse'
                     );
                 } else {
-                   
-
                     body.dateInitial = formatDateWithoutHours(body.dateInitial);
                     if (body.dateFinal) {
                         body.dateFinal = formatDateWithoutHours(body.dateFinal);
@@ -170,8 +168,6 @@ module.exports = {
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
-         
-
             courses.map((course) => {
                 course.dateInitial = addHours(course.dateInitial);
                 course.dateFinal = addHours(course.dateFinal);
@@ -251,7 +247,6 @@ module.exports = {
                         '/createCourse'
                     );
                 } else {
-                   
                     body.dateInitial = formatDateWithoutHours(body.dateInitial);
                     if (body.dateFinal) {
                         body.dateFinal = formatDateWithoutHours(body.dateFinal);
@@ -354,9 +349,7 @@ module.exports = {
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
-            arrCoursesFinal = courses;        
-
-            
+            arrCoursesFinal = courses;
 
             success(res, req, {
                 data: arrCoursesFinal,
@@ -518,7 +511,8 @@ module.exports = {
                             instructorTemp,
                             qrcode: qrCode,
                             qrCodeSelfRegistration: qrCodeSelfRegistration,
-                            isSelfRegistrationEnabled: isSelfRegistrationEnabled
+                            isSelfRegistrationEnabled:
+                                isSelfRegistrationEnabled,
                         });
 
                         success(res, req, 'Criado com sucesso!');
@@ -714,8 +708,9 @@ module.exports = {
     async appliedCourse(req, res) {
         try {
             const { courseID, classID } = req.params;
-            const course = await CourseModel.findById(courseID)
-                .populate('materials')
+            const course = await CourseModel.findById(courseID).populate(
+                'materials'
+            );
 
             const classUsers = await getClassByID(classID);
             course.materials = course.materials.concat(classUsers.materials);
@@ -1021,12 +1016,16 @@ module.exports = {
     async getCourseByQrCodeSelfRegistration(req, res) {
         try {
             const { body } = req;
+            const { _id } = await getUserByToken(req);
             console.log(body);
             const course = await ClassModel.findOne({
                 qrCodeSelfRegistration: { $eq: body.qrcode },
             }).populate('courseID', 'title');
-
-            success(res, req, course);
+            const register = course.users.find((user) => user.userID == _id)
+            ? true
+            : false;
+            console.log(register);
+            success(res, req, register ? 'registered' : course);
         } catch (error) {
             internalServer(
                 res,
@@ -1060,16 +1059,23 @@ module.exports = {
     },
     async selfRegistration(req, res) {
         try {
-            const { body } = req
+            const { body } = req;
             const user = await getUserByToken(req);
 
             var userID = String(user._id);
 
-            const course = await ClassModel.updateOne({
-                _id: { $eq: body.qrcode },
-            }, { $push: { users: { userID: userID, presence: true, grades: "" } } }, )
+            const course = await ClassModel.updateOne(
+                {
+                    _id: { $eq: body.qrcode },
+                },
+                {
+                    $push: {
+                        users: { userID: userID, presence: true, grades: '' },
+                    },
+                }
+            );
 
-            success(res, req, course)
+            success(res, req, course);
         } catch (error) {
             internalServer(
                 res,
@@ -1077,8 +1083,8 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'courses',
-                '/getCourseByQrCode',
-            )
+                '/getCourseByQrCode'
+            );
         }
     },
     async verifyInstructor(req, res) {
@@ -1183,6 +1189,4 @@ module.exports = {
             );
         }
     },
-
-   
 };
