@@ -1017,14 +1017,12 @@ module.exports = {
         try {
             const { body } = req;
             const { _id } = await getUserByToken(req);
-            console.log(body);
             const course = await ClassModel.findOne({
                 qrCodeSelfRegistration: { $eq: body.qrcode },
             }).populate('courseID', 'title');
             const register = course.users.find((user) => user.userID == _id)
             ? true
             : false;
-            console.log(register);
             success(res, req, register ? 'registered' : course);
         } catch (error) {
             internalServer(
