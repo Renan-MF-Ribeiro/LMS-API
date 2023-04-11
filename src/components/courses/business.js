@@ -197,17 +197,13 @@ module.exports = {
                 )
                     .populate({
                         path: 'courseID',
-                        select: '-materials',
-                        populate: {
-                            path: 'program',
-                            select: 'title',
-                        },
+                        select: '-materials',                       
                     })
                     .populate({
                         path: 'materials',
                         match: { author: 'INSTRUTOR' },
                     })
-                    .populate('instructor', ['name', 'store'])
+                    .populate('instructor', ['name'])
 
                 const classesFilter = classes.filter(item => {
                     const usersFilter = item.users.filter(user => {
@@ -226,25 +222,5 @@ module.exports = {
         })
     },
 
-    returnGroupsAD (courses) {
-        return new Promise(async (resolve, reject) => {
-            let groupsAD = []
-            const coursesOfStore = []
 
-            for (const course of courses) {
-                if (course.groups.office === '2') {
-                    course.dateInitial = addHours(course.dateInitial)
-                    course.dateFinal = addHours(course.dateFinal)
-                    coursesOfStore.push(course)
-                    const findGroupsAD = await Group.find({ tags: { $in: course.groups.tags } })
-                    for (const gp of findGroupsAD) {
-                        groupsAD.push(gp.name)
-                    }
-                }
-            }
-
-            groupsAD = [...new Set(groupsAD)]
-            resolve({ groupsAD, coursesOfStore })
-        })
-    },
 }

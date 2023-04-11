@@ -29,8 +29,6 @@ const {
     getStoreUSers,
     getAppliedCourses,
     getClassByID,
-    returnProgramaID,
-    returnGroupsAD,
 } = require('./business');
 
 const {
@@ -168,7 +166,6 @@ module.exports = {
                     path: 'materials',
                     match: { author: 'CONTEUDISTA' },
                 })
-                .populate('program', 'title')
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
@@ -254,9 +251,7 @@ module.exports = {
                         '/createCourse'
                     );
                 } else {
-                    const programID = await returnProgramaID(body.program);
-                    body.program = programID;
-
+                   
                     body.dateInitial = formatDateWithoutHours(body.dateInitial);
                     if (body.dateFinal) {
                         body.dateFinal = formatDateWithoutHours(body.dateFinal);
@@ -355,18 +350,13 @@ module.exports = {
                     path: 'groups',
                     select: ['office', 'tags'],
                 })
-                .populate('program', 'title')
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
-            arrCoursesFinal = courses;
+            arrCoursesFinal = courses;        
 
-            const { groupsAD, coursesOfStore } = await returnGroupsAD(courses);
-
-            for (const group of user.groupsAD) {
-                if (groupsAD.includes(group)) arrCoursesFinal = coursesOfStore;
-            }
+            
 
             success(res, req, {
                 data: arrCoursesFinal,
@@ -726,7 +716,6 @@ module.exports = {
             const { courseID, classID } = req.params;
             const course = await CourseModel.findById(courseID)
                 .populate('materials')
-                .populate('program', 'title');
 
             const classUsers = await getClassByID(classID);
             course.materials = course.materials.concat(classUsers.materials);
@@ -1092,64 +1081,6 @@ module.exports = {
             )
         }
     },
-    async getInstructorByInstructorGroup(req, res) {
-        try {
-            const { params } = req;
-            const tags = [];
-            const usersFilter = [];
-            const groups = [];
-
-            const course = await CourseModel.findById(
-                params.courseID,
-                'groups'
-            ).populate('groups', 'tags');
-
-            course.groups.tags.forEach((tag) => {
-                tags.push(tag.value.toString());
-            });
-
-            const groupsAD = await Group.find({
-                deleted: 0,
-                active: 1,
-            });
-
-            groupsAD.forEach((group) => {
-                group.tags.forEach((tag) => {
-                    if (tags.includes(tag.value.toString())) groups.push(group);
-                });
-            });
-
-            for (const group of groups) {
-                const users = await User.find(
-                    {
-                        groupsAD: { $in: group.name },
-                        status: 'ATIVO',
-                    },
-                    ['groupsAD', 'name', '_id', 'networkLogin']
-                );
-
-                for (const user of users) {
-                    usersFilter.push(user);
-                }
-            }
-
-            if (usersFilter.length > 0) {
-                usersFilter.sort((a, b) => (a.name < b.name ? -1 : 1));
-            }
-
-            success(res, req, usersFilter);
-        } catch (error) {
-            internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'courses',
-                '/getInstructorByInstructorGroup'
-            );
-        }
-    },
-
     async verifyInstructor(req, res) {
         try {
             const { params } = req;
@@ -1166,13 +1097,6 @@ module.exports = {
                     select: ['trails', 'office', 'tags'],
                 }
             );
-
-            // const { groupsAD } = await returnGroupsAD([course])
-
-            // groupsAD.map(group => {
-            //     if (user.groupsAD.includes(group)) isInstructorStore = true
-            // })
-
             const groupEC = await Group.find({
                 name: 'GL_ACADMODA_EC_LIDERTREINADOR',
             });
@@ -1260,40 +1184,5 @@ module.exports = {
         }
     },
 
-    async verify(req, res) {
-        try {
-            const { params } = req;
-            let isEC = true;
-            let isInstructorStore = false;
-
-            const user = await getUserByToken(req);
-            const course = await CourseModel.findById(params.courseID).populate(
-                {
-                    path: 'groups',
-                    select: ['trails', 'office', 'tags'],
-                }
-            );
-
-            const { groupsAD } = await returnGroupsAD([course]);
-
-            groupsAD.map((group) => {
-                if (user.groupsAD.includes(group)) isInstructorStore = true;
-            });
-
-            if (isInstructorStore) isEC = false;
-
-            success(res, req, {
-                isEC,
-            });
-        } catch (error) {
-            internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'courses',
-                '/verify'
-            );
-        }
-    },
+   
 };
