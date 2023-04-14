@@ -1,175 +1,185 @@
 /* eslint-disable no-async-promise-executor */
 
-const { awsAmazon } = require('../../utils/files')
-const { User } = require('../users/model')
-const { Group } = require('../groups/model')
-const { MaterialModel, ClassModel, ProgramModel } = require('./model')
+const { awsAmazon } = require('../../utils/files');
+const { User } = require('../users/model');
+const { Group } = require('../groups/model');
+const { MaterialModel, ClassModel } = require('./model');
 
 const {
     formatDateWithoutHours,
     getDateTodayWithoutHours,
     addHours,
-} = require('../../utils/functions')
+} = require('../../utils/functions');
 
 module.exports = {
-    uploadMaterial (material, author, folder) {
+    uploadMaterial(material, author, folder) {
         return new Promise(async (resolve, reject) => {
             try {
-                const nameFile = material.name.split('.')
-                const url = await awsAmazon(material, folder)
+                const nameFile = material.name.split('.');
+                const url = await awsAmazon(material, folder);
                 const { _id } = await MaterialModel.create({
                     title: nameFile[0],
                     url,
                     author,
-                })
-                resolve(_id)
+                });
+                resolve(_id);
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
-    queryInstructorCourses (searchBy) {
-        const today = getDateTodayWithoutHours()
+    queryInstructorCourses(searchBy) {
+        const today = getDateTodayWithoutHours();
 
         const searchByClasule = searchBy
             ? { $text: { $search: searchBy } }
-            : {}
+            : {};
         const activeCourseClasule = {
             deleted: 0,
             status: 1,
-        }
+        };
 
         const startDateClasule = {
             dateInitial: { $lte: today },
-        }
+        };
 
         const endDateClasule = {
             dateFinal: { $gte: today },
-        }
+        };
 
         return {
             ...searchByClasule,
             ...activeCourseClasule,
             // ...startDateClasule,
             // ...endDateClasule,
-        }
+        };
     },
 
-    verifyValidity (dateInitial, dateFinal) {
-        const startDate = formatDateWithoutHours(dateInitial)
-        const endDate = formatDateWithoutHours(dateFinal)
-        const today = getDateTodayWithoutHours()
+    verifyValidity(dateInitial, dateFinal) {
+        const startDate = formatDateWithoutHours(dateInitial);
+        const endDate = formatDateWithoutHours(dateFinal);
+        const today = getDateTodayWithoutHours();
 
         if (
             startDate <= today &&
             (endDate >= today || endDate === 'Invalid Date')
         ) {
-            return true
+            return true;
         }
-        return false
+        return false;
     },
 
-    getStoreUSers (store) {
+    getStoreUSers(store) {
         return new Promise(async (resolve, reject) => {
             try {
                 const users = await User.find(
                     {
                         status: 'ATIVO',
-                        store: { $eq: store },
+                        // store: { $eq: store },
                     },
-                    ['name', 'registration', 'initials'],
-                ).sort({ name: 1 })
+                    ['name', 'registration']
+                ).sort({ name: 1 });
 
-                resolve(users)
+                resolve(users);
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
-    getCeaUsers () {
+    getCeaUsers() {
         return new Promise(async (resolve, reject) => {
             try {
                 const users = await User.find(
                     {
                         status: 'ATIVO',
                     },
-                    ['name', 'registration'],
-                )
+                    ['name', 'registration']
+                );
 
-                resolve(users)
+                resolve(users);
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
-    getAppliedCourses (instructor, order, sort, skip, limit, searchBy) {
+    getAppliedCourses(instructor, order, sort, skip, limit, searchBy) {
         return new Promise(async (resolve, reject) => {
             try {
                 let courses = await ClassModel.find(
                     {
                         instructor: { $eq: instructor },
                     },
-                    ['users', 'createdAt'],
+                    ['users', 'createdAt']
                 )
-                    .populate(
-                        {
-                            path: 'courseID',
-                            select: ['title', 'createdAt', 'description'],
-                            match: searchBy ? {
-                                $text: {
-                                    $search: `"${searchBy}"`,
-                                },
-                            } : {},
-                        },
-                    )
+                    .populate({
+                        path: 'courseID',
+                        select: ['title', 'createdAt', 'description'],
+                        match: searchBy
+                            ? {
+                                  $text: {
+                                      $search: `"${searchBy}"`,
+                                  },
+                              }
+                            : {},
+                    })
                     .sort({ [order]: sort })
                     .skip(parseInt(skip))
-                    .limit(parseInt(limit))
+                    .limit(parseInt(limit));
 
                 const total = await ClassModel.find(
                     {
                         instructor: { $eq: instructor },
                     },
-                    ['users', 'createdAt'],
-                ).countDocuments()
+                    ['users', 'createdAt']
+                ).countDocuments();
 
                 if (searchBy) {
-                    courses = courses.filter(course => course.courseID !== null)
+                    courses = courses.filter(
+                        (course) => course.courseID !== null
+                    );
                 }
 
                 resolve({
                     courses,
                     total,
-                })
+                });
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
-    getClassByID (classID) {
+    getClassByID(classID) {
         return new Promise(async (resolve, reject) => {
             try {
-                const arrUsers = []
-                const { users, materials, qrcode, dateApplicationInitial, dateApplicationFinal, instructor, instructorTemp } = await ClassModel.findById(
-                    classID,
-                ).populate('materials')
-                    .populate('instructor', 'name')
+                const arrUsers = [];
+                const {
+                    users,
+                    materials,
+                    qrcode,
+                    dateApplicationInitial,
+                    dateApplicationFinal,
+                    instructor,
+                    instructorTemp,
+                    qrCodeSelfRegistration,
+                    isSelfRegistrationEnabled,
+                } = await ClassModel.findById(classID)
+                    .populate('materials')
+                    .populate('instructor', 'name');
 
                 for (const user of users) {
-                    const result = await User.findById(user.userID)
+                    const result = await User.findById(user.userID);
 
                     arrUsers.push({
                         _id: result._id,
                         name: result.name,
                         registration: result.registration,
-                        initials: result.initials,
                         presence: user.presence,
                         grades: user.grades,
-                    })
+                    });
                 }
 
                 resolve({
@@ -180,95 +190,53 @@ module.exports = {
                     qrcode,
                     instructor,
                     instructorTemp,
-                })
+                    qrCodeSelfRegistration,
+                    isSelfRegistrationEnabled,
+                });
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
-
-    returnProgramaID (programTitle) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                let programID
-                const title = programTitle || 'Programa Livre'
-
-                const program = await ProgramModel.findOne({
-                    title: { $eq: title },
-                })
-
-                program
-                    ? (programID = program._id)
-                    : (programID = await ProgramModel.create({
-                        title: programTitle,
-                    }))
-
-                resolve(programID)
-            } catch (error) {
-                reject(error)
-            }
-        })
-    },
-
-    getCoursesByUserID (userID) {
+    getCoursesByUserID(userID) {
         return new Promise(async (resolve, reject) => {
             try {
                 const classes = await ClassModel.find(
                     {
                         'users.userID': userID,
                     },
-                    ['users', 'courseID', 'qrcode', 'dateApplicationInitial', 'dateApplicationFinal'],
+                    [
+                        'users',
+                        'courseID',
+                        'qrcode',
+                        'dateApplicationInitial',
+                        'dateApplicationFinal',
+                    ]
                 )
                     .populate({
                         path: 'courseID',
                         select: '-materials',
-                        populate: {
-                            path: 'program',
-                            select: 'title',
-                        },
                     })
                     .populate({
                         path: 'materials',
                         match: { author: 'INSTRUTOR' },
                     })
-                    .populate('instructor', ['name', 'store'])
+                    .populate('instructor', ['name']);
 
-                const classesFilter = classes.filter(item => {
-                    const usersFilter = item.users.filter(user => {
+                const classesFilter = classes.filter((item) => {
+                    const usersFilter = item.users.filter((user) => {
                         if (user.presence && user.userID === userID) {
-                            return user
+                            return user;
                         }
-                    })
+                    });
 
-                    if (usersFilter.length > 0) return item
-                })
+                    if (usersFilter.length > 0) return item;
+                });
 
-                resolve(classesFilter)
+                resolve(classesFilter);
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
-
-    returnGroupsAD (courses) {
-        return new Promise(async (resolve, reject) => {
-            let groupsAD = []
-            const coursesOfStore = []
-
-            for (const course of courses) {
-                if (course.groups.office === '2') {
-                    course.dateInitial = addHours(course.dateInitial)
-                    course.dateFinal = addHours(course.dateFinal)
-                    coursesOfStore.push(course)
-                    const findGroupsAD = await Group.find({ tags: { $in: course.groups.tags } })
-                    for (const gp of findGroupsAD) {
-                        groupsAD.push(gp.name)
-                    }
-                }
-            }
-
-            groupsAD = [...new Set(groupsAD)]
-            resolve({ groupsAD, coursesOfStore })
-        })
-    },
-}
+};

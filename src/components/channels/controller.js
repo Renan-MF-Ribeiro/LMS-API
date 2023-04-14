@@ -1,9 +1,9 @@
-const _messages = require("../../utils/messages");
-const _functions = require("../../utils/functions");
-const { Channel } = require("./model");
-const { azureBlob } = require("../../utils/files");
-const { DOMAIN, AZURE_BLOB_URL } = process.env
-
+const _messages = require('../../utils/messages');
+const _functions = require('../../utils/functions');
+const { Channel } = require('./model');
+const { azureBlob } = require('../../utils/files');
+const { DOMAIN, AZURE_BLOB_URL } = process.env;
+const { getTagsElegiblesByToken } = require('../sections/business');
 module.exports = {
     async getChannels(req, res) {
         try {
@@ -47,12 +47,12 @@ module.exports = {
         }
     },
     async getChannelsElegibles(req, res) {
-        const tags = await _functions.getTagsGroupsByToken(req);
+        const tags = await getTagsElegiblesByToken(req);
         try {
             const channels = await Channel.find({
                 tags: { $in: tags.map((tag) => tag.value) },
-                enabled:true
-            });
+                enabled: true,
+            }).sort({ position: 'asc' });
 
             _messages.success(res, req, channels);
         } catch (error) {
@@ -74,8 +74,8 @@ module.exports = {
             let fileArray = Object.keys(req.files).map((key) => req.files[key]);
 
             for (let i in body.banners) {
-                let path = await azureBlob(fileArray[i], "channels/banners");
-                path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                let path = await azureBlob(fileArray[i], 'channels/banners');
+                path = path.replace(AZURE_BLOB_URL, DOMAIN);
                 body.banners[i].path = path;
             }
 
@@ -128,16 +128,21 @@ module.exports = {
                     (key) => req.files[key]
                 );
 
-                let indexBannersWithNoPath = body.banners.reduce(function (r, v, i) {
-                    return r.concat(typeof v.path != "string" ? i : []);
-                }, []);
+                let indexBannersWithNoPath = body.banners.reduce(function (
+                    r,
+                    v,
+                    i
+                ) {
+                    return r.concat(typeof v.path != 'string' ? i : []);
+                },
+                []);
 
-                for(let index in indexBannersWithNoPath){
+                for (let index in indexBannersWithNoPath) {
                     let path = await azureBlob(
                         fileArray[index],
-                        "channels/banners"
+                        'channels/banners'
                     );
-                    path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                    path = path.replace(AZURE_BLOB_URL, DOMAIN);
                     body.banners[indexBannersWithNoPath[index]].path = path;
                 }
             }
@@ -146,15 +151,15 @@ module.exports = {
 
             if (findChannel.length) {
                 await Channel.findOneAndUpdate({ _id: channelId }, body);
-                _messages.success(res, req, "Canal Atualizado!");
+                _messages.success(res, req, 'Canal Atualizado!');
             } else {
                 return _messages.badRequest(
                     res,
                     req,
-                    "Canal não encontrado",
-                    "Este canal não foi encontrado.",
-                    "channels",
-                    "update"
+                    'Canal não encontrado',
+                    'Este canal não foi encontrado.',
+                    'channels',
+                    'update'
                 );
             }
         } catch (error) {
@@ -162,9 +167,9 @@ module.exports = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "channels",
-                "/create"
+                'Erro interno no servidor',
+                'channels',
+                '/create'
             );
         }
     },
@@ -193,6 +198,28 @@ module.exports = {
                 'Erro interno no servidor',
                 'channels',
                 '/create'
+            );
+        }
+    },
+
+    async updatePosition(req, res) {
+        try {
+            const channels = req.body;
+
+            for (const channel of channels) {
+                const { id, position } = channel;
+                await Channel.findByIdAndUpdate(id, { position });
+            }
+
+            _messages.success(res, req, 'Atualizado com sucesso!');
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'channels',
+                '/updatePosition'
             );
         }
     },

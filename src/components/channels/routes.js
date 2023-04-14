@@ -9,5 +9,6 @@ router
     .post('/', formidable(), _controller.create)
     .put('/', formidable(), _controller.update)
     .delete('/:id', _controller.delete)
+    .post('/update-position', _controller.updatePosition)
 
 module.exports = router

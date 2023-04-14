@@ -11,8 +11,6 @@ const { Trail } = require('./model');
 const { Item } = require('../items/model');
 const { populateTrails } = require('../trails/business');
 const { Tracking } = require('../tracking/model');
-const { Log } = require('../logs/model')
-const mongoose = require('mongoose');
 const {
     pagination,
     ordernation,
@@ -22,6 +20,9 @@ const {
     getDateTodayWithoutHours,
     formatDateWithoutHours,
 } = require('../../utils/functions');
+
+const { Log } = require('../logs/model')
+const mongoose = require('mongoose');
 
 const { checkItem } = require('./business');
 

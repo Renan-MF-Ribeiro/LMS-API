@@ -79,6 +79,7 @@ const termsOfUseRoutes = require("./components/terms-of-use/routes");
 const messagesRoutes = require("./components/messages/routes");
 const showCaseRoutes = require("./components/showcase/routes");
 const channelRoutes = require("./components/channels/routes");
+const newMessagesRoutes = require('./components/new-messages/routes')
 
 app.use("/items", validateTokenRoute, itemsRoutes)
     .use("/tracking", validateTokenRoute, trackingRoutes)
@@ -98,6 +99,7 @@ app.use("/items", validateTokenRoute, itemsRoutes)
     .use("/suppliers", supplierRoutes)
     .use("/terms-of-use", validateTokenRoute, termsOfUseRoutes)
     .use("/messages", validateTokenRoute, messagesRoutes)
+    .use("/messages/v2", validateTokenRoute, newMessagesRoutes)
     .use("/channels", validateTokenRoute, channelRoutes);
 
 if (config.showcase.active) {

@@ -14,6 +14,7 @@ const ChannelSchema = new mongoose.Schema({
     enabled: { type: Boolean, default: true },
     tags: { type: Array },
     banners: { type: Array },
+    position: { type: Number, default: 0 },
     idSections: {  type: [{ type: 'ObjectId', ref: 'sections' }] },
 }, {
     ...schemaOptions,

@@ -166,8 +166,13 @@ module.exports = {
                             formatDateWithoutHours(classGroup.startDate),
                             'days'
                         );
+                        const diffEnd = calculateDiffDate(
+                            today,
+                            formatDateWithoutHours(classGroup.limitDate),
+                            'days'
+                        );
 
-                        if (diff >= 0) {
+                        if (diff >= 0 && diffEnd <= 0) {
                             tags.push({
                                 display: classGroup.groupCode,
                                 value: classGroup.groupCode,
@@ -175,7 +180,6 @@ module.exports = {
                         }
                     }
                 }
-
                 if (user.tags.length > 0) {
                     const today = getDateTodayWithoutHours();
 
