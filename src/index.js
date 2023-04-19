@@ -80,6 +80,7 @@ const messagesRoutes = require("./components/messages/routes");
 const showCaseRoutes = require("./components/showcase/routes");
 const channelRoutes = require("./components/channels/routes");
 const newMessagesRoutes = require('./components/new-messages/routes')
+const gamificationRoutes = require('./components/gamification/routes')
 
 app.use("/items", validateTokenRoute, itemsRoutes)
     .use("/tracking", validateTokenRoute, trackingRoutes)
@@ -98,9 +99,10 @@ app.use("/items", validateTokenRoute, itemsRoutes)
     .use("/xapi", validateTokenRoute, xapiRoutes)
     .use("/suppliers", supplierRoutes)
     .use("/terms-of-use", validateTokenRoute, termsOfUseRoutes)
+    .use("/channels", validateTokenRoute, channelRoutes)
     .use("/messages", validateTokenRoute, messagesRoutes)
     .use("/messages/v2", validateTokenRoute, newMessagesRoutes)
-    .use("/channels", validateTokenRoute, channelRoutes);
+    .use("/gamification", validateTokenRoute, gamificationRoutes);
 
 if (config.showcase.active) {
     app.use("/showcase", showCaseRoutes);
