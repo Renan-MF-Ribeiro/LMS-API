@@ -147,6 +147,26 @@ const GamificationController = {
         }
     },
 
+    async getClientUser(req, res) {
+        if (config.gamification.active) {
+            try {
+                const { networkLogin } = req.params;
+                const host = process.env.API_GAMIFICATION;
+                const clientId = process.env.CLIENT_ID;
+                const uri = `${host}/users/${clientId}/${networkLogin}`;
+                const { data } = await axios.get(uri, {
+                    headers: {
+                        'x-api-key': process.env.API_KEY_GAMIFICATION,
+                    },
+                });
+
+                return _messages.success(res, req, data);
+            } catch (error) {
+                return _messages.badRequest(res, req, error);
+            }
+        }
+    },
+
     async getClientRankingUsersDetails(req, res) {
         if (config.gamification.active) {
             try {
