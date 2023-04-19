@@ -10,6 +10,7 @@ router
     .get('/clients/events', _controller.getClientEvents)
     .get('/event-users/:networkLogin', _controller.getExtract)
     .get('/ranking-users/:networkLogin', _controller.listRankingByUser)
+    .get('/users/:networkLogin', _controller.getClientUser)
     // Admin routes
     .put('/clients', isAdmin, _controller.updateClient)
     .put('/clients/niveis/:nivelId', isAdmin, formidable(), _controller.updateClientNivelImage)
