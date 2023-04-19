@@ -17,15 +17,23 @@ const GamificationBusiness = {
         const eligibilities = tags.map(({ value }) => value);
 
         try {
-            await axios.post(uri, {
-                clientId: +process.env.CLIENT_ID,
-                networkLogin,
-                category,
-                eligibilities,
-                props,
-            });
+            await axios.post(
+                uri,
+                {
+                    clientId: +process.env.CLIENT_ID,
+                    networkLogin,
+                    category,
+                    eligibilities,
+                    props,
+                },
+                {
+                    headers: {
+                        'x-api-key': process.env.API_KEY_GAMIFICATION,
+                    },
+                }
+            );
         } catch (err) {
-            const errorInfo = 'GAMEFICATION_DISPATCH_EXCEPTION';
+            const errorInfo = 'GAMIFICATION_DISPATCH_EXCEPTION';
             if (err?.code) {
                 const { errno, code, syscall, address } = err;
                 throw {
@@ -123,7 +131,7 @@ const GamificationBusiness = {
                     trail,
                     item,
                     completion,
-                    userCreatedAt: user.createdAt
+                    userCreatedAt: user.createdAt,
                 });
             }
         }
