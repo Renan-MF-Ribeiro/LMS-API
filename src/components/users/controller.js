@@ -100,7 +100,7 @@ module.exports = {
                     res,
                     req,
                     'User already exists',
-                    { error: 'User already exists' },
+                    { error: 'Usuário já existe' },
                     'users',
                     'create'
                 );
