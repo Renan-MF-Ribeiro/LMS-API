@@ -475,6 +475,8 @@ module.exports = {
                     numberOfItemsCompleted >= 1
                 ) {
                     _messages.success(res, req, true);
+                }  else {
+                    _messages.success(res, req, false);
                 }
             } else {
                 _messages.success(res, req, false);

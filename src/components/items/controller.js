@@ -148,7 +148,7 @@ const ItemController = {
                         if (!content) {
                             payload.contentPath = payload.content;
                         } else {
-                            payload.enabled = false;
+                            payload.enabled = true;
                             payload.contentPath = String(
                                 new Date().toISOString()
                             );
@@ -392,7 +392,7 @@ const ItemController = {
                         if (!content) {
                             payload.contentPath = payload.content;
                         } else {
-                            payload.enabled = false;
+                            payload.enabled = true;
                             payload.contentPath = String(
                                 new Date().toISOString()
                             );
@@ -532,7 +532,7 @@ const ItemController = {
 
                     if (payload.kind === 'MediaItem') {
                         if (content) {
-                            payload.enabled = false;
+                            payload.enabled = true;
                             const item = await Item.findOne({
                                 _id: payload._id,
                             });
