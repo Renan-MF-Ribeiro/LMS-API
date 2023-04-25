@@ -94,7 +94,11 @@ const TrailSchema = new mongoose.Schema(
         },
         createdAt: { type: Date },
         updatedAt: { type: Date },
-        externalPlayer: { type: Boolean, default: false },
+        externalPlayer: {
+            type: String,
+            enum: ['NONE', 'ALL', 'FIRST_ITEM'],
+            default: 'NONE',
+        },
         clientId: { type: Number, default: CLIENT_ID },
         innerTextStatus: { type: Boolean, default: false },
         innerText: { type: String, required: ifInnerTextEnabled },
