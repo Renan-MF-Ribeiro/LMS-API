@@ -359,7 +359,7 @@ module.exports = {
                     const linkTrailItem = await returnLinkTrailByItem(idItem)
                     const bag = xapi.initTinCan(linkTrailItem.urlTrail, linkTrailItem.urlItem, completeUser)
                     const attempt = evaluationPerformed.length + 1
-                    await xapi.sendAttemptAssessment(bag, item, completeUser, attempt)
+                    // await xapi.sendAttemptAssessment(bag, item, completeUser, attempt)
 
                     questions[0].number = 1
                     _messages.success(res, req, {
@@ -495,7 +495,7 @@ module.exports = {
             const linkTrailItem = await returnLinkTrailByItem(idItem)
             const bag = xapi.initTinCan(linkTrailItem.urlTrail, linkTrailItem.urlItem, completeUser)
 
-            await xapi.sendAnsweredAssessment(bag, attempt, completeUser, questionTincan.description, numPergunta, arrChoices, correctResponsesPattern, choiceUser, durationCalc)
+            // await xapi.sendAnsweredAssessment(bag, attempt, completeUser, questionTincan.description, numPergunta, arrChoices, correctResponsesPattern, choiceUser, durationCalc)
 
             _messages.success(res, req, result)
         } catch (error) {
@@ -533,7 +533,7 @@ module.exports = {
                 const linkTrailItem = await returnLinkTrailByItem(String(item))
                 const bag = xapi.initTinCan(linkTrailItem.urlTrail, linkTrailItem.urlItem, completeUser)
 
-                await xapi.sendCompleteAssessment(bag, title, (result.values.correct >= passingScore), (result.values.correct / 100), (result.attemptsHistory + 1))
+                // await xapi.sendCompleteAssessment(bag, title, (result.values.correct >= passingScore), (result.values.correct / 100), (result.attemptsHistory + 1))
 
                 _messages.success(res, req, result)
             } else {
