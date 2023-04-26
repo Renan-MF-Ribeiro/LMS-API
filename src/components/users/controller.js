@@ -492,7 +492,7 @@ module.exports = {
         const { token } = req.body;
         const secret = process.env.JWT_SECRET;
         const data = await jwt.verify(token, secret);
-        const networkLogin = data.networkLogin;
+        const networkLogin = data.data.networkLogin ? data.data.networkLogin : data.networkLogin
 
         try {
             if (networkLogin) {
