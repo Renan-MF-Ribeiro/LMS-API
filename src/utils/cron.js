@@ -368,25 +368,22 @@ async function getUsersLoad () {
 
             console.log(`Iniciando Processamento de ${users.length} usuários...`)
             for (const user of users) {
-                if (user.cpf) {
-                    user.cpf = user.cpf.replace(/[^a-z0-9]/gi, '')
-                    user.cpf = formatNumberCpf(user.cpf)
-                    const existingUser = await User.findOne({
-                        cpf: user.cpf,
-                    })
+                const existingUser = await User.findOne({
+                    networkLogin: user.networkLogin,
+                })
 
-                    const processedUser = processUsersLoad(user)
-                    const account = await processUserAccount(processedUser)
+                const processedUser = processUsersLoad(user)
+                const account = await processUserAccount(processedUser)
 
-                    processedUser.password = existingUser ? existingUser.password : processedUser.password
+                processedUser.password = existingUser ? existingUser.password : processedUser.password
 
-                    if (existingUser) {
-                        existingUsers.push({ _id: existingUser._id, processedUser })
-                    } else {
-                        usersToSend.push(account)
-                        newUsers.push(processedUser)
-                    }
+                if (existingUser) {
+                    existingUsers.push({ _id: existingUser._id, processedUser })
+                } else {
+                    usersToSend.push(account)
+                    newUsers.push(processedUser)
                 }
+                
             }
 
             console.log(`Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`)
@@ -399,7 +396,11 @@ async function getUsersLoad () {
             }
 
             if (inactivateIfNotInSpreadsheet) {
-                await User.update({ updatedAt: { $lt: data_start } }, { $set: { status: 'INATIVO' } }, { multi: true })
+                await User.updateMany({ 
+                    updatedAt: { $lt: data_start } }, 
+                    { $set: { status: 'INATIVO' } }, 
+                    { multi: true }
+                )
             }
             if (newUsers.length > 0) {
                 console.log(`Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`)
