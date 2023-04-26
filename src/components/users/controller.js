@@ -491,8 +491,9 @@ module.exports = {
         let user = {};
         const { token } = req.body;
         const secret = process.env.JWT_SECRET;
-        const data = await jwt.verify(token, secret);
-        const networkLogin = data.data.networkLogin ? data.data.networkLogin : data.networkLogin
+        const data = jwt.verify(token, secret);
+        console.log(data)
+        const networkLogin = data.data?.networkLogin ? data.data.networkLogin : data.networkLogin
 
         try {
             if (networkLogin) {
