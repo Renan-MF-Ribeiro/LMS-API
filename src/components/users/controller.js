@@ -490,10 +490,9 @@ module.exports = {
     async singleSignOn(req, res) {
         let user = {};
         const { token } = req.body;
-        const secret = process.env.JWT_SECRET;
+        const secret = process.env.PROJECT_SECRET_KEY;
         const data = jwt.verify(token, secret);
-        console.log(data)
-        const networkLogin = data.data?.networkLogin ? data.data.networkLogin : data.networkLogin
+        const networkLogin = data.networkLogin ? data.networkLogin : data.data.networkLogin
 
         try {
             if (networkLogin) {
