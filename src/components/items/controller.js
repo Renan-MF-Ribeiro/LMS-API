@@ -146,7 +146,7 @@ const ItemController = {
 
                     if (payload.kind === 'MediaItem') {
                         if (!content) {
-                            payload.contentPath = payload.content;
+                            // payload.contentPath = payload.content;
                         } else {
                             payload.enabled = true;
                             payload.contentPath = String(
@@ -390,7 +390,7 @@ const ItemController = {
 
                     if (payload.kind === 'MediaItem') {
                         if (!content) {
-                            payload.contentPath = payload.content;
+                            // payload.contentPath = payload.content;
                         } else {
                             payload.enabled = true;
                             payload.contentPath = String(
