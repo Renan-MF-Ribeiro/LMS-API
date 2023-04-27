@@ -146,7 +146,7 @@ const ItemController = {
 
                     if (payload.kind === 'MediaItem') {
                         if (!content) {
-                            // payload.contentPath = payload.content;
+                         // payload.contentPath = payload.content;
                         } else {
                             payload.enabled = true;
                             payload.contentPath = String(
@@ -390,7 +390,7 @@ const ItemController = {
 
                     if (payload.kind === 'MediaItem') {
                         if (!content) {
-                            // payload.contentPath = payload.content;
+                              // payload.contentPath = payload.content;
                         } else {
                             payload.enabled = true;
                             payload.contentPath = String(
@@ -540,12 +540,16 @@ const ItemController = {
                             payload.contentPath = String(
                                 new Date().toISOString()
                             );
-                            vimeoFilePathUpdate(
-                                content,
-                                payload,
-                                user,
-                                vimeoId
-                            );
+                            if (payload.vimeoId) {
+                                vimeoFilePathUpdate(
+                                    content,
+                                    payload,
+                                    user,
+                                    vimeoId
+                                );
+                            } else {
+                                vimeoFilePathCreate(content, payload, user);
+                            }
                         }
                     }
 
