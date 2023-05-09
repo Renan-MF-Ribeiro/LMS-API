@@ -237,7 +237,6 @@ module.exports = {
 
     processUsersLoad(data) {
         const salt = bcrypt.genSaltSync(10)
-
         const initialPasswordKey = '1234'
         data.password = [{ 
             hash: bcrypt.hashSync(data?.password ?? initialPasswordKey, salt), 
@@ -282,7 +281,7 @@ module.exports = {
         data.groupsAD = groupsAD
         if (data.cpf) {
             data.cpf = data.cpf.replace(/[^a-z0-9]/gi, '')
-            data.cpf = formatNumberCpf(data.cpf)
+            data.cpf = _functions.formatNumberCpf(data.cpf)
         }
 
         return data

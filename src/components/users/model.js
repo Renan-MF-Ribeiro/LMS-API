@@ -178,7 +178,7 @@ const mapUser = {
     CIDADE: 'city',
     ESTADO: 'state',
     EMPRESA: 'company',
-    DATA_ADMISSAO: 'admission',
+    ADMISSAO: 'admission',
     CARGO: 'office',
     TAREFA: 'task',
     CENTRO_DE_CUSTO: 'costCenter',
