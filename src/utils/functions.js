@@ -35,7 +35,7 @@ module.exports = {
         if (!date) {
             return null
         }
-        return momentz(date, 'DD/MM/YYYY')
+        return momentz(date).add(3, 'hours').format('DD/MM/YYYY')
     },
 
     getDateTodayWithoutHours () {

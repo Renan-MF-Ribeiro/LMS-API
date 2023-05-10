@@ -401,9 +401,7 @@ module.exports = {
                             const tmpUser = {}
 
                             for (var i = 0; i < row.values.length; i++) {
-                                const val = typeof (row.values[i]) === 'object' && row.values[i].text != undefined ? row.values[i].text : row.values[i]
-                                const tmpValue = String(row.values[i]) != 'undefined' ? String(val) : ''
-                                tmpUser[objPattern[i]] = tmpValue
+                                tmpUser[objPattern[i]] = row.values[i]?.text ?? row.values[i] ?? ''
                             }
 
                             delete tmpUser.undefined
