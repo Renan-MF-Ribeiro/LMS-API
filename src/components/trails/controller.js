@@ -742,6 +742,7 @@ module.exports = {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
             const searchBy = req.query.searchBy;
+            const noLimit = req.query?.all;
 
             let total = 0;
             if (req.query.type) {
@@ -795,7 +796,7 @@ module.exports = {
                 )
                     .sort({ [order]: sort })
                     .skip(parseInt(skip))
-                    .limit(parseInt(limit));
+                    .limit(parseInt(noLimit ? 200 : limit));
 
                 _messages.success(res, req, {
                     data: trails,
