@@ -95,10 +95,7 @@ module.exports = {
                 );
             }
             
-            const newUser = new User(req.body);
-            await newUser.validate();
-            const processedUser = processUsersLoad(newUser);
-
+            const processedUser = processUsersLoad(req.body);
             await User.create(processedUser);
             const created = await User.findOne(
                 { networkLogin: processedUser.networkLogin },
