@@ -78,10 +78,10 @@ const GamificationController = require('../gamification/controller');
 module.exports = {
     async create(req, res) {
         try {
-            const { registration, networkLogin } = req.body;
+            const { registration , cpf  } = req.body;
             
             const userFound = await User.findOne({
-                $or: [{ registration }, { networkLogin }],
+                $or: [{ registration }, { cpf }],
             });
 
             if (userFound) {
