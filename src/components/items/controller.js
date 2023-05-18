@@ -146,9 +146,9 @@ const ItemController = {
 
                     if (payload.kind === 'MediaItem') {
                         if (!content) {
-                            payload.contentPath = payload.content;
+                         // payload.contentPath = payload.content;
                         } else {
-                            payload.enabled = false;
+                            payload.enabled = true;
                             payload.contentPath = String(
                                 new Date().toISOString()
                             );
@@ -390,9 +390,9 @@ const ItemController = {
 
                     if (payload.kind === 'MediaItem') {
                         if (!content) {
-                            payload.contentPath = payload.content;
+                              // payload.contentPath = payload.content;
                         } else {
-                            payload.enabled = false;
+                            payload.enabled = true;
                             payload.contentPath = String(
                                 new Date().toISOString()
                             );
@@ -532,7 +532,7 @@ const ItemController = {
 
                     if (payload.kind === 'MediaItem') {
                         if (content) {
-                            payload.enabled = false;
+                            payload.enabled = true;
                             const item = await Item.findOne({
                                 _id: payload._id,
                             });
@@ -540,12 +540,16 @@ const ItemController = {
                             payload.contentPath = String(
                                 new Date().toISOString()
                             );
-                            vimeoFilePathUpdate(
-                                content,
-                                payload,
-                                user,
-                                vimeoId
-                            );
+                            if (payload.vimeoId) {
+                                vimeoFilePathUpdate(
+                                    content,
+                                    payload,
+                                    user,
+                                    vimeoId
+                                );
+                            } else {
+                                vimeoFilePathCreate(content, payload, user);
+                            }
                         }
                     }
 
@@ -838,11 +842,11 @@ const ItemController = {
 
         try {
             const packageId = new mongoose.Types.ObjectId();
-
+            let _id = null;
             const busboy = new Busboy({
                 headers: req.headers,
                 limits: {
-                    fields: 0,
+                    fields: 1,
                     files: 1,
                 },
             });
@@ -912,8 +916,17 @@ const ItemController = {
                     .on('error', reject);
             });
             req.pipe(busboy);
+            const fieldP = new Promise((resolve, reject) => {
+                busboy
+                    .on('field', function (field, id) {
+                        _id = id;
+                        return;
+                    })
+                    .on('finish', resolve)
+                    .on('error', reject);
+            });
 
-            await Promise.all([...filesP, contentP]);
+            await Promise.all([...filesP, fieldP, contentP]);
             let path = await pathFile;
             path = path.replace(AZURE_BLOB_URL, DOMAIN);
             const scormPath = {
@@ -964,6 +977,18 @@ const ItemController = {
                     (el) => el.name === 'resources'
                 );
 
+                if (_id) {
+                    const item = await Item.findById({ _id: _id });
+                    if (item.kind == 'SoonItem') {
+                        await Item.findOneAndUpdate(
+                            { _id: item._id },
+                            {
+                                kind: 'SCORMItem',
+                            }
+                        );
+                    }
+                }
+
                 const items = await Promise.all(
                     $items.map(($item) => {
                         const $resource = $resources.children.find(
@@ -981,15 +1006,25 @@ const ItemController = {
                         const href = $resource.attributes.href;
                         const scoId = $item.attributes.identifier;
 
-                        return SCORMItem.create({
-                            author: user._id,
-                            title,
-                            titleURL,
-                            packageId,
-                            scoId,
-                            contentPath: `${packageId}/${href}`,
-                            scormPath,
-                        });
+                        if (_id) {
+                            return SCORMItem.findByIdAndUpdate(_id, {
+                                enabled:false,
+                                packageId,
+                                scoId,
+                                contentPath: `${packageId}/${href}`,
+                                scormPath,
+                            });
+                        } else {
+                            return SCORMItem.create({
+                                author: user._id,
+                                title,
+                                titleURL,
+                                packageId,
+                                scoId,
+                                contentPath: `${packageId}/${href}`,
+                                scormPath,
+                            });
+                        }
                     })
                 );
 

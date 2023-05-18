@@ -234,25 +234,25 @@ module.exports = {
             })
         })
     },
+
     processUsersLoad(data) {
         const salt = bcrypt.genSaltSync(10)
-
         const initialPasswordKey = '1234'
-        data.password = [{ hash: bcrypt.hashSync(initialPasswordKey, salt), valid: true, createdAt: new Date(Date.now()) }]
+        data.password = [{ 
+            hash: bcrypt.hashSync(data?.password ?? initialPasswordKey, salt), 
+            valid: true, 
+            createdAt: new Date(Date.now()) 
+        }]
 
-        data.clientUserKey = CLIENT_ID + '@@' + data.cpf
-        data.status = String(data.status).toUpperCase()
+        data.clientUserKey = CLIENT_ID + '@@' + data.networkLogin
         data.birthDate = _functions.formatDateWithoutHoursBrasilian(data.birthDate)
         data.admission = _functions.formatDateWithoutHoursBrasilian(data.admission)
-        data.status = data.status.toUpperCase()
-        data.networkLogin = data.cpf
+        data.createDate = _functions.formatDateWithoutHoursBrasilian(data?.createDate ?? new Date())
         data.enabled = true
 
         const roles = data.roles ? data.roles.split(',').map(item => item.trim()) : []
 
         const groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO']
-
-        if(data?.actingField) groupsAD.push(`ELEGE_${data.actingField}`)
         
         const elegibility = !data.company && !data.office ? [] : [
             `ELEGE_${_functions.clearString(data.company)}`,
@@ -280,6 +280,11 @@ module.exports = {
             }
         })
         data.groupsAD = groupsAD
+        if (data.cpf) {
+            data.cpf = String(data.cpf).replace(/[^a-z0-9]/gi, '')
+            data.cpf = _functions.formatNumberCpf(data.cpf)
+            data.networkLogin = data.cpf
+        }
 
         return data
     },

@@ -78,37 +78,27 @@ const GamificationController = require('../gamification/controller');
 module.exports = {
     async create(req, res) {
         try {
-            const userValue = new User(req.body);
-            await userValue.validate();
-
-            const { admission, birthDate } = userValue;
-
-            const processedUser = processUsersLoad(userValue);
+            const { registration , cpf  } = req.body;
+            
             const userFound = await User.findOne({
-                $or: [
-                    { cpf: processedUser.cpf },
-                    { email: processedUser.email },
-                    { networkLogin: processedUser.networkLogin },
-                ],
+                $or: [{ registration }, { cpf }],
             });
-
-            processedUser.birthDate = admission;
-            processedUser.admission = birthDate;
 
             if (userFound) {
                 return _messages.forbidden(
                     res,
                     req,
                     'User already exists',
-                    { error: 'User already exists' },
+                    { error: 'Usuário já existe' },
                     'users',
                     'create'
                 );
             }
-
+            
+            const processedUser = processUsersLoad(req.body);
             await User.create(processedUser);
             const created = await User.findOne(
-                { cpf: processedUser.cpf },
+                { networkLogin: processedUser.networkLogin },
                 { ...userProjection }
             );
 
@@ -475,6 +465,8 @@ module.exports = {
                     numberOfItemsCompleted >= 1
                 ) {
                     _messages.success(res, req, true);
+                } else {
+                    _messages.success(res, req, false);
                 }
             } else {
                 _messages.success(res, req, false);
@@ -488,9 +480,9 @@ module.exports = {
     async singleSignOn(req, res) {
         let user = {};
         const { token } = req.body;
-        const secret = process.env.JWT_SECRET;
-        const data = await jwt.verify(token, secret);
-        const networkLogin = data.networkLogin;
+        const secret = process.env.PROJECT_SECRET_KEY;
+        const data = jwt.verify(token, secret);
+        const networkLogin = data.networkLogin ? data.networkLogin : data.data.networkLogin
 
         try {
             if (networkLogin) {
@@ -784,7 +776,7 @@ module.exports = {
                     !!user.email,
                     password_new,
                     resetPasswordUrl,
-                    { name: user.name, cpf: user.cpf }
+                    { name: user.name, networkLogin: user.networkLogin }
                 );
                 // $2a$10$G06bQZrp8R8kn2cnImS47eHQv./K4i0bp1yBaNDyj3WSrsCH/639G --> senha
                 return await _messages.success(
@@ -1030,42 +1022,31 @@ module.exports = {
             } else {
                 file = req.files.content;
             }
-            const preProcessedUsers = await _files.readXLSXUsers(file.path);
-            const results = preProcessedUsers.map((user) => {
-                if (user.cpf) {
-                    user.cpf = user.cpf.replace(/[^a-z0-9]/gi, '');
-                    user.cpf = formatNumberCpf(user.cpf);
-                }
-                return user;
-            });
-
+            const results = await _files.readXLSXUsers(file.path);
             for (const result of results) {
-                if (result.cpf) {
-                    const existingUser = await User.findOne({
-                        cpf: result.cpf,
+                const existingUser = await User.findOne({
+                    networkLogin: result.networkLogin,
+                });
+
+                const processedUser = processUsersLoad(result);
+                const account = await processUserAccount(processedUser);
+
+                processedUser.password = existingUser
+                    ? existingUser.password
+                    : processedUser.password;
+
+                if (existingUser) {
+                    existingUsers.push({
+                        _id: existingUser._id,
+                        processedUser,
                     });
-
-                    const processedUser = processUsersLoad(result);
-
-                    const account = await processUserAccount(processedUser);
-
-                    processedUser.password = existingUser
-                        ? existingUser.password
-                        : processedUser.password;
-
-                    if (existingUser) {
-                        existingUsers.push({
-                            _id: existingUser._id,
-                            processedUser,
-                        });
-                    } else {
-                        usersToSend.push(account);
-                        newUsers.push(processedUser);
-                    }
+                } else {
+                    usersToSend.push(account);
+                    newUsers.push(processedUser);
                 }
+                
             }
 
-            const data_start = new Date();
             console.log(
                 `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
             );
@@ -1076,7 +1057,8 @@ module.exports = {
             }
 
             if (inactivateIfNotInSpreadsheet) {
-                await User.update(
+                const data_start = new Date();
+                await User.updateMany(
                     { updatedAt: { $lt: data_start } },
                     { $set: { status: 'INATIVO' } },
                     { multi: true }
@@ -2103,8 +2085,11 @@ module.exports = {
 
     async handleNames(req, res) {
         try {
-            const { networkLogins } = req.body
-            const users = await User.find({ networkLogin: { $in: networkLogins }}, ['name', 'networkLogin'])
+            const { networkLogins } = req.body;
+            const users = await User.find(
+                { networkLogin: { $in: networkLogins } },
+                ['name', 'networkLogin']
+            );
 
             return _messages.success(res, req, users);
         } catch (error) {
@@ -2117,5 +2102,5 @@ module.exports = {
                 'conteudistas'
             );
         }
-    }
+    },
 };
