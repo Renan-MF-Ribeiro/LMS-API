@@ -1036,9 +1036,13 @@ module.exports = {
                     : processedUser.password;
 
                 if (existingUser) {
+                    const groupsAD = [...processedUser.groupsAD, ...existingUser.groupsAD]
                     existingUsers.push({
                         _id: existingUser._id,
-                        processedUser,
+                        processedUser: {
+                            ...processedUser,
+                            groupsAD: [...new Set(groupsAD)]
+                        },
                     });
                 } else {
                     usersToSend.push(account);
