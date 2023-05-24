@@ -247,7 +247,7 @@ module.exports = {
         data.clientUserKey = CLIENT_ID + '@@' + data.networkLogin
         data.birthDate = _functions.formatDateWithoutHoursBrasilian(data.birthDate)
         data.admission = _functions.formatDateWithoutHoursBrasilian(data.admission)
-        data.createDate = _functions.formatDateWithoutHoursBrasilian(data.createDate)
+        data.createDate = _functions.formatDateWithoutHoursBrasilian(data?.createDate ?? new Date())
         data.enabled = true
 
         const roles = data.roles ? data.roles.split(',').map(item => item.trim()) : []
@@ -283,6 +283,7 @@ module.exports = {
         if (data.cpf) {
             data.cpf = String(data.cpf).replace(/[^a-z0-9]/gi, '')
             data.cpf = _functions.formatNumberCpf(data.cpf)
+            data.networkLogin = data.cpf
         }
 
         return data

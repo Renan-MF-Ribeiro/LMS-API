@@ -79,10 +79,10 @@ const GamificationController = require('../gamification/controller');
 module.exports = {
     async create(req, res) {
         try {
-            const { registration, networkLogin } = req.body;
+            const { registration , cpf  } = req.body;
             
             const userFound = await User.findOne({
-                $or: [{ registration }, { networkLogin }],
+                $or: [{ registration }, { cpf }],
             });
 
             if (userFound) {
@@ -96,10 +96,7 @@ module.exports = {
                 );
             }
             
-            const newUser = new User(req.body);
-            await newUser.validate();
-            const processedUser = processUsersLoad(newUser);
-
+            const processedUser = processUsersLoad(req.body);
             await User.create(processedUser);
             const created = await User.findOne(
                 { networkLogin: processedUser.networkLogin },
@@ -1047,9 +1044,13 @@ module.exports = {
                     : processedUser.password;
 
                 if (existingUser) {
+                    const groupsAD = [...processedUser.groupsAD, ...existingUser.groupsAD]
                     existingUsers.push({
                         _id: existingUser._id,
-                        processedUser,
+                        processedUser: {
+                            ...processedUser,
+                            groupsAD: [...new Set(groupsAD)]
+                        },
                     });
                 } else {
                     usersToSend.push(account);
