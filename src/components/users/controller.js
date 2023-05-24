@@ -23,6 +23,7 @@ const {
     returnIdGroupUser,
     generateTokenAnalytics,
     generateSASToken,
+    generateHappPlaceToken,
 } = require('../../utils/auth');
 
 const {
@@ -356,6 +357,12 @@ module.exports = {
                         clientID: CLIENT_ID,
                     });
 
+                    const token_happplace = generateHappPlaceToken({
+                        userName: user.name,
+                        networkLogin: user.networkLogin,
+                        clientID: CLIENT_ID,
+                    })
+
                     const SAS = generateSASToken();
 
                     await updateGroupsOfUser(
@@ -390,6 +397,7 @@ module.exports = {
                             name: user.name,
                             profilePhoto: user.profilePhoto,
                             tokenAnalytics: token_analytics,
+                            tokenHappPlace: token_happplace,
                             networkLogin: user.networkLogin,
                             userId: user._id,
                         },

@@ -60,6 +60,17 @@ module.exports = {
         return token
     },
 
+    generateHappPlaceToken: obj => {
+        const token = jwt.sign({
+            data: obj,
+        },
+        PROJECT_SECRET_KEY, {
+            expiresIn: '1h',
+        },
+        )
+        return token
+    },
+
     generateTokenAnalytics: obj => {
         const token = jwt.sign({
             perfil: obj.perfil,
