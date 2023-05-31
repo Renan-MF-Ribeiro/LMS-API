@@ -12,6 +12,7 @@ const {
     PROJECT_SECRET_KEY,
     LDAP_HOST,
     ANALYTICS_SECRET_KEY,
+    HAPPPLACE_SECRET_KEY,
     MONITORING_SECRET_KEY,
     AZURE_BLOBNAME, AZURE_ACCESSKEY
 } = process.env
@@ -64,8 +65,8 @@ module.exports = {
         const token = jwt.sign({
             data: obj,
         },
-        PROJECT_SECRET_KEY, {
-            expiresIn: '1h',
+        HAPPPLACE_SECRET_KEY, {
+            expiresIn: '12h',
         },
         )
         return token
@@ -88,13 +89,13 @@ module.exports = {
         const credentials = new storage.StorageSharedKeyCredential(AZURE_BLOBNAME, AZURE_ACCESSKEY);
         const containerName="lmsassets";
         const blobSAS = storage.generateBlobSASQueryParameters({
-            containerName, 
-            AZURE_BLOBNAME, 
-            permissions: storage.BlobSASPermissions.parse("r"), 
+            containerName,
+            AZURE_BLOBNAME,
+            permissions: storage.BlobSASPermissions.parse("r"),
             startsOn: new Date(),
             expiresOn: new Date(new Date().valueOf() + 14400000)
           },
-          credentials 
+          credentials
         ).toString();
 
         return blobSAS
