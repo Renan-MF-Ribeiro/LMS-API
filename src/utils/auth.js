@@ -12,9 +12,11 @@ const {
     PROJECT_SECRET_KEY,
     LDAP_HOST,
     ANALYTICS_SECRET_KEY,
+    HAPPPLACE_SSO_KEY,
     MONITORING_SECRET_KEY,
-    AZURE_BLOBNAME, AZURE_ACCESSKEY
-} = process.env
+    AZURE_BLOBNAME,
+    AZURE_ACCESSKEY,
+} = process.env;
 var storage = require("@azure/storage-blob")
 const {
     Profile,
@@ -60,6 +62,17 @@ module.exports = {
         return token
     },
 
+    generateHappPlaceToken: obj => {
+        const token = jwt.sign({
+            data: obj,
+        },
+        HAPPPLACE_SSO_KEY, {
+            expiresIn: '12h',
+        },
+        )
+        return token
+    },
+
     generateTokenAnalytics: obj => {
         const token = jwt.sign({
             perfil: obj.perfil,
@@ -72,18 +85,19 @@ module.exports = {
 
         return token
     },
+
     generateSASToken: () => {
         //PUBLIC_PATH, UPLOADS_PATH, AZURE_STRINGCONN, AZURE_BLOBNAME, AZURE_ACCESSKEY
         const credentials = new storage.StorageSharedKeyCredential(AZURE_BLOBNAME, AZURE_ACCESSKEY);
         const containerName="lmsassets";
         const blobSAS = storage.generateBlobSASQueryParameters({
-            containerName, 
-            AZURE_BLOBNAME, 
-            permissions: storage.BlobSASPermissions.parse("r"), 
+            containerName,
+            AZURE_BLOBNAME,
+            permissions: storage.BlobSASPermissions.parse("r"),
             startsOn: new Date(),
             expiresOn: new Date(new Date().valueOf() + 14400000)
           },
-          credentials 
+          credentials
         ).toString();
 
         return blobSAS
