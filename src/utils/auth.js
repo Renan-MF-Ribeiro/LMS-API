@@ -85,6 +85,7 @@ module.exports = {
 
         return token
     },
+
     generateSASToken: () => {
         //PUBLIC_PATH, UPLOADS_PATH, AZURE_STRINGCONN, AZURE_BLOBNAME, AZURE_ACCESSKEY
         const credentials = new storage.StorageSharedKeyCredential(AZURE_BLOBNAME, AZURE_ACCESSKEY);

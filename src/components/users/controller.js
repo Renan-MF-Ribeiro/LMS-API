@@ -79,8 +79,8 @@ const GamificationController = require('../gamification/controller');
 module.exports = {
     async create(req, res) {
         try {
-            const { registration , cpf  } = req.body;
-            
+            const { registration, cpf } = req.body;
+
             const userFound = await User.findOne({
                 $or: [{ registration }, { cpf }],
             });
@@ -95,7 +95,7 @@ module.exports = {
                     'create'
                 );
             }
-            
+
             const processedUser = processUsersLoad(req.body);
             await User.create(processedUser);
             const created = await User.findOne(
@@ -358,7 +358,7 @@ module.exports = {
                         userName: user.name,
                         networkLogin: user.networkLogin,
                         clientID: CLIENT_ID,
-                    })
+                    });
 
                     const SAS = generateSASToken();
 
@@ -490,7 +490,9 @@ module.exports = {
         const { token } = req.body;
         const secret = process.env.PROJECT_SECRET_KEY;
         const data = jwt.verify(token, secret);
-        const networkLogin = data.networkLogin ? data.networkLogin : data.data.networkLogin
+        const networkLogin = data.networkLogin
+            ? data.networkLogin
+            : data.data.networkLogin;
 
         try {
             if (networkLogin) {
@@ -1044,19 +1046,14 @@ module.exports = {
                     : processedUser.password;
 
                 if (existingUser) {
-                    const groupsAD = [...processedUser.groupsAD, ...existingUser.groupsAD]
                     existingUsers.push({
                         _id: existingUser._id,
-                        processedUser: {
-                            ...processedUser,
-                            groupsAD: [...new Set(groupsAD)]
-                        },
+                        processedUser,
                     });
                 } else {
                     usersToSend.push(account);
                     newUsers.push(processedUser);
                 }
-                
             }
 
             console.log(
