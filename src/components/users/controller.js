@@ -394,7 +394,7 @@ module.exports = {
                             name: user.name,
                             profilePhoto: user.profilePhoto,
                             tokenAnalytics: token_analytics,
-                            happplaceToken: token_happplace,
+                            tokenHappplace: token_happplace,
                             networkLogin: user.networkLogin,
                             userId: user._id,
                         },
