@@ -394,7 +394,7 @@ module.exports = {
                             name: user.name,
                             profilePhoto: user.profilePhoto,
                             tokenAnalytics: token_analytics,
-                            happplaceToken: token_happplace,
+                            tokenHappPlace: token_happplace,
                             networkLogin: user.networkLogin,
                             userId: user._id,
                         },
@@ -1046,9 +1046,13 @@ module.exports = {
                     : processedUser.password;
 
                 if (existingUser) {
+                    const groupsAD = [...processedUser.groupsAD, ...existingUser.groupsAD]
                     existingUsers.push({
                         _id: existingUser._id,
-                        processedUser,
+                        processedUser: {
+                            ...processedUser,
+                            groupsAD: [...new Set(groupsAD)]
+                        },
                     });
                 } else {
                     usersToSend.push(account);
