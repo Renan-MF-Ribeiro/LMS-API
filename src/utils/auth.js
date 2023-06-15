@@ -12,10 +12,11 @@ const {
     PROJECT_SECRET_KEY,
     LDAP_HOST,
     ANALYTICS_SECRET_KEY,
-    HAPPPLACE_SECRET_KEY,
+    HAPPPLACE_SSO_KEY,
     MONITORING_SECRET_KEY,
-    AZURE_BLOBNAME, AZURE_ACCESSKEY
-} = process.env
+    AZURE_BLOBNAME,
+    AZURE_ACCESSKEY,
+} = process.env;
 var storage = require("@azure/storage-blob")
 const {
     Profile,
@@ -65,7 +66,7 @@ module.exports = {
         const token = jwt.sign({
             data: obj,
         },
-        HAPPPLACE_SECRET_KEY, {
+        HAPPPLACE_SSO_KEY, {
             expiresIn: '12h',
         },
         )
