@@ -347,7 +347,7 @@ module.exports = {
 
             const tracking = await ExamTracking.findOne({ item: idItem, userLogin: user.networkLogin })
 
-            if (!evaluation.attempts || tracking.remainingAttempts <= evaluation.attempts) {
+            if (!evaluation.attempts || !tracking || tracking?.remainingAttempts <= evaluation.attempts) {
                 const { categories } = await _business.returnCategoriesOfEvaluation(id)
                 const { questions, amount } = await _business.returnRandomQuestionsByCategory(categories)
                 if (questions.length > 0) {

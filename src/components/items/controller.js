@@ -207,9 +207,19 @@ const ItemController = {
                     }
 
                     // GAMIFICATION DISPATCH
-                    await GamificationController.dispatch(user.networkLogin, [
-                        EVENTS_CATEGORY.UPLOADED_CONTENT,
-                    ]);
+                    const collabItems = await Item.find({
+                        author: user._id,
+                        collaborative: true,
+                    });
+                    await GamificationController.dispatch(
+                        user.networkLogin,
+                        [EVENTS_CATEGORY.UPLOADED_CONTENT],
+                        {
+                            collabItemsCreatedAt: collabItems.map(
+                                ({ createdAt }) => createdAt
+                            ),
+                        }
+                    );
 
                     //Evento novo conteúdo colaborativo
                     _messages.success(res, req, item._id);
