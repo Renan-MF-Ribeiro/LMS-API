@@ -203,6 +203,7 @@ const ItemController = {
                                 : 'pending',
                             thumbPath: thumbPath,
                             title: item.title,
+                            titleURL: item.titleURL,
                         });
                     }
 
