@@ -1,13 +1,9 @@
 /* eslint-disable no-async-promise-executor */
-require('dotenv').config()
-const ldap = require('ldapjs')
-const jwt = require('jsonwebtoken')
-const {
-    promisify,
-} = require('util')
-const {
-    error,
-} = require('../utils/logger')
+require('dotenv').config();
+const ldap = require('ldapjs');
+const jwt = require('jsonwebtoken');
+const { promisify } = require('util');
+const { error } = require('../utils/logger');
 const {
     PROJECT_SECRET_KEY,
     LDAP_HOST,
@@ -17,20 +13,16 @@ const {
     AZURE_BLOBNAME,
     AZURE_ACCESSKEY,
 } = process.env;
-var storage = require("@azure/storage-blob")
-const {
-    Profile,
-} = require('../components/profiles/model')
-const {
-    Group,
-} = require('../components/groups/model')
+var storage = require('@azure/storage-blob');
+const { Profile } = require('../components/profiles/model');
+const { Group } = require('../components/groups/model');
 
 const _ldapClient = ldap.createClient({
     url: LDAP_HOST,
     timeLimit: 7000,
     reconnect: true,
-})
-_ldapClient.on('error', err => error('Erro LDAP: %o', err))
+});
+_ldapClient.on('error', (err) => error('Erro LDAP: %o', err));
 
 module.exports = {
     ldapClient: {
@@ -39,90 +31,104 @@ module.exports = {
         unbind: promisify(_ldapClient.unbind).bind(_ldapClient),
     },
 
-    generateToken: obj => {
-        const token = jwt.sign({
-            data: obj,
-        },
-        PROJECT_SECRET_KEY, {
-            expiresIn: '1h',
-        },
-        )
+    generateToken: (obj) => {
+        const token = jwt.sign(
+            {
+                data: obj,
+            },
+            PROJECT_SECRET_KEY,
+            {
+                expiresIn: '1h',
+            }
+        );
 
-        return token
+        return token;
     },
 
-    generateSSOToken: obj => {
-        const token = jwt.sign({
-            data: obj,
-        },
-        PROJECT_SECRET_KEY, {
-            expiresIn: '1h',
-        },
-        )
-        return token
+    generateSSOToken: (obj) => {
+        const token = jwt.sign(
+            {
+                data: obj,
+            },
+            PROJECT_SECRET_KEY,
+            {
+                expiresIn: '1h',
+            }
+        );
+        return token;
     },
 
-    generateHappPlaceToken: obj => {
-        const token = jwt.sign({
-            data: obj,
-        },
-        HAPPPLACE_SSO_KEY, {
-            expiresIn: '12h',
-        },
-        )
-        return token
+    generateHappPlaceToken: (obj) => {
+        const token = jwt.sign(
+            {
+                data: obj,
+            },
+            HAPPPLACE_SSO_KEY,
+            {
+                expiresIn: '12h',
+            }
+        );
+        return token;
     },
 
-    generateTokenAnalytics: obj => {
-        const token = jwt.sign({
-            perfil: obj.perfil,
-            clientID: obj.clientID,
-        },
-        ANALYTICS_SECRET_KEY, {
-            expiresIn: '12h',
-        },
-        )
+    generateTokenAnalytics: (obj) => {
+        const token = jwt.sign(
+            {
+                perfil: obj.perfil,
+                clientID: obj.clientID,
+            },
+            ANALYTICS_SECRET_KEY,
+            {
+                expiresIn: '12h',
+            }
+        );
 
-        return token
+        return token;
     },
 
     generateSASToken: () => {
         //PUBLIC_PATH, UPLOADS_PATH, AZURE_STRINGCONN, AZURE_BLOBNAME, AZURE_ACCESSKEY
-        const credentials = new storage.StorageSharedKeyCredential(AZURE_BLOBNAME, AZURE_ACCESSKEY);
-        const containerName="lmsassets";
-        const blobSAS = storage.generateBlobSASQueryParameters({
-            containerName,
+        const credentials = new storage.StorageSharedKeyCredential(
             AZURE_BLOBNAME,
-            permissions: storage.BlobSASPermissions.parse("r"),
-            startsOn: new Date(),
-            expiresOn: new Date(new Date().valueOf() + 14400000)
-          },
-          credentials
-        ).toString();
+            AZURE_ACCESSKEY
+        );
+        const containerName = 'lmsassets';
+        const blobSAS = storage
+            .generateBlobSASQueryParameters(
+                {
+                    containerName,
+                    AZURE_BLOBNAME,
+                    permissions: storage.BlobSASPermissions.parse('r'),
+                    startsOn: new Date(),
+                    expiresOn: new Date(new Date().valueOf() + 14400000),
+                },
+                credentials
+            )
+            .toString();
 
-        return blobSAS
+        return blobSAS;
     },
 
-    decodeToken: token => {
-        return jwt.decode(token, PROJECT_SECRET_KEY)
+    decodeToken: (token) => {
+        return jwt.decode(token, PROJECT_SECRET_KEY);
     },
 
-    returnIdProfileUser: profiles => {
+    returnIdProfileUser: (profiles) => {
         return new Promise(async (resolve, reject) => {
             try {
-                const result = []
-                const numbers = []
+                const result = [];
+                const numbers = [];
 
                 for (const p in profiles) {
                     const profile = await Profile.findOne({
                         $text: {
                             $search: profiles[p],
                         },
-                    })
+                    });
 
                     if (profile) {
-                        numbers.push(returnNumberOfProfile(profiles[p]))
-                        result.push(profile._id)
+                        numbers.push(returnNumberOfProfile(profiles[p]));
+                        result.push(profile._id);
                     }
                 }
 
@@ -130,55 +136,55 @@ module.exports = {
                     resolve({
                         result,
                         numbers,
-                    })
+                    });
                 } else {
-                    reject(new Error('Sem perfil vinculado!'))
+                    reject(new Error('Sem perfil vinculado!'));
                 }
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
-    returnProfileByToken: token => {
+    returnProfileByToken: (token) => {
         return new Promise(async (resolve, reject) => {
             try {
-                const result = []
-                const data = jwt.decode(token, PROJECT_SECRET_KEY)
-                const profiles = data.data.profiles
+                const result = [];
+                const data = jwt.decode(token, PROJECT_SECRET_KEY);
+                const profiles = data.data.profiles;
 
                 for (const p in profiles) {
                     const profile = await Profile.findOne({
                         _id: {
                             $eq: profiles[p],
                         },
-                    })
+                    });
 
-                    if (profile) result.push(profile.title)
+                    if (profile) result.push(profile.title);
                 }
 
-                resolve(result)
+                resolve(result);
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
-    validateToken: req => {
-        return new Promise(resolve => {
+    validateToken: (req) => {
+        return new Promise((resolve) => {
             try {
-                const token = req.headers.authorization
+                const token = req.headers.authorization;
                 jwt.verify(token, PROJECT_SECRET_KEY, function (err) {
                     if (err) {
-                        resolve(false)
+                        resolve(false);
                     } else {
-                        resolve(true)
+                        resolve(true);
                     }
-                })
+                });
             } catch (error) {
-                resolve(false)
+                resolve(false);
             }
-        })
+        });
     },
 
     validateMonitoringToken: (req) => {
@@ -198,74 +204,74 @@ module.exports = {
         });
     },
 
-    validateTokenNginx: token => {
-        return new Promise(resolve => {
+    validateTokenNginx: (token) => {
+        return new Promise((resolve) => {
             try {
                 // const token = req.headers.authorization
                 jwt.verify(token, PROJECT_SECRET_KEY, function (err) {
                     if (err) {
-                        resolve(false)
+                        resolve(false);
                     } else {
-                        resolve(true)
+                        resolve(true);
                     }
-                })
+                });
             } catch (error) {
-                resolve(false)
+                resolve(false);
             }
-        })
+        });
     },
 
-    returnIdGroupUser (groups) {
+    returnIdGroupUser(groups) {
         return new Promise(async (resolve, reject) => {
             try {
-                const result = []
+                const result = [];
 
                 for (const p in groups) {
                     const group = await Group.findOne({
                         $text: {
                             $search: groups[p],
                         },
-                    })
+                    });
 
-                    if (group) result.push(group._id)
+                    if (group) result.push(group._id);
                 }
 
-                resolve(result)
+                resolve(result);
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
-}
+};
 
-function returnNumberOfProfile (profile) {
-    let number
+function returnNumberOfProfile(profile) {
+    let number;
     switch (profile) {
         case 'PERFIL_Integrador':
-            number = 1
-            break
+            number = 1;
+            break;
         case 'PERFIL_Intrutor':
-            number = 2
-            break
+            number = 2;
+            break;
         case 'PERFIL_Admin':
-            number = 3
-            break
+            number = 3;
+            break;
         case 'PERFIL_Analista':
-            number = 4
-            break
+            number = 4;
+            break;
         case 'PERFIL_Conteudista':
-            number = 5
-            break
+            number = 5;
+            break;
         case 'PERFIL_Colaborador':
-            number = 6
-            break
+            number = 6;
+            break;
         case 'PERFIL_Colaborador_Livre':
-            number = 7
-            break
+            number = 7;
+            break;
         default:
-            number = 0
-            break
+            number = 0;
+            break;
     }
 
-    return number
+    return number;
 }
