@@ -573,6 +573,11 @@ module.exports = {
                         clientID: CLIENT_ID,
                     });
 
+                    const token_happplace = generateHappPlaceToken({
+                        networkLogin: user.networkLogin,
+                        clientId: CLIENT_ID,
+                    });
+
                     const SAS = generateSASToken();
 
                     await updateGroupsOfUser(
@@ -606,6 +611,7 @@ module.exports = {
                             name: user.name,
                             profilePhoto: user.profilePhoto,
                             tokenAnalytics: token_analytics,
+                            tokenHappPlace: token_happplace,
                             networkLogin: user.networkLogin,
                             userId: user._id,
                         },
