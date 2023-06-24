@@ -4,6 +4,7 @@ const {
     CourseModel,
     ClassModel,
     MaterialModel,
+    ProgramModel,
     CourseEvaluationModel,
 } = require('./model');
 
@@ -29,6 +30,8 @@ const {
     getStoreUSers,
     getAppliedCourses,
     getClassByID,
+    returnProgramaID,
+    checkEligibility,
 } = require('./business');
 
 const {
@@ -44,6 +47,7 @@ module.exports = {
             const arrMaterials = [];
             let flagDate = true;
             body.tags = JSON.parse(body.tags);
+            body.mandatory = JSON.parse(body.mandatory);
 
             const dateInitialCourse = formatDateWithoutHours(
                 addHours(body.dateInitial)
@@ -79,6 +83,9 @@ module.exports = {
                         '/createCourse'
                     );
                 } else {
+                    const programID = await returnProgramaID(body.program);
+                    body.program = programID;
+
                     body.dateInitial = formatDateWithoutHours(body.dateInitial);
                     if (body.dateFinal) {
                         body.dateFinal = formatDateWithoutHours(body.dateFinal);
@@ -164,9 +171,14 @@ module.exports = {
                     path: 'materials',
                     match: { author: 'CONTEUDISTA' },
                 })
-                .sort({ [order]: sort })
+                .populate('program', 'title')
+                .sort({
+                    [order]: sort,
+                })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
+
+            const programs = await ProgramModel.find().select('title');
 
             courses.map((course) => {
                 course.dateInitial = addHours(course.dateInitial);
@@ -176,6 +188,7 @@ module.exports = {
             success(res, req, {
                 data: courses,
                 total,
+                programs,
             });
         } catch (error) {
             internalServer(
@@ -196,6 +209,7 @@ module.exports = {
             const arrMaterials = [];
             let flagDate = true;
             body.tags = JSON.parse(body.tags);
+            body.mandatory = JSON.parse(body.mandatory);
 
             const dateInitialCourse = formatDateWithoutHours(
                 addHours(body.dateInitial)
@@ -247,6 +261,9 @@ module.exports = {
                         '/createCourse'
                     );
                 } else {
+                    const programID = await returnProgramaID(body.program);
+                    body.program = programID;
+
                     body.dateInitial = formatDateWithoutHours(body.dateInitial);
                     if (body.dateFinal) {
                         body.dateFinal = formatDateWithoutHours(body.dateFinal);
@@ -289,6 +306,7 @@ module.exports = {
                 }
             }
         } catch (error) {
+            console.log(error);
             internalServer(
                 res,
                 req,
@@ -345,7 +363,10 @@ module.exports = {
                     path: 'groups',
                     select: ['office', 'tags'],
                 })
-                .sort({ [order]: sort })
+                .populate('program', 'title')
+                .sort({
+                    [order]: sort,
+                })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
@@ -414,7 +435,6 @@ module.exports = {
                 qrCodeSelfRegistration,
                 isSelfRegistrationEnabled,
             } = req.fields;
-
             let flagDate = true;
 
             if (dateApplicationInitial || dateApplicationFinal) {
@@ -453,7 +473,6 @@ module.exports = {
                     path: 'groups',
                     select: 'trails',
                 });
-                console.log(course);
 
                 if (canCreateClass) {
                     const dateInitial = formatDateWithoutHours(
@@ -498,7 +517,6 @@ module.exports = {
                                 arrMaterials.push(materialID);
                             }
                         }
-
                         await ClassModel.create({
                             courseID,
                             users: JSON.parse(users),
@@ -553,13 +571,15 @@ module.exports = {
                 instructorTemp,
                 dateApplicationInitial,
                 dateApplicationFinal,
+                qrCodeSelfRegistration,
+                isSelfRegistrationEnabled,
             } = req.fields;
             const materials = req.files.materials;
             const user = await getUserByToken(req);
             const currentMaterials = await ClassModel.findById(classID);
             const arrMaterials = currentMaterials.materials;
-
             let flagDate = true;
+            isSelfRegistrationEnabled = isSelfRegistrationEnabled == 'true';
 
             if (dateApplicationInitial || dateApplicationFinal) {
                 if (dateApplicationInitial && dateApplicationFinal === '') {
@@ -648,6 +668,8 @@ module.exports = {
                         // instructor: user._id,
                         materials: arrMaterials,
                         qrcode: qrCode,
+                        qrCodeSelfRegistration: qrCodeSelfRegistration,
+                        isSelfRegistrationEnabled: isSelfRegistrationEnabled,
                     });
 
                     success(res, req, 'Atualizado com sucesso!');
@@ -708,9 +730,9 @@ module.exports = {
     async appliedCourse(req, res) {
         try {
             const { courseID, classID } = req.params;
-            const course = await CourseModel.findById(courseID).populate(
-                'materials'
-            );
+            const course = await CourseModel.findById(courseID)
+                .populate('materials')
+                .populate('program', 'title');
 
             const classUsers = await getClassByID(classID);
             course.materials = course.materials.concat(classUsers.materials);
@@ -1016,14 +1038,37 @@ module.exports = {
     async getCourseByQrCodeSelfRegistration(req, res) {
         try {
             const { body } = req;
-            const { _id } = await getUserByToken(req);
+            const { _id, groupsAD } = await getUserByToken(req);
+
             const course = await ClassModel.findOne({
                 qrCodeSelfRegistration: { $eq: body.qrcode },
-            }).populate('courseID', 'title');
-            const register = course.users.find((user) => user.userID == _id)
-            ? true
-            : false;
-            success(res, req, register ? 'registered' : course);
+            }).populate('courseID', ['title', 'tags', 'mandatory']);
+            console.log(
+                groupsAD,
+                course.courseID.mandatory,
+                course.courseID.tags
+            );
+            const eligibility = checkEligibility(
+                groupsAD,
+                course.courseID.mandatory,
+                course.courseID.tags
+            );
+
+            if (eligibility) {
+                const register = course.users.find((user) => user.userID == _id)
+                    ? true
+                    : false;
+                success(res, req, register ? 'registered' : course);
+            } else {
+                badRequest(
+                    res,
+                    req,
+                    'O aluno não está elegivel a este treinemento',
+                    'Atenção! Você não está elegivel a este treinemento.',
+                    'courses',
+                    '/getCourseByQrCodeSelfRegistration'
+                );
+            }
         } catch (error) {
             internalServer(
                 res,
@@ -1055,6 +1100,7 @@ module.exports = {
             );
         }
     },
+
     async selfRegistration(req, res) {
         try {
             const { body } = req;
@@ -1085,6 +1131,64 @@ module.exports = {
             );
         }
     },
+    async getInstructorByInstructorGroup(req, res) {
+        try {
+            const { params } = req;
+            const tags = [];
+            const usersFilter = [];
+            const groups = [];
+
+            const course = await CourseModel.findById(
+                params.courseID,
+                'groups'
+            ).populate('groups', 'tags');
+
+            course.groups.tags.forEach((tag) => {
+                tags.push(tag.value.toString());
+            });
+
+            const groupsAD = await Group.find({
+                deleted: 0,
+                active: 1,
+            });
+
+            groupsAD.forEach((group) => {
+                group.tags.forEach((tag) => {
+                    if (tags.includes(tag.value.toString())) groups.push(group);
+                });
+            });
+
+            for (const group of groups) {
+                const users = await User.find(
+                    {
+                        groupsAD: { $in: group.name },
+                        status: 'ATIVO',
+                    },
+                    ['groupsAD', 'name', '_id', 'networkLogin']
+                );
+
+                for (const user of users) {
+                    usersFilter.push(user);
+                }
+            }
+
+            if (usersFilter.length > 0) {
+                usersFilter.sort((a, b) => (a.name < b.name ? -1 : 1));
+            }
+
+            success(res, req, usersFilter);
+        } catch (error) {
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'courses',
+                '/getInstructorByInstructorGroup'
+            );
+        }
+    },
+
     async verifyInstructor(req, res) {
         try {
             const { params } = req;

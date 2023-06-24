@@ -1,14 +1,14 @@
-const _messages = require("../../utils/messages");
-const { Item } = require("../items/model");
-const { Tracking } = require("../tracking/model");
-const { Trail } = require("../trails/model");
-const { checkIfTheTrackIsValid } = require("../sections/business");
-const { User } = require("../users/model");
+const _messages = require('../../utils/messages');
+const { Item } = require('../items/model');
+const { Tracking } = require('../tracking/model');
+const { Trail } = require('../trails/model');
+const { checkIfTheTrackIsValid } = require('../sections/business');
+const { User } = require('../users/model');
 const {
     getUserByToken,
     getTagsGroupsByToken,
     processTrailTracking,
-} = require("../../utils/functions");
+} = require('../../utils/functions');
 const {
     trailsCompletedOrInProgress,
     studentAverageCourses,
@@ -23,49 +23,51 @@ const {
     averageGroupCourses,
     averageGroupRatings,
     trailsCompletedExpired,
-} = require("./business");
+} = require('./business');
 
-const { populateTrails } = require("../trails/business");
+const { populateTrails } = require('../trails/business');
 
 // const { updateAverageCourses } = require('../../utils/cron')
 
 const ItemController = {
-   async searchTrailsItems (req, res) {
+    async searchTrailsItems(req, res) {
         try {
-            const user = await getUserByToken(req)
-            const tags = await getTagsGroupsByToken(req)
-            const searchBy = req.query.searchBy
-            let filterTrails = []
-            const result = []
+            const user = await getUserByToken(req);
+            const tags = await getTagsGroupsByToken(req);
+            const searchBy = req.query.searchBy;
+            let filterTrails = [];
+            const result = [];
 
             const allTrackingUser = await Tracking.find({
                 userLogin: { $eq: user.networkLogin },
                 $or: [
-                    { expiredCompletion: { $exists: false } }, 
-                    { expiredCompletion: { $eq: null } }
-                ]
-            })
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } },
+                ],
+            });
 
             for (const tag of user.tags) {
-                delete tag.createdAt
-                tags.push(tag)
+                delete tag.createdAt;
+                tags.push(tag);
             }
 
             filterTrails = await populateTrails(true, {
                 $or: [
-                    { title: new RegExp(searchBy, 'gi')},
-                    { description: new RegExp(searchBy, 'gi')},
+                    { title: new RegExp(searchBy, 'gi') },
+                    { description: new RegExp(searchBy, 'gi') },
                 ],
                 tags: { $in: tags },
-                enabled: true
-            })
-            filterTrails = filterTrails.filter(trail => checkIfTheTrackIsValid(trail))
+                enabled: true,
+            });
+            filterTrails = filterTrails.filter((trail) =>
+                checkIfTheTrackIsValid(trail)
+            );
 
             const items = await Item.find({
                 description: new RegExp(searchBy, 'gi'),
                 enabled: true,
                 deleted: { $eq: 0 },
-            })
+            });
 
             for (const item of items) {
                 const itemTrail = await populateTrails(true, {
@@ -75,15 +77,17 @@ const ItemController = {
                         { mandatory: { $in: tags } },
                     ],
                     enabled: true,
-                })
+                });
 
                 if (itemTrail) {
                     for (const t of itemTrail) {
-                        const isValidTrail = checkIfTheTrackIsValid(t)
+                        const isValidTrail = checkIfTheTrackIsValid(t);
                         if (isValidTrail) {
-                            const index = filterTrails.findIndex(val => val.id === itemTrail.id)
+                            const index = filterTrails.findIndex(
+                                (val) => val.id === itemTrail.id
+                            );
                             if (index === -1) {
-                                filterTrails.push(t)
+                                filterTrails.push(t);
                             }
                         }
                     }
@@ -91,14 +95,24 @@ const ItemController = {
             }
 
             for (let trail of filterTrails) {
-                const processedTrail = processTrailTracking(trail, allTrackingUser)
-                trail = processedTrail.trail
-                result.push(trail)
+                const processedTrail = processTrailTracking(
+                    trail,
+                    allTrackingUser
+                );
+                trail = processedTrail.trail;
+                result.push(trail);
             }
 
-            _messages.success(res, req, result)
+            _messages.success(res, req, result);
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'home', 'searchTrailsItems')
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'home',
+                'searchTrailsItems'
+            );
         }
     },
 
@@ -193,16 +207,16 @@ const ItemController = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "home",
-                "dashboardStudent"
+                'Erro interno no servidor',
+                'home',
+                'dashboardStudent'
             );
         }
     },
     async dashboardStudentv2(req, res) {
         try {
             const user = await getUserByToken(req);
-
+            const courses = await getStudentCourses(req);
             const allTrails = await Trail.countDocuments();
             const resultTrails = await trailsCompletedOrInProgress(req);
             const resultTrailsExpired = await trailsCompletedExpired(req);
@@ -236,6 +250,7 @@ const ItemController = {
                 allTrailsElegibles,
                 resultTrailsExpired,
                 certificatesExpired,
+                courses,
             });
         } catch (error) {
             console.log(error);
@@ -243,9 +258,9 @@ const ItemController = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "home",
-                "dashboardStudent"
+                'Erro interno no servidor',
+                'home',
+                'dashboardStudent'
             );
         }
     },
@@ -258,9 +273,9 @@ const ItemController = {
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "home",
-                "/searchStudentCourses"
+                'Erro interno no servidor',
+                'home',
+                '/searchStudentCourses'
             );
         }
     },
