@@ -48,6 +48,7 @@ module.exports = {
             let flagDate = true;
             body.tags = JSON.parse(body.tags);
             body.mandatory = JSON.parse(body.mandatory);
+            body.certificateDue = JSON.parse(body.certificateDue);
 
             const dateInitialCourse = formatDateWithoutHours(
                 addHours(body.dateInitial)
@@ -210,6 +211,7 @@ module.exports = {
             let flagDate = true;
             body.tags = JSON.parse(body.tags);
             body.mandatory = JSON.parse(body.mandatory);
+            body.certificateDue = JSON.parse(body.certificateDue);
 
             const dateInitialCourse = formatDateWithoutHours(
                 addHours(body.dateInitial)
