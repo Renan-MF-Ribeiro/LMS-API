@@ -264,22 +264,22 @@ module.exports = {
         });
     },
 
-    checkEligibility(eligibilityUser, mandatory, tags) {
-        const eligibilityMandatory = eligibilityUser.some((eligibility) =>
-            mandatory.some((m) => m.value === eligibility)
+    checkEligibility(eligibilityUser, tagsAnd, tagsOr) {
+        const eligibilitytagsAnd = eligibilityUser.some((eligibility) =>
+            tagsAnd.some((m) => m.value === eligibility)
         );
 
-        if (eligibilityMandatory) {
-            const allEligibilityMandatory = mandatory.every((eligibility) =>
+        if (eligibilitytagsAnd) {
+            const allEligibilitytagsAnd = tagsAnd.every((eligibility) =>
                 eligibilityUser.includes(eligibility.value)
             );
 
-            if (allEligibilityMandatory) {
+            if (allEligibilitytagsAnd) {
                 return true; // Acesso permitido
             }
         } else {
             const eligibilityTag = eligibilityUser.some((eligibility) =>
-                tags.some((tag) => tag.value === eligibility)
+                tagsOr.some((tag) => tag.value === eligibility)
             );
 
             if (eligibilityTag) {

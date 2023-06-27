@@ -1045,11 +1045,7 @@ module.exports = {
             const course = await ClassModel.findOne({
                 qrCodeSelfRegistration: { $eq: body.qrcode },
             }).populate('courseID', ['title', 'tags', 'mandatory']);
-            console.log(
-                groupsAD,
-                course.courseID.mandatory,
-                course.courseID.tags
-            );
+
             const eligibility = checkEligibility(
                 groupsAD,
                 course.courseID.mandatory,

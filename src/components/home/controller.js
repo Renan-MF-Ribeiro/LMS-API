@@ -2,7 +2,10 @@ const _messages = require('../../utils/messages');
 const { Item } = require('../items/model');
 const { Tracking } = require('../tracking/model');
 const { Trail } = require('../trails/model');
-const { checkIfTheTrackIsValid } = require('../sections/business');
+const {
+    checkIfTheTrackIsValid,
+    checkEligibilityTagsAnd,
+} = require('../sections/business');
 const { User } = require('../users/model');
 const {
     getUserByToken,
@@ -59,6 +62,10 @@ const ItemController = {
                 tags: { $in: tags },
                 enabled: true,
             });
+
+            filterTrails = filterTrails.filter((trail) =>
+                checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags)
+            );
             filterTrails = filterTrails.filter((trail) =>
                 checkIfTheTrackIsValid(trail)
             );

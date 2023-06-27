@@ -37,7 +37,10 @@ const {
     vimeoFilePathUpdate,
 } = require('../../utils/files');
 
-const { getTagsElegiblesByToken } = require('../sections/business');
+const {
+    getTagsElegiblesByToken,
+    checkEligibilityTagsAnd,
+} = require('../sections/business');
 const { getUserByToken } = require('../../utils/functions');
 const GamificationController = require('../gamification/controller');
 const { EVENTS_CATEGORY } = require('../gamification/model');
@@ -146,7 +149,7 @@ const ItemController = {
 
                     if (payload.kind === 'MediaItem') {
                         if (!content) {
-                         // payload.contentPath = payload.content;
+                            // payload.contentPath = payload.content;
                         } else {
                             payload.enabled = true;
                             payload.contentPath = String(
@@ -348,7 +351,7 @@ const ItemController = {
                         payload.kind != 'SoonItem'
                     ) {
                         if (content) {
-                            payload.fileName = content.name
+                            payload.fileName = content.name;
                             contentPath = await azureBlob(
                                 content,
                                 'items/content'
@@ -401,7 +404,7 @@ const ItemController = {
 
                     if (payload.kind === 'MediaItem') {
                         if (!content) {
-                              // payload.contentPath = payload.content;
+                            // payload.contentPath = payload.content;
                         } else {
                             payload.enabled = true;
                             payload.contentPath = String(
@@ -755,7 +758,17 @@ const ItemController = {
 
             const tags = await getTagsElegiblesByToken(req);
             const trail = await Trail.findOne(queryTrail);
-
+            if (!checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags)) {
+                _messages.badRequest(
+                    res,
+                    req,
+                    'Você não esta elegível a este conteúdo',
+                    'Você não esta elegível a este conteúdo',
+                    'items',
+                    'findItemById'
+                );
+                return;
+            }
             // Validação de eligibilidade do item.
             const tagNames = tags.map((x) => x.display.toUpperCase());
             const trailTagNames = trail.tags.map((x) =>
@@ -1019,7 +1032,7 @@ const ItemController = {
 
                         if (_id) {
                             return SCORMItem.findByIdAndUpdate(_id, {
-                                enabled:false,
+                                enabled: false,
                                 packageId,
                                 scoId,
                                 contentPath: `${packageId}/${href}`,
@@ -1165,7 +1178,7 @@ const ItemController = {
             };
             await SCORMItem.findByIdAndUpdate(_id, {
                 contentPath: `${packageId}/${href}`,
-                scormPath:scormPath
+                scormPath: scormPath,
             });
 
             res.status(httpStatus.NO_CONTENT).send();

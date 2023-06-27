@@ -84,6 +84,7 @@ const TrailSchema = new mongoose.Schema(
         startDate: { type: Date },
         endDate: { type: Date },
         tags: { type: Array },
+        tagsAnd: { type: Array, required: false },
         completion: { type: Number, default: null },
         certificate: { type: Number, default: 0 },
         isSequenceEnabled: {
@@ -184,13 +185,13 @@ const vwTrailsItems = new mongoose.Schema({
     clientId: { type: Number, default: CLIENT_ID },
     innerTextStatus: { type: Boolean, default: false },
     innerText: { type: String, required: ifInnerTextEnabled },
-})
+});
 
 const TrailsItems = mongoose.model(
     'vwTrailsItems',
     vwTrailsItems,
-    'vwTrailsItems',
-)
+    'vwTrailsItems'
+);
 
 const vwTrailsTagsWithUsersAndTrackings = new mongoose.Schema({
     title: { type: String, required: true, trim: true },
@@ -218,15 +219,15 @@ const vwTrailsTagsWithUsersAndTrackings = new mongoose.Schema({
         required: true,
     },
     trackings: { type: Array },
-})
+});
 const TrailsTagsWithUsersAndTrackings = mongoose.model(
     'vwTrailsTagsWithUsersAndTrackings',
     vwTrailsTagsWithUsersAndTrackings,
-    'vwTrailsTagsWithUsersAndTrackings',
-)
+    'vwTrailsTagsWithUsersAndTrackings'
+);
 
 module.exports = {
     Trail,
     TrailsItems,
     TrailsTagsWithUsersAndTrackings,
-}
+};
