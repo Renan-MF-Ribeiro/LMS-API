@@ -3,7 +3,7 @@
 const { awsAmazon } = require('../../utils/files');
 const { User } = require('../users/model');
 const { Group } = require('../groups/model');
-const { MaterialModel, ClassModel } = require('./model');
+const { MaterialModel, ClassModel, ProgramModel } = require('./model');
 
 const {
     formatDateWithoutHours,
@@ -198,6 +198,30 @@ module.exports = {
             }
         });
     },
+
+    returnProgramaID(programTitle) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let programID;
+                const title = programTitle || 'Programa Livre';
+
+                const program = await ProgramModel.findOne({
+                    title: { $eq: title },
+                });
+
+                program
+                    ? (programID = program._id)
+                    : (programID = await ProgramModel.create({
+                          title: programTitle,
+                      }));
+
+                resolve(programID);
+            } catch (error) {
+                reject(error);
+            }
+        });
+    },
+
     getCoursesByUserID(userID) {
         return new Promise(async (resolve, reject) => {
             try {
@@ -238,5 +262,31 @@ module.exports = {
                 reject(error);
             }
         });
+    },
+
+    checkEligibility(eligibilityUser, tagsAnd, tagsOr) {
+        const eligibilitytagsAnd = eligibilityUser.some((eligibility) =>
+            tagsAnd.some((m) => m.value === eligibility)
+        );
+
+        if (eligibilitytagsAnd) {
+            const allEligibilitytagsAnd = tagsAnd.every((eligibility) =>
+                eligibilityUser.includes(eligibility.value)
+            );
+
+            if (allEligibilitytagsAnd) {
+                return true; // Acesso permitido
+            }
+        } else {
+            const eligibilityTag = eligibilityUser.some((eligibility) =>
+                tagsOr.some((tag) => tag.value === eligibility)
+            );
+
+            if (eligibilityTag) {
+                return true; // Acesso permitido
+            }
+        }
+
+        return false; // Acesso negado
     },
 };

@@ -514,6 +514,36 @@ module.exports = {
             }
         });
     },
+
+    checkEligibilityTagsAnd(tagsUser, tagsAnd, tagsOr) {
+        const eligibilityUser = tagsUser.map((tag) =>
+            tag.value.toLocaleLowerCase()
+        );
+
+        const eligibilitytagsAnd = eligibilityUser.some((eligibility) =>
+            tagsAnd?.some((m) => m.value.toLocaleLowerCase() === eligibility)
+        );
+
+        if (eligibilitytagsAnd) {
+            const allEligibilitytagsAnd = tagsAnd?.every((eligibility) =>
+                eligibilityUser.includes(eligibility.value.toLocaleLowerCase())
+            );
+
+            if (allEligibilitytagsAnd) {
+                return true;
+            }
+        } else {
+            const eligibilityTag = eligibilityUser.some((eligibility) =>
+                tagsOr?.some(
+                    (tag) => tag.value.toLocaleLowerCase() === eligibility
+                )
+            );
+            if (eligibilityTag) {
+                return true;
+            }
+        }
+        return false;
+    },
 };
 
 function isNecessary(trail, tags) {

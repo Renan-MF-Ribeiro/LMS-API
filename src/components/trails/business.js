@@ -1,21 +1,29 @@
 const {
     formatDateWithoutHours,
     getDateTodayWithoutHours,
-} = require('../../utils/functions')
+} = require('../../utils/functions');
 
-const { Trail } = require('./model')
-const { Item } = require('../items/model')
+const { Trail } = require('./model');
+const { Item } = require('../items/model');
 
 module.exports = {
-    async checkItem (item) {
+    async checkItem(item) {
         return new Promise((resolve, reject) => {
-            const today = getDateTodayWithoutHours()
-            const startDate = formatDateWithoutHours(item.startDate)
-            const endDate = item.endDate ? formatDateWithoutHours(item.endDate) : 'Invalid Date'
+            const today = getDateTodayWithoutHours();
+            const startDate = formatDateWithoutHours(item.startDate);
+            const endDate = item.endDate
+                ? formatDateWithoutHours(item.endDate)
+                : 'Invalid Date';
 
-            if (startDate <= today && (endDate >= today || endDate === 'Invalid Date') && item.enabled && item.highlighted) resolve(true)
-            resolve(false)
-        })
+            if (
+                startDate <= today &&
+                (endDate >= today || endDate === 'Invalid Date') &&
+                item.enabled &&
+                item.highlighted
+            )
+                resolve(true);
+            resolve(false);
+        });
     },
 
     /**
@@ -27,18 +35,28 @@ module.exports = {
      * @param {*} limit
      * @param {boolean} filterEnabled Flag que indica se deve filtrar por habilitado ou não. (Padrão: true)
      */
-    populateTrails (flag = true, findObj = {}, sortObj = {}, filterEnabled = true, match = {}, skip = null, limit = null) {
+    populateTrails(
+        flag = true,
+        findObj = {},
+        sortObj = {},
+        filterEnabled = true,
+        match = {},
+        skip = null,
+        limit = null
+    ) {
         return new Promise(async (resolve, reject) => {
             try {
-                let trails = []
+                let trails = [];
 
-                const matchObj = filterEnabled ? {
-                    ...match,
-                    enabled: true,
-                    deleted: 0,
-                } : {
-                    deleted: 0,
-                }
+                const matchObj = filterEnabled
+                    ? {
+                          ...match,
+                          enabled: true,
+                          deleted: 0,
+                      }
+                    : {
+                          deleted: 0,
+                      };
                 if (skip !== null) {
                     trails = await Trail.find(findObj)
                         .populate({
@@ -49,42 +67,48 @@ module.exports = {
                             match: matchObj,
                             populate: {
                                 path: 'idEvaluation',
-                                select: 'description'
-                            }
+                                select: 'description',
+                            },
                         })
                         .sort(sortObj)
                         .skip(skip)
-                        .limit(limit)
+                        .limit(limit);
                 } else {
-                    trails = await Trail.find(findObj).populate({
-                        path: 'author',
-                    }).populate({
-                        path: 'items.itemID',
-                        match: matchObj,
-                        populate: {
-                            path: 'idEvaluation',
-                            select: 'description'
-                        }
-                    }).sort(sortObj)
+                    trails = await Trail.find(findObj)
+                        .populate({
+                            path: 'author',
+                        })
+                        .populate({
+                            path: 'items.itemID',
+                            match: matchObj,
+                            populate: {
+                                path: 'idEvaluation',
+                                select: 'description',
+                            },
+                        })
+                        .sort(sortObj);
                 }
-                const arrTrails = []
+                const arrTrails = [];
                 if (!flag) {
                     for (const trail of trails) {
-                        const arrItems = []
+                        const arrItems = [];
                         for (const i of trail.items) {
-                            const item = await Item.findById(i.itemID)
-                            if (item !== null) arrItems.push(item)
+                            const item = await Item.findById(i.itemID);
+                            if (item !== null) arrItems.push(item);
                         }
 
-                        let userName = ''
+                        let userName = '';
                         if (trail.author) {
-                            userName = trail.author.name
+                            userName = trail.author.name;
                         }
 
-                        let supportMaterialEnabled = false
-                        const filteredSupportArray = trail.supportMaterial.filter((x)=> x.deleted === false)
-                        if(filteredSupportArray.length > 0){
-                            supportMaterialEnabled = true
+                        let supportMaterialEnabled = false;
+                        const filteredSupportArray =
+                            trail.supportMaterial.filter(
+                                (x) => x.deleted === false
+                            );
+                        if (filteredSupportArray.length > 0) {
+                            supportMaterialEnabled = true;
                         }
 
                         arrTrails.push({
@@ -103,6 +127,7 @@ module.exports = {
                             updatedAt: trail.updatedAt,
                             endDate: trail.endDate,
                             tags: trail.tags,
+                            tagsAnd: trail.tagsAnd || null,
                             innerTextStatus: trail.innerTextStatus,
                             innerText: trail.innerText,
                             author: userName,
@@ -119,33 +144,36 @@ module.exports = {
                             externalPlayer: trail.externalPlayer,
                             certificateLayout: trail.certificateLayout,
                             supportMaterialEnabled: supportMaterialEnabled,
-                        })
+                        });
                     }
                 } else {
                     for (const trail of trails) {
-                        const arrItems = []
+                        const arrItems = [];
                         for (const i of trail.items) {
-                            const item = await Item.findById(i.itemID)
+                            const item = await Item.findById(i.itemID);
                             if (item !== null) {
                                 arrItems.push({
                                     urlItem: i.urlItem,
                                     urlTrail: i.urlTrail,
                                     itemID: i.itemID,
                                     mandatory: i.mandatory,
-                                    afterSeparator:i.afterSeparator
-                                })
+                                    afterSeparator: i.afterSeparator,
+                                });
                             }
                         }
 
-                        let userName = ''
+                        let userName = '';
                         if (trail.author) {
-                            userName = trail.author.name
+                            userName = trail.author.name;
                         }
 
-                        let supportMaterialEnabled = false
-                        const filteredSupportArray = trail.supportMaterial.filter((x)=> x.deleted === false)
-                        if(filteredSupportArray.length > 0){
-                            supportMaterialEnabled = true
+                        let supportMaterialEnabled = false;
+                        const filteredSupportArray =
+                            trail.supportMaterial.filter(
+                                (x) => x.deleted === false
+                            );
+                        if (filteredSupportArray.length > 0) {
+                            supportMaterialEnabled = true;
                         }
 
                         arrTrails.push({
@@ -164,6 +192,7 @@ module.exports = {
                             createdAt: trail.createdAt,
                             updatedAt: trail.updatedAt,
                             tags: trail.tags,
+                            tagsAnd: trail.tagsAnd || null,
                             completion: trail.completion,
                             isSequenceEnabled: trail.isSequenceEnabled,
                             items: arrItems,
@@ -180,13 +209,13 @@ module.exports = {
                             externalPlayer: trail.externalPlayer,
                             certificateLayout: trail.certificateLayout,
                             supportMaterialEnabled: supportMaterialEnabled,
-                        })
+                        });
                     }
                 }
-                resolve(arrTrails)
+                resolve(arrTrails);
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
-}
+};
