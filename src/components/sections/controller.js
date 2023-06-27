@@ -206,10 +206,6 @@ module.exports = {
                 let trails = await populateTrails(true, {
                     enabled: true,
                     $or: [
-                        { collaborative: false },
-                        { collaborative: { $exists: false } },
-                    ],
-                    $or: [
                         {
                             tags: {
                                 $in: tags,
@@ -222,8 +218,13 @@ module.exports = {
                         },
                     ],
                 });
-                trails = trails.filter((trail) =>
-                    checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags)
+                trails = trails.filter(
+                    (trail) =>
+                        checkEligibilityTagsAnd(
+                            tags,
+                            trail.tagsAnd,
+                            trail.tags
+                        ) && !trail.collaborative
                 );
                 trails = trails.filter((trail) =>
                     checkIfTheTrackIsValid(trail)
