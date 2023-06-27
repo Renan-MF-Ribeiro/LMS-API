@@ -769,27 +769,6 @@ const ItemController = {
                 );
                 return;
             }
-            // Validação de eligibilidade do item.
-            const tagNames = tags.map((x) => x.display.toUpperCase());
-            const trailTagNames = trail.tags.map((x) =>
-                x.display.toUpperCase()
-            );
-
-            let isEligible = false;
-            for (const tagTrilha of trailTagNames) {
-                if (tagNames.includes(tagTrilha)) {
-                    isEligible = true;
-                    break;
-                }
-            }
-
-            if (!isEligible) {
-                _messages.success(res, req, {
-                    error: true,
-                    message: 'Este curso não está disponível para você',
-                });
-                return;
-            }
 
             const item = await Item.findOne(queryItem);
 
