@@ -12,6 +12,7 @@ const { createWriteStream } = require('fs');
 const parseXml = require('@rgrove/parse-xml');
 const { filter, reduce, pipe } = require('ramda');
 const { Trail } = require('../trails/model');
+const { Section } = require('../sections/model');
 const { error } = require('../../utils/logger');
 const _errors = require('../../utils/errors');
 const _messages = require('../../utils/messages');
@@ -57,9 +58,6 @@ const ITEM_KINDS = Object.freeze({
 
 const ItemController = {
     async itemColaborativo(req, res) {
-        if (!req.is('multipart/form-data')) {
-            return res.status(httpStatus.NOT_ACCEPTABLE).send();
-        }
         let payload = {};
         if (req.fields.payload) {
             try {
@@ -78,7 +76,7 @@ const ItemController = {
                 'A data final não pode ser menor que a data inicial!',
                 'A data final não pode ser menor que a data inicial!',
                 'items',
-                ''
+                'multiUploadCreate'
             );
         } else {
             const user = await getUserByToken(req);
@@ -91,9 +89,10 @@ const ItemController = {
                     ITEM_KINDS[req.body.kind || payload.kind] || Item;
 
                 try {
-                    const { thumb, content } = req.files;
+                    const { thumb, content, banner } = req.files;
                     let thumbPath;
                     let contentPath;
+                    let bannerPath;
 
                     if (thumb) {
                         thumbPath = await azureBlob(thumb, 'items/thumbs');
@@ -103,8 +102,20 @@ const ItemController = {
                                 : thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
                     }
 
-                    if (payload.kind !== 'MediaItem') {
+                    if (banner) {
+                        bannerPath = await azureBlob(banner, 'items/banners');
+                        bannerPath =
+                            process.env.NODE_ENV === 'local'
+                                ? bannerPath
+                                : bannerPath.replace(AZURE_BLOB_URL, DOMAIN);
+                    }
+
+                    if (
+                        payload.kind !== 'MediaItem' ||
+                        payload.kind != 'SoonItem'
+                    ) {
                         if (content) {
+                            payload.fileName = content.name;
                             contentPath = await azureBlob(
                                 content,
                                 'items/content'
@@ -121,29 +132,37 @@ const ItemController = {
                         if (
                             !contentPath &&
                             payload.content &&
-                            (ItemModel === MediaItem ||
-                                ItemModel === AudioItem ||
-                                ItemModel === DocumentItem)
+                            (ItemModel === MediaItem || ItemModel === AudioItem)
                         ) {
                             contentPath = payload.content;
+                            delete payload.content;
                         }
                     }
 
                     if (
-                        payload.kind !== 'SoundcloudItem' ||
-                        payload.kind !== 'MediaItem'
+                        (payload.kind !== 'SoundcloudItem' ||
+                            payload.kind !== 'MediaItem') &&
+                        payload.kind != 'SoonItem'
                     ) {
                         payload = {
                             ...payload,
                             enabled: true,
                             thumbPath: thumbPath || undefined,
+                            bannerPath: bannerPath || undefined,
                             contentPath: contentPath || undefined,
+                        };
+                    } else if (payload.kind == 'SoonItem') {
+                        payload = {
+                            ...payload,
+                            enabled: true,
+                            thumbPath: thumbPath || undefined,
                         };
                     } else {
                         payload = {
                             ...payload,
                             enabled: true,
                             thumbPath: thumbPath || undefined,
+                            bannerPath: bannerPath || undefined,
                         };
                     }
 
@@ -159,18 +178,23 @@ const ItemController = {
                         }
                     }
 
-                    const sectionTags = payload.tags;
+                    if (payload.kind === 'EventItem') {
+                        delete payload.contentPath;
+                    }
+
+                    const sectionId = payload.sectionId;
 
                     delete payload.thumb;
                     delete payload.content;
                     delete payload.tags;
+                    delete payload.sectionId;
 
                     payload.author = user._id;
 
                     const item = await ItemModel.create(payload);
 
                     if (item._id) {
-                        await Trail.create({
+                        const trail = await Trail.create({
                             backgroundPath: null,
                             bannerPath: null,
                             completion: null,
@@ -191,7 +215,6 @@ const ItemController = {
                             mandatory: [],
                             startDate: item.startDate,
                             tags: [
-                                ...sectionTags,
                                 {
                                     display: 'ELEGE_geral',
                                     value: 'ELEGE_geral',
@@ -208,6 +231,17 @@ const ItemController = {
                             title: item.title,
                             titleURL: item.titleURL,
                         });
+
+                        await Section.findOneAndUpdate(
+                            { _id: sectionId },
+                            {
+                                $push: {
+                                    trails: {
+                                        _id: trail._id,
+                                    },
+                                },
+                            }
+                        );
                     }
 
                     // GAMIFICATION DISPATCH
@@ -228,6 +262,7 @@ const ItemController = {
                     //Evento novo conteúdo colaborativo
                     _messages.success(res, req, item._id);
                 } catch (error) {
+                    console.log(error);
                     if (error.message === 'Something went wrong') {
                         _messages.internalServer(
                             res,
@@ -577,6 +612,7 @@ const ItemController = {
                     delete payload.content;
                     delete payload.thumb;
                     delete payload.banner;
+                    delete payload.sectionId;
 
                     payload.author = user._id;
 
@@ -717,8 +753,15 @@ const ItemController = {
 
     async findById(req, res) {
         try {
-            const _id = req.params.itemId;
-            const item = await Item.findOne({ _id });
+            const findValue = req.params.itemId;
+
+            const isObjectId = mongoose.Types.ObjectId.isValid(findValue);
+
+            const query = isObjectId
+                ? { _id: findValue }
+                : { titleURL: findValue };
+
+            const item = await Item.findOne(query);
             _messages.success(res, req, item);
         } catch (error) {
             _messages.internalServer(
