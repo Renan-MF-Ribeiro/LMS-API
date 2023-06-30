@@ -42,7 +42,8 @@ const {
 module.exports = {
     async createCourse(req, res) {
         try {
-            const materials = req.files.materials;
+            const materials = JSON.parse(req.fields.materials);
+            const files = req.files;
             const body = req.fields;
             const arrMaterials = [];
             let flagDate = true;
@@ -95,22 +96,16 @@ module.exports = {
                     const courseCreated = await CourseModel.create(body);
 
                     if (materials) {
-                        if (!materials.length) {
+                        const materialsArray = Array.isArray(materials)
+                            ? [...materials]
+                            : [materials];
+                        for (const material of materialsArray) {
                             const materialID = await uploadMaterial(
-                                materials,
+                                files[material],
                                 'CONTEUDISTA',
-                                `courses/${courseCreated._id}/materials`
+                                `courses/${courseCreated._id}body/materials`
                             );
                             arrMaterials.push(materialID);
-                        } else {
-                            for (const material of materials) {
-                                const materialID = await uploadMaterial(
-                                    material,
-                                    'CONTEUDISTA',
-                                    `courses/${courseCreated._id}/materials`
-                                );
-                                arrMaterials.push(materialID);
-                            }
                         }
                     }
 
@@ -205,9 +200,10 @@ module.exports = {
 
     async updateCourse(req, res) {
         try {
-            const materials = req.files.materials;
+            const materials = JSON.parse(req.fields.materials);
             const body = req.fields;
             const arrMaterials = [];
+            const files = req.files;
             let flagDate = true;
             body.tags = JSON.parse(body.tags);
             body.mandatory = JSON.parse(body.mandatory);
@@ -277,7 +273,7 @@ module.exports = {
                             : [materials];
                         for (const material of materialsArray) {
                             const materialID = await uploadMaterial(
-                                material,
+                                files[material],
                                 'CONTEUDISTA',
                                 `courses/${body._id}body/materials`
                             );
@@ -464,7 +460,8 @@ module.exports = {
                     '/createClass'
                 );
             } else {
-                const materials = req.files.materials;
+                const materials = JSON.parse(req.fields.materials);
+                const files = req.files;
                 const arrMaterials = [];
                 const trails = [];
                 let namesCourse = '';
@@ -512,7 +509,7 @@ module.exports = {
                                 : [materials];
                             for (const material of materialsArray) {
                                 const materialID = await uploadMaterial(
-                                    material,
+                                    files[material],
                                     'INSTRUTOR',
                                     `courses/${courseID}body/materials`
                                 );
@@ -576,7 +573,8 @@ module.exports = {
                 qrCodeSelfRegistration,
                 isSelfRegistrationEnabled,
             } = req.fields;
-            const materials = req.files.materials;
+            const materials = JSON.parse(req.fields.materials);
+            const files = req.files;
             const user = await getUserByToken(req);
             const currentMaterials = await ClassModel.findById(classID);
             const arrMaterials = currentMaterials.materials;
@@ -654,7 +652,7 @@ module.exports = {
                             : [materials];
                         for (const material of materialsArray) {
                             const materialID = await uploadMaterial(
-                                material,
+                                files[material],
                                 'INSTRUTOR',
                                 `courses/${courseID}body/materials`
                             );

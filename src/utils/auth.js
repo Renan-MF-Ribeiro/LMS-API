@@ -38,7 +38,7 @@ module.exports = {
             },
             PROJECT_SECRET_KEY,
             {
-                expiresIn: '1h',
+                expiresIn: '6h',
             }
         );
 
@@ -52,7 +52,7 @@ module.exports = {
             },
             PROJECT_SECRET_KEY,
             {
-                expiresIn: '1h',
+                expiresIn: '6h',
             }
         );
         return token;
