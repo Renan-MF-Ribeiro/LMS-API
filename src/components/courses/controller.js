@@ -50,14 +50,12 @@ module.exports = {
             body.tags = JSON.parse(body.tags);
             body.mandatory = JSON.parse(body.mandatory);
             body.certificateDue = JSON.parse(body.certificateDue);
-
             const dateInitialCourse = formatDateWithoutHours(
                 addHours(body.dateInitial)
             );
             const dataFinalCourse = formatDateWithoutHours(
                 addHours(body.dateFinal)
             );
-
             if (!body.passingScore || body.passingScore === 'null')
                 delete body.passingScore;
             if (dateInitialCourse > dataFinalCourse) flagDate = false;
@@ -92,7 +90,7 @@ module.exports = {
                     if (body.dateFinal) {
                         body.dateFinal = formatDateWithoutHours(body.dateFinal);
                     }
-
+                    delete body.materials;
                     const courseCreated = await CourseModel.create(body);
 
                     if (materials) {
@@ -125,6 +123,7 @@ module.exports = {
                 );
             }
         } catch (error) {
+            console.log(error);
             internalServer(
                 res,
                 req,
