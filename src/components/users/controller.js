@@ -355,6 +355,7 @@ module.exports = {
                     });
 
                     const token_happplace = generateHappPlaceToken({
+                        name: user.name,
                         networkLogin: user.networkLogin,
                         clientId: CLIENT_ID,
                     });
@@ -574,6 +575,7 @@ module.exports = {
                     });
 
                     const token_happplace = generateHappPlaceToken({
+                        name: user.name,
                         networkLogin: user.networkLogin,
                         clientId: CLIENT_ID,
                     });
