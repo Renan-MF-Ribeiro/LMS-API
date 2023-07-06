@@ -26,7 +26,10 @@ const {
     TrackingsItems,
 } = require('./model');
 const { HistoricEvaluation, Evaluation } = require('../assessments/model');
-const { getTagsElegiblesByToken } = require('../sections/business');
+const {
+    getTagsElegiblesByToken,
+    checkEligibilityTagsAnd,
+} = require('../sections/business');
 const { populateTrails } = require('../trails/business');
 const cryptoJS = require('crypto-js');
 const { Item } = require('../items/model');
@@ -326,12 +329,15 @@ const TrackingController = {
                     ) {
                         arrTrailsCompletedOrProgress.push(trail);
                     } else {
-                        if (trail.tags) {
-                            for (const tag of trail.tags) {
-                                const include = tags.filter(
-                                    t => t.value === tag.value,
+                        if (trail.tags.length || trail.tagsAnd.length) {
+                            if (
+                                checkEligibilityTagsAnd(
+                                    tags,
+                                    trail.tagsAnd,
+                                    trail.tags
                                 )
-                                if (include.length > 0) { arrTrailsCompletedOrProgress.push(trail) }
+                            ) {
+                                arrTrailsCompletedOrProgress.push(trail);
                             }
                         } else {
                             arrTrailsCompletedOrProgress.push(trail);
@@ -426,9 +432,9 @@ const TrackingController = {
             const tracking = await Tracking.findOne({ item, userLogin });
 
             if (tracking.kind === 'ExamTracking') {
-                const userFind = await User.findOne({ networkLogin })
-                const user = userFind._id
-                await HistoricEvaluation.deleteMany({ item, user })
+                const userFind = await User.findOne({ networkLogin });
+                const user = userFind._id;
+                await HistoricEvaluation.deleteMany({ item, user });
             }
 
             await Tracking.deleteMany({ item, userLogin });
