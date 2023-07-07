@@ -314,7 +314,7 @@ module.exports = {
     },
 
     clearString (text) {
-        return this.removeAccents(text).replace(/[\])}[{(]/g, '').split(' ').join('_')
+        return this.removeAccents(text).replace(/[\])}[{(]/g, '').split(' ').join('_').toUpperCase()
     },
 
     processTrailTracking (trail, allTrackingUser) {
