@@ -1052,22 +1052,15 @@ module.exports = {
                     ? existingUser.password
                     : processedUser.password;
 
-                if (existingUser) {
-                    const groupsAD = [
-                        ...processedUser.groupsAD,
-                        ...existingUser.groupsAD,
-                    ];
-                    existingUsers.push({
-                        _id: existingUser._id,
-                        processedUser: {
-                            ...processedUser,
-                            groupsAD: [...new Set(groupsAD)],
-                        },
-                    });
-                } else {
-                    usersToSend.push(account);
-                    newUsers.push(processedUser);
-                }
+                    if (existingUser) {
+                        existingUsers.push({
+                            _id: existingUser._id,
+                            processedUser,
+                        });
+                    } else {
+                        usersToSend.push(account);
+                        newUsers.push(processedUser);
+                    }
             }
 
             console.log(
