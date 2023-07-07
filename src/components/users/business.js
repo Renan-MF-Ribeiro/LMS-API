@@ -253,6 +253,30 @@ module.exports = {
         const roles = data.roles ? data.roles.split(',').map(item => item.trim()) : []
 
         const groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO']
+        const targetTags = [
+            'office', 
+            'vp', 
+            'locality',
+            'optionalEligibility1',
+            'optionalEligibility2',
+            'optionalEligibility3'
+        ]
+        targetTags.forEach(async (tag) => {
+            if(!!data[tag]) {
+                const value = `ELEGE_${_functions.clearString(data[tag])}`
+                groupsAD.push(value)
+                const group = await Group.findOne({ name: value })
+                if (!group) {
+                    await Group.create({ 
+                        name: value,
+                        tags: [{
+                            display: value,
+                            value: value
+                        }] 
+                    })
+                }
+            } 
+        });
         
         const elegibility = !data.company && !data.office ? [] : [
             `ELEGE_${_functions.clearString(data.company)}`,
