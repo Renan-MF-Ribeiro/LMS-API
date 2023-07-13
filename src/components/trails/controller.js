@@ -35,6 +35,7 @@ const {
     keepLearningSections,
     concludedSections,
     checkEligibilityTagsAnd,
+    getTagsElegiblesByToken,
 } = require('../sections/business');
 
 module.exports = {
@@ -191,7 +192,7 @@ module.exports = {
         try {
             const findValue = req.params.trailId;
             const user = await getUserByToken(req);
-            const tags = await getTagsGroupsByToken(req);
+            const tags = await getTagsElegiblesByToken(req);
             const allTrackingUser = await Tracking.find({
                 userLogin: { $eq: user.networkLogin },
             });
@@ -1107,7 +1108,7 @@ module.exports = {
             var dtInicio = new Date();
 
             const user = await getUserByToken(req);
-            const tags = await getTagsGroupsByToken(req);
+            const tags = await getTagsElegiblesByToken(req);
             let banners = [];
             const itemsIDProcessados = [];
 
@@ -1189,7 +1190,7 @@ module.exports = {
             var dtInicio = new Date();
 
             const user = await getUserByToken(req);
-            const tags = await getTagsGroupsByToken(req);
+            const tags = await getTagsElegiblesByToken(req);
             let banners = [];
             const itemsID = [];
             for (const tag of user.tags) {
