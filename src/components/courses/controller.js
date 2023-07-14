@@ -58,6 +58,8 @@ module.exports = {
             );
             if (!body.passingScore || body.passingScore === 'null')
                 delete body.passingScore;
+            if (!body.certificateLayout || body.certificateLayout === 'null')
+                delete body.certificateLayout;
             if (dateInitialCourse > dataFinalCourse) flagDate = false;
 
             if (flagDate) {
