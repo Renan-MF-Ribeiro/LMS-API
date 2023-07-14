@@ -220,6 +220,7 @@ module.exports = {
                 );
                 return;
             }
+
             const trail = processExpirationDate(trails[0], user);
             let durationHours = 0;
             for (const item of trail.items) {
@@ -1135,6 +1136,7 @@ module.exports = {
                     enabled: true,
                     $or: [
                         { tags: { $in: tags } },
+                        { tagsAnd: { $in: tags } },
                         { mandatory: { $in: tags } },
                     ],
                     'items.itemID': { $in: arrItemsID },
@@ -1204,6 +1206,7 @@ module.exports = {
                     enabled: true,
                     $or: [
                         { tags: { $in: tags } },
+                        { tagsAnd: { $in: tags } },
                         { mandatory: { $in: tags } },
                     ],
                 },
