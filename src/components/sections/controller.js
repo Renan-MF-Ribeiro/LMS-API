@@ -70,7 +70,8 @@ module.exports = {
                 title: { $eq: req.body.title },
             });
             if (verify.length === 0) {
-                const section = await Section.create(req.body);
+                const position = await Section.find({ deleted: 0 }).count()
+                const section = await Section.create({...req.body, position });
                 _messages.success(
                     res,
                     req,
