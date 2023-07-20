@@ -6,7 +6,7 @@ module.exports = {
     async generate(req, res) {
         try {
             const user = await getUserByToken(req);
-            const uri = `${process.env.API_CONNECT}/system-users`;
+            const uri = `${process.env.API_CONNECT}/system-users/${process.env.CLIENT_ID}`;
             const { data } = await axios.post(
                 uri,
                 {
@@ -15,9 +15,6 @@ module.exports = {
                 {
                     headers: {
                         'system-user-key': process.env.CONNECT_CLIENT_KEY,
-                    },
-                    params: {
-                        clientId: process.env.CLIENT_ID,
                     },
                 }
             );
