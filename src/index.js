@@ -81,28 +81,32 @@ const showCaseRoutes = require("./components/showcase/routes");
 const channelRoutes = require("./components/channels/routes");
 const newMessagesRoutes = require('./components/new-messages/routes')
 const gamificationRoutes = require('./components/gamification/routes')
+const systemUsersRoutes = require('./components/system-users/routes');
 
-app.use("/items", validateTokenRoute, itemsRoutes)
-    .use("/tracking", validateTokenRoute, trackingRoutes)
-    .use("/trails", validateTokenRoute, trailsRoutes)
-    .use("/evaluations", validateTokenRoute, assessmentsRoutes)
-    .use("/sections", validateTokenRoute, sectionsRoutes)
-    .use("/users", usersRoutes)
-    .use("/groups", validateTokenRoute, groupsRoutes)
-    .use("/profiles", validateTokenRoute, profilesRoutes)
-    .use("/courses", validateTokenRoute, coursesRoutes)
-    .use("/onboarding", validateTokenRoute, onboardingRoutes)
-    .use("/reports", reportsRoutes)
-    .use("/home", validateTokenRoute, homeRoutes)
-    .use("/crons", validateTokenRoute, cronRoutes)
-    .use("/logs", validateTokenRoute, logsRoutes)
-    .use("/xapi", validateTokenRoute, xapiRoutes)
-    .use("/suppliers", supplierRoutes)
-    .use("/terms-of-use", validateTokenRoute, termsOfUseRoutes)
-    .use("/channels", validateTokenRoute, channelRoutes)
-    .use("/messages", validateTokenRoute, messagesRoutes)
-    .use("/messages/v2", validateTokenRoute, newMessagesRoutes)
-    .use("/gamification", validateTokenRoute, gamificationRoutes);
+
+app.use('/items', validateTokenRoute, itemsRoutes)
+    .use('/tracking', validateTokenRoute, trackingRoutes)
+    .use('/trails', validateTokenRoute, trailsRoutes)
+    .use('/evaluations', validateTokenRoute, assessmentsRoutes)
+    .use('/sections', validateTokenRoute, sectionsRoutes)
+    .use('/users', usersRoutes)
+    .use('/groups', validateTokenRoute, groupsRoutes)
+    .use('/profiles', validateTokenRoute, profilesRoutes)
+    .use('/courses', validateTokenRoute, coursesRoutes)
+    .use('/onboarding', validateTokenRoute, onboardingRoutes)
+    .use('/reports', reportsRoutes)
+    .use('/home', validateTokenRoute, homeRoutes)
+    .use('/crons', validateTokenRoute, cronRoutes)
+    .use('/logs', validateTokenRoute, logsRoutes)
+    .use('/xapi', validateTokenRoute, xapiRoutes)
+    .use('/suppliers', supplierRoutes)
+    .use('/terms-of-use', validateTokenRoute, termsOfUseRoutes)
+    .use('/channels', validateTokenRoute, channelRoutes)
+    .use('/messages', validateTokenRoute, messagesRoutes)
+    .use('/messages/v2', validateTokenRoute, newMessagesRoutes)
+    .use('/gamification', validateTokenRoute, gamificationRoutes)
+    .use('/system-users', validateTokenRoute, systemUsersRoutes);
+
 
 if (config.showcase.active) {
     app.use("/showcase", showCaseRoutes);
