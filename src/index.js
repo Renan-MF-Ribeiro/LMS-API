@@ -104,7 +104,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/messages', validateTokenRoute, messagesRoutes)
     .use('/messages/v2', validateTokenRoute, newMessagesRoutes)
     .use('/gamification', validateTokenRoute, gamificationRoutes)
-    .use('/apikey', validateTokenRoute, systemUsersRoutes);
+    .use('/connect-key', validateTokenRoute, systemUsersRoutes);
 
 if (config.showcase.active) {
     app.use('/showcase', showCaseRoutes);

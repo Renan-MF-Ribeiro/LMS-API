@@ -5,4 +5,4 @@ const { isAdmin } = require('../../utils/middlewares');
 module.exports = express
     .Router()
     .get('/', isAdmin, _controller.getActive)
-    .get('/newkey', isAdmin, _controller.generate);
+    .get('/generate', isAdmin, _controller.generate);
