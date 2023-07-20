@@ -1,8 +1,8 @@
-const express = require('express')
-const _controller = require('./controller')
-const { isAdmin } = require('../../utils/middlewares')
+const express = require('express');
+const _controller = require('./controller');
+const { isAdmin } = require('../../utils/middlewares');
 
 module.exports = express
     .Router()
-    .post('/generate', isAdmin, _controller.generate)
-    .get('/active', isAdmin, _controller.getActive)
+    .get('/', isAdmin, _controller.getActive)
+    .get('/newkey', isAdmin, _controller.generate);
