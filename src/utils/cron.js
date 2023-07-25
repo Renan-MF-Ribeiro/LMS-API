@@ -7,6 +7,7 @@ const { Message } = require('../components/new-messages/model');
 const { Group } = require('../components/groups/model');
 const { populateTrails } = require('../components/trails/business');
 const { Tracking } = require('../components/tracking/model');
+const { Trail } = require('../components/trails/model');
 const moment = require('moment');
 const {
     isSCORMCompleted,
@@ -18,6 +19,7 @@ const {
     calculateDiffDate,
     formatNumberCpf,
     getDateToday,
+    findMostOccurringElements,
 } = require('./functions');
 const {
     getTagsElegibles,
@@ -51,6 +53,7 @@ const { uploadFileDegreed } = require('./ftp');
 const {
     notifyResponsibleUsers,
 } = require('../components/new-messages/controller');
+const { Section } = require('../components/sections/model');
 
 const emailTemplate = config.messenger.emailTemplate;
 const groupingA = config.cron.average.groupA;
@@ -142,6 +145,20 @@ module.exports = {
         }
     },
 
+    cronUpdateRecommendedTrails() {
+        if (config.cron.recommendedTrails.active) {
+            new CronJob(
+                '00 00 * * * ',
+                () => {
+                    recommendedTrailsCron();
+                },
+                null,
+                true,
+                'America/Sao_Paulo'
+            );
+        }
+    },
+
     updateUserTemporaryTags() {
         new CronJob(
             '00 00 * * * ',
@@ -209,6 +226,10 @@ module.exports = {
         revokeTrail();
     },
 
+    executeRecommendedTrails() {
+        recommendedTrailsCron()
+    },
+
     executeCourseReleaseNotification() {
         courseReleaseCron();
     },
@@ -224,6 +245,22 @@ module.exports = {
         examTrackingDeleteCron();
     },
 };
+
+async function recommendedTrailsCron() {
+    try {
+        const completedTrackingsFromTheLastDay = await Tracking.find({ "completionAt": { $ne: null }, "createdAt": { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } })
+        const trails = []
+        for (const t of completedTrackingsFromTheLastDay) {
+            const trail = await Trail.findOne({ "items.itemID": { $in: t.item } })
+
+            trails.push(trail._id)
+        }
+        const recommendedTrails = findMostOccurringElements(trails, 5);
+        await Section.findOneAndUpdate({defaultType: "most_completed"}, {$set: {trails: recommendedTrails}})
+    } catch (error) {
+        console.log(error)
+    }
+}
 
 async function averageRating() {
     try {
@@ -380,7 +417,7 @@ function groupCron(usersLastLogin, grouping) {
                 const averageCompanyCourses =
                     numberTrailsElegiblesCompany > 0
                         ? (numberTrailsCompletedCompany * 100) /
-                          numberTrailsElegiblesCompany
+                        numberTrailsElegiblesCompany
                         : 0;
 
                 const log = await AverageCourses.findOne({
@@ -891,7 +928,7 @@ async function cronDegreedCharge(hours) {
                         'pt',
                         String(
                             Math.ceil((itemDetails.durationHours / 60) * 10) /
-                                10
+                            10
                         )
                             .split('.')
                             .join(','),
@@ -1024,8 +1061,8 @@ async function revokeTrail() {
                     const startDate = new Date(lastCompletionAt);
                     const expirationDate = !isFixed
                         ? moment(startDate)
-                              .add(trail.certificateDue.value, 'days')
-                              .toDate()
+                            .add(trail.certificateDue.value, 'days')
+                            .toDate()
                         : new Date(trail.certificateDue.value);
 
                     return {

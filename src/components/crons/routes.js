@@ -10,7 +10,8 @@ const {
     executeCourseReleaseNotification,
     executeUsersCron,
     executeDeleteTrackingCron,
-    executeCronRevokeTrail
+    executeCronRevokeTrail,
+    executeRecommendedTrails
 } = require('./controller')
 
 router
@@ -24,5 +25,6 @@ router
     .get('/charge', executeCourseChargeNotification)
     .get('/exam-tracking-delete', executeDeleteTrackingCron)
     .get('/revoke-trails', executeCronRevokeTrail)
+    .get('/recommended-trails', executeRecommendedTrails)
 
 module.exports = router

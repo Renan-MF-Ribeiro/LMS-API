@@ -425,6 +425,17 @@ module.exports = {
         return d instanceof Date && !isNaN(d)
     },
 
+    findMostOccurringElements(arr, numElements){
+        const countMap = arr.reduce((countMap, element) => {
+          countMap[element] = (countMap[element] || 0) + 1;
+          return countMap;
+        }, {});
+        const countArray = Object.entries(countMap);
+        countArray.sort((a, b) => b[1] - a[1]);
+        const mostOccurringElements = countArray.slice(0, numElements);
+        return mostOccurringElements.map(([element]) => element);
+    },
+
 }
 
 function nameMonth (month) {

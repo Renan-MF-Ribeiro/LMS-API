@@ -10,6 +10,7 @@ const {
     executeCronUsers,
     executeExamDeleteTrackingCron,
     executeRevokeTrail,
+    executeRecommendedTrails
 } = require('../../utils/cron');
 
 module.exports = {
@@ -129,6 +130,15 @@ module.exports = {
     async executeCronRevokeTrail(req, res) {
         if (config.cron.revokeTrail.active) {
             executeRevokeTrail();
+            res.status(200).json('CRON INICIADO COM SUCESSO');
+        } else {
+            res.status(500).json('FUNCIONALIDADE INATIVA');
+        }
+    },
+
+    async executeRecommendedTrails(req, res) {
+        if (config.cron.recommendedTrails.active) {
+            executeRecommendedTrails();
             res.status(200).json('CRON INICIADO COM SUCESSO');
         } else {
             res.status(500).json('FUNCIONALIDADE INATIVA');
