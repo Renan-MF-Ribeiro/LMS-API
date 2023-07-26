@@ -38,12 +38,12 @@ module.exports = {
             const sections = await Section.find(
                 searchBy
                     ? {
-                          $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-                          deleted: { $eq: 0 },
-                      }
+                        $or: [{ title: { $regex: searchBy, $options: 'i' } }],
+                        deleted: { $eq: 0 },
+                    }
                     : {
-                          deleted: { $eq: 0 },
-                      }
+                        deleted: { $eq: 0 },
+                    }
             )
                 .sort({ position: 'asc' })
                 .populate(populateTrails);
@@ -71,7 +71,7 @@ module.exports = {
             });
             if (verify.length === 0) {
                 const position = await Section.find({ deleted: 0 }).count()
-                const section = await Section.create({...req.body, position });
+                const section = await Section.create({ ...req.body, position });
                 _messages.success(
                     res,
                     req,

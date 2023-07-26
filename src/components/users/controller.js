@@ -15,15 +15,19 @@ const {
 
 const {
     generateToken,
+    generateMfaToken,
     generateSSOToken,
     decodeToken,
     validateToken,
     validateTokenNginx,
+    validateMfaToken,
     returnIdProfileUser,
     returnIdGroupUser,
     generateTokenAnalytics,
     generateSASToken,
     generateHappPlaceToken,
+    generateMultiFactor,
+    validateMultiFactor,
 } = require('../../utils/auth');
 
 const {
@@ -55,6 +59,7 @@ const {
     sendSignupActivationEmail,
     sendNotificationEmail,
     sendResetedPasswordToUser,
+    sendMultiFactorToUser,
 } = require('../../utils/email');
 
 const axios = require('axios');
@@ -2117,6 +2122,52 @@ module.exports = {
                 'users',
                 'conteudistas'
             );
+        }
+    },
+
+
+    async generateMultiFactor (req, res) {
+        try {
+            const { networkLogin } = req.body
+            const user = await User.findOne({ networkLogin: networkLogin })
+            const tokenAndSecret = await generateMultiFactor(user.name, networkLogin)
+            if(user.alternativeEmail){
+                await sendMultiFactorToUser(user.email, user, tokenAndSecret.newToken.token)
+                await sendMultiFactorToUser(user.alternativeEmail, user, tokenAndSecret.newToken.token)
+            } else {
+                await sendMultiFactorToUser(user.email, user, tokenAndSecret.newToken.token)
+            }
+            _messages.success(res, req, tokenAndSecret.newSecret.secret)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'conteudistas')
+        }
+    },
+
+    async validateMultiFactor (req, res) {
+        try {
+            const user = await getUserByToken(req)
+            const { secret, token } = req.body
+            const mfaToken = req.headers.mfatoken
+            const payload = jwt.decode(mfaToken)
+            const validationReturn = await validateMultiFactor(secret, token)
+            let mfaJwt
+            if (validationReturn && validationReturn.delta >= -5 && payload.data.ref == user._id) {
+                mfaJwt = generateMfaToken({ mfa: true, ref: user._id})
+                _messages.success(res, req, mfaJwt)
+            } else {
+                _messages.forbidden(res, req, 'Token inválido', 'Token inválido!', 'users', 'ldapSignIn')
+            }
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'conteudistas')
+        }
+    },
+
+    async validateMfaToken (req, res) {
+        try {
+            const isTokenValid = await validateMfaToken(req)
+            _messages.success(res, req, isTokenValid)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'conteudistas')
         }
     },
 };

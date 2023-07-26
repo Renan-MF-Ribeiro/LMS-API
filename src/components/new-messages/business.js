@@ -50,6 +50,32 @@ module.exports = {
         }
     },
 
+    async sendMfaToKafka (campaign, users) {
+        try {
+            const producer = kafka.producer()
+            await producer.connect()
+            const messages = []
+            for (const user of users) {
+                const stringMessage = JSON.stringify(await processMessage(campaign, user))
+                messages.push({ value: stringMessage })
+            }
+            const chunk = 10
+            for (let i = 0; i < messages.length; i += chunk) {
+                console.log(process.env.TOPIC_MFA)
+                const temporary = messages.slice(i, i + chunk)
+                await producer.send({
+                    topic: process.env.TOPIC_MFA,
+                    messages: temporary,
+                })
+            }
+            
+            await producer.disconnect()
+        } catch (error) {
+            console.error(error)
+            throw error
+        }
+    },
+
     async getUserList(trailFilters, userFilter) {
         let dbCounter = 0;
 
