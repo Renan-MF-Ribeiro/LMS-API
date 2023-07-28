@@ -1508,7 +1508,6 @@ module.exports = {
 
             for (let file of fileArray) {
                 let path = await azureBlob(file, 'trails/material');
-                path = path.replace(AZURE_BLOB_URL, DOMAIN);
                 const material = {
                     _id: new mongoose.Types.ObjectId(),
                     url: path,

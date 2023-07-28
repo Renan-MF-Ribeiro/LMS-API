@@ -118,9 +118,10 @@ module.exports = {
         const blockBlobClient = containerClient.getBlockBlobClient(filePath)
         const blobOptions = { blobHTTPHeaders: { blobContentType: fileType } }
         const uploadBlobResponse = await blockBlobClient.uploadStream(file$, file.size, undefined, blobOptions)
+        const url = decodeURIComponent(blockBlobClient.url)
 
-        return decodeURIComponent(blockBlobClient.url)
-        // })
+        url = process.env.NODE_ENV === 'local' ? url : url.replace(AZURE_BLOB_URL, DOMAIN);
+        return url
     },
 
     async getAzureFile () {

@@ -710,11 +710,7 @@ const TrackingController = {
 
             const { file } = req.files;
             activityPath = await azureBlob(file, 'items/activity');
-            activityPath =
-                process.env.NODE_ENV === 'local'
-                    ? activityPath
-                    : activityPath.replace(AZURE_BLOB_URL, DOMAIN);
-
+            
             if (tracking.lessonStatus == 'failed') {
                 await ActivityTracking.findOneAndUpdate(
                     { _id: tracking._id },

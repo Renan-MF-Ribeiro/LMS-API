@@ -96,18 +96,10 @@ const ItemController = {
 
                     if (thumb) {
                         thumbPath = await azureBlob(thumb, 'items/thumbs');
-                        thumbPath =
-                            process.env.NODE_ENV === 'local'
-                                ? thumbPath
-                                : thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
                     }
 
                     if (banner) {
                         bannerPath = await azureBlob(banner, 'items/banners');
-                        bannerPath =
-                            process.env.NODE_ENV === 'local'
-                                ? bannerPath
-                                : bannerPath.replace(AZURE_BLOB_URL, DOMAIN);
                     }
 
                     if (
@@ -367,18 +359,10 @@ const ItemController = {
 
                     if (thumb) {
                         thumbPath = await azureBlob(thumb, 'items/thumbs');
-                        thumbPath =
-                            process.env.NODE_ENV === 'local'
-                                ? thumbPath
-                                : thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
                     }
 
                     if (banner) {
                         bannerPath = await azureBlob(banner, 'items/banners');
-                        bannerPath =
-                            process.env.NODE_ENV === 'local'
-                                ? bannerPath
-                                : bannerPath.replace(AZURE_BLOB_URL, DOMAIN);
                     }
 
                     if (
@@ -540,18 +524,10 @@ const ItemController = {
 
                     if (thumb) {
                         thumbPath = await azureBlob(thumb, 'items/thumbs');
-                        thumbPath =
-                            process.env.NODE_ENV === 'local'
-                                ? thumbPath
-                                : thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
                     }
 
                     if (banner) {
                         bannerPath = await azureBlob(banner, 'items/banners');
-                        bannerPath =
-                            process.env.NODE_ENV === 'local'
-                                ? bannerPath
-                                : bannerPath.replace(AZURE_BLOB_URL, DOMAIN);
                     }
 
                     if (payload.kind !== 'MediaItem') {
