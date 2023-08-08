@@ -106,7 +106,27 @@ const GamificationController = {
         }
     },
 
-    async getExtract(req, res) {
+    async getExtractByClient(req, res) {
+        if (config.gamification.active) {
+            try {
+                const host = process.env.API_GAMIFICATION;
+                const clientId = process.env.CLIENT_ID;
+                const query = new URLSearchParams(req.query);
+                const uri = `${host}/event-users/${clientId}?${query}`;
+                const { data } = await axios.get(uri, {
+                    headers: {
+                        'x-api-key': process.env.API_KEY_GAMIFICATION,
+                    },
+                });
+
+                return _messages.success(res, req, data);
+            } catch (error) {
+                return _messages.badRequest(res, req, error);
+            }
+        }
+    },
+
+    async getExtractByUser(req, res) {
         if (config.gamification.active) {
             try {
                 const { networkLogin } = req.params;
