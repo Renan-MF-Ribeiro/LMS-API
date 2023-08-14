@@ -359,6 +359,11 @@ module.exports = {
                         clientID: CLIENT_ID,
                     });
 
+                    const token_mfa = generateMfaToken({
+                        ref: user._id,
+                        mfa: false,
+                    })
+
                     const token_happplace = generateHappPlaceToken({
                         name: user.name,
                         networkLogin: user.networkLogin,
@@ -400,6 +405,7 @@ module.exports = {
                             profilePhoto: user.profilePhoto,
                             tokenAnalytics: token_analytics,
                             tokenHappPlace: token_happplace,
+                            mfaToken: token_mfa,
                             networkLogin: user.networkLogin,
                             userId: user._id,
                         },
@@ -574,6 +580,11 @@ module.exports = {
                         groups: groupsIDS,
                     });
 
+                    const token_mfa = generateMfaToken({
+                        ref: user._id,
+                        mfa: false,
+                    })
+
                     const token_analytics = generateTokenAnalytics({
                         perfil: profilesIDS.numbers,
                         clientID: CLIENT_ID,
@@ -618,6 +629,7 @@ module.exports = {
                             name: user.name,
                             profilePhoto: user.profilePhoto,
                             tokenAnalytics: token_analytics,
+                            mfaToken: token_mfa,
                             tokenHappPlace: token_happplace,
                             networkLogin: user.networkLogin,
                             userId: user._id,
