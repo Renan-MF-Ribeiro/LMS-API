@@ -2,7 +2,7 @@
 require('dotenv').config();
 const ldap = require('ldapjs');
 const jwt = require('jsonwebtoken');
-const twofactor = require('node-2fa')
+const twofactor = require('node-2fa');
 const { promisify } = require('util');
 const { error } = require('../utils/logger');
 const {
@@ -46,16 +46,18 @@ module.exports = {
         return token;
     },
 
-    generateMfaToken: obj => {
-        const token = jwt.sign({
-            data: obj,
-        },
-        PROJECT_SECRET_KEY, {
-            expiresIn: '6h',
-        },
-        )
+    generateMfaToken: (obj) => {
+        const token = jwt.sign(
+            {
+                data: obj,
+            },
+            PROJECT_SECRET_KEY,
+            {
+                expiresIn: '6h',
+            }
+        );
 
-        return token
+        return token;
     },
 
     generateSSOToken: (obj) => {
@@ -217,22 +219,22 @@ module.exports = {
         });
     },
 
-    validateMfaToken: req => {
-        return new Promise(resolve => {
+    validateMfaToken: (req) => {
+        return new Promise((resolve) => {
             try {
-                const token = req.headers.mfatoken
-                const payload = jwt.decode(token)
+                const token = req.headers.mfatoken;
+                const payload = jwt.decode(token);
                 jwt.verify(token, PROJECT_SECRET_KEY, function (err) {
                     if (err || !payload.data.mfa) {
-                        resolve(false)
+                        resolve(false);
                     } else {
-                        resolve(true)
+                        resolve(true);
                     }
-                })
+                });
             } catch (error) {
-                resolve(false)
+                resolve(false);
             }
-        })
+        });
     },
 
     validateTokenNginx: (token) => {
@@ -274,26 +276,26 @@ module.exports = {
         });
     },
 
-    async generateMultiFactor (name, account) {
+    async generateMultiFactor(name, account) {
         try {
-            const newSecret = twofactor.generateSecret({ name, account })
+            const newSecret = twofactor.generateSecret({ name, account });
 
-            const newToken = twofactor.generateToken(newSecret.secret)
+            const newToken = twofactor.generateToken(newSecret.secret);
 
-            return { newSecret, newToken }
+            return { newSecret, newToken };
         } catch (error) {
-            console.log(error)
-            return error
+            console.log(error);
+            return error;
         }
     },
 
-    async validateMultiFactor (secret, token) {
+    async validateMultiFactor(secret, token) {
         try {
-            const validation = twofactor.verifyToken(secret, token, 5)
-            return validation
+            const validation = twofactor.verifyToken(secret, token, 5);
+            return validation;
         } catch (error) {
-            console.log(error)
-            return error
+            console.log(error);
+            return error;
         }
     },
 };
@@ -304,7 +306,7 @@ function returnNumberOfProfile(profile) {
         case 'PERFIL_Integrador':
             number = 1;
             break;
-        case 'PERFIL_Intrutor':
+        case 'PERFIL_Instrutor':
             number = 2;
             break;
         case 'PERFIL_Admin':
