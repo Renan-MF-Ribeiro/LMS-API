@@ -20,7 +20,7 @@ var corsOptions = {
         'https://monitoring.happlearning.com.br',
     ],
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Range', 'X-CSRF-TOKEN', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Range', 'X-CSRF-TOKEN', 'Authorization', 'Mfatoken'],
     exposedHeaders: [
         'Accept-Ranges',
         'Content-Encoding',
