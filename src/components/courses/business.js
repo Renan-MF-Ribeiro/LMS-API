@@ -265,23 +265,21 @@ module.exports = {
     },
 
     checkEligibility(eligibilityUser, tagsAnd, tagsOr) {
-        const eligibilitytagsAnd = eligibilityUser.some((eligibility) =>
-            tagsAnd.some((m) => m.value === eligibility)
+        const eligibilitytagsAnd = eligibilityUser.map(
+            (eligibility) => eligibility.value
         );
 
-        if (eligibilitytagsAnd) {
+        if (tagsAnd.length > 0) {
             const allEligibilitytagsAnd = tagsAnd.every((eligibility) =>
-                eligibilityUser.includes(eligibility.value)
+                eligibilitytagsAnd.includes(eligibility.value)
             );
-
             if (allEligibilitytagsAnd) {
                 return true; // Acesso permitido
             }
         } else {
-            const eligibilityTag = eligibilityUser.some((eligibility) =>
+            const eligibilityTag = eligibilitytagsAnd.some((eligibility) =>
                 tagsOr.some((tag) => tag.value === eligibility)
             );
-
             if (eligibilityTag) {
                 return true; // Acesso permitido
             }

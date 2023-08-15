@@ -1,4 +1,4 @@
-const { User } = require('../users/model');
+const { User, groups } = require('../users/model');
 
 const {
     CourseModel,
@@ -37,6 +37,8 @@ const {
 const {
     checkItemCompleted,
     getTrailCompletion,
+    getTagsElegiblesByToken,
+    getTagsElegibles,
 } = require('../sections/business');
 
 module.exports = {
@@ -219,6 +221,8 @@ module.exports = {
 
             if (!body.passingScore || body.passingScore === 'null')
                 body.passingScore = null;
+            if (!body.certificateLayout || body.certificateLayout === 'null')
+                body.certificateLayout = null;
 
             if (dateInitialCourse > dataFinalCourse) flagDate = false;
 
@@ -821,53 +825,66 @@ module.exports = {
         try {
             const { searchBy } = req.query;
             const { skip, limit } = pagination(req);
+            const { id } = req.params;
+            const now = new Date().toISOString();
 
-            const users = searchBy
-                ? await User.find({
-                      status: 'ATIVO',
-                      $or: [
-                          { name: { $regex: searchBy, $options: 'i' } },
-                          { networkLogin: { $regex: searchBy, $options: 'i' } },
-                          { registration: { $regex: searchBy, $options: 'i' } },
-                      ],
-                  })
-                      .skip(parseInt(skip))
-                      .limit(parseInt(limit))
-                      .sort({ name: 1 })
-                : await User.find({
-                      status: 'ATIVO',
-                  })
-                      .skip(parseInt(skip))
-                      .limit(parseInt(limit))
-                      .sort({ name: 1 });
+            const course = await CourseModel.findById(id);
+            const courseTags = course.tags;
 
-            const total = searchBy
-                ? await User.countDocuments()
-                      .find({
-                          status: 'ATIVO',
-                          $or: [
-                              { name: { $regex: searchBy, $options: 'i' } },
-                              {
-                                  networkLogin: {
-                                      $regex: searchBy,
-                                      $options: 'i',
-                                  },
-                              },
-                              {
-                                  registration: {
-                                      $regex: searchBy,
-                                      $options: 'i',
-                                  },
-                              },
-                          ],
-                      })
-                      .count()
-                : await User.find({
-                      status: 'ATIVO',
-                  }).count();
+            const groupsWithSameTagsAsCourse = await Group.find({
+                tags: { $in: courseTags },
+            });
+            const groupsNames = groupsWithSameTagsAsCourse.map(
+                (group) => group.name
+            );
+
+            const courseTagsValues = courseTags.map(
+                (courseTag) => courseTag.value
+            );
+
+            const inGroupsAdOrClassGroup = {
+                $or: [
+                    { groupsAD: { $in: groupsNames } },
+                    {
+                        classGroups: {
+                            $elemMatch: {
+                                groupCode: { $in: courseTagsValues },
+                                status: 2,
+                                startDate: { $lte: now },
+                                limitDate: { $gte: now },
+                            },
+                        },
+                    },
+                ],
+            };
+
+            const usersQuery = {
+                status: 'ATIVO',
+                $and: [inGroupsAdOrClassGroup],
+            };
+
+            if (searchBy) {
+                const searchByQuery = {
+                    $or: [
+                        { name: { $regex: searchBy, $options: 'i' } },
+                        { networkLogin: { $regex: searchBy, $options: 'i' } },
+                        { registration: { $regex: searchBy, $options: 'i' } },
+                    ],
+                };
+                usersQuery.$and.push(searchByQuery);
+            }
+            // console.log(usersQuery);
+
+            const users = await User.find(usersQuery)
+                .skip(parseInt(skip))
+                .limit(parseInt(limit))
+                .sort({ name: 1 });
+
+            const total = await User.find(usersQuery).count();
 
             success(res, req, { data: users, total });
         } catch (error) {
+            console.error(error);
             internalServer(
                 res,
                 req,
@@ -1039,25 +1056,30 @@ module.exports = {
     async getCourseByQrCodeSelfRegistration(req, res) {
         try {
             const { body } = req;
-            const { _id, groupsAD } = await getUserByToken(req);
-
+            const { _id } = await getUserByToken(req);
+            const tags = await getTagsElegiblesByToken(req);
             const course = await ClassModel.findOne({
                 qrCodeSelfRegistration: { $eq: body.qrcode },
             }).populate('courseID', ['title', 'tags', 'mandatory']);
 
+            if (!course)
+                return badRequest(
+                    res,
+                    req,
+                    'Turma indisponível.',
+                    'Turma indisponível.',
+                    'courses',
+                    '/getCourseByQrCodeSelfRegistration'
+                );
+
             const eligibility = checkEligibility(
-                groupsAD,
+                tags,
                 course.courseID.mandatory,
                 course.courseID.tags
             );
 
-            if (eligibility) {
-                const register = course.users.find((user) => user.userID == _id)
-                    ? true
-                    : false;
-                success(res, req, register ? 'registered' : course);
-            } else {
-                badRequest(
+            if (!eligibility)
+                return badRequest(
                     res,
                     req,
                     'O aluno não está elegivel a este treinemento',
@@ -1065,7 +1087,12 @@ module.exports = {
                     'courses',
                     '/getCourseByQrCodeSelfRegistration'
                 );
-            }
+
+            const register = course.users.find((user) => user.userID == _id)
+                ? true
+                : false;
+
+            success(res, req, register ? 'registered' : course);
         } catch (error) {
             internalServer(
                 res,
