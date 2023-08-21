@@ -115,10 +115,33 @@ const CourseEvaluationModel = mongoose.model(
     CourseEvaluationSchema
 );
 
+const vwCoursesWithTagsAndUsers = new mongoose.Schema({
+    title: { type: String, required: true, trim: true },
+    tags: { type: Array },
+    mandatory: { type: Array },
+    tagGroups: { type: Array },
+    mandatoryGroups: { type: Array },
+    user: {
+        type: {
+            name: { type: String, required: true },
+            networkLogin: { type: String, required: false, default: null },
+            email: { type: String, required: true },
+            createdAt: { type: Date },
+        },
+        required: true,
+    },
+});
+const CoursesWithTagsAndUsers = mongoose.model(
+    'vwCoursesWithTagsAndUsers',
+    vwCoursesWithTagsAndUsers,
+    'vwCoursesWithTagsAndUsers'
+);
+
 module.exports = {
     CourseModel,
     MaterialModel,
     ClassModel,
     ProgramModel,
     CourseEvaluationModel,
+    CoursesWithTagsAndUsers,
 };

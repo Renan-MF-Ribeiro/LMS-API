@@ -6,6 +6,7 @@ const {
     MaterialModel,
     ProgramModel,
     CourseEvaluationModel,
+    CoursesWithTagsAndUsers,
 } = require('./model');
 
 const { Group, InstructorGroup } = require('../groups/model');
@@ -826,61 +827,38 @@ module.exports = {
             const { searchBy } = req.query;
             const { skip, limit } = pagination(req);
             const { id } = req.params;
-            const now = new Date().toISOString();
 
-            const course = await CourseModel.findById(id);
-            const courseTags = course.tags;
-
-            const groupsWithSameTagsAsCourse = await Group.find({
-                tags: { $in: courseTags },
-            });
-            const groupsNames = groupsWithSameTagsAsCourse.map(
-                (group) => group.name
-            );
-
-            const courseTagsValues = courseTags.map(
-                (courseTag) => courseTag.value
-            );
-
-            const inGroupsAdOrClassGroup = {
-                $or: [
-                    { groupsAD: { $in: groupsNames } },
-                    {
-                        classGroups: {
-                            $elemMatch: {
-                                groupCode: { $in: courseTagsValues },
-                                status: 2,
-                                startDate: { $lte: now },
-                                limitDate: { $gte: now },
+            const query = { $and: [{ _id: id }, { 'user.status': 'ATIVO' }] };
+            if (searchBy) {
+                query.$and.push({
+                    $or: [
+                        { 'user.name': { $regex: searchBy, $options: 'i' } },
+                        {
+                            'user.networkLogin': {
+                                $regex: searchBy,
+                                $options: 'i',
                             },
                         },
-                    },
-                ],
-            };
-
-            const usersQuery = {
-                status: 'ATIVO',
-                $and: [inGroupsAdOrClassGroup],
-            };
-
-            if (searchBy) {
-                const searchByQuery = {
-                    $or: [
-                        { name: { $regex: searchBy, $options: 'i' } },
-                        { networkLogin: { $regex: searchBy, $options: 'i' } },
-                        { registration: { $regex: searchBy, $options: 'i' } },
+                        {
+                            'user.registration': {
+                                $regex: searchBy,
+                                $options: 'i',
+                            },
+                        },
                     ],
-                };
-                usersQuery.$and.push(searchByQuery);
+                });
             }
-            // console.log(usersQuery);
 
-            const users = await User.find(usersQuery)
-                .skip(parseInt(skip))
-                .limit(parseInt(limit))
-                .sort({ name: 1 });
+            const users = (
+                await CoursesWithTagsAndUsers.find(query)
+                    .skip(parseInt(skip))
+                    .limit(parseInt(limit))
+                    .sort({ 'user.name': 1 })
+            ).map((result) => result.user);
 
-            const total = await User.find(usersQuery).count();
+            const total = await CoursesWithTagsAndUsers.find(
+                query
+            ).countDocuments();
 
             success(res, req, { data: users, total });
         } catch (error) {
