@@ -7,7 +7,8 @@ module.exports = {
         try {
             const user = await getUserByToken(req);
             const uri = `${process.env.API_CONNECT}/system-users/${process.env.CLIENT_ID}`;
-            const { data } = await axios.post(
+            let data;
+            const { data: responseData } = await axios.post(
                 uri,
                 {
                     userId: user._id,
@@ -16,8 +17,12 @@ module.exports = {
                     headers: {
                         'system-user-key': process.env.CONNECT_CLIENT_KEY,
                     },
+                    params: {
+                        clientId: process.env.CLIENT_ID,
+                    },
                 }
             );
+            data = responseData;
 
             _messages.success(
                 res,
@@ -28,6 +33,7 @@ module.exports = {
                 'generate'
             );
         } catch (error) {
+            console.log(error);
             _messages.internalServer(
                 res,
                 req,
@@ -42,11 +48,28 @@ module.exports = {
     async getActive(req, res) {
         try {
             const uri = `${process.env.API_CONNECT}/system-users/${process.env.CLIENT_ID}`;
-            const { data } = await axios.get(uri, {
-                headers: {
-                    'system-user-key': process.env.CONNECT_CLIENT_KEY,
-                },
-            });
+
+            let data;
+            try {
+                const { data: responseData } = await axios.get(uri, {
+                    headers: {
+                        'system-user-key': process.env.CONNECT_CLIENT_KEY,
+                    },
+                });
+                data = responseData;
+            } catch (err) {
+                if (err.response.data.statusCode === 404)
+                    _messages.notFound(
+                        res,
+                        req,
+                        JSON.stringify(err.response.data),
+                        'nenhuma key encontrada para o cliente',
+                        'system-users',
+                        'getActive'
+                    );
+                return;
+            }
+
             _messages.success(
                 res,
                 req,
@@ -56,6 +79,7 @@ module.exports = {
                 'getActive'
             );
         } catch (error) {
+            console.log(error);
             _messages.internalServer(
                 res,
                 req,
