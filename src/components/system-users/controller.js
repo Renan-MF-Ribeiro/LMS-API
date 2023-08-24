@@ -8,21 +8,24 @@ module.exports = {
             const user = await getUserByToken(req);
             const uri = `${process.env.API_CONNECT}/system-users/${process.env.CLIENT_ID}`;
             let data;
-            const { data: responseData } = await axios.post(
-                uri,
-                {
-                    userId: user._id,
-                },
-                {
-                    headers: {
-                        'system-user-key': process.env.CONNECT_CLIENT_KEY,
+            try {
+                const { data: responseData } = await axios.post(
+                    uri,
+                    {
+                        userId: user._id,
                     },
-                    params: {
-                        clientId: process.env.CLIENT_ID,
-                    },
-                }
-            );
-            data = responseData;
+                    {
+                        headers: {
+                            'system-user-key': process.env.CONNECT_CLIENT_KEY,
+                        },
+                    }
+                );
+                data = responseData;
+            } catch (err) {
+                console.error(err);
+                // TODO improve error handling
+                throw err;
+            }
 
             _messages.success(
                 res,
@@ -58,16 +61,19 @@ module.exports = {
                 });
                 data = responseData;
             } catch (err) {
-                if (err.response.data.statusCode === 404)
+                if (err.response.data.statusCode === 404) {
                     _messages.notFound(
                         res,
                         req,
                         JSON.stringify(err.response.data),
-                        'nenhuma key encontrada para o cliente',
+                        'nenhuma key ativa encontrada para o cliente',
                         'system-users',
                         'getActive'
                     );
-                return;
+                    return;
+                } else {
+                    throw err;
+                }
             }
 
             _messages.success(
