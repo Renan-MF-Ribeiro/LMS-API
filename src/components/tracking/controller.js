@@ -131,7 +131,8 @@ const TrackingController = {
 
                 if (
                     (TrackingModel == DocumentTracking ||
-                        TrackingModel == MediaTracking) &&
+                        TrackingModel == MediaTracking ||  
+                        TrackingModel == EventTracking) &&
                     req.body.completion == 1
                 ) {
                     registerCompletationAt = true;
