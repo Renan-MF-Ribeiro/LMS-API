@@ -335,6 +335,7 @@ module.exports = {
                 }
             }
         } catch (error) {
+            console.log(error)
             _messages.internalServer(
                 res,
                 req,

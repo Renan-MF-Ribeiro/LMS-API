@@ -27,7 +27,7 @@ const configJson = require('../../config.json')
 const bucket = process.env.BUCKET
 aws.config = { accessKeyId: process.env.ACCESSKEY, secretAccessKey: process.env.SECRETKEY, region: process.env.REGION }
 
-const { PUBLIC_PATH, UPLOADS_PATH, AZURE_STRINGCONN, AZURE_BLOBNAME, AZURE_ACCESSKEY } = process.env
+const { PUBLIC_PATH, UPLOADS_PATH, AZURE_STRINGCONN, AZURE_BLOBNAME, AZURE_ACCESSKEY, AZURE_BLOB_URL } = process.env
 
 shelljs.mkdir('-p', UPLOADS_PATH)
 
