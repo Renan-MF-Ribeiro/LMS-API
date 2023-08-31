@@ -1,10 +1,9 @@
 const GamificationBusiness = require('./business');
+const GamificationEventBusiness = require('./business.events');
 const { User } = require('../users/model');
 const config = require('../../../config.json');
 const axios = require('axios');
 const _messages = require('../../utils/messages');
-const FormData = require('form-data');
-const fs = require('fs');
 
 const GamificationController = {
     async dispatch(networkLogin, categories, props) {
@@ -12,7 +11,7 @@ const GamificationController = {
             const user = await User.findOne({ networkLogin });
             try {
                 for (const category of categories) {
-                    await GamificationBusiness[category](user, category, props);
+                    await GamificationEventBusiness[category](user, category, props);
                 }
             } catch (err) {
                 console.log(err);
@@ -20,17 +19,23 @@ const GamificationController = {
         }
     },
 
+    async updateClientUser(req, res) {
+        if (config.gamification.active) {
+            try {
+                const { networkLogin } = req.params
+                const data = await GamificationBusiness.updateClientUser(networkLogin, req.body)
+
+                return _messages.success(res, req, data);
+            } catch (error) {
+                return _messages.badRequest(res, req, error);
+            }
+        }
+    },
+
     async getClient(req, res) {
         if (config.gamification.active) {
             try {
-                const host = process.env.API_GAMIFICATION;
-                const clientId = process.env.CLIENT_ID;
-                const uri = `${host}/clients/${clientId}`;
-                const { data } = await axios.get(uri, {
-                    headers: {
-                        'x-api-key': process.env.API_KEY_GAMIFICATION,
-                    },
-                });
+                const data = await GamificationBusiness.getClient()
 
                 return _messages.success(res, req, data);
             } catch (error) {
@@ -42,14 +47,7 @@ const GamificationController = {
     async getClientEvents(req, res) {
         if (config.gamification.active) {
             try {
-                const host = process.env.API_GAMIFICATION;
-                const clientId = process.env.CLIENT_ID;
-                const uri = `${host}/clients/${clientId}/events`;
-                const { data } = await axios.get(uri, {
-                    headers: {
-                        'x-api-key': process.env.API_KEY_GAMIFICATION,
-                    },
-                });
+                const data = await GamificationBusiness.getClientEvents()
 
                 return _messages.success(res, req, data);
             } catch (error) {
@@ -61,14 +59,7 @@ const GamificationController = {
     async updateClient(req, res) {
         if (config.gamification.active) {
             try {
-                const host = process.env.API_GAMIFICATION;
-                const clientId = process.env.CLIENT_ID;
-                const uri = `${host}/clients/${clientId}`;
-                const { data } = await axios.put(uri, req.body, {
-                    headers: {
-                        'x-api-key': process.env.API_KEY_GAMIFICATION,
-                    },
-                });
+                const data = await GamificationBusiness.updateClient(req.body)
 
                 return _messages.success(res, req, data);
             } catch (error) {
@@ -80,24 +71,9 @@ const GamificationController = {
     async updateClientNivelImage(req, res) {
         if (config.gamification.active) {
             try {
-                const { file } = req.files;
-                const host = process.env.API_GAMIFICATION;
-                const clientId = process.env.CLIENT_ID;
                 const { nivelId } = req.params;
-                const uri = `${host}/clients/${clientId}/${nivelId}`;
-                const formData = new FormData();
-                formData.append(
-                    'file',
-                    fs.createReadStream(file.path),
-                    file.name
-                );
-                const { data } = await axios.put(uri, formData, {
-                    headers: {
-                        'x-api-key': process.env.API_KEY_GAMIFICATION,
-                        'Content-Type': 'multipart/form-data',
-                        ...formData.getHeaders(),
-                    },
-                });
+                const { file } = req.files;
+                const data = await GamificationBusiness.updateClientNivelImage(nivelId, file)
 
                 return _messages.success(res, req, data);
             } catch (error) {
@@ -109,15 +85,7 @@ const GamificationController = {
     async getExtractByClient(req, res) {
         if (config.gamification.active) {
             try {
-                const host = process.env.API_GAMIFICATION;
-                const clientId = process.env.CLIENT_ID;
-                const query = new URLSearchParams(req.query);
-                const uri = `${host}/event-users/${clientId}?${query}`;
-                const { data } = await axios.get(uri, {
-                    headers: {
-                        'x-api-key': process.env.API_KEY_GAMIFICATION,
-                    },
-                });
+                const data = await GamificationBusiness.getExtractByClient(req.query)
 
                 return _messages.success(res, req, data);
             } catch (error) {
@@ -130,15 +98,7 @@ const GamificationController = {
         if (config.gamification.active) {
             try {
                 const { networkLogin } = req.params;
-                const host = process.env.API_GAMIFICATION;
-                const clientId = process.env.CLIENT_ID;
-                const query = new URLSearchParams(req.query);
-                const uri = `${host}/event-users/${clientId}/${networkLogin}?${query}`;
-                const { data } = await axios.get(uri, {
-                    headers: {
-                        'x-api-key': process.env.API_KEY_GAMIFICATION,
-                    },
-                });
+                const data = await GamificationBusiness.getExtractByUser(networkLogin, req.query)
 
                 return _messages.success(res, req, data);
             } catch (error) {
@@ -151,14 +111,7 @@ const GamificationController = {
         if (config.gamification.active) {
             try {
                 const { networkLogin } = req.params;
-                const host = process.env.API_GAMIFICATION;
-                const clientId = process.env.CLIENT_ID;
-                const uri = `${host}/ranking-users/${clientId}/${networkLogin}`;
-                const { data } = await axios.get(uri, {
-                    headers: {
-                        'x-api-key': process.env.API_KEY_GAMIFICATION,
-                    },
-                });
+                const data = await GamificationBusiness.listRankingByUser(networkLogin)
 
                 return _messages.success(res, req, data);
             } catch (error) {
@@ -171,14 +124,7 @@ const GamificationController = {
         if (config.gamification.active) {
             try {
                 const { networkLogin } = req.params;
-                const host = process.env.API_GAMIFICATION;
-                const clientId = process.env.CLIENT_ID;
-                const uri = `${host}/users/${clientId}/${networkLogin}`;
-                const { data } = await axios.get(uri, {
-                    headers: {
-                        'x-api-key': process.env.API_KEY_GAMIFICATION,
-                    },
-                });
+                const data = await GamificationBusiness.getClientUser(networkLogin)
 
                 return _messages.success(res, req, data);
             } catch (error) {
@@ -191,15 +137,7 @@ const GamificationController = {
         if (config.gamification.active) {
             try {
                 const { _id } = req.params;
-                const host = process.env.API_GAMIFICATION;
-                const clientId = process.env.CLIENT_ID;
-                const query = new URLSearchParams(req.query);
-                const uri = `${host}/ranking-users/${clientId}/${_id}/details?${query}`;
-                const { data } = await axios.get(uri, {
-                    headers: {
-                        'x-api-key': process.env.API_KEY_GAMIFICATION,
-                    },
-                });
+                const data = await GamificationBusiness.getClientRankingUsersDetails(_id, req.query)
 
                 return _messages.success(res, req, data);
             } catch (error) {
@@ -211,15 +149,7 @@ const GamificationController = {
     async getClientRankings(req, res) {
         if (config.gamification.active) {
             try {
-                const host = process.env.API_GAMIFICATION;
-                const clientId = process.env.CLIENT_ID;
-                const query = new URLSearchParams(req.query);
-                const uri = `${host}/rankings/${clientId}?${query}`;
-                const { data } = await axios.get(uri, {
-                    headers: {
-                        'x-api-key': process.env.API_KEY_GAMIFICATION,
-                    },
-                });
+                const data = await GamificationBusiness.getClientRankings(req.query)
 
                 return _messages.success(res, req, data);
             } catch (error) {
@@ -231,14 +161,7 @@ const GamificationController = {
     async createClientRankings(req, res) {
         if (config.gamification.active) {
             try {
-                const host = process.env.API_GAMIFICATION;
-                const clientId = process.env.CLIENT_ID;
-                const uri = `${host}/rankings/${clientId}`;
-                const { data } = await axios.post(uri, req.body, {
-                    headers: {
-                        'x-api-key': process.env.API_KEY_GAMIFICATION,
-                    },
-                });
+                const data = await GamificationBusiness.createClientRankings(req.body)
 
                 return _messages.success(res, req, data);
             } catch (error) {
@@ -251,14 +174,7 @@ const GamificationController = {
         if (config.gamification.active) {
             try {
                 const { _id } = req.params;
-                const host = process.env.API_GAMIFICATION;
-                const clientId = process.env.CLIENT_ID;
-                const uri = `${host}/rankings/${clientId}/${_id}`;
-                const { data } = await axios.put(uri, req.body, {
-                    headers: {
-                        'x-api-key': process.env.API_KEY_GAMIFICATION,
-                    },
-                });
+                const data = await GamificationBusiness.updateClientRankings(_id, req.body)
 
                 return _messages.success(res, req, data);
             } catch (error) {
@@ -271,14 +187,7 @@ const GamificationController = {
         if (config.gamification.active) {
             try {
                 const { _id } = req.params;
-                const host = process.env.API_GAMIFICATION;
-                const clientId = process.env.CLIENT_ID;
-                const uri = `${host}/rankings/${clientId}/${_id}`;
-                const { data } = await axios.delete(uri, {
-                    headers: {
-                        'x-api-key': process.env.API_KEY_GAMIFICATION,
-                    },
-                });
+                const data = await GamificationBusiness.deleteClientRankings(_id)
 
                 return _messages.success(res, req, data);
             } catch (error) {
