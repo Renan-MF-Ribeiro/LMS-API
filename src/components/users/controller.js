@@ -80,6 +80,7 @@ const inactivateIfNotInSpreadsheet =
 const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail;
 const { EVENTS_CATEGORY } = require('../gamification/model');
 const GamificationController = require('../gamification/controller');
+const GamificationBusiness = require('../gamification/business');
 
 module.exports = {
     async create(req, res) {
@@ -1917,7 +1918,14 @@ module.exports = {
         const { tag, userId } = req.body;
 
         try {
-            await User.findByIdAndUpdate(userId, { $pull: { groupsAD: tag } });
+            const user = await User.findByIdAndUpdate(
+                userId,
+                { $pull: { groupsAD: tag } },
+                { new: true }
+            );
+            const eligibilities = user.groupsAD.filter((tag) => String(tag).startsWith('ELEGE_'))
+            await GamificationBusiness.updateClientUser(user.networkLogin, { eligibilities })
+
             _messages.success(res, req, {
                 message: 'Tag de permissão removida',
             });
@@ -1935,9 +1943,14 @@ module.exports = {
     async addGroups(req, res) {
         const { tag, userId } = req.body;
         try {
-            await User.findByIdAndUpdate(userId, {
-                $addToSet: { groupsAD: tag },
-            });
+            const user = await User.findByIdAndUpdate(
+                userId, 
+                { $addToSet: { groupsAD: tag } }, 
+                { new: true }
+            );
+            const eligibilities = user.groupsAD.filter((tag) => String(tag).startsWith('ELEGE_'))
+            await GamificationBusiness.updateClientUser(user.networkLogin, { eligibilities })
+
             _messages.success(res, req, {
                 message: 'Tag de permissão adicionada ao usuário',
             });
