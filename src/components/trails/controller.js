@@ -28,8 +28,8 @@ const { checkItem } = require('./business');
 
 const { Evaluation } = require('../assessments/model');
 const { User } = require('../users/model');
-const { Message } = require('../messages/model');
-const { sendMessageToKafka } = require('../messages/business');
+const { Message } = require('../new-messages/model');
+const { sendMessageToKafka } = require('../new-messages/business');
 const {
     elegiblesContents,
     keepLearningSections,
