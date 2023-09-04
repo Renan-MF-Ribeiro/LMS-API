@@ -241,7 +241,7 @@ const ItemController = {
                         author: user._id,
                         collaborative: true,
                     });
-                    await GamificationController.dispatch(
+                    GamificationController.dispatch(
                         user.networkLogin,
                         [EVENTS_CATEGORY.UPLOADED_CONTENT],
                         {

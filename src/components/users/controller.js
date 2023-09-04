@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const { CLIENT_ID, DOMAIN, AZURE_BLOB_URL, NODE_ENV } = process.env;
 const _messages = require('../../utils/messages');
 const _files = require('../../utils/files');
-const { Message } = require('../messages/model');
+const { Message } = require('../new-messages/model');
 const {
     User,
     UserTest,
@@ -66,7 +66,7 @@ const axios = require('axios');
 const bcrypt = require('bcryptjs');
 const cryptoJS = require('crypto-js');
 const jwt = require('jsonwebtoken');
-const { sendMessageToKafka } = require('../messages/business');
+const { sendMessageToKafka } = require('../new-messages/business');
 
 const config = require('../../../config.json');
 const {
@@ -387,7 +387,7 @@ module.exports = {
                     key = cryptoJS.AES.encrypt(key, password).toString();
 
                     // GAMIFICATION DISPATCH
-                    await GamificationController.dispatch(login, [
+                    GamificationController.dispatch(login, [
                         EVENTS_CATEGORY.LOGIN,
                     ]);
 
