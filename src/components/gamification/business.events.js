@@ -70,14 +70,14 @@ const GamificationEventBusiness = {
         await GamificationEventBusiness.handleEvent(user, category);
     },
 
-    // 🕐 TO DO
-    async [EVENTS_CATEGORY.OPENED_FROM_EMAIL](user, category) {
-        await GamificationEventBusiness.handleEvent(user, category);
+    // ✅ DONE
+    async [EVENTS_CATEGORY.OPENED_FROM_EMAIL](user, category, props) {
+        await GamificationEventBusiness.handleEvent(user, category, props);
     },
 
-    // 🕐 TO DO
-    async [EVENTS_CATEGORY.OPENED_FROM_NOTIFICATION](user, category) {
-        await GamificationEventBusiness.handleEvent(user, category);
+    // ✅ DONE
+    async [EVENTS_CATEGORY.OPENED_FROM_NOTIFICATION](user, category, props) {
+        await GamificationEventBusiness.handleEvent(user, category, props);
     },
 
     // 🕐 TO DO

@@ -1,4 +1,4 @@
-const { TrailsTagsWithUsersAndTrackings } = require('../trails/model');
+const { TrailsTagsWithUsersAndTrackings, Trail } = require('../trails/model');
 const { User, LastLogin } = require('../users/model');
 const {
     getUsersByIds,
@@ -12,6 +12,8 @@ const clientid = process.env.CLIENT_ID;
 require('dotenv').config();
 const kafka = require('../../utils/kafka');
 const { processTrailTracking, sleep } = require('../../utils/functions');
+const { generateSSOToken } = require('../../utils/auth');
+const { Item } = require('../items/model');
 
 module.exports = {
     async processTargetUsers(target, category) {
@@ -29,10 +31,12 @@ module.exports = {
             await producer.connect();
             const messages = [];
             for (const user of users) {
-                const stringMessage = JSON.stringify(
-                    await processMessage(campaign, user)
-                );
-                messages.push({ value: stringMessage });
+                for(const communication of campaign.communication) {
+                    const stringMessage = JSON.stringify(
+                        await processMessage({ ...campaign, communication }, user)
+                    );
+                    messages.push({ value: stringMessage });
+                }
             }
             const chunk = 10;
             for (let i = 0; i < messages.length; i += chunk) {
@@ -497,7 +501,7 @@ async function processMessage(campaign, user) {
     try {
         const { communication, target, ...data } = campaign;
         const foundUser = await User.findOne({ _id: user });
-        const notificationlink = processNotificationLink(target);
+        const notificationlink = await processNotificationLink(target, communication);
 
         const message = {
             clientid,
@@ -513,12 +517,19 @@ async function processMessage(campaign, user) {
     }
 }
 
-function processNotificationLink(target) {
+async function processNotificationLink(target, communication) {
     const { type, value } = target;
+    
     if (type && type === 'trail') {
-        const url = value.itemId
-            ? `${process.env.DOMAIN}/login/entrar?redirectTo=/player/${value.trailId}/${value.itemId}`
-            : `${process.env.DOMAIN}/login/entrar?redirectTo=/menu/${value.trailId}`;
+        const trail = await Trail.findOne({ _id: value.trailId })
+        const item = await Item.findOne({ _id: value.itemId })
+        const token = generateSSOToken({
+            networkLogin: value.user.networkLogin,
+            communication,
+            trailTitle: trail.title,
+        });
+        const redirectTo = value.itemId ? `/player/${trail.titleURL}/${item.titleURL}` : `/menu/${trail.titleURL}`
+        const url = `${process.env.DOMAIN}/login/entrar/sso?token=${token}&redirectTo=${redirectTo}`
         const notificationlink = {
             trailid: value.trailId,
             itemid: value.itemId,
