@@ -506,6 +506,22 @@ module.exports = {
             ? data.networkLogin
             : data.data.networkLogin;
 
+        if (data?.communication || data?.data?.communication) {
+            const communication = data?.communication || data?.data?.communication
+            const communicationCategory = String(communication).toUpperCase()
+            const eventCategory = EVENTS_CATEGORY[`OPENED_FROM_${communicationCategory}`]
+            
+            GamificationController.dispatch(
+                networkLogin,
+                [eventCategory],
+                {
+                    trail: {
+                        title: data?.trailTitle || data?.data?.trailTitle
+                    }
+                }
+            );
+        }
+
         try {
             if (networkLogin) {
                 user = await User.findOne({ networkLogin, status: 'ATIVO' }, [
@@ -1070,15 +1086,15 @@ module.exports = {
                     ? existingUser.password
                     : processedUser.password;
 
-                    if (existingUser) {
-                        existingUsers.push({
-                            _id: existingUser._id,
-                            processedUser,
-                        });
-                    } else {
-                        usersToSend.push(account);
-                        newUsers.push(processedUser);
-                    }
+                if (existingUser) {
+                    existingUsers.push({
+                        _id: existingUser._id,
+                        processedUser,
+                    });
+                } else {
+                    usersToSend.push(account);
+                    newUsers.push(processedUser);
+                }
             }
 
             console.log(
