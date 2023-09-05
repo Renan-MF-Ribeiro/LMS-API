@@ -31,9 +31,12 @@ module.exports = {
             await producer.connect();
             const messages = [];
             for (const user of users) {
-                for(const communication of campaign.communication) {
+                for (const communication of campaign.communication) {
                     const stringMessage = JSON.stringify(
-                        await processMessage({ ...campaign, communication }, user)
+                        await processMessage(
+                            { ...campaign, communication },
+                            user
+                        )
                     );
                     messages.push({ value: stringMessage });
                 }
@@ -54,29 +57,31 @@ module.exports = {
         }
     },
 
-    async sendMfaToKafka (campaign, users) {
+    async sendMfaToKafka(campaign, users) {
         try {
-            const producer = kafka.producer()
-            await producer.connect()
-            const messages = []
+            const producer = kafka.producer();
+            await producer.connect();
+            const messages = [];
             for (const user of users) {
-                const stringMessage = JSON.stringify(await processMessage(campaign, user))
-                messages.push({ value: stringMessage })
+                const stringMessage = JSON.stringify(
+                    await processMessage(campaign, user)
+                );
+                messages.push({ value: stringMessage });
             }
-            const chunk = 10
+            const chunk = 10;
             for (let i = 0; i < messages.length; i += chunk) {
-                console.log(process.env.TOPIC_MFA)
-                const temporary = messages.slice(i, i + chunk)
+                console.log(process.env.TOPIC_MFA);
+                const temporary = messages.slice(i, i + chunk);
                 await producer.send({
                     topic: process.env.TOPIC_MFA,
                     messages: temporary,
-                })
+                });
             }
-            
-            await producer.disconnect()
+
+            await producer.disconnect();
         } catch (error) {
-            console.error(error)
-            throw error
+            console.error(error);
+            throw error;
         }
     },
 
@@ -277,7 +282,6 @@ module.exports = {
                         ];
                     }
 
-                    
                     if (finished) {
                         const finishedUsers = [];
 
@@ -490,7 +494,7 @@ module.exports = {
                 name: userData.name,
                 email: userData.email,
             });
-            userIds.push(user._id);
+            if (user && user._id) userIds.push(user._id);
         }
 
         return userIds;
@@ -501,7 +505,10 @@ async function processMessage(campaign, user) {
     try {
         const { communication, target, ...data } = campaign;
         const foundUser = await User.findOne({ _id: user });
-        const notificationlink = await processNotificationLink(target, communication);
+        const notificationlink = await processNotificationLink(
+            target,
+            communication
+        );
 
         const message = {
             clientid,
@@ -519,17 +526,19 @@ async function processMessage(campaign, user) {
 
 async function processNotificationLink(target, communication) {
     const { type, value } = target;
-    
+
     if (type && type === 'trail') {
-        const trail = await Trail.findOne({ _id: value.trailId })
-        const item = await Item.findOne({ _id: value.itemId })
+        const trail = await Trail.findOne({ _id: value.trailId });
+        const item = await Item.findOne({ _id: value.itemId });
         const token = generateSSOToken({
             networkLogin: value.user.networkLogin,
             communication,
             trailTitle: trail.title,
         });
-        const redirectTo = value.itemId ? `/player/${trail.titleURL}/${item.titleURL}` : `/menu/${trail.titleURL}`
-        const url = `${process.env.DOMAIN}/login/entrar/sso?token=${token}&redirectTo=${redirectTo}`
+        const redirectTo = value.itemId
+            ? `/player/${trail.titleURL}/${item.titleURL}`
+            : `/menu/${trail.titleURL}`;
+        const url = `${process.env.DOMAIN}/login/entrar/sso?token=${token}&redirectTo=${redirectTo}`;
         const notificationlink = {
             trailid: value.trailId,
             itemid: value.itemId,
