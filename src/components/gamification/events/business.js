@@ -1,13 +1,14 @@
 const axios = require('axios');
-const { processTrailTracking } = require('../../utils/functions');
-const { Item } = require('../items/model');
+const { processTrailTracking } = require('../../../utils/functions');
+const { Item } = require('../../items/model');
 const {
     getTrailCompletion,
     getTagsElegibles,
-} = require('../sections/business');
-const { Tracking } = require('../tracking/model');
-const { populateTrails } = require('../trails/business');
-const { EVENTS_CATEGORY } = require('./model');
+} = require('../../sections/business');
+const { Tracking } = require('../../tracking/model');
+const { populateTrails } = require('../../trails/business');
+const { EVENTS_CATEGORY } = require('../model');
+
 
 const GamificationEventBusiness = {
     async handleEvent(user, category, props) {
