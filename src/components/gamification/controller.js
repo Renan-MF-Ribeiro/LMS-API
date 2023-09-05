@@ -1,5 +1,5 @@
 const GamificationBusiness = require('./business');
-const GamificationEventBusiness = require('./business.events');
+const GamificationEventBusiness = require('./events/business');
 const { User } = require('../users/model');
 const config = require('../../../config.json');
 const axios = require('axios');
