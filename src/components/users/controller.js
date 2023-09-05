@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const { CLIENT_ID, DOMAIN, AZURE_BLOB_URL, NODE_ENV } = process.env;
 const _messages = require('../../utils/messages');
 const _files = require('../../utils/files');
-const { Message } = require('../new-messages/model');
+const { NewMessage } = require('../new-messages/model');
 const {
     User,
     UserTest,
@@ -1125,7 +1125,7 @@ module.exports = {
                     await sendAccountsToKafka(usersToSend);
                     const campaign = createWelcomeCampaign();
                     await sendMessageToKafka(campaign, newUsers);
-                    await Message.create(campaign);
+                    await NewMessage.create(campaign);
                 }
             }
 

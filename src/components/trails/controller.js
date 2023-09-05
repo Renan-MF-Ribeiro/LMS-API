@@ -28,7 +28,7 @@ const { checkItem } = require('./business');
 
 const { Evaluation } = require('../assessments/model');
 const { User } = require('../users/model');
-const { Message } = require('../new-messages/model');
+const { NewMessage } = require('../new-messages/model');
 const { sendMessageToKafka } = require('../new-messages/business');
 const {
     elegiblesContents,
@@ -1457,7 +1457,7 @@ module.exports = {
                     trail,
                     moderation === 'approved' ? 'aprovado' : 'recusado'
                 );
-                await Message.create(campaign);
+                await NewMessage.create(campaign);
                 sendMessageToKafka(campaign, [user]);
             }
 

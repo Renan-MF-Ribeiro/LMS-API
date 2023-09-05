@@ -3,7 +3,7 @@
 require('dotenv').config();
 const CronJob = require('cron').CronJob;
 const { User } = require('../components/users/model');
-const { Message } = require('../components/new-messages/model');
+const { NewMessage } = require('../components/new-messages/model');
 const { Group } = require('../components/groups/model');
 const { populateTrails } = require('../components/trails/business');
 const { Tracking } = require('../components/tracking/model');
@@ -565,7 +565,7 @@ async function getUsersLoad() {
                     await sendAccountsToKafka(usersToSend);
                     const campaign = createWelcomeCampaign();
                     await sendMessageToKafka(campaign, newUsers);
-                    await Message.create(campaign);
+                    await NewMessage.create(campaign);
                 }
             }
             console.log('Novos usuários criados');
@@ -635,7 +635,7 @@ async function courseReleaseCron() {
 
             if (elegibleUsers.length > 0) {
                 const campaign = createReleaseCampaign(trail);
-                await Message.create(campaign);
+                await NewMessage.create(campaign);
                 await sendMessageToKafka(campaign, elegibleUsers);
                 storageLog(
                     'Campanha de lançamento de cursos enviada',
@@ -705,7 +705,7 @@ async function courseChargeCron() {
 
             if (elegibleUsers.length > 0) {
                 const campaign = createChargeCampaign(trail);
-                await Message.create(campaign);
+                await NewMessage.create(campaign);
                 sendMessageToKafka(campaign, elegibleUsers);
                 storageLog(
                     'Campanha de cobrança de cursos enviada',
@@ -745,7 +745,7 @@ async function examTrackingDeleteCron() {
                     });
 
                     const campaign = createExamTrackingCampaign(tr.item.title);
-                    await Message.create(campaign);
+                    await NewMessage.create(campaign);
                     console.log([user.networkLogin]);
                     sendMessageToKafka(campaign, [user]);
                     storageLog(
