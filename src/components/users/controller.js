@@ -1940,7 +1940,7 @@ module.exports = {
                 { new: true }
             );
             const eligibilities = user.groupsAD.filter((tag) => String(tag).startsWith('ELEGE_'))
-            await GamificationBusiness.updateClientUser(user.networkLogin, { eligibilities })
+            GamificationBusiness.updateClientUser(user.networkLogin, { eligibilities })
 
             _messages.success(res, req, {
                 message: 'Tag de permissão removida',
@@ -1965,7 +1965,7 @@ module.exports = {
                 { new: true }
             );
             const eligibilities = user.groupsAD.filter((tag) => String(tag).startsWith('ELEGE_'))
-            await GamificationBusiness.updateClientUser(user.networkLogin, { eligibilities })
+            GamificationBusiness.updateClientUser(user.networkLogin, { eligibilities })
 
             _messages.success(res, req, {
                 message: 'Tag de permissão adicionada ao usuário',
