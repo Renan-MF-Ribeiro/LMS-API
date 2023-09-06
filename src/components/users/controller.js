@@ -387,7 +387,7 @@ module.exports = {
                     key = cryptoJS.AES.encrypt(key, password).toString();
 
                     // GAMIFICATION DISPATCH
-                    GamificationController.dispatch(login, [
+                    await GamificationController.dispatch(login, [
                         EVENTS_CATEGORY.LOGIN,
                     ]);
 
@@ -511,7 +511,7 @@ module.exports = {
             const communicationCategory = String(communication).toUpperCase()
             const eventCategory = EVENTS_CATEGORY[`OPENED_FROM_${communicationCategory}`]
             
-            GamificationController.dispatch(
+            await GamificationController.dispatch(
                 networkLogin,
                 [eventCategory],
                 {

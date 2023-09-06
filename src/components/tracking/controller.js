@@ -211,7 +211,7 @@ const TrackingController = {
             }
 
             // GAMIFICATION DISPATCH
-            GamificationController.dispatch(
+            await GamificationController.dispatch(
                 q.userLogin,
                 [
                     EVENTS_CATEGORY.STARTED_TRAIL,
