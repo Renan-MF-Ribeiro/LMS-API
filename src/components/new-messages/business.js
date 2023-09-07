@@ -501,14 +501,19 @@ module.exports = {
     },
 };
 
-async function processMessage (campaign, user) {
+async function processMessage(campaign, user) {
     try {
-        let { communication, target, ...data } = campaign
-        target.recovery = campaign.recovery
-        target.resetPasswordUrl = campaign.resetPasswordUrl
-        const foundUser = await User.findOne({ _id: user })
-        const notificationlink = processNotificationLink(target)
-        const userEmailAndDeviceId = await User.findById(user._id).select('email deviceId -_id');
+        let { communication, target, ...data } = campaign;
+        target.recovery = campaign.recovery;
+        target.resetPasswordUrl = campaign.resetPasswordUrl;
+        const foundUser = await User.findOne({ _id: user });
+        const notificationlink = await processNotificationLink(
+            target,
+            communication
+        );
+        const userEmailAndDeviceId = await User.findById(user._id).select(
+            'email deviceId -_id'
+        );
 
         const message = {
             clientid,
@@ -516,13 +521,19 @@ async function processMessage (campaign, user) {
             ...data,
             identifier: foundUser.networkLogin,
             viewed: false,
-            userEmail: campaign.userEmail ? campaign.userEmail : userEmailAndDeviceId.email ? userEmailAndDeviceId.email : null,
-            userDevice: userEmailAndDeviceId.deviceId ? userEmailAndDeviceId.deviceId : null,
+            userEmail: campaign.userEmail
+                ? campaign.userEmail
+                : userEmailAndDeviceId.email
+                ? userEmailAndDeviceId.email
+                : null,
+            userDevice: userEmailAndDeviceId.deviceId
+                ? userEmailAndDeviceId.deviceId
+                : null,
             notificationlink,
-        }
-        return message
+        };
+        return message;
     } catch (error) {
-        console.error(error)
+        console.error(error);
     }
 }
 
