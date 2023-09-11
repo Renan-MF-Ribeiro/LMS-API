@@ -165,7 +165,12 @@ const GamificationController = {
 
                 return _messages.success(res, req, data);
             } catch (error) {
-                return _messages.badRequest(res, req, error);
+                return _messages.badRequest(
+                    res,
+                    req,
+                    error,
+                    'Ranking com título informado já existe'
+                );
             }
         }
     },
@@ -178,7 +183,12 @@ const GamificationController = {
 
                 return _messages.success(res, req, data);
             } catch (error) {
-                return _messages.badRequest(res, req, error);
+                return _messages.badRequest(
+                    res,
+                    req,
+                    error,
+                    'Ranking com título informado já existe'
+                );
             }
         }
     },
