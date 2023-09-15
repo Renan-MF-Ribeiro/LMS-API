@@ -81,7 +81,6 @@ const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail;
 const { EVENTS_CATEGORY } = require('../gamification/model');
 const GamificationController = require('../gamification/controller');
 const GamificationBusiness = require('../gamification/business');
-const { Group } = require('../groups/model');
 
 module.exports = {
     async create(req, res) {
