@@ -1939,7 +1939,7 @@ module.exports = {
                 { $pull: { groupsAD: tag } },
                 { new: true }
             );
-            const eligibilities = user.groupsAD.filter((tag) => String(tag).startsWith('ELEGE_'))
+            const eligibilities = user.groupsAD.filter((tag) => !String(tag).startsWith('PERFIL_'))
             GamificationBusiness.updateClientUser(user.networkLogin, { eligibilities })
 
             _messages.success(res, req, {
@@ -1964,7 +1964,7 @@ module.exports = {
                 { $addToSet: { groupsAD: tag } }, 
                 { new: true }
             );
-            const eligibilities = user.groupsAD.filter((tag) => String(tag).startsWith('ELEGE_'))
+            const eligibilities = user.groupsAD.filter((tag) => !String(tag).startsWith('PERFIL_'))
             GamificationBusiness.updateClientUser(user.networkLogin, { eligibilities })
 
             _messages.success(res, req, {
