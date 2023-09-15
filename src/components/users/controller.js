@@ -81,6 +81,7 @@ const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail;
 const { EVENTS_CATEGORY } = require('../gamification/model');
 const GamificationController = require('../gamification/controller');
 const GamificationBusiness = require('../gamification/business');
+const { Group } = require('../groups/model');
 
 module.exports = {
     async create(req, res) {
@@ -1939,7 +1940,7 @@ module.exports = {
                 { $pull: { groupsAD: tag } },
                 { new: true }
             );
-            const eligibilities = user.groupsAD.filter((tag) => String(tag).startsWith('ELEGE_'))
+            const eligibilities = user.groupsAD.filter((tag) => !String(tag).startsWith('PERFIL_'))
             GamificationBusiness.updateClientUser(user.networkLogin, { eligibilities })
 
             _messages.success(res, req, {
@@ -1964,7 +1965,7 @@ module.exports = {
                 { $addToSet: { groupsAD: tag } }, 
                 { new: true }
             );
-            const eligibilities = user.groupsAD.filter((tag) => String(tag).startsWith('ELEGE_'))
+            const eligibilities = user.groupsAD.filter((tag) => !String(tag).startsWith('PERFIL_'))
             GamificationBusiness.updateClientUser(user.networkLogin, { eligibilities })
 
             _messages.success(res, req, {
