@@ -81,6 +81,7 @@ const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail;
 const { EVENTS_CATEGORY } = require('../gamification/model');
 const GamificationController = require('../gamification/controller');
 const GamificationBusiness = require('../gamification/business');
+const { Group } = require('../groups/model');
 
 module.exports = {
     async create(req, res) {
@@ -1939,8 +1940,10 @@ module.exports = {
                 { $pull: { groupsAD: tag } },
                 { new: true }
             );
-            const eligibilities = user.groupsAD.filter((tag) => !String(tag).startsWith('PERFIL_'))
-            GamificationBusiness.updateClientUser(user.networkLogin, { eligibilities })
+            const groupsAD = user.groupsAD.filter((tag) => !String(tag).startsWith('PERFIL_'));
+            const groups = await Group.find({ name: { $in: groupsAD } })
+            const eligibilities = groups.map(({ name, tags }) =>({ name, tags: tags.map(({ value }) => value) }))
+            GamificationBusiness.updateClientUser(user.networkLogin, { eligibilities });
 
             _messages.success(res, req, {
                 message: 'Tag de permissão removida',
@@ -1960,12 +1963,14 @@ module.exports = {
         const { tag, userId } = req.body;
         try {
             const user = await User.findByIdAndUpdate(
-                userId, 
-                { $addToSet: { groupsAD: tag } }, 
+                userId,
+                { $addToSet: { groupsAD: tag } },
                 { new: true }
             );
-            const eligibilities = user.groupsAD.filter((tag) => !String(tag).startsWith('PERFIL_'))
-            GamificationBusiness.updateClientUser(user.networkLogin, { eligibilities })
+            const groupsAD = user.groupsAD.filter((tag) => !String(tag).startsWith('PERFIL_'));
+            const groups = await Group.find({ name: { $in: groupsAD } })
+            const eligibilities = groups.map(({ name, tags }) =>({ name, tags: tags.map(({ value }) => value) }))
+            GamificationBusiness.updateClientUser(user.networkLogin, { eligibilities });
 
             _messages.success(res, req, {
                 message: 'Tag de permissão adicionada ao usuário',
