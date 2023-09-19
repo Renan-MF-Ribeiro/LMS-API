@@ -188,24 +188,23 @@ const GamificationController = {
         if (config.gamification.active) {
             try {
                 const { _id } = req.params;
-                const eligibilities = !req.body?.eligibilities?.[0]?.value
-                    ? [
-                          ...req.body.eligibilities.map((eligibility) => ({
-                              display: eligibility,
-                              value: eligibility
-                          }))
-                      ]
-                    : req.body.eligibilities;
+                
+                if(!!req.body?.eligibilities) {
+                    const eligibilities = !req.body?.eligibilities?.[0]?.value
+                        ? [
+                              ...req.body.eligibilities?.map((eligibility) => ({
+                                  display: eligibility,
+                                  value: eligibility
+                              }))
+                          ]
+                        : req.body.eligibilities;
+                    const groups = await Group.find({ tags: { $in: eligibilities }, active: 1 });
+                    const tags = eligibilities.map(({ value }) => value);
+                    const groupsTags = groups.map(({ name }) => ({ name, tags: [...new Set(tags)] }));
+                    req.body.eligibilities = groupsTags
+                }
 
-                const groups = await Group.find({ tags: { $in: eligibilities }, active: 1 });
-                const tags = eligibilities.map(({ value }) => value);
-                const groupsTags = groups.map(({ name }) => ({ name, tags: [...new Set(tags)] }));
-
-                const data = await GamificationBusiness.updateClientRankings(_id, {
-                        ...req.body,
-                        eligibilities: groupsTags,
-                    }
-                );
+                const data = await GamificationBusiness.updateClientRankings(_id, req.body);
 
                 return _messages.success(res, req, data);
             } catch (error) {
