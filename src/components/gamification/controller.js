@@ -166,11 +166,9 @@ const GamificationController = {
                 const groups = await Group.find({ tags: { $in: eligibilities }, active: 1 });
                 const tags = eligibilities.map(({ value }) => value);
                 const groupsTags = groups.map(({ name }) => ({ name, tags: [...new Set(tags)] }));
+                req.body.eligibilities = groupsTags
 
-                const data = await GamificationBusiness.createClientRankings({
-                    ...req.body,
-                    eligibilities: groupsTags
-                });
+                const data = await GamificationBusiness.createClientRankings(req.body);
 
                 return _messages.success(res, req, data);
             } catch (error) {
