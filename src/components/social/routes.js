@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const _controller = require('./controller')
+const { isAdmin } = require('../../utils/middlewares');
 
 router
     //comments
@@ -16,6 +17,8 @@ router
     .post('/favorite/create', _controller.createFavorite)
     .get('/favorite/:trailId', _controller.getFavoritesByUserId)
     .put('/favorite/update/:favoriteId', _controller.updateFavorite)
+    .get('/', isAdmin, _controller.getActive)
+    .post('/generate', isAdmin, _controller.generate);
 
 
 module.exports = router

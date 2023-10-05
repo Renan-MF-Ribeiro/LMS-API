@@ -19,7 +19,7 @@ const {
 const { getCoursesByUserID } = require("../courses/business");
 
 module.exports = {
-    trailsCompletedOrInProgress(req) {
+    trailsCompletedOrInProgress (req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const user = await getUserByToken(req);
@@ -27,6 +27,10 @@ module.exports = {
                 const arrTrailsCompletedOrProgress = [];
                 const allTrackingUser = await Tracking.find({
                     userLogin: { $eq: user.networkLogin },
+                    $or: [
+                        { expiredCompletion: { $exists: false } },
+                        { expiredCompletion: { $eq: null } },
+                    ],
                 });
 
                 for (const t of allTrackingUser) {
@@ -69,7 +73,7 @@ module.exports = {
         });
     },
 
-    trailsCompletedExpired(req) {
+    trailsCompletedExpired (req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const user = await getUserByToken(req);
@@ -125,7 +129,7 @@ module.exports = {
         });
     },
 
-    calculateAverageStudent(user) {
+    calculateAverageStudent (user) {
         return new Promise(async (resolve, reject) => {
             try {
                 const result = await calculateAverage(user);
@@ -137,7 +141,7 @@ module.exports = {
         });
     },
 
-    studentAverageCourses(user, req) {
+    studentAverageCourses (user, req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const { numberTrailsCompleted, numberTrailsElegibles } =
@@ -157,7 +161,7 @@ module.exports = {
         });
     },
 
-    averageGroupCourses(user, group) {
+    averageGroupCourses (user, group) {
         return new Promise(async (resolve, reject) => {
             try {
                 const data = user[group];
@@ -174,7 +178,7 @@ module.exports = {
         });
     },
 
-    averageGroupRatings(user, group) {
+    averageGroupRatings (user, group) {
         return new Promise(async (resolve, reject) => {
             try {
                 const data = user[group];
@@ -191,7 +195,7 @@ module.exports = {
         });
     },
 
-    getNumberOfItemsCompletedOrInProgressOrNotStarted(req) {
+    getNumberOfItemsCompletedOrInProgressOrNotStarted (req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const user = await getUserByToken(req);
@@ -273,7 +277,7 @@ module.exports = {
             }
         });
     },
-    getStudentCourses(req) {
+    getStudentCourses (req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const user = await getUserByToken(req);
@@ -287,7 +291,7 @@ module.exports = {
         });
     },
 
-    returnCertificates(trails, user) {
+    returnCertificates (trails, user) {
         return new Promise(async (resolve, reject) => {
             try {
                 const certs = [];
@@ -362,7 +366,7 @@ module.exports = {
     },
 };
 
-function numberOfCompleteAndEligibleCourses(user, flagToken, req) {
+function numberOfCompleteAndEligibleCourses (user, flagToken, req) {
     return new Promise(async (resolve, reject) => {
         try {
             const tags = flagToken
@@ -421,7 +425,7 @@ function numberOfCompleteAndEligibleCourses(user, flagToken, req) {
 //     }, false)
 // }
 
-function calculateNumberOfMandatoryItems(trails, user, userTags) {
+function calculateNumberOfMandatoryItems (trails, user, userTags) {
     return new Promise(async (resolve, reject) => {
         try {
             // Filtra todas as trilhas mandatórias para o usuário.

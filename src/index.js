@@ -20,7 +20,13 @@ var corsOptions = {
         'https://monitoring.happlearning.com.br',
     ],
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Range', 'X-CSRF-TOKEN', 'Authorization', 'Mfatoken'],
+    allowedHeaders: [
+        'Content-Type',
+        'Range',
+        'X-CSRF-TOKEN',
+        'Authorization',
+        'Mfatoken',
+    ],
     exposedHeaders: [
         'Accept-Ranges',
         'Content-Encoding',
@@ -82,6 +88,7 @@ const channelRoutes = require('./components/channels/routes');
 const newMessagesRoutes = require('./components/new-messages/routes');
 const gamificationRoutes = require('./components/gamification/routes');
 const systemUsersRoutes = require('./components/system-users/routes');
+const socialRoutes = require('./components/social/routes');
 
 app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/tracking', validateTokenRoute, trackingRoutes)
@@ -104,7 +111,8 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/messages', validateTokenRoute, messagesRoutes)
     .use('/messages/v2', validateTokenRoute, newMessagesRoutes)
     .use('/gamification', validateTokenRoute, gamificationRoutes)
-    .use('/connect-key', validateTokenRoute, systemUsersRoutes);
+    .use('/connect-key', validateTokenRoute, systemUsersRoutes)
+    .use('/social', validateTokenRoute, socialRoutes);
 
 if (config.showcase.active) {
     app.use('/showcase', showCaseRoutes);
