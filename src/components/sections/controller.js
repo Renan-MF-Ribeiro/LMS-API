@@ -1,8 +1,8 @@
 /* eslint-disable no-async-promise-executor */
-const { Section } = require('./model')
-const { Tracking } = require('../tracking/model')
-const _messages = require('../../utils/messages')
-const { populateTrails } = require('../trails/business')
+const { Section } = require('./model');
+const { Tracking } = require('../tracking/model');
+const _messages = require('../../utils/messages');
+const { populateTrails } = require('../trails/business');
 const {
     checkIfTheTrackIsValid,
     filterTrails,
@@ -14,35 +14,44 @@ const {
     keepLearningSections,
     concludedSections,
     getGroupCodesByToken,
-} = require('./business')
-const { getUserByToken, processTrailTracking, processExpirationDate } = require('../../utils/functions')
+    checkEligibilityTagsAnd,
+} = require('./business');
+const {
+    getUserByToken,
+    processTrailTracking,
+    processExpirationDate,
+} = require('../../utils/functions');
 
 module.exports = {
-    async returnSections (req, res) {
+    async returnSections(req, res) {
         try {
-            const searchBy = req.query.searchBy
+            const searchBy = req.query.searchBy;
             const total = await Section.find({
                 deleted: { $eq: 0 },
-            }).countDocuments()
+            }).countDocuments();
 
             const populateTrails = {
                 path: 'trails',
                 model: 'Trail',
                 select: ['_id', 'title', 'thumbPath'],
-            }
+            };
             const sections = await Section.find(
-                searchBy ? {
-                    $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-                    deleted: { $eq: 0 },
-                } : {
-                    deleted: { $eq: 0 },
-                },
-            ).sort({ position: 'asc' }).populate(populateTrails)
+                searchBy
+                    ? {
+                        $or: [{ title: { $regex: searchBy, $options: 'i' } }],
+                        deleted: { $eq: 0 },
+                    }
+                    : {
+                        deleted: { $eq: 0 },
+                    }
+            )
+                .sort({ position: 'asc' })
+                .populate(populateTrails);
 
             _messages.success(res, req, {
                 data: sections,
                 total,
-            })
+            });
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -50,18 +59,19 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'section',
-                '/returnSections',
-            )
+                '/returnSections'
+            );
         }
     },
 
-    async createSection (req, res) {
+    async createSection(req, res) {
         try {
             const verify = await Section.find({
                 title: { $eq: req.body.title },
-            })
+            });
             if (verify.length === 0) {
-                const section = await Section.create(req.body)
+                const position = await Section.find({ deleted: 0 }).count()
+                const section = await Section.create({ ...req.body, position });
                 _messages.success(
                     res,
                     req,
@@ -69,10 +79,11 @@ module.exports = {
                     'Criação de dados',
                     'sections',
                     'createSection',
-                    section, [],
+                    section,
+                    [],
                     true,
-                    'CREATE',
-                )
+                    'CREATE'
+                );
             } else {
                 _messages.badRequest(
                     res,
@@ -80,8 +91,8 @@ module.exports = {
                     'Já existe uma seção cadastrada com esse título!',
                     'Já existe uma seção cadastrada com esse título!',
                     'sections',
-                    'createSections',
-                )
+                    'createSections'
+                );
             }
         } catch (error) {
             _messages.internalServer(
@@ -90,21 +101,21 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'section',
-                '/createSession',
-            )
+                '/createSession'
+            );
         }
     },
 
-    async updateSection (req, res) {
+    async updateSection(req, res) {
         try {
-            const { _id } = req.body
+            const { _id } = req.body;
             const verify = await Section.find({
                 title: { $eq: req.body.title },
                 _id: { $ne: _id },
-            })
+            });
             if (verify.length === 0) {
-                const oldData = await Section.findByIdAndUpdate(_id, req.body)
-                const newData = await Section.find({ _id: { $eq: _id } })
+                const oldData = await Section.findByIdAndUpdate(_id, req.body);
+                const newData = await Section.find({ _id: { $eq: _id } });
 
                 _messages.success(
                     res,
@@ -116,8 +127,8 @@ module.exports = {
                     newData,
                     oldData,
                     true,
-                    'UPDATE',
-                )
+                    'UPDATE'
+                );
             } else {
                 _messages.badRequest(
                     res,
@@ -125,26 +136,26 @@ module.exports = {
                     'Já existe uma seção cadastrada com esse título!',
                     'Já existe uma seção cadastrada com esse título!',
                     'sections',
-                    'updateSections',
-                )
+                    'updateSections'
+                );
             }
         } catch (error) {
-            console.log(error)
+            console.log(error);
             _messages.internalServer(
                 res,
                 req,
                 error.message,
                 'Erro interno no servidor',
                 'section',
-                '/updateSection',
-            )
+                '/updateSection'
+            );
         }
     },
 
-    async deleteSection (req, res) {
+    async deleteSection(req, res) {
         try {
-            const { id } = req.params
-            const section = await Section.findById(id)
+            const { id } = req.params;
+            const section = await Section.findById(id);
             if (section.default) {
                 _messages.badRequest(
                     res,
@@ -152,20 +163,25 @@ module.exports = {
                     'Não é possível excluir uma sessão obrigatória',
                     'Não é possível excluir uma sessão obrigatória',
                     'section',
-                    '/deleteSection',
-                )
+                    '/deleteSection'
+                );
             } else {
-                await Section.findByIdAndUpdate(id, { deleted: 1, title: section.title + ':deleted' })
+                await Section.findByIdAndUpdate(id, {
+                    deleted: 1,
+                    title: section.title + ':deleted',
+                });
                 _messages.success(
                     res,
                     req,
                     'Excluído com sucesso',
                     'Exclusão de dados',
                     'sections',
-                    'deleteSection', [], [],
+                    'deleteSection',
+                    [],
+                    [],
                     true,
-                    'DELETE',
-                )
+                    'DELETE'
+                );
             }
         } catch (error) {
             _messages.internalServer(
@@ -174,123 +190,148 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'section',
-                '/deleteSection',
-            )
+                '/deleteSection'
+            );
         }
     },
 
-    async getSectionsElegibles (req, res) {
+    async getSectionsElegibles(req, res) {
         try {
-            const user = await getUserByToken(req)
-            const tags = await getTagsElegiblesByToken(req)
-            const classGroups = await getGroupCodesByToken(req, tags)
-            let resultSections = []
+            const user = await getUserByToken(req);
+            const tags = await getTagsElegiblesByToken(req);
+            const classGroups = await getGroupCodesByToken(req, tags);
+            let resultSections = [];
 
             if (tags.length > 0) {
-                const filter = req.query
+                const filter = req.query;
                 let trails = await populateTrails(true, {
                     enabled: true,
-                    $or: [{ collaborative: false }, { collaborative: { $exists: false } }],
-                    tags: {
-                        $in: tags,
-                    },
-                })
-                trails = trails.filter(trail => checkIfTheTrackIsValid(trail))
+                    $or: [
+                        {
+                            tags: {
+                                $in: tags,
+                            },
+                        },
+                        {
+                            tagsAnd: {
+                                $in: tags,
+                            },
+                        },
+                    ],
+                });
+                trails = trails.filter(
+                    (trail) =>
+                        checkEligibilityTagsAnd(
+                            tags,
+                            trail.tagsAnd,
+                            trail.tags
+                        ) && !trail.collaborative
+                );
+                trails = trails.filter((trail) =>
+                    checkIfTheTrackIsValid(trail)
+                );
                 const allTrackingUser = await Tracking.find({
                     userLogin: { $eq: user.networkLogin },
                     $or: [
-                        { expiredCompletion: { $exists: false } }, 
-                        { expiredCompletion: { $eq: null } }
-                    ]
-
-                })
+                        { expiredCompletion: { $exists: false } },
+                        { expiredCompletion: { $eq: null } },
+                    ],
+                });
 
                 for (let trail of trails) {
-                    const processedTrail = processTrailTracking(trail, allTrackingUser)
+                    const processedTrail = processTrailTracking(
+                        trail,
+                        allTrackingUser
+                    );
 
                     if (trail.expirationType) {
-                        trail = processExpirationDate(trail, user)
+                        trail = processExpirationDate(trail, user);
                     }
 
-                    trail = processedTrail.trail
+                    trail = processedTrail.trail;
                     for (const tag of trail.tags) {
                         for (const classGroup of classGroups) {
                             if (classGroup.groupCode === tag.value) {
-                                trail.classGroup = classGroup
+                                trail.classGroup = classGroup;
                             }
                         }
                     }
                 }
 
-                const arrSections = await elegiblesContents(trails)
-                const arrMandatorySections = await mandatorySections(trails, tags)
-                const arrRecentsSections = await recentsSections(trails)
-                const arrKeepLearningSections = await keepLearningSections(trails)
-                const arrConcludedSections = await concludedSections(trails)
+                const arrSections = await elegiblesContents(trails);
+                const arrMandatorySections = await mandatorySections(
+                    trails,
+                    tags
+                );
+                const arrRecentsSections = await recentsSections(trails);
+                const arrKeepLearningSections = await keepLearningSections(
+                    trails
+                );
+                const arrConcludedSections = await concludedSections(trails);
 
                 resultSections = arrSections
                     .concat(arrMandatorySections)
                     .concat(arrRecentsSections)
                     .concat(arrKeepLearningSections)
-                    .concat(arrConcludedSections)
-                resultSections = resultSections.filter(val => {
-                    return val != null
-                })
+                    .concat(arrConcludedSections);
+                resultSections = resultSections.filter((val) => {
+                    return val != null;
+                });
 
                 if (resultSections.length > 0) {
                     resultSections.sort((a, b) =>
-                        a.position < b.position ? -1 : 1,
-                    )
+                        a.position < b.position ? -1 : 1
+                    );
                 }
 
                 if (filter && Object.values(filter).length > 0) {
-                    const arrResultSections = []
+                    const arrResultSections = [];
                     for (const section of resultSections) {
                         section.trails = filterTrails(
                             filter,
                             section.trails,
-                            tags,
-                        )
+                            tags
+                        );
                         if (section.trails.length > 0) {
                             // Verifica a obrigatoriedade da trilha.
-                            arrResultSections.push(section)
+                            arrResultSections.push(section);
                         }
                     }
 
-                    resultSections = arrResultSections
+                    resultSections = arrResultSections;
                 }
 
                 for (const section of resultSections) {
                     for (const trail of section.trails) {
-                        setTrailMandatory(trail, tags)
+                        setTrailMandatory(trail, tags);
                     }
                 }
             }
-            
-            _messages.success(res, req, resultSections)
+
+            _messages.success(res, req, resultSections);
         } catch (error) {
-            console.log(error)
+            console.log(error);
             _messages.internalServer(
                 res,
                 req,
                 error.message,
                 'Erro interno no servidor',
                 'sections',
-                '/elegiblesContents',
-            )
+                '/elegiblesContents'
+            );
         }
     },
 
-    async updatePosition (req, res) {
+    async updatePosition(req, res) {
         try {
-            const sections = req.body
+            const sections = req.body;
 
             for (const section of sections) {
-                const { id, position } = section
-                await Section.findByIdAndUpdate(id, { position })
+                const { id, position } = section;
+                await Section.findByIdAndUpdate(id, { position });
             }
 
-            _messages.success(res, req, 'Atualizado com sucesso!')
+            _messages.success(res, req, 'Atualizado com sucesso!');
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -298,8 +339,8 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'sections',
-                '/updatePosition',
-            )
+                '/updatePosition'
+            );
         }
     },
-}
+};

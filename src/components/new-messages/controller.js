@@ -1,5 +1,6 @@
 const axios = require('axios');
 const config = require('../../../config.json');
+const { htmlToText } = require('html-to-text');
 const { NewMessage } = require('./model');
 const {
     getUserList,
@@ -298,7 +299,9 @@ module.exports = {
                 },
             };
             campaign.target = target;
-            campaign.text = campaign.textHtml;
+            campaign.text = htmlToText(campaign.textHtml, {
+                wordwrap: 130,
+            });
 
             await sendMessageToKafka(campaign, targetUsers);
 
@@ -308,7 +311,8 @@ module.exports = {
                 id: sendingListId,
                 status: 'SENT',
                 title: campaign.title,
-                text: campaign?.text ?? campaign?.textHtml,
+                text: campaign.text,
+                textHtml: campaign.textHtml,
             });
 
             _messages.success(res, req, sendingListId);

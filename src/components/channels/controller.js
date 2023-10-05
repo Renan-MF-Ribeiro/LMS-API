@@ -75,7 +75,6 @@ module.exports = {
 
             for (let i in body.banners) {
                 let path = await azureBlob(fileArray[i], 'channels/banners');
-                path = path.replace(AZURE_BLOB_URL, DOMAIN);
                 body.banners[i].path = path;
             }
 
@@ -142,7 +141,6 @@ module.exports = {
                         fileArray[index],
                         'channels/banners'
                     );
-                    path = path.replace(AZURE_BLOB_URL, DOMAIN);
                     body.banners[indexBannersWithNoPath[index]].path = path;
                 }
             }

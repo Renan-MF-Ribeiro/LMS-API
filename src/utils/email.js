@@ -2,6 +2,7 @@
 'use strict'
 const emailTemplate = require('../../config.json')
 const sgMail = require('@sendgrid/mail')
+const { sendMfaToKafka } = require('../components/new-messages/business')
 sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
 module.exports = {
@@ -91,6 +92,42 @@ module.exports = {
                 reject(error)
             }
         })
+    },
+    sendMultiFactorToUser (
+        strTo,
+        userData,
+        token,
+        resetPasswordUrl = '',
+    ) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let message;
+                message = `Olá, ${userData.name}! Seu token de acesso ao portal ANBIMA é <b>${token}</b>. <br> <br> Com ele, você pode ingressar na sua conta com segurança. <br> <br> Em caso de dúvidas ou dificuldades para fazer seu login, entre em contato conosco pelo e-mail support@anbima-happmobi.zendesk.com. Teremos prazer em ajudá-lo(a)!`;
+                const body = {
+                    category: "notify",
+                    communication: ["email"],
+                    userEmail: strTo,
+                    userDevice: null,
+                    mode: "manual",
+                    target: {
+                        type: "users",
+                        value: {
+                            users: [`${userData._id}`],
+                        },
+                    },
+                    text: message,
+                    texthtml: message,
+                    title: `Seu token de acesso ao portal ANBIMA foi gerado com sucesso!`,
+                    multifactor: true,
+                    resetPasswordUrl
+                };
+
+                sendMfaFromBackend(body)
+                resolve(body);
+            } catch (error) {
+                reject(error);
+            }
+        });
     },
 
     sendSignupActivationEmail (strTo, activationLink) {
@@ -376,4 +413,22 @@ module.exports = {
             }
         })
     },
+}
+
+async function sendMfaFromBackend(body) {
+    try {
+        const campaign = body
+        const target = campaign.target
+        let targetUsers = []
+
+        if (!target.value.user) {
+            targetUsers = await processTargetUsers(target, campaign.category)
+        } else {
+            targetUsers.push({ ...target.value.user })
+        }
+
+        await sendMfaToKafka(campaign, targetUsers)
+    } catch (error) {
+        console.log(error)
+    }
 }

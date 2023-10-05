@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const { CLIENT_ID, DOMAIN, AZURE_BLOB_URL, NODE_ENV } = process.env;
 const _messages = require('../../utils/messages');
 const _files = require('../../utils/files');
-const { Message } = require('../messages/model');
+const { NewMessage } = require('../new-messages/model');
 const {
     User,
     UserTest,
@@ -15,15 +15,19 @@ const {
 
 const {
     generateToken,
+    generateMfaToken,
     generateSSOToken,
     decodeToken,
     validateToken,
     validateTokenNginx,
+    validateMfaToken,
     returnIdProfileUser,
     returnIdGroupUser,
     generateTokenAnalytics,
     generateSASToken,
     generateHappPlaceToken,
+    generateMultiFactor,
+    validateMultiFactor,
 } = require('../../utils/auth');
 
 const {
@@ -55,13 +59,14 @@ const {
     sendSignupActivationEmail,
     sendNotificationEmail,
     sendResetedPasswordToUser,
+    sendMultiFactorToUser,
 } = require('../../utils/email');
 
 const axios = require('axios');
 const bcrypt = require('bcryptjs');
 const cryptoJS = require('crypto-js');
 const jwt = require('jsonwebtoken');
-const { sendMessageToKafka } = require('../messages/business');
+const { sendMessageToKafka } = require('../new-messages/business');
 
 const config = require('../../../config.json');
 const {
@@ -75,6 +80,8 @@ const inactivateIfNotInSpreadsheet =
 const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail;
 const { EVENTS_CATEGORY } = require('../gamification/model');
 const GamificationController = require('../gamification/controller');
+const GamificationBusiness = require('../gamification/business');
+const { Group } = require('../groups/model');
 
 module.exports = {
     async create(req, res) {
@@ -354,10 +361,15 @@ module.exports = {
                         clientID: CLIENT_ID,
                     });
 
+                    const token_mfa = generateMfaToken({
+                        ref: user._id,
+                        mfa: false,
+                    });
+
                     const token_happplace = generateHappPlaceToken({
-                        userName: user.name,
+                        name: user.name,
                         networkLogin: user.networkLogin,
-                        clientID: CLIENT_ID,
+                        clientId: CLIENT_ID,
                     });
 
                     const SAS = generateSASToken();
@@ -395,6 +407,7 @@ module.exports = {
                             profilePhoto: user.profilePhoto,
                             tokenAnalytics: token_analytics,
                             tokenHappPlace: token_happplace,
+                            mfaToken: token_mfa,
                             networkLogin: user.networkLogin,
                             userId: user._id,
                         },
@@ -494,6 +507,24 @@ module.exports = {
             ? data.networkLogin
             : data.data.networkLogin;
 
+        if (data?.communication || data?.data?.communication) {
+            const communication =
+                data?.communication || data?.data?.communication;
+            const communicationCategory = String(communication).toUpperCase();
+            const eventCategory =
+                EVENTS_CATEGORY[`OPENED_FROM_${communicationCategory}`];
+
+            await GamificationController.dispatch(
+                networkLogin,
+                [eventCategory],
+                {
+                    trail: {
+                        title: data?.trailTitle || data?.data?.trailTitle,
+                    },
+                }
+            );
+        }
+
         try {
             if (networkLogin) {
                 user = await User.findOne({ networkLogin, status: 'ATIVO' }, [
@@ -569,9 +600,20 @@ module.exports = {
                         groups: groupsIDS,
                     });
 
+                    const token_mfa = generateMfaToken({
+                        ref: user._id,
+                        mfa: false,
+                    });
+
                     const token_analytics = generateTokenAnalytics({
                         perfil: profilesIDS.numbers,
                         clientID: CLIENT_ID,
+                    });
+
+                    const token_happplace = generateHappPlaceToken({
+                        name: user.name,
+                        networkLogin: user.networkLogin,
+                        clientId: CLIENT_ID,
                     });
 
                     const SAS = generateSASToken();
@@ -607,6 +649,8 @@ module.exports = {
                             name: user.name,
                             profilePhoto: user.profilePhoto,
                             tokenAnalytics: token_analytics,
+                            mfaToken: token_mfa,
+                            tokenHappPlace: token_happplace,
                             networkLogin: user.networkLogin,
                             userId: user._id,
                         },
@@ -1084,7 +1128,7 @@ module.exports = {
                     await sendAccountsToKafka(usersToSend);
                     const campaign = createWelcomeCampaign();
                     await sendMessageToKafka(campaign, newUsers);
-                    await Message.create(campaign);
+                    await NewMessage.create(campaign);
                 }
             }
 
@@ -1297,9 +1341,6 @@ module.exports = {
             const file = req.files.file;
             // const photoPath = await _files.awsAmazon(file, `photos/${user._id}`)
             let photoPath = await _files.azureBlob(file, `photos/${user._id}`);
-            if (NODE_ENV != 'local') {
-                photoPath = photoPath.replace(AZURE_BLOB_URL, DOMAIN);
-            }
             await User.findByIdAndUpdate(user._id, { profilePhoto: photoPath });
             _messages.success(res, req, photoPath);
         } catch (error) {
@@ -1896,7 +1937,23 @@ module.exports = {
         const { tag, userId } = req.body;
 
         try {
-            await User.findByIdAndUpdate(userId, { $pull: { groupsAD: tag } });
+            const user = await User.findByIdAndUpdate(
+                userId,
+                { $pull: { groupsAD: tag } },
+                { new: true }
+            );
+            const groupsAD = user.groupsAD.filter(
+                (tag) => !String(tag).startsWith('PERFIL_')
+            );
+            const groups = await Group.find({ name: { $in: groupsAD } });
+            const eligibilities = groups.map(({ name, tags }) => ({
+                name,
+                tags: tags.map(({ value }) => value),
+            }));
+            GamificationBusiness.updateClientUser(user.networkLogin, {
+                eligibilities,
+            });
+
             _messages.success(res, req, {
                 message: 'Tag de permissão removida',
             });
@@ -1914,9 +1971,23 @@ module.exports = {
     async addGroups(req, res) {
         const { tag, userId } = req.body;
         try {
-            await User.findByIdAndUpdate(userId, {
-                $addToSet: { groupsAD: tag },
+            const user = await User.findByIdAndUpdate(
+                userId,
+                { $addToSet: { groupsAD: tag } },
+                { new: true }
+            );
+            const groupsAD = user.groupsAD.filter(
+                (tag) => !String(tag).startsWith('PERFIL_')
+            );
+            const groups = await Group.find({ name: { $in: groupsAD } });
+            const eligibilities = groups.map(({ name, tags }) => ({
+                name,
+                tags: tags.map(({ value }) => value),
+            }));
+            GamificationBusiness.updateClientUser(user.networkLogin, {
+                eligibilities,
             });
+
             _messages.success(res, req, {
                 message: 'Tag de permissão adicionada ao usuário',
             });
@@ -1954,7 +2025,13 @@ module.exports = {
         const { tag, userId } = req.body;
         try {
             await User.findByIdAndUpdate(userId, {
-                $addToSet: { classGroups: tag },
+                $addToSet: {
+                    classGroups: {
+                        ...tag,
+                        startDate: new Date(tag.startDate),
+                        limitDate: new Date(tag.limitDate),
+                    },
+                },
             });
             _messages.success(res, req, {
                 message: 'Tag de curso adicionada ao usuário',
@@ -1978,9 +2055,17 @@ module.exports = {
             for (group of classGroups) {
                 if (group._id == tag._id) {
                     group = tag;
-                    newTags.push(group);
+                    newTags.push({
+                        ...group,
+                        startDate: new Date(group.startDate),
+                        limitDate: new Date(group.limitDate),
+                    });
                 } else {
-                    newTags.push(group);
+                    newTags.push({
+                        ...group,
+                        startDate: new Date(group.startDate),
+                        limitDate: new Date(group.limitDate),
+                    });
                 }
             }
             await User.findByIdAndUpdate(_id, { classGroups: newTags });
@@ -2101,6 +2186,98 @@ module.exports = {
             );
 
             return _messages.success(res, req, users);
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'users',
+                'conteudistas'
+            );
+        }
+    },
+
+    async generateMultiFactor(req, res) {
+        try {
+            const { networkLogin } = req.body;
+            const user = await User.findOne({ networkLogin: networkLogin });
+            const tokenAndSecret = await generateMultiFactor(
+                user.name,
+                networkLogin
+            );
+            if (user.alternativeEmail) {
+                await sendMultiFactorToUser(
+                    user.email,
+                    user,
+                    tokenAndSecret.newToken.token
+                );
+                await sendMultiFactorToUser(
+                    user.alternativeEmail,
+                    user,
+                    tokenAndSecret.newToken.token
+                );
+            } else {
+                await sendMultiFactorToUser(
+                    user.email,
+                    user,
+                    tokenAndSecret.newToken.token
+                );
+            }
+            _messages.success(res, req, tokenAndSecret.newSecret.secret);
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'users',
+                'conteudistas'
+            );
+        }
+    },
+
+    async validateMultiFactor(req, res) {
+        try {
+            const user = await getUserByToken(req);
+            const { secret, token } = req.body;
+            const mfaToken = req.headers.mfatoken;
+            const payload = jwt.decode(mfaToken);
+            const validationReturn = await validateMultiFactor(secret, token);
+            let mfaJwt;
+            if (
+                validationReturn &&
+                validationReturn.delta >= -5 &&
+                payload.data.ref == user._id
+            ) {
+                mfaJwt = generateMfaToken({ mfa: true, ref: user._id });
+                _messages.success(res, req, mfaJwt);
+            } else {
+                _messages.forbidden(
+                    res,
+                    req,
+                    'Token inválido',
+                    'Token inválido!',
+                    'users',
+                    'ldapSignIn'
+                );
+            }
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'users',
+                'conteudistas'
+            );
+        }
+    },
+
+    async validateMfaToken(req, res) {
+        try {
+            const isTokenValid = await validateMfaToken(req);
+            _messages.success(res, req, isTokenValid);
         } catch (error) {
             _messages.internalServer(
                 res,

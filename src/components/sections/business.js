@@ -14,21 +14,27 @@ const { Section, DEFAULT_TYPES } = require('./model');
 
 module.exports = {
     checkIfTheTrackIsValid(trail) {
-        const startDate = formatDateWithoutHours(trail.startDate);
-        const endDate = formatDateWithoutHours(trail.endDate);
         const today = getDateTodayWithoutHours();
-        // && (endDate >= today || endDate === 'Invalid Date')
-        if (trail.items.length > 0) {
-            if (startDate && (endDate === null || endDate === 'Invalid Date')) {
-                if (startDate <= today) return true;
-            }
 
-            if (startDate && endDate) {
-                if (startDate <= today && endDate >= today) return true;
+        if (trail.classGroup) {
+            const startGroup = formatDateWithoutHours(
+                trail.classGroup.startDate
+            );
+
+            if (!(startGroup <= today)) {
+                return false;
             }
         }
 
-        return false;
+        if (trail.startDate && trail.endDate) {
+            const startDate = formatDateWithoutHours(trail.startDate);
+            const endDate = formatDateWithoutHours(trail.endDate);
+
+            if (!(startDate <= today && endDate >= today)) {
+                return false;
+            }
+        }
+        return true;
     },
 
     calculateDiffDateTrail(trail) {
@@ -514,6 +520,36 @@ module.exports = {
             }
         });
     },
+
+    checkEligibilityTagsAnd(tagsUser, tagsAnd, tagsOr) {
+        const eligibilityUser = tagsUser.map((tag) =>
+            tag.value.toLocaleLowerCase()
+        );
+
+        const eligibilitytagsAnd = eligibilityUser.some((eligibility) =>
+            tagsAnd?.some((m) => m.value.toLocaleLowerCase() === eligibility)
+        );
+
+        if (eligibilitytagsAnd) {
+            const allEligibilitytagsAnd = tagsAnd?.every((eligibility) =>
+                eligibilityUser.includes(eligibility.value.toLocaleLowerCase())
+            );
+
+            if (allEligibilitytagsAnd) {
+                return true;
+            }
+        } else {
+            const eligibilityTag = eligibilityUser.some((eligibility) =>
+                tagsOr?.some(
+                    (tag) => tag.value.toLocaleLowerCase() === eligibility
+                )
+            );
+            if (eligibilityTag) {
+                return true;
+            }
+        }
+        return false;
+    },
 };
 
 function isNecessary(trail, tags) {
@@ -630,21 +666,25 @@ function isMostRecent(trail) {
 }
 
 function checkIfTheTrackIsValid(trail) {
-    const startDate = formatDateWithoutHours(trail.startDate);
-    const endDate = formatDateWithoutHours(trail.endDate);
     const today = getDateTodayWithoutHours();
-    // && (endDate >= today || endDate === 'Invalid Date')
-    if (trail.items.length > 0) {
-        if (startDate && (endDate === null || endDate === 'Invalid Date')) {
-            if (startDate <= today) return true;
-        }
 
-        if (startDate && endDate) {
-            if (startDate <= today && endDate >= today) return true;
+    if (trail.classGroup) {
+        const startGroup = formatDateWithoutHours(trail.classGroup.startDate);
+
+        if (!(startGroup <= today)) {
+            return false;
         }
     }
 
-    return false;
+    if (trail.startDate && trail.endDate) {
+        const startDate = formatDateWithoutHours(trail.startDate);
+        const endDate = formatDateWithoutHours(trail.endDate);
+
+        if (!(startDate <= today && endDate >= today)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 function calculateDiffDateTrail(trail) {

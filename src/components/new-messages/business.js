@@ -1,4 +1,4 @@
-const { TrailsTagsWithUsersAndTrackings } = require('../trails/model');
+const { TrailsTagsWithUsersAndTrackings, Trail } = require('../trails/model');
 const { User, LastLogin } = require('../users/model');
 const {
     getUsersByIds,
@@ -12,6 +12,8 @@ const clientid = process.env.CLIENT_ID;
 require('dotenv').config();
 const kafka = require('../../utils/kafka');
 const { processTrailTracking, sleep } = require('../../utils/functions');
+const { generateSSOToken } = require('../../utils/auth');
+const { Item } = require('../items/model');
 
 module.exports = {
     async processTargetUsers(target, category) {
@@ -29,6 +31,38 @@ module.exports = {
             await producer.connect();
             const messages = [];
             for (const user of users) {
+                for (const communication of campaign.communication) {
+                    const stringMessage = JSON.stringify(
+                        await processMessage(
+                            { ...campaign, communication },
+                            user
+                        )
+                    );
+                    messages.push({ value: stringMessage });
+                }
+            }
+            const chunk = 10;
+            for (let i = 0; i < messages.length; i += chunk) {
+                const temporary = messages.slice(i, i + chunk);
+                await producer.send({
+                    topic: process.env.TOPIC_MSG,
+                    messages: temporary,
+                });
+            }
+
+            await producer.disconnect();
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    },
+
+    async sendMfaToKafka(campaign, users) {
+        try {
+            const producer = kafka.producer();
+            await producer.connect();
+            const messages = [];
+            for (const user of users) {
                 const stringMessage = JSON.stringify(
                     await processMessage(campaign, user)
                 );
@@ -36,9 +70,10 @@ module.exports = {
             }
             const chunk = 10;
             for (let i = 0; i < messages.length; i += chunk) {
+                console.log(process.env.TOPIC_MFA);
                 const temporary = messages.slice(i, i + chunk);
                 await producer.send({
-                    topic: process.env.TOPIC_MSG,
+                    topic: process.env.TOPIC_MFA,
                     messages: temporary,
                 });
             }
@@ -247,7 +282,6 @@ module.exports = {
                         ];
                     }
 
-                    
                     if (finished) {
                         const finishedUsers = [];
 
@@ -460,7 +494,7 @@ module.exports = {
                 name: userData.name,
                 email: userData.email,
             });
-            userIds.push(user._id);
+            if (user && user._id) userIds.push(user._id);
         }
 
         return userIds;
@@ -469,9 +503,17 @@ module.exports = {
 
 async function processMessage(campaign, user) {
     try {
-        const { communication, target, ...data } = campaign;
+        let { communication, target, ...data } = campaign;
+        target.recovery = campaign.recovery;
+        target.resetPasswordUrl = campaign.resetPasswordUrl;
         const foundUser = await User.findOne({ _id: user });
-        const notificationlink = processNotificationLink(target);
+        const notificationlink = await processNotificationLink(
+            target,
+            communication
+        );
+        const userEmailAndDeviceId = await User.findById(user._id).select(
+            'email deviceId -_id'
+        );
 
         const message = {
             clientid,
@@ -479,6 +521,14 @@ async function processMessage(campaign, user) {
             ...data,
             identifier: foundUser.networkLogin,
             viewed: false,
+            userEmail: campaign.userEmail
+                ? campaign.userEmail
+                : userEmailAndDeviceId.email
+                ? userEmailAndDeviceId.email
+                : null,
+            userDevice: userEmailAndDeviceId.deviceId
+                ? userEmailAndDeviceId.deviceId
+                : null,
             notificationlink,
         };
         return message;
@@ -487,12 +537,21 @@ async function processMessage(campaign, user) {
     }
 }
 
-function processNotificationLink(target) {
+async function processNotificationLink(target, communication) {
     const { type, value } = target;
+
     if (type && type === 'trail') {
-        const url = value.itemId
-            ? `${process.env.DOMAIN}/login/entrar?redirectTo=/player/${value.trailId}/${value.itemId}`
-            : `${process.env.DOMAIN}/login/entrar?redirectTo=/menu/${value.trailId}`;
+        const trail = await Trail.findOne({ _id: value.trailId });
+        const item = await Item.findOne({ _id: value.itemId });
+        const token = generateSSOToken({
+            networkLogin: value.user.networkLogin,
+            communication,
+            trailTitle: trail.title,
+        });
+        const redirectTo = value.itemId
+            ? `/player/${trail.titleURL}/${item.titleURL}`
+            : `/menu/${trail.titleURL}`;
+        const url = `${process.env.DOMAIN}/login/entrar/sso?token=${token}&redirectTo=${redirectTo}`;
         const notificationlink = {
             trailid: value.trailId,
             itemid: value.itemId,

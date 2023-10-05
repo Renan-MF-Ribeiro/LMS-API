@@ -96,6 +96,7 @@ module.exports = {
             // if (question.length === 0) {
             await Category.findByIdAndUpdate(id, { deleted: 1 })
             await Question.updateMany({ idCategory: { $eq: id }, deleted: { $eq: 0 } }, { deleted: 1 })
+            await Evaluation.updateMany({ categories: id }, { $pull: { categories: id }})
             _messages.success(res, req, 'Excluído com sucesso', 'Exclusão de dados', 'categories', 'deleteCategory', [], [], true, 'DELETE')
             // } else {
             //    _messages.badRequest(res, req, 'Existe questões para essa categoria', 'Não é possível realizar a exclusão, pois existem questões vinculadas a categoria', 'categories', 'deleteCategory')

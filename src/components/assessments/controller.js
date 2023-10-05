@@ -53,6 +53,11 @@ module.exports = {
             const timeDuration = await HistoricEvaluation.find({ user: { $eq: user._id }, idEvaluation: { $eq: idEvaluation } }).sort({ [order]: sort })
 
             var result = null
+            const totalQuestions = await Question.countDocuments({
+                idEvaluation: { $eq: idEvaluation },
+                deleted: { $eq: false },
+            })
+            
             if (timeDuration.length) {
                 const { amountQuestionsCorrect, amountOfQuestions } = timeDuration[0]
 
@@ -68,7 +73,7 @@ module.exports = {
                 description,
                 attempts,
                 duration,
-                amountOfQuestions,
+                amountOfQuestions: amountOfQuestions > totalQuestions ? totalQuestions : amountOfQuestions,
                 attemptsHistory: timeDuration.length,
                 historicDuration: timeDuration.length > 0 ? timeDuration[0].duration : null,
                 values: result != null ? result.values : { correct: 0, incorrect: 0 },
@@ -347,7 +352,7 @@ module.exports = {
 
             const tracking = await ExamTracking.findOne({ item: idItem, userLogin: user.networkLogin })
 
-            if (!evaluation.attempts || tracking.remainingAttempts <= evaluation.attempts) {
+            if (!evaluation.attempts || !tracking || tracking?.remainingAttempts <= evaluation.attempts) {
                 const { categories } = await _business.returnCategoriesOfEvaluation(id)
                 const { questions, amount } = await _business.returnRandomQuestionsByCategory(categories)
                 if (questions.length > 0) {
@@ -508,16 +513,29 @@ module.exports = {
         try {
             const { id } = req.params
             const user = await _functions.getUserByToken(req)
-            const { amountQuestionsAnswered, questions, amountOfQuestions, amountQuestionsCorrect, answers, item, duration } = await HistoricEvaluation
-                .findOne({ _id: { $eq: id } })
+            const {
+                amountQuestionsAnswered,
+                questions,
+                amountOfQuestions,
+                amountQuestionsCorrect,
+                idEvaluation,
+                answers,
+                item,
+                duration,
+            } = await HistoricEvaluation.findOne({ _id: { $eq: id } })
+
+            const totalQuestions = await Question.countDocuments({
+                idEvaluation: { $eq: idEvaluation },
+                deleted: { $eq: false },
+            })
 
             const answeredQuestions = amountQuestionsAnswered
-            const amountQuestions = amountOfQuestions
+            const amountQuestions = amountOfQuestions > totalQuestions ? totalQuestions : amountOfQuestions
 
             const { passingScore } = await Item.findOne({ _id: { $eq: item } })
             const result = await _business.calculateRatingEvaluation(amountQuestionsCorrect, amountOfQuestions)
 
-            if (amountQuestionsAnswered === amountOfQuestions) {
+            if (amountQuestionsAnswered === amountQuestions) {
                 const { idEvaluation, title } = await Item.findOne({ _id: { $eq: item } }, ['idEvaluation', 'title'])
                 const { attempts } = await Evaluation.findOne({ _id: { $eq: idEvaluation } })
                 const history = await HistoricEvaluation.find({ user: { $eq: user._id }, idEvaluation: { $eq: idEvaluation } })

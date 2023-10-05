@@ -26,6 +26,9 @@
         },
         "revokeTrail": {
             "active": true
+        },
+        "recommendedTrails": {
+            "active": true
         }
     },
     "usersData": {

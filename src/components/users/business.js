@@ -253,11 +253,24 @@ module.exports = {
         const roles = data.roles ? data.roles.split(',').map(item => item.trim()) : []
 
         const groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO']
-        
-        const elegibility = !data.company && !data.office ? [] : [
-            `ELEGE_${_functions.clearString(data.company)}`,
-            `ELEGE_${_functions.clearString(data.office)}`,
-        ]
+        if(!!data.company && !!data.office) {
+            groupsAD.push(`ELEGE_${_functions.clearString(data.company)}`)
+            groupsAD.push(`ELEGE_${_functions.clearString(data.office)}`)
+        }
+        const targetTags = ['optionalEligibility1','optionalEligibility2','optionalEligibility3']
+        targetTags.forEach((tag) => !!data[tag] && groupsAD.push(`ELEGE_${_functions.clearString(data[tag])}`));
+        groupsAD.forEach(async (groupName) => {
+            const group = await Group.findOne({ name: groupName })
+            if (!group) {
+                await Group.create({ 
+                    name: groupName,
+                    tags: [{
+                        display: groupName,
+                        value: groupName
+                    }] 
+                })
+            }
+        })
 
         if (roles.includes('Admin')) {
             groupsAD.push('PERFIL_Admin')
@@ -270,15 +283,6 @@ module.exports = {
             groupsAD.push('PERFIL_Conteudista')
         }
 
-        elegibility.forEach(async value => {
-            if (value) {
-                groupsAD.push(value)
-                const group = await Group.findOne({ name: value })
-                if (!group) {
-                    await Group.create({ name: value })
-                }
-            }
-        })
         data.groupsAD = groupsAD
         if (data.cpf) {
             data.cpf = String(data.cpf).replace(/[^a-z0-9]/gi, '')

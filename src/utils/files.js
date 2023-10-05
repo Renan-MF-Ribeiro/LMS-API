@@ -27,7 +27,7 @@ const configJson = require('../../config.json')
 const bucket = process.env.BUCKET
 aws.config = { accessKeyId: process.env.ACCESSKEY, secretAccessKey: process.env.SECRETKEY, region: process.env.REGION }
 
-const { PUBLIC_PATH, UPLOADS_PATH, AZURE_STRINGCONN, AZURE_BLOBNAME, AZURE_ACCESSKEY } = process.env
+const { PUBLIC_PATH, UPLOADS_PATH, AZURE_STRINGCONN, AZURE_BLOBNAME, AZURE_ACCESSKEY, AZURE_BLOB_URL, DOMAIN } = process.env
 
 shelljs.mkdir('-p', UPLOADS_PATH)
 
@@ -118,9 +118,10 @@ module.exports = {
         const blockBlobClient = containerClient.getBlockBlobClient(filePath)
         const blobOptions = { blobHTTPHeaders: { blobContentType: fileType } }
         const uploadBlobResponse = await blockBlobClient.uploadStream(file$, file.size, undefined, blobOptions)
+        let url = decodeURIComponent(blockBlobClient.url)
 
-        return decodeURIComponent(blockBlobClient.url)
-        // })
+        url = process.env.NODE_ENV === 'local' ? url : url.replace(AZURE_BLOB_URL, DOMAIN);
+        return url
     },
 
     async getAzureFile () {

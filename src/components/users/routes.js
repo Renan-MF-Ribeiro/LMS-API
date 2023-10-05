@@ -63,6 +63,7 @@ module.exports = express.Router()
     .post('/remove-class-tag', validateTokenRoute, _controller.deleteClassTag)
     .post('/add-class-tag', validateTokenRoute, _controller.addClassTag)
     .post('/update-class-tag', validateTokenRoute, _controller.updateClassTag)
-    
-    // HL-1263
     .get('/evaluations/:idEvaluation', validateTokenRoute, _controller.evaluationProgress)
+    .get('/mfa/token', _controller.validateMfaToken)
+    .post('/mfa/generate', _controller.generateMultiFactor)
+    .post('/mfa/validate', _controller.validateMultiFactor)

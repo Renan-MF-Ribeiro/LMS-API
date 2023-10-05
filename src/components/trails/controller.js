@@ -21,19 +21,21 @@ const {
     formatDateWithoutHours,
 } = require('../../utils/functions');
 
-const { Log } = require('../logs/model')
+const { Log } = require('../logs/model');
 const mongoose = require('mongoose');
 
 const { checkItem } = require('./business');
 
 const { Evaluation } = require('../assessments/model');
 const { User } = require('../users/model');
-const { Message } = require('../messages/model');
-const { sendMessageToKafka } = require('../messages/business');
+const { NewMessage } = require('../new-messages/model');
+const { sendMessageToKafka } = require('../new-messages/business');
 const {
     elegiblesContents,
     keepLearningSections,
     concludedSections,
+    checkEligibilityTagsAnd,
+    getTagsElegiblesByToken,
 } = require('../sections/business');
 
 module.exports = {
@@ -190,7 +192,7 @@ module.exports = {
         try {
             const findValue = req.params.trailId;
             const user = await getUserByToken(req);
-
+            const tags = await getTagsElegiblesByToken(req);
             const allTrackingUser = await Tracking.find({
                 userLogin: { $eq: user.networkLogin },
             });
@@ -201,6 +203,23 @@ module.exports = {
                   }
                 : { titleURL: findValue };
             const trails = await populateTrails(true, query);
+            if (
+                !checkEligibilityTagsAnd(
+                    tags,
+                    trails[0].tagsAnd,
+                    trails[0].tags
+                )
+            ) {
+                _messages.badRequest(
+                    res,
+                    req,
+                    'Você não esta elegível a este conteúdo',
+                    'Você não esta elegível a este conteúdo',
+                    'trails',
+                    'findByIdWithTrackingAndInnerText'
+                );
+                return;
+            }
 
             const trail = processExpirationDate(trails[0], user);
             let durationHours = 0;
@@ -316,6 +335,7 @@ module.exports = {
                 }
             }
         } catch (error) {
+            console.log(error)
             _messages.internalServer(
                 res,
                 req,
@@ -538,6 +558,7 @@ module.exports = {
                 }
             }
         } catch (error) {
+            console.log(error)
             _messages.internalServer(
                 res,
                 req,
@@ -631,23 +652,23 @@ module.exports = {
             _messages.success(
                 res,
                 req,
-                "Sucesso",
-                "Atualização de dados",
-                "trails",
-                "linkSeparators",
+                'Sucesso',
+                'Atualização de dados',
+                'trails',
+                'linkSeparators',
                 newData,
                 oldData,
                 true,
-                "UPDATE"
+                'UPDATE'
             );
         } catch (error) {
             _messages.internalServer(
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "trails",
-                "separators"
+                'Erro interno no servidor',
+                'trails',
+                'separators'
             );
         }
     },
@@ -663,7 +684,7 @@ module.exports = {
             let newData;
             const update = separators.map((separatorDB) => {
                 if (separatorDB._id.toString() == separator._id)
-                separatorDB.title = separator.title;
+                    separatorDB.title = separator.title;
                 return separatorDB;
             });
             oldData = await Trail.findByIdAndUpdate(idTrail, {
@@ -674,23 +695,23 @@ module.exports = {
             _messages.success(
                 res,
                 req,
-                "Sucesso",
-                "Atualização de dados",
-                "trails",
-                "linkSeparators",
+                'Sucesso',
+                'Atualização de dados',
+                'trails',
+                'linkSeparators',
                 newData,
                 oldData,
                 true,
-                "UPDATE"
+                'UPDATE'
             );
         } catch (error) {
             _messages.internalServer(
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "trails",
-                "separators"
+                'Erro interno no servidor',
+                'trails',
+                'separators'
             );
         }
     },
@@ -716,23 +737,23 @@ module.exports = {
             _messages.success(
                 res,
                 req,
-                "Sucesso",
-                "Atualização de dados",
-                "trails",
-                "linkSeparators",
+                'Sucesso',
+                'Atualização de dados',
+                'trails',
+                'linkSeparators',
                 newData,
                 oldData,
                 true,
-                "UPDATE"
+                'UPDATE'
             );
         } catch (error) {
             _messages.internalServer(
                 res,
                 req,
                 error.message,
-                "Erro interno no servidor",
-                "trails",
-                "separators"
+                'Erro interno no servidor',
+                'trails',
+                'separators'
             );
         }
     },
@@ -1018,18 +1039,18 @@ module.exports = {
 
             // Valida os ids.
             const hasAllItems =
-            // items.length == itemsInOrder.length &&
-            itemsInOrder.reduce((hasAllItems, val) => {
-                if (hasAllItems == false) {
-                    return false;
-                }
+                // items.length == itemsInOrder.length &&
+                itemsInOrder.reduce((hasAllItems, val) => {
+                    if (hasAllItems == false) {
+                        return false;
+                    }
 
-                return (
-                    items.findIndex(
-                        (i) => val.itemID._id == i.itemID.toString()
-                    ) >= 0
-                );
-            }, true);
+                    return (
+                        items.findIndex(
+                            (i) => val.itemID._id == i.itemID.toString()
+                        ) >= 0
+                    );
+                }, true);
             if (hasAllItems) {
                 // Atualiza lista de items.
                 const newTrailItems = itemsInOrder.map((idItem) => {
@@ -1090,7 +1111,7 @@ module.exports = {
             var dtInicio = new Date();
 
             const user = await getUserByToken(req);
-            const tags = await getTagsGroupsByToken(req);
+            const tags = await getTagsElegiblesByToken(req);
             let banners = [];
             const itemsIDProcessados = [];
 
@@ -1117,6 +1138,7 @@ module.exports = {
                     enabled: true,
                     $or: [
                         { tags: { $in: tags } },
+                        { tagsAnd: { $in: tags } },
                         { mandatory: { $in: tags } },
                     ],
                     'items.itemID': { $in: arrItemsID },
@@ -1172,7 +1194,7 @@ module.exports = {
             var dtInicio = new Date();
 
             const user = await getUserByToken(req);
-            const tags = await getTagsGroupsByToken(req);
+            const tags = await getTagsElegiblesByToken(req);
             let banners = [];
             const itemsID = [];
             for (const tag of user.tags) {
@@ -1186,6 +1208,7 @@ module.exports = {
                     enabled: true,
                     $or: [
                         { tags: { $in: tags } },
+                        { tagsAnd: { $in: tags } },
                         { mandatory: { $in: tags } },
                     ],
                 },
@@ -1434,7 +1457,7 @@ module.exports = {
                     trail,
                     moderation === 'approved' ? 'aprovado' : 'recusado'
                 );
-                await Message.create(campaign);
+                await NewMessage.create(campaign);
                 sendMessageToKafka(campaign, [user]);
             }
 
@@ -1483,47 +1506,63 @@ module.exports = {
         try {
             let trailId = req.fields.trailId;
             let fileArray = Object.keys(req.files).map((key) => req.files[key]);
-            const supportMaterial = []
+            const supportMaterial = [];
 
             for (let file of fileArray) {
-                let path = await azureBlob(file, "trails/material");
-                path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                let path = await azureBlob(file, 'trails/material');
                 const material = {
                     _id: new mongoose.Types.ObjectId(),
                     url: path,
                     name: file.name,
                     size: file.size,
-                    deleted: false
-                }
-                supportMaterial.push(material)
+                    deleted: false,
+                };
+                supportMaterial.push(material);
             }
 
-            await Trail.findByIdAndUpdate(trailId,
-                { $push: { supportMaterial: supportMaterial } })
+            await Trail.findByIdAndUpdate(trailId, {
+                $push: { supportMaterial: supportMaterial },
+            });
 
-            _messages.success(res, req, { message: 'Upload concluído!' })
+            _messages.success(res, req, { message: 'Upload concluído!' });
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'uploadMaterial')
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno do servidor',
+                'trails',
+                'uploadMaterial'
+            );
         }
     },
 
     async listMaterial(req, res) {
         try {
-            let trailId = req.params.id
-            const trail = await Trail.findById(trailId)
-            const filteredSupportArray = trail.supportMaterial.filter((x)=> x.deleted === false)
-            _messages.success(res, req, filteredSupportArray)
+            let trailId = req.params.id;
+            const trail = await Trail.findById(trailId);
+            const filteredSupportArray = trail.supportMaterial.filter(
+                (x) => x.deleted === false
+            );
+            _messages.success(res, req, filteredSupportArray);
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'listMaterial')
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno do servidor',
+                'trails',
+                'listMaterial'
+            );
         }
     },
 
     async downloadMaterial(req, res) {
         try {
-            let trailId = req.body.trailId
-            let materialId = req.body.materialId
-            const trail = await Trail.findById(trailId)
-            const requestingUser = getUserByToken(req)
+            let trailId = req.body.trailId;
+            let materialId = req.body.materialId;
+            const trail = await Trail.findById(trailId);
+            const requestingUser = getUserByToken(req);
 
             for (let material of trail.supportMaterial) {
                 if (String(material._id) === materialId) {
@@ -1538,30 +1577,47 @@ module.exports = {
                         ip: null,
                         login: null,
                         groups: [],
-                    })
+                    });
                 }
             }
 
-            _messages.success(res, req)
+            _messages.success(res, req);
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'downloadMaterial')
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno do servidor',
+                'trails',
+                'downloadMaterial'
+            );
         }
     },
 
     async deleteMaterial(req, res) {
         try {
-            let trailId = req.body.trailId
-            let materialId = mongoose.Types.ObjectId(req.body.materialId)
+            let trailId = req.body.trailId;
+            let materialId = mongoose.Types.ObjectId(req.body.materialId);
 
-            await Trail.findOneAndUpdate({ _id: trailId, "supportMaterial._id": materialId }, {
-                $set: {
-                    "supportMaterial.$.deleted": true
+            await Trail.findOneAndUpdate(
+                { _id: trailId, 'supportMaterial._id': materialId },
+                {
+                    $set: {
+                        'supportMaterial.$.deleted': true,
+                    },
                 }
-            })
+            );
 
-            _messages.success(res, req)
+            _messages.success(res, req);
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno do servidor', 'trails', 'downloadMaterial')
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno do servidor',
+                'trails',
+                'downloadMaterial'
+            );
         }
     },
 };
