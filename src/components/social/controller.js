@@ -3,36 +3,19 @@ const { getUserByToken } = require('../../utils/functions');
 const _messages = require('../../utils/messages');
 
 module.exports = {
-    async generate(req, res) {
+    async getConfig(req, res) {
         try {
             const user = await getUserByToken(req);
-            const uri = `${process.env.API_CONNECT}/system-users/${process.env.CLIENT_ID}`;
-            let data;
-            try {
-                const { data: responseData } = await axios.post(
-                    uri,
-                    {
-                        userId: user._id,
-                    },
-                    {
-                        headers: {
-                            'system-user-key': process.env.CONNECT_CLIENT_KEY,
-                        },
-                    }
-                );
-                data = responseData;
-            } catch (err) {
-                console.error(err);
-                throw err;
-            }
+            const uri = `${process.env.API_SOCIAL}/client-config/${process.env.CLIENT_ID}`;
+            const { data } = await axios.get(uri);
 
             _messages.success(
                 res,
                 req,
                 data,
-                'Credenciais geradas com sucesso',
-                'system-users',
-                'generate'
+                'configurações encontradas',
+                'social',
+                'getConfig'
             );
         } catch (error) {
             console.log(error);
@@ -42,14 +25,14 @@ module.exports = {
                 error.message,
                 null,
                 'social',
-                'generate'
+                'getConfig'
             );
         }
     },
 
-    async getActive(req, res) {
+    async postConfig(req, res) {
         try {
-            const uri = `${process.env.API_CONNECT}/system-users/${process.env.CLIENT_ID}`;
+            const uri = `${process.env.API_SOCIAL}/client-config/${process.env.CLIENT_ID}`;
 
             let data;
             try {
@@ -79,9 +62,9 @@ module.exports = {
                 res,
                 req,
                 data,
-                'Key solicitada com sucesso',
-                'system-users',
-                'getActive'
+                'configurações atualizadas',
+                'social',
+                'putConfig'
             );
         } catch (error) {
             console.log(error);
@@ -91,7 +74,7 @@ module.exports = {
                 error.message,
                 null,
                 'social',
-                'getActive'
+                'putConfig'
             );
         }
     },

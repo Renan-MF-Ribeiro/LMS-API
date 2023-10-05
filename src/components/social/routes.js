@@ -4,5 +4,5 @@ const { isAdmin } = require('../../utils/middlewares');
 
 module.exports = express
     .Router()
-    .get('/', isAdmin, _controller.getActive)
-    .post('/generate', isAdmin, _controller.generate);
+    .get('/config', isAdmin, _controller.getConfig)
+    .post('/config', isAdmin, _controller.postConfig);
