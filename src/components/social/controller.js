@@ -120,10 +120,6 @@ module.exports = {
             return _messages.badRequest(error)
         }
     },
-
-}
-
-
     async generate(req, res) {
         try {
             const user = await getUserByToken(req);
