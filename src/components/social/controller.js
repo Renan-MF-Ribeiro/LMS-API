@@ -101,7 +101,7 @@ module.exports = {
                 allowed: allowedIdsList,
                 blocked: blockedIdsList,
                 moderated: moderatedIdsList,
-            } = response.data.users;
+            } = response.data.usersLists;
 
             const allowed = await _business.getUsersByIdsList(
                 allowedIdsList,
@@ -177,7 +177,7 @@ module.exports = {
                     updatedAt: new Date(),
                 },
                 operation,
-                list,
+                listName,
             };
             const uri = `${process.env.API_SOCIAL}/client-config/users-lists/${process.env.CLIENT_ID}`;
             try {
