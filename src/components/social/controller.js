@@ -139,7 +139,7 @@ module.exports = {
 
     async addOrRemoveFromUserList(req, res) {
         try {
-            const { operation, list } = req.body;
+            const { operation, listName } = req.body;
 
             const validOperations = ['add', 'remove'];
             if (!validOperations.includes(operation)) {
@@ -155,7 +155,7 @@ module.exports = {
             }
 
             const validLists = ['allowed', 'blocked', 'moderated'];
-            if (!validLists.includes(list)) {
+            if (!validLists.includes(listName)) {
                 _messages.badRequest(
                     res,
                     req,
