@@ -5,4 +5,5 @@ const { isAdmin } = require('../../utils/middlewares');
 module.exports = express
     .Router()
     .get('/config', isAdmin, _controller.getConfig)
-    .post('/config', isAdmin, _controller.postConfig);
+    .put('/config', isAdmin, _controller.putConfig)
+    .get('/users', isAdmin, _controller.getUsers);
