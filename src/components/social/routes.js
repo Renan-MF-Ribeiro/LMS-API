@@ -6,4 +6,5 @@ module.exports = express
     .Router()
     .get('/config', isAdmin, _controller.getConfig)
     .put('/config', isAdmin, _controller.putConfig)
-    .get('/users', isAdmin, _controller.getUsers);
+    .get('/users-lists', isAdmin, _controller.getUsers)
+    .post('/users-lists', isAdmin, _controller.addOrRemoveFromUserList);

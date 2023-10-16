@@ -37,8 +37,8 @@ module.exports = {
             const body = {
                 commentModeration: reqBody.commentModeration,
                 blockedTrails: reqBody.blockedTrails,
-                tags: reqBody.tags,
-                users: reqBody.users,
+                tagsLists: reqBody.tagsLists,
+                usersLists: reqBody.usersLists,
             };
 
             try {
@@ -97,33 +97,29 @@ module.exports = {
 
             const uri = `${process.env.API_SOCIAL}/client-config/${process.env.CLIENT_ID}`;
             const response = await axios.get(uri);
-            const { allowed, blocked, moderated } = response.data.users;
-            // console.log({ allowed, blocked, moderated });
+            const {
+                allowed: allowedIdsList,
+                blocked: blockedIdsList,
+                moderated: moderatedIdsList,
+            } = response.data.users;
 
-            const { data: allowedData, total: allowedTotal } =
-                await _business.getUsersByList(allowed, options);
-            const { data: blockedData, total: blockedTotal } =
-                await _business.getUsersByList(blocked, options);
-            const { data: moderatedData, total: moderatedTotal } =
-                await _business.getUsersByList(moderated, options);
+            const allowed = await _business.getUsersByIdsList(
+                allowedIdsList,
+                options
+            );
+            const blocked = await _business.getUsersByIdsList(
+                blockedIdsList,
+                options
+            );
+            const moderated = await _business.getUsersByIdsList(
+                moderatedIdsList,
+                options
+            );
 
             _messages.success(
                 res,
                 req,
-                {
-                    allowed: {
-                        data: allowedData,
-                        total: allowedTotal,
-                    },
-                    blocked: {
-                        data: blockedData,
-                        total: blockedTotal,
-                    },
-                    moderated: {
-                        data: moderatedData,
-                        total: moderatedTotal,
-                    },
-                },
+                { allowed, blocked, moderated },
                 'configurações encontradas',
                 'social',
                 'getUsers'
@@ -137,6 +133,86 @@ module.exports = {
                 null,
                 'social',
                 'getUsers'
+            );
+        }
+    },
+
+    async addOrRemoveFromUserList(req, res) {
+        try {
+            const { operation, list } = req.body;
+
+            const validOperations = ['add', 'remove'];
+            if (!validOperations.includes(operation)) {
+                _messages.badRequest(
+                    res,
+                    req,
+                    'Operação inválida',
+                    'Operação inválida',
+                    'social',
+                    'addOrRemoveFromUserList'
+                );
+                return;
+            }
+
+            const validLists = ['allowed', 'blocked', 'moderated'];
+            if (!validLists.includes(list)) {
+                _messages.badRequest(
+                    res,
+                    req,
+                    'Lista inválida',
+                    'Lista inválida',
+                    'social',
+                    'addOrRemoveFromUserList'
+                );
+                return;
+            }
+
+            const collaborator = await _functions.getUserByToken(req);
+            const { userId } = req.body;
+
+            const body = {
+                user: {
+                    userId: userId,
+                    collaboratorId: collaborator._id,
+                    updatedAt: new Date(),
+                },
+                operation,
+                list,
+            };
+            const uri = `${process.env.API_SOCIAL}/client-config/users-lists/${process.env.CLIENT_ID}`;
+            try {
+                const response = await axios.patch(uri, body);
+                return _messages.success(
+                    res,
+                    req,
+                    response.data,
+                    'ok',
+                    'social',
+                    'addOrRemoveFromUserList'
+                );
+            } catch (error) {
+                if (error.response?.data.statusCode === 400) {
+                    return _messages.badRequest(
+                        res,
+                        req,
+                        JSON.stringify(err.response.data.message),
+                        'bad request to social',
+                        'social',
+                        'addOrRemoveFromUserList'
+                    );
+                } else {
+                    throw error;
+                }
+            }
+        } catch (error) {
+            console.log(error);
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                null,
+                'social',
+                'addOrRemoveFromUserList'
             );
         }
     },

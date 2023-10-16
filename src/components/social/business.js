@@ -1,7 +1,7 @@
 const { User } = require('../users/model');
 
 module.exports = {
-    async getUsersByList(list, { searchBy, order, sort, skip, limit }) {
+    async getUsersByIdsList(list, { searchBy, order, sort, skip, limit }) {
         const userIds = [];
         const collaboratorIds = [];
 
