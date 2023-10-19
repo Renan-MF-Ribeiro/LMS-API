@@ -2,17 +2,28 @@ const { default: axios } = require('axios');
 const _business = require('./business');
 const _functions = require('../../utils/functions');
 const _messages = require('../../utils/messages');
+const { Trail } = require('../trails/model');
 
 module.exports = {
     async getConfig(req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/client-config/${process.env.CLIENT_ID}`;
             const { data } = await axios.get(uri);
+            const trails = await Trail.find(
+                { _id: { $in: data.blockedTrails } },
+                'title'
+            );
+
+            const blockedTrailsWithName = data.blockedTrails.map((trailId) => ({
+                _id: trailId,
+                title: trails.find((trail) => trail._id.toString() === trailId)
+                    .title,
+            }));
 
             _messages.success(
                 res,
                 req,
-                data,
+                { ...data, blockedTrails: blockedTrailsWithName },
                 'configurações encontradas',
                 'social',
                 'getConfig'
@@ -33,10 +44,14 @@ module.exports = {
     async putConfig(req, res) {
         try {
             const reqBody = req.body;
+            const blockedTrailsOnlyId = reqBody.blockedTrails.map((trail) =>
+                trail._id.toString()
+            );
+
             const uri = `${process.env.API_SOCIAL}/client-config/${process.env.CLIENT_ID}`;
             const body = {
                 commentModeration: reqBody.commentModeration,
-                blockedTrails: reqBody.blockedTrails,
+                blockedTrails: blockedTrailsOnlyId,
                 tagsLists: reqBody.tagsLists,
                 usersLists: reqBody.usersLists,
             };
