@@ -164,7 +164,7 @@ function getCron(automation, messageAutomation) {
     let cronData = {
         messageAutomationId: messageAutomation._id,
         text: automation.text,
-        title: 'Aviso Universidade Corporativa Synchro',
+        title: 'Aviso',
         callToAction: automation.callToAction,
     };
 
