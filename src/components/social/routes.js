@@ -5,4 +5,6 @@ const { isAdmin } = require('../../utils/middlewares');
 module.exports = express
     .Router()
     .get('/config', isAdmin, _controller.getConfig)
-    .post('/config', isAdmin, _controller.postConfig);
+    .put('/config', isAdmin, _controller.putConfig)
+    .get('/users-lists', isAdmin, _controller.getUsers)
+    .post('/users-lists', isAdmin, _controller.addOrRemoveFromUserList);
