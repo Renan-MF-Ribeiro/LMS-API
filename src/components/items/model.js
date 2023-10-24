@@ -13,7 +13,7 @@ const schemaOptions = {
     collation: { locale: 'en_US', strength: 1 },
 };
 
-function ifEnabled() {
+function ifEnabled () {
     return this.enabled;
 }
 
@@ -250,7 +250,15 @@ const EventItem = Item.discriminator(
     'EventItem',
     new mongoose.Schema(
         {
-            event: [{ name: String, url: String }],
+            event: [
+                {
+                    name: String,
+                    url: String,
+                    startDate: Date,
+                    endDate: Date,
+                    id: String,
+                },
+            ],
             default: [],
             ...endpointOptions,
         },
