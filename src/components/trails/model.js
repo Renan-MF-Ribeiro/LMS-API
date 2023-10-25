@@ -4,13 +4,13 @@ const { CLIENT_ID } = process.env;
 
 connect();
 
-function ifEnabledAndHighlighted() {
+function ifEnabledAndHighlighted () {
     return this.enabled && this.highlighted;
 }
-function ifEnabledAndNotHighlighted() {
+function ifEnabledAndNotHighlighted () {
     return this.enabled && !this.highlighted;
 }
-function ifInnerTextEnabled() {
+function ifInnerTextEnabled () {
     return this.innerTextStatus;
 }
 
@@ -62,6 +62,8 @@ const TrailSchema = new mongoose.Schema(
                     urlItem: { type: String, required: false, default: null },
                     urlTrail: { type: String, required: false, default: null },
                     mandatory: { type: Boolean, default: false },
+                    chief: { type: Boolean, default: false },
+                    optional: { type: Boolean, default: false },
                     afterSeparator: {
                         type: String,
                         required: false,
