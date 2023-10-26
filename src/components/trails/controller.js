@@ -38,8 +38,10 @@ const {
     getTagsElegiblesByToken,
 } = require('../sections/business');
 
+const ObjectId = require("mongoose").Types.ObjectId;
+
 module.exports = {
-    async getCollaborative(req, res) {
+    async getCollaborative (req, res) {
         try {
             const queryParams = req.query;
 
@@ -69,7 +71,7 @@ module.exports = {
         }
     },
 
-    async getCollaborativeChannel(req, res) {
+    async getCollaborativeChannel (req, res) {
         try {
             const user = await getUserByToken(req);
             const { skip, limit } = pagination(req);
@@ -144,7 +146,7 @@ module.exports = {
         }
     },
 
-    async create(req, res) {
+    async create (req, res) {
         try {
             const trail = await Trail.create(req.body);
             _messages.success(
@@ -171,7 +173,7 @@ module.exports = {
         }
     },
 
-    async findById(req, res) {
+    async findById (req, res) {
         try {
             const _id = req.params.trailId;
             const trail = await Trail.findOne({ _id }, '-innerText');
@@ -188,7 +190,7 @@ module.exports = {
         }
     },
 
-    async findByIdWithTrackingAndInnerText(req, res) {
+    async findByIdWithTrackingAndInnerText (req, res) {
         try {
             const findValue = req.params.trailId;
             const user = await getUserByToken(req);
@@ -199,8 +201,8 @@ module.exports = {
 
             const query = findValue.match(/^[0-9a-fA-F]{24}$/)
                 ? {
-                      $or: [{ _id: findValue }, { titleURL: findValue }],
-                  }
+                    $or: [{ _id: findValue }, { titleURL: findValue }],
+                }
                 : { titleURL: findValue };
             const trails = await populateTrails(true, query);
             if (
@@ -241,7 +243,7 @@ module.exports = {
         }
     },
 
-    async multiUploadCreate(req, res) {
+    async multiUploadCreate (req, res) {
         try {
             const { thumb, banner, background } = req.files;
 
@@ -249,7 +251,7 @@ module.exports = {
             if (req.fields.payload) {
                 try {
                     payload = JSON.parse(req.fields.payload);
-                } catch {}
+                } catch { }
             }
 
             const flag = checksIfTheEndDateIsLessThanTheStartDate(
@@ -347,7 +349,7 @@ module.exports = {
         }
     },
 
-    async changeStatus(req, res) {
+    async changeStatus (req, res) {
         try {
             const { _id, enabled } = req.body;
 
@@ -389,7 +391,7 @@ module.exports = {
         }
     },
 
-    async changeShowcase(req, res) {
+    async changeShowcase (req, res) {
         try {
             const { _id, showcase } = req.body;
 
@@ -431,30 +433,29 @@ module.exports = {
         }
     },
 
-    async update(req, res) {
+    async update (req, res) {
         try {
-            const { thumb, banner, background } = req.files;
-            const { _id } = JSON.parse(req.fields.payload);
+            const { thumb, banner, background } = req.files
+            const { _id } = JSON.parse(req.fields.payload)
             let { thumbPath, bannerPath, backgroundPath } = await Trail.findOne(
-                { _id: { $eq: _id } }
-            );
+                { _id: { $eq: _id } },
+            )
 
-            let payload = {};
+            let payload = {}
 
             if (req.fields.payload) {
                 try {
-                    payload = JSON.parse(req.fields.payload);
-                } catch {}
+                    payload = JSON.parse(req.fields.payload)
+                } catch { }
             }
-
             if (typeof payload.backgroundPath === 'object') {
-                payload.backgroundPath = '';
+                payload.backgroundPath = ''
             }
 
             const flag = checksIfTheEndDateIsLessThanTheStartDate(
                 payload.startDate,
-                payload.endDate
-            );
+                payload.endDate,
+            )
             if (!flag) {
                 _messages.badRequest(
                     res,
@@ -462,89 +463,130 @@ module.exports = {
                     'A data final não pode ser menor que a data inicial!',
                     'A data final não pode ser menor que a data inicial!',
                     'items',
-                    'multiUploadCreate'
-                );
+                    'multiUploadCreate',
+                )
             } else {
                 const verify = await Trail.find({
                     title: { $eq: payload.title },
                     _id: { $ne: _id },
-                });
+                })
 
                 if (verify.length === 0) {
                     if (thumb) {
-                        thumbPath = await azureBlob(thumb, 'trails/thumbs');
+                        thumbPath = await azureBlob(thumb, 'trails/thumbs')
                         if (process.env.NODE_ENV !== 'local') {
                             thumbPath = thumbPath.replace(
                                 AZURE_BLOB_URL,
-                                DOMAIN
-                            );
+                                DOMAIN,
+                            )
                         }
                     }
                     if (banner) {
                         // bannerPath = await awsAmazon(banner, 'trails/banners')
-                        bannerPath = await azureBlob(banner, 'trails/banners');
+                        bannerPath = await azureBlob(banner, 'trails/banners')
                     }
 
                     if (background) {
                         backgroundPath = await azureBlob(
                             background,
-                            'trails/backgrounds'
-                        );
+                            'trails/backgrounds',
+                        )
                         if (process.env.NODE_ENV !== 'local') {
                             backgroundPath = backgroundPath.replace(
                                 AZURE_BLOB_URL,
-                                DOMAIN
-                            );
+                                DOMAIN,
+                            )
                         }
                     } else {
                         backgroundPath = payload.backgroundPath
                             ? payload.backgroundPath
-                            : null;
+                            : null
                     }
 
-                    delete payload.thumb;
-                    delete payload.banner;
+                    delete payload.thumb
+                    delete payload.banner
+
+                    if (payload.separators) {
+                        for (separator of payload.separators) {
+                            if (!ObjectId.isValid(separator._id)) {
+                                const oldId = separator._id
+                                const newId = new mongoose.Types.ObjectId()
+                                payload.items = payload.items.map(item => {
+                                    if (item.afterSeparator == oldId) {
+                                        item.afterSeparator = newId
+                                    }
+                                    return item
+                                })
+                                separator._id = newId
+                            }
+                        }
+                    }
+                    if (payload.supportFileMaterial) {
+                        const fileArray = payload.supportFileMaterial.map(
+                            key => req.files[key],
+                        )
+                        const supportMaterial = []
+
+                        for (const file of fileArray) {
+                            let path = await azureBlob(file, 'trails/material')
+                            path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                            const material = {
+                                _id: new mongoose.Types.ObjectId(),
+                                url: path,
+                                name: file.name,
+                                size: file.size,
+                                deleted: false,
+                            }
+                            supportMaterial.push(material)
+                        }
+                        payload.supportMaterial = [
+                            ...payload.supportMaterial,
+                            ...supportMaterial,
+                        ]
+                        delete payload.supportFileMaterial
+                    }
 
                     payload = {
                         ...payload,
                         thumbPath,
                         bannerPath,
                         backgroundPath,
-                    };
+                    }
 
                     const [trail] = await Trail.find({
                         _id: { $eq: payload._id },
-                    });
+                    })
 
                     if (payload.mandatory.length == 0) {
                         // Setar todos os mandatory de itens como false.
-                        trail.items.forEach((item) => {
-                            item.mandatory = false;
-                        });
+                        trail.items.forEach(item => {
+                            item.mandatory = false
+                        })
 
-                        payload.items = trail.items;
+                        payload.items.forEach(item => {
+                            item.mandatory = false
+                        })
                     }
-
                     const oldData = await Trail.updateOne(
                         { _id: { $eq: payload._id } },
-                        payload
-                    );
-                    const newData = await Trail.find({
+                        payload,
+                    )
+                    const newData = await Trail.findOne({
                         _id: { $eq: payload._id },
-                    });
+                    })
 
                     _messages.success(
                         res,
                         req,
-                        trail,
+                        newData,
                         'Atualização de dados',
                         'trails',
                         'update',
                         newData,
                         oldData,
                         true,
-                        'UPDATE'
-                    );
+                        'UPDATE',
+                    )
                 } else {
                     _messages.badRequest(
                         res,
@@ -553,8 +595,8 @@ module.exports = {
                         'Já existe um trilha cadastrada com esse título',
                         'trails',
                         'update',
-                        '5d9f22722cefc7329473e5c5'
-                    );
+                        '5d9f22722cefc7329473e5c5',
+                    )
                 }
             }
         } catch (error) {
@@ -565,12 +607,12 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'trails',
-                'update'
-            );
+                'update',
+            )
         }
     },
 
-    async linkItems(req, res) {
+    async linkItems (req, res) {
         try {
             let exist = false;
             const { idItem, idTrail } = req.body;
@@ -634,7 +676,7 @@ module.exports = {
         }
     },
 
-    async linkSeparators(req, res) {
+    async linkSeparators (req, res) {
         try {
             const { idTrail, separator } = req.body;
             const { separators } = await Trail.findOne({
@@ -673,7 +715,7 @@ module.exports = {
         }
     },
 
-    async updateSeparators(req, res) {
+    async updateSeparators (req, res) {
         try {
             let exist = false;
             const { idTrail, separator } = req.body;
@@ -716,7 +758,7 @@ module.exports = {
         }
     },
 
-    async unlinkSeparators(req, res) {
+    async unlinkSeparators (req, res) {
         try {
             let exist = false;
             const { idTrail, separator } = req.body;
@@ -758,7 +800,7 @@ module.exports = {
         }
     },
 
-    async findAll(req, res) {
+    async findAll (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -777,42 +819,42 @@ module.exports = {
                 total = await Trail.find(
                     searchBy
                         ? {
-                              $or: [
-                                  {
-                                      description: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                                  {
-                                      title: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                              ],
-                          }
+                            $or: [
+                                {
+                                    description: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                                {
+                                    title: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                            ],
+                        }
                         : {}
                 ).countDocuments();
 
                 const trails = await Trail.find(
                     searchBy
                         ? {
-                              $or: [
-                                  {
-                                      description: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                                  {
-                                      title: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                              ],
-                          }
+                            $or: [
+                                {
+                                    description: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                                {
+                                    title: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                            ],
+                        }
                         : {}
                 )
                     .sort({ [order]: sort })
@@ -836,19 +878,19 @@ module.exports = {
         }
     },
 
-    async returnItemsByTrail(req, res) {
+    async returnItemsByTrail (req, res) {
         try {
-            const { skip, limit } = pagination(req);
-            const { order, sort } = ordernation(req);
-            const { id } = req.params;
-            const user = await getUserByToken(req);
+            const { skip, limit } = pagination(req)
+            const { order, sort } = ordernation(req)
+            const { id } = req.params
+            const user = await getUserByToken(req)
 
             const total = await Trail.findOne(
                 {
                     _id: { $eq: id },
                 },
-                'items'
-            );
+                'items',
+            )
 
             const trails = await populateTrails(
                 true,
@@ -861,55 +903,66 @@ module.exports = {
                 false,
                 true,
                 parseInt(skip),
-                parseInt(limit)
-            );
+                parseInt(limit),
+            )
 
-            const items = trails[0].items;
+            const items = trails[0].items
+
+            // const { items } = await Trail
+            //     .findOne({
+            //         _id: { $eq: id },
+            //     })
+            //     .sort({ [order]: sort })
+            //     .populate('items')
+            //     .skip(parseInt(skip))
+            //     .limit(parseInt(limit))
 
             for (const item of items) {
                 const tracking = await Tracking.findOne({
                     item: { $eq: item._id },
                     userLogin: { $eq: user.networkLogin },
-                });
+                })
 
                 if (tracking) {
                     if (tracking.kind === 'SCORMTracking') {
                         item.completion = isSCORMCompleted(
-                            tracking.lessonStatus
+                            tracking.lessonStatus,
                         )
                             ? 1
-                            : 0;
+                            : 0
                     } else {
-                        item.completion = tracking.completion;
+                        item.completion = tracking.completion
                     }
                 }
 
                 if (item.kind === 'ExamItem') {
                     const evaluation = await Evaluation.findById(
-                        item.idEvaluation
-                    );
-                    if (evaluation)
-                        item.descriptionEvaluation = evaluation.description;
+                        item.idEvaluation,
+                    )
+                    if (evaluation) {
+                        item.descriptionEvaluation = evaluation.description
+                    }
                 }
             }
             _messages.success(res, req, {
                 data: items,
                 separators: trails[0].separators,
                 total: total.items.length,
-            });
+            })
         } catch (error) {
+            console.log(error)
             _messages.internalServer(
                 res,
                 req,
                 error.message,
                 'Erro interno no servidor',
                 'trails',
-                'returnItemsByTrail'
-            );
+                'returnItemsByTrail',
+            )
         }
     },
 
-    async returnItemsByTrailMenu(req, res) {
+    async returnItemsByTrailMenu (req, res) {
         try {
             const { id } = req.params;
             const user = await getUserByToken(req);
@@ -974,7 +1027,7 @@ module.exports = {
         }
     },
 
-    async unlinkItems(req, res) {
+    async unlinkItems (req, res) {
         try {
             const { idItem, idTrail } = req.body;
             const { items } = await Trail.findOne(
@@ -1023,7 +1076,7 @@ module.exports = {
         }
     },
 
-    async changeItemOrderFromTrail(req, res) {
+    async changeItemOrderFromTrail (req, res) {
         try {
             const { idTrail, order } = req.body;
 
@@ -1105,7 +1158,7 @@ module.exports = {
         }
     },
 
-    async returnBannersElegibles_new(req, res) {
+    async returnBannersElegibles_new (req, res) {
         // # Nova versão para retornar banner, para melhorar a performance
         try {
             var dtInicio = new Date();
@@ -1189,7 +1242,7 @@ module.exports = {
         }
     },
 
-    async returnBannersElegibles(req, res) {
+    async returnBannersElegibles (req, res) {
         try {
             var dtInicio = new Date();
 
@@ -1250,7 +1303,7 @@ module.exports = {
         }
     },
 
-    async returnTrailsByIDS(req, res) {
+    async returnTrailsByIDS (req, res) {
         try {
             const { trailsIDS } = req.body;
             const arrTrails = [];
@@ -1273,7 +1326,7 @@ module.exports = {
         }
     },
 
-    async returnLinkTrailByItem(idItem) {
+    async returnLinkTrailByItem (idItem) {
         return new Promise(async (resolve, reject) => {
             try {
                 const trails = await Trail.find({ 'items.itemID': idItem });
@@ -1293,7 +1346,7 @@ module.exports = {
         });
     },
 
-    async mandatory(req, res) {
+    async mandatory (req, res) {
         try {
             const { idTrail, idItem, mandatory } = req.body;
             const trail = await Trail.findById(idTrail);
@@ -1332,7 +1385,7 @@ module.exports = {
         }
     },
 
-    async xapi(req, res) {
+    async xapi (req, res) {
         try {
             const trails = await Trail.find();
 
@@ -1344,9 +1397,8 @@ module.exports = {
                         items.push({
                             itemID: item._id,
                             urlTrail: `http://happmobi.com.br/${TINCAN_OWNER}/${trail.id}`,
-                            urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${
-                                trail.id
-                            }/${item._id.toString()}`,
+                            urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${trail.id
+                                }/${item._id.toString()}`,
                             mandatory: false,
                         });
                     }
@@ -1377,7 +1429,7 @@ module.exports = {
      * @param {*} req Request
      * @param {*} res Response
      */
-    async getCourseInformation(req, res) {
+    async getCourseInformation (req, res) {
         try {
             const findValueTrail = req.params.trailId;
             const itemId = req.params.itemId;
@@ -1385,11 +1437,11 @@ module.exports = {
             const trail = await Trail.findOne(
                 findValueTrail.match(/^[0-9a-fA-F]{24}$/)
                     ? {
-                          $or: [
-                              { _id: findValueTrail },
-                              { titleURL: findValueTrail },
-                          ],
-                      }
+                        $or: [
+                            { _id: findValueTrail },
+                            { titleURL: findValueTrail },
+                        ],
+                    }
                     : { titleURL: findValueTrail }
             );
             const item = trail.items.find((i) => i.itemID == itemId);
@@ -1418,7 +1470,7 @@ module.exports = {
         }
     },
 
-    async returnTrailsByUser(req, res) {
+    async returnTrailsByUser (req, res) {
         try {
             const { userId } = req.query;
             const trails = await populateTrails(true, {
@@ -1435,7 +1487,7 @@ module.exports = {
         }
     },
 
-    async updateModeration(req, res) {
+    async updateModeration (req, res) {
         try {
             const { moderation, tags, trailId } = req.body;
 
@@ -1474,7 +1526,7 @@ module.exports = {
         }
     },
 
-    async saveComplaint(req, res) {
+    async saveComplaint (req, res) {
         try {
             const { reason, trailId } = req.body;
 
@@ -1502,7 +1554,7 @@ module.exports = {
         }
     },
 
-    async uploadMaterial(req, res) {
+    async uploadMaterial (req, res) {
         try {
             let trailId = req.fields.trailId;
             let fileArray = Object.keys(req.files).map((key) => req.files[key]);
@@ -1537,7 +1589,7 @@ module.exports = {
         }
     },
 
-    async listMaterial(req, res) {
+    async listMaterial (req, res) {
         try {
             let trailId = req.params.id;
             const trail = await Trail.findById(trailId);
@@ -1557,7 +1609,7 @@ module.exports = {
         }
     },
 
-    async downloadMaterial(req, res) {
+    async downloadMaterial (req, res) {
         try {
             let trailId = req.body.trailId;
             let materialId = req.body.materialId;
@@ -1594,7 +1646,7 @@ module.exports = {
         }
     },
 
-    async deleteMaterial(req, res) {
+    async deleteMaterial (req, res) {
         try {
             let trailId = req.body.trailId;
             let materialId = mongoose.Types.ObjectId(req.body.materialId);
@@ -1622,7 +1674,7 @@ module.exports = {
     },
 };
 
-function processTrailAndItems(trail) {
+function processTrailAndItems (trail) {
     let duration = 0;
     for (const item of trail.items) {
         duration += item.itemID.durationHours;
@@ -1642,7 +1694,7 @@ function processTrailAndItems(trail) {
     return trail;
 }
 
-function prepareObject(trail) {
+function prepareObject (trail) {
     return {
         _id: trail._id,
         title: trail.title,
@@ -1659,7 +1711,7 @@ function prepareObject(trail) {
     };
 }
 
-function createModerationAlert(trail, verb) {
+function createModerationAlert (trail, verb) {
     const title = `O conteúdo ${trail.title} foi ${verb}!`;
     const text = `Seu conteúdo ${trail.title} acabou de ser ${verb} por um moderador!`;
     const communication = ['notification'];
