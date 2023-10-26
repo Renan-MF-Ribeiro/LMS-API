@@ -46,6 +46,7 @@ const TrailSchema = new mongoose.Schema(
         separators: {
             type: [
                 {
+                    _id: { type: String },
                     kind: { type: String, required: true },
                     title: { type: String, required: true },
                     items: {

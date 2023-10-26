@@ -38,6 +38,8 @@ const {
     getTagsElegiblesByToken,
 } = require('../sections/business');
 
+const ObjectId = require("mongoose").Types.ObjectId;
+
 module.exports = {
     async getCollaborative (req, res) {
         try {
@@ -598,6 +600,7 @@ module.exports = {
                 }
             }
         } catch (error) {
+            console.log(error)
             _messages.internalServer(
                 res,
                 req,
