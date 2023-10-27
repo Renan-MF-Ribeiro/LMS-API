@@ -74,5 +74,22 @@ router
         '/instructor/delete-class/:classID',
         isInstructor,
         _controller.deleteClass
-    );
+    )
+    .post(
+        '/waitlist-join',
+        _controller.joinWaitList
+    )
+    .get(
+        '/waitlist-user',
+        _controller.getWaitListByUser
+    )
+    .get(
+        '/waitlist-course',
+        _controller.getWaitListByCourse
+    )
+    .get(
+        '/waitlist-elegible-course',
+        _controller.getWaitlistAndElegibleUsersByCourse
+    )
+    ;
 module.exports = router;

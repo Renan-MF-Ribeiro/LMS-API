@@ -36,6 +36,40 @@ module.exports = {
         return momentz(date).format('YYYY-MM-DD');
     },
 
+    findObjectInRange(data, referenceDate) {
+        let foundObject = null;
+    
+        for (const obj of data) {
+            if (obj.startDate <= referenceDate && obj.limitDate >= referenceDate) {
+                foundObject = obj;
+                break;
+            }
+        }  
+    
+        if(foundObject){
+            return foundObject;
+        } else {
+            // Se nenhum objeto for encontrado no intervalo, encontre o objeto mais próximo
+            let closestDateDiff = Infinity;
+    
+            for (const obj of data) {
+                const startDateDiff = Math.abs(referenceDate - obj.startDate);
+                const limitDateDiff = Math.abs(referenceDate - obj.limitDate);
+    
+                if (startDateDiff < closestDateDiff) {
+                    foundObject = obj;
+                    closestDateDiff = startDateDiff;
+                }
+    
+                if (limitDateDiff < closestDateDiff) {
+                    foundObject = obj;
+                    closestDateDiff = limitDateDiff;
+                }
+            }
+            return foundObject;
+        }
+    },
+
     formatDateWithoutHoursBrasilian(date) {
         if (!date) {
             return null;

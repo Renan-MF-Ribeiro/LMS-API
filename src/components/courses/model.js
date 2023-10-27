@@ -36,6 +36,12 @@ const CourseSChema = new mongoose.Schema(
         qrCode: { type: String, required: true, trim: true },
         tags: { type: Array, required: false },
         mandatory: { type: Array, required: false },
+        completion: { type: Date, required: false },
+        completionAt: { type: Date, required: false },
+        thumbPath: { type: String, trim: true, required: false  },
+        instructor: { type: 'ObjectId', ref: 'users', required: false },
+        inWaitList: { type: Boolean, required: false, default: false },
+        score: { type: Number, required: false, default: null },
     },
     {
         ...schemaOptions,
@@ -47,6 +53,18 @@ const MaterialSchema = new mongoose.Schema(
         title: { type: String, required: true, trim: true },
         url: { type: String, required: true, trim: true },
         author: { type: String, default: 'CONTEUDISTA' },
+    },
+    {
+        ...schemaOptions,
+    }
+);
+
+const WaitListSchema = new mongoose.Schema(
+    {
+        userID: { type: 'ObjectId', ref: 'users', required: true },
+        courseID: { type: 'ObjectId', ref: 'course', required: true },
+        joinDate: { type: Date, required: false },
+        sent: {type: Boolean, default: false }
     },
     {
         ...schemaOptions,
@@ -101,6 +119,8 @@ const CourseEvaluationSchema = new mongoose.Schema(
     }
 );
 
+
+
 CourseSChema.index({
     title: 'text',
     description: 'text',
@@ -110,6 +130,7 @@ const CourseModel = mongoose.model('course', CourseSChema);
 const MaterialModel = mongoose.model('material', MaterialSchema);
 const ClassModel = mongoose.model('classes', ClassSchema);
 const ProgramModel = mongoose.model('program', ProgramsSchema);
+const WaitListModel = mongoose.model('waitlist', WaitListSchema);
 const CourseEvaluationModel = mongoose.model(
     'course_evaluation',
     CourseEvaluationSchema
@@ -131,10 +152,57 @@ const vwCoursesWithTagsAndUsers = new mongoose.Schema({
         required: true,
     },
 });
+
+const vwWaitListsByCourses = new mongoose.Schema({
+    title: { type: String, required: true, trim: true },
+    users: { type: Array, required: true },
+    sent: {type: Boolean, default: false }
+});
+
+const vwWaitListsUser = new mongoose.Schema({
+    course: { type: Object, required: true},
+    user: { type: Object, required: true },
+    sent: {type: Boolean, default: false }
+});
+
+const vwCoursesWithUsers = new mongoose.Schema({
+    title: { type: String, required: true, trim: true },
+    users: { type: Array, required: true },
+});
+
+const vwUsersWithProcessedTags = new mongoose.Schema({
+    userTags: { type: Array, required: true },
+});
+
 const CoursesWithTagsAndUsers = mongoose.model(
     'vwCoursesWithTagsAndUsers',
     vwCoursesWithTagsAndUsers,
     'vwCoursesWithTagsAndUsers'
+);
+
+const WaitListsByCourses = mongoose.model(
+    'vwWaitListsByCourses',
+    vwWaitListsByCourses,
+    'vwWaitListsByCourses'
+);
+
+const WaitListsByUser = mongoose.model(
+    'vwWaitListsUser',
+    vwWaitListsUser,
+    'vwWaitListsUser'
+);
+
+const CoursesWithUsers = mongoose.model(
+    'vwCoursesWithUsers',
+    vwCoursesWithUsers,
+    'vwCoursesWithUsers'
+);
+
+
+const UsersWithProcessedTags = mongoose.model(
+    'vwUsersWithProcessedTags',
+    vwUsersWithProcessedTags,
+    'vwUsersWithProcessedTags'
 );
 
 module.exports = {
@@ -142,6 +210,11 @@ module.exports = {
     MaterialModel,
     ClassModel,
     ProgramModel,
+    WaitListModel,
     CourseEvaluationModel,
     CoursesWithTagsAndUsers,
+    WaitListsByCourses,
+    WaitListsByUser,
+    CoursesWithUsers,
+    UsersWithProcessedTags
 };

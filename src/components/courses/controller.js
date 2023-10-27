@@ -1295,4 +1295,206 @@ module.exports = {
             );
         }
     },
+
+    async joinWaitList (req, res) {
+        try {
+            let { body } = req;
+            const alreadyJoined = await WaitListModel.findOne({
+                userID: body.userID,
+                courseID: body.courseID,
+                sent: false
+            });
+
+            if (alreadyJoined) {
+                return badRequest(
+                    res,
+                    req,
+                    'Você já está na lista de espera deste curso',
+                    `Você já está na lista de espera deste curso`,
+                    'courses',
+                    'joinWaitList'
+                );
+            }
+
+            body.joinDate = new Date();
+
+            const waitList = await WaitListModel.create(body);
+            return success(res, req, waitList);
+        } catch (error) {
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'waitlist',
+                '/waitlist-join'
+            );
+        }
+    },
+
+    async getWaitListByUser (req, res) {
+        try {
+            const { skip, limit } = pagination(req);
+            const { order, sort } = ordernation(req);
+            const searchBy = req.query.searchBy;
+
+            const query = searchBy
+                ? {
+                    $or: [
+                        { 'user.name': { $regex: searchBy, $options: 'i' } },
+                        {
+                            'course.title': {
+                                $regex: searchBy,
+                                $options: 'i',
+                            },
+                        },
+
+                    ],
+                }
+                : {};
+
+            const total = await WaitListsByUser.find(query).countDocuments();
+
+            const data = await WaitListsByUser.find(query)
+                .sort({
+                    [order]: sort,
+                })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit));
+
+            success(res, req, { data, total });
+        } catch (error) {
+            console.log(error);
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'courses',
+                '/getCourseByQrCode'
+            );
+        }
+    },
+
+    async getWaitListByCourse (req, res) {
+        try {
+            const { skip, limit } = pagination(req);
+            const { order, sort } = ordernation(req);
+            const searchBy = req.query.searchBy;
+
+            const query = searchBy
+                ? {
+                    $or: [
+                        {
+                            'course.title': {
+                                $regex: searchBy,
+                                $options: 'i',
+                            },
+                        },
+
+                    ],
+                }
+                : {};
+
+            const total = await WaitListsByCourses.find(query).countDocuments();
+
+            const data = await WaitListsByCourses.find(query)
+                .sort({
+                    [order]: sort,
+                })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit));
+
+            success(res, req, { data, total });
+        } catch (error) {
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'courses',
+                '/getCourseByQrCode'
+            );
+        }
+    },
+
+    async getWaitlistAndElegibleUsersByCourse (req, res) {
+        try {
+            const courseId = req.query.courseId;
+            const elegibleUsers = [];
+            const waitlistUsers = await WaitListsByCourses.findOne({ _id: courseId, sent: false }).select('users');
+            console.log("waitlistUsers", waitlistUsers)
+            const foundClass = await ClassModel.findOne({
+                courseID: courseId,
+            }).populate('courseID', [
+                'title',
+                'tags',
+                'passingScore',
+            ]);
+
+            const foundCourse = await CourseModel.findOne({ _id: courseId })
+
+            const tags = foundCourse.tags.map((e) => e.value);
+            const mandatoryTags = foundCourse.mandatory.map(
+                (e) => e.value
+            );
+
+            // const usersWithMandatoryTags = await UsersWithProcessedTags.find({
+            //     userTags: { $all: mandatoryTags },
+            // });
+            const usersWithTags = await UsersWithProcessedTags.find({
+                userTags: { $in: tags },
+            });
+
+            // const users = usersWithMandatoryTags.concat(usersWithTags);
+            for (let user of usersWithTags) {
+                let userInClass
+                if (foundClass) {
+                    userInClass = foundClass.users.find(
+                        (u) => u.userID == user._id
+                    );
+                }
+                if (userInClass) {
+                    if (
+                        userInClass.grades <
+                        foundClass.courseID.passingScore
+                    ) {
+                        elegibleUsers.push({
+                            _id: user._id,
+                            name: user.name,
+                            email: user.email,
+                        });
+                    }
+                } else {
+                    elegibleUsers.push({
+                        _id: user._id,
+                        name: user.name,
+                        email: user.email,
+                    });
+                }
+            }
+
+            const elegibleUsersTotal = elegibleUsers ? elegibleUsers.length : 0;
+            const waitlistUsersTotal = waitlistUsers
+                ? waitlistUsers.users.length
+                : 0;
+
+            success(res, req, {
+                waitlistUsers,
+                waitlistUsersTotal,
+                elegibleUsers,
+                elegibleUsersTotal,
+            });
+        } catch (error) {
+            console.log(error);
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'courses',
+                '/getCourseByQrCode'
+            );
+        }
+    },
 };

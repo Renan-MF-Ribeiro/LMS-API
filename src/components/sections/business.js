@@ -9,6 +9,7 @@ const {
     isSCORMCompleted,
 } = require('../../utils/functions');
 const { Group } = require('../groups/model');
+const { CourseModel, WaitListModel } = require('../courses/model');
 const { Tracking } = require('../tracking/model');
 const { Section, DEFAULT_TYPES } = require('./model');
 
@@ -158,36 +159,21 @@ module.exports = {
             });
         }
     },
-    getTagsElegiblesByToken(req) {
+    getTagsElegiblesByToken (req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const user = await getUserByToken(req);
                 const tags = await getTagsGroupsByToken(req);
-
+                const today = getDateTodayWithoutHours();
                 if (user.classGroups.length > 0) {
                     for (const classGroup of user.classGroups) {
-                        const today = getDateTodayWithoutHours();
-                        const diff = calculateDiffDate(
-                            today,
-                            formatDateWithoutHours(classGroup.startDate),
-                            'days'
-                        );
-                        const diffEnd = calculateDiffDate(
-                            today,
-                            formatDateWithoutHours(classGroup.limitDate),
-                            'days'
-                        );
-
-                        if (diff >= 0 && diffEnd <= 0) {
-                            tags.push({
+                        tags.push({
                                 display: classGroup.groupCode,
                                 value: classGroup.groupCode,
                             });
-                        }
                     }
                 }
                 if (user.tags.length > 0) {
-                    const today = getDateTodayWithoutHours();
 
                     for (const tag of user.tags) {
                         const diff = calculateDiffDate(
@@ -520,6 +506,80 @@ module.exports = {
             }
         });
     },
+
+    async courseInSections (tags, courses, userId) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const section = await Section.findOne({
+                    defaultType: DEFAULT_TYPES.COURSES,
+                    active: 1,
+                }).lean();
+                let elegibleCourses = await CourseModel.find({ tags: { $in: tags }, deleted: { $eq: 0 }, status: { $eq: 1 } }).select({
+                    title: 1,
+                    thumbPath: 1,
+                    _id: 1,
+                    description: 1,
+                    passingScore: 1,
+                    certificate: 1,
+                    certificateLayout: 1,
+                    workload: 1,
+                    instructor: 1,
+                }).lean()
+
+                for (let i of elegibleCourses) {
+                    const alreadyJoined = await WaitListModel.findOne({
+                        userID: userId,
+                        courseID: i._id,
+                        sent: false
+                    });
+                    let inWaitList = false
+                    if (alreadyJoined) {
+                        inWaitList = true
+                    }
+                    courses.map((e) => {
+                        if (String(e.courseID._id) == String(i._id)) {
+                            const presence = e.users[0].presence
+                            const grade = e.users[0].grades ?  e.users[0].grades : 0
+                            const passingScore = i.passingScore ?  i.passingScore: 0
+                            const certificateElegible = grade >= passingScore ? true : false
+                            i.certificateElegible = certificateElegible
+                            i.presence = presence
+                            i.grade = grade
+                            i.completionAt = e.dateApplicationFinal
+                            i.studentMaterials = e.materials
+                            i.instructor = e.instructor
+                        }
+                    })
+                    i.inWaitList = inWaitList
+                }
+
+                if (section) {
+                    const sortFnc =
+                        section &&
+                            section.ordination !== undefined &&
+                            section.ordination === 0
+                            ? function (a, b) {
+                                return -1
+                            }
+                            : function (a, b) {
+                                return a.title?.localeCompare(b.title);
+                            };
+                    for (const course of elegibleCourses) {
+                        section.trails.push(course);
+                    }
+
+                    section.trails.sort(sortFnc);
+                }
+
+
+                resolve(section && section.trails.length > 0 ? section : []);
+            } catch (error) {
+                console.log(error);
+                reject(error);
+            }
+        });
+    },
+
 
     checkEligibilityTagsAnd(tagsUser, tagsAnd, tagsOr) {
         const eligibilityUser = tagsUser.map((tag) =>
