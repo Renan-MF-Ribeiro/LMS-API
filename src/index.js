@@ -113,7 +113,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/messages/v2', validateTokenRoute, newMessagesRoutes)
     .use('/gamification', validateTokenRoute, gamificationRoutes)
     .use('/connect-key', validateTokenRoute, systemUsersRoutes)
-    .use('/social', validateTokenRoute, socialRoutes);
+    .use('/social', validateTokenRoute, socialRoutes)
     .use('/padlets', validateTokenRoute, padletRoutes)
 
 if (config.showcase.active) {
