@@ -15,8 +15,10 @@ const {
     concludedSections,
     getGroupCodesByToken,
     checkEligibilityTagsAnd,
-    courseInSections
+    courseInSections,
 } = require('./business');
+
+const { getStudentCourses } = require('../home/business')
 const {
     getUserByToken,
     processTrailTracking,
