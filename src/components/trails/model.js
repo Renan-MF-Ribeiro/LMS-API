@@ -153,6 +153,8 @@ const vwTrailsItems = new mongoose.Schema({
                 urlItem: { type: String, required: false, default: null },
                 urlTrail: { type: String, required: false, default: null },
                 mandatory: { type: Boolean, default: false },
+                chief: { type: Boolean, default: false },
+                optional: { type: Boolean, default: false },
             },
         ],
         default: [],

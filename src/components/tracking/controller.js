@@ -36,6 +36,9 @@ const { Item } = require('../items/model');
 const GamificationController = require('../gamification/controller');
 const { EVENTS_CATEGORY } = require('../gamification/model');
 
+const { createCompleteTracking } = require('./business')
+
+
 const TRACKING_KINDS = Object.freeze({
     DocumentTracking: DocumentTracking,
     MediaTracking: MediaTracking,
@@ -52,6 +55,8 @@ const TrackingController = {
 
         try {
             const q = pick(['item', 'userLogin'], req.body);
+            
+            const { isChiefItem } = req.query
             delete req.body._id;
 
             const tracking = await Tracking.findOne(q);
@@ -188,6 +193,16 @@ const TrackingController = {
                 }
             }
 
+            if (isChiefItem && registerCompletationAt) {
+                for (const item of req.body.optionalItems) {
+                    console.log(item)
+                    const i = await Item.findById(item._id).lean()
+                    const trackingKind = processTrackingType(i)
+
+                    createCompleteTracking(i, trackingKind, q.userLogin)
+                }
+            }
+
             if (TrackingModel === ExamTracking) {
                 const { idEvaluation } = await Item.findOne({
                     _id: req.body.item,
@@ -247,17 +262,40 @@ const TrackingController = {
 
     async findOrCreate(req, res) {
         try {
-            const { item } = req.query;
+            const { item, trailId, chief } = req.query;
             const { data } = await decodeToken(req.headers.authorization);
 
             const user = await User.findOne({ _id: data.ref }, 'networkLogin');
             const userLogin = user.networkLogin;
 
+            const optionalItems = []
+
+            if (chief === 'true') {
+                const trail = await Trail.findById(trailId)
+                    .populate({
+                        path: 'items',
+                        populate: {
+                            path: 'itemID',
+                            model: 'Item',
+                        },
+                    })
+                    .lean()
+
+                for (const item of trail.items) {
+                    if (item.optional) {
+                        optionalItems.push({
+                            title: item.itemID.title,
+                            _id: item.itemID._id,
+                        })
+                    }
+                }
+            }
+
             const tracking = await Tracking.findOne({ item, userLogin });
 
             const response = tracking ? tracking.toObject() : { item };
 
-            _messages.success(res, req, { ...response, userLogin });
+            _messages.success(res, req, { ...response, userLogin, optionalItems });
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -741,5 +779,26 @@ const TrackingController = {
         }
     },
 };
+
+function processTrackingType (item) {
+    switch (item.kind) {
+        case "MediaItem":
+            return "MediaTracking";
+        case "DocumentItem":
+            return "DocumentTracking";
+        case "SCORMItem":
+            return "SCORMTracking";
+        case "ExamItem":
+            return "ExamTracking";
+        case "AudioItem":
+            return "AudioTracking";
+        case "EventItem":
+            return "EventTracking";
+        case "FormItem":
+            return "FormTracking";
+        default:
+            break
+    }
+}
 
 module.exports = TrackingController;
