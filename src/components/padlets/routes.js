@@ -1,0 +1,10 @@
+const express = require('express')
+const _controller = require('./controller')
+
+module.exports = express.Router()
+    .post('/create', _controller.createPadlet)
+    .put('/update', _controller.updatePadlet)
+    .delete('/delete', _controller.deletePadlet)
+    .get('/list', _controller.getPadletsByTrail)
+    .get('/wordcloud/expectation', _controller.getExpectationWordCloud)
+    .get('/wordcloud/conclusion', _controller.getConclusionWordCloud)
