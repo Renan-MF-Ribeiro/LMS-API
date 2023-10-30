@@ -2,6 +2,7 @@ const _messages = require('../../utils/messages');
 const _functions = require('../../utils/functions');
 const _files = require('../../utils/files');
 const { Trail } = require('../../components/trails/model');
+const { User } = require('../../components/users/model');
 const { Section } = require('../../components/sections/model');
 const { Group, InstructorGroup, ClassGroup } = require('./model');
 const { CourseModel } = require('../courses/model');
