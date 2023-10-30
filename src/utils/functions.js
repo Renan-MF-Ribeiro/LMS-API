@@ -97,17 +97,14 @@ module.exports = {
     getDates(DATA_INICIO, DATA_FIM) {
         const startDate = new Date(DATA_INICIO);
         const limitDate = new Date(DATA_FIM);
-        console.log('noget', { startDate, limitDate });
 
         const startDay = startDate.getDate();
         const startMonth = startDate.getMonth() + 1;
         const startYear = startDate.getFullYear();
-        console.log({ startDay, startMonth, startYear });
 
         const limitDay = limitDate.getDate();
         const limitMonth = limitDate.getMonth() + 1;
         const limitYear = limitDate.getFullYear();
-        console.log({ limitDay, limitMonth, limitYear });
 
         const startString = `${startYear}-${
             startMonth >= 10 ? startMonth : '0' + startMonth
@@ -117,7 +114,6 @@ module.exports = {
             limitMonth >= 10 ? limitMonth : '0' + limitMonth
         }-${limitDay >= 10 ? limitDay : '0' + limitDay}T23:59:59.000-03:00`;
 
-        console.log({ startString, limitString });
         return {
             startDate: new Date(startString),
             limitDate: new Date(limitString),

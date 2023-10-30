@@ -582,8 +582,6 @@ module.exports = {
             resultWorkbook.xlsx.write(res).then(function () {
                 res.end();
             });
-
-            // _messages.success(res, req);
         } catch (error) {
             console.log(error);
             _messages.internalServer(
