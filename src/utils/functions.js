@@ -38,29 +38,32 @@ module.exports = {
 
     findObjectInRange(data, referenceDate) {
         let foundObject = null;
-    
+
         for (const obj of data) {
-            if (obj.startDate <= referenceDate && obj.limitDate >= referenceDate) {
+            if (
+                obj.startDate <= referenceDate &&
+                obj.limitDate >= referenceDate
+            ) {
                 foundObject = obj;
                 break;
             }
-        }  
-    
-        if(foundObject){
+        }
+
+        if (foundObject) {
             return foundObject;
         } else {
             // Se nenhum objeto for encontrado no intervalo, encontre o objeto mais próximo
             let closestDateDiff = Infinity;
-    
+
             for (const obj of data) {
                 const startDateDiff = Math.abs(referenceDate - obj.startDate);
                 const limitDateDiff = Math.abs(referenceDate - obj.limitDate);
-    
+
                 if (startDateDiff < closestDateDiff) {
                     foundObject = obj;
                     closestDateDiff = startDateDiff;
                 }
-    
+
                 if (limitDateDiff < closestDateDiff) {
                     foundObject = obj;
                     closestDateDiff = limitDateDiff;
@@ -89,6 +92,36 @@ module.exports = {
 
     calculateDiffDate(dateInitial, dateFinal, format) {
         return moment(dateInitial).diff(dateFinal, format);
+    },
+
+    getDates(DATA_INICIO, DATA_FIM) {
+        const startDate = new Date(DATA_INICIO);
+        const limitDate = new Date(DATA_FIM);
+        console.log('noget', { startDate, limitDate });
+
+        const startDay = startDate.getDate();
+        const startMonth = startDate.getMonth() + 1;
+        const startYear = startDate.getFullYear();
+        console.log({ startDay, startMonth, startYear });
+
+        const limitDay = limitDate.getDate();
+        const limitMonth = limitDate.getMonth() + 1;
+        const limitYear = limitDate.getFullYear();
+        console.log({ limitDay, limitMonth, limitYear });
+
+        const startString = `${startYear}-${
+            startMonth >= 10 ? startMonth : '0' + startMonth
+        }-${startDay >= 10 ? startDay : '0' + startDay}T00:00:00.000-03:00`;
+
+        const limitString = `${limitYear}-${
+            limitMonth >= 10 ? limitMonth : '0' + limitMonth
+        }-${limitDay >= 10 ? limitDay : '0' + limitDay}T23:59:59.000-03:00`;
+
+        console.log({ startString, limitString });
+        return {
+            startDate: new Date(startString),
+            limitDate: new Date(limitString),
+        };
     },
 
     getDataByToken(req) {

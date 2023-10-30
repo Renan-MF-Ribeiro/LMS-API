@@ -439,7 +439,16 @@ module.exports = {
                 const networkLogin =
                     typeof classGroupRow.LOGIN === 'string'
                         ? classGroupRow.LOGIN
+                        : typeof classGroupRow.LOGIN === 'number'
+                        ? classGroupRow.LOGIN.toString()
                         : classGroupRow.LOGIN.text;
+
+                if (!networkLogin) {
+                    results.push(
+                        `Invalid networkLogin: ${classGroupRow.LOGIN}`
+                    );
+                    continue;
+                }
 
                 const foundUser = await User.findOne({
                     networkLogin,
@@ -475,10 +484,11 @@ module.exports = {
                                 });
                             }
 
-                            const { startDate, limitDate } = getDates(
-                                classGroupRow.DATA_INICIO,
-                                classGroupRow.DATA_FIM
-                            );
+                            const { startDate, limitDate } =
+                                _functions.getDates(
+                                    classGroupRow.DATA_INICIO,
+                                    classGroupRow.DATA_FIM
+                                );
 
                             classGroup.startDate = startDate;
                             classGroup.limitDate = limitDate;
@@ -506,10 +516,11 @@ module.exports = {
                                     )
                                         return previous;
 
-                                    const { startDate, limitDate } = getDates(
-                                        classGroupRow.DATA_INICIO,
-                                        classGroupRow.DATA_FIM
-                                    );
+                                    const { startDate, limitDate } =
+                                        _functions.getDates(
+                                            classGroupRow.DATA_INICIO,
+                                            classGroupRow.DATA_FIM
+                                        );
 
                                     return {
                                         ...previous,
