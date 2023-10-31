@@ -105,7 +105,7 @@ module.exports = {
         });
     },
 
-    getAppliedCourses (instructor, order, sort, skip, limit, searchBy) {
+    getAppliedCourses (instructor, order, sort, skip, limit, searchBy, isAdmin) {
         return new Promise(async (resolve, reject) => {
             try {
 
