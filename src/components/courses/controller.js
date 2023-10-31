@@ -7,6 +7,10 @@ const {
     ProgramModel,
     CourseEvaluationModel,
     CoursesWithTagsAndUsers,
+    WaitListsByUser,
+    WaitListsByCourses,
+    UsersWithProcessedTags,
+    WaitListModel
 } = require('./model');
 
 const { Group, InstructorGroup } = require('../groups/model');
@@ -180,10 +184,10 @@ module.exports = {
 
             const programs = await ProgramModel.find().select('title');
 
-            courses.map((course) => {
-                course.dateInitial = addHours(course.dateInitial);
-                course.dateFinal = addHours(course.dateFinal);
-            });
+            // courses.map((course) => {
+            //     course.dateInitial = addHours(course.dateInitial);
+            //     course.dateFinal = addHours(course.dateFinal);
+            // });
 
             success(res, req, {
                 data: courses,
