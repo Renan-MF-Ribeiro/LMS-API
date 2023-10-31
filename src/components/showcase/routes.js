@@ -1,8 +1,28 @@
 const express = require('express')
 const _controller = require('./controller')
+const {
+    validateTokenRoute,
+} = require('../../utils/middlewares')
+
+const configRoutes = require('./configuration/routes')
+const bannersRoutes = require('./banners/routes')
+const videosRoutes = require('./videos/routes')
+const mostViewRoutes = require('./mostView/routes')
+const selectionTrailsRoutes = require('./selectionTrails/routes')
+const textAreaRoutes = require('./textArea/routes')
+const imageAreaRoutes = require('./imageArea/routes')
+const depositionsRoutes = require('./depositions/routes')
 
 module.exports = express.Router()
     .get('/', _controller.getShowCaseTrails)
     .get('/trails/:trailId', _controller.getShowCaseTrailById)
     .get('/trails', _controller.getOnlyShowCaseTrails)
     .get('/search', _controller.searchTrails)
+    .use('/configurations', configRoutes)
+    .use('/banners', validateTokenRoute, bannersRoutes)
+    .use('/videos', validateTokenRoute, videosRoutes)
+    .use('/mostView', validateTokenRoute, mostViewRoutes)
+    .use('/selection', validateTokenRoute, selectionTrailsRoutes)
+    .use('/textArea', validateTokenRoute, textAreaRoutes)
+    .use('/imageArea', validateTokenRoute, imageAreaRoutes)
+    .use('/depositions', validateTokenRoute, depositionsRoutes)
