@@ -8,6 +8,7 @@ const {
     SCORMTrackingHistory,
     SCORMLessonStatus,
     EventTracking,
+    FormTracking
 } = require("./model");
 
 const TRACKING_KINDS = Object.freeze({
@@ -17,6 +18,7 @@ const TRACKING_KINDS = Object.freeze({
     ExamTracking: ExamTracking,
     AudioTracking: AudioTracking,
     EventTracking: EventTracking,
+    FormTracking: FormTracking,
 });
 
 module.exports = {

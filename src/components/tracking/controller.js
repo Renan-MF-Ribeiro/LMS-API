@@ -24,6 +24,7 @@ const {
     EventTracking,
     ActivityTracking,
     TrackingsItems,
+    FormTracking
 } = require('./model');
 const { HistoricEvaluation, Evaluation } = require('../assessments/model');
 const {
@@ -47,6 +48,7 @@ const TRACKING_KINDS = Object.freeze({
     AudioTracking: AudioTracking,
     EventTracking: EventTracking,
     ActivityTracking: ActivityTracking,
+    FormTracking: FormTracking
 });
 
 const TrackingController = {
@@ -225,6 +227,19 @@ const TrackingController = {
                 }
             }
 
+            if (TrackingModel === FormTracking) {
+                const formItem = await Item.findById(q.item)
+                for (let i = 0; i < req.body.statements.length; i++) {
+                    const statement = req.body.statements[i]
+                    const itemStatement = formItem?.statements.find(({ _id }) => _id.equals(statement._id))
+                    if ([FORM_ITEM_TYPE.MULTIPLE, FORM_ITEM_TYPE.OBJECTIVE].includes(itemStatement.type)) {
+                        req.body.statements[i].reply = statement?.reply?.map((_id) => new mongoose.Types.ObjectId(_id))
+                    }
+                }
+                if (!!req.body.completionAt) req.body.completion = 1
+                if (req.body.completion === 1) completionAt = new Date();
+            }
+
             // GAMIFICATION DISPATCH
             await GamificationController.dispatch(
                 q.userLogin,
@@ -292,6 +307,33 @@ const TrackingController = {
             }
 
             const tracking = await Tracking.findOne({ item, userLogin });
+            if (tracking?.kind === 'FormTracking') {
+                const formItem = await Item.findById(item).lean()
+                for (let i = 0; i < formItem?.statements.length; i++) {
+                    const itemStatement = formItem?.statements[i]
+                    const trackingStatement = tracking?.statements?.find(({ _id }) => itemStatement._id.equals(_id))
+
+                    if ([FORM_ITEM_TYPE.MULTIPLE, FORM_ITEM_TYPE.OBJECTIVE].includes(itemStatement.type)) {
+                        tracking.statements[i] = {
+                            ...itemStatement,
+                            alternatives: itemStatement?.alternatives.map((alternative) => {
+                                const trackingReply = trackingStatement?.reply
+
+                                return {
+                                    ...alternative,
+                                    checked: !!trackingReply?.find((_id) => alternative._id.equals(_id))
+                                }
+                            })
+                        }
+                    } else {
+                        const response = trackingStatement?.reply
+                        tracking.statements[i] = {
+                            ...itemStatement,
+                            response: itemStatement.type == FORM_ITEM_TYPE.DICHOTOMOUS ? !!response : response
+                        }
+                    }
+                }
+            }
 
             const response = tracking ? tracking.toObject() : { item };
 
@@ -421,19 +463,19 @@ const TrackingController = {
                 const itemDataArr = [];
 
                 for (const item in trail.items) {
-                    if (trail.items[item].itemID.completion) {
+                    if (trail.items[item].itemID?.completion) {
                         completedTrails.push(trail.items[item]);
                     }
-                    trail.items[item] = trail.items[item].itemID;
+                    trail.items[item] = trail.items[item].itemID
                     itemData = {
-                        completion: trail.items[item].completion === 1,
-                        completionAt: trail.items[item].completionAt,
-                        kind: trail.items[item].kind,
-                        _id: trail.items[item]._id,
-                        score: trail.items[item].score,
-                        createdAt: trail.items[item].createdAt,
-                        updatedAt: trail.items[item].updatedAt,
-                        title: trail.items[item].title,
+                        completion: trail.items[item]?.completion === 1,
+                        completionAt: trail.items[item]?.completionAt,
+                        kind: trail.items[item]?.kind,
+                        _id: trail.items[item]?._id,
+                        score: trail.items[item]?.score,
+                        createdAt: trail.items[item]?.createdAt,
+                        updatedAt: trail.items[item]?.updatedAt,
+                        title: trail.items[item]?.title,
                     };
                     itemDataArr.push(itemData);
                 }
