@@ -50,12 +50,12 @@ const TRACKING_KINDS = Object.freeze({
 });
 
 const TrackingController = {
-    async createOrUpdate(req, res) {
+    async createOrUpdate (req, res) {
         const TrackingModel = TRACKING_KINDS[req.body.kind] || Tracking;
 
         try {
             const q = pick(['item', 'userLogin'], req.body);
-            
+
             const { isChiefItem } = req.query
             delete req.body._id;
 
@@ -136,7 +136,7 @@ const TrackingController = {
 
                 if (
                     (TrackingModel == DocumentTracking ||
-                        TrackingModel == MediaTracking ||  
+                        TrackingModel == MediaTracking ||
                         TrackingModel == EventTracking) &&
                     req.body.completion == 1
                 ) {
@@ -172,8 +172,8 @@ const TrackingController = {
                 completionAt = tracking
                     ? tracking.completionAt
                     : setNewDate
-                    ? new Date()
-                    : null;
+                        ? new Date()
+                        : null;
             }
 
             if (
@@ -202,6 +202,8 @@ const TrackingController = {
                     createCompleteTracking(i, trackingKind, q.userLogin)
                 }
             }
+
+            delete req.body.optionalItems
 
             if (TrackingModel === ExamTracking) {
                 const { idEvaluation } = await Item.findOne({
@@ -260,7 +262,7 @@ const TrackingController = {
         }
     },
 
-    async findOrCreate(req, res) {
+    async findOrCreate (req, res) {
         try {
             const { item, trailId, chief } = req.query;
             const { data } = await decodeToken(req.headers.authorization);
@@ -308,7 +310,7 @@ const TrackingController = {
         }
     },
 
-    async list(req, res) {
+    async list (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -331,16 +333,16 @@ const TrackingController = {
 
             const query = searchBy
                 ? {
-                      $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-                      'items.itemID': {
-                          $in: allTrackingUser.map((v) => v.item),
-                      },
-                  }
+                    $or: [{ title: { $regex: searchBy, $options: 'i' } }],
+                    'items.itemID': {
+                        $in: allTrackingUser.map((v) => v.item),
+                    },
+                }
                 : {
-                      'items.itemID': {
-                          $in: allTrackingUser.map((v) => v.item),
-                      },
-                  };
+                    'items.itemID': {
+                        $in: allTrackingUser.map((v) => v.item),
+                    },
+                };
 
             const newArrTrails = await Trail.find(query).populate({
                 path: 'items',
@@ -464,7 +466,7 @@ const TrackingController = {
         }
     },
 
-    async deleteQuery(req, res) {
+    async deleteQuery (req, res) {
         try {
             const { item, userLogin } = req.query;
             var networkLogin = userLogin;
@@ -491,17 +493,17 @@ const TrackingController = {
         }
     },
 
-    async createOrUpdateDocument(req, res) {
+    async createOrUpdateDocument (req, res) {
         req.body.kind = 'DocumentTracking';
         return TrackingController.createOrUpdate(req, res);
     },
 
-    async createOrUpdateMedia(req, res) {
+    async createOrUpdateMedia (req, res) {
         req.body.kind = 'MediaTracking';
         return TrackingController.createOrUpdate(req, res);
     },
 
-    async createOrUpdateSCORM(req, res) {
+    async createOrUpdateSCORM (req, res) {
         var decrypted = cryptoJS.AES.decrypt(req.headers.tokendata, 'commit');
         const tmpStatus = decrypted.toString(cryptoJS.enc.Utf8);
 
@@ -513,7 +515,7 @@ const TrackingController = {
         req.body.kind = 'SCORMTracking';
         return TrackingController.createOrUpdate(req, res);
     },
-    async listActivitiesHistoric(req, res) {
+    async listActivitiesHistoric (req, res) {
         try {
             const { skip, limit } = pagination(req);
             let { order, sort } = ordernation(req);
@@ -521,45 +523,45 @@ const TrackingController = {
 
             const query = searchBy
                 ? {
-                      $and: [
-                          {
-                              $or: [
-                                  {
-                                      'item.title': {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                                  {
-                                      'user.name': {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                                  {
-                                      reviewer: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                              ],
-                          },
-                          {
-                              $or: [
-                                  { lessonStatus: 'failed' },
-                                  { lessonStatus: 'passed' },
-                              ],
-                              kind: 'ActivityTracking',
-                          },
-                      ],
-                  }
+                    $and: [
+                        {
+                            $or: [
+                                {
+                                    'item.title': {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                                {
+                                    'user.name': {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                                {
+                                    reviewer: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                            ],
+                        },
+                        {
+                            $or: [
+                                { lessonStatus: 'failed' },
+                                { lessonStatus: 'passed' },
+                            ],
+                            kind: 'ActivityTracking',
+                        },
+                    ],
+                }
                 : {
-                      $or: [
-                          { lessonStatus: 'failed' },
-                          { lessonStatus: 'passed' },
-                      ],
-                      kind: 'ActivityTracking',
-                  };
+                    $or: [
+                        { lessonStatus: 'failed' },
+                        { lessonStatus: 'passed' },
+                    ],
+                    kind: 'ActivityTracking',
+                };
 
             order = order === 'maxCorrectedAt' ? 'correctedAt' : order;
             order = order === 'itemName' ? 'item.title' : order;
@@ -610,7 +612,7 @@ const TrackingController = {
         }
     },
 
-    async listActivitiesForCorrection(req, res) {
+    async listActivitiesForCorrection (req, res) {
         try {
             const { skip, limit } = pagination(req);
             let { order, sort } = ordernation(req);
@@ -619,19 +621,19 @@ const TrackingController = {
 
             const query = searchBy
                 ? {
-                      $or: [
-                          { 'item.title': { $regex: searchBy, $options: 'i' } },
-                          { 'user.name': { $regex: searchBy, $options: 'i' } },
-                      ],
-                      kind: 'ActivityTracking',
-                      lessonStatus: 'incomplete',
-                      sentAt: { $exists: true, $not: { $size: 0 } },
-                  }
+                    $or: [
+                        { 'item.title': { $regex: searchBy, $options: 'i' } },
+                        { 'user.name': { $regex: searchBy, $options: 'i' } },
+                    ],
+                    kind: 'ActivityTracking',
+                    lessonStatus: 'incomplete',
+                    sentAt: { $exists: true, $not: { $size: 0 } },
+                }
                 : {
-                      lessonStatus: 'incomplete',
-                      kind: 'ActivityTracking',
-                      sentAt: { $exists: true, $not: { $size: 0 } },
-                  };
+                    lessonStatus: 'incomplete',
+                    kind: 'ActivityTracking',
+                    sentAt: { $exists: true, $not: { $size: 0 } },
+                };
 
             order = order === 'maxSentAt' ? 'sentAt' : order;
             order = order === 'itemName' ? 'item.title' : order;
@@ -679,7 +681,7 @@ const TrackingController = {
         }
     },
 
-    async updateActivityAdmin(req, res) {
+    async updateActivityAdmin (req, res) {
         try {
             const { trackingId } = req.query;
             const todayDate = new Date();
@@ -697,15 +699,15 @@ const TrackingController = {
             const queryStatus =
                 body.score >= tracking.item.passingScore
                     ? {
-                          lessonStatus: 'passed',
-                          completion: 1,
-                      }
+                        lessonStatus: 'passed',
+                        completion: 1,
+                    }
                     : body.score < tracking.item.passingScore
-                    ? {
-                          lessonStatus: 'failed',
-                          completion: 0,
-                      }
-                    : undefined;
+                        ? {
+                            lessonStatus: 'failed',
+                            completion: 0,
+                        }
+                        : undefined;
 
             if (queryStatus) {
                 await ActivityTracking.findOneAndUpdate(
@@ -733,7 +735,7 @@ const TrackingController = {
         }
     },
 
-    async updateActivityUser(req, res) {
+    async updateActivityUser (req, res) {
         try {
             const { item, userLogin } = req.query;
             const todayDate = new Date();
@@ -749,7 +751,7 @@ const TrackingController = {
 
             const { file } = req.files;
             activityPath = await azureBlob(file, 'items/activity');
-            
+
             if (tracking.lessonStatus == 'failed') {
                 await ActivityTracking.findOneAndUpdate(
                     { _id: tracking._id },
