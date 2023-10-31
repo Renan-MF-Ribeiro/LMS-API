@@ -313,6 +313,42 @@ const SoonItem = Item.discriminator(
     )
 );
 
+const FORM_ITEM_TYPE = Object.freeze({
+    DICHOTOMOUS: 'dichotomous',
+    MULTIPLE: 'multiple',
+    OBJECTIVE: 'objective',
+    DISSERTATIVE: 'dissertative'
+})
+
+function ifIsChoosable () {
+    return [FORM_ITEM_TYPE.MULTIPLE, FORM_ITEM_TYPE.OBJECTIVE].includes(this.type)
+}
+
+function ifIsDissertative () {
+    return this.type === FORM_ITEM_TYPE.DISSERTATIVE
+}
+
+const FormItemAlternative = {
+    _id: { type: 'ObjectId', required: true },
+    alternative: { type: String, required: true }
+}
+
+const FormItem = Item.discriminator(
+    "FormItem",
+    new mongoose.Schema({
+        statements: [{
+            _id: { type: 'ObjectId', required: true },
+            type: { type: String, enum: Object.values(FORM_ITEM_TYPE), required: true },
+            title: { type: String, required: true },
+            alternatives: { type: [FormItemAlternative], required: ifIsChoosable, default: undefined },
+            numberCharacters: { type: Number, required: ifIsDissertative }
+        }],
+        ...endpointOptions
+    },
+        { ...schemaOptions }
+    )
+)
+
 module.exports = {
     pathResolver,
     ifEnabled,
@@ -326,4 +362,6 @@ module.exports = {
     EventItem,
     ActivityItem,
     SoonItem,
+    FormItem,
+    FORM_ITEM_TYPE
 };
