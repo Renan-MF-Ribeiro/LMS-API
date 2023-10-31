@@ -713,7 +713,7 @@ module.exports = {
             const user = await getUserByToken(req);
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
-            const { searchBy } = req.query;
+            const { searchBy, isAdmin } = req.query;
 
             const { courses, total } = await getAppliedCourses(
                 user._id,
@@ -721,7 +721,8 @@ module.exports = {
                 sort,
                 skip,
                 limit,
-                searchBy
+                searchBy,
+                isAdmin
             );
             success(res, req, {
                 data: courses,

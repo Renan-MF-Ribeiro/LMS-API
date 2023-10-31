@@ -42,11 +42,7 @@ router
     .get('/instructor/all', isInstructor, _controller.instructorAllCourses)
     .get('/instructor/course/:id', isInstructor, _controller.getCourseById)
     .get('/instructor/users', isInstructor, _controller.getUsers)
-    .get(
-        '/instructor/applied-courses',
-        isInstructor,
-        _controller.appliedCourses
-    )
+    .get('/instructor/applied-courses', _controller.appliedCourses)
     .get('/instructor/applied-course/:courseID/:classID', _controller.appliedCourse)
     .get('/instructor/search-user/:id', isInstructor, _controller.searchUser)
     .post(
