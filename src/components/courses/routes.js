@@ -47,11 +47,7 @@ router
         isInstructor,
         _controller.appliedCourses
     )
-    .get(
-        '/instructor/applied-course/:courseID/:classID',
-        isInstructor,
-        _controller.appliedCourse
-    )
+    .get('/instructor/applied-course/:courseID/:classID', _controller.appliedCourse)
     .get('/instructor/search-user/:id', isInstructor, _controller.searchUser)
     .post(
         '/instructor/create-class',
