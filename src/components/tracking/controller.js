@@ -140,6 +140,7 @@ const TrackingController = {
                 if (
                     (TrackingModel == DocumentTracking ||
                         TrackingModel == MediaTracking ||
+                        TrackingModel == FormTracking ||
                         TrackingModel == EventTracking) &&
                     req.body.completion == 1
                 ) {
@@ -198,7 +199,6 @@ const TrackingController = {
 
             if (isChiefItem && registerCompletationAt) {
                 for (const item of req.body.optionalItems) {
-                    console.log(item)
                     const i = await Item.findById(item._id).lean()
                     const trackingKind = processTrackingType(i)
 
@@ -206,7 +206,7 @@ const TrackingController = {
                 }
             }
 
-            delete req.body.optionalItems
+
 
             if (TrackingModel === ExamTracking) {
                 const { idEvaluation } = await Item.findOne({
@@ -258,7 +258,7 @@ const TrackingController = {
                     lessonStatus: req.body?.lessonStatus,
                 }
             );
-
+            delete req.body.optionalItems
             await TrackingModel.findOneAndUpdate(
                 q,
                 { ...req.body, totalTime, isAllowedToSendXAPI, completionAt },
