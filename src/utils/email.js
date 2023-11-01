@@ -1,6 +1,6 @@
 /* eslint-disable no-async-promise-executor */
 'use strict'
-const emailTemplate = require('../../config.json')
+const config = require('../../config.json')
 const sgMail = require('@sendgrid/mail')
 const { sendMfaToKafka } = require('../components/new-messages/business')
 sgMail.setApiKey(process.env.SENDGRID_API_KEY)
@@ -20,7 +20,7 @@ module.exports = {
                     <div border="0" cellpadding="0" cellspacing="0" style="max-height: 800px; max-width: 1000px;">
                         <div>
                             <div max-height="328"><img data-imagetype="External"
-                                    src="${emailTemplate.messenger.emailTemplate.thumbnail}" alt="Thumbnail"
+                                    src="${config.messenger.emailTemplate.thumbnail}" alt="Thumbnail"
                                     style="width:100%; height:100%">
                             </div>
                         </div>
@@ -39,12 +39,12 @@ module.exports = {
                             <div style="height: 50px;">
                                     <a href="${resetPasswordUrl}" target="_blank" style="font-size: 1rem; border: 0px; text-transform: uppercase; text-align: center;
                                     text-decoration: none; border-radius: 5px; color: rgb(255, 255, 255); font-weight: bold; font-family: Ubuntu, Roboto, sans-serif;
-                                    padding: 1rem; background-color: ${emailTemplate.messenger.emailTemplate.primary} !important;">Acessar</a>
+                                    padding: 1rem; background-color: ${config.messenger.emailTemplate.primary} !important;">Acessar</a>
                             </div>
                         </center>
                         </div>
                         <div height="75"><img data-imagetype="External"
-                                src="${emailTemplate.messenger.emailTemplate.footer}" alt="Footer"
+                                src="${config.messenger.emailTemplate.footer}" alt="Footer"
                                 style="width:100%; height:100%">
                         </div>
                     </div>
@@ -102,7 +102,7 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             try {
                 let message;
-                message = `Olá, ${userData.name}! Seu token de acesso ao portal ANBIMA é <b>${token}</b>. <br> <br> Com ele, você pode ingressar na sua conta com segurança. <br> <br> Em caso de dúvidas ou dificuldades para fazer seu login, entre em contato conosco pelo e-mail support@anbima-happmobi.zendesk.com. Teremos prazer em ajudá-lo(a)!`;
+                message = `Olá, ${userData.name}! Seu token de acesso ao portal ${config.clientName} é <b>${token}</b>. <br> <br> Com ele, você pode ingressar na sua conta com segurança. <br> <br> Em caso de dúvidas ou dificuldades para fazer seu login, entre em contato conosco pelo e-mail ${config.mfaSupportEmail}. Teremos prazer em ajudá-lo(a)!`;
                 const body = {
                     category: "notify",
                     communication: ["email"],
@@ -117,7 +117,7 @@ module.exports = {
                     },
                     text: message,
                     texthtml: message,
-                    title: `Seu token de acesso ao portal ANBIMA foi gerado com sucesso!`,
+                    title: `Seu token de acesso ao portal ${config.clientName} foi gerado com sucesso!`,
                     multifactor: true,
                     resetPasswordUrl
                 };

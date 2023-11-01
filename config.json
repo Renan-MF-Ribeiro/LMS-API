@@ -55,5 +55,7 @@
     "vimeoFolder": "8417388",
     "gamification": {
         "active": true
-    }
+    },
+    "clientName": "LMS Happlearning",
+    "mfaSupportEmail": "suporte@happlearning.com.br"
 }
