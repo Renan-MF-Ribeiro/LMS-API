@@ -174,21 +174,6 @@ const ItemController = {
 
                     if (payload.kind === 'EventItem') {
                         delete payload.contentPath;
-                    }                    
-
-                    if (payload.kind === 'FormItem') {
-                        delete payload.contentPath
-                        payload.statements = payload.statements.map((statement) => ({
-                            _id: new mongoose.Types.ObjectId(),
-                            title: statement.title,
-                            type: statement.type,
-                            alternatives: statement?.alternatives?.map(({ alternative }) => ({
-                                _id: new mongoose.Types.ObjectId(),
-                                alternative
-                            })),
-                            numberCharacters: statement?.numberCharacters
-                        })
-                        );
                     }
 
                     const sectionId = payload.sectionId;
@@ -452,6 +437,21 @@ const ItemController = {
 
                     if (payload.kind === 'EventItem') {
                         delete payload.contentPath;
+                    }                    
+
+                    if (payload.kind === 'FormItem') {
+                        delete payload.contentPath
+                        payload.statements = payload.statements.map((statement) => ({
+                            _id: new mongoose.Types.ObjectId(),
+                            title: statement.title,
+                            type: statement.type,
+                            alternatives: statement?.alternatives?.map(({ alternative }) => ({
+                                _id: new mongoose.Types.ObjectId(),
+                                alternative
+                            })),
+                            numberCharacters: statement?.numberCharacters
+                        })
+                        );
                     }
 
                     delete payload.thumb;
