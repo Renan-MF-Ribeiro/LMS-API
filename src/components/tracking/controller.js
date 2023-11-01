@@ -1,3 +1,4 @@
+const mongoose = require('mongoose')
 const httpStatus = require('http-status-codes');
 const { pick } = require('ramda');
 const { decodeToken } = require('../../utils/auth');
@@ -33,7 +34,7 @@ const {
 } = require('../sections/business');
 const { populateTrails } = require('../trails/business');
 const cryptoJS = require('crypto-js');
-const { Item } = require('../items/model');
+const { Item, FORM_ITEM_TYPE } = require('../items/model');
 const GamificationController = require('../gamification/controller');
 const { EVENTS_CATEGORY } = require('../gamification/model');
 
