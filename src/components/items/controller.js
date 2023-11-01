@@ -27,6 +27,7 @@ const {
     SoundcloudItem,
     EventItem,
     ActivityItem,
+    FormItem,
 } = require('./model');
 const { Tracking } = require('../tracking/model');
 const {
@@ -54,6 +55,7 @@ const ITEM_KINDS = Object.freeze({
     SoundcloudItem: SoundcloudItem,
     EventItem: EventItem,
     ActivityItem: ActivityItem,
+    FormItem: FormItem
 });
 
 const ItemController = {
@@ -435,6 +437,21 @@ const ItemController = {
 
                     if (payload.kind === 'EventItem') {
                         delete payload.contentPath;
+                    }                    
+
+                    if (payload.kind === 'FormItem') {
+                        delete payload.contentPath
+                        payload.statements = payload.statements.map((statement) => ({
+                            _id: new mongoose.Types.ObjectId(),
+                            title: statement.title,
+                            type: statement.type,
+                            alternatives: statement?.alternatives?.map(({ alternative }) => ({
+                                _id: new mongoose.Types.ObjectId(),
+                                alternative
+                            })),
+                            numberCharacters: statement?.numberCharacters
+                        })
+                        );
                     }
 
                     delete payload.thumb;
@@ -584,6 +601,26 @@ const ItemController = {
                         ...(bannerPath ? { bannerPath: bannerPath } : {}),
                         ...payload,
                     };
+
+                    if (payload.kind === 'FormItem') {
+                        for (let i = 0; i < payload?.statements.length; i++) {
+                            const statement = payload?.statements[i]
+                            payload.statements[i] = {
+                                _id: statement?._id || new mongoose.Types.ObjectId(),
+                                title: statement.title,
+                                type: statement.type,
+                                ...(statement?.alternatives && {
+                                    alternatives: statement.alternatives.map(({ _id, alternative }) => ({
+                                        _id: _id || new mongoose.Types.ObjectId(),
+                                        alternative
+                                    }))
+                                }),
+                                ...(statement?.numberCharacters && {
+                                    numberCharacters: statement?.numberCharacters
+                                })
+                            }
+                        }
+                    }
 
                     delete payload.content;
                     delete payload.thumb;

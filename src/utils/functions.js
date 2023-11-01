@@ -422,7 +422,7 @@ module.exports = {
 
         for (const item of trail.items) {
             const objTracking = allTrackingUser.filter((obj) => {
-                if (String(obj.item) === String(item.itemID._id)) {
+                if (String(obj.item) === String(item?.itemID?._id)) {
                     return true;
                 }
             })[0];
@@ -458,7 +458,7 @@ module.exports = {
                     tmpCompletion = objTracking.completion;
                 }
             }
-            if (item.itemID.passingScore && item.itemID.passingScore !== 0) {
+            if (item.itemID?.passingScore && item.itemID.passingScore !== 0) {
                 const kindsWithScore = ['ExamTracking', 'ActivityTracking'];
                 if (objTracking && kindsWithScore.includes(objTracking.kind)) {
                     scoreArr.push(objTracking.score);
