@@ -208,7 +208,7 @@ module.exports = {
 
     async updateCourse (req, res) {
         try {
-            const materials = JSON.parse(req.fields.materials);
+            const materials = req.fields.materials ? JSON.parse(req.fields.materials) : null;
             const body = req.fields;
             const arrMaterials = [];
             const files = req.files;
