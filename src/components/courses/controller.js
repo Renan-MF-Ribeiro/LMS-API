@@ -13,6 +13,9 @@ const {
     WaitListModel
 } = require('./model');
 
+const { DOMAIN, AZURE_BLOB_URL } = process.env;
+
+
 const { Group, InstructorGroup } = require('../groups/model');
 
 const { Trail } = require('../trails/model');
@@ -63,6 +66,14 @@ module.exports = {
             const dataFinalCourse = formatDateWithoutHours(
                 addHours(body.dateFinal)
             );
+
+            let thumbPath;
+            const { thumb } = req.files;
+            if (thumb) {
+                thumbPath = await azureBlob(thumb, 'items/thumbs');
+                body.thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
+            }
+
             if (!body.passingScore || body.passingScore === 'null')
                 delete body.passingScore;
             if (!body.certificateLayout || body.certificateLayout === 'null')
@@ -230,6 +241,13 @@ module.exports = {
                 body.certificateLayout = null;
 
             if (dateInitialCourse > dataFinalCourse) flagDate = false;
+
+            let thumbPath;
+            const { thumb } = req.files;
+            if (thumb) {
+                thumbPath = await azureBlob(thumb, 'items/thumbs');
+                body.thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
+            }
 
             if (!flagDate) {
                 badRequest(
