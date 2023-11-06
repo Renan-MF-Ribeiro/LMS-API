@@ -3,6 +3,7 @@
 const config = require('../../config.json')
 const sgMail = require('@sendgrid/mail')
 const { sendMfaToKafka } = require('../components/new-messages/business')
+const { processTargetUsers } = require('../components/messages/business')
 sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
 module.exports = {
