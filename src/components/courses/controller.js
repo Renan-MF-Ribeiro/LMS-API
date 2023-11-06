@@ -67,11 +67,11 @@ module.exports = {
                 addHours(body.dateFinal)
             );
 
-            let thumb;
-            const { thumbPath } = req.files;
-            if (thumbPath) {
-                thumb = await azureBlob(thumbPath, 'items/thumbs');
-                body.thumbPath = thumb.replace(AZURE_BLOB_URL, DOMAIN);
+            let thumbPath;
+            const { thumb } = req.files;
+            if (thumb) {
+                thumbPath = await azureBlob(thumb, 'items/thumbs');
+                body.thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
             }
 
             if (!body.passingScore || body.passingScore === 'null')
@@ -234,12 +234,12 @@ module.exports = {
             const dataFinalCourse = formatDateWithoutHours(
                 addHours(body.dateFinal)
             );
-
-            let thumb;
-            const { thumbPath } = req.files;
-            if (thumbPath) {
-                thumb = await azureBlob(thumbPath, 'items/thumbs');
-                body.thumbPath = thumb.replace(AZURE_BLOB_URL, DOMAIN);
+            
+            let thumbPath;
+            const { thumb } = req.files;
+            if (thumb) {
+                thumbPath = await azureBlob(thumb, 'items/thumbs');
+                body.thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
             }
 
             if (!body.passingScore || body.passingScore === 'null')
