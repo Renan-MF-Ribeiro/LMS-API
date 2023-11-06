@@ -15,6 +15,7 @@ const {
 
 const { DOMAIN, AZURE_BLOB_URL } = process.env;
 
+const { azureBlob } = require('../../utils/files');
 
 const { Group, InstructorGroup } = require('../groups/model');
 
