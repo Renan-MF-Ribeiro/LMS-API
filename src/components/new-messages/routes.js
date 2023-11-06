@@ -26,6 +26,7 @@ router
         '/automation/toggle-active/:messageAutomationId',
         isAdmin,
         _automationController.toggleActive
+    .post('/send-waitinglist', _controller.sendWaitingListMessage)
 );
 
 module.exports = router

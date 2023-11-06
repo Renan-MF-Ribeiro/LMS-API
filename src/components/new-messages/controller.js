@@ -16,6 +16,11 @@ const {
     getUserByToken,
     getDateTodayWithoutHours,
 } = require('../../utils/functions');
+const {
+    WaitListsByCourses,
+    WaitListModel,
+    CourseModel,
+} = require('../courses/model');
 const { createCSVString } = require('../../utils/files');
 const { CLIENT_ID, SENDINBLUE_API_KEY, SENDINBLUE_FOLDER_ID, API_MESSENGER } =
     process.env;
@@ -363,6 +368,94 @@ module.exports = {
                     createMessagesFromBackend(message);
                 }
             }
+        }
+    },
+
+    async sendWaitingListMessage(req, res) {
+        try {
+            const {
+                waitlistUsersArray,
+                elegibleUsersArray,
+                courseId,
+                date,
+                type,
+                place,
+            } = req.body;
+
+            const course = await CourseModel.findOne({ _id: courseId });
+
+            var dateTime = moment(date).subtract('3', 'hours').format('DD/MM HH:mm').split(' ');
+
+            let text = ' ';
+            let texthtml = ' ';
+
+            if (type == 'URL') {
+                text = `Prezado(a) Aluno(a), Desejamos informar que sua inscrição foi registrada na lista de espera para o curso ${course.title}. É com satisfação que comunicamos que uma nova turma deste curso será ministrada no dia ${dateTime[0]} as ${dateTime[1]}, a ser realizada através do link ${place}. Em situação de impossibilidade de participação, solicitamos que considere reingressar na lista de espera, a fim de oportunizar a vaga a outros interessados. Agradecemos antecipadamente!`;
+                texthtml = `<br> <p>Prezado(a) Aluno(a), Desejamos informar que sua inscrição foi registrada na lista de espera para o curso ${course.title}. <br> <br> É com satisfação que comunicamos que uma nova turma deste curso será ministrada no dia ${dateTime[0]} as ${dateTime[1]}, a ser realizada através do link <a href="${place}">${place}</a>. <br> <br> Em situação de impossibilidade de participação, solicitamos que considere reingressar na lista de espera, a fim de oportunizar a vaga a outros interessados. <br> <br> Agradecemos antecipadamente!</p> <br>`;
+            } else if (type == 'text') {
+                text = `Prezado(a) Aluno(a), Desejamos informar que sua inscrição foi registrada na lista de espera para o curso ${course.title}. É com satisfação que comunicamos que uma nova turma deste curso será ministrada no dia ${dateTime[0]} as ${dateTime[1]}, a ser realizada nas instalações localizadas no ${place}. Em situação de impossibilidade de participação, solicitamos que considere reingressar na lista de espera, a fim de oportunizar a vaga a outros interessados. Agradecemos antecipadamente!`;
+                texthtml = `<br> <p>Prezado(a) Aluno(a), Desejamos informar que sua inscrição foi registrada na lista de espera para o curso ${course.title}. <br> <br> É com satisfação que comunicamos que uma nova turma deste curso será ministrada no dia ${dateTime[0]} as ${dateTime[1]}, a ser realizada nas instalações localizadas no ${place}. <br> <br> Em situação de impossibilidade de participação, solicitamos que considere reingressar na lista de espera, a fim de oportunizar a vaga a outros interessados. <br> <br> Agradecemos antecipadamente!</p> <br>`;
+            }
+
+            if (waitlistUsersArray.length > 0) {
+                const waitlistUsersIdList = waitlistUsersArray.map(
+                    (u) => u._id
+                );
+                const message = {
+                    category: 'notify',
+                    communication: ['notification', 'email'],
+                    mode: 'manual',
+                    target: {
+                        type: 'users',
+                        value: {
+                            users: waitlistUsersIdList,
+                        },
+                    },
+                    text: text,
+                    texthtml: texthtml,
+                    thumbnail: config.messenger.emailTemplate.thumbnail,
+                    title: `Aviso Universidade Corporativa Synchro`,
+                };
+                createMessagesFromBackend(message);
+
+                for (const user of waitlistUsersIdList) {
+                    await WaitListModel.findOneAndUpdate(
+                        { userID: user, courseID: courseId, sent: false },
+                        { sent: true }
+                    );
+                }
+            }
+
+            if (elegibleUsersArray.length > 0) {
+                const message = {
+                    category: 'notify',
+                    communication: ['notification', 'email'],
+                    mode: 'manual',
+                    target: {
+                        type: 'users',
+                        value: {
+                            users: elegibleUsersArray,
+                        },
+                    },
+                    text: text,
+                    texthtml: texthtml,
+                    thumbnail: config.messenger.emailTemplate.thumbnail,
+                    title: `Aviso Universidade Corporativa Synchro`,
+                };
+                createMessagesFromBackend(message);
+            }
+
+            _messages.success(res, req);
+        } catch (error) {
+            console.log(error);
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'groups',
+                'get'
+            );
         }
     },
 };
