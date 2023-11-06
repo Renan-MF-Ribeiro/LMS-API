@@ -67,11 +67,11 @@ module.exports = {
                 addHours(body.dateFinal)
             );
 
-            let thumbPath;
-            const { thumb } = req.files;
-            if (thumb) {
-                thumbPath = await azureBlob(thumb, 'items/thumbs');
-                body.thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
+            let thumb;
+            const { thumbPath } = req.files;
+            if (thumbPath) {
+                thumb = await azureBlob(thumbPath, 'items/thumbs');
+                body.thumbPath = thumb.replace(AZURE_BLOB_URL, DOMAIN);
             }
 
             if (!body.passingScore || body.passingScore === 'null')
@@ -235,6 +235,13 @@ module.exports = {
                 addHours(body.dateFinal)
             );
 
+            let thumb;
+            const { thumbPath } = req.files;
+            if (thumbPath) {
+                thumb = await azureBlob(thumbPath, 'items/thumbs');
+                body.thumbPath = thumb.replace(AZURE_BLOB_URL, DOMAIN);
+            }
+
             if (!body.passingScore || body.passingScore === 'null')
                 body.passingScore = null;
             if (!body.certificateLayout || body.certificateLayout === 'null')
@@ -242,12 +249,7 @@ module.exports = {
 
             if (dateInitialCourse > dataFinalCourse) flagDate = false;
 
-            let thumbPath;
-            const { thumb } = req.files;
-            if (thumb) {
-                thumbPath = await azureBlob(thumb, 'items/thumbs');
-                body.thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
-            }
+            
 
             if (!flagDate) {
                 badRequest(
