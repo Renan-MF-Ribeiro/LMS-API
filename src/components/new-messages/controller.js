@@ -2,6 +2,7 @@ const axios = require('axios');
 const config = require('../../../config.json');
 const { htmlToText } = require('html-to-text');
 const { NewMessage } = require('./model');
+const moment = require('moment');
 const {
     getUserList,
     returnListOfIds,
