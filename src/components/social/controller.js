@@ -234,7 +234,7 @@ module.exports = {
 
     async createComment(req, res) {
         try {
-            const uri = `${process.env.API_SOCIAL}/comment/${process.env.CLIENT_ID}`;
+            const uri = `${process.env.API_SOCIAL}/home/comment/${process.env.CLIENT_ID}`;
             const body = req.body
             const { data } = await axios.post(uri, body);
 
@@ -246,7 +246,7 @@ module.exports = {
     },
     async getAllComments(req, res) {
         try {
-            const uri = `${API_SOCIAL}/comment/${process.env.CLIENT_ID}`;
+            const uri = `${process.env.API_SOCIAL}/home/comment/${process.env.CLIENT_ID}`;
             const { data } = await axios.get(uri);
 
             return _messages.success(req, res, data)
@@ -258,7 +258,7 @@ module.exports = {
     async getCommentsByTrailId(req, res) {
         try {
             const { trailId } = req.params
-            const uri = `${API_SOCIAL}/comment/${trailId}`;
+            const uri = `${process.env.API_SOCIAL}/home/comment/${trailId}`;
             const { data } = await axios.get(uri);
 
             return _messages.success(req, res, data)
@@ -271,7 +271,7 @@ module.exports = {
         try {
             const { commentId } = req.params
             const body = req.body
-            const uri = `${API_SOCIAL}/comment/${commentId}`;
+            const uri = `${process.env.API_SOCIAL}/home/comment/${commentId}`;
             const { data } = await axios.put(uri, body);
 
             return _messages.success(req, res, data)
@@ -282,20 +282,20 @@ module.exports = {
     },
     async createLike(req, res) {
         try {
-            const uri = `${process.env.API_SOCIAL}/like/${process.env.CLIENT_ID}`;
+            const uri = `${process.env.API_SOCIAL}/home/like/${process.env.CLIENT_ID}`;
             const body = req.body
             const { data } = await axios.post(uri, body);
 
             return _messages.success(req, res, data)
         } catch (error) {
-            console.log(error)
+            console.log("!", error)
             return _messages.badRequest(error)
         }
     },
     async getLikesByTrailId(req, res) {
         try {
             const { trailId } = req.params
-            const uri = `${process.env.API_SOCIAL}/like/${trailId}`;
+            const uri = `${process.env.API_SOCIAL}/home/like/${trailId}`;
             const { data } = await axios.get(uri);
 
             return _messages.success(req, res, data)
@@ -306,7 +306,7 @@ module.exports = {
     },
     async deleteLike(req, res) {
         try {
-            const uri = `${process.env.API_SOCIAL}/like`;
+            const uri = `${process.env.API_SOCIAL}/home/like`;
             const body = req.body
             const { data } = await axios.delete(uri, body);
 
@@ -318,7 +318,7 @@ module.exports = {
     },
     async createFavorite(req, res) {
         try {
-            const uri = `${process.env.API_SOCIAL}/favorite/${process.env.CLIENT_ID}`;
+            const uri = `${process.env.API_SOCIAL}/home/favorite/${process.env.CLIENT_ID}`;
             const body = req.body
             const { data } = await axios.post(uri, body);
 
@@ -331,7 +331,7 @@ module.exports = {
     async getFavoritesByUserId(req, res) {
         try {
             const { userId } = req.params
-            const uri = `${process.env.API_SOCIAL}/favorite/${userId}`;
+            const uri = `${process.env.API_SOCIAL}/home/favorite/${userId}`;
             const { data } = await axios.get(uri);
 
             return _messages.success(req, res, data)
@@ -344,7 +344,7 @@ module.exports = {
         try {
             const { favoriteId } = req.params
             const body = req.body
-            const uri = `${process.env.API_SOCIAL}/favorite/${favoriteId}`;
+            const uri = `${process.env.API_SOCIAL}/home/favorite/${favoriteId}`;
             const { data } = await axios.put(uri, body);
 
             return _messages.success(req, res, data)
