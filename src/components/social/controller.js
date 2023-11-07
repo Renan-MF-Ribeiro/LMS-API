@@ -353,6 +353,19 @@ module.exports = {
             return _messages.badRequest(error)
         }
     },
+    async shareSocialContent(req, res) {
+        try {
+            const { favoriteId } = req.params
+            const body = req.body
+            const uri = `${process.env.API_SOCIAL}/home/share/${process.env.CLIENT_ID}`;
+            const { data } = await axios.put(uri, body);
+
+            return _messages.success(req, res, data)
+        } catch (error) {
+            console.log(error)
+            return _messages.badRequest(error)
+        }
+    },
 
     async generate(req, res) {
         try {

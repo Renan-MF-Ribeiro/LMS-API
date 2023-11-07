@@ -8,6 +8,8 @@ module.exports = express
     .put('/config', isAdmin, _controller.putConfig)
     .get('/users-lists', isAdmin, _controller.getUsers)
     .post('/users-lists', isAdmin, _controller.addOrRemoveFromUserList)
+    .get('/', isAdmin, _controller.getActive)
+    .post('/generate', isAdmin, _controller.generate)
     //comments
     .post('/comment/create', _controller.createComment)
     .get('/comment/all', _controller.getAllComments)
@@ -21,5 +23,6 @@ module.exports = express
     .post('/favorite/create', _controller.createFavorite)
     .get('/favorite/:trailId', _controller.getFavoritesByUserId)
     .put('/favorite/update/:favoriteId', _controller.updateFavorite)
-    .get('/', isAdmin, _controller.getActive)
-    .post('/generate', isAdmin, _controller.generate);
+    //share
+    .post('/share', _controller.shareSocialContent)
+    
