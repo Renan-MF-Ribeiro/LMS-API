@@ -237,11 +237,24 @@ module.exports = {
             const uri = `${process.env.API_SOCIAL}/home/comment/${process.env.CLIENT_ID}`;
             const body = req.body
             const { data } = await axios.post(uri, body);
-
-            return _messages.success(req, res, data)
+            _messages.success(res,
+                res,
+                req,
+                data,
+                'ok',
+                'social',
+                'createComment')
+            return;
         } catch (error) {
-            console.log(error)
-            return _messages.badRequest(error)
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'createComment'
+            );
+            return;
         }
     },
     async getAllComments(req, res) {
@@ -249,10 +262,24 @@ module.exports = {
             const uri = `${process.env.API_SOCIAL}/home/comment/${process.env.CLIENT_ID}`;
             const { data } = await axios.get(uri);
 
-            return _messages.success(req, res, data)
+            _messages.success(res,
+                res,
+                req,
+                data,
+                'ok',
+                'social',
+                'getAllComments')
+            return;
         } catch (error) {
-            console.log(error)
-            return _messages.badRequest(error)
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'getAllComments'
+            );
+            return;
         }
     },
     async getCommentsByTrailId(req, res) {
@@ -261,10 +288,24 @@ module.exports = {
             const uri = `${process.env.API_SOCIAL}/home/comment/${trailId}`;
             const { data } = await axios.get(uri);
 
-            return _messages.success(req, res, data)
+            _messages.success(res,
+                res,
+                req,
+                data,
+                'ok',
+                'social',
+                'getCommentsByTrailId')
+            return;
         } catch (error) {
-            console.log(error)
-            return _messages.badRequest(error)
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'getCommentsByTrailId'
+            );
+            return;
         }
     },
     async updateComment(req, res) {
@@ -274,10 +315,24 @@ module.exports = {
             const uri = `${process.env.API_SOCIAL}/home/comment/${commentId}`;
             const { data } = await axios.put(uri, body);
 
-            return _messages.success(req, res, data)
+            _messages.success(res,
+                res,
+                req,
+                data,
+                'ok',
+                'social',
+                'updateComment')
+            return;
         } catch (error) {
-            console.log(error)
-            return _messages.badRequest(error)
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'updateComment'
+            );
+            return;
         }
     },
     async createLike(req, res) {
@@ -286,10 +341,24 @@ module.exports = {
             const body = req.body
             const { data } = await axios.post(uri, body);
 
-            return _messages.success(req, res, data)
+            _messages.success(res,
+                res,
+                req,
+                data,
+                'ok',
+                'social',
+                'createLike')
+            return;
         } catch (error) {
-            console.log("!", error)
-            return _messages.badRequest(error)
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'createLike'
+            );
+            return;
         }
     },
     async getLikesByTrailId(req, res) {
@@ -298,10 +367,24 @@ module.exports = {
             const uri = `${process.env.API_SOCIAL}/home/like/${trailId}`;
             const { data } = await axios.get(uri);
 
-            return _messages.success(req, res, data)
+            _messages.success(res,
+                res,
+                req,
+                data,
+                'ok',
+                'social',
+                'getLikesByTrailId')
+            return;
         } catch (error) {
-            console.log(error)
-            return _messages.badRequest(error)
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'getLikesByTrailId'
+            );
+            return;
         }
     },
     async deleteLike(req, res) {
@@ -310,10 +393,24 @@ module.exports = {
             const body = req.body
             const { data } = await axios.delete(uri, body);
 
-            return _messages.success(req, res, data)
+            _messages.success(res,
+                res,
+                req,
+                data,
+                'ok',
+                'social',
+                'deleteLike')
+            return;
         } catch (error) {
-            console.log(error)
-            return _messages.badRequest(error)
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'deleteLike'
+            );
+            return;
         }
     },
     async createFavorite(req, res) {
@@ -322,10 +419,24 @@ module.exports = {
             const body = req.body
             const { data } = await axios.post(uri, body);
 
-            return _messages.success(req, res, data)
+            _messages.success(res,
+                res,
+                req,
+                data,
+                'ok',
+                'social',
+                'createFavorite')
+            return;
         } catch (error) {
-            console.log(error)
-            return _messages.badRequest(error)
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'createFavorite'
+            );
+            return;
         }
     },
     async getFavoritesByUserId(req, res) {
@@ -334,10 +445,24 @@ module.exports = {
             const uri = `${process.env.API_SOCIAL}/home/favorite/${userId}`;
             const { data } = await axios.get(uri);
 
-            return _messages.success(req, res, data)
+            _messages.success(res,
+                res,
+                req,
+                data,
+                'ok',
+                'social',
+                'getFavoritesByUserId')
+            return;
         } catch (error) {
-            console.log(error)
-            return _messages.badRequest(error)
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'getFavoritesByUserId'
+            );
+            return;
         }
     },
     async updateFavorite(req, res) {
@@ -347,10 +472,24 @@ module.exports = {
             const uri = `${process.env.API_SOCIAL}/home/favorite/${favoriteId}`;
             const { data } = await axios.put(uri, body);
 
-            return _messages.success(req, res, data)
+            _messages.success(res,
+                res,
+                req,
+                data,
+                'ok',
+                'social',
+                'updateFavorite')
+            return;
         } catch (error) {
-            console.log(error)
-            return _messages.badRequest(error)
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'updateFavorite'
+            );
+            return;
         }
     },
     async shareSocialContent(req, res) {
@@ -360,10 +499,24 @@ module.exports = {
             const uri = `${process.env.API_SOCIAL}/home/share/${process.env.CLIENT_ID}`;
             const { data } = await axios.put(uri, body);
 
-            return _messages.success(req, res, data)
+            _messages.success(res,
+                res,
+                req,
+                data,
+                'ok',
+                'social',
+                'shareSocialContent')
+            return;
         } catch (error) {
-            console.log(error)
-            return _messages.badRequest(error)
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'shareSocialContent'
+            );
+            return;
         }
     },
 
