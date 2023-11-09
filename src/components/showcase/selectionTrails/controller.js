@@ -4,6 +4,7 @@ const { Selection_Showcase } = require('./model')
 const { DOMAIN, AZURE_BLOB_URL } = process.env
 const { azureBlob } = require('../../../utils/files')
 const { DEFAULT_TYPES, Showcase } = require('../configuration/model')
+const { Trail } = require('../../trails/model')
 module.exports = {
     async getList (req, res) {
         try {
@@ -37,6 +38,64 @@ module.exports = {
                 'Erro interno no servidor',
                 'Selection_Showcase',
                 'get',
+            )
+        }
+    },
+
+    async getListTrails (req, res) {
+        try {
+            const { order, sort } = _functions.ordernation(req)
+            const { skip, limit } = _functions.pagination(req)
+            const searchBy = req.query.searchBy
+
+            let total = 0
+            const today = new Date();
+            const query = searchBy
+                ? {
+                    $or: [
+                        {
+                            description: {
+                                $regex: searchBy,
+                                $options: 'i',
+                            },
+                        },
+                        {
+                            title: {
+                                $regex: searchBy,
+                                $options: 'i',
+                            },
+                        },
+                    ],
+                    enabled: true,
+                    startDate: { $lt: today }, // startDate seja menor do que hoje
+                    endDate: { $gt: today }, // endDate seja maior do que hoje
+                }
+                : {
+                    enabled: true,
+                    startDate: { $lt: today }, // startDate seja menor do que hoje
+                    endDate: { $gt: today }, // endDate seja maior do que hoje
+                }
+
+            total = await Trail.find(query).countDocuments()
+
+            const trails = await Trail.find(query)
+                .sort({ [order]: sort })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit))
+
+            _messages.success(res, req, {
+                data: trails,
+                total,
+            })
+
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'trails',
+                'findAll',
             )
         }
     },
@@ -124,6 +183,37 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'selection_showcase',
+                '/create',
+            )
+        }
+    },
+
+    async delete (req, res) {
+        try {
+            const { id } = req.params
+            const findSection = await Selection_Showcase.find({ _id: id })
+
+            if (findSection.length) {
+                await Selection_Showcase.deleteOne({ _id: id })
+            } else {
+                return _messages.badRequest(
+                    res,
+                    req,
+                    'Seção não encontrada',
+                    'Esta seção não foi encontrado.',
+                    'videos_showcase',
+                    'update',
+                )
+            }
+            _messages.success(res, req, 'Seção removida!')
+        } catch (error) {
+            console.error(error)
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'videos_showcase',
                 '/create',
             )
         }

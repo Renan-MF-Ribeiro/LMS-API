@@ -24,8 +24,6 @@ module.exports = {
                 .sort({
                     [order]: sort,
                 })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit))
 
             _messages.success(res, req, {
                 data: sections,
@@ -66,7 +64,7 @@ module.exports = {
         try {
 
             const { id } = req.params
-            const block = await Showcase.findById({ _id: id, enabled: true })
+            const block = await Showcase.findById({ _id: id, enabled: true, })
             if (block.type == 'mostSeen') {
                 let tracking = await Tracking.aggregate([
                     {
@@ -84,7 +82,13 @@ module.exports = {
                     }
                 ]).sort({ qtd: -1 })
                 tracking = tracking.map((tr) => tr.item)
-                let trails = await Trail.find({ "items.itemID": { $in: tracking } }).sort({ updatedAt: -1 }).limit(6)
+                const today = new Date();
+                let trails = await Trail.find({
+                    enabled: true,
+                    startDate: { $lt: today }, // startDate seja menor do que hoje
+                    endDate: { $gt: today }, // endDate seja maior do que hoje
+                    "items.itemID": { $in: tracking }
+                }).sort({ updatedAt: -1 }).limit(6)
                 block.trails = trails
             }
             if (block.type == 'selection') {

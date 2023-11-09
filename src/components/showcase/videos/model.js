@@ -16,7 +16,9 @@ const videos_ShowcaseSchema = new mongoose.Schema({
     videos: {
         type: [{
             path: { type: String, required: true, trim: true },
-            link: { type: String, required: true, trim: true },
+            link: { type: String, required: false, trim: true },
+            thumb: { type: String, required: false, trim: true },
+
         }]
     },
 

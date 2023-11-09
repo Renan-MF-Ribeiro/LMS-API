@@ -127,5 +127,36 @@ module.exports = {
                 '/create',
             )
         }
+    },
+
+    async delete (req, res) {
+        try {
+            const { id } = req.params
+            const findSection = await MostView_Showcase.find({ _id: id })
+
+            if (findSection.length) {
+                await MostView_Showcase.deleteOne({ _id: id })
+            } else {
+                return _messages.badRequest(
+                    res,
+                    req,
+                    'Seção não encontrada',
+                    'Esta seção não foi encontrado.',
+                    'videos_showcase',
+                    'update',
+                )
+            }
+            _messages.success(res, req, 'Seção removida!')
+        } catch (error) {
+            console.error(error)
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'videos_showcase',
+                '/create',
+            )
+        }
     }
 }

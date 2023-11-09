@@ -44,7 +44,8 @@ module.exports = {
     async update (req, res) {
         try {
             const body = JSON.parse(req.fields.body)
-            const fileArray = Object.keys(req.files).map(key => req.files[key])
+            // const fileArray = Object.keys(req.files).map(key => req.files[key])
+            const files = req.files
             const sectionId = body._id
             delete body.sectionId
 
@@ -53,26 +54,31 @@ module.exports = {
             if (findSection.length) {
 
 
-                if (fileArray) {
+                if (files) {
 
-                    const indexBG = fileArray.findIndex(el => el.name === body.background)
-                    if (indexBG >= 0) {
-
-                        console.log(fileArray, indexBG)
-                        let pathBG = await azureBlob(fileArray[indexBG], 'showcase/videos')
+                    const background = files['background']
+                    if (background) {
+                        let pathBG = await azureBlob(background, 'showcase/videos')
                         pathBG = pathBG.replace(AZURE_BLOB_URL, DOMAIN)
                         body.background = pathBG
-                        fileArray.splice(indexBG, 1)
                     }
 
-                    for (const file of fileArray) {
-                        let path = await azureBlob(file, 'showcase/videos')
-                        path = path.replace(AZURE_BLOB_URL, DOMAIN)
-                        console.log(body)
-                        const index = body.videos.findIndex((el) => el.path == file.name)
-                        console.log(index)
-                        body.videos[index].path = path
-                    }
+                    await Promise.all(body.videos.map(async (video) => {
+                        const videoFile = files[video.path];
+                        if (videoFile) {
+                            let path = await azureBlob(videoFile, 'showcase/videos');
+                            path = path.replace(AZURE_BLOB_URL, DOMAIN);
+                            video.path = path;
+                        }
+                        const thumbFile = files[video.thumb.toString()];
+                        if (thumbFile) {
+                            let path = await azureBlob(thumbFile, 'showcase/videos');
+                            path = path.replace(AZURE_BLOB_URL, DOMAIN);
+                            video.thumb = path;
+                        }
+                        return video;
+                    }));
+
                 }
 
                 await Videos_Showcase.findOneAndUpdate({ _id: sectionId }, body)
@@ -106,24 +112,34 @@ module.exports = {
     async create (req, res) {
         try {
             const body = JSON.parse(req.fields.body)
-            const fileArray = Object.keys(req.files).map(key => req.files[key])
+            const files = req.files
 
 
-            const indexBG = fileArray.findIndex(el => el.name === body.background)
-            if (indexBG >= 0) {
-                let pathBG = await azureBlob(fileArray[indexBG], 'showcase/videos')
-                pathBG = pathBG.replace(AZURE_BLOB_URL, DOMAIN)
-                body.background = pathBG
-                fileArray.splice(indexBG, 1)
-            }
+            if (files) {
 
-            for (const file of fileArray) {
-                let path = await azureBlob(file, 'showcase/videos')
-                path = path.replace(AZURE_BLOB_URL, DOMAIN)
-                console.log(body)
-                const index = body.videos.findIndex((el) => el.path == file.name)
-                console.log(index)
-                body.videos[index].path = path
+                const background = files['background']
+                if (background) {
+                    let pathBG = await azureBlob(background, 'showcase/videos')
+                    pathBG = pathBG.replace(AZURE_BLOB_URL, DOMAIN)
+                    body.background = pathBG
+                }
+
+                await Promise.all(body.videos.map(async (video) => {
+                    const videoFile = files[video.path];
+                    if (videoFile) {
+                        let path = await azureBlob(videoFile, 'showcase/videos');
+                        path = path.replace(AZURE_BLOB_URL, DOMAIN);
+                        video.path = path;
+                    }
+                    const thumbFile = files[video.thumb.toString()];
+                    if (thumbFile) {
+                        let path = await azureBlob(thumbFile, 'showcase/videos');
+                        path = path.replace(AZURE_BLOB_URL, DOMAIN);
+                        video.thumb = path;
+                    }
+                    return video;
+                }));
+
             }
             const lastPosition = await Showcase.find().countDocuments()
             body.position = lastPosition
@@ -132,6 +148,37 @@ module.exports = {
 
             _messages.success(res, req, videos, 'Videos salvos!')
 
+        } catch (error) {
+            console.error(error)
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'videos_showcase',
+                '/create',
+            )
+        }
+    },
+
+    async delete (req, res) {
+        try {
+            const { id } = req.params
+            const findSection = await Videos_Showcase.find({ _id: id })
+
+            if (findSection.length) {
+                await Videos_Showcase.deleteOne({ _id: id })
+            } else {
+                return _messages.badRequest(
+                    res,
+                    req,
+                    'Seção não encontrada',
+                    'Esta seção não foi encontrado.',
+                    'videos_showcase',
+                    'update',
+                )
+            }
+            _messages.success(res, req, 'Seção removida!')
         } catch (error) {
             console.error(error)
             _messages.internalServer(
