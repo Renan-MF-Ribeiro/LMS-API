@@ -1,6 +1,6 @@
 /* eslint-disable no-async-promise-executor */
 
-const { awsAmazon } = require('../../utils/files');
+const { azureBlob } = require('../../utils/files');
 const { User } = require('../users/model');
 const { Group } = require('../groups/model');
 const { MaterialModel, ClassModel, ProgramModel } = require('./model');
@@ -16,7 +16,7 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             try {
                 const nameFile = material.name.split('.');
-                const url = await awsAmazon(material, folder);
+                const url = await azureBlob(material, folder);
                 const { _id } = await MaterialModel.create({
                     title: nameFile[0],
                     url,

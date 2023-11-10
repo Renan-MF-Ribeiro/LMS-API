@@ -1343,7 +1343,6 @@ module.exports = {
         try {
             const user = await getUserByToken(req);
             const file = req.files.file;
-            // const photoPath = await _files.awsAmazon(file, `photos/${user._id}`)
             let photoPath = await _files.azureBlob(file, `photos/${user._id}`);
             await User.findByIdAndUpdate(user._id, { profilePhoto: photoPath });
             _messages.success(res, req, photoPath);

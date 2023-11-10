@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { TINCAN_OWNER, DOMAIN, AZURE_BLOB_URL } = process.env;
 const _messages = require('../../utils/messages');
-const { awsAmazon, azureBlob } = require('../../utils/files');
+const { azureBlob } = require('../../utils/files');
 const {
     isSCORMCompleted,
     processExpirationDate,
@@ -286,7 +286,6 @@ module.exports = {
                         }
                     }
                     if (banner) {
-                        // bannerPath = await awsAmazon(banner, 'trails/banners')
                         bannerPath = await azureBlob(banner, 'trails/banners');
                     }
 
@@ -482,7 +481,6 @@ module.exports = {
                         }
                     }
                     if (banner) {
-                        // bannerPath = await awsAmazon(banner, 'trails/banners')
                         bannerPath = await azureBlob(banner, 'trails/banners')
                     }
 

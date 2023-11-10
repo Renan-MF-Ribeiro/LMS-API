@@ -31,7 +31,6 @@ const {
 } = require('./model');
 const { Tracking } = require('../tracking/model');
 const {
-    awsAmazon,
     azureBlob,
     isSCORMManifestFile,
     isSCORMSchemaFile,
@@ -437,7 +436,7 @@ const ItemController = {
 
                     if (payload.kind === 'EventItem') {
                         delete payload.contentPath;
-                    }                    
+                    }
 
                     if (payload.kind === 'FormItem') {
                         delete payload.contentPath
@@ -961,7 +960,7 @@ const ItemController = {
                                             return;
                                         }
 
-                                        // filesP.push(awsAmazon(entry, `scorm/${packageId}`))
+
                                         filesP.push(
                                             azureBlob(
                                                 entry,
@@ -1190,7 +1189,7 @@ const ItemController = {
                                             return;
                                         }
 
-                                        // filesP.push(awsAmazon(entry, `scorm/${packageId}`))
+
                                         filesP.push(
                                             azureBlob(
                                                 entry,

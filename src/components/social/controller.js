@@ -5,7 +5,7 @@ const _messages = require('../../utils/messages');
 const { Trail } = require('../trails/model');
 
 module.exports = {
-    async getConfig(req, res) {
+    async getConfig (req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/client-config/${process.env.CLIENT_ID}`;
             const { data } = await axios.get(uri);
@@ -41,7 +41,7 @@ module.exports = {
         }
     },
 
-    async putConfig(req, res) {
+    async putConfig (req, res) {
         try {
             const reqBody = req.body;
             const blockedTrailsOnlyId = reqBody.blockedTrails.map((trail) =>
@@ -103,7 +103,7 @@ module.exports = {
         }
     },
 
-    async getUsers(req, res) {
+    async getUsers (req, res) {
         try {
             const { skip, limit } = _functions.pagination(req);
             const { order, sort } = _functions.ordernation(req);
@@ -152,7 +152,7 @@ module.exports = {
         }
     },
 
-    async addOrRemoveFromUserList(req, res) {
+    async addOrRemoveFromUserList (req, res) {
         try {
             const { operation, listName } = req.body;
 
@@ -232,12 +232,12 @@ module.exports = {
         }
     },
 
-    async createComment(req, res) {
+    async createComment (req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/home/comment/${process.env.CLIENT_ID}`;
             const body = req.body
             const { data } = await axios.post(uri, body);
-            _messages.success(res,
+            _messages.success(
                 res,
                 req,
                 data,
@@ -257,12 +257,12 @@ module.exports = {
             return;
         }
     },
-    async getAllComments(req, res) {
+    async getAllComments (req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/home/comment/${process.env.CLIENT_ID}`;
             const { data } = await axios.get(uri);
 
-            _messages.success(res,
+            _messages.success(
                 res,
                 req,
                 data,
@@ -282,13 +282,13 @@ module.exports = {
             return;
         }
     },
-    async getCommentsByTrailId(req, res) {
+    async getCommentsByTrailId (req, res) {
         try {
             const { trailId } = req.params
             const uri = `${process.env.API_SOCIAL}/home/comment/${trailId}`;
             const { data } = await axios.get(uri);
 
-            _messages.success(res,
+            _messages.success(
                 res,
                 req,
                 data,
@@ -308,14 +308,14 @@ module.exports = {
             return;
         }
     },
-    async updateComment(req, res) {
+    async updateComment (req, res) {
         try {
             const { commentId } = req.params
             const body = req.body
             const uri = `${process.env.API_SOCIAL}/home/comment/${commentId}`;
             const { data } = await axios.put(uri, body);
 
-            _messages.success(res,
+            _messages.success(
                 res,
                 req,
                 data,
@@ -335,13 +335,13 @@ module.exports = {
             return;
         }
     },
-    async createLike(req, res) {
+    async createLike (req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/home/like/${process.env.CLIENT_ID}`;
             const body = req.body
             const { data } = await axios.post(uri, body);
 
-            _messages.success(res,
+            _messages.success(
                 res,
                 req,
                 data,
@@ -350,6 +350,7 @@ module.exports = {
                 'createLike')
             return;
         } catch (error) {
+            console.log(error)
             _messages.badRequest(
                 res,
                 req,
@@ -361,13 +362,13 @@ module.exports = {
             return;
         }
     },
-    async getLikesByTrailId(req, res) {
+    async getLikesByTrailId (req, res) {
         try {
             const { trailId } = req.params
             const uri = `${process.env.API_SOCIAL}/home/like/${trailId}`;
             const { data } = await axios.get(uri);
-
-            _messages.success(res,
+            console.log(data)
+            _messages.success(
                 res,
                 req,
                 data,
@@ -376,6 +377,7 @@ module.exports = {
                 'getLikesByTrailId')
             return;
         } catch (error) {
+            console.log(error)
             _messages.badRequest(
                 res,
                 req,
@@ -387,13 +389,13 @@ module.exports = {
             return;
         }
     },
-    async deleteLike(req, res) {
+    async deleteLike (req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/home/like`;
             const body = req.body
             const { data } = await axios.delete(uri, body);
 
-            _messages.success(res,
+            _messages.success(
                 res,
                 req,
                 data,
@@ -413,13 +415,13 @@ module.exports = {
             return;
         }
     },
-    async createFavorite(req, res) {
+    async createFavorite (req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/home/favorite/${process.env.CLIENT_ID}`;
             const body = req.body
             const { data } = await axios.post(uri, body);
 
-            _messages.success(res,
+            _messages.success(
                 res,
                 req,
                 data,
@@ -439,13 +441,13 @@ module.exports = {
             return;
         }
     },
-    async getFavoritesByUserId(req, res) {
+    async getFavoritesByUserId (req, res) {
         try {
             const { userId } = req.params
             const uri = `${process.env.API_SOCIAL}/home/favorite/${userId}`;
             const { data } = await axios.get(uri);
 
-            _messages.success(res,
+            _messages.success(
                 res,
                 req,
                 data,
@@ -465,14 +467,14 @@ module.exports = {
             return;
         }
     },
-    async updateFavorite(req, res) {
+    async updateFavorite (req, res) {
         try {
             const { favoriteId } = req.params
             const body = req.body
             const uri = `${process.env.API_SOCIAL}/home/favorite/${favoriteId}`;
             const { data } = await axios.put(uri, body);
 
-            _messages.success(res,
+            _messages.success(
                 res,
                 req,
                 data,
@@ -492,14 +494,14 @@ module.exports = {
             return;
         }
     },
-    async shareSocialContent(req, res) {
+    async shareSocialContent (req, res) {
         try {
             const { favoriteId } = req.params
             const body = req.body
             const uri = `${process.env.API_SOCIAL}/home/share/${process.env.CLIENT_ID}`;
             const { data } = await axios.put(uri, body);
 
-            _messages.success(res,
+            _messages.success(
                 res,
                 req,
                 data,
@@ -520,7 +522,7 @@ module.exports = {
         }
     },
 
-    async generate(req, res) {
+    async generate (req, res) {
         try {
             const user = await getUserByToken(req);
             const uri = `${process.env.API_CONNECT}/system-users/${process.env.CLIENT_ID}`;
@@ -564,7 +566,7 @@ module.exports = {
         }
     },
 
-    async getActive(req, res) {
+    async getActive (req, res) {
         try {
             const uri = `${process.env.API_CONNECT}/system-users/${process.env.CLIENT_ID}`;
 
