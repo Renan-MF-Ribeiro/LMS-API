@@ -57,7 +57,7 @@ module.exports = {
                 idEvaluation: { $eq: idEvaluation },
                 deleted: { $eq: false },
             })
-            
+
             if (timeDuration.length) {
                 const { amountQuestionsCorrect, amountOfQuestions } = timeDuration[0]
 
@@ -90,37 +90,38 @@ module.exports = {
             const { id } = req.params
             const { userId } = req.query
             const { idEvaluation, passingScore } = await Item.findOne({ _id: { $eq: id } })
-            const historicEvaluation = await HistoricEvaluation.find({ user: { $eq: userId }, idEvaluation: { $eq: idEvaluation }, item: { $eq: id }}).populate({
-            path:'questions',			
-            populate: { 
-                path:'alternatives',
-                model: 'alternatives' 
-            }})
-            .lean()
+            const historicEvaluation = await HistoricEvaluation.find({ user: { $eq: userId }, idEvaluation: { $eq: idEvaluation }, item: { $eq: id } }).populate({
+                path: 'questions',
+                populate: {
+                    path: 'alternatives',
+                    model: 'alternatives'
+                }
+            })
+                .lean()
             const objHistoricEvaluation = JSON.parse(JSON.stringify(historicEvaluation))
             const allAttempts = []
-            for(let evaluation of objHistoricEvaluation){
+            for (let evaluation of objHistoricEvaluation) {
                 let questionObj = {}
                 let questions = []
-                
-                for(let question of evaluation.questions){
+
+                for (let question of evaluation.questions) {
                     let correctAnswerWasGiven = false;
                     let alternatives = []
                     let alternativeObj = {}
                     let answerDate
                     let indexOfAnswer
-                    for(let answer of evaluation.answers){
+                    for (let answer of evaluation.answers) {
                         indexOfAnswer = question.alternatives.findIndex(v => {
                             return String(v._id) == String(answer.idAlternative)
                         })
-                        if(indexOfAnswer > -1){
+                        if (indexOfAnswer > -1) {
                             answerDate = new Date(answer.createdAt + 'Z')
                             question.alternatives[indexOfAnswer].isUserGuess = true
                         }
                     }
-                    
-                    question.alternatives.map(v=>{
-                        if(v.isUserGuess){
+
+                    question.alternatives.map(v => {
+                        if (v.isUserGuess) {
                             correctAnswerWasGiven = v.correct === v.isUserGuess ? true : false;
                         }
                         alternativeObj = {
@@ -146,8 +147,8 @@ module.exports = {
                 const attempt = {
                     score: (100 * evaluation.amountQuestionsCorrect) / evaluation.amountOfQuestions,
                     evalStart: evaluation.createdAt,
-                    evalEnd: evaluation.updatedAt,    
-                    passingScore: passingScore,    
+                    evalEnd: evaluation.updatedAt,
+                    passingScore: passingScore,
                     questions: questions
                 }
                 allAttempts.push(attempt)
@@ -362,8 +363,8 @@ module.exports = {
                     const completeUser = await userModel.User.findById(user._id)
 
                     const linkTrailItem = await returnLinkTrailByItem(idItem)
-                    const bag = xapi.initTinCan(linkTrailItem.urlTrail, linkTrailItem.urlItem, completeUser)
-                    const attempt = evaluationPerformed.length + 1
+                    // const bag = xapi.initTinCan(linkTrailItem.urlTrail, linkTrailItem.urlItem, completeUser)
+                    // const attempt = evaluationPerformed.length + 1
                     // await xapi.sendAttemptAssessment(bag, item, completeUser, attempt)
 
                     questions[0].number = 1
@@ -498,7 +499,7 @@ module.exports = {
             const attempt = evaluationPerformed.length + 1
 
             const linkTrailItem = await returnLinkTrailByItem(idItem)
-            const bag = xapi.initTinCan(linkTrailItem.urlTrail, linkTrailItem.urlItem, completeUser)
+            // const bag = xapi.initTinCan(linkTrailItem.urlTrail, linkTrailItem.urlItem, completeUser)
 
             // await xapi.sendAnsweredAssessment(bag, attempt, completeUser, questionTincan.description, numPergunta, arrChoices, correctResponsesPattern, choiceUser, durationCalc)
 
@@ -549,7 +550,7 @@ module.exports = {
                 const completeUser = await userModel.User.findById(user._id)
 
                 const linkTrailItem = await returnLinkTrailByItem(String(item))
-                const bag = xapi.initTinCan(linkTrailItem.urlTrail, linkTrailItem.urlItem, completeUser)
+                // const bag = xapi.initTinCan(linkTrailItem.urlTrail, linkTrailItem.urlItem, completeUser)
 
                 // await xapi.sendCompleteAssessment(bag, title, (result.values.correct >= passingScore), (result.values.correct / 100), (result.attemptsHistory + 1))
 
@@ -560,8 +561,8 @@ module.exports = {
                         { _id: { $eq: questions[amountQuestionsAnswered] } },
                         ['description'],
                     )
-                    .populate({path:'alternatives', match: { deleted: { $eq: 0 }}, select: 'description deleted'})
-                        
+                    .populate({ path: 'alternatives', match: { deleted: { $eq: 0 } }, select: 'description deleted' })
+
                 question.number = amountQuestionsAnswered + 1
                 _messages.success(res, req, {
                     question: question,

@@ -24,7 +24,7 @@ const XAPIController = {
                 return
             }
 
-            const bag = xapi.initTinCan(itemTrail.urlTrail, itemTrail.urlItem, completeUser)
+            // const bag = xapi.initTinCan(itemTrail.urlTrail, itemTrail.urlItem, completeUser)
 
             // await xapi.sendAttemptCurso(bag, userInfo, item, completeUser)
 
@@ -47,7 +47,7 @@ const XAPIController = {
             }
 
             if (itemTracking.isAllowedToSendXAPI && item.isEndpointEnabled) {
-                const bag = xapi.initTinCan(itemTrail.urlTrail, itemTrail.urlItem, completeUser)
+                // const bag = xapi.initTinCan(itemTrail.urlTrail, itemTrail.urlItem, completeUser)
                 // await xapi.sendCompletedCurso(bag, item, itemTracking)
 
                 // Atualiza isXAPICompleteSent
