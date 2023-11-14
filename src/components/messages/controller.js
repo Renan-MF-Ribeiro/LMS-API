@@ -29,18 +29,22 @@ module.exports = {
     async webPushMessage (req, res) {
         try {
             const user = await getUserByToken(req);
+            const payload = req.body;
 
-            const payload = req.body
+            for (const subscription of user.webPushAuthorization) {
+                try {
+                    await sendMessage(subscription, payload);
+                } catch (error) {
+                    console.error(error);
+                    throw new Error('Erro no envio da mensagem via push: ' + error.message);
+                }
+            }
 
-            user.webPushAuthorization.forEach((subscription) => {
-
-                sendMessage(subscription, payload)
-            })
             _messages.success(res, req, '');
 
         } catch (error) {
-            console.log(error)
-            return _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'messages', 'returnUsers')
+            console.log(error);
+            return _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'messages', 'returnUsers');
         }
     },
 

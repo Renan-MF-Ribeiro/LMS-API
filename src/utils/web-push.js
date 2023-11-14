@@ -17,15 +17,10 @@ const options = {
 
 
 module.exports = {
-    sendMessage (subscription, payload) {
+    async sendMessage (subscription, payload) {
 
         // send notification
-        webpush.sendNotification(subscription, JSON.stringify(payload), options)
-            .then((_) => {
+        return webpush.sendNotification(subscription, JSON.stringify(payload), options)
 
-            })
-            .catch((_) => {
-                console.error(_);
-            });
     }
 }
