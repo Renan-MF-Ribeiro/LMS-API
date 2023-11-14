@@ -45,7 +45,7 @@ module.exports = {
 
         } catch (error) {
             console.log(error);
-            return _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'messages', 'returnUsers');
+            return _messages.internalServer(res, req, error.message, error, 'messages', 'returnUsers');
         }
     },
 
