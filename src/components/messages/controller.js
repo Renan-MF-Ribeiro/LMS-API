@@ -37,7 +37,7 @@ module.exports = {
                     await sendMessage(subscription, payload);
                 } catch (error) {
                     console.error(error);
-                    const errorMessage = 'Erro no envio da mensagem via push: ' + error.message
+                    const errorMessage = 'Erro no envio da mensagem via push: ' + JSON.stringify(error)
                     return _messages.internalServer(res, req, errorMessage, errorMessage, 'messages', 'returnUsers');
 
                 }

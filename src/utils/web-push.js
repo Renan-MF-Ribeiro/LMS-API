@@ -10,6 +10,7 @@ const options = {
         privateKey: config.vapidKeys.privateKey,
     },
     TTL: 60,
+    contentEncoding: 'aes128gcm',
 };
 
 
