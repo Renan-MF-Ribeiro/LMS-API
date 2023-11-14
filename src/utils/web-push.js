@@ -8,7 +8,7 @@ const vapidKeys = {
 
 const options = {
     vapidDetails: {
-        subject: 'mailto:example_email@example.com',
+        subject: 'mailto:renan.ribeiro@happmobi.com.br',
         publicKey: vapidKeys.publicKey,
         privateKey: vapidKeys.privateKey,
     },

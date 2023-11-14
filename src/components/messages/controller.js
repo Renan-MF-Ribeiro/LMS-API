@@ -31,6 +31,7 @@ module.exports = {
             const user = await getUserByToken(req);
             const payload = req.body;
 
+
             for (const subscription of user.webPushAuthorization) {
                 try {
                     await sendMessage(subscription, payload);
