@@ -39,7 +39,7 @@ module.exports = {
                     console.error(error);
                     const errorMessage = 'Erro no envio da mensagem via push: ' + error.message
                     return _messages.internalServer(res, req, errorMessage, errorMessage, 'messages', 'returnUsers');
-                    throw new Error();
+
                 }
             }
 
