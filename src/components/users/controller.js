@@ -269,6 +269,7 @@ module.exports = {
                         'profilePhoto',
                         'groupsAD',
                         'email',
+                        'webPushAuthorization'
                     ]
                 );
 
@@ -349,6 +350,8 @@ module.exports = {
                     );
                     const groupsIDS = await returnIdGroupUser(namesGroups);
 
+                    const authwebPush = user.webPushAuthorization[user.webPushAuthorization.length - 1]
+
                     const token = generateToken({
                         ref: user._id,
                         profiles: profilesIDS.result,
@@ -410,6 +413,7 @@ module.exports = {
                             mfaToken: token_mfa,
                             networkLogin: user.networkLogin,
                             userId: user._id,
+                            authwebPush: authwebPush?.keys.auth
                         },
                         'Sucesso ao logar',
                         'users',
@@ -2278,6 +2282,7 @@ module.exports = {
         }
     },
 
+
     async validateMfaToken (req, res) {
         try {
             const isTokenValid = await validateMfaToken(req);
@@ -2289,7 +2294,35 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'users',
-                'conteudistas'
+                'validateMfaToken'
+            );
+        }
+    },
+
+    async updateWebPushAuthorization (req, res) {
+        try {
+            const user = await getUserByToken(req);
+            const webPushAuthorization = req.body
+            const userDB = await User.findById(user._id)
+            let webPushAuthorizationArray = userDB.webPushAuthorization
+            if (webPushAuthorizationArray) {
+
+                webPushAuthorizationArray.push(webPushAuthorization)
+            } else {
+                webPushAuthorizationArray = [webPushAuthorization]
+            }
+
+            await User.updateOne({ _id: user._id }, { webPushAuthorization: webPushAuthorizationArray })
+
+            _messages.success(res, req, 'Sucess');
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'users',
+                'WebPushAuthorization'
             );
         }
     },
