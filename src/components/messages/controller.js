@@ -37,14 +37,16 @@ module.exports = {
                     await sendMessage(subscription, payload);
                 } catch (error) {
                     console.error(error);
-                    throw new Error('Erro no envio da mensagem via push: ' + error.message);
+                    const errorMessage = 'Erro no envio da mensagem via push: ' + error.message
+                    return _messages.internalServer(res, req, errorMessage, errorMessage, 'messages', 'returnUsers');
+                    throw new Error();
                 }
             }
 
             _messages.success(res, req, '');
 
         } catch (error) {
-            console.log(error);
+            console.log('error', error);
             return _messages.internalServer(res, req, error.message, error, 'messages', 'returnUsers');
         }
     },
