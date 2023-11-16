@@ -10,7 +10,11 @@ module.exports = {
             const uri = `${process.env.API_SOCIAL}/client-config/${process.env.CLIENT_ID}`;
             const { data } = await axios.get(uri);
             const trails = await Trail.find(
-                { _id: { $in: data.blockedTrails } },
+                {
+                    _id: {
+                        $in: data.blockedTrails.map((trail) => trail.trailId),
+                    },
+                },
                 'title'
             );
 
