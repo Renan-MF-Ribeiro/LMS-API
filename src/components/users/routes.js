@@ -42,12 +42,12 @@ module.exports = express.Router()
     }))
     .post('/sso/saml/callback', passport
         .authenticate('saml', { failureRedirect: '/', failureFlash: true }), (req, res, next) => {
-        const xmlResponse = req.body.SAMLResponse
-        const parser = new Saml2js(xmlResponse)
-        req.samlUserObject = parser.toObject()
-        next()
-    },
-    _controller.ssoCallback)
+            const xmlResponse = req.body.SAMLResponse
+            const parser = new Saml2js(xmlResponse)
+            req.samlUserObject = parser.toObject()
+            next()
+        },
+        _controller.ssoCallback)
     .post('/device', validateTokenRoute, _controller.updateDeviceId)
     .get('/collaboration/list', validateTokenRoute, isAdmin, _controller.returnCollaborativeUsers)
     .put('/collaboration/apply', validateTokenRoute, isAdmin, _controller.setCollaborator)
@@ -67,3 +67,4 @@ module.exports = express.Router()
     .get('/mfa/token', _controller.validateMfaToken)
     .post('/mfa/generate', _controller.generateMultiFactor)
     .post('/mfa/validate', _controller.validateMultiFactor)
+    .post('/authorization', _controller.updateWebPushAuthorization)

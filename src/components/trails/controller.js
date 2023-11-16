@@ -148,7 +148,54 @@ module.exports = {
 
     async create (req, res) {
         try {
-            const trail = await Trail.create(req.body);
+
+            const payload = req.body
+
+            const idItem = payload.items.map((item) => item.itemID._id)
+
+            const items = []
+
+            for (const i of idItem) {
+                const index = items.indexOf(i)
+                if (index === -1) {
+                    items.push({
+                        urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${idTrail}/${idItem}`,
+                        urlTrail: `http://happmobi.com.br/${TINCAN_OWNER}/${idTrail}`,
+                        itemID: i,
+                    })
+                }
+            }
+
+            console.log(items)
+
+            payload.items = items
+            if (payload.supportFileMaterial) {
+                const fileArray = payload.supportFileMaterial.map(
+                    key => req.files[key],
+                )
+                const supportMaterial = []
+
+                for (const file of fileArray) {
+                    let path = await azureBlob(file, 'trails/material')
+                    path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                    const material = {
+                        _id: new mongoose.Types.ObjectId(),
+                        url: path,
+                        name: file.name,
+                        size: file.size,
+                        deleted: false,
+                    }
+                    supportMaterial.push(material)
+                }
+                payload.supportMaterial = [
+                    ...payload.supportMaterial,
+                    ...supportMaterial,
+                ]
+                delete payload.supportFileMaterial
+            }
+
+            const trail = await Trail.create(payload)
+
             _messages.success(
                 res,
                 req,
@@ -302,6 +349,31 @@ module.exports = {
                         }
                     }
 
+                    if (payload.supportFileMaterial) {
+                        const fileArray = payload.supportFileMaterial.map(
+                            key => req.files[key],
+                        )
+                        const supportMaterial = []
+
+                        for (const file of fileArray) {
+                            let path = await azureBlob(file, 'trails/material')
+                            path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                            const material = {
+                                _id: new mongoose.Types.ObjectId(),
+                                url: path,
+                                name: file.name,
+                                size: file.size,
+                                deleted: false,
+                            }
+                            supportMaterial.push(material)
+                        }
+                        payload.supportMaterial = [
+                            ...payload.supportMaterial,
+                            ...supportMaterial,
+                        ]
+                        delete payload.supportFileMaterial
+                    }
+
                     payload = {
                         ...payload,
                         enabled: true,
@@ -310,7 +382,29 @@ module.exports = {
                         backgroundPath,
                     };
 
+                    const idItem = payload.items.map((item) => item.itemID._id)
+
+                    const items = []
+
                     const trail = await Trail.create(payload);
+
+                    payload.items.forEach((item) => {
+                        items.push({
+                            ...item,
+                            urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}/${item.itemID._id}`,
+                            urlTrail: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}`,
+                            itemID: item.itemID._id,
+                        })
+                    })
+
+                    trail.items = items
+
+                    const oldData = await Trail.updateOne(
+                        { _id: { $eq: trail._id } },
+                        trail
+                    );
+                    const newData = await Trail.find({ _id: { $eq: trail._id } });
+
                     _messages.success(
                         res,
                         req,
@@ -318,7 +412,7 @@ module.exports = {
                         'Atualização de dados',
                         'trails',
                         'multiUploadCreate',
-                        trail,
+                        newData,
                         [],
                         true,
                         'UPDATE'
@@ -565,6 +659,17 @@ module.exports = {
                             item.mandatory = false
                         })
                     }
+
+                    payload.items.forEach((item) => {
+                        items.push({
+                            ...item,
+                            urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}/${item.itemID._id}`,
+                            urlTrail: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}`,
+                            itemID: item.itemID._id,
+                        })
+                    })
+
+                    payload.items = items
                     const oldData = await Trail.updateOne(
                         { _id: { $eq: payload._id } },
                         payload,
