@@ -229,8 +229,8 @@ module.exports = {
                     return _messages.badRequest(
                         res,
                         req,
-                        JSON.stringify(err.response.data.message),
-                        'bad request to social',
+                        JSON.stringify(error.response.data.message),
+                        `bad request to social: ${error.response.data.message}`,
                         'social',
                         'addOrRemoveFromUserList'
                     );
