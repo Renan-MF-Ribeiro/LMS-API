@@ -196,14 +196,20 @@ module.exports = {
             }
 
             const collaborator = await _functions.getUserByToken(req);
-            const { userId } = req.body;
+            const { userId, idsList } = req.body;
+            const date = new Date();
 
             const body = {
                 user: {
                     userId: userId,
                     collaboratorId: collaborator._id,
-                    updatedAt: new Date(),
+                    updatedAt: date,
                 },
+                userList: idsList.map((id) => ({
+                    userId: id,
+                    collaboratorId: collaborator._id,
+                    updatedAt: date,
+                })),
                 operation,
                 listName,
             };
