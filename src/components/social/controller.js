@@ -20,12 +20,14 @@ module.exports = {
 
             let blockedTrailsWithName = [];
             if (data.blockedTrails.length > 0) {
-                blockedTrailsWithName = data.blockedTrails.map((trailId) => ({
-                    _id: trailId,
-                    title: trails.find(
-                        (trail) => trail._id.toString() === trailId
-                    )?.title,
-                }));
+                blockedTrailsWithName = data.blockedTrails.map(
+                    ({ trailId }) => ({
+                        _id: trailId,
+                        title: trails.find(
+                            (trail) => trail._id.toString() === trailId
+                        )?.title,
+                    })
+                );
             }
 
             _messages.success(
