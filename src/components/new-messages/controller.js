@@ -415,7 +415,7 @@ module.exports = {
                     text: text,
                     texthtml: texthtml,
                     thumbnail: config.messenger.emailTemplate.thumbnail,
-                    title: `Aviso Universidade Corporativa Synchro`,
+                    title: `Aviso Happlearning`,
                 };
                 createMessagesFromBackend(message);
 
@@ -441,7 +441,7 @@ module.exports = {
                     text: text,
                     texthtml: texthtml,
                     thumbnail: config.messenger.emailTemplate.thumbnail,
-                    title: `Aviso Universidade Corporativa Synchro`,
+                    title: `Aviso Happlearning`,
                 };
                 createMessagesFromBackend(message);
             }
