@@ -82,6 +82,7 @@ const { EVENTS_CATEGORY } = require('../gamification/model');
 const GamificationController = require('../gamification/controller');
 const GamificationBusiness = require('../gamification/business');
 const { Group } = require('../groups/model');
+const { handleUserEligibilitiesGamification } = require('../gamification/utils');
 
 module.exports = {
     async create (req, res) {
@@ -1579,6 +1580,7 @@ module.exports = {
                     ...dataToken,
                 });
                 const SAS = generateSASToken();
+                GamificationBusiness.createClientUser(networkLogin, groupsAD)
                 _messages.success(res, req, {
                     SAS,
                     token,
@@ -1940,6 +1942,7 @@ module.exports = {
         }
     },
 
+
     async deleteGroups (req, res) {
         const { tag, userId } = req.body;
 
@@ -1949,14 +1952,7 @@ module.exports = {
                 { $pull: { groupsAD: tag } },
                 { new: true }
             );
-            const groupsAD = user.groupsAD.filter(
-                (tag) => !String(tag).startsWith('PERFIL_')
-            );
-            const groups = await Group.find({ name: { $in: groupsAD } });
-            const eligibilities = groups.map(({ name, tags }) => ({
-                name,
-                tags: tags.map(({ value }) => value),
-            }));
+            const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD)
             GamificationBusiness.updateClientUser(user.networkLogin, {
                 eligibilities,
             });
@@ -1983,14 +1979,7 @@ module.exports = {
                 { $addToSet: { groupsAD: tag } },
                 { new: true }
             );
-            const groupsAD = user.groupsAD.filter(
-                (tag) => !String(tag).startsWith('PERFIL_')
-            );
-            const groups = await Group.find({ name: { $in: groupsAD } });
-            const eligibilities = groups.map(({ name, tags }) => ({
-                name,
-                tags: tags.map(({ value }) => value),
-            }));
+            const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD)
             GamificationBusiness.updateClientUser(user.networkLogin, {
                 eligibilities,
             });
