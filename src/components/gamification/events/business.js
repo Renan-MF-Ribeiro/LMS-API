@@ -1,21 +1,18 @@
 const axios = require('axios');
 const { processTrailTracking } = require('../../../utils/functions');
 const { Item } = require('../../items/model');
-const {
-    getTrailCompletion,
-    getTagsElegibles,
-} = require('../../sections/business');
+const { getTrailCompletion } = require('../../sections/business');
 const { Tracking } = require('../../tracking/model');
 const { populateTrails } = require('../../trails/business');
 const { EVENTS_CATEGORY } = require('../model');
+const { handleUserEligibilitiesGamification } = require('../utils');
 
 
 const GamificationEventBusiness = {
     async handleEvent(user, category, props) {
         const uri = `${process.env.API_GAMIFICATION}/event-users`;
         const networkLogin = user.networkLogin;
-        const tags = await getTagsElegibles(user);
-        const eligibilities = tags.map(({ value }) => value);
+        const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD)
 
         try {
             await axios.post(

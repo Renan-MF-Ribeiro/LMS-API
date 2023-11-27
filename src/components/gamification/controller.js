@@ -2,9 +2,8 @@ const GamificationBusiness = require('./business');
 const GamificationEventBusiness = require('./events/business');
 const { User } = require('../users/model');
 const config = require('../../../config.json');
-const axios = require('axios');
 const _messages = require('../../utils/messages');
-const { Group } = require('../groups/model');
+const { handleGroupTagsGamification } = require('./utils');
 
 const GamificationController = {
     async dispatch(networkLogin, categories, props) {
@@ -121,6 +120,19 @@ const GamificationController = {
         }
     },
 
+    async createClientUser(req, res) {
+        if(config.gamification.active) {
+            try {
+                const { user } = req.params;
+                const data = await GamificationBusiness.createClientUser(user)
+
+                return _messages.success(res, req, data);
+            } catch (error) {
+                return _messages.badRequest(res, req, error);
+            }
+        }
+    },
+
     async getClientUser(req, res) {
         if (config.gamification.active) {
             try {
@@ -163,10 +175,7 @@ const GamificationController = {
         if (config.gamification.active) {
             try {
                 const { eligibilities } = req.body;
-                const groups = await Group.find({ tags: { $in: eligibilities }, active: 1 });
-                const tags = eligibilities.map(({ value }) => value);
-                const groupsTags = groups.map(({ name }) => ({ name, tags: [...new Set(tags)] }));
-                req.body.eligibilities = groupsTags
+                req.body.eligibilities = await handleGroupTagsGamification(eligibilities)
 
                 const data = await GamificationBusiness.createClientRankings(req.body);
 
@@ -196,10 +205,8 @@ const GamificationController = {
                               }))
                           ]
                         : req.body.eligibilities;
-                    const groups = await Group.find({ tags: { $in: eligibilities }, active: 1 });
-                    const tags = eligibilities.map(({ value }) => value);
-                    const groupsTags = groups.map(({ name }) => ({ name, tags: [...new Set(tags)] }));
-                    req.body.eligibilities = groupsTags
+                
+                    req.body.eligibilities = await handleGroupTagsGamification(eligibilities)
                 }
 
                 const data = await GamificationBusiness.updateClientRankings(_id, req.body);
