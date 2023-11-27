@@ -7,7 +7,7 @@ const { Trail } = require('./model');
 const { Item } = require('../items/model');
 
 module.exports = {
-    async checkItem(item) {
+    async checkItem (item) {
         return new Promise((resolve, reject) => {
             const today = getDateTodayWithoutHours();
             const startDate = formatDateWithoutHours(item.startDate);
@@ -35,7 +35,7 @@ module.exports = {
      * @param {*} limit
      * @param {boolean} filterEnabled Flag que indica se deve filtrar por habilitado ou não. (Padrão: true)
      */
-    populateTrails(
+    populateTrails (
         flag = true,
         findObj = {},
         sortObj = {},
@@ -50,13 +50,13 @@ module.exports = {
 
                 const matchObj = filterEnabled
                     ? {
-                          ...match,
-                          enabled: true,
-                          deleted: 0,
-                      }
+                        ...match,
+                        enabled: true,
+                        deleted: 0,
+                    }
                     : {
-                          deleted: 0,
-                      };
+                        deleted: 0,
+                    };
                 if (skip !== null) {
                     trails = await Trail.find(findObj)
                         .populate({
@@ -133,6 +133,7 @@ module.exports = {
                             author: userName,
                             completion: trail.completion,
                             isSequenceEnabled: trail.isSequenceEnabled,
+                            isPadletEnabled: trail.isPadletEnabled,
                             items: arrItems,
                             separators: trail.separators,
                             expirationType: trail.expirationType,
@@ -157,6 +158,8 @@ module.exports = {
                                     urlTrail: i.urlTrail,
                                     itemID: i.itemID,
                                     mandatory: i.mandatory,
+                                    chief: i.chief,
+                                    optional: i.optional,
                                     afterSeparator: i.afterSeparator,
                                 });
                             }
@@ -195,6 +198,7 @@ module.exports = {
                             tagsAnd: trail.tagsAnd || null,
                             completion: trail.completion,
                             isSequenceEnabled: trail.isSequenceEnabled,
+                            isPadletEnabled: trail.isPadletEnabled,
                             items: arrItems,
                             separators: trail.separators,
                             innerTextStatus: trail.innerTextStatus,

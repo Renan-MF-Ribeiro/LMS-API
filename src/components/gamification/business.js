@@ -1,12 +1,22 @@
 const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
+const { handleUserEligibilitiesGamification } = require('./utils');
 
 const host = process.env.API_GAMIFICATION;
 const clientId = process.env.CLIENT_ID;
 const headers = { 'x-api-key': process.env.API_KEY_GAMIFICATION };
 
 const GamificationBusiness = {
+    async createClientUser(networkLogin, groupsAD) {
+        const uri = `${host}/users/${clientId}`;
+        const eligibilities = await handleUserEligibilitiesGamification(groupsAD);
+        const body = { networkLogin, eligibilities };
+        const { data } = await axios.post(uri, body, { headers });
+
+        return data;
+    },
+
     async getClientUser(networkLogin) {
         const uri = `${host}/users/${clientId}/${networkLogin}`;
         const { data } = await axios.get(uri, { headers });

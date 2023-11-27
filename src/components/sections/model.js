@@ -14,6 +14,7 @@ const DEFAULT_TYPES = Object.freeze({
     RECENTS: 'recents',
     KEEP_LEARNING: 'keep_learning',
     CONCLUDED: 'concluded',
+    COURSES: 'courses',
 });
 
 const SectionSchema = new mongoose.Schema(

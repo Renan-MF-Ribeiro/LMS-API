@@ -7,7 +7,15 @@ const {
     ProgramModel,
     CourseEvaluationModel,
     CoursesWithTagsAndUsers,
+    WaitListsByUser,
+    WaitListsByCourses,
+    UsersWithProcessedTags,
+    WaitListModel
 } = require('./model');
+
+const { DOMAIN, AZURE_BLOB_URL } = process.env;
+
+const { azureBlob } = require('../../utils/files');
 
 const { Group, InstructorGroup } = require('../groups/model');
 
@@ -43,7 +51,7 @@ const {
 } = require('../sections/business');
 
 module.exports = {
-    async createCourse(req, res) {
+    async createCourse (req, res) {
         try {
             const materials = JSON.parse(req.fields.materials);
             const files = req.files;
@@ -59,6 +67,14 @@ module.exports = {
             const dataFinalCourse = formatDateWithoutHours(
                 addHours(body.dateFinal)
             );
+
+            let thumbPath;
+            const { thumb } = req.files;
+            if (thumb) {
+                thumbPath = await azureBlob(thumb, 'items/thumbs');
+                body.thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
+            }
+
             if (!body.passingScore || body.passingScore === 'null')
                 delete body.passingScore;
             if (!body.certificateLayout || body.certificateLayout === 'null')
@@ -140,7 +156,7 @@ module.exports = {
         }
     },
 
-    async allCourses(req, res) {
+    async allCourses (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -149,23 +165,23 @@ module.exports = {
             const total = await CourseModel.find(
                 searchBy
                     ? {
-                          $text: { $search: searchBy },
-                          deleted: 0,
-                      }
+                        $text: { $search: searchBy },
+                        deleted: 0,
+                    }
                     : {
-                          deleted: 0,
-                      }
+                        deleted: 0,
+                    }
             ).countDocuments();
 
             const courses = await CourseModel.find(
                 searchBy
                     ? {
-                          title: { $regex: searchBy, $options: 'i' },
-                          deleted: 0,
-                      }
+                        title: { $regex: searchBy, $options: 'i' },
+                        deleted: 0,
+                    }
                     : {
-                          deleted: 0,
-                      }
+                        deleted: 0,
+                    }
             )
                 .populate({
                     path: 'materials',
@@ -180,10 +196,10 @@ module.exports = {
 
             const programs = await ProgramModel.find().select('title');
 
-            courses.map((course) => {
-                course.dateInitial = addHours(course.dateInitial);
-                course.dateFinal = addHours(course.dateFinal);
-            });
+            // courses.map((course) => {
+            //     course.dateInitial = addHours(course.dateInitial);
+            //     course.dateFinal = addHours(course.dateFinal);
+            // });
 
             success(res, req, {
                 data: courses,
@@ -202,9 +218,9 @@ module.exports = {
         }
     },
 
-    async updateCourse(req, res) {
+    async updateCourse (req, res) {
         try {
-            const materials = JSON.parse(req.fields.materials);
+            const materials = req.fields.materials ? JSON.parse(req.fields.materials) : null;
             const body = req.fields;
             const arrMaterials = [];
             const files = req.files;
@@ -219,6 +235,13 @@ module.exports = {
             const dataFinalCourse = formatDateWithoutHours(
                 addHours(body.dateFinal)
             );
+            
+            let thumbPath;
+            const { thumb } = req.files;
+            if (thumb) {
+                thumbPath = await azureBlob(thumb, 'items/thumbs');
+                body.thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
+            }
 
             if (!body.passingScore || body.passingScore === 'null')
                 body.passingScore = null;
@@ -226,6 +249,8 @@ module.exports = {
                 body.certificateLayout = null;
 
             if (dateInitialCourse > dataFinalCourse) flagDate = false;
+
+            
 
             if (!flagDate) {
                 badRequest(
@@ -321,7 +346,7 @@ module.exports = {
         }
     },
 
-    async deleteCourse(req, res) {
+    async deleteCourse (req, res) {
         try {
             const { id } = req.params;
             await CourseModel.findByIdAndUpdate(id, { deleted: 1 });
@@ -338,7 +363,7 @@ module.exports = {
         }
     },
 
-    async instructorAllCourses(req, res) {
+    async instructorAllCourses (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -350,14 +375,14 @@ module.exports = {
             const courses = await CourseModel.find(
                 searchBy
                     ? {
-                          title: { $regex: '' || searchBy, $options: 'i' },
-                          deleted: 0,
-                          status: 1,
-                      }
+                        title: { $regex: '' || searchBy, $options: 'i' },
+                        deleted: 0,
+                        status: 1,
+                    }
                     : {
-                          deleted: 0,
-                          status: 1,
-                      }
+                        deleted: 0,
+                        status: 1,
+                    }
             )
                 .populate({
                     path: 'materials',
@@ -392,7 +417,7 @@ module.exports = {
         }
     },
 
-    async getCourseById(req, res) {
+    async getCourseById (req, res) {
         try {
             const { id } = req.params;
             const course = await CourseModel.findById(id).populate('materials');
@@ -409,7 +434,7 @@ module.exports = {
         }
     },
 
-    async getUsers(req, res) {
+    async getUsers (req, res) {
         try {
             const user = await getUserByToken(req);
             const storeUsers = await getStoreUSers(user.store);
@@ -426,7 +451,7 @@ module.exports = {
         }
     },
 
-    async createClass(req, res) {
+    async createClass (req, res) {
         try {
             let {
                 courseID,
@@ -565,7 +590,7 @@ module.exports = {
         }
     },
 
-    async updateClass(req, res) {
+    async updateClass (req, res) {
         try {
             let {
                 courseID,
@@ -676,6 +701,8 @@ module.exports = {
                         qrcode: qrCode,
                         qrCodeSelfRegistration: qrCodeSelfRegistration,
                         isSelfRegistrationEnabled: isSelfRegistrationEnabled,
+                        dateApplicationInitial,
+                        dateApplicationFinal,
                     });
 
                     success(res, req, 'Atualizado com sucesso!');
@@ -702,12 +729,12 @@ module.exports = {
         }
     },
 
-    async appliedCourses(req, res) {
+    async appliedCourses (req, res) {
         try {
             const user = await getUserByToken(req);
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
-            const { searchBy } = req.query;
+            const { searchBy, isAdmin } = req.query;
 
             const { courses, total } = await getAppliedCourses(
                 user._id,
@@ -715,7 +742,8 @@ module.exports = {
                 sort,
                 skip,
                 limit,
-                searchBy
+                searchBy,
+                isAdmin
             );
             success(res, req, {
                 data: courses,
@@ -733,7 +761,7 @@ module.exports = {
         }
     },
 
-    async appliedCourse(req, res) {
+    async appliedCourse (req, res) {
         try {
             const { courseID, classID } = req.params;
             const course = await CourseModel.findById(courseID)
@@ -762,7 +790,7 @@ module.exports = {
         }
     },
 
-    async deleteMaterial(req, res) {
+    async deleteMaterial (req, res) {
         try {
             const arrMaterials = [];
             const { materialID, classID } = req.params;
@@ -792,7 +820,7 @@ module.exports = {
         }
     },
 
-    async deleteMaterialCourse(req, res) {
+    async deleteMaterialCourse (req, res) {
         try {
             const arrMaterials = [];
             const { materialID, courseID } = req.params;
@@ -822,7 +850,7 @@ module.exports = {
         }
     },
 
-    async searchUser(req, res) {
+    async searchUser (req, res) {
         try {
             const { searchBy } = req.query;
             const { skip, limit } = pagination(req);
@@ -874,7 +902,7 @@ module.exports = {
         }
     },
 
-    async deleteClass(req, res) {
+    async deleteClass (req, res) {
         try {
             const { classID } = req.params;
             const { materials } = await ClassModel.findById(classID);
@@ -896,7 +924,7 @@ module.exports = {
         }
     },
 
-    async courseEvaluation(req, res) {
+    async courseEvaluation (req, res) {
         try {
             const { classID, answers } = req.body;
             const student = await getUserByToken(req);
@@ -938,7 +966,7 @@ module.exports = {
         }
     },
 
-    async verifyCourseEvaluation(req, res) {
+    async verifyCourseEvaluation (req, res) {
         try {
             const { classID } = req.params;
             const student = await getUserByToken(req);
@@ -989,7 +1017,7 @@ module.exports = {
         }
     },
 
-    async getCourseEvaluations(req, res) {
+    async getCourseEvaluations (req, res) {
         try {
             const { classID } = req.params;
             const student = await getUserByToken(req);
@@ -1011,7 +1039,7 @@ module.exports = {
         }
     },
 
-    async getCourseByQrCode(req, res) {
+    async getCourseByQrCode (req, res) {
         try {
             const body = req.body;
             const course = await ClassModel.findOne({
@@ -1031,7 +1059,7 @@ module.exports = {
         }
     },
 
-    async getCourseByQrCodeSelfRegistration(req, res) {
+    async getCourseByQrCodeSelfRegistration (req, res) {
         try {
             const { body } = req;
             const { _id } = await getUserByToken(req);
@@ -1083,7 +1111,7 @@ module.exports = {
         }
     },
 
-    async getCourseDetailByQrCode(req, res) {
+    async getCourseDetailByQrCode (req, res) {
         try {
             const { body } = req;
             const course = await CourseModel.findOne({
@@ -1103,7 +1131,7 @@ module.exports = {
         }
     },
 
-    async selfRegistration(req, res) {
+    async selfRegistration (req, res) {
         try {
             const { body } = req;
             const user = await getUserByToken(req);
@@ -1133,7 +1161,7 @@ module.exports = {
             );
         }
     },
-    async getInstructorByInstructorGroup(req, res) {
+    async getInstructorByInstructorGroup (req, res) {
         try {
             const { params } = req;
             const tags = [];
@@ -1191,7 +1219,7 @@ module.exports = {
         }
     },
 
-    async verifyInstructor(req, res) {
+    async verifyInstructor (req, res) {
         try {
             const { params } = req;
             const trails = [];
@@ -1290,6 +1318,208 @@ module.exports = {
                 'Erro interno no servidor',
                 'courses',
                 '/verifyInstructor'
+            );
+        }
+    },
+
+    async joinWaitList (req, res) {
+        try {
+            let { body } = req;
+            const alreadyJoined = await WaitListModel.findOne({
+                userID: body.userID,
+                courseID: body.courseID,
+                sent: false
+            });
+
+            if (alreadyJoined) {
+                return badRequest(
+                    res,
+                    req,
+                    'Você já está na lista de espera deste curso',
+                    `Você já está na lista de espera deste curso`,
+                    'courses',
+                    'joinWaitList'
+                );
+            }
+
+            body.joinDate = new Date();
+
+            const waitList = await WaitListModel.create(body);
+            return success(res, req, waitList);
+        } catch (error) {
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'waitlist',
+                '/waitlist-join'
+            );
+        }
+    },
+
+    async getWaitListByUser (req, res) {
+        try {
+            const { skip, limit } = pagination(req);
+            const { order, sort } = ordernation(req);
+            const searchBy = req.query.searchBy;
+
+            const query = searchBy
+                ? {
+                    $or: [
+                        { 'user.name': { $regex: searchBy, $options: 'i' } },
+                        {
+                            'course.title': {
+                                $regex: searchBy,
+                                $options: 'i',
+                            },
+                        },
+
+                    ],
+                }
+                : {};
+
+            const total = await WaitListsByUser.find(query).countDocuments();
+
+            const data = await WaitListsByUser.find(query)
+                .sort({
+                    [order]: sort,
+                })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit));
+
+            success(res, req, { data, total });
+        } catch (error) {
+            console.log(error);
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'courses',
+                '/getCourseByQrCode'
+            );
+        }
+    },
+
+    async getWaitListByCourse (req, res) {
+        try {
+            const { skip, limit } = pagination(req);
+            const { order, sort } = ordernation(req);
+            const searchBy = req.query.searchBy;
+
+            const query = searchBy
+                ? {
+                    $or: [
+                        {
+                            'course.title': {
+                                $regex: searchBy,
+                                $options: 'i',
+                            },
+                        },
+
+                    ],
+                }
+                : {};
+
+            const total = await WaitListsByCourses.find(query).countDocuments();
+
+            const data = await WaitListsByCourses.find(query)
+                .sort({
+                    [order]: sort,
+                })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit));
+
+            success(res, req, { data, total });
+        } catch (error) {
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'courses',
+                '/getCourseByQrCode'
+            );
+        }
+    },
+
+    async getWaitlistAndElegibleUsersByCourse (req, res) {
+        try {
+            const courseId = req.query.courseId;
+            const elegibleUsers = [];
+            const waitlistUsers = await WaitListsByCourses.findOne({ _id: courseId, sent: false }).select('users');
+            console.log("waitlistUsers", waitlistUsers)
+            const foundClass = await ClassModel.findOne({
+                courseID: courseId,
+            }).populate('courseID', [
+                'title',
+                'tags',
+                'passingScore',
+            ]);
+
+            const foundCourse = await CourseModel.findOne({ _id: courseId })
+
+            const tags = foundCourse.tags.map((e) => e.value);
+            const mandatoryTags = foundCourse.mandatory.map(
+                (e) => e.value
+            );
+
+            // const usersWithMandatoryTags = await UsersWithProcessedTags.find({
+            //     userTags: { $all: mandatoryTags },
+            // });
+            const usersWithTags = await UsersWithProcessedTags.find({
+                userTags: { $in: tags },
+            });
+
+            // const users = usersWithMandatoryTags.concat(usersWithTags);
+            for (let user of usersWithTags) {
+                let userInClass
+                if (foundClass) {
+                    userInClass = foundClass.users.find(
+                        (u) => u.userID == user._id
+                    );
+                }
+                if (userInClass) {
+                    if (
+                        userInClass.grades <
+                        foundClass.courseID.passingScore
+                    ) {
+                        elegibleUsers.push({
+                            _id: user._id,
+                            name: user.name,
+                            email: user.email,
+                        });
+                    }
+                } else {
+                    elegibleUsers.push({
+                        _id: user._id,
+                        name: user.name,
+                        email: user.email,
+                    });
+                }
+            }
+
+            const elegibleUsersTotal = elegibleUsers ? elegibleUsers.length : 0;
+            const waitlistUsersTotal = waitlistUsers
+                ? waitlistUsers.users.length
+                : 0;
+
+            success(res, req, {
+                waitlistUsers,
+                waitlistUsersTotal,
+                elegibleUsers,
+                elegibleUsersTotal,
+            });
+        } catch (error) {
+            console.log(error);
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'courses',
+                '/getCourseByQrCode'
             );
         }
     },

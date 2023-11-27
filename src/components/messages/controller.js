@@ -1,9 +1,10 @@
 const { processTargetUsers, sendMessageToKafka } = require('./business')
 const _messages = require('../../utils/messages')
 const { Message } = require('./model')
-const { pagination, ordernation } = require('../../utils/functions')
+const { pagination, ordernation, getUserByToken } = require('../../utils/functions')
 const { Item } = require('../items/model')
 const config = require('../../../config.json')
+const { sendMessage } = require('../../utils/web-push')
 
 module.exports = {
     async createMessages (req, res) {
@@ -23,17 +24,30 @@ module.exports = {
         }
     },
 
-    async createMessagesFromBackend (message) {
-        try {
-            const campaign = message
-            const target = campaign.target
 
-            const message = await Message.create(campaign)
-            const targetUsers = await processTargetUsers(target, campaign.category)
-            await sendMessageToKafka(campaign, targetUsers)
+
+    async webPushMessage (req, res) {
+        try {
+            const user = await getUserByToken(req);
+            const payload = req.body;
+
+
+            for (const subscription of user.webPushAuthorization) {
+                try {
+                    await sendMessage(subscription, payload);
+                } catch (error) {
+                    console.error(error);
+                    const errorMessage = 'Erro no envio da mensagem via push: ' + JSON.stringify(error)
+                    return _messages.internalServer(res, req, errorMessage, errorMessage, 'messages', 'returnUsers');
+
+                }
+            }
+
+            _messages.success(res, req, '');
 
         } catch (error) {
-            console.log(error)
+            console.log('error', error);
+            return _messages.internalServer(res, req, error.message, error, 'messages', 'returnUsers');
         }
     },
 
@@ -109,4 +123,18 @@ module.exports = {
             }
         }
     },
+}
+async function createMessagesFromBackend (body) {
+    try {
+        console.log(body)
+        const campaign = body
+        const target = campaign.target
+
+        const message = await Message.create(campaign)
+        const targetUsers = await processTargetUsers(target, campaign.category)
+        await sendMessageToKafka(campaign, targetUsers)
+
+    } catch (error) {
+        console.log(error)
+    }
 }

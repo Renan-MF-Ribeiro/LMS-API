@@ -1,6 +1,6 @@
 /* eslint-disable no-async-promise-executor */
 
-const { awsAmazon } = require('../../utils/files');
+const { azureBlob } = require('../../utils/files');
 const { User } = require('../users/model');
 const { Group } = require('../groups/model');
 const { MaterialModel, ClassModel, ProgramModel } = require('./model');
@@ -12,11 +12,11 @@ const {
 } = require('../../utils/functions');
 
 module.exports = {
-    uploadMaterial(material, author, folder) {
+    uploadMaterial (material, author, folder) {
         return new Promise(async (resolve, reject) => {
             try {
                 const nameFile = material.name.split('.');
-                const url = await awsAmazon(material, folder);
+                const url = await azureBlob(material, folder);
                 const { _id } = await MaterialModel.create({
                     title: nameFile[0],
                     url,
@@ -29,7 +29,7 @@ module.exports = {
         });
     },
 
-    queryInstructorCourses(searchBy) {
+    queryInstructorCourses (searchBy) {
         const today = getDateTodayWithoutHours();
 
         const searchByClasule = searchBy
@@ -56,7 +56,7 @@ module.exports = {
         };
     },
 
-    verifyValidity(dateInitial, dateFinal) {
+    verifyValidity (dateInitial, dateFinal) {
         const startDate = formatDateWithoutHours(dateInitial);
         const endDate = formatDateWithoutHours(dateFinal);
         const today = getDateTodayWithoutHours();
@@ -70,7 +70,7 @@ module.exports = {
         return false;
     },
 
-    getStoreUSers(store) {
+    getStoreUSers (store) {
         return new Promise(async (resolve, reject) => {
             try {
                 const users = await User.find(
@@ -88,7 +88,7 @@ module.exports = {
         });
     },
 
-    getCeaUsers() {
+    getCeaUsers () {
         return new Promise(async (resolve, reject) => {
             try {
                 const users = await User.find(
@@ -105,13 +105,15 @@ module.exports = {
         });
     },
 
-    getAppliedCourses(instructor, order, sort, skip, limit, searchBy) {
+    getAppliedCourses (instructor, order, sort, skip, limit, searchBy, isAdmin) {
         return new Promise(async (resolve, reject) => {
             try {
-                let courses = await ClassModel.find(
-                    {
+
+                const query = isAdmin ?
+                    {} : {
                         instructor: { $eq: instructor },
-                    },
+                    }
+                let courses = await ClassModel.find(query,
                     ['users', 'createdAt']
                 )
                     .populate({
@@ -119,20 +121,17 @@ module.exports = {
                         select: ['title', 'createdAt', 'description'],
                         match: searchBy
                             ? {
-                                  $text: {
-                                      $search: `"${searchBy}"`,
-                                  },
-                              }
+                                $text: {
+                                    $search: `"${searchBy}"`,
+                                },
+                            }
                             : {},
                     })
                     .sort({ [order]: sort })
                     .skip(parseInt(skip))
                     .limit(parseInt(limit));
 
-                const total = await ClassModel.find(
-                    {
-                        instructor: { $eq: instructor },
-                    },
+                const total = await ClassModel.find(query,
                     ['users', 'createdAt']
                 ).countDocuments();
 
@@ -152,7 +151,7 @@ module.exports = {
         });
     },
 
-    getClassByID(classID) {
+    getClassByID (classID) {
         return new Promise(async (resolve, reject) => {
             try {
                 const arrUsers = [];
@@ -199,7 +198,7 @@ module.exports = {
         });
     },
 
-    returnProgramaID(programTitle) {
+    returnProgramaID (programTitle) {
         return new Promise(async (resolve, reject) => {
             try {
                 let programID;
@@ -212,8 +211,8 @@ module.exports = {
                 program
                     ? (programID = program._id)
                     : (programID = await ProgramModel.create({
-                          title: programTitle,
-                      }));
+                        title: programTitle,
+                    }));
 
                 resolve(programID);
             } catch (error) {
@@ -222,7 +221,7 @@ module.exports = {
         });
     },
 
-    getCoursesByUserID(userID) {
+    getCoursesByUserID (userID) {
         return new Promise(async (resolve, reject) => {
             try {
                 const classes = await ClassModel.find(
@@ -264,7 +263,7 @@ module.exports = {
         });
     },
 
-    checkEligibility(eligibilityUser, tagsAnd, tagsOr) {
+    checkEligibility (eligibilityUser, tagsAnd, tagsOr) {
         const eligibilitytagsAnd = eligibilityUser.map(
             (eligibility) => eligibility.value
         );

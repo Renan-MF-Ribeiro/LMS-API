@@ -42,16 +42,8 @@ router
     .get('/instructor/all', isInstructor, _controller.instructorAllCourses)
     .get('/instructor/course/:id', isInstructor, _controller.getCourseById)
     .get('/instructor/users', isInstructor, _controller.getUsers)
-    .get(
-        '/instructor/applied-courses',
-        isInstructor,
-        _controller.appliedCourses
-    )
-    .get(
-        '/instructor/applied-course/:courseID/:classID',
-        isInstructor,
-        _controller.appliedCourse
-    )
+    .get('/instructor/applied-courses', _controller.appliedCourses)
+    .get('/instructor/applied-course/:courseID/:classID', _controller.appliedCourse)
     .get('/instructor/search-user/:id', isInstructor, _controller.searchUser)
     .post(
         '/instructor/create-class',
@@ -74,5 +66,22 @@ router
         '/instructor/delete-class/:classID',
         isInstructor,
         _controller.deleteClass
-    );
+    )
+    .post(
+        '/waitlist-join',
+        _controller.joinWaitList
+    )
+    .get(
+        '/waitlist-user',
+        _controller.getWaitListByUser
+    )
+    .get(
+        '/waitlist-course',
+        _controller.getWaitListByCourse
+    )
+    .get(
+        '/waitlist-elegible-course',
+        _controller.getWaitlistAndElegibleUsersByCourse
+    )
+    ;
 module.exports = router;

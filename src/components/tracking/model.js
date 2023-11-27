@@ -134,6 +134,20 @@ const vwTrackingsItems = new mongoose.Schema({
 
 const TrackingsItems = mongoose.model('vwTrackingsItems', vwTrackingsItems, 'vwTrackingsItems')
 
+const FormTracking = Tracking.discriminator(
+    "FormTracking",
+    new mongoose.Schema(
+        {
+            completion: { type: Number, min: 0, max: 1 },
+            statements: [{
+                _id: { type: 'ObjectId', required: true, default: new mongoose.Types.ObjectId() },
+                reply: { type: mongoose.Schema.Types.Mixed }
+            }]
+        },
+        { ...schemaOptions }
+    )
+);
+
 module.exports = {
     Tracking,
     DocumentTracking,
@@ -145,5 +159,6 @@ module.exports = {
     ExamTracking,
     AudioTracking,
     EventTracking,
-    ActivityTracking
+    ActivityTracking,
+    FormTracking
 }

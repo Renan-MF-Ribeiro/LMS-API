@@ -1,3 +1,4 @@
+const mongoose = require('mongoose')
 const httpStatus = require('http-status-codes');
 const { pick } = require('ramda');
 const { decodeToken } = require('../../utils/auth');
@@ -24,6 +25,7 @@ const {
     EventTracking,
     ActivityTracking,
     TrackingsItems,
+    FormTracking
 } = require('./model');
 const { HistoricEvaluation, Evaluation } = require('../assessments/model');
 const {
@@ -32,9 +34,12 @@ const {
 } = require('../sections/business');
 const { populateTrails } = require('../trails/business');
 const cryptoJS = require('crypto-js');
-const { Item } = require('../items/model');
+const { Item, FORM_ITEM_TYPE } = require('../items/model');
 const GamificationController = require('../gamification/controller');
 const { EVENTS_CATEGORY } = require('../gamification/model');
+
+const { createCompleteTracking } = require('./business')
+
 
 const TRACKING_KINDS = Object.freeze({
     DocumentTracking: DocumentTracking,
@@ -44,14 +49,17 @@ const TRACKING_KINDS = Object.freeze({
     AudioTracking: AudioTracking,
     EventTracking: EventTracking,
     ActivityTracking: ActivityTracking,
+    FormTracking: FormTracking
 });
 
 const TrackingController = {
-    async createOrUpdate(req, res) {
+    async createOrUpdate (req, res) {
         const TrackingModel = TRACKING_KINDS[req.body.kind] || Tracking;
 
         try {
             const q = pick(['item', 'userLogin'], req.body);
+
+            const { isChiefItem } = req.query
             delete req.body._id;
 
             const tracking = await Tracking.findOne(q);
@@ -131,7 +139,8 @@ const TrackingController = {
 
                 if (
                     (TrackingModel == DocumentTracking ||
-                        TrackingModel == MediaTracking ||  
+                        TrackingModel == MediaTracking ||
+                        TrackingModel == FormTracking ||
                         TrackingModel == EventTracking) &&
                     req.body.completion == 1
                 ) {
@@ -167,8 +176,8 @@ const TrackingController = {
                 completionAt = tracking
                     ? tracking.completionAt
                     : setNewDate
-                    ? new Date()
-                    : null;
+                        ? new Date()
+                        : null;
             }
 
             if (
@@ -187,6 +196,17 @@ const TrackingController = {
                     });
                 }
             }
+
+            if (isChiefItem && registerCompletationAt) {
+                for (const item of req.body.optionalItems) {
+                    const i = await Item.findById(item._id).lean()
+                    const trackingKind = processTrackingType(i)
+
+                    createCompleteTracking(i, trackingKind, q.userLogin)
+                }
+            }
+
+
 
             if (TrackingModel === ExamTracking) {
                 const { idEvaluation } = await Item.findOne({
@@ -210,6 +230,19 @@ const TrackingController = {
                 }
             }
 
+            if (TrackingModel === FormTracking) {
+                const formItem = await Item.findById(q.item)
+                for (let i = 0; i < req.body.statements.length; i++) {
+                    const statement = req.body.statements[i]
+                    const itemStatement = formItem?.statements.find(({ _id }) => _id.equals(statement._id))
+                    if ([FORM_ITEM_TYPE.MULTIPLE, FORM_ITEM_TYPE.OBJECTIVE].includes(itemStatement.type)) {
+                        req.body.statements[i].reply = statement?.reply?.map((_id) => new mongoose.Types.ObjectId(_id))
+                    }
+                }
+                if (!!req.body.completionAt) req.body.completion = 1
+                if (req.body.completion === 1) completionAt = new Date();
+            }
+
             // GAMIFICATION DISPATCH
             await GamificationController.dispatch(
                 q.userLogin,
@@ -225,7 +258,7 @@ const TrackingController = {
                     lessonStatus: req.body?.lessonStatus,
                 }
             );
-
+            delete req.body.optionalItems
             await TrackingModel.findOneAndUpdate(
                 q,
                 { ...req.body, totalTime, isAllowedToSendXAPI, completionAt },
@@ -245,19 +278,69 @@ const TrackingController = {
         }
     },
 
-    async findOrCreate(req, res) {
+    async findOrCreate (req, res) {
         try {
-            const { item } = req.query;
+            const { item, trailId, chief } = req.query;
             const { data } = await decodeToken(req.headers.authorization);
 
             const user = await User.findOne({ _id: data.ref }, 'networkLogin');
             const userLogin = user.networkLogin;
 
+            const optionalItems = []
+
+            if (chief === 'true') {
+                const trail = await Trail.findById(trailId)
+                    .populate({
+                        path: 'items',
+                        populate: {
+                            path: 'itemID',
+                            model: 'Item',
+                        },
+                    })
+                    .lean()
+
+                for (const item of trail.items) {
+                    if (item.optional) {
+                        optionalItems.push({
+                            title: item.itemID.title,
+                            _id: item.itemID._id,
+                        })
+                    }
+                }
+            }
+
             const tracking = await Tracking.findOne({ item, userLogin });
+            if (tracking?.kind === 'FormTracking') {
+                const formItem = await Item.findById(item).lean()
+                for (let i = 0; i < formItem?.statements.length; i++) {
+                    const itemStatement = formItem?.statements[i]
+                    const trackingStatement = tracking?.statements?.find(({ _id }) => itemStatement._id.equals(_id))
+
+                    if ([FORM_ITEM_TYPE.MULTIPLE, FORM_ITEM_TYPE.OBJECTIVE].includes(itemStatement.type)) {
+                        tracking.statements[i] = {
+                            ...itemStatement,
+                            alternatives: itemStatement?.alternatives.map((alternative) => {
+                                const trackingReply = trackingStatement?.reply
+
+                                return {
+                                    ...alternative,
+                                    checked: !!trackingReply?.find((_id) => alternative._id.equals(_id))
+                                }
+                            })
+                        }
+                    } else {
+                        const response = trackingStatement?.reply
+                        tracking.statements[i] = {
+                            ...itemStatement,
+                            response: itemStatement.type == FORM_ITEM_TYPE.DICHOTOMOUS ? !!response : response
+                        }
+                    }
+                }
+            }
 
             const response = tracking ? tracking.toObject() : { item };
 
-            _messages.success(res, req, { ...response, userLogin });
+            _messages.success(res, req, { ...response, userLogin, optionalItems });
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -270,7 +353,7 @@ const TrackingController = {
         }
     },
 
-    async list(req, res) {
+    async list (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -293,16 +376,16 @@ const TrackingController = {
 
             const query = searchBy
                 ? {
-                      $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-                      'items.itemID': {
-                          $in: allTrackingUser.map((v) => v.item),
-                      },
-                  }
+                    $or: [{ title: { $regex: searchBy, $options: 'i' } }],
+                    'items.itemID': {
+                        $in: allTrackingUser.map((v) => v.item),
+                    },
+                }
                 : {
-                      'items.itemID': {
-                          $in: allTrackingUser.map((v) => v.item),
-                      },
-                  };
+                    'items.itemID': {
+                        $in: allTrackingUser.map((v) => v.item),
+                    },
+                };
 
             const newArrTrails = await Trail.find(query).populate({
                 path: 'items',
@@ -383,19 +466,19 @@ const TrackingController = {
                 const itemDataArr = [];
 
                 for (const item in trail.items) {
-                    if (trail.items[item].itemID.completion) {
+                    if (trail.items[item].itemID?.completion) {
                         completedTrails.push(trail.items[item]);
                     }
-                    trail.items[item] = trail.items[item].itemID;
+                    trail.items[item] = trail.items[item].itemID
                     itemData = {
-                        completion: trail.items[item].completion === 1,
-                        completionAt: trail.items[item].completionAt,
-                        kind: trail.items[item].kind,
-                        _id: trail.items[item]._id,
-                        score: trail.items[item].score,
-                        createdAt: trail.items[item].createdAt,
-                        updatedAt: trail.items[item].updatedAt,
-                        title: trail.items[item].title,
+                        completion: trail.items[item]?.completion === 1,
+                        completionAt: trail.items[item]?.completionAt,
+                        kind: trail.items[item]?.kind,
+                        _id: trail.items[item]?._id,
+                        score: trail.items[item]?.score,
+                        createdAt: trail.items[item]?.createdAt,
+                        updatedAt: trail.items[item]?.updatedAt,
+                        title: trail.items[item]?.title,
                     };
                     itemDataArr.push(itemData);
                 }
@@ -426,7 +509,7 @@ const TrackingController = {
         }
     },
 
-    async deleteQuery(req, res) {
+    async deleteQuery (req, res) {
         try {
             const { item, userLogin } = req.query;
             var networkLogin = userLogin;
@@ -453,17 +536,17 @@ const TrackingController = {
         }
     },
 
-    async createOrUpdateDocument(req, res) {
+    async createOrUpdateDocument (req, res) {
         req.body.kind = 'DocumentTracking';
         return TrackingController.createOrUpdate(req, res);
     },
 
-    async createOrUpdateMedia(req, res) {
+    async createOrUpdateMedia (req, res) {
         req.body.kind = 'MediaTracking';
         return TrackingController.createOrUpdate(req, res);
     },
 
-    async createOrUpdateSCORM(req, res) {
+    async createOrUpdateSCORM (req, res) {
         var decrypted = cryptoJS.AES.decrypt(req.headers.tokendata, 'commit');
         const tmpStatus = decrypted.toString(cryptoJS.enc.Utf8);
 
@@ -475,7 +558,7 @@ const TrackingController = {
         req.body.kind = 'SCORMTracking';
         return TrackingController.createOrUpdate(req, res);
     },
-    async listActivitiesHistoric(req, res) {
+    async listActivitiesHistoric (req, res) {
         try {
             const { skip, limit } = pagination(req);
             let { order, sort } = ordernation(req);
@@ -483,45 +566,45 @@ const TrackingController = {
 
             const query = searchBy
                 ? {
-                      $and: [
-                          {
-                              $or: [
-                                  {
-                                      'item.title': {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                                  {
-                                      'user.name': {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                                  {
-                                      reviewer: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                              ],
-                          },
-                          {
-                              $or: [
-                                  { lessonStatus: 'failed' },
-                                  { lessonStatus: 'passed' },
-                              ],
-                              kind: 'ActivityTracking',
-                          },
-                      ],
-                  }
+                    $and: [
+                        {
+                            $or: [
+                                {
+                                    'item.title': {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                                {
+                                    'user.name': {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                                {
+                                    reviewer: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                            ],
+                        },
+                        {
+                            $or: [
+                                { lessonStatus: 'failed' },
+                                { lessonStatus: 'passed' },
+                            ],
+                            kind: 'ActivityTracking',
+                        },
+                    ],
+                }
                 : {
-                      $or: [
-                          { lessonStatus: 'failed' },
-                          { lessonStatus: 'passed' },
-                      ],
-                      kind: 'ActivityTracking',
-                  };
+                    $or: [
+                        { lessonStatus: 'failed' },
+                        { lessonStatus: 'passed' },
+                    ],
+                    kind: 'ActivityTracking',
+                };
 
             order = order === 'maxCorrectedAt' ? 'correctedAt' : order;
             order = order === 'itemName' ? 'item.title' : order;
@@ -572,7 +655,7 @@ const TrackingController = {
         }
     },
 
-    async listActivitiesForCorrection(req, res) {
+    async listActivitiesForCorrection (req, res) {
         try {
             const { skip, limit } = pagination(req);
             let { order, sort } = ordernation(req);
@@ -581,19 +664,19 @@ const TrackingController = {
 
             const query = searchBy
                 ? {
-                      $or: [
-                          { 'item.title': { $regex: searchBy, $options: 'i' } },
-                          { 'user.name': { $regex: searchBy, $options: 'i' } },
-                      ],
-                      kind: 'ActivityTracking',
-                      lessonStatus: 'incomplete',
-                      sentAt: { $exists: true, $not: { $size: 0 } },
-                  }
+                    $or: [
+                        { 'item.title': { $regex: searchBy, $options: 'i' } },
+                        { 'user.name': { $regex: searchBy, $options: 'i' } },
+                    ],
+                    kind: 'ActivityTracking',
+                    lessonStatus: 'incomplete',
+                    sentAt: { $exists: true, $not: { $size: 0 } },
+                }
                 : {
-                      lessonStatus: 'incomplete',
-                      kind: 'ActivityTracking',
-                      sentAt: { $exists: true, $not: { $size: 0 } },
-                  };
+                    lessonStatus: 'incomplete',
+                    kind: 'ActivityTracking',
+                    sentAt: { $exists: true, $not: { $size: 0 } },
+                };
 
             order = order === 'maxSentAt' ? 'sentAt' : order;
             order = order === 'itemName' ? 'item.title' : order;
@@ -641,7 +724,7 @@ const TrackingController = {
         }
     },
 
-    async updateActivityAdmin(req, res) {
+    async updateActivityAdmin (req, res) {
         try {
             const { trackingId } = req.query;
             const todayDate = new Date();
@@ -659,15 +742,15 @@ const TrackingController = {
             const queryStatus =
                 body.score >= tracking.item.passingScore
                     ? {
-                          lessonStatus: 'passed',
-                          completion: 1,
-                      }
+                        lessonStatus: 'passed',
+                        completion: 1,
+                    }
                     : body.score < tracking.item.passingScore
-                    ? {
-                          lessonStatus: 'failed',
-                          completion: 0,
-                      }
-                    : undefined;
+                        ? {
+                            lessonStatus: 'failed',
+                            completion: 0,
+                        }
+                        : undefined;
 
             if (queryStatus) {
                 await ActivityTracking.findOneAndUpdate(
@@ -695,7 +778,7 @@ const TrackingController = {
         }
     },
 
-    async updateActivityUser(req, res) {
+    async updateActivityUser (req, res) {
         try {
             const { item, userLogin } = req.query;
             const todayDate = new Date();
@@ -711,7 +794,7 @@ const TrackingController = {
 
             const { file } = req.files;
             activityPath = await azureBlob(file, 'items/activity');
-            
+
             if (tracking.lessonStatus == 'failed') {
                 await ActivityTracking.findOneAndUpdate(
                     { _id: tracking._id },
@@ -741,5 +824,26 @@ const TrackingController = {
         }
     },
 };
+
+function processTrackingType (item) {
+    switch (item.kind) {
+        case "MediaItem":
+            return "MediaTracking";
+        case "DocumentItem":
+            return "DocumentTracking";
+        case "SCORMItem":
+            return "SCORMTracking";
+        case "ExamItem":
+            return "ExamTracking";
+        case "AudioItem":
+            return "AudioTracking";
+        case "EventItem":
+            return "EventTracking";
+        case "FormItem":
+            return "FormTracking";
+        default:
+            break
+    }
+}
 
 module.exports = TrackingController;

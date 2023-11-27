@@ -15,11 +15,15 @@ const {
     concludedSections,
     getGroupCodesByToken,
     checkEligibilityTagsAnd,
+    courseInSections,
 } = require('./business');
+
+const { getStudentCourses } = require('../home/business')
 const {
     getUserByToken,
     processTrailTracking,
     processExpirationDate,
+    findObjectInRange
 } = require('../../utils/functions');
 
 module.exports = {
@@ -201,7 +205,6 @@ module.exports = {
             const tags = await getTagsElegiblesByToken(req);
             const classGroups = await getGroupCodesByToken(req, tags);
             let resultSections = [];
-
             if (tags.length > 0) {
                 const filter = req.query;
                 let trails = await populateTrails(true, {
@@ -252,7 +255,7 @@ module.exports = {
                     for (const tag of trail.tags) {
                         for (const classGroup of classGroups) {
                             if (classGroup.groupCode === tag.value) {
-                                trail.classGroup = classGroup;
+                                trail.classGroup = findObjectInRange(classGroups.filter((e)=> e.groupCode == tag.value), new Date())
                             }
                         }
                     }
@@ -269,11 +272,14 @@ module.exports = {
                 );
                 const arrConcludedSections = await concludedSections(trails);
 
+                const courses = await getStudentCourses(req);
+                const arrCoursesSections = await courseInSections(tags, courses, user._id);
                 resultSections = arrSections
                     .concat(arrMandatorySections)
                     .concat(arrRecentsSections)
                     .concat(arrKeepLearningSections)
-                    .concat(arrConcludedSections);
+                    .concat(arrConcludedSections)
+                    .concat(arrCoursesSections);
                 resultSections = resultSections.filter((val) => {
                     return val != null;
                 });
