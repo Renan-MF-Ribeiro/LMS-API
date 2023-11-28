@@ -660,6 +660,8 @@ module.exports = {
                         })
                     }
 
+                    const items = []
+
                     payload.items.forEach((item) => {
                         items.push({
                             ...item,
