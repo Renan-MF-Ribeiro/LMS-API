@@ -253,8 +253,9 @@ module.exports = {
 
     async createComment(req, res) {
         try {
-            const uri = `${process.env.API_SOCIAL}/home/comment/${process.env.CLIENT_ID}`;
-            const body = req.body;
+            const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}`;
+            const user = await _functions.getUserByToken(req)
+            const body = { ...req.body, userId: user._id };
             const { data } = await axios.post(uri, body);
             _messages.success(res, req, data, 'ok', 'social', 'createComment');
             return;
@@ -267,13 +268,13 @@ module.exports = {
                 'social',
                 'createComment'
             );
-            return;
         }
     },
+
     async getAllComments(req, res) {
         try {
-            const uri = `${process.env.API_SOCIAL}/home/comment/${process.env.CLIENT_ID}`;
-            const { data } = await axios.get(uri);
+            const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}`;
+            const { data } = await axios.get(uri, { params: req.query });
 
             _messages.success(res, req, data, 'ok', 'social', 'getAllComments');
             return;
@@ -289,10 +290,11 @@ module.exports = {
             return;
         }
     },
+
     async getCommentsByTrailId(req, res) {
         try {
             const { trailId } = req.params;
-            const uri = `${process.env.API_SOCIAL}/home/comment/${trailId}`;
+            const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/${trailId}`;
             const { data } = await axios.get(uri);
 
             _messages.success(
@@ -316,11 +318,12 @@ module.exports = {
             return;
         }
     },
+
     async updateComment(req, res) {
         try {
             const { commentId } = req.params;
             const body = req.body;
-            const uri = `${process.env.API_SOCIAL}/home/comment/${commentId}`;
+            const uri = `${process.env.API_SOCIAL}/comments/${commentId}`;
             const { data } = await axios.put(uri, body);
 
             _messages.success(res, req, data, 'ok', 'social', 'updateComment');
@@ -337,6 +340,122 @@ module.exports = {
             return;
         }
     },
+
+    async getPendingComments(req, res) {
+        try {
+            const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/pending`;
+            const { searchBy, ...query } =  req.query
+            const searchByTrailOrUser = await _business.handleSearchByTrailOrUser(searchBy)
+
+            const { data } = await axios.get(uri, {
+                params: {
+                    ...query,
+                    ...(searchBy && {
+                        searchBy: searchByTrailOrUser.length ? searchByTrailOrUser.flat() : searchBy
+                    })
+                }
+            });
+
+            _messages.success(res, req, data, 'ok', 'social', 'getPendingComments');
+            return;
+        } catch (error) {
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'getPendingComments'
+            );
+            return;
+        }
+    },
+
+    async getApprovedComments(req, res) {
+        try {
+            const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/approved`;
+            const { searchBy, ...query } =  req.query
+            const searchByTrailOrUser = await _business.handleSearchByTrailOrUser(searchBy)
+
+            const { data } = await axios.get(uri, {
+                params: {
+                    ...query,
+                    ...(searchBy && {
+                        searchBy: searchByTrailOrUser.length ? searchByTrailOrUser.flat() : searchBy
+                    })
+                }
+            });
+
+            _messages.success(res, req, data, 'ok', 'social', 'getApprovedComments');
+            return;
+        } catch (error) {
+            console.log(error);
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'getApprovedComments'
+            );
+            return;
+        }
+    },
+
+    async getRejectedComments(req, res) {
+        try {
+            const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/rejected`;
+            const { searchBy, ...query } =  req.query
+            const searchByTrailOrUser = await _business.handleSearchByTrailOrUser(searchBy)
+
+            const { data } = await axios.get(uri, {
+                params: {
+                    ...query,
+                    ...(searchBy && {
+                        searchBy: searchByTrailOrUser.length ? searchByTrailOrUser.flat() : searchBy
+                    })
+                }
+            });
+
+            _messages.success(res, req, data, 'ok', 'social', 'getRejectedComments');
+            return;
+        } catch (error) {
+            console.log(error);
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'getRejectedComments'
+            );
+            return;
+        }
+    },
+
+    async updateCommentStatus(req, res) {
+        try {
+            const { commentId } = req.params
+            const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/${commentId}`;
+            const body = req.body;
+            const { data } = await axios.patch(uri, body);
+
+            _messages.success(res, req, data, 'ok', 'social', 'updateCommentStatus');
+            return;
+        } catch (error) {
+            console.log(error);
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'updateCommentStatus'
+            );
+            return;
+        }
+    },
+
     async createLike(req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/home/like/${process.env.CLIENT_ID}`;
@@ -358,6 +477,7 @@ module.exports = {
             return;
         }
     },
+
     async getLikesByTrailId(req, res) {
         try {
             const { trailId } = req.params;
@@ -386,6 +506,7 @@ module.exports = {
             return;
         }
     },
+
     async deleteLike(req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/home/like`;
@@ -406,6 +527,7 @@ module.exports = {
             return;
         }
     },
+
     async createFavorite(req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/home/favorite/${process.env.CLIENT_ID}`;
@@ -426,6 +548,7 @@ module.exports = {
             return;
         }
     },
+
     async getFavoritesByUserId(req, res) {
         try {
             const { userId } = req.params;
@@ -453,6 +576,7 @@ module.exports = {
             return;
         }
     },
+
     async updateFavorite(req, res) {
         try {
             const { favoriteId } = req.params;
@@ -474,6 +598,7 @@ module.exports = {
             return;
         }
     },
+
     async shareSocialContent(req, res) {
         try {
             const { favoriteId } = req.params;

@@ -1,3 +1,4 @@
+const { Trail } = require('../trails/model');
 const { User } = require('../users/model');
 
 module.exports = {
@@ -73,4 +74,16 @@ module.exports = {
             total,
         };
     },
+
+    async handleSearchByTrailOrUser(searchBy) {
+        const searchByTrailOrUser = []
+        if(searchBy) {
+            const trails = await Trail.find({ title: { $regex: searchBy, $options: 'i' } })
+            const users = await User.find({ name: { $regex: searchBy, $options: 'i' } })
+            if(trails) searchByTrailOrUser.push(trails.map(({ _id }) => _id.toString()))
+            if(users) searchByTrailOrUser.push(users.map(({ _id }) => _id.toString()))
+        }
+
+        return searchByTrailOrUser
+    }
 };
