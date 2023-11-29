@@ -9,10 +9,15 @@ module.exports = express
     .get('/users-lists', isAdmin, _controller.getUsers)
     .post('/users-lists', isAdmin, _controller.addOrRemoveFromUserList)
     //comments
-    .post('/comment/create', _controller.createComment)
-    .get('/comment/all', _controller.getAllComments)
-    .get('/comment/trails/:trailId', _controller.getCommentsByTrailId)
-    .put('/comment/update/:commentId', _controller.updateComment)
+    .post('/comments/create', _controller.createComment)
+    .get('/comments/all', _controller.getAllComments)
+    .get('/comments/trails/:trailId', _controller.getCommentsByTrailId)
+    .put('/comments/update/:commentId', _controller.updateComment)
+    // comments management
+    .get('/comments/pending', isAdmin, _controller.getPendingComments)
+    .get('/comments/approved', isAdmin, _controller.getApprovedComments)
+    .get('/comments/rejected', isAdmin, _controller.getRejectedComments)
+    .patch('/comments/:commentId', isAdmin, _controller.updateCommentStatus)
     //likes
     .post('/like/create', _controller.createLike)
     .get('/like/:trailId', _controller.getLikesByTrailId)
