@@ -90,7 +90,7 @@ const gamificationRoutes = require('./components/gamification/routes');
 const systemUsersRoutes = require('./components/system-users/routes');
 const socialRoutes = require('./components/social/routes');
 const padletRoutes = require('./components/padlets/routes');
-const zendeskRoutes = require('./components/zendesk-support/routes');
+const supportRoutes = require('./components/support/routes');
 
 app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/tracking', validateTokenRoute, trackingRoutes)
@@ -116,7 +116,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/connect-key', validateTokenRoute, systemUsersRoutes)
     .use('/social', validateTokenRoute, socialRoutes)
     .use('/padlets', validateTokenRoute, padletRoutes)
-    .use('/zendesk', zendeskRoutes)
+    .use('/support', supportRoutes)
 
 if (config.showcase.active) {
     app.use('/showcase', showCaseRoutes);

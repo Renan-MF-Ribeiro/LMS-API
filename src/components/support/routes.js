@@ -1,5 +1,6 @@
 const express = require('express')
 const _controller = require('./controller')
+const formidable = require('express-formidable');
 
 module.exports = express.Router()
-    .post('/', _controller.create)
+    .post('/', formidable(), _controller.create)
