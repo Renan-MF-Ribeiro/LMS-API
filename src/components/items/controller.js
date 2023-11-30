@@ -1107,7 +1107,7 @@ const ItemController = {
         }
     },
 
-    async updateSCORM (req, res) {
+    async updateSCORM(req, res) {
         if (req.method !== 'PUT') {
             return res.status(httpStatus.NOT_FOUND).send();
         }
@@ -1119,15 +1119,15 @@ const ItemController = {
         try {
             const _id = req.params.itemId;
             let { packageId } = await Item.findOne({ _id }, 'packageId');
-            const { contentPath } = await SCORMItem.findOne(
+            const { contentPath, scoId } = await SCORMItem.findOne(
                 { _id },
-                'contentPath'
+                'contentPath scoId',
             );
             const contentPathExplode = contentPath.split('/');
             const explodeUrl = contentPathExplode[0].split('_');
 
             contentPathExplode.shift();
-            const href = contentPathExplode.join('/');
+            // const href = contentPathExplode.join('/');
 
             if (!explodeUrl[1]) {
                 packageId = packageId + '_1';
@@ -1144,6 +1144,7 @@ const ItemController = {
                 },
             });
 
+            let manifestP = null;
             const filesP = [];
             let pathFile = null;
             let scormName = null;
@@ -1181,14 +1182,19 @@ const ItemController = {
                                     etl.map(async (entry) => {
                                         if (
                                             isSCORMSchemaFile(entry.path) ||
-                                            isSCORMManifestFile(entry.path)
+                                            entry.type === 'Directory'
                                         ) {
                                             filesP.push(
                                                 entry.autodrain().promise()
                                             );
+                                            
                                             return;
                                         }
 
+                                        if (isSCORMManifestFile(entry.path)) {
+                                            manifestP = entry.buffer();
+                                            return;
+                                        }
 
                                         filesP.push(
                                             azureBlob(
@@ -1210,12 +1216,76 @@ const ItemController = {
                 path: path,
                 name: scormName,
             };
-            await SCORMItem.findByIdAndUpdate(_id, {
-                contentPath: `${packageId}/${href}`,
-                scormPath: scormPath,
-            });
 
-            res.status(httpStatus.NO_CONTENT).send();
+            if (!manifestP) {
+                throw _errors.SCORM_UPLOAD.NO_MANIFEST;
+            }
+
+            try {
+                const manifest = (await manifestP).toString();
+                const $doc = parseXml(manifest);
+                const $manifest = $doc.children[0];
+                const $orgs = $manifest.children.find(
+                    (el) => el.name === 'organizations'
+                );
+                if (!$orgs) return _messages.success(res, req, []);
+
+                const defaultOrg = $orgs.attributes.default;
+                if (!defaultOrg) return _messages.success(res, req, []);
+
+                const $org = $orgs.children.find(
+                    (el) =>
+                        el.name === 'organization' &&
+                        el.attributes.identifier === defaultOrg
+                );
+
+                if (!$org) return _messages.success(res, req, []);
+
+                const itemReducer = pipe(
+                    filter((el) => el.type === 'element' && el.name === 'item'),
+                    reduce(
+                        (items, item) => [
+                            ...items,
+                            item,
+                            ...itemReducer(item.children),
+                        ],
+                        []
+                    )
+                );
+
+                const $items = itemReducer($org.children);
+                if (!$items.length) return _messages.success(res, req, []);
+
+                const $resources = $manifest.children.find(
+                    (el) => el.name === 'resources'
+                );
+
+                await Promise.all(
+                    $items.map(($item) => {
+                        const $resource = $resources.children.find(
+                            (el) =>
+                                el.name === 'resource' &&
+                                el.attributes.identifier ===
+                                    $item.attributes.identifierref
+                        );
+
+                        const href = $resource.attributes.href;
+                        const scoIdentifier = $item.attributes.identifier;
+                        if(scoId != scoIdentifier){
+                            throw _errors.SCORM_UPLOAD.UNEXPECTED_IDENTIFIER
+                        }
+
+                        return SCORMItem.findByIdAndUpdate(_id, {
+                            contentPath: `${packageId}/${href}`,
+                            scormPath:scormPath
+                        });
+                    })
+                );
+
+                res.status(httpStatus.NO_CONTENT).send();
+            } catch (err) {
+                throw _errors.SCORM_UPLOAD.INVALID_MANIFEST;
+            }
         } catch (err) {
             if (err.code === _errors.SCORM_UPLOAD.INVALID_PACKAGE.code) {
                 res.status(httpStatus.UNPROCESSABLE_ENTITY).send(err);
