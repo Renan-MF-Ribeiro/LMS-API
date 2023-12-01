@@ -85,5 +85,21 @@ module.exports = {
         }
 
         return searchByTrailOrUser
+    },
+
+    async handleUserNameAndTrailTitle(data) {
+        const trails = await Trail.find({ _id: { $in: data.map(({ trailId }) => trailId) } }, 'title')
+        const users = await User.find({ _id: { $in: data.map(({ userId }) => userId)} }, 'name')
+
+        return data.map((comment) => {
+            const trail = trails.find(({ _id }) => _id.equals(comment.trailId))
+            const user = users.find(({ _id }) => _id.equals(comment.userId))
+
+            return {
+                ...comment,
+                userName: user.name,
+                trailTitle: trail.title
+            }
+        })
     }
 };
