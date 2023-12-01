@@ -60,6 +60,7 @@
         "nocache": "^3.0.3",
         "node-2fa": "^2.0.3",
         "node-cryptojs-aes": "^0.4.0",
+        "node-zendesk": "^5.0.6",
         "passport": "^0.4.1",
         "passport-saml": "^3.2.1",
         "ramda": "^0.26.1",
