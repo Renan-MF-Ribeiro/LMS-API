@@ -355,8 +355,9 @@ module.exports = {
                     })
                 }
             });
+            const comments = await _business.handleUserNameAndTrailTitle(data)
 
-            _messages.success(res, req, data, 'ok', 'social', 'getPendingComments');
+            _messages.success(res, req, comments, 'ok', 'social', 'getPendingComments');
             return;
         } catch (error) {
             _messages.badRequest(
@@ -385,8 +386,9 @@ module.exports = {
                     })
                 }
             });
+            const comments = await _business.handleUserNameAndTrailTitle(data)
 
-            _messages.success(res, req, data, 'ok', 'social', 'getApprovedComments');
+            _messages.success(res, req, comments, 'ok', 'social', 'getApprovedComments');
             return;
         } catch (error) {
             console.log(error);
@@ -416,8 +418,9 @@ module.exports = {
                     })
                 }
             });
+            const comments = await _business.handleUserNameAndTrailTitle(data)
 
-            _messages.success(res, req, data, 'ok', 'social', 'getRejectedComments');
+            _messages.success(res, req, comments, 'ok', 'social', 'getRejectedComments');
             return;
         } catch (error) {
             console.log(error);
