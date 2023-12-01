@@ -1,3 +1,5 @@
+const { ZENDESK_USER, ZENDESK_API_KEY } = process.env;
+
 const axios = require('axios');
 const fs = require('fs').promises;
 
@@ -7,12 +9,20 @@ const config = {
     url: 'https://happlearning.zendesk.com/api/v2/uploads',
     headers: {
         'Accept': 'application/json',
-        'Authorization': `Basic ${Buffer.from('diego@happmobi.com.br/token:6amofnCVfXX0MpCuIjOxhdvdmZ6MY86QYlWFif2i').toString('base64')}`,
+        'Authorization': `Basic ${btoa(`${ZENDESK_USER}/token:${ZENDESK_API_KEY}`)}`,
         'Content-Type': 'application/binary', // Alterado para indicar que estamos enviando um arquivo binário
     },
 }
 
+const custom_fields = {
+    ClientName: 9475144442263,
+    NetworkLogin: 1500015359621,
+    ClientID: 19253343340439,
+    ClientClass: 9475087643671,
+};
+
 module.exports = {
+    custom_fields,
     async getTokenAttachment (fileArray) {
         let token; // Variável para armazenar o token
 
@@ -43,7 +53,7 @@ const sendFile = async (attached, index, token) => {
     config['params'] = { filename: attached.name };
 
     if (token) {
-        // Se já tiver um token (ou seja, não é a primeira chamada), adicione ao parâmetro 'field'
+        // Se já tiver um token (ou seja, não é a primeira chamada), adicione ao parâmetro
         config['params']['token'] = token;
     }
 

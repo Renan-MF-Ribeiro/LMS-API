@@ -1,8 +1,8 @@
-const { COMPOSE_PROJECT_NAME, CLIENT_ID, AZURE_BLOB_URL, NODE_ENV } = process.env;
+const { COMPOSE_PROJECT_NAME, CLIENT_ID, ZENDESK_USER, ZENDESK_API_KEY, ZENDESK_SUBDOMAIN } = process.env;
 const _messages = require('../../utils/messages');
 const zendesk = require('node-zendesk');
 const fs = require('fs');
-const { getTokenAttachment } = require('./business')
+const { getTokenAttachment, custom_fields } = require('./business')
 
 
 
@@ -21,22 +21,21 @@ module.exports = {
             }
 
             body.ticket.custom_fields.push({
-                id: 9475144442263,
+                id: custom_fields.ClientName,
                 value: COMPOSE_PROJECT_NAME
 
             })
 
             body.ticket.custom_fields.push({
-                id: 19253343340439,
+                id: custom_fields.ClientID,
                 value: CLIENT_ID,
             })
             const client = zendesk.createClient({
-                username: 'diego@happmobi.com.br',
-                token: '6amofnCVfXX0MpCuIjOxhdvdmZ6MY86QYlWFif2i',
-                subdomain: 'happlearning'
+                username: ZENDESK_USER,
+                token: ZENDESK_API_KEY,
+                subdomain: ZENDESK_SUBDOMAIN
             });
 
-            console.log(body)
             client.tickets.create(body).then(response => {
                 return _messages.success(
                     res,
