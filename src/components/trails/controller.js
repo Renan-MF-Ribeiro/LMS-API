@@ -252,6 +252,30 @@ module.exports = {
                 }
                 : { titleURL: findValue };
             const trails = await populateTrails(true, query);
+            if (!trails || !trails[0]) {
+                const course = await CourseModel.findById(findValue)
+                if (course) {
+
+                    return _messages.success(
+                        res,
+                        req,
+                        course,
+                        'Course',
+                        'trails',
+                        'findByIdWithTracking'
+                    );
+                } else {
+                    return _messages.badRequest(
+                        res,
+                        req,
+                        'Trilha não localizada',
+                        'Trilha não localizada',
+                        'trails',
+                        'findByIdWithTrackingAndInnerText'
+                    )
+
+                }
+            }
             if (
                 !checkEligibilityTagsAnd(
                     tags,
