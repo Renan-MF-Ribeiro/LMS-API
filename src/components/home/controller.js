@@ -181,6 +181,7 @@ const ItemController = {
 
             const allTrailsElegibles = await Trail.find({
                 tags: { $in: tags },
+                enabled: true
             }).countDocuments();
 
             await User.findByIdAndUpdate(user._id, {
@@ -246,6 +247,7 @@ const ItemController = {
 
             const allTrailsElegibles = await Trail.find({
                 tags: { $in: tags },
+                enabled: true
             }).countDocuments();
 
             // await User.findByIdAndUpdate(user._id, { averageRating: averageStudent.toFixed(2), numberTrailsCompleted, numberTrailsElegibles })
