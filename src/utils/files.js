@@ -46,7 +46,7 @@ const {
 
 shelljs.mkdir('-p', UPLOADS_PATH);
 
-async function streamToBuffer (readableStream) {
+async function streamToBuffer(readableStream) {
     return new Promise((resolve, reject) => {
         const chunks = [];
         readableStream.on('data', (data) => {
@@ -59,9 +59,9 @@ async function streamToBuffer (readableStream) {
     });
 }
 
-function bufferToStream (binary) {
+function bufferToStream(binary) {
     const readableInstanceStream = new Readable({
-        read () {
+        read() {
             this.push(binary);
             this.push(null);
         },
@@ -107,7 +107,7 @@ module.exports = {
     //     });
     // },
 
-    async azureBlob (file, folder, ignoreStream = false) {
+    async azureBlob(file, folder, ignoreStream = false) {
         // return new Promise((resolve, reject) => {
         const blobServiceClient =
             BlobServiceClient.fromConnectionString(AZURE_STRINGCONN);
@@ -149,7 +149,7 @@ module.exports = {
         return url;
     },
 
-    async getAzureFile () {
+    async getAzureFile() {
         try {
             const env = process.env.NODE_ENV;
             const directory = env === 'production' ? 'producao' : 'homologacao';
@@ -182,7 +182,7 @@ module.exports = {
         // return await streamToBuffer(downloadFileResponse.readableStreamBody)
     },
 
-    async moveUserLoadToProcessed (buffer) {
+    async moveUserLoadToProcessed(buffer) {
         try {
             const env = process.env.NODE_ENV;
             const directory = env === 'production' ? 'producao' : 'homologacao';
@@ -208,7 +208,7 @@ module.exports = {
         }
     },
 
-    vimeoFilePathCreate (file, payload, user, mode = 'create') {
+    vimeoFilePathCreate(file, payload, user, mode = 'create') {
         let filePath;
         let fileType;
         let uploadStatus;
@@ -298,7 +298,7 @@ module.exports = {
         }, 5000);
     },
 
-    vimeoFilePathUpdate (file, payload, user, vimeoId) {
+    vimeoFilePathUpdate(file, payload, user, vimeoId) {
         let uploadStatus;
         const vimeoIdPath = `/videos/${vimeoId}`;
         const fileName = file.name;
@@ -373,7 +373,7 @@ module.exports = {
         }, 5000);
     },
 
-    async moveUpload (file) {
+    async moveUpload(file) {
         if (!file) return null;
 
         const hash = revHash(file.path);
@@ -393,17 +393,17 @@ module.exports = {
         )
     ),
 
-    mkdirSCORM (packageId) {
+    mkdirSCORM(packageId) {
         const _path = path.join(UPLOADS_PATH, 'scorm', packageId);
 
         try {
             shelljs.mkdir('-p', _path);
-        } catch { }
+        } catch {}
 
         return _path;
     },
 
-    mvFile (file, name) {
+    mvFile(file, name) {
         return new Promise((resolve, reject) => {
             try {
                 const _path = path.join(UPLOADS_PATH, name);
@@ -415,7 +415,7 @@ module.exports = {
         });
     },
 
-    readXLSX (file) {
+    readXLSX(file) {
         return new Promise((resolve, reject) => {
             xlsx(file)
                 .then((rows) => {
@@ -428,7 +428,7 @@ module.exports = {
         });
     },
 
-    readXLSXAlternative (file) {
+    readXLSXAlternative(file) {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.readFile(file).then(() => {
@@ -445,7 +445,7 @@ module.exports = {
         });
     },
 
-    readXLSXClassGroups (file) {
+    readXLSXClassGroups(file) {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.readFile(file).then(function () {
@@ -481,7 +481,7 @@ module.exports = {
         });
     },
 
-    writeXlsxClassGroupsResults (workbook, results) {
+    writeXlsxClassGroupsResults(workbook, results) {
         const worksheet = workbook.getWorksheet('Sua Carga Aqui');
 
         worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
@@ -497,7 +497,7 @@ module.exports = {
         return workbook;
     },
 
-    readXLSXUsers (file) {
+    readXLSXUsers(file) {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.readFile(file).then(function () {
@@ -540,7 +540,8 @@ module.exports = {
             });
         });
     },
-    readXLSXUsersBuffer (file) {
+
+    readXLSXUsersBuffer(file) {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.load(file).then(function () {
@@ -569,7 +570,7 @@ module.exports = {
                             for (var i = 0; i < row.values.length; i++) {
                                 const val =
                                     typeof row.values[i] === 'object' &&
-                                        row.values[i].text != undefined
+                                    row.values[i].text != undefined
                                         ? row.values[i].text
                                         : row.values[i];
                                 const tmpValue =
@@ -592,7 +593,7 @@ module.exports = {
         });
     },
 
-    readCSV (file) {
+    readCSV(file) {
         return new Promise((resolve, reject) => {
             try {
                 const results = [];
@@ -609,7 +610,7 @@ module.exports = {
         });
     },
 
-    writeFile (header, records) {
+    writeFile(header, records) {
         return new Promise((resolve, reject) => {
             const csvWriter = createCsvWriter({
                 path: path.resolve() + '/src/public/lista_usuarios.csv',
@@ -627,7 +628,7 @@ module.exports = {
         });
     },
 
-    writeFileLogs (header, records) {
+    writeFileLogs(header, records) {
         return new Promise((resolve, reject) => {
             const csvWriter = createCsvWriter({
                 path:
@@ -648,7 +649,7 @@ module.exports = {
         });
     },
 
-    createCSVString (header, records) {
+    createCSVString(header, records) {
         const csvStringfier = createObjectCsvStringifier({
             header,
             encoding: 'utf8',
@@ -660,5 +661,51 @@ module.exports = {
         ].join('');
 
         return csvString;
+    },
+
+    readXLSXHeaders(file) {
+        return new Promise((resolve, reject) => {
+            const workbook = new ExcelJS.Workbook();
+            workbook.xlsx.readFile(file).then(function () {
+                var worksheet = workbook.getWorksheet('Sua CargaUsuario Aqui');
+                if (!worksheet) worksheet = workbook.getWorksheet(0);
+                var objPattern = [];
+                var objUsers = [];
+
+                worksheet.eachRow(
+                    { includeEmpty: false },
+                    function (row, rowNumber) {
+                        if (objPattern.length == 0) {
+                            for (var i = 0; i < row.values.length; i++) {
+                                let labelCarga = row.values[i]
+                                    ? _functions.clearString(row.values[i])
+                                    : row.values[i];
+
+                                labelCarga = String(labelCarga).toUpperCase();
+
+                                const labelDB = mapUser[labelCarga];
+
+                                objPattern.push(labelDB);
+                            }
+                        } else {
+                            const tmpUser = {};
+
+                            for (var i = 0; i < row.values.length; i++) {
+                                tmpUser[objPattern[i]] =
+                                    row.values[i]?.text ?? row.values[i] ?? '';
+                            }
+
+                            delete tmpUser.undefined;
+
+                            if (tmpUser[objPattern[1]] != objPattern[1]) {
+                                objUsers.push(tmpUser);
+                            }
+                        }
+                    }
+                );
+                // resolve(objUsers);
+                resolve(['campo1', 'campo2', 'campo3']);
+            });
+        });
     },
 };

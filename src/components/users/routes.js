@@ -130,5 +130,11 @@ module.exports = express
     .post('/mfa/generate', _controller.generateMultiFactor)
     .post('/mfa/validate', _controller.validateMultiFactor)
     .post('/authorization', _controller.updateWebPushAuthorization)
-    .get('/map', _controller.getUserMap)
-    .put('/map', _controller.putUserMap);
+    .get('/map', validateTokenRoute, _controller.getUserMap)
+    .put('/map', validateTokenRoute, _controller.putUserMap)
+    .post(
+        '/map/read-headers',
+        validateTokenRoute,
+        formidable(),
+        _controller.readSheetHeaders
+    );

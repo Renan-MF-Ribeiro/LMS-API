@@ -2377,4 +2377,28 @@ module.exports = {
             );
         }
     },
+
+    async readSheetHeaders(req, res) {
+        try {
+            let file = null;
+            if (req.files.file) {
+                file = req.files.file;
+            } else {
+                file = req.files.content;
+            }
+
+            const results = await _files.readXLSXHeaders(file.path);
+
+            const data = _messages.success(res, req, data);
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'users',
+                'readSheetHeaders'
+            );
+        }
+    },
 };
