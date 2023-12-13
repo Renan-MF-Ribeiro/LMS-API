@@ -293,6 +293,59 @@ module.exports = {
         return data
     },
 
+    async persistUsers(results, { onboarding } = { onboarding: false }) {
+        const usersToSend = [];
+        const newUsers = [];
+        const updatedUsers = [];
+
+        for (const result of results) {
+            if (onboarding || (result.LOGIN_REDE && result.AREA)) {
+                const processedUser = await module.exports.processUsersLoad(
+                    result,
+                    { onboarding }
+                );
+                const account = await module.exports.processUserAccount(
+                    processedUser
+                );
+
+                usersToSend.push(account);
+                if (
+                    processedUser.createdAt.getTime() ===
+                    processedUser.updatedAt.getTime()
+                ) {
+                    newUsers.push(account);
+                } else {
+                    updatedUsers.push(updatedUsers.length + 1);
+                }
+            }
+        }
+
+        if (
+            config.messenger.sendUsersToMicrosservice &&
+            usersToSend.length > 0
+        ) {
+            const filterUsersToSend = usersToSend.filter(
+                (u) => u.status === "ATIVO"
+            );
+            for (let i = 0; i < filterUsersToSend.length; i += 500) {
+                await sendAccountsToKafka(filterUsersToSend.slice(i, i + 500));
+            }
+
+            if (config.messenger.sendWelcomeCampaign) {
+                const campaign = createWelcomeCampaign();
+                for (let i = 0; i < newUsers.length; i += 500) {
+                    await sendMessageToKafka(
+                        campaign,
+                        newUsers.slice(i, i + 500)
+                    );
+                    await Message.create(campaign);
+                }
+            }
+        }
+
+        return { newUsers: newUsers.length, updatedUsers: updatedUsers.length };
+    },
+
     async processUserAccount(data) {
         try {
             const { groupsAD = [] } = data

@@ -105,7 +105,8 @@ const userSchema = new mongoose.Schema(
         optionalEligibility2: { type: String, trim: true },
         optionalEligibility3: { type: String, trim: true },
         task: { type: String, trim: true },
-        webPushAuthorization: { type: Array, required: false, default: [] }
+        webPushAuthorization: { type: Array, required: false, default: [] },
+        onboarding: { type: Boolean, default: false },
     },
     {
         ...optionsSchema,

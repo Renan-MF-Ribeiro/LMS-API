@@ -42,6 +42,7 @@ const {
     sendUpdatedDeviceIdToMessenger,
     createWelcomeCampaign,
     returnDateSinceFirstLogin,
+    persistUsers
 } = require('./business');
 
 const {
@@ -1160,6 +1161,23 @@ module.exports = {
         }
     },
 
+    async importOnboarding (req, res) {
+        try {
+            const file = req.files.content
+            const results = await _files.readXLSXUsers(file.path)
+            console.log(`Iniciando processamento de ${results.length} usuários`)
+
+            const { newUsers, updatedUsers } = await persistUsers(results, { onboarding: true })
+
+            console.log(`${newUsers} usuários criados`)
+            console.log(`${updatedUsers} usuários atualizados`)
+
+            _messages.success(res, req, 'Importado com sucesso')
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'import')
+        }
+    },
+
     async returnUsers(req, res) {
         try {
             const { skip, limit } = pagination(req);
@@ -1227,6 +1245,15 @@ module.exports = {
                 'users',
                 'returnUsers'
             );
+        }
+    },
+
+    async returnUsersOnboarding (req, res) {
+        try {
+            const users = await findUsers(req, { onboarding: true })
+            _messages.success(res, req, users)
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'returnUsers')
         }
     },
 
