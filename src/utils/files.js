@@ -667,44 +667,21 @@ module.exports = {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.readFile(file).then(function () {
-                var worksheet = workbook.getWorksheet('Sua CargaUsuario Aqui');
+                let worksheet = workbook.getWorksheet('Sua CargaUsuario Aqui');
                 if (!worksheet) worksheet = workbook.getWorksheet(0);
-                var objPattern = [];
-                var objUsers = [];
+
+                const headers = [];
 
                 worksheet.eachRow(
                     { includeEmpty: false },
                     function (row, rowNumber) {
-                        if (objPattern.length == 0) {
-                            for (var i = 0; i < row.values.length; i++) {
-                                let labelCarga = row.values[i]
-                                    ? _functions.clearString(row.values[i])
-                                    : row.values[i];
-
-                                labelCarga = String(labelCarga).toUpperCase();
-
-                                const labelDB = mapUser[labelCarga];
-
-                                objPattern.push(labelDB);
-                            }
-                        } else {
-                            const tmpUser = {};
-
-                            for (var i = 0; i < row.values.length; i++) {
-                                tmpUser[objPattern[i]] =
-                                    row.values[i]?.text ?? row.values[i] ?? '';
-                            }
-
-                            delete tmpUser.undefined;
-
-                            if (tmpUser[objPattern[1]] != objPattern[1]) {
-                                objUsers.push(tmpUser);
-                            }
+                        if (rowNumber !== 1) return;
+                        for (let i = 0; i < row.values.length; i += 1) {
+                            if (row.values[i]) headers.push(row.values[i]);
                         }
                     }
                 );
-                // resolve(objUsers);
-                resolve(['campo1', 'campo2', 'campo3']);
+                resolve(headers);
             });
         });
     },

@@ -2387,9 +2387,8 @@ module.exports = {
                 file = req.files.content;
             }
 
-            const results = await _files.readXLSXHeaders(file.path);
-
-            const data = _messages.success(res, req, data);
+            const data = await _files.readXLSXHeaders(file.path);
+            _messages.success(res, req, data);
         } catch (error) {
             _messages.internalServer(
                 res,
