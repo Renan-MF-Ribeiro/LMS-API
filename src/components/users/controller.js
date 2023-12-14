@@ -42,7 +42,7 @@ const {
     sendUpdatedDeviceIdToMessenger,
     createWelcomeCampaign,
     returnDateSinceFirstLogin,
-    persistUsers
+    persistUsers,
 } = require('./business');
 
 const {
@@ -1161,20 +1161,31 @@ module.exports = {
         }
     },
 
-    async importOnboarding (req, res) {
+    async importOnboarding(req, res) {
         try {
-            const file = req.files.content
-            const results = await _files.readXLSXUsers(file.path)
-            console.log(`Iniciando processamento de ${results.length} usuários`)
+            const file = req.files.content;
+            const results = await _files.readXLSXUsers(file.path);
+            console.log(
+                `Iniciando processamento de ${results.length} usuários`
+            );
 
-            const { newUsers, updatedUsers } = await persistUsers(results, { onboarding: true })
+            const { newUsers, updatedUsers } = await persistUsers(results, {
+                onboarding: true,
+            });
 
-            console.log(`${newUsers} usuários criados`)
-            console.log(`${updatedUsers} usuários atualizados`)
+            console.log(`${newUsers} usuários criados`);
+            console.log(`${updatedUsers} usuários atualizados`);
 
-            _messages.success(res, req, 'Importado com sucesso')
+            _messages.success(res, req, 'Importado com sucesso');
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'import')
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'users',
+                'import'
+            );
         }
     },
 
@@ -1248,12 +1259,19 @@ module.exports = {
         }
     },
 
-    async returnUsersOnboarding (req, res) {
+    async returnUsersOnboarding(req, res) {
         try {
-            const users = await findUsers(req, { onboarding: true })
-            _messages.success(res, req, users)
+            const users = await findUsers(req, { onboarding: true });
+            _messages.success(res, req, users);
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users', 'returnUsers')
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'users',
+                'returnUsers'
+            );
         }
     },
 
@@ -2363,7 +2381,7 @@ module.exports = {
                 }
             );
 
-            _messages.success(res, req, data);
+            _messages.success(res, req, data.user);
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -2383,7 +2401,7 @@ module.exports = {
             const { data } = await axios.patch(
                 `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
                 {
-                    ...body,
+                    user: { ...body },
                 },
                 {
                     headers: {
@@ -2392,7 +2410,7 @@ module.exports = {
                 }
             );
 
-            _messages.success(res, req, data);
+            _messages.success(res, req, data.user);
         } catch (error) {
             _messages.internalServer(
                 res,
