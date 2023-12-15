@@ -43,6 +43,7 @@ const {
     createWelcomeCampaign,
     returnDateSinceFirstLogin,
     persistUsers,
+    findUsers
 } = require('./business');
 
 const {
