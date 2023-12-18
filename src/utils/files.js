@@ -105,7 +105,9 @@ const forEachRow = (row, rowNumber, map, labels, users, previousHyperLink) => {
                     );
                 });
                 previousHyperLink.index = i;
-            } else i = row.values.indexOf(value);
+            } else {
+                i = row.values.indexOf(value);
+            }
 
             if (labels[i] && row.values[i]) {
                 tmpUser[labels[i]] = row.values[i].text ?? row.values[i] ?? '';
