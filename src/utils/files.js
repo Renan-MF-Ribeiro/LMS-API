@@ -71,6 +71,50 @@ function bufferToStream(binary) {
     return readableInstanceStream;
 }
 
+const forEachRow = (row, rowNumber, map, labels, users, previousHyperLink) => {
+    if (rowNumber === 1) {
+        // rowNumber === 1 means its headers
+        for (const columnHeader of row.values) {
+            const mapEntries = Object.entries(map);
+            const labelDB = mapEntries.find(
+                (entry) => entry[1] && columnHeader && entry[1] === columnHeader
+            )?.[0];
+
+            labels.push(labelDB);
+        }
+    } else {
+        const tmpUser = {};
+        previousHyperLink.index = -1;
+
+        for (const value of row.values) {
+            if (!value) continue;
+
+            let i;
+            if (value.text) {
+                row.values.find((findValue, findIndex) => {
+                    if (!findValue?.text) return false;
+                    i = findIndex;
+                    return (
+                        findValue &&
+                        value &&
+                        findValue.text &&
+                        value.text &&
+                        findValue.text === value.text &&
+                        (previousHyperLink.index === -1 ||
+                            findIndex > previousHyperLink.index)
+                    );
+                });
+                previousHyperLink.index = i;
+            } else i = row.values.indexOf(value);
+
+            if (labels[i] && row.values[i]) {
+                tmpUser[labels[i]] = row.values[i].text ?? row.values[i] ?? '';
+            }
+        }
+        users.push(tmpUser);
+    }
+};
+
 module.exports = {
     // awsAmazon(file, folder) {
     //     return new Promise((resolve, reject) => {
@@ -519,52 +563,19 @@ module.exports = {
                 );
                 const labels = [];
                 const users = [];
+                let previousHyperLink = { index: -1 };
 
-                worksheet.eachRow(
-                    { includeEmpty: false },
-                    function (row, rowNumber) {
-                        if (rowNumber === 1) {
-                            // rowNumber === 1 means its headers
-                            for (const columnHeader of row.values) {
-                                const mapEntries = Object.entries(map);
-                                const labelDB = mapEntries.find(
-                                    (entry) => entry[1] === columnHeader
-                                )?.[0];
+                worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+                    return forEachRow(
+                        row,
+                        rowNumber,
+                        map,
+                        labels,
+                        users,
+                        previousHyperLink
+                    );
+                });
 
-                                labels.push(labelDB);
-                            }
-                        } else {
-                            const tmpUser = {};
-
-                            for (const value of row.values) {
-                                if (!value) continue;
-
-                                let i;
-                                if (value.text) {
-                                    row.values.find((findValue, findIndex) => {
-                                        i = findIndex;
-                                        return (
-                                            findValue &&
-                                            value &&
-                                            findValue.text &&
-                                            value.text &&
-                                            findValue.text === value.text
-                                        );
-                                    });
-                                } else i = row.values.indexOf(value);
-
-                                if (labels[i] && row.values[i]) {
-                                    tmpUser[labels[i]] =
-                                        row.values[i].text ??
-                                        row.values[i] ??
-                                        '';
-                                }
-                            }
-
-                            users.push(tmpUser);
-                        }
-                    }
-                );
                 resolve(users);
             });
         });
@@ -579,52 +590,18 @@ module.exports = {
                 );
                 const labels = [];
                 const users = [];
+                let previousHyperLink = { index: -1 };
 
-                worksheet.eachRow(
-                    { includeEmpty: false },
-                    function (row, rowNumber) {
-                        if (rowNumber === 1) {
-                            // rowNumber === 1 means its headers
-                            for (const columnHeader of row.values) {
-                                const mapEntries = Object.entries(map);
-                                const labelDB = mapEntries.find(
-                                    (entry) => entry[1] === columnHeader
-                                )?.[0];
-
-                                labels.push(labelDB);
-                            }
-                        } else {
-                            const tmpUser = {};
-
-                            for (const value of row.values) {
-                                if (!value) continue;
-
-                                let i;
-                                if (value.text) {
-                                    row.values.find((findValue, findIndex) => {
-                                        i = findIndex;
-                                        return (
-                                            findValue &&
-                                            value &&
-                                            findValue.text &&
-                                            value.text &&
-                                            findValue.text === value.text
-                                        );
-                                    });
-                                } else i = row.values.indexOf(value);
-
-                                if (labels[i] && row.values[i]) {
-                                    tmpUser[labels[i]] =
-                                        row.values[i].text ??
-                                        row.values[i] ??
-                                        '';
-                                }
-                            }
-
-                            users.push(tmpUser);
-                        }
-                    }
-                );
+                worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+                    return forEachRow(
+                        row,
+                        rowNumber,
+                        map,
+                        labels,
+                        users,
+                        previousHyperLink
+                    );
+                });
                 resolve(users);
             });
         });
