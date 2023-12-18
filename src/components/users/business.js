@@ -9,6 +9,8 @@ const {
     formatDate,
     getDateToday,
     calculateDiffDate,
+    pagination,
+    ordernation,
 } = require('../../utils/functions')
 const {
     ldapClient,
@@ -29,6 +31,72 @@ const emailTemplate = config.messenger.emailTemplate
 require('dotenv').config()
 
 module.exports = {
+    async findUsers(req, { onboarding }) {
+        const { skip, limit } = pagination(req);
+        const { order, sort } = ordernation(req);
+        const searchBy = req.query.searchBy;
+        const tag = req.query.tag;
+        let onboardingQuery 
+        if(tag){
+            onboardingQuery = onboarding
+            ? [{ onboarding: { $eq: onboarding } }]
+            : [
+                  {
+                      $or: [
+                          { onboarding: { $exists: false }, groupsAD: { $in: tag } },
+                          { onboarding: { $eq: onboarding }, groupsAD: { $in: tag }  },
+                      ],
+                  },
+              ];
+        }else{
+            onboardingQuery = onboarding
+            ? [{ onboarding: { $eq: onboarding } }]
+            : [
+                  {
+                      $or: [
+                          { onboarding: { $exists: false } },
+                          { onboarding: { $eq: onboarding } },
+                      ],
+                  },
+              ];
+        }
+
+        const searchByQuery = searchBy
+            ? {
+                  $or: [
+                      { name: { $regex: searchBy, $options: "i" } },
+                      { registration: { $regex: searchBy, $options: "i" } },
+                      { email: { $regex: searchBy, $options: "i" } },
+                  ],
+                  $and: onboardingQuery,
+              }
+            : {
+                  $and: onboardingQuery,
+              };
+
+        const users = await User.find(searchByQuery)
+            .sort({ [order]: sort })
+            .skip(parseInt(skip))
+            .limit(parseInt(limit));
+
+        const total = await User.find(searchByQuery).countDocuments();
+        const totalActive = await User.find({
+            status: "ATIVO",
+            $or: [...onboardingQuery],
+        }).countDocuments();
+        const totalInactive = await User.find({
+            status: "INATIVO",
+            $or: [...onboardingQuery],
+        }).countDocuments();
+
+        return {
+            data: users,
+            total,
+            totalActive,
+            totalInactive,
+        };
+    },
+
     checkAmountOfLocks(id) {
         return new Promise(async(resolve, reject) => {
             try {
