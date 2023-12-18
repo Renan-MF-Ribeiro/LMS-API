@@ -9,6 +9,7 @@ const {
     User,
     UserTest,
     Block,
+    mapUser,
     userSchema,
     userProjection,
 } = require('./model');
@@ -2433,7 +2434,12 @@ module.exports = {
             }
 
             const data = await _files.readXLSXHeaders(file.path);
-            _messages.success(res, req, data);
+            const fields = Object.entries(mapUser).map((entry) => ({
+                display: entry[0],
+                value: entry[1],
+            }));
+
+            _messages.success(res, req, { headers: data, fields });
         } catch (error) {
             _messages.internalServer(
                 res,
