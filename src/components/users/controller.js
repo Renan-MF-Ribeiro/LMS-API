@@ -9,9 +9,9 @@ const {
     User,
     UserTest,
     Block,
-    mapUser,
     userSchema,
     userProjection,
+    defaultUserMap,
 } = require('./model');
 
 const {
@@ -44,7 +44,7 @@ const {
     createWelcomeCampaign,
     returnDateSinceFirstLogin,
     persistUsers,
-    findUsers
+    findUsers,
 } = require('./business');
 
 const {
@@ -109,7 +109,21 @@ module.exports = {
                 );
             }
 
-            const processedUser = processUsersLoad(req.body);
+            const elegibilityResponse = await axios.get(
+                `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+                {
+                    headers: {
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                    },
+                }
+            );
+            const fieldsForElegibility = elegibilityResponse.fields;
+
+            const processedUser = processUsersLoad(
+                req.body,
+                fieldsForElegibility
+            );
+
             await User.create(processedUser);
             const created = await User.findOne(
                 { networkLogin: processedUser.networkLogin },
@@ -1094,12 +1108,26 @@ module.exports = {
                 file = req.files.content;
             }
             const results = await _files.readXLSXUsers(file.path);
+
+            const elegibilityResponse = await axios.get(
+                `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+                {
+                    headers: {
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                    },
+                }
+            );
+            const fieldsForElegibility = elegibilityResponse.fields;
+
             for (const result of results) {
                 const existingUser = await User.findOne({
                     networkLogin: result.networkLogin,
                 });
 
-                const processedUser = processUsersLoad(result);
+                const processedUser = processUsersLoad(
+                    result,
+                    fieldsForElegibility
+                );
                 const account = await processUserAccount(processedUser);
 
                 processedUser.password = existingUser
@@ -2378,7 +2406,7 @@ module.exports = {
                 `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
                 {
                     headers: {
-                        'system-user-key': process.env.CONNECT_CLIENT_KEY,
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
                     },
                 }
             );
@@ -2408,7 +2436,7 @@ module.exports = {
                 },
                 {
                     headers: {
-                        'system-user-key': process.env.CONNECT_CLIENT_KEY,
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
                     },
                 }
             );
@@ -2436,9 +2464,9 @@ module.exports = {
             }
 
             const data = await _files.readXLSXHeaders(file.path);
-            const fields = Object.entries(mapUser).map((entry) => ({
-                display: entry[0],
-                value: entry[1],
+            const fields = Object.entries(defaultUserMap).map((entry) => ({
+                display: entry[1],
+                value: entry[0],
             }));
 
             _messages.success(res, req, { headers: data, fields });

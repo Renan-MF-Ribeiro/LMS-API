@@ -9,6 +9,7 @@ const { populateTrails } = require('../components/trails/business');
 const { Tracking } = require('../components/tracking/model');
 const { Trail } = require('../components/trails/model');
 const moment = require('moment');
+const axios = require('axios');
 const {
     isSCORMCompleted,
     calculateAverage,
@@ -227,7 +228,7 @@ module.exports = {
     },
 
     executeRecommendedTrails() {
-        recommendedTrailsCron()
+        recommendedTrailsCron();
     },
 
     executeCourseReleaseNotification() {
@@ -248,17 +249,25 @@ module.exports = {
 
 async function recommendedTrailsCron() {
     try {
-        const completedTrackingsFromTheLastDay = await Tracking.find({ "completionAt": { $ne: null }, "createdAt": { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } })
-        const trails = []
+        const completedTrackingsFromTheLastDay = await Tracking.find({
+            completionAt: { $ne: null },
+            createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+        });
+        const trails = [];
         for (const t of completedTrackingsFromTheLastDay) {
-            const trail = await Trail.findOne({ "items.itemID": { $in: t.item } })
+            const trail = await Trail.findOne({
+                'items.itemID': { $in: t.item },
+            });
 
-            trails.push(trail._id)
+            trails.push(trail._id);
         }
         const recommendedTrails = findMostOccurringElements(trails, 5);
-        await Section.findOneAndUpdate({defaultType: "most_completed"}, {$set: {trails: recommendedTrails}})
+        await Section.findOneAndUpdate(
+            { defaultType: 'most_completed' },
+            { $set: { trails: recommendedTrails } }
+        );
     } catch (error) {
-        console.log(error)
+        console.log(error);
     }
 }
 
@@ -417,7 +426,7 @@ function groupCron(usersLastLogin, grouping) {
                 const averageCompanyCourses =
                     numberTrailsElegiblesCompany > 0
                         ? (numberTrailsCompletedCompany * 100) /
-                        numberTrailsElegiblesCompany
+                          numberTrailsElegiblesCompany
                         : 0;
 
                 const log = await AverageCourses.findOne({
@@ -509,6 +518,16 @@ async function getUsersLoad() {
             const existingUsers = [];
             const usersToSend = [];
 
+            const elegibilityResponse = await axios.get(
+                `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+                {
+                    headers: {
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                    },
+                }
+            );
+            const fieldsForElegibility = elegibilityResponse.fields;
+
             console.log(
                 `Iniciando Processamento de ${users.length} usuários...`
             );
@@ -517,7 +536,10 @@ async function getUsersLoad() {
                     networkLogin: user.networkLogin,
                 });
 
-                const processedUser = processUsersLoad(user);
+                const processedUser = processUsersLoad(
+                    user,
+                    fieldsForElegibility
+                );
                 const account = await processUserAccount(processedUser);
 
                 processedUser.password = existingUser
@@ -928,7 +950,7 @@ async function cronDegreedCharge(hours) {
                         'pt',
                         String(
                             Math.ceil((itemDetails.durationHours / 60) * 10) /
-                            10
+                                10
                         )
                             .split('.')
                             .join(','),
@@ -1061,8 +1083,8 @@ async function revokeTrail() {
                     const startDate = new Date(lastCompletionAt);
                     const expirationDate = !isFixed
                         ? moment(startDate)
-                            .add(trail.certificateDue.value, 'days')
-                            .toDate()
+                              .add(trail.certificateDue.value, 'days')
+                              .toDate()
                         : new Date(trail.certificateDue.value);
 
                     return {

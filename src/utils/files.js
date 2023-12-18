@@ -17,8 +17,9 @@ const { BlobServiceClient } = require('@azure/storage-blob');
 const { ShareServiceClient } = require('@azure/storage-file-share');
 const momentz = require('moment-timezone');
 const ExcelJS = require('exceljs');
+const axios = require('axios');
 const _functions = require('./functions');
-const { mapUser } = require('./../components/users/model');
+const { mapUserOld, defaultUserMap } = require('./../components/users/model');
 const { Item, MediaItem } = require('../components/items/model');
 const { sleep } = require('./functions');
 const {
@@ -497,46 +498,74 @@ module.exports = {
         return workbook;
     },
 
-    readXLSXUsers(file) {
+    async readXLSXUsers(file) {
+        const mapsResponse = await axios.get(
+            `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
+            {
+                headers: {
+                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                },
+            }
+        );
+        const maps = mapsResponse.data;
+        const map =
+            maps.user && maps.user.keys.length > 0 ? maps.user : defaultUserMap;
+
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.readFile(file).then(function () {
-                var worksheet = workbook.getWorksheet('Sua CargaUsuario Aqui');
-                var objPattern = [];
-                var objUsers = [];
+                const worksheet = workbook.getWorksheet(
+                    'Sua CargaUsuario Aqui'
+                );
+                const labels = [];
+                const users = [];
 
                 worksheet.eachRow(
                     { includeEmpty: false },
                     function (row, rowNumber) {
-                        if (objPattern.length == 0) {
-                            for (var i = 0; i < row.values.length; i++) {
-                                let labelCarga = row.values[i]
-                                    ? _functions.clearString(row.values[i])
-                                    : row.values[i];
+                        if (rowNumber === 1) {
+                            // rowNumber === 1 means its headers
+                            for (const columnHeader of row.values) {
+                                const mapEntries = Object.entries(map);
+                                const labelDB = mapEntries.find(
+                                    (entry) => entry[1] === columnHeader
+                                )?.[0];
 
-                                labelCarga = String(labelCarga).toUpperCase();
-
-                                const labelDB = mapUser[labelCarga];
-
-                                objPattern.push(labelDB);
+                                labels.push(labelDB);
                             }
                         } else {
                             const tmpUser = {};
 
-                            for (var i = 0; i < row.values.length; i++) {
-                                tmpUser[objPattern[i]] =
-                                    row.values[i]?.text ?? row.values[i] ?? '';
+                            for (const value of row.values) {
+                                if (!value) continue;
+
+                                let i;
+                                if (value.text) {
+                                    row.values.find((findValue, findIndex) => {
+                                        i = findIndex;
+                                        return (
+                                            findValue &&
+                                            value &&
+                                            findValue.text &&
+                                            value.text &&
+                                            findValue.text === value.text
+                                        );
+                                    });
+                                } else i = row.values.indexOf(value);
+
+                                if (labels[i] && row.values[i]) {
+                                    tmpUser[labels[i]] =
+                                        row.values[i].text ??
+                                        row.values[i] ??
+                                        '';
+                                }
                             }
 
-                            delete tmpUser.undefined;
-
-                            if (tmpUser[objPattern[1]] != objPattern[1]) {
-                                objUsers.push(tmpUser);
-                            }
+                            users.push(tmpUser);
                         }
                     }
                 );
-                resolve(objUsers);
+                resolve(users);
             });
         });
     },
@@ -545,50 +574,58 @@ module.exports = {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.load(file).then(function () {
-                var worksheet = workbook.getWorksheet('Sua CargaUsuario Aqui');
-                var objPattern = [];
-                var objUsers = [];
+                const worksheet = workbook.getWorksheet(
+                    'Sua CargaUsuario Aqui'
+                );
+                const labels = [];
+                const users = [];
 
                 worksheet.eachRow(
                     { includeEmpty: false },
                     function (row, rowNumber) {
-                        if (objPattern.length == 0) {
-                            for (var i = 0; i < row.values.length; i++) {
-                                let labelCarga = row.values[i]
-                                    ? _functions.clearString(row.values[i])
-                                    : row.values[i];
+                        if (rowNumber === 1) {
+                            // rowNumber === 1 means its headers
+                            for (const columnHeader of row.values) {
+                                const mapEntries = Object.entries(map);
+                                const labelDB = mapEntries.find(
+                                    (entry) => entry[1] === columnHeader
+                                )?.[0];
 
-                                labelCarga = String(labelCarga).toUpperCase();
-
-                                const labelDB = mapUser[labelCarga];
-
-                                objPattern.push(labelDB);
+                                labels.push(labelDB);
                             }
                         } else {
                             const tmpUser = {};
 
-                            for (var i = 0; i < row.values.length; i++) {
-                                const val =
-                                    typeof row.values[i] === 'object' &&
-                                    row.values[i].text != undefined
-                                        ? row.values[i].text
-                                        : row.values[i];
-                                const tmpValue =
-                                    String(row.values[i]) != 'undefined'
-                                        ? String(val)
-                                        : '';
-                                tmpUser[objPattern[i]] = tmpValue;
+                            for (const value of row.values) {
+                                if (!value) continue;
+
+                                let i;
+                                if (value.text) {
+                                    row.values.find((findValue, findIndex) => {
+                                        i = findIndex;
+                                        return (
+                                            findValue &&
+                                            value &&
+                                            findValue.text &&
+                                            value.text &&
+                                            findValue.text === value.text
+                                        );
+                                    });
+                                } else i = row.values.indexOf(value);
+
+                                if (labels[i] && row.values[i]) {
+                                    tmpUser[labels[i]] =
+                                        row.values[i].text ??
+                                        row.values[i] ??
+                                        '';
+                                }
                             }
 
-                            delete tmpUser.undefined;
-
-                            if (tmpUser[objPattern[1]] != objPattern[1]) {
-                                objUsers.push(tmpUser);
-                            }
+                            users.push(tmpUser);
                         }
                     }
                 );
-                resolve(objUsers);
+                resolve(users);
             });
         });
     },
