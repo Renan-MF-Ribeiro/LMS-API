@@ -364,7 +364,9 @@ module.exports = {
         if (elegibilityFields && elegibilityFields.length > 0) {
             for (const field of elegibilityFields) {
                 if (data[field]) {
-                    groupsAD.push(`ELEGE_${clearString(data[field])}`);
+                    groupsAD.push(
+                        `ELEGE_${_functions.clearString(data[field])}`
+                    );
                 }
             }
         } else {
@@ -440,7 +442,7 @@ module.exports = {
                 },
             }
         );
-        const fieldsForElegibility = elegibilityResponse.fields;
+        const fieldsForElegibility = elegibilityResponse.data.fields;
 
         for (const result of results) {
             if (onboarding || (result.LOGIN_REDE && result.AREA)) {

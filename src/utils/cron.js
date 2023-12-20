@@ -526,7 +526,7 @@ async function getUsersLoad() {
                     },
                 }
             );
-            const fieldsForElegibility = elegibilityResponse.fields;
+            const fieldsForElegibility = elegibilityResponse.data.fields;
 
             console.log(
                 `Iniciando Processamento de ${users.length} usuários...`

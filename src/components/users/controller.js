@@ -117,7 +117,7 @@ module.exports = {
                     },
                 }
             );
-            const fieldsForElegibility = elegibilityResponse.fields;
+            const fieldsForElegibility = elegibilityResponse.data.fields;
 
             const processedUser = processUsersLoad(
                 req.body,
@@ -1117,7 +1117,7 @@ module.exports = {
                     },
                 }
             );
-            const fieldsForElegibility = elegibilityResponse.fields;
+            const fieldsForElegibility = elegibilityResponse.data.fields;
 
             for (const result of results) {
                 const existingUser = await User.findOne({
@@ -2416,7 +2416,7 @@ module.exports = {
                 value: entry[0],
             }));
 
-            _messages.success(res, req, {map: data.user, fields});
+            _messages.success(res, req, { map: data.user, fields });
         } catch (error) {
             _messages.internalServer(
                 res,

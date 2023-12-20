@@ -106,7 +106,17 @@ const forEachRow = (row, rowNumber, map, labels, users, previousHyperLink) => {
                 });
                 previousHyperLink.index = i;
             } else {
-                i = row.values.indexOf(value);
+                row.values.find((findValue, findIndex) => {
+                    if (findValue?.text) return false;
+                    if (
+                        tmpUser[labels[findIndex]] &&
+                        tmpUser[labels[findIndex]] === findValue
+                    )
+                        return false;
+
+                    i = findIndex;
+                    return findValue === value;
+                });
             }
 
             if (labels[i] && row.values[i]) {
