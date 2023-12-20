@@ -2411,7 +2411,12 @@ module.exports = {
                 }
             );
 
-            _messages.success(res, req, data.user);
+            const fields = Object.entries(defaultUserMap).map((entry) => ({
+                display: entry[1],
+                value: entry[0],
+            }));
+
+            _messages.success(res, req, {map: data.user, fields});
         } catch (error) {
             _messages.internalServer(
                 res,
