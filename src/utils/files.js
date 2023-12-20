@@ -563,6 +563,12 @@ module.exports = {
                 const worksheet = workbook.getWorksheet(
                     'Sua CargaUsuario Aqui'
                 );
+
+                if (!worksheet)
+                    throw new Error(
+                        'Planilha "Sua CargaUsuario Aqui" não encontrada'
+                    );
+
                 const labels = [];
                 const users = [];
                 let previousHyperLink = { index: -1 };
