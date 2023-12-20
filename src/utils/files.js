@@ -560,14 +560,9 @@ module.exports = {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.readFile(file).then(function () {
-                const worksheet = workbook.getWorksheet(
-                    'Sua CargaUsuario Aqui'
-                );
+                let worksheet = workbook.getWorksheet('Sua CargaUsuario Aqui');
 
-                if (!worksheet)
-                    throw new Error(
-                        'Planilha "Sua CargaUsuario Aqui" não encontrada'
-                    );
+                if (!worksheet) worksheet = workbook.worksheets[0];
 
                 const labels = [];
                 const users = [];
@@ -593,9 +588,9 @@ module.exports = {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.load(file).then(function () {
-                const worksheet = workbook.getWorksheet(
-                    'Sua CargaUsuario Aqui'
-                );
+                let worksheet = workbook.getWorksheet('Sua CargaUsuario Aqui');
+                if (!worksheet) worksheet = workbook.worksheets[0];
+
                 const labels = [];
                 const users = [];
                 let previousHyperLink = { index: -1 };
