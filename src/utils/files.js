@@ -545,7 +545,7 @@ module.exports = {
     },
 
     async readXLSXUsers(file) {
-        const mapsResponse = await axios.get(
+        const getMapsResponse = await axios.get(
             `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
             {
                 headers: {
@@ -553,9 +553,12 @@ module.exports = {
                 },
             }
         );
-        const maps = mapsResponse.data;
+        const connectMaps = getMapsResponse.data;
+
         const map =
-            maps.user && maps.user.keys.length > 0 ? maps.user : defaultUserMap;
+            connectMaps.user && Object.keys(connectMaps.user).length > 0
+                ? connectMaps.user
+                : defaultUserMap;
 
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
