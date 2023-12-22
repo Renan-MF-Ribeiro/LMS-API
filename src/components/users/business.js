@@ -361,7 +361,7 @@ module.exports = {
 
         const groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO'];
 
-        if (elegibilityFields && elegibilityFields.length > 0) {
+        if (elegibilityFields && elegibilityFields.length > 0 && onboarding == false) {
             for (const field of elegibilityFields) {
                 if (data[field]) {
                     groupsAD.push(
