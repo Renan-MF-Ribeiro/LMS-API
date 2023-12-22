@@ -1167,6 +1167,7 @@ module.exports = {
                 console.log(
                     `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
                 );
+                
                 await User.insertMany(newUsers);
 
                 if (config.messenger.sendUsersToMicrosservice) {
@@ -1193,18 +1194,85 @@ module.exports = {
 
     async importOnboarding(req, res) {
         try {
-            const file = req.files.content;
-            const results = await _files.readXLSXUsers(file.path);
-            console.log(
-                `Iniciando processamento de ${results.length} usuários`
+            const onboarding = true
+            var file = null;
+            const newUsers = [];
+            const existingUsers = [];
+            const usersToSend = [];
+            if (req.files.file) {
+                file = req.files.file;
+            } else {
+                file = req.files.content;
+            }
+            const results = await _files.readXLSXUsers(file.path, onboarding);
+            const elegibilityResponse = await axios.get(
+                `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+                {
+                    headers: {
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                    },
+                }
             );
+            const fieldsForElegibility = elegibilityResponse.data.fields;
 
-            const { newUsers, updatedUsers } = await persistUsers(results, {
-                onboarding: true,
-            });
+            for (const result of results) {
+                const existingUser = await User.findOne({
+                    networkLogin: result.networkLogin,
+                });
+                const processedUser = processUsersLoad(
+                    result,
+                    fieldsForElegibility,
+                    onboarding
+                );
+                const account = await processUserAccount(processedUser);
 
-            console.log(`${newUsers} usuários criados`);
-            console.log(`${updatedUsers} usuários atualizados`);
+                processedUser.password = existingUser
+                    ? existingUser.password
+                    : processedUser.password;
+
+                if (existingUser) {
+                    existingUsers.push({
+                        _id: existingUser._id,
+                        processedUser,
+                    });
+                } else {
+                    usersToSend.push(account);
+                    newUsers.push(processedUser);
+                }
+            }
+
+            console.log(
+                `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
+            );
+            for (const user of existingUsers) {
+                await User.findByIdAndUpdate(user._id, {
+                    ...user.processedUser,
+                });
+            }
+
+            if (inactivateIfNotInSpreadsheet) {
+                const data_start = new Date();
+                await User.updateMany(
+                    { updatedAt: { $lt: data_start } },
+                    { $set: { status: 'INATIVO' } },
+                    { multi: true }
+                );
+            }
+
+            if (newUsers.length > 0) {
+                console.log(
+                    `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
+                );
+
+                await User.insertMany(newUsers);
+
+                if (config.messenger.sendUsersToMicrosservice) {
+                    await sendAccountsToKafka(usersToSend);
+                    const campaign = createWelcomeCampaign();
+                    await sendMessageToKafka(campaign, newUsers);
+                    await NewMessage.create(campaign);
+                }
+            }
 
             _messages.success(res, req, 'Importado com sucesso');
         } catch (error) {

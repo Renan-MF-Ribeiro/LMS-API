@@ -79,7 +79,6 @@ const forEachRow = (row, rowNumber, map, labels, users, previousHyperLink) => {
             const labelDB = mapEntries.find(
                 (entry) => entry[1] && columnHeader && entry[1] === columnHeader
             )?.[0];
-
             labels.push(labelDB);
         }
     } else {
@@ -88,7 +87,7 @@ const forEachRow = (row, rowNumber, map, labels, users, previousHyperLink) => {
 
         for (const value of row.values) {
             if (!value) continue;
-
+            
             let i;
             if (value.text) {
                 row.values.find((findValue, findIndex) => {
@@ -554,7 +553,7 @@ module.exports = {
         return workbook;
     },
 
-    async readXLSXUsers(file) {
+    async readXLSXUsers(file, onboarding = false) {
         const getMapsResponse = await axios.get(
             `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
             {
@@ -566,10 +565,9 @@ module.exports = {
         const connectMaps = getMapsResponse.data;
 
         const map =
-            connectMaps.user && Object.keys(connectMaps.user).length > 0
+            connectMaps.user && Object.keys(connectMaps.user).length > 0 && onboarding == false
                 ? connectMaps.user
                 : defaultUserMap;
-
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.readFile(file).then(function () {

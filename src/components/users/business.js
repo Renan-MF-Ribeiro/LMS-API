@@ -333,7 +333,7 @@ module.exports = {
         });
     },
 
-    processUsersLoad(data, elegibilityFields = []) {
+    processUsersLoad(data, elegibilityFields = [], onboarding = false) {
         const salt = bcrypt.genSaltSync(10);
         const initialPasswordKey = '1234';
         data.password = [
@@ -426,6 +426,10 @@ module.exports = {
             // data.networkLogin = data.cpf
         }
 
+        if(onboarding){
+            data.onboarding = true
+        }
+
         return data;
     },
 
@@ -445,7 +449,7 @@ module.exports = {
         const fieldsForElegibility = elegibilityResponse.data.fields;
 
         for (const result of results) {
-            if (onboarding || (result.LOGIN_REDE && result.AREA)) {
+            if (onboarding) {
                 const processedUser = await module.exports.processUsersLoad(
                     result,
                     fieldsForElegibility
