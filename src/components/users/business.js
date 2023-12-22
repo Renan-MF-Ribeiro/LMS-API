@@ -456,8 +456,8 @@ module.exports = {
 
                 usersToSend.push(account);
                 if (
-                    processedUser.createdAt.getTime() ===
-                    processedUser.updatedAt.getTime()
+                    processedUser.createdAt ===
+                    processedUser.updatedAt
                 ) {
                     newUsers.push(account);
                 } else {
