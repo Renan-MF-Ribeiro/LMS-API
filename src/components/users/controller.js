@@ -2411,7 +2411,11 @@ module.exports = {
                     },
                 }
             );
-            const userMap = data.user ? data.user : defaultUserMap;
+
+            const userMap =
+                data.user && Object.keys(data.user).length > 0
+                    ? data.user
+                    : defaultUserMap;
 
             const fields = Object.entries(defaultUserMap).map((entry) => ({
                 display: entry[1],
