@@ -427,6 +427,7 @@ module.exports = {
         }
 
         if(onboarding){
+            data.networkLogin = data.cpf
             data.onboarding = true
         }
 
