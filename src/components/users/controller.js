@@ -1208,6 +1208,7 @@ module.exports = {
 
             _messages.success(res, req, 'Importado com sucesso');
         } catch (error) {
+            console.log(error)
             _messages.internalServer(
                 res,
                 req,
