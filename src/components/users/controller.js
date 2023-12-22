@@ -1208,7 +1208,7 @@ module.exports = {
 
             _messages.success(res, req, 'Importado com sucesso');
         } catch (error) {
-            console.log(error)
+            console.log(error);
             _messages.internalServer(
                 res,
                 req,
@@ -2411,13 +2411,14 @@ module.exports = {
                     },
                 }
             );
+            const userMap = data.user ? data.user : defaultUserMap;
 
             const fields = Object.entries(defaultUserMap).map((entry) => ({
                 display: entry[1],
                 value: entry[0],
             }));
 
-            _messages.success(res, req, { map: data.user, fields });
+            _messages.success(res, req, { map: userMap, fields });
         } catch (error) {
             _messages.internalServer(
                 res,
