@@ -11,6 +11,7 @@ const {
     getUserByToken,
     getTagsGroupsByToken,
     processTrailTracking,
+    getDateTodayWithoutHours
 } = require('../../utils/functions');
 const {
     trailsCompletedOrInProgress,
@@ -178,10 +179,12 @@ const ItemController = {
                 delete tag.createdAt;
                 tags.push(tag);
             }
-
+            
             const allTrailsElegibles = await Trail.find({
                 tags: { $in: tags },
-                enabled: true
+                enabled: true,
+                startDate: { $lt: getDateTodayWithoutHours() },
+                endDate: { $gt: getDateTodayWithoutHours() },
             }).countDocuments();
 
             await User.findByIdAndUpdate(user._id, {
@@ -247,8 +250,11 @@ const ItemController = {
 
             const allTrailsElegibles = await Trail.find({
                 tags: { $in: tags },
-                enabled: true
+                enabled: true,
+                startDate: { $lt: getDateTodayWithoutHours() },
+                endDate: { $gt: getDateTodayWithoutHours() },
             }).countDocuments();
+
 
             // await User.findByIdAndUpdate(user._id, { averageRating: averageStudent.toFixed(2), numberTrailsCompleted, numberTrailsElegibles })
 
