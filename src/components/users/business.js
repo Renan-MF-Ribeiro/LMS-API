@@ -361,12 +361,24 @@ module.exports = {
 
         const groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO'];
 
-        if (elegibilityFields && elegibilityFields.length > 0 && onboarding == false) {
+        if (
+            elegibilityFields &&
+            elegibilityFields.length > 0 &&
+            onboarding == false
+        ) {
             for (const field of elegibilityFields) {
                 if (data[field]) {
-                    groupsAD.push(
-                        `ELEGE_${_functions.clearString(data[field])}`
-                    );
+                    console.log({
+                        field,
+                        datafield: data[field],
+                        type: typeof data[field],
+                    });
+                    const value =
+                        typeof data[field] !== 'string'
+                            ? data[field]
+                            : _functions.clearString(data[field]);
+
+                    groupsAD.push(`ELEGE_${value}`);
                 }
             }
         } else {
@@ -426,9 +438,9 @@ module.exports = {
             // data.networkLogin = data.cpf
         }
 
-        if(onboarding){
-            data.networkLogin = data.cpf
-            data.onboarding = true
+        if (onboarding) {
+            data.networkLogin = data.cpf;
+            data.onboarding = true;
         }
 
         return data;
@@ -460,10 +472,7 @@ module.exports = {
                 );
 
                 usersToSend.push(account);
-                if (
-                    processedUser.createdAt ===
-                    processedUser.updatedAt
-                ) {
+                if (processedUser.createdAt === processedUser.updatedAt) {
                     newUsers.push(account);
                 } else {
                     updatedUsers.push(updatedUsers.length + 1);
