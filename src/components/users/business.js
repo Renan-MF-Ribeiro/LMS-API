@@ -373,8 +373,11 @@ module.exports = {
                         datafield: data[field],
                         type: typeof data[field],
                     });
+                    const fieldType = typeof data[field];
+                    if (fieldType === 'object') continue;
+
                     const value =
-                        typeof data[field] !== 'string'
+                        fieldType !== 'string'
                             ? data[field]
                             : _functions.clearString(data[field]);
 
