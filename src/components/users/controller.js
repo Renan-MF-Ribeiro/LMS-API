@@ -1298,17 +1298,17 @@ module.exports = {
                 searchBy
                     ? {
                           $or: [
-                              { name: { $regex: searchBy, $options: 'i' } },
+                              { name: { $regex: searchBy, $options: 'i' }, onboarding: false },
                               {
                                   registration: {
                                       $regex: searchBy,
                                       $options: 'i',
-                                  },
+                                  }, onboarding: false
                               },
-                              { email: { $regex: searchBy, $options: 'i' } },
+                              { email: { $regex: searchBy, $options: 'i' }, onboarding: false},
                           ],
                       }
-                    : {}
+                    : { onboarding: false }
             )
                 .sort({
                     [order]: sort,
@@ -1318,19 +1318,19 @@ module.exports = {
 
             const total = await User.find(
                 searchBy
-                    ? {
-                          $or: [
-                              { name: { $regex: searchBy, $options: 'i' } },
-                              {
-                                  registration: {
-                                      $regex: searchBy,
-                                      $options: 'i',
-                                  },
-                              },
-                              { email: { $regex: searchBy, $options: 'i' } },
-                          ],
-                      }
-                    : {}
+                ? {
+                    $or: [
+                        { name: { $regex: searchBy, $options: 'i' }, onboarding: false },
+                        {
+                            registration: {
+                                $regex: searchBy,
+                                $options: 'i',
+                            }, onboarding: false
+                        },
+                        { email: { $regex: searchBy, $options: 'i' }, onboarding: false},
+                    ],
+                }
+              : { onboarding: false }
             ).countDocuments();
 
             const totalActive = await User.find({
