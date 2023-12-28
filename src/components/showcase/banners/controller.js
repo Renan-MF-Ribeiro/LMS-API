@@ -54,7 +54,7 @@ module.exports = {
             if (findSection.length) {
 
                 for (const file of fileArray) {
-                    let path = await azureBlob(file, 'showcase/banners')
+                    let path = await azureBlob(file, 'showcase/banners', false, 'lmsassetsanon')
                     path = path.replace(AZURE_BLOB_URL, DOMAIN)
                     const index = body.banners.findIndex((el) => el.path == file.name)
                     body.banners[index].path = path
@@ -90,7 +90,7 @@ module.exports = {
             const fileArray = Object.keys(req.files).map(key => req.files[key])
 
             for (const file of fileArray) {
-                let path = await azureBlob(file, 'showcase/banners')
+                let path = await azureBlob(file, 'showcase/banners', false, 'lmsassetsanon')
                 path = path.replace(AZURE_BLOB_URL, DOMAIN)
                 const index = body.banners.findIndex((el) => el.path == file.name)
                 body.banners[index].path = path

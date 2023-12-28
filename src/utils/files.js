@@ -47,7 +47,7 @@ const {
 
 shelljs.mkdir('-p', UPLOADS_PATH);
 
-async function streamToBuffer(readableStream) {
+async function streamToBuffer (readableStream) {
     return new Promise((resolve, reject) => {
         const chunks = [];
         readableStream.on('data', (data) => {
@@ -60,9 +60,9 @@ async function streamToBuffer(readableStream) {
     });
 }
 
-function bufferToStream(binary) {
+function bufferToStream (binary) {
     const readableInstanceStream = new Readable({
-        read() {
+        read () {
             this.push(binary);
             this.push(null);
         },
@@ -87,7 +87,7 @@ const forEachRow = (row, rowNumber, map, labels, users, previousHyperLink) => {
 
         for (const value of row.values) {
             if (!value) continue;
-            
+
             let i;
             if (value.text) {
                 row.values.find((findValue, findIndex) => {
@@ -163,13 +163,13 @@ module.exports = {
     //     });
     // },
 
-    async azureBlob(file, folder, ignoreStream = false) {
+    async azureBlob (file, folder, ignoreStream = false, container = 'lmsassets') {
         // return new Promise((resolve, reject) => {
         const blobServiceClient =
             BlobServiceClient.fromConnectionString(AZURE_STRINGCONN);
 
         const containerClient =
-            blobServiceClient.getContainerClient('lmsassets');
+            blobServiceClient.getContainerClient(container);
         // containerClient.create();
         // console.log(containerClient)
 
@@ -205,7 +205,7 @@ module.exports = {
         return url;
     },
 
-    async getAzureFile() {
+    async getAzureFile () {
         try {
             const env = process.env.NODE_ENV;
             const directory = env === 'production' ? 'producao' : 'homologacao';
@@ -238,7 +238,7 @@ module.exports = {
         // return await streamToBuffer(downloadFileResponse.readableStreamBody)
     },
 
-    async moveUserLoadToProcessed(buffer) {
+    async moveUserLoadToProcessed (buffer) {
         try {
             const env = process.env.NODE_ENV;
             const directory = env === 'production' ? 'producao' : 'homologacao';
@@ -264,7 +264,7 @@ module.exports = {
         }
     },
 
-    vimeoFilePathCreate(file, payload, user, mode = 'create') {
+    vimeoFilePathCreate (file, payload, user, mode = 'create') {
         let filePath;
         let fileType;
         let uploadStatus;
@@ -354,7 +354,7 @@ module.exports = {
         }, 5000);
     },
 
-    vimeoFilePathUpdate(file, payload, user, vimeoId) {
+    vimeoFilePathUpdate (file, payload, user, vimeoId) {
         let uploadStatus;
         const vimeoIdPath = `/videos/${vimeoId}`;
         const fileName = file.name;
@@ -429,7 +429,7 @@ module.exports = {
         }, 5000);
     },
 
-    async moveUpload(file) {
+    async moveUpload (file) {
         if (!file) return null;
 
         const hash = revHash(file.path);
@@ -449,17 +449,17 @@ module.exports = {
         )
     ),
 
-    mkdirSCORM(packageId) {
+    mkdirSCORM (packageId) {
         const _path = path.join(UPLOADS_PATH, 'scorm', packageId);
 
         try {
             shelljs.mkdir('-p', _path);
-        } catch {}
+        } catch { }
 
         return _path;
     },
 
-    mvFile(file, name) {
+    mvFile (file, name) {
         return new Promise((resolve, reject) => {
             try {
                 const _path = path.join(UPLOADS_PATH, name);
@@ -471,7 +471,7 @@ module.exports = {
         });
     },
 
-    readXLSX(file) {
+    readXLSX (file) {
         return new Promise((resolve, reject) => {
             xlsx(file)
                 .then((rows) => {
@@ -484,7 +484,7 @@ module.exports = {
         });
     },
 
-    readXLSXAlternative(file) {
+    readXLSXAlternative (file) {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.readFile(file).then(() => {
@@ -501,7 +501,7 @@ module.exports = {
         });
     },
 
-    readXLSXClassGroups(file) {
+    readXLSXClassGroups (file) {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.readFile(file).then(function () {
@@ -537,7 +537,7 @@ module.exports = {
         });
     },
 
-    writeXlsxClassGroupsResults(workbook, results) {
+    writeXlsxClassGroupsResults (workbook, results) {
         const worksheet = workbook.getWorksheet('Sua Carga Aqui');
 
         worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
@@ -553,7 +553,7 @@ module.exports = {
         return workbook;
     },
 
-    async readXLSXUsers(file, onboarding = false) {
+    async readXLSXUsers (file, onboarding = false) {
         const getMapsResponse = await axios.get(
             `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
             {
@@ -595,7 +595,7 @@ module.exports = {
         });
     },
 
-    readXLSXUsersBuffer(file) {
+    readXLSXUsersBuffer (file) {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.load(file).then(function () {
@@ -621,7 +621,7 @@ module.exports = {
         });
     },
 
-    readCSV(file) {
+    readCSV (file) {
         return new Promise((resolve, reject) => {
             try {
                 const results = [];
@@ -638,7 +638,7 @@ module.exports = {
         });
     },
 
-    writeFile(header, records) {
+    writeFile (header, records) {
         return new Promise((resolve, reject) => {
             const csvWriter = createCsvWriter({
                 path: path.resolve() + '/src/public/lista_usuarios.csv',
@@ -656,7 +656,7 @@ module.exports = {
         });
     },
 
-    writeFileLogs(header, records) {
+    writeFileLogs (header, records) {
         return new Promise((resolve, reject) => {
             const csvWriter = createCsvWriter({
                 path:
@@ -677,7 +677,7 @@ module.exports = {
         });
     },
 
-    createCSVString(header, records) {
+    createCSVString (header, records) {
         const csvStringfier = createObjectCsvStringifier({
             header,
             encoding: 'utf8',
@@ -691,7 +691,7 @@ module.exports = {
         return csvString;
     },
 
-    readXLSXHeaders(file) {
+    readXLSXHeaders (file) {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.readFile(file).then(function () {

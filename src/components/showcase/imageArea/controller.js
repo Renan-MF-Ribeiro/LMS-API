@@ -61,7 +61,7 @@ module.exports = {
                     if (indexBG >= 0) {
 
                         console.log(fileArray, indexBG)
-                        let pathBG = await azureBlob(fileArray[indexBG], 'showcase/imageArea')
+                        let pathBG = await azureBlob(fileArray[indexBG], 'showcase/imageArea', false, 'lmsassetsanon')
                         pathBG = pathBG.replace(AZURE_BLOB_URL, DOMAIN)
                         body.imgPath = pathBG
                     }
@@ -104,7 +104,7 @@ module.exports = {
 
             const indexBG = fileArray.findIndex(el => el.name === body.imgPath)
             if (indexBG >= 0) {
-                let pathBG = await azureBlob(fileArray[indexBG], 'showcase/imageArea')
+                let pathBG = await azureBlob(fileArray[indexBG], 'showcase/imageArea', false, 'lmsassetsanon')
                 pathBG = pathBG.replace(AZURE_BLOB_URL, DOMAIN)
                 body.imgPath = pathBG
                 fileArray.splice(indexBG, 1)

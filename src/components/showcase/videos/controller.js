@@ -58,7 +58,7 @@ module.exports = {
 
                     const background = files['background']
                     if (background) {
-                        let pathBG = await azureBlob(background, 'showcase/videos')
+                        let pathBG = await azureBlob(background, 'showcase/videos', false, 'lmsassetsanon')
                         pathBG = pathBG.replace(AZURE_BLOB_URL, DOMAIN)
                         body.background = pathBG
                     }
@@ -66,13 +66,13 @@ module.exports = {
                     await Promise.all(body.videos.map(async (video) => {
                         const videoFile = files[video.path];
                         if (videoFile) {
-                            let path = await azureBlob(videoFile, 'showcase/videos');
+                            let path = await azureBlob(videoFile, 'showcase/videos', false, 'lmsassetsanon');
                             path = path.replace(AZURE_BLOB_URL, DOMAIN);
                             video.path = path;
                         }
                         const thumbFile = files[video.thumb.toString()];
                         if (thumbFile) {
-                            let path = await azureBlob(thumbFile, 'showcase/videos');
+                            let path = await azureBlob(thumbFile, 'showcase/videos', false, 'lmsassetsanon');
                             path = path.replace(AZURE_BLOB_URL, DOMAIN);
                             video.thumb = path;
                         }
@@ -119,7 +119,7 @@ module.exports = {
 
                 const background = files['background']
                 if (background) {
-                    let pathBG = await azureBlob(background, 'showcase/videos')
+                    let pathBG = await azureBlob(background, 'showcase/videos', false, 'lmsassetsanon')
                     pathBG = pathBG.replace(AZURE_BLOB_URL, DOMAIN)
                     body.background = pathBG
                 }
@@ -127,13 +127,13 @@ module.exports = {
                 await Promise.all(body.videos.map(async (video) => {
                     const videoFile = files[video.path];
                     if (videoFile) {
-                        let path = await azureBlob(videoFile, 'showcase/videos');
+                        let path = await azureBlob(videoFile, 'showcase/videos', false, 'lmsassetsanon');
                         path = path.replace(AZURE_BLOB_URL, DOMAIN);
                         video.path = path;
                     }
                     const thumbFile = files[video.thumb.toString()];
                     if (thumbFile) {
-                        let path = await azureBlob(thumbFile, 'showcase/videos');
+                        let path = await azureBlob(thumbFile, 'showcase/videos', false, 'lmsassetsanon');
                         path = path.replace(AZURE_BLOB_URL, DOMAIN);
                         video.thumb = path;
                     }
