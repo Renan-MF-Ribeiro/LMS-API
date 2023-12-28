@@ -201,7 +201,7 @@ module.exports = {
         url =
             process.env.NODE_ENV === 'local'
                 ? url
-                : url.replace(AZURE_BLOB_URL, DOMAIN);
+                : url.replace(AZURE_BLOB_URL.substring(0, AZURE_BLOB_URL.lastIndexOf('/')) + `/${container}`, DOMAIN);
         return url;
     },
 
