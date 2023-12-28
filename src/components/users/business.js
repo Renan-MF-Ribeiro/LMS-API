@@ -359,7 +359,7 @@ module.exports = {
         );
         data.enabled = true;
 
-        const groupsAD = onboarding === true ? ['PERFIL_Aluno', 'ELEGE_CURSO', 'ELEGE_onboarding'] : ['PERFIL_Aluno', 'ELEGE_CURSO'] 
+        const groupsAD = onboarding === true ? ['PERFIL_Aluno', 'ELEGE_ONBOARDING'] : ['PERFIL_Aluno', 'ELEGE_CURSO'] 
 
         if (
             elegibilityFields &&
