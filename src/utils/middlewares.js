@@ -7,6 +7,7 @@ const {
     validateToken,
     validateMonitoringToken,
 } = require('./auth');
+const config = require('../../config.json');
 
 module.exports = {
     sendCsrf(req, res, next) {
@@ -271,6 +272,14 @@ module.exports = {
             } else {
                 _messages.forbidden(res, req, 'Sem permissão de acesso');
             }
+        }
+    },
+
+    isAluraActive: (req, res, next) => {
+        if (config?.alura?.active) {
+            next();
+        } else {
+            _messages.successEmpty(res, req, 'Feature "Alura" não está ativa');
         }
     },
 };
