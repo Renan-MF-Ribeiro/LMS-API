@@ -42,6 +42,19 @@ const AluraController = {
 			return _messages.internalServer(res, req, error)
 		}
 	},
+
+	async launch(req, res) {
+		try {
+			const { idCourse } = req.params
+			const { email } = await getUserByToken(req)
+			const uri = `${host}/courses/launch/${clientId}/${email}/${idCourse}`
+			const { data: launchUrl } = await axios.get(uri, { headers })
+			
+			return res.redirect(302, launchUrl);
+		} catch(error) {
+			return _messages.internalServer(res, req, error)
+		}
+	}
 };
 
 module.exports = AluraController;
