@@ -1,5 +1,6 @@
 const axios = require('axios');
 const _messages = require('../../utils/messages');
+const { getUserByToken } = require('../../utils/functions');
 
 const host = process.env.API_ALURA;
 const clientId = process.env.CLIENT_ID;
@@ -19,7 +20,7 @@ const AluraController = {
 
 	async listByTrails(req, res) {
 		try {
-			const { email } = req.params;
+			const { email } = await getUserByToken(req)
 			const uri = `${host}/courses/trails/${clientId}/${email}`;
 			const { data } = await axios.get(uri, { headers });
 
@@ -31,7 +32,8 @@ const AluraController = {
 
 	async getByTrails(req, res) {
 		try {
-			const { email, idSubcategory } = req.params;
+			const { email } = await getUserByToken(req)
+			const { idSubcategory } = req.params;
 			const uri = `${host}/courses/trails/${clientId}/${email}/${idSubcategory}`;
 			const { data } = await axios.get(uri, { headers });
 
