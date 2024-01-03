@@ -118,7 +118,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/social', validateTokenRoute, socialRoutes)
     .use('/padlets', validateTokenRoute, padletRoutes)
     .use('/support', supportRoutes)
-    .use('/alura', aluraRoutes)
+    .use('/alura', validateTokenRoute, aluraRoutes)
 
 if (config.showcase.active) {
     app.use('/showcase', showCaseRoutes);
