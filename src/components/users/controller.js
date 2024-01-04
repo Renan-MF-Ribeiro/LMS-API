@@ -1296,19 +1296,19 @@ module.exports = {
 
             const users = await User.find(
                 searchBy
-                    ? {
-                          $or: [
-                              { name: { $regex: searchBy, $options: 'i' }, onboarding: false },
-                              {
-                                  registration: {
-                                      $regex: searchBy,
-                                      $options: 'i',
-                                  }, onboarding: false
-                              },
-                              { email: { $regex: searchBy, $options: 'i' }, onboarding: false},
-                          ],
-                      }
-                    : { onboarding: false }
+                ? {
+                    $or: [
+                        { name: { $regex: searchBy, $options: 'i' }, onboarding: { $ne: true } },
+                        {
+                            registration: {
+                                $regex: searchBy,
+                                $options: 'i',
+                            }, onboarding: { $ne: true }
+                        },
+                        { email: { $regex: searchBy, $options: 'i' }, onboarding: { $ne: true }},
+                    ],
+                }
+              : { onboarding: { $ne: true } }
             )
                 .sort({
                     [order]: sort,
