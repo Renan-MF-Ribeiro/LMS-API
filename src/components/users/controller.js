@@ -1335,9 +1335,11 @@ module.exports = {
 
             const totalActive = await User.find({
                 status: 'ATIVO',
+                onboarding: false
             }).countDocuments();
             const totalInactive = await User.find({
                 status: 'INATIVO',
+                onboarding: false
             }).countDocuments();
 
             _messages.success(res, req, {
