@@ -1320,26 +1320,26 @@ module.exports = {
                 searchBy
                 ? {
                     $or: [
-                        { name: { $regex: searchBy, $options: 'i' }, onboarding: false },
+                        { name: { $regex: searchBy, $options: 'i' }, onboarding: { $ne: true } },
                         {
                             registration: {
                                 $regex: searchBy,
                                 $options: 'i',
-                            }, onboarding: false
+                            }, onboarding: { $ne: true }
                         },
-                        { email: { $regex: searchBy, $options: 'i' }, onboarding: false},
+                        { email: { $regex: searchBy, $options: 'i' }, onboarding: { $ne: true }},
                     ],
                 }
-              : { onboarding: false }
+              : { onboarding: { $ne: true } }
             ).countDocuments();
 
             const totalActive = await User.find({
                 status: 'ATIVO',
-                onboarding: false
+                onboarding: { $ne: true }
             }).countDocuments();
             const totalInactive = await User.find({
                 status: 'INATIVO',
-                onboarding: false
+                onboarding: { $ne: true }
             }).countDocuments();
 
             _messages.success(res, req, {
