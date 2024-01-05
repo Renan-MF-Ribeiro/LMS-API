@@ -6,7 +6,7 @@ const { isAluraActive } = require('../../utils/middlewares');
 router
     .get('/courses/sections', isAluraActive, _controller.getSections)
     .get('/courses/trails', isAluraActive, _controller.listByTrails)
-    .get('/courses/trails/:idTrail', isAluraActive, _controller.getByTrails)
-    .get('/courses/launch/:idItem', isAluraActive, _controller.launch);
+    .get('/courses/trails/:trailId', isAluraActive, _controller.getByTrails)
+    .get('/courses/launch/:itemId', isAluraActive, _controller.launch);
 
 module.exports = router;
