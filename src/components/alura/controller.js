@@ -33,8 +33,8 @@ const AluraController = {
 	async getByTrails(req, res) {
 		try {
 			const { email } = await getUserByToken(req)
-			const { idSubcategory } = req.params;
-			const uri = `${host}/courses/trails/${clientId}/${email}/${idSubcategory}`;
+			const { idTrail } = req.params;
+			const uri = `${host}/courses/trails/${clientId}/${email}/${idTrail}`;
 			const { data } = await axios.get(uri, { headers });
 
 			return _messages.success(res, req, data);
@@ -45,12 +45,12 @@ const AluraController = {
 
 	async launch(req, res) {
 		try {
-			const { idCourse } = req.params
+			const { idItem } = req.params
 			const { email } = await getUserByToken(req)
-			const uri = `${host}/courses/launch/${clientId}/${email}/${idCourse}`
+			const uri = `${host}/courses/launch/${clientId}/${email}/${idItem}`
 			const { data: launchUrl } = await axios.get(uri, { headers })
 			
-			return res.redirect(302, launchUrl);
+			return res.redirect(302, launchUrl.redirect);
 		} catch(error) {
 			return _messages.internalServer(res, req, error)
 		}
