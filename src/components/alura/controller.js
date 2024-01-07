@@ -7,6 +7,18 @@ const clientId = process.env.CLIENT_ID;
 const headers = { 'x-client-key': process.env.API_KEY_ALURA };
 
 const AluraController = {
+	async addResources(req, res) {
+		try {
+			const { resources } = req.body
+			const uri = `${host}/clients/${clientId}`;
+			const { data } = await axios.patch(uri, { resources }, { headers });
+
+			return _messages.success(res, req, data);
+		} catch (error) {
+			return _messages.internalServer(res, req, error)
+		}
+	},
+
 	async getSections(req, res) {
 		try {
 			const uri = `${host}/courses/sections/${clientId}`;
