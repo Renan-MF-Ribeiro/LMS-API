@@ -50,7 +50,7 @@ const AluraController = {
 			const uri = `${host}/courses/launch/${clientId}/${email}/${itemId}`
 			const { data: launchUrl } = await axios.get(uri, { headers })
 			
-			return res.redirect(302, launchUrl.redirect);
+			res.redirect(302, launchUrl.redirect);
 		} catch(error) {
 			return _messages.internalServer(res, req, error)
 		}
