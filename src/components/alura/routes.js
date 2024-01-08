@@ -4,6 +4,7 @@ const _controller = require('./controller');
 const { isAluraActive } = require('../../utils/middlewares');
 
 router
+    .get('/clients', isAluraActive, _controller.getClient) 
     .patch('/clients', isAluraActive, _controller.addResources)
     .post('/clients/check-resources', isAluraActive, _controller.checkResources)
     .get('/courses/sections', isAluraActive, _controller.getSections)
