@@ -10,8 +10,22 @@ const AluraController = {
 	async addResources(req, res) {
 		try {
 			const { resources } = req.body
-			const uri = `${host}/clients/${clientId}`;
+			const { email } = await getUserByToken(req)
+			const uri = `${host}/clients/${clientId}/${email}`;
 			const { data } = await axios.patch(uri, { resources }, { headers });
+
+			return _messages.success(res, req, data);
+		} catch (error) {
+			return _messages.internalServer(res, req, error)
+		}
+	},
+
+	async checkResources(req, res) {
+		try {
+			const { resources } = req.body
+			const { email } = await getUserByToken(req)
+			const uri = `${host}/clients/check-resources/${clientId}/${email}`;
+			const { data } = await axios.post(uri, { resources }, { headers });
 
 			return _messages.success(res, req, data);
 		} catch (error) {
