@@ -86,8 +86,8 @@ const AluraController = {
 			const { email } = await getUserByToken(req)
 			const uri = `${host}/courses/launch/${clientId}/${email}/${itemId}`
 			const { data: launchUrl } = await axios.get(uri, { headers })
-			
-			res.redirect(302, launchUrl.redirect);
+		
+			return _messages.success(res, req, launchUrl);
 		} catch(error) {
 			return _messages.internalServer(res, req, error)
 		}
