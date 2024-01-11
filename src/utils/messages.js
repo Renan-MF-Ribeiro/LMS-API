@@ -49,6 +49,4 @@ module.exports = {
         await _functions.recordLog(req, 'CONFLICT', err, component, rota)
         res.status(httpStatus.CONFLICT).json(data)
     },
-    
-
 }
