@@ -83,8 +83,7 @@ const AluraController = {
 	async launch(req, res) {
 		try {
 			const { itemId } = req.params
-			// const { email } = await getUserByToken(req)
-			const email = 'yan@email.com'
+			const { email } = await getUserByToken(req)
 			const uri = `${host}/courses/launch/${clientId}/${email}/${itemId}`
 			const { data: launchUrl } = await axios.get(uri, { headers })
 		
