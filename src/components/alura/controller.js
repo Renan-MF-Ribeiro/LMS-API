@@ -14,7 +14,7 @@ const AluraController = {
 
 			return _messages.success(res, req, data);
 		} catch (error) {
-			return _messages.internalServer(res, req, error)
+			return handleError(res, req, error)
 		}
 	},
 
@@ -27,7 +27,7 @@ const AluraController = {
 
 			return _messages.success(res, req, data);
 		} catch (error) {
-			return _messages.internalServer(res, req, error)
+			return handleError(res, req, error)
 		}
 	},
 
@@ -40,7 +40,7 @@ const AluraController = {
 
 			return _messages.success(res, req, data);
 		} catch (error) {
-			return _messages.internalServer(res, req, error)
+			return handleError(res, req, error)
 		}
 	},
 
@@ -51,7 +51,7 @@ const AluraController = {
 
 			return _messages.success(res, req, data);
 		} catch (error) {
-			return _messages.internalServer(res, req, error)
+			return handleError(res, req, error)
 		}
 	},
 
@@ -63,7 +63,7 @@ const AluraController = {
 
 			return _messages.success(res, req, data);
 		} catch (error) {
-			return _messages.internalServer(res, req, error)
+			return handleError(res, req, error)
 		}
 	},
 
@@ -76,22 +76,47 @@ const AluraController = {
 
 			return _messages.success(res, req, data);
 		} catch (error) {
-			return _messages.internalServer(res, req, error)
+			return handleError(res, req, error)
 		}
 	},
 
 	async launch(req, res) {
 		try {
 			const { itemId } = req.params
-			const { email } = await getUserByToken(req)
+			// const { email } = await getUserByToken(req)
+			const email = 'yan@email.com'
 			const uri = `${host}/courses/launch/${clientId}/${email}/${itemId}`
 			const { data: launchUrl } = await axios.get(uri, { headers })
 		
 			return _messages.success(res, req, launchUrl);
-		} catch(error) {
-			return _messages.internalServer(res, req, error)
+		} catch (error) {
+			return handleError(res, req, error)
+		}
+	},
+};
+
+function handleError(res, req, error) {
+	switch(error?.response?.status){
+		case 400: {
+			return _messages.badRequest(res, req, error, error.response.data)
+		}
+
+		case 403: {
+			return _messages.forbidden(res, req, error, error.response.data)
+		}
+
+		case 404: {
+			return _messages.notFound(res, req, error, error.response.data)
+		}
+
+		case 409: {
+			return _messages.conflict(res, req, error, error.response.data)
+		}
+
+		default: {
+			return _messages.internalServer(res, req, error, error.response.data)
 		}
 	}
-};
+}
 
 module.exports = AluraController;
