@@ -92,6 +92,7 @@ const socialRoutes = require('./components/social/routes');
 const padletRoutes = require('./components/padlets/routes');
 const supportRoutes = require('./components/support/routes');
 const aluraRoutes = require('./components/alura/routes');
+const themeRoutes = require('./components/theme/routes');
 
 app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/tracking', validateTokenRoute, trackingRoutes)
@@ -119,6 +120,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/padlets', validateTokenRoute, padletRoutes)
     .use('/support', supportRoutes)
     .use('/alura', validateTokenRoute, aluraRoutes)
+    .use('/theme', validateTokenRoute, themeRoutes)
 
 if (config.showcase.active) {
     app.use('/showcase', showCaseRoutes);
