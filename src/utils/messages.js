@@ -44,4 +44,11 @@ module.exports = {
         res.status(httpStatus.NOT_FOUND).json(data)
     },
 
+    conflict: async (res, req, err, data, component = null, rota = null) => {
+        info(component, rota, 'conflict', err)
+        await _functions.recordLog(req, 'CONFLICT', err, component, rota)
+        res.status(httpStatus.CONFLICT).json(data)
+    },
+    
+
 }
