@@ -10,7 +10,7 @@ const optionsSchema = {
 }
 
 const AlternativesSchema = new mongoose.Schema({
-    description: { type: String, required: true, trim: true, maxlength: 500 },
+    description: { type: String, required: true, trim: true },
     active: { type: Number, default: 1 },
     idQuestion: { type: 'ObjectId', ref: 'questions' },
     deleted: { type: Number, default: 0 },
