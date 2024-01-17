@@ -27,6 +27,14 @@ module.exports = {
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
 
+            for (const i in categories) {
+                let questionsCount = await Question.find({ idCategory: categories[i]._id, deleted: 0, active: 1 }).countDocuments();
+                console.log(questionsCount)
+                categories[i].totalQuestions = questionsCount;
+                console.log(categories[i])
+            }
+
+            console.log(categories)
             _messages.success(res, req, {
                 data: categories,
                 total,
@@ -66,6 +74,13 @@ module.exports = {
     async updateCategory (req, res) {
         try {
             const { _id } = req.body
+            const questionsOfCategory = await Question
+                .find(
+                    { idCategory: { $eq: req.body._id }, repealed: { $eq: 0 }, deleted: { $eq: 0 }, active: { $eq: 1 } }
+                ).countDocuments()
+            if (req.body.amountOfQuestions > questionsOfCategory) {
+                return _messages.badRequest(res, req, 'Questões insuficientes', 'Não é possível cadastras uma quantidade de questões maior que as questões cadastradas', 'categories', 'deleteCategory')
+            }
             const oldData = await Category.findByIdAndUpdate(_id, req.body)
             const newData = await Category.find({ _id: { $eq: _id } })
             _messages.success(res, req, 'Atualizado com sucesso', 'Atualização de dados', 'categories', 'updateCategory', newData, oldData, true, 'UPDATE')
@@ -96,7 +111,7 @@ module.exports = {
             // if (question.length === 0) {
             await Category.findByIdAndUpdate(id, { deleted: 1 })
             await Question.updateMany({ idCategory: { $eq: id }, deleted: { $eq: 0 } }, { deleted: 1 })
-            await Evaluation.updateMany({ categories: id }, { $pull: { categories: id }})
+            await Evaluation.updateMany({ categories: id }, { $pull: { categories: id } })
             _messages.success(res, req, 'Excluído com sucesso', 'Exclusão de dados', 'categories', 'deleteCategory', [], [], true, 'DELETE')
             // } else {
             //    _messages.badRequest(res, req, 'Existe questões para essa categoria', 'Não é possível realizar a exclusão, pois existem questões vinculadas a categoria', 'categories', 'deleteCategory')
