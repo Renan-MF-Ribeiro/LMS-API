@@ -129,8 +129,18 @@ module.exports = {
                             { idCategory: { $eq: category._id }, repealed: { $eq: 0 }, deleted: { $eq: 0 }, active: { $eq: 1 } }
                         ).select('_id')
 
+                    console.log(questionsOfCategory)
+                    console.log(category)
+                    console.log(category.amountOfQuestions, questionsOfCategory.length)
 
-                    amountOfQuestions += Math.min(category.amountOfQuestions, questionsOfCategory.length)
+                    if (category.amountOfQuestions > 0) {
+
+                        amountOfQuestions += Math.min(category.amountOfQuestions, questionsOfCategory.length)
+                    } else {
+                        //all questions
+                        amountOfQuestions += questionsOfCategory.length
+
+                    }
                     const questions =
                         (category.randomQuestions
                             ? returnSliceDataRandom(questionsOfCategory, 0, category.amountOfQuestions)

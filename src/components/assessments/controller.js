@@ -43,8 +43,9 @@ module.exports = {
                 .findOne({
                     _id: { $eq: idEvaluation },
                     deleted: { $eq: 0 },
+
                 })
-                .populate('categories')
+                .populate({ path: 'categories', match: { deleted: { $eq: 0 }, active: { $eq: 1 }, } })
 
             const timeDuration = await HistoricEvaluation.find({ user: { $eq: user._id }, idEvaluation: { $eq: idEvaluation } }).sort({ [order]: sort })
 
@@ -54,7 +55,7 @@ module.exports = {
                 idEvaluation: { $eq: idEvaluation },
                 deleted: { $eq: false },
             })
-
+            console.log(totalQuestions)
 
             if (timeDuration.length) {
                 const { amountQuestionsCorrect } = timeDuration[0]
@@ -63,9 +64,19 @@ module.exports = {
             } else {
                 amountOfQuestions = 0
                 for (const category of categories) {
-                    amountOfQuestions += category.amountOfQuestions
+                    if (category.amountOfQuestions < 0) {
+                        const amountOfQuestionsByCategory = await Question.countDocuments({
+                            idCategory: { $eq: category._id },
+                            deleted: { $eq: 0 },
+                            active: { $eq: 1 }
+                        })
+                        amountOfQuestions += amountOfQuestionsByCategory
+                    } else {
+                        amountOfQuestions += category.amountOfQuestions
+                    }
                 }
             }
+            console.log(amountOfQuestions)
 
             const obj = {
                 description,
@@ -356,7 +367,7 @@ module.exports = {
             let correct = false
             let amountCorrect = amountQuestionsCorrect
 
-            if (idAlternative === rigthAnswer.toString()) {
+            if (idAlternative === rigthAnswer?.toString()) {
                 correct = true
                 amountCorrect++
             }
@@ -523,7 +534,7 @@ module.exports = {
                 return _messages.success(res, req, result)
 
             } else {
-                let categories = await Category.find({ idEvaluation: id, deleted: 0 })
+                let categories = await Category.find({ idEvaluation: id, deleted: 0, active: 1 })
 
                 let questionsAnswers = null
 

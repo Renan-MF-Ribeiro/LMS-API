@@ -16,7 +16,9 @@ const CategoriesSchema = new mongoose.Schema({
     active: { type: Number, default: 1 },
     randomQuestions: { type: Number, required: false, default: 0 }, // 0 - NÃO / 1 - SIM
     amountOfQuestions: { type: Number, default: 0 },
+    totalQuestions: { type: Number, default: 0 },
     deleted: { type: Number, default: 0 },
+
 }, {
     ...optionsSchema,
 })
