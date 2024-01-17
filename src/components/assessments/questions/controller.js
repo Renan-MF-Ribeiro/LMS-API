@@ -88,8 +88,9 @@ module.exports = {
                 const { idEvaluation } = await Category.findOne({ _id: { $eq: idCategory } })
                 objQuestion.idEvaluation = idEvaluation
                 const alternativeCreated = await Question.create(objQuestion)
+                const question = await Question.findById(alternativeCreated._id).populate('idCategory', 'description')
 
-                _messages.success(res, req, 'Questão cadastrada com sucesso', 'questions', 'createQuestion', alternativeCreated, [], true, 'CREATE')
+                _messages.success(res, req, question, 'questions', 'createQuestion', alternativeCreated, [], true, 'CREATE')
             } else {
                 _messages.badRequest(res, req, 'Essa questão já foi cadastrada!', 'Essa questão já foi cadastrada!', 'questions', 'createQuestion')
             }
@@ -104,6 +105,7 @@ module.exports = {
                 description: { $eq: req.body.description },
                 idEvaluation: { $eq: req.body.idEvaluation },
                 idCategory: { $eq: req.body.idCategory },
+                feedback: { $eq: req.body.feedback },
                 deleted: { $eq: 0 },
                 repealed: { $eq: 0 },
             })
