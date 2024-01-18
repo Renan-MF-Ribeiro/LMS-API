@@ -92,6 +92,19 @@ const AluraController = {
 			return handleError(res, req, error)
 		}
 	},
+	
+	async search(req, res) {
+		try {
+			const { searchBy } = req.query
+			const { email } = await getUserByToken(req)
+			const uri = `${host}/courses/search/${clientId}?email=${email}&searchBy=${encodeURI(searchBy)}`
+			const { data } = await axios.get(uri, { headers })
+		
+			return _messages.success(res, req, data);
+		} catch (error) {
+			return handleError(res, req, error)
+		}
+	}
 };
 
 function handleError(res, req, error) {

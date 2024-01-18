@@ -10,6 +10,7 @@ router
     .get('/courses/sections', isAluraActive, _controller.getSections)
     .get('/courses/trails', isAluraActive, _controller.listByTrails)
     .get('/courses/trails/:trailId', isAluraActive, _controller.getByTrails)
-    .get('/courses/launch/:itemId', isAluraActive, _controller.launch);
+    .get('/courses/launch/:itemId', isAluraActive, _controller.launch)
+    .get('/courses/search', isAluraActive, _controller.search)
 
 module.exports = router;
