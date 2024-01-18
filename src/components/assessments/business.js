@@ -129,7 +129,7 @@ module.exports = {
                         ).select('_id')
 
 
-                    if (category.amountOfQuestions > 0) {
+                    if (category.amountOfQuestions >= 0) {
 
                         amountOfQuestions += Math.min(category.amountOfQuestions, questionsOfCategory.length)
                     } else {
