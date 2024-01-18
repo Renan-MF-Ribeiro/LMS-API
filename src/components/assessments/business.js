@@ -45,7 +45,6 @@ module.exports = {
                         }],
                     )
                 const respondida = await HistoricEvaluation.find({ questions: id })
-                console.log(respondida)
 
                 if (respondida != '' && respondida != []) {
 
@@ -93,13 +92,13 @@ module.exports = {
                 } else {
                     if (body) {
                         // oldData = await Question.findByIdAndUpdate(idQuestion, { rigthAnswer: idAlternative })
-                        console.log(body)
-                        const newRigthAnswer = body.idAlternative != question.rigthAnswer?._id
+
+                        const newRigthAnswer = body.idAlternative && body.idAlternative != question.rigthAnswer?._id
 
                         await Question.findByIdAndUpdate(id, {
                             description: body.description ? body.description : question.description,
                             idCategory: body.idCategory ? body.idCategory : question.idCategory,
-                            rigthAnswer: newRigthAnswer ? body.idAlternative : question.rigthAnswer?._id,
+                            rigthAnswer: newRigthAnswer ? (body.idAlternative) : question.rigthAnswer?._id,
                             feedback: body.feedback
 
                         })
@@ -129,9 +128,6 @@ module.exports = {
                             { idCategory: { $eq: category._id }, repealed: { $eq: 0 }, deleted: { $eq: 0 }, active: { $eq: 1 } }
                         ).select('_id')
 
-                    console.log(questionsOfCategory)
-                    console.log(category)
-                    console.log(category.amountOfQuestions, questionsOfCategory.length)
 
                     if (category.amountOfQuestions > 0) {
 

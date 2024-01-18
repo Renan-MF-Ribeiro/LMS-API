@@ -55,7 +55,6 @@ module.exports = {
                 idEvaluation: { $eq: idEvaluation },
                 deleted: { $eq: false },
             })
-            console.log(totalQuestions)
 
             if (timeDuration.length) {
                 const { amountQuestionsCorrect } = timeDuration[0]
@@ -76,7 +75,6 @@ module.exports = {
                     }
                 }
             }
-            console.log(amountOfQuestions)
 
             const obj = {
                 description,
@@ -285,6 +283,7 @@ module.exports = {
                                     description: { $eq: description },
                                     idEvaluation: { $eq: idEvaluation },
                                     deleted: 0,
+                                    repealed: 0
                                 })
 
                                 if (question.length === 0) {

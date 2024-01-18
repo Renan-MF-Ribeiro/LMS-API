@@ -125,7 +125,7 @@ module.exports = {
                 }
                 const { _id } = req.body
                 await _business.updateAndRepealedQuestion(_id, req.body)
-                console.log(_id)
+
                 _messages.success(res, req, alert, 'Atualização de dados', 'questions', 'updateQuestion', [], [], true, 'UPDATE')
             } else {
                 _messages.badRequest(res, req, 'Essa questão já foi cadastrada!', 'Essa questão já foi cadastrada!', 'questions', 'updateQuestion')

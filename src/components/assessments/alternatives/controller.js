@@ -15,6 +15,7 @@ module.exports = {
                     description: { $eq: description },
                     idQuestion: { $eq: idQuestion },
                     deleted: 0,
+                    repealed: 0
                 })
 
             if (verify.length === 0) {

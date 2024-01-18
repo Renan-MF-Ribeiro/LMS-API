@@ -28,13 +28,11 @@ module.exports = {
                 .limit(parseInt(limit))
 
             for (const i in categories) {
-                let questionsCount = await Question.find({ idCategory: categories[i]._id, deleted: 0, active: 1 }).countDocuments();
-                console.log(questionsCount)
+                let questionsCount = await Question.find({ idCategory: categories[i]._id, deleted: 0, active: 1, repealed: 0 }).countDocuments();
+
                 categories[i].totalQuestions = questionsCount;
-                console.log(categories[i])
             }
 
-            console.log(categories)
             _messages.success(res, req, {
                 data: categories,
                 total,
