@@ -120,7 +120,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/padlets', validateTokenRoute, padletRoutes)
     .use('/support', supportRoutes)
     .use('/alura', validateTokenRoute, aluraRoutes)
-    .use('/theme', validateTokenRoute, themeRoutes)
+    .use('/theme', themeRoutes)
 
 if (config.showcase.active) {
     app.use('/showcase', showCaseRoutes);

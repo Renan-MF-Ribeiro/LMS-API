@@ -53,6 +53,7 @@ const loginSchema = new mongoose.Schema({
         },
     },
     background: { type: String },
+    backgroundMobile: { type: String },
     logo: { type: String },
 }, {
     ...schemaOptions,

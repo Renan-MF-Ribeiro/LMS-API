@@ -24,19 +24,59 @@ module.exports = {
                 logoPath = logoPath.replace(AZURE_BLOB_URL, DOMAIN)
                 body.logo = logoPath
             }
+            //backgroundMobile
+            const backgroundMobile = fileArray.findIndex(el => el.name === body.backgroundMobile)
+            if (backgroundMobile >= 0) {
 
-            const theme = await ThemeLogin.create(body)
+                let backgroundMobilePath = await azureBlob(fileArray[backgroundMobile], 'showcase/home', false, 'lmsassetsanon')
+                backgroundMobilePath = backgroundMobilePath.replace(AZURE_BLOB_URL, DOMAIN)
+                body.backgroundMobile = backgroundMobilePath
+            }
 
+            let theme = await ThemeLogin.findOne({}).sort({ createdAt: -1 })
 
-            _messages.success(res, req, theme)
+            if (theme) {
+
+                theme = await ThemeLogin.findByIdAndUpdate(theme._id, body)
+            } else {
+                theme = await ThemeLogin.create(body)
+            }
+
+            return _messages.success(res, req, theme)
+
         } catch (error) {
             _messages.internalServer(
                 res,
                 req,
                 error.message,
                 'Erro interno no servidor',
-                'ImageArea_Showcase',
-                'get',
+                'theme',
+                'createOrUpdate',
+            )
+        }
+
+    },
+
+    async getLoginScreen (req, res) {
+        try {
+            const theme = await ThemeLogin.findOne({}).sort({ createdAt: -1 }).select('-createdAt -updatedAt -_id -__v')
+
+            if (theme) {
+
+                return _messages.success(res, req, theme)
+            }
+            throw new Error('Nenhum tema de login encontrado!')
+
+        }
+        catch (error) {
+            console.error(error)
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'theme',
+                'getLoginScreen',
             )
         }
     }
