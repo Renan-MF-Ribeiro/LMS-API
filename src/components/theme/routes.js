@@ -1,8 +1,8 @@
 const express = require("express");
-const _controller = require("./controller");
-const formidable = require('express-formidable')
-const { validateTokenRoute } = require('../../utils/middlewares');
+
+const loginRoutes = require('./login/routes');
+const loginConfigRoutes = require('./login-config/routes');
 
 module.exports = express.Router()
-    .put('/login', formidable(), validateTokenRoute, _controller.createOrUpdate)
-    .get('/login', _controller.getLoginScreen)
+    .use('/login', loginRoutes)
+    .use('/login-config', loginConfigRoutes)

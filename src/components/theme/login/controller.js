@@ -1,7 +1,7 @@
 const { ThemeLogin } = require('./model')
-const _messages = require('../../utils/messages')
+const _messages = require('../../../utils/messages')
 const { DOMAIN, AZURE_BLOB_URL } = process.env
-const { azureBlob } = require('../../utils/files')
+const { azureBlob } = require('../../../utils/files')
 
 module.exports = {
     async createOrUpdate (req, res) {
