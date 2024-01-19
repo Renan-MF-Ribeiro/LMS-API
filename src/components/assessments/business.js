@@ -5,6 +5,7 @@ const { Question } = require('./questions/model')
 const { Alternative } = require('./alternatives/model')
 const { HistoricEvaluation, Evaluation } = require('./model')
 const { returnSliceDataRandom } = require('../../utils/functions')
+const { Category } = require('./categories/model')
 
 module.exports = {
 
@@ -44,7 +45,9 @@ module.exports = {
                         }],
                     )
                 const respondida = await HistoricEvaluation.find({ questions: id })
-                if (respondida != '') {
+
+                if (respondida != '' && respondida != []) {
+
                     await Question.findByIdAndUpdate(id, { repealed: 1 })
                     const arrIdAlternatives = []
                     var strDescription = ((body.description && body.description != 'undefined') ? body.description : question.description)
@@ -53,17 +56,18 @@ module.exports = {
                         idCategory: body.idCategory ? body.idCategory : question.idCategory,
                         idEvaluation: question.idEvaluation,
                         description: strDescription,
-                        rigthAnswer: body.idAlternative
                     })
 
                     for (const alternative of question.alternatives) {
                         let correct = false
-
                         if (action) {
                             if (alternative._id == body.idAlternative) correct = true
                         } else {
                             if (question.rigthAnswer) {
-                                if (alternative.description === question.rigthAnswer.description) correct = true
+
+                                if (alternative.description === question.rigthAnswer.description) {
+                                    correct = true
+                                }
                             }
                         }
 
@@ -87,9 +91,20 @@ module.exports = {
                     await Question.findByIdAndUpdate(questionCreated._id, { alternatives: arrIdAlternatives, rigthAnswer: idRigthAnswer, description: strDescription })
                 } else {
                     if (body) {
-                        const quest = await Question.findByIdAndUpdate(id, { description: body.description ? body.description : question.description, idCategory: body.idCategory ? body.idCategory : question.idCategory, rigthAnswer: body.idAlternative })
-                        for (alternative of quest.alternatives) {
-                            await Alternative.findByIdAndUpdate(alternative, { correct: alternative == body.idAlternative })
+                        // oldData = await Question.findByIdAndUpdate(idQuestion, { rigthAnswer: idAlternative })
+
+                        const newRigthAnswer = body.idAlternative && body.idAlternative != question.rigthAnswer?._id
+
+                        await Question.findByIdAndUpdate(id, {
+                            description: body.description ? body.description : question.description,
+                            idCategory: body.idCategory ? body.idCategory : question.idCategory,
+                            rigthAnswer: newRigthAnswer ? (body.idAlternative) : question.rigthAnswer?._id,
+                            feedback: body.feedback
+
+                        })
+                        if (newRigthAnswer) {
+                            await Alternative.findByIdAndUpdate(question.rigthAnswer._id, { correct: false })
+                            await Alternative.findByIdAndUpdate(body.idAlternative, { correct: true })
                         }
                     }
                 }
@@ -100,35 +115,90 @@ module.exports = {
         })
     },
 
-    returnRandomQuestionsByCategory (categories) {
+    returnQuestionsByCategory (categories) {
         return new Promise(async (resolve, reject) => {
             try {
                 const questionsOfEvaluations = []
                 let amountOfQuestions = 0
-                
-                console.log(categories)
+
                 for (const category of categories) {
-                    amountOfQuestions += category.amountOfQuestions
 
                     const questionsOfCategory = await Question
                         .find(
-                            { idCategory: { $eq: category._id }, repealed: { $eq: 0 }, deleted: { $eq: 0 }, active: { $eq: 1} },
-                            ['description'],
-                        )
-                        .populate({path:'alternatives', match: { deleted: { $eq: 0 }}, select: 'description deleted'})
-                        
-console.log(questionsOfCategory)
-                    const questions = returnSliceDataRandom(questionsOfCategory, 0, category.amountOfQuestions)
+                            { idCategory: { $eq: category._id }, repealed: { $eq: 0 }, deleted: { $eq: 0 }, active: { $eq: 1 } }
+                        ).select('_id')
 
-                    for (const question of questions) {
-                        questionsOfEvaluations.push(question)
+
+                    if (category.amountOfQuestions >= 0) {
+
+                        amountOfQuestions += Math.min(category.amountOfQuestions, questionsOfCategory.length)
+                    } else {
+                        //all questions
+                        amountOfQuestions += questionsOfCategory.length
+
                     }
+                    const questions =
+                        (category.randomQuestions
+                            ? returnSliceDataRandom(questionsOfCategory, 0, category.amountOfQuestions)
+                            : questionsOfCategory.slice(0, category.amountOfQuestions)
+                        ).map(question => ({ _id: question._id, type: 'question' }))
+
+                    if (category.case) {
+                        category.case['type'] = 'case'
+                        questions.unshift(category.case)
+                    }
+                    questionsOfEvaluations.push(questions)
+
                 }
 
                 resolve({
                     questions: questionsOfEvaluations,
                     amount: amountOfQuestions,
                 })
+            } catch (error) {
+                reject(error)
+            }
+        })
+    },
+
+    returnQuestionsByCategoryFromHistoric (questions) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const questionsOrdered = []
+                let category = []
+
+                let categoryId
+                for (const questionId of questions) {
+                    const { idCategory } = await Question.findById(questionId).select('idCategory')
+
+                    if (idCategory.toString() == categoryId?.toString()) {
+                        category.push({ _id: questionId, type: 'question' })
+                    }
+                    else {
+
+                        if (category.length > 0) {
+                            questionsOrdered.push(category)
+                        }
+                        category = [];
+
+                        const categoryCase = await Category.findById(idCategory).select('case');
+
+                        if (categoryCase.case) {
+                            categoryCase.case['type'] = 'case'
+                            category.unshift(categoryCase.case)
+                        }
+
+                        category.push({ _id: questionId, type: 'question' })
+
+                        categoryId = idCategory
+                    }
+                }
+                if (category.length > 0) {
+                    questionsOrdered.push(category)
+                }
+                category = [];
+
+                resolve(questionsOrdered)
             } catch (error) {
                 reject(error)
             }
@@ -175,16 +245,21 @@ console.log(questionsOfCategory)
         })
     },
 
-    returnsQuestionsAnswered (answers) {
+    returnsQuestionsAnswered (answers, showRigthAnswer) {
         return new Promise(async (resolve, reject) => {
             try {
                 const questions = []
                 for (const answer of answers) {
-                    const { description } = await Question.findOne({ _id: { $eq: answer.idQuestion } })
+                    const { description, feedback, rigthAnswer } = await Question.findOne({ _id: { $eq: answer.idQuestion } }).populate({
+                        path: 'rigthAnswer',
+                        select: ['description'],
+                    })
 
                     questions.push({
                         description,
                         correct: answer.correct,
+                        feedback: feedback ? answer.correct ? feedback.positive : feedback.negative : null,
+                        rigthAnswer: showRigthAnswer ? rigthAnswer.description : null
                     })
                 }
 

@@ -10,11 +10,12 @@ const optionsSchema = {
 }
 
 const EvalutionsSchema = new mongoose.Schema({
-    description: { type: String, required: true, trim: true, maxlength: 60 },
+    description: { type: String, required: true, trim: true },
     sort: { type: Number, required: true, default: 0 }, // 0 - SORTEAMENTO NA CATEGORIA / 1 - SORTEAMENTO GERAL
     attempts: { type: Number, required: false },
     duration: { type: Number, required: false },
     feedback: { type: Number, required: false, default: 0 }, // 0 - NÃO / 1 - SIM
+    randomQuestions: { type: Number, required: false, default: 0 }, // 0 - NÃO / 1 - SIM
     active: { type: Number, required: false, default: 1 },
     categories: { type: [{ type: 'ObjectId', ref: 'categories' }] },
     deleted: { type: Number, default: 0 },

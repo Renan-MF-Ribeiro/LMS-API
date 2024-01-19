@@ -1,5 +1,5 @@
 class SCORMUploadError extends Error {
-    constructor (message, code) {
+    constructor(message, code) {
         super(message)
         this.message = message
         this.code = code
@@ -28,6 +28,10 @@ module.exports = {
         INVALID_PACKAGE: new SCORMUploadError(
             'Arquivo corrompido.',
             23422,
+        ),
+        UNEXPECTED_IDENTIFIER: new SCORMUploadError(
+            'O identificador do item está divergente.',
+            23424,
         ),
     },
 }

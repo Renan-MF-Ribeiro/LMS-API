@@ -255,7 +255,6 @@ const ItemController = {
                     //Evento novo conteúdo colaborativo
                     _messages.success(res, req, item._id);
                 } catch (error) {
-                    console.log(error);
                     if (error.message === 'Something went wrong') {
                         _messages.internalServer(
                             res,
@@ -1107,7 +1106,7 @@ const ItemController = {
         }
     },
 
-    async updateSCORM(req, res) {
+    async updateSCORM (req, res) {
         if (req.method !== 'PUT') {
             return res.status(httpStatus.NOT_FOUND).send();
         }
@@ -1187,7 +1186,7 @@ const ItemController = {
                                             filesP.push(
                                                 entry.autodrain().promise()
                                             );
-                                            
+
                                             return;
                                         }
 
@@ -1229,7 +1228,6 @@ const ItemController = {
                     (el) => el.name === 'organizations'
                 );
                 if (!$orgs) return _messages.success(res, req, []);
-
                 const defaultOrg = $orgs.attributes.default;
                 if (!defaultOrg) return _messages.success(res, req, []);
 
@@ -1266,24 +1264,27 @@ const ItemController = {
                             (el) =>
                                 el.name === 'resource' &&
                                 el.attributes.identifier ===
-                                    $item.attributes.identifierref
+                                $item.attributes.identifierref
                         );
 
                         const href = $resource.attributes.href;
                         const scoIdentifier = $item.attributes.identifier;
-                        if(scoId != scoIdentifier){
+                        if (scoId != scoIdentifier) {
                             throw _errors.SCORM_UPLOAD.UNEXPECTED_IDENTIFIER
                         }
 
                         return SCORMItem.findByIdAndUpdate(_id, {
                             contentPath: `${packageId}/${href}`,
-                            scormPath:scormPath
+                            scormPath: scormPath
                         });
                     })
                 );
 
                 res.status(httpStatus.NO_CONTENT).send();
             } catch (err) {
+                if (err) {
+                    throw _errors.SCORM_UPLOAD.UNEXPECTED_IDENTIFIER
+                }
                 throw _errors.SCORM_UPLOAD.INVALID_MANIFEST;
             }
         } catch (err) {

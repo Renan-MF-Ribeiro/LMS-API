@@ -1,14 +1,10 @@
 const { Evaluation, HistoricEvaluation, LogsEvaluation } = require('./model')
 const { Category } = require('./categories/model')
 const { Question } = require('./questions/model')
-const { ExamTracking, Tracking } = require('../tracking/model')
-
 const { Alternative } = require('./alternatives/model')
 const { Item } = require('../items/model')
 const { returnLinkTrailByItem } = require('../trails/controller')
-const userModel = require('../users/model')
 
-const xapi = require('../../utils/xApi')
 const _messages = require('../../utils/messages')
 const _business = require('./business')
 const _functions = require('../../utils/functions')
@@ -47,25 +43,36 @@ module.exports = {
                 .findOne({
                     _id: { $eq: idEvaluation },
                     deleted: { $eq: 0 },
+
                 })
-                .populate('categories')
+                .populate({ path: 'categories', match: { deleted: { $eq: 0 }, active: { $eq: 1 }, } })
 
             const timeDuration = await HistoricEvaluation.find({ user: { $eq: user._id }, idEvaluation: { $eq: idEvaluation } }).sort({ [order]: sort })
 
             var result = null
+            var amountOfQuestions = null
             const totalQuestions = await Question.countDocuments({
                 idEvaluation: { $eq: idEvaluation },
                 deleted: { $eq: false },
             })
 
             if (timeDuration.length) {
-                const { amountQuestionsCorrect, amountOfQuestions } = timeDuration[0]
-
+                const { amountQuestionsCorrect } = timeDuration[0]
+                amountOfQuestions = timeDuration[0].amountOfQuestions
                 result = await _business.calculateRatingEvaluation(amountQuestionsCorrect, amountOfQuestions)
             } else {
-                var amountOfQuestions = 0
+                amountOfQuestions = 0
                 for (const category of categories) {
-                    amountOfQuestions += category.amountOfQuestions
+                    if (category.amountOfQuestions < 0) {
+                        const amountOfQuestionsByCategory = await Question.countDocuments({
+                            idCategory: { $eq: category._id },
+                            deleted: { $eq: 0 },
+                            active: { $eq: 1 }
+                        })
+                        amountOfQuestions += amountOfQuestionsByCategory
+                    } else {
+                        amountOfQuestions += category.amountOfQuestions
+                    }
                 }
             }
 
@@ -81,6 +88,7 @@ module.exports = {
 
             _messages.success(res, req, obj)
         } catch (error) {
+            console.error(error)
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'returnEvaluation')
         }
     },
@@ -94,23 +102,23 @@ module.exports = {
                 path: 'questions',
                 populate: {
                     path: 'alternatives',
-                    model: 'alternatives'
-                }
+                    model: 'alternatives',
+                },
             })
                 .lean()
             const objHistoricEvaluation = JSON.parse(JSON.stringify(historicEvaluation))
             const allAttempts = []
-            for (let evaluation of objHistoricEvaluation) {
+            for (const evaluation of objHistoricEvaluation) {
                 let questionObj = {}
-                let questions = []
+                const questions = []
 
-                for (let question of evaluation.questions) {
-                    let correctAnswerWasGiven = false;
-                    let alternatives = []
+                for (const question of evaluation.questions) {
+                    let correctAnswerWasGiven = false
+                    const alternatives = []
                     let alternativeObj = {}
                     let answerDate
                     let indexOfAnswer
-                    for (let answer of evaluation.answers) {
+                    for (const answer of evaluation.answers) {
                         indexOfAnswer = question.alternatives.findIndex(v => {
                             return String(v._id) == String(answer.idAlternative)
                         })
@@ -122,7 +130,7 @@ module.exports = {
 
                     question.alternatives.map(v => {
                         if (v.isUserGuess) {
-                            correctAnswerWasGiven = v.correct === v.isUserGuess ? true : false;
+                            correctAnswerWasGiven = v.correct === v.isUserGuess
                         }
                         alternativeObj = {
                             _id: v._id,
@@ -149,7 +157,7 @@ module.exports = {
                     evalStart: evaluation.createdAt,
                     evalEnd: evaluation.updatedAt,
                     passingScore: passingScore,
-                    questions: questions
+                    questions: questions,
                 }
                 allAttempts.push(attempt)
             }
@@ -162,6 +170,7 @@ module.exports = {
     async getAllEvaluations (req, res) {
         try {
             const { skip, limit } = _functions.pagination(req)
+            const { order, sort } = _functions.ordernation(req)
             const searchBy = req.query.searchBy
 
             const total = await Evaluation.find(searchBy ? {
@@ -172,6 +181,7 @@ module.exports = {
             } : {
                 deleted: { $eq: 0 },
             }).countDocuments()
+
             const evaluations = await Evaluation
                 .find(searchBy ? {
                     $or: [
@@ -181,6 +191,7 @@ module.exports = {
                 } : {
                     deleted: { $eq: 0 },
                 })
+                .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
 
@@ -238,6 +249,8 @@ module.exports = {
             const positionAlternative = header.indexOf('Alternativa A') // GUARDA POSIÇÃO APENAS PARA CONFERENCIA DA ESTRUTURA DO ARQUIVO
             const positionCategory = header.indexOf('Categoria') // GUARDA A POSIÇÃO CORRESPONDENTE AS CATEGORIAS
             const positionCorrectAlternative = header.indexOf('Alternativa Correta') // GUARDA A POSIÇÃO CORRESPONDENTE A ALTERNATIVA CORRETA
+            const positionFeedbackPositive = header.indexOf('Feedback Positivo') // GUARDA A POSIÇÃO CORRESPONDENTE AO FEEDBACK POSITIVO
+            const positionFeedbackNegative = header.indexOf('Feedback Negativo') // GUARDA A POSIÇÃO CORRESPONDENTE AO FEEDBACK NEGATIVO
 
             if (positionCategory >= 0 && positionCorrectAlternative >= 0 && positionQuestion >= 0 && positionAlternative >= 0) {
                 const arrData = dataFile.slice(1) // REMOVE CABEÇALHO
@@ -270,6 +283,7 @@ module.exports = {
                                     description: { $eq: description },
                                     idEvaluation: { $eq: idEvaluation },
                                     deleted: 0,
+                                    repealed: 0
                                 })
 
                                 if (question.length === 0) {
@@ -277,10 +291,15 @@ module.exports = {
                                         const alternatives = questions[p].slice(positionAlternative, positionCorrectAlternative)
                                         const positionLetter = _functions.returnsLetterPosition(questions[p][positionCorrectAlternative]) // RETORNA A POSIÇÃO DA LETRA DA ALTERNATIVA CORRETA
                                         const idAlternatives = []
+                                        const feedback = {
+                                            positive: questions[p][positionFeedbackPositive],
+                                            negative: questions[p][positionFeedbackNegative],
+                                        }
                                         const objQuestion = {
                                             idCategory: categoryCreated._id,
                                             idEvaluation,
                                             description,
+                                            feedback
                                         }
 
                                         // REALIZA O CADASTRO DA QUESTÃO
@@ -314,105 +333,67 @@ module.exports = {
 
                 // VINCULA O ID DA CATEGORIA NA AVALIAÇÃO
                 await Evaluation.findByIdAndUpdate(idEvaluation, { categories: idCategories })
-                _messages.success(res, req, 'Importado com sucessos, dados repetidos ou em branco não serão gravados!', 'Importado com sucesso', 'assessments', 'importQuestions', [], [], true, 'CREATE')
+                return _messages.success(res, req, 'Importado com sucessos, dados repetidos ou em branco não serão gravados!', 'Importado com sucesso', 'assessments', 'importQuestions', [], [], true, 'CREATE')
             } else {
-                _messages.badRequest(res, req, 'Erro de estruturação', 'A estrutura do excel não está adequada para a importação', 'evaluations', 'importQuestions')
+                return _messages.badRequest(res, req, 'Erro de estruturação', 'A estrutura do excel não está adequada para a importação', 'evaluations', 'importQuestions')
             }
             // } else {
             //    _messages.badRequest(res, req, 'Erro de validação', 'Já existe questões ou categorias cadastradas nessa avaliação', 'evaluations', 'importQuestions')
             // }
         } catch (error) {
-            console.log(error)
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'importQuestions')
+            console.error(error)
+            return _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'importQuestions')
         }
     },
 
     async getActivesEvaluations (req, res) {
         try {
             const evaluations = await Evaluation.find({ active: { $eq: 1 } })
-            _messages.success(res, req, evaluations)
+            return _messages.success(res, req, evaluations)
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'getActivesEvluations')
+            return _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'getActivesEvluations')
         }
     },
 
-    async startEvaluation (req, res) {
-        try {
-            const { id, idItem } = req.params
-            const user = await _functions.getUserByToken(req)
-            const evaluation = await Evaluation.findOne({ _id: { $eq: id } })
 
-            const item = await Item.findById(idItem)
-
-            const evaluationPerformed = await HistoricEvaluation
-                .find({
-                    idEvaluation: { $eq: id },
-                    item: { $eq: idItem },
-                    user: { $eq: user._id },
-                })
-
-            const tracking = await ExamTracking.findOne({ item: idItem, userLogin: user.networkLogin })
-
-            if (!evaluation.attempts || !tracking || tracking?.remainingAttempts <= evaluation.attempts) {
-                const { categories } = await _business.returnCategoriesOfEvaluation(id)
-                const { questions, amount } = await _business.returnRandomQuestionsByCategory(categories)
-                if (questions.length > 0) {
-                    const { _id } = await _business.insertEvaluationHistory(questions, amount, id, idItem, user._id, evaluation.duration)
-                    await LogsEvaluation.create({ idHistoricEvaluation: _id })
-
-                    const completeUser = await userModel.User.findById(user._id)
-
-                    const linkTrailItem = await returnLinkTrailByItem(idItem)
-                    // const bag = xapi.initTinCan(linkTrailItem.urlTrail, linkTrailItem.urlItem, completeUser)
-                    // const attempt = evaluationPerformed.length + 1
-                    // await xapi.sendAttemptAssessment(bag, item, completeUser, attempt)
-
-                    questions[0].number = 1
-                    _messages.success(res, req, {
-                        question: questions[0],
-                        _id,
-                    })
-                } else {
-                    _messages.badRequest(res, req, 'Avaliação sem questão', 'Não é possível iniciar uma avaliação sem questões configuradas', 'evaluations', 'startEvaluation')
-                }
-            } else {
-                _messages.badRequest(res, req, 'Você atingiu o número máximo de tentativas para fazer essa avaliação.', 'Você atingiu o número máximo de tentativas para fazer essa avaliação.', 'evaluations', 'startEvaluation')
-            }
-        } catch (error) {
-            console.log(error)
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'startEvaluation')
-        }
-    },
 
     async questionResponse (req, res) {
         try {
-            const { _id, idQuestion, idAlternative, idItem } = req.body
-            const { idEvaluation, answers, amountQuestionsCorrect, createdAt } = await HistoricEvaluation.findOne({ _id: { $eq: _id } })
-            const { feedback } = await Evaluation.findOne({ _id: { $eq: idEvaluation } })
+            const { _id, idQuestion, idAlternative } = req.body
+            const { answers, amountQuestionsCorrect } = await HistoricEvaluation.findOne({ _id: { $eq: _id } })
             const { rigthAnswer } = await Question.findOne({ _id: { $eq: idQuestion } })
-            const result = {}
-            const arrAnswers = [...answers]
+            let arrAnswers = [...answers]
             let correct = false
             let amountCorrect = amountQuestionsCorrect
 
-            if (idAlternative === rigthAnswer.toString()) {
+            if (idAlternative === rigthAnswer?.toString()) {
                 correct = true
                 amountCorrect++
             }
 
-            if (feedback) {
-                result.correct = correct
-                result.rigthAnswer = rigthAnswer
-            } else {
-                result.correct = correct
-            }
+            const questionAnswered = arrAnswers.find(answer => answer.idQuestion == idQuestion)
+            if (questionAnswered) {
 
-            arrAnswers.push({
-                idQuestion,
-                idAlternative,
-                correct,
-                createdAt: _functions.getDateToday(),
-            })
+                arrAnswers = arrAnswers.map(answer => {
+                    if (answer.idQuestion == idQuestion) {
+                        answer.idAlternative = idAlternative
+                        answer.updatedAt = _functions.getDateToday()
+                        answer.correct = correct
+                    }
+                    return answer
+                })
+
+                amountCorrect = arrAnswers.filter((answer) => answer.correct).length
+            } else {
+
+                arrAnswers.push({
+                    idQuestion,
+                    idAlternative,
+                    correct,
+                    createdAt: _functions.getDateToday(),
+                })
+
+            }
 
             await HistoricEvaluation.findByIdAndUpdate(_id, {
                 answers: arrAnswers,
@@ -420,93 +401,11 @@ module.exports = {
                 amountQuestionsCorrect: amountCorrect,
             })
 
-            const questionTincan = await Question
-                .findOne(
-                    { _id: { $eq: idQuestion } },
-                    ['description', 'idEvaluation'],
-                )
-                .populate('alternatives', 'description')
 
-            const allQuestion = await Question
-                .find(
-                    {
-                        idEvaluation: { $eq: questionTincan.idEvaluation },
-                        deleted: 0,
-                    },
-
-                    ['description'],
-                ).sort({ _id: 1 })
-
-            let numPergunta = null
-            for (var i = 0; i < allQuestion.length; i++) {
-                if (allQuestion[i].id == idQuestion) {
-                    numPergunta = (i + 1)
-                }
-            }
-
-            const arrChoices = []
-
-            const allChoices = await Alternative
-                .find(
-                    {
-                        idQuestion: { $eq: idQuestion },
-                        deleted: 0,
-                    },
-
-                    ['description'],
-                ).sort({ _id: 1 })
-
-            // # Calculando o tempo de resposta do aluno:
-            let durationCalc = null
-
-            if (arrAnswers.length > 1) {
-                durationCalc = new Date(arrAnswers[arrAnswers.length - 1].createdAt) - new Date(arrAnswers[arrAnswers.length - 2].createdAt)
-            } else {
-                durationCalc = new Date(_functions.getDateToday()) - new Date(createdAt)
-            }
-
-            durationCalc = _functions.duration(durationCalc)
-
-            const correctResponsesPattern = []
-            let choiceUser = null
-
-            for (var i = 0; i < allChoices.length; i++) {
-                arrChoices.push({
-                    id: (i + 1),
-                    description: {
-                        'en-US': allChoices[i].description,
-                    },
-                })
-
-                if (rigthAnswer.toString() == allChoices[i]._id) {
-                    correctResponsesPattern.push(String(i + 1))
-                }
-
-                if (idAlternative == allChoices[i]._id) {
-                    choiceUser = String(i + 1)
-                }
-            }
-
-            const completeUser = await _functions.getUserByToken(req)
-
-            const evaluationPerformed = await HistoricEvaluation
-                .find({
-                    idEvaluation: { $eq: _id },
-                    item: { $eq: idItem },
-                    user: { $eq: completeUser._id },
-                })
-
-            const attempt = evaluationPerformed.length + 1
-
-            const linkTrailItem = await returnLinkTrailByItem(idItem)
-            // const bag = xapi.initTinCan(linkTrailItem.urlTrail, linkTrailItem.urlItem, completeUser)
-
-            // await xapi.sendAnsweredAssessment(bag, attempt, completeUser, questionTincan.description, numPergunta, arrChoices, correctResponsesPattern, choiceUser, durationCalc)
-
-            _messages.success(res, req, result)
+            return _messages.success(res, req, null)
         } catch (error) {
-            console.log(error)
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'questionResponse')
+            console.error(error)
+            return _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'questionResponse')
         }
     },
 
@@ -516,7 +415,6 @@ module.exports = {
             const user = await _functions.getUserByToken(req)
             const {
                 amountQuestionsAnswered,
-                questions,
                 amountOfQuestions,
                 amountQuestionsCorrect,
                 idEvaluation,
@@ -530,7 +428,6 @@ module.exports = {
                 deleted: { $eq: false },
             })
 
-            const answeredQuestions = amountQuestionsAnswered
             const amountQuestions = amountOfQuestions > totalQuestions ? totalQuestions : amountOfQuestions
 
             const { passingScore } = await Item.findOne({ _id: { $eq: item } })
@@ -538,74 +435,31 @@ module.exports = {
 
             if (amountQuestionsAnswered === amountQuestions) {
                 const { idEvaluation, title } = await Item.findOne({ _id: { $eq: item } }, ['idEvaluation', 'title'])
-                const { attempts } = await Evaluation.findOne({ _id: { $eq: idEvaluation } })
+                const { attempts, feedback } = await Evaluation.findOne({ _id: { $eq: idEvaluation } })
                 const history = await HistoricEvaluation.find({ user: { $eq: user._id }, idEvaluation: { $eq: idEvaluation } })
-                const questions = await _business.returnsQuestionsAnswered(answers)
+                const questions = await _business.returnsQuestionsAnswered(answers, feedback)
                 result.questions = questions
                 result.finished = true
                 result.passingScore = passingScore
                 result.attemptsHistory = history.length
                 result.attempts = attempts
-
-                const completeUser = await userModel.User.findById(user._id)
-
-                const linkTrailItem = await returnLinkTrailByItem(String(item))
-                // const bag = xapi.initTinCan(linkTrailItem.urlTrail, linkTrailItem.urlItem, completeUser)
-
-                // await xapi.sendCompleteAssessment(bag, title, (result.values.correct >= passingScore), (result.values.correct / 100), (result.attemptsHistory + 1))
+                result.title = title
 
                 _messages.success(res, req, result)
             } else {
-                const question = await Question
-                    .findOne(
-                        { _id: { $eq: questions[amountQuestionsAnswered] } },
-                        ['description'],
-                    )
-                    .populate({ path: 'alternatives', match: { deleted: { $eq: 0 } }, select: 'description deleted' })
 
-                question.number = amountQuestionsAnswered + 1
                 _messages.success(res, req, {
-                    question: question,
                     duration,
-                    answeredQuestions,
-                    amountQuestions
                 })
             }
         } catch (error) {
+            console.error(error)
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'nextQuestion')
         }
     },
 
-    async checkEvaluationStarted (req, res) {
-        try {
-            const { idItem, id } = req.params
-            const user = await _functions.getUserByToken(req)
-            let started = false
 
-            const historic = await HistoricEvaluation
-                .find({
-                    idEvaluation: { $eq: id },
-                    item: { $eq: idItem },
-                    user: { $eq: user._id },
-                })
-                .sort({ createdAt: 'desc' })
-                .limit(1)
 
-            if (historic.length > 0) {
-                if (historic[0].amountQuestionsAnswered < historic[0].amountOfQuestions) started = true
-                _messages.success(res, req, {
-                    _id: historic[0]._id,
-                    started,
-                })
-            } else {
-                _messages.success(res, req, {
-                    started,
-                })
-            }
-        } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'checkEvaluation')
-        }
-    },
 
     async countdownEvaluation (req, res) {
         try {
@@ -623,22 +477,17 @@ module.exports = {
         try {
             const { evaluationID, itemID } = req.body
             const { passingScore } = await Item.findOne({ _id: { $eq: itemID } })
-            const user = await _functions.getUserByToken(req)
 
             const { amountQuestionsCorrect, amountOfQuestions, answers } = await HistoricEvaluation.findOne({
                 _id: { $eq: evaluationID },
             })
 
-            await HistoricEvaluation.findByIdAndUpdate(evaluationID, { amountQuestionsAnswered: amountOfQuestions })
+            await HistoricEvaluation.findByIdAndUpdate(evaluationID, { amountQuestionsAnswered: amountOfQuestions, duration: 0 })
             const result = await _business.calculateRatingEvaluation(amountQuestionsCorrect, amountOfQuestions)
             const questions = await _business.returnsQuestionsAnswered(answers)
             result.questions = questions
             result.finished = true
             result.passingScore = passingScore
-
-            // if (result.values.correct >= passingScore) {
-            //     await ExamTracking.findOneAndUpdate({ item: itemID, userLogin: user.networkLogin }, { lessonStatus: 'passed' })
-            // }
 
             _messages.success(res, req, result)
         } catch (error) {
@@ -646,4 +495,121 @@ module.exports = {
         }
     },
 
+
+    async getAllQuestions (req, res) {
+        try {
+            const { id, idItem } = req.params
+            const user = await _functions.getUserByToken(req)
+
+            const historicEvaluationArray = await HistoricEvaluation.find({
+                item: idItem,
+                user: user._id
+            })
+                .sort({ createdAt: 'desc' })
+                .limit(1)
+
+            const historicEvaluation = historicEvaluationArray[0]
+
+            const currentAttempt =
+                historicEvaluation &&
+                historicEvaluation.amountQuestionsAnswered < historicEvaluation.amountOfQuestions
+
+            if (currentAttempt) {
+                const sortedQuestions = await _business.returnQuestionsByCategoryFromHistoric(historicEvaluation.questions)
+
+                questionsAnswers = historicEvaluation.answers
+                    .map(answer => ({
+                        question: answer.idQuestion,
+                        alternative: answer.idAlternative
+                    }))
+
+                const result = {
+                    questions: sortedQuestions,
+                    amount: historicEvaluation.amountOfQuestions,
+                    questionsAnswers: questionsAnswers,
+                    historicEvaluationId: historicEvaluation._id
+                }
+
+                return _messages.success(res, req, result)
+
+            } else {
+                let categories = await Category.find({ idEvaluation: id, deleted: 0, active: 1 })
+
+                let questionsAnswers = null
+
+                const evaluation = await Evaluation.findById(id)
+
+                if (evaluation.randomQuestions) {
+                    categories = _functions.returnSliceDataRandom(categories, 0, categories.length)
+                }
+
+                const { questions, amount } = await _business.returnQuestionsByCategory(categories)
+
+                const questionHistoric = []
+                for (question of questions) {
+                    const categorie = question.filter(q => q._id)
+
+                    questionHistoric.push(...categorie)
+                }
+
+                const { _id } = await HistoricEvaluation.create({
+                    idEvaluation: id,
+                    amountOfQuestions: amount,
+                    questions: questionHistoric,
+                    item: idItem,
+                    user: user._id,
+                    duration: evaluation.duration,
+                })
+
+                await LogsEvaluation.create({ idHistoricEvaluation: _id })
+
+                const result = { questions, amount, questionsAnswers, historicEvaluationId: _id }
+
+                return _messages.success(res, req, result)
+
+            }
+
+        }
+        catch (error) {
+            console.error(error)
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'evaluations',
+                'getAllQuestions')
+        }
+    },
+
+    async getQuestionById (req, res) {
+        try {
+            const { id } = req.params
+            const question = await Question
+                .findOne(
+                    { _id: { $eq: id } },
+                    ['description', 'idCategory'],
+                )
+                .populate('alternatives', 'description')
+
+            const { randomQuestions } = await Category.findById(question.idCategory).select('randomQuestions')
+
+            if (randomQuestions) {
+                question['alternatives'] = _functions.returnSliceDataRandom(question['alternatives'], 0, question['alternatives'].length)
+            }
+
+            return _messages.success(res, req, question)
+        }
+        catch (error) {
+            console.error(error)
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'evaluations',
+                'getQuestionById')
+        }
+
+    }
 }

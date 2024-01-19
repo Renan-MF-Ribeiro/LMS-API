@@ -7,78 +7,78 @@ const clientId = process.env.CLIENT_ID;
 const headers = { 'x-client-key': process.env.API_KEY_ALURA };
 
 const AluraController = {
-	async getClient (req, res) {
-		try {
-			const uri = `${host}/clients/${clientId}`;
-			const { data } = await axios.get(uri, { headers });
+    async getClient (req, res) {
+        try {
+            const uri = `${host}/clients/${clientId}`;
+            const { data } = await axios.get(uri, { headers });
 
-			return _messages.success(res, req, data);
-		} catch (error) {
-			return handleError(res, req, error)
-		}
-	},
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error)
+        }
+    },
 
-	async addResources(req, res) {
-		try {
-			const { resources } = req.body
-			const { email } = await getUserByToken(req)
-			const uri = `${host}/clients/${clientId}/${email}`;
-			const { data } = await axios.patch(uri, { resources }, { headers });
+    async addResources (req, res) {
+        try {
+            const { resources } = req.body
+            const { email } = await getUserByToken(req)
+            const uri = `${host}/clients/${clientId}/${email}`;
+            const { data } = await axios.patch(uri, { resources }, { headers });
 
-			return _messages.success(res, req, data);
-		} catch (error) {
-			return handleError(res, req, error)
-		}
-	},
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error)
+        }
+    },
 
-	async checkResources(req, res) {
-		try {
-			const { resources } = req.body
-			const { email } = await getUserByToken(req)
-			const uri = `${host}/clients/check-resources/${clientId}/${email}`;
-			const { data } = await axios.post(uri, { resources }, { headers });
+    async checkResources (req, res) {
+        try {
+            const { resources } = req.body
+            const { email } = await getUserByToken(req)
+            const uri = `${host}/clients/check-resources/${clientId}/${email}`;
+            const { data } = await axios.post(uri, { resources }, { headers });
 
-			return _messages.success(res, req, data);
-		} catch (error) {
-			return handleError(res, req, error)
-		}
-	},
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error)
+        }
+    },
 
-	async getSections(req, res) {
-		try {
-			const uri = `${host}/courses/sections/${clientId}`;
-			const { data } = await axios.get(uri, { headers });
+    async getSections (req, res) {
+        try {
+            const uri = `${host}/courses/sections/${clientId}`;
+            const { data } = await axios.get(uri, { headers });
 
-			return _messages.success(res, req, data);
-		} catch (error) {
-			return handleError(res, req, error)
-		}
-	},
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error)
+        }
+    },
 
-	async listByTrails(req, res) {
-		try {
-			const { email } = await getUserByToken(req)
-			const uri = `${host}/courses/trails/${clientId}/${email}`;
-			const { data } = await axios.get(uri, { headers });
+    async listByTrails (req, res) {
+        try {
+            const { email } = await getUserByToken(req)
+            const uri = `${host}/courses/trails/${clientId}/${email}`;
+            const { data } = await axios.get(uri, { headers });
 
-			return _messages.success(res, req, data);
-		} catch (error) {
-			return handleError(res, req, error)
-		}
-	},
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error)
+        }
+    },
 
-	async getByTrails(req, res) {
-		try {
-			const { email } = await getUserByToken(req)
-			const { trailId } = req.params;
-			const uri = `${host}/courses/trails/${clientId}/${email}/${trailId}`;
-			const { data } = await axios.get(uri, { headers });
+    async getByTrails (req, res) {
+        try {
+            const { email } = await getUserByToken(req)
+            const { trailId } = req.params;
+            const uri = `${host}/courses/trails/${clientId}/${email}/${trailId}`;
+            const { data } = await axios.get(uri, { headers });
 
-			return _messages.success(res, req, data);
-		} catch (error) {
-			return handleError(res, req, error)
-		}
-	},
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error)
+        }
+    },
 
 	async launch(req, res) {
 		try {
@@ -107,28 +107,28 @@ const AluraController = {
 	}
 };
 
-function handleError(res, req, error) {
-	switch(error?.response?.status){
-		case 400: {
-			return _messages.badRequest(res, req, error, error.response.data)
-		}
+function handleError (res, req, error) {
+    switch (error?.response?.status) {
+        case 400: {
+            return _messages.badRequest(res, req, error, error.response.data)
+        }
 
-		case 403: {
-			return _messages.forbidden(res, req, error, error.response.data)
-		}
+        case 403: {
+            return _messages.forbidden(res, req, error, error.response.data)
+        }
 
-		case 404: {
-			return _messages.notFound(res, req, error, error.response.data)
-		}
+        case 404: {
+            return _messages.notFound(res, req, error, error.response.data)
+        }
 
-		case 409: {
-			return _messages.conflict(res, req, error, error.response.data)
-		}
+        case 409: {
+            return _messages.conflict(res, req, error, error.response.data)
+        }
 
-		default: {
-			return _messages.internalServer(res, req, error, error.response.data)
-		}
-	}
+        default: {
+            return _messages.internalServer(res, req, error, error.response?.data)
+        }
+    }
 }
 
 module.exports = AluraController;
