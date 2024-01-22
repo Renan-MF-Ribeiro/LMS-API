@@ -317,7 +317,8 @@ const FORM_ITEM_TYPE = Object.freeze({
     DICHOTOMOUS: 'dichotomous',
     MULTIPLE: 'multiple',
     OBJECTIVE: 'objective',
-    DISSERTATIVE: 'dissertative'
+    DISSERTATIVE: 'dissertative',
+    RATING: 'rating'
 })
 
 function ifIsChoosable () {
