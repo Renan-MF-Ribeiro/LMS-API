@@ -296,7 +296,6 @@ module.exports = {
             const { trailId } = req.params;
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/${trailId}`;
             const { data } = await axios.get(uri);
-
             _messages.success(
                 res,
                 req,
@@ -483,10 +482,9 @@ module.exports = {
 
     async getLikesByTrailId(req, res) {
         try {
-            const { trailId } = req.params;
-            const uri = `${process.env.API_SOCIAL}/home/like/${trailId}`;
+            const { trailId, userId } = req.params;
+            const uri = `${process.env.API_SOCIAL}/home/like/${trailId}/${userId}`;
             const { data } = await axios.get(uri);
-            console.log(data);
             _messages.success(
                 res,
                 req,

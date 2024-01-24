@@ -20,7 +20,7 @@ module.exports = express
     .patch('/comments/:commentId', isAdmin, _controller.updateCommentStatus)
     //likes
     .post('/like/create', _controller.createLike)
-    .get('/like/:trailId', _controller.getLikesByTrailId)
+    .get('/like/:trailId/:userId', _controller.getLikesByTrailId)
     .delete('/like/delete', _controller.deleteLike)
     //favorite
     .post('/favorite/create', _controller.createFavorite)
