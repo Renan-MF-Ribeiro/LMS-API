@@ -47,7 +47,8 @@ const GamificationController = {
     async getClientEvents(req, res) {
         if (config.gamification.active) {
             try {
-                const data = await GamificationBusiness.getClientEvents()
+                const { networkLogin } = await getUserByToken(req)
+                const data = await GamificationBusiness.getClientEvents(networkLogin)
 
                 return _messages.success(res, req, data);
             } catch (error) {
