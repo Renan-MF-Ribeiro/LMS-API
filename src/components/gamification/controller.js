@@ -4,6 +4,7 @@ const { User } = require('../users/model');
 const config = require('../../../config.json');
 const _messages = require('../../utils/messages');
 const { handleGroupTagsGamification } = require('./utils');
+const { getUserByToken } = require('../../utils/functions');
 
 const GamificationController = {
     async dispatch(networkLogin, categories, props) {

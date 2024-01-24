@@ -19,7 +19,7 @@ module.exports = {
                 strConn = `mongodb://${DB_USER}:${DB_PASSWORD}@${DB_HOST}/${DB_NAME}`
             }
 
-            return mongoose.connect(strConn)
+            return mongoose.connect(strConn, { dbName: DB_NAME })
         } catch (err) {
             error(err)
         }
