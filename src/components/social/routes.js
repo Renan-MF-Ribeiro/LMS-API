@@ -24,7 +24,7 @@ module.exports = express
     .delete('/like/delete', _controller.deleteLike)
     //favorite
     .post('/favorite/create', _controller.createFavorite)
-    .get('/favorite/:trailId', _controller.getFavoritesByUserId)
+    .get('/favorite/:userId', _controller.getFavoritesByUserId)
     .put('/favorite/update/:favoriteId', _controller.updateFavorite)
     //share
     .post('/share', _controller.shareSocialContent);
