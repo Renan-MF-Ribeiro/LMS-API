@@ -196,7 +196,7 @@ module.exports = {
         const blobOptions = { blobHTTPHeaders: { blobContentType: fileType } };
         const uploadBlobResponse = await blockBlobClient.uploadStream(
             file$,
-            file.size,
+            file.size || file?.vars?.uncompressedSize || undefined,
             undefined,
             blobOptions
         );
