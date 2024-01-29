@@ -3,6 +3,9 @@ const _business = require('./business');
 const _functions = require('../../utils/functions');
 const _messages = require('../../utils/messages');
 const { Trail } = require('../trails/model');
+const { generateSSOToken } = require('../../utils/auth');
+const { User } = require('../users/model');
+
 
 module.exports = {
     async getConfig(req, res) {
@@ -602,10 +605,48 @@ module.exports = {
 
     async shareSocialContent(req, res) {
         try {
-            const { favoriteId } = req.params;
-            const body = req.body;
+            const { trailId } = req.params;
+            const { name } = await _functions.getUserByToken(req);
+            const { usersArray } = req.body;
+
+            const trail = await Trail.findById(trailId, 'title titleURL');
+
+            const text = `Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!`;
+            const texthtml = `<br> <p>Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!</p> <br>`;
+            const messages = [];
+            const redirectTo = `/menu/${trail.titleURL}`;
+
+            for(let id of usersArray){
+                const foundUser = await User.findById(id)
+                const token = generateSSOToken({
+                    networkLogin: foundUser.networkLogin,
+                    communication: ['notification', 'email'],
+                    trailTitle: trail.title,
+                });
+    
+                const message = {
+                    clientid: process.env.CLIENT_ID,
+                    type: ['notification', 'email'],
+                    category: 'notify',
+                    mode: 'manual',
+                    text: text,
+                    texthtml: texthtml,
+                    title: `Happlearning - ${name} compartilhou um conteúdo com você!`,
+                    identifier: foundUser.networkLogin,
+                    viewed: false,
+                    userEmail: foundUser.email || null,
+                    userDevice: foundUser.userDevice || null,
+                    notificationlink: {
+                        trailid: trailId,
+                        itemid: null,
+                        url: `${process.env.DOMAIN}/login/entrar/sso?token=${token}&redirectTo=${redirectTo}`,
+                    },
+                };
+                messages.push(message)
+            }
+
             const uri = `${process.env.API_SOCIAL}/home/share/${process.env.CLIENT_ID}`;
-            const { data } = await axios.put(uri, body);
+            const { data } = await axios.put(uri, messages);
 
             _messages.success(
                 res,
@@ -617,6 +658,7 @@ module.exports = {
             );
             return;
         } catch (error) {
+            console.log(error)
             _messages.badRequest(
                 res,
                 req,

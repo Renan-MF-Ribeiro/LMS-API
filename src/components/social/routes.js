@@ -27,4 +27,4 @@ module.exports = express
     .get('/favorite/:userId', _controller.getFavoritesByUserId)
     .put('/favorite/update/:favoriteId', _controller.updateFavorite)
     //share
-    .post('/share', _controller.shareSocialContent);
+    .post('/share/:trailId', _controller.shareSocialContent);
