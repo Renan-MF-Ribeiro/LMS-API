@@ -606,10 +606,9 @@ function getTrailCompletion(trail) {
     const completed = trail.items.find((val) => val.completion === 1);
     const incomplete = trail.items.find(
         (val) =>
-            val.completion != null && val.completion >= 0 && val.completion < 1
+        val.completion != null && val.completion >= 0 && val.completion < 1 || val.completion == 2
     );
     const notAttempted = trail.items.find((val) => val.completion === null);
-
     if (incomplete) {
         return 0;
     } else if (completed && notAttempted) {
