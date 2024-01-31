@@ -5,6 +5,8 @@ const _messages = require('../../utils/messages');
 const { Trail } = require('../trails/model');
 const { generateSSOToken } = require('../../utils/auth');
 const { User } = require('../users/model');
+const config = require('../../../config.json');
+
 
 
 module.exports = {
@@ -258,7 +260,7 @@ module.exports = {
         try {
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}`;
             const user = await _functions.getUserByToken(req)
-            const body = { ...req.body, userId: user._id, userName: user.name};
+            const body = { ...req.body, userId: user._id, userName: user.name, moderated: config.socialCommentModeration.active};
             const { data } = await axios.post(uri, body);
             _messages.success(res, req, data, 'ok', 'social', 'createComment');
             return;

@@ -64,5 +64,8 @@
     },
     "alura": {
         "active": true
+    },
+    "socialCommentModeration": {
+        "active": false
     }
 }
