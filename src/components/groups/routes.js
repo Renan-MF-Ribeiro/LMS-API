@@ -20,6 +20,7 @@ router
     .get('/tagslist', isAccountant, _controller.getTagsList)
     .get('/groupsbytag', isAccountant, _controller.getGroupsByTag)
     .post('/groupsbytag', isAccountant, _controller.updateGroupsByTag)
+    .delete('/groupsbytag/:tag', isAccountant, _controller.removeGroupsByTag)
     .get('/section-tags', isAccountant, _controller.getSectionTags)
     .put('/', isAdmin, _controller.update)
     .put('/class-group', isAdmin, _controller.updateClassGroup)
