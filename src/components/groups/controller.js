@@ -362,13 +362,14 @@ module.exports = {
             const { skip, limit } = _functions.pagination(req);
             const searchBy = req.query.searchBy;
 
-            const groups = await Group.find({});
+            const groups = await Group.find({ deleted: { $eq: 0 } });
             const trails = await Trail.find({});
 
             const groupTags = groups
                 .filter((value) => value.tags?.length > 0)
                 .map((group) => group.tags.map((tag) => tag.value))
                 .filter((tag) => !/(\bPERFIL_)/.test(tag));
+
             const trailTags = trails
                 .filter((value) => value.tags?.length > 0)
                 .map((trail) => trail.tags.map((tag) => tag.value))
@@ -384,13 +385,26 @@ module.exports = {
             tags = tags.filter((tag) => tag.tag?.includes(searchBy))
 
             // Ordenação
-            tags.sort((a, b) => {
-                const ordernation = sort === 'desc' ? 1 : -1;
-                return ordernation * (a[order] > b[order] ? 1 : a[order] < b[order] ? -1 : 0);
-            });
 
             var end = skip + Number(limit);
             var tagsPag = tags.slice(skip, end);
+
+            tagsPag = await Promise.all(tagsPag.map(async (tag) => {
+                const groupsCount = await Group.countDocuments({
+                    deleted: 0,
+                    'tags.display': new RegExp(tag.tag, 'i')
+                });
+
+                return {
+                    ...tag,
+                    groups: groupsCount
+                };
+            }));
+
+            tagsPag.sort((a, b) => {
+                const ordernation = sort === 'desc' ? 1 : -1;
+                return ordernation * (a[order] > b[order] ? 1 : a[order] < b[order] ? -1 : 0);
+            });
 
             _messages.success(res, req, {
                 data: tagsPag,
@@ -459,6 +473,34 @@ module.exports = {
             );
 
             _messages.success(res, req, { response: 'sucesso' });
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'groups',
+                '/updateGroupsByTag'
+            );
+        }
+    },
+
+    async removeGroupsByTag (req, res) {
+        try {
+            const { tag } = req.params;
+
+            // Atualizando documentos para remover a tag específica
+            const removeGroup = await Group.updateMany(
+                { deleted: { $eq: 0 }, 'tags.display': new RegExp(tag, 'i') },
+                { $pull: { tags: { display: new RegExp(tag, 'i') } } }
+            );
+
+            const removeTrails = await Trail.updateMany(
+                { enabled: { $eq: true }, 'tags.display': new RegExp(tag, 'i') },
+                { $pull: { tags: { display: new RegExp(tag, 'i') } } }
+            );
+
+            _messages.success(res, req, { removeGroup, removeTrails });
         } catch (error) {
             _messages.internalServer(
                 res,
