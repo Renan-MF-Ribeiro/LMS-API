@@ -361,9 +361,11 @@ module.exports = {
             const { sort, order } = _functions.ordernation(req);
             const { skip, limit } = _functions.pagination(req);
             const searchBy = req.query.searchBy;
+            const queryGroup = searchBy ? { deleted: 0, 'tags.display': searchBy, } : { deleted: 0, }
+            const groups = await Group.find(queryGroup);
 
-            const groups = await Group.find({ deleted: { $eq: 0 } });
-            const trails = await Trail.find({});
+            const queryTrail = searchBy ? { tags: { $exists: true, $ne: [] }, 'tags.display': searchBy, } : { tags: { $exists: true, $ne: [] } }
+            const trails = await Trail.find(queryTrail);
 
             const groupTags = groups
                 .filter((value) => value.tags?.length > 0)
@@ -382,29 +384,32 @@ module.exports = {
             tags = tags.filter((tag, index, self) => self.indexOf(tag) === index).map((tag => ({ tag })))
 
             const total = tags.length
-            tags = tags.filter((tag) => tag.tag?.includes(searchBy))
+
 
             // Ordenação
+            tags.sort((a, b) => {
+                const ordernation = sort === 'desc' ? 1 : -1;
+                return ordernation * (a[order] > b[order] ? 1 : a[order] < b[order] ? -1 : 0);
+            });
+
+
+            //paginação
 
             var end = skip + Number(limit);
             var tagsPag = tags.slice(skip, end);
 
+            //quantidade de grupos por tag
+
             tagsPag = await Promise.all(tagsPag.map(async (tag) => {
                 const groupsCount = await Group.countDocuments({
-                    deleted: 0,
-                    'tags.display': new RegExp(tag.tag, 'i')
+                    deleted: 0, 'tags.display': tag.tag,
                 });
-
                 return {
                     ...tag,
                     groups: groupsCount
                 };
             }));
 
-            tagsPag.sort((a, b) => {
-                const ordernation = sort === 'desc' ? 1 : -1;
-                return ordernation * (a[order] > b[order] ? 1 : a[order] < b[order] ? -1 : 0);
-            });
 
             _messages.success(res, req, {
                 data: tagsPag,
@@ -427,7 +432,7 @@ module.exports = {
 
             const tag = req.query.tag;
 
-            const groups = await Group.find({ deleted: { $eq: 0 }, 'tags.display': new RegExp(tag, 'i') });
+            const groups = await Group.find({ deleted: { $eq: 0 }, 'tags.display': tag });
 
             const groupTags = groups
                 .filter((value) => value.tags?.length > 0)
@@ -459,12 +464,17 @@ module.exports = {
 
             const body = req.body
             const tag = body.tag;
+            const old = body.old;
 
+            let remove
             // Atualizando documentos para remover a tag específica
-            const remove = await Group.updateMany(
-                { deleted: { $eq: 0 }, 'tags.display': new RegExp(tag, 'i') },
-                { $pull: { tags: { display: new RegExp(tag, 'i') } } }
-            );
+            console.log(old)
+            if (old) {
+                remove = await Group.updateMany(
+                    { 'tags.display': old },
+                    { $pull: { tags: { display: old } } }
+                );
+            }
 
             // Atualizando documentos para adicionar a tag em cada array 'tags'
             const update = await Group.updateMany(
@@ -472,7 +482,7 @@ module.exports = {
                 { $push: { tags: { display: tag, value: tag } } }
             );
 
-            _messages.success(res, req, { response: 'sucesso' });
+            _messages.success(res, req, { remove, update });
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -491,17 +501,13 @@ module.exports = {
 
             // Atualizando documentos para remover a tag específica
             const removeGroup = await Group.updateMany(
-                { deleted: { $eq: 0 }, 'tags.display': new RegExp(tag, 'i') },
-                { $pull: { tags: { display: new RegExp(tag, 'i') } } }
+                { 'tags.display': tag, },
+                { $pull: { tags: { display: tag } } }
             );
 
-            const removeTrails = await Trail.updateMany(
-                { enabled: { $eq: true }, 'tags.display': new RegExp(tag, 'i') },
-                { $pull: { tags: { display: new RegExp(tag, 'i') } } }
-            );
-
-            _messages.success(res, req, { removeGroup, removeTrails });
+            _messages.success(res, req, { removeGroup });
         } catch (error) {
+            conso
             _messages.internalServer(
                 res,
                 req,
