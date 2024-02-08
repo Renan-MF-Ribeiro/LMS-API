@@ -361,10 +361,10 @@ module.exports = {
             const { sort, order } = _functions.ordernation(req);
             const { skip, limit } = _functions.pagination(req);
             const searchBy = req.query.searchBy;
-            const queryGroup = searchBy ? { deleted: 0, 'tags.display': searchBy, } : { deleted: 0, }
+            const queryGroup = searchBy ? { deleted: 0, 'tags.display': { $regex: searchBy, $options: 'i' }, } : { deleted: 0, }
             const groups = await Group.find(queryGroup);
 
-            const queryTrail = searchBy ? { tags: { $exists: true, $ne: [] }, 'tags.display': searchBy, } : { tags: { $exists: true, $ne: [] } }
+            const queryTrail = searchBy ? { tags: { $exists: true, $ne: [] }, 'tags.display': { $regex: searchBy, $options: 'i' }, } : { tags: { $exists: true, $ne: [] } }
             const trails = await Trail.find(queryTrail);
 
             const groupTags = groups
@@ -431,7 +431,6 @@ module.exports = {
         try {
 
             const tag = req.query.tag;
-
             const groups = await Group.find({ deleted: { $eq: 0 }, 'tags.display': tag });
 
             const groupTags = groups
@@ -468,7 +467,6 @@ module.exports = {
 
             let remove
             // Atualizando documentos para remover a tag específica
-            console.log(old)
             if (old) {
                 remove = await Group.updateMany(
                     { 'tags.display': old },
