@@ -1,66 +1,71 @@
-const { COMPOSE_PROJECT_NAME, CLIENT_ID, ZENDESK_USER, ZENDESK_API_KEY, ZENDESK_SUBDOMAIN } = process.env;
-const _messages = require('../../utils/messages');
-const zendesk = require('node-zendesk');
+const axios = require('axios');
 const fs = require('fs');
-const { getTokenAttachment, custom_fields } = require('./business')
+const FormData = require('form-data');
 
-
+const _messages = require('../../utils/messages');
 
 module.exports = {
-    async create (req, res) {
+    async create(req, res) {
         try {
-            const body = JSON.parse(req.fields.payload);
+            const form = new FormData();
 
-            if (Object.keys(req.files).length !== 0) {
-                let fileArray = Object.keys(req.files).map((key) => req.files[key]);
+            const reqPayload = JSON.parse(req.fields.payload);
+            const payload = {
+                ticket: {
+                    ...reqPayload.ticket,
+                },
+                clientName: process.env.COMPOSE_PROJECT_NAME,
+            };
+            const strPayload = JSON.stringify(payload);
+            form.append('payload', strPayload);
 
-                const tokenFile = await getTokenAttachment(fileArray)
-
-                body.ticket.comment.uploads = [tokenFile]
-
+            if (Object.entries(req.files).length > 0) {
+                for (const [_fileKey, file] of Object.entries(req.files)) {
+                    const fieldName = file.name.split('.')[0];
+                    const readStream = fs.createReadStream(file.path);
+                    form.append(fieldName, readStream);
+                }
             }
 
-            body.ticket.custom_fields.push({
-                id: custom_fields.ClientName,
-                value: COMPOSE_PROJECT_NAME
+            const url = `${process.env.API_ZENDESK}/support/ticket/${process.env.CLIENT_ID}`;
 
-            })
+            const headers = {
+                ...form.getHeaders(),
+                Authorization: process.env.API_KEY_ZENDESK,
+            };
 
-            body.ticket.custom_fields.push({
-                id: custom_fields.ClientID,
-                value: CLIENT_ID,
-            })
-            const client = zendesk.createClient({
-                username: ZENDESK_USER,
-                token: ZENDESK_API_KEY,
-                subdomain: ZENDESK_SUBDOMAIN
-            });
-
-            client.tickets.create(body).then(response => {
+            try {
+                const response = await axios({
+                    method: 'post',
+                    url,
+                    headers,
+                    data: form,
+                });
                 return _messages.success(
                     res,
                     req,
-                    response.result,
+                    response.data,
                     'Sucesso',
                     'support',
                     'createTicket'
                 );
-            }).catch(error => {
-                console.error(`Failed to create ticket: ${error.message}`);
+            } catch (err) {
+                console.error(
+                    `Failed in zendesk microsservice: ${err.message}`
+                );
                 return _messages.internalServer(
                     res,
                     req,
-                    error.message,
-                    'Erro interno no servidor',
+                    err.message,
+                    'Erro interno no servidor (happlearning-zendesk)',
                     'support',
                     'createTicket'
                 );
-            });
+            }
+        } catch (error) {
+            console.error(`Failed to process ticket data: ${error.message}`);
 
-
-        }
-        catch (error) {
-            _messages.internalServer(
+            return _messages.internalServer(
                 res,
                 req,
                 error.message,
@@ -69,5 +74,5 @@ module.exports = {
                 'createTicket'
             );
         }
-    }
-}
+    },
+};
