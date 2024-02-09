@@ -27,6 +27,7 @@ router
     .put('/question/rigth-answer', isAccountant, _controllerQuestions.rigthAnswer)
     .put('/question/change-status', isAccountant, _controllerQuestions.changeStatus)
     .delete('/questions/:id', isAccountant, _controllerQuestions.deleteQuestion)
+    .post('/feedback', isAccountant, _controllerQuestions.updateFeedback)
 
     // ALTERNATIVES
     .get('/alternatives/:id', isAccountant, _controllerAlternative.getAlternatives)
@@ -42,12 +43,13 @@ router
     .post('/finalize-evaluation', isStudent, _controller.finalizeEvaluation)
     .put('/', isAccountant, _controller.updateEvaluation)
     .get('/evaluation-details/:id', _controller.returnEvaluationWithDetails)
-    .get('/check-evaluation-started/:idItem/:id', isStudent, _controller.checkEvaluationStarted)
-    .get('/start-evaluation/:idItem/:id', isStudent, _controller.startEvaluation)
     .get('/next-question/:id', isStudent, _controller.nextQuestion)
     .get('/evaluation/:id', isStudent, _controller.returnEvaluation)
     .get('/actives', isAccountant, _controller.getActivesEvaluations)
     .get('/', isAccountant, _controller.getAllEvaluations)
     .delete('/:id', isAccountant, _controller.deleteEvaluation)
+
+    .get('/allQuestions/:idItem/:id', isStudent, _controller.getAllQuestions)
+    .get('/questionById/:id', isStudent, _controller.getQuestionById)
 
 module.exports = router

@@ -17,8 +17,9 @@ const { BlobServiceClient } = require('@azure/storage-blob');
 const { ShareServiceClient } = require('@azure/storage-file-share');
 const momentz = require('moment-timezone');
 const ExcelJS = require('exceljs');
+const axios = require('axios');
 const _functions = require('./functions');
-const { mapUser } = require('./../components/users/model');
+const { mapUserOld, defaultUserMap } = require('./../components/users/model');
 const { Item, MediaItem } = require('../components/items/model');
 const { sleep } = require('./functions');
 const {
@@ -46,7 +47,7 @@ const {
 
 shelljs.mkdir('-p', UPLOADS_PATH);
 
-async function streamToBuffer (readableStream) {
+async function streamToBuffer(readableStream) {
     return new Promise((resolve, reject) => {
         const chunks = [];
         readableStream.on('data', (data) => {
@@ -59,9 +60,9 @@ async function streamToBuffer (readableStream) {
     });
 }
 
-function bufferToStream (binary) {
+function bufferToStream(binary) {
     const readableInstanceStream = new Readable({
-        read () {
+        read() {
             this.push(binary);
             this.push(null);
         },
@@ -69,6 +70,61 @@ function bufferToStream (binary) {
 
     return readableInstanceStream;
 }
+
+const forEachRow = (row, rowNumber, map, labels, users, previousHyperLink) => {
+    if (rowNumber === 1) {
+        // rowNumber === 1 means its headers
+        for (const columnHeader of row.values) {
+            const mapEntries = Object.entries(map);
+            const labelDB = mapEntries.find(
+                (entry) => entry[1] && columnHeader && entry[1] === columnHeader
+            )?.[0];
+            labels.push(labelDB);
+        }
+    } else {
+        const tmpUser = {};
+        previousHyperLink.index = -1;
+
+        for (const value of row.values) {
+            if (!value) continue;
+
+            let i;
+            if (value.text) {
+                row.values.find((findValue, findIndex) => {
+                    if (!findValue?.text) return false;
+                    i = findIndex;
+                    return (
+                        findValue &&
+                        value &&
+                        findValue.text &&
+                        value.text &&
+                        findValue.text === value.text &&
+                        (previousHyperLink.index === -1 ||
+                            findIndex > previousHyperLink.index)
+                    );
+                });
+                previousHyperLink.index = i;
+            } else {
+                row.values.find((findValue, findIndex) => {
+                    if (findValue?.text) return false;
+                    if (
+                        tmpUser[labels[findIndex]] &&
+                        tmpUser[labels[findIndex]] === findValue
+                    )
+                        return false;
+
+                    i = findIndex;
+                    return findValue === value;
+                });
+            }
+
+            if (labels[i] && row.values[i]) {
+                tmpUser[labels[i]] = row.values[i].text ?? row.values[i] ?? '';
+            }
+        }
+        users.push(tmpUser);
+    }
+};
 
 module.exports = {
     // awsAmazon(file, folder) {
@@ -107,13 +163,17 @@ module.exports = {
     //     });
     // },
 
-    async azureBlob (file, folder, ignoreStream = false) {
+    async azureBlob(
+        file,
+        folder,
+        ignoreStream = false,
+        container = 'lmsassets'
+    ) {
         // return new Promise((resolve, reject) => {
         const blobServiceClient =
             BlobServiceClient.fromConnectionString(AZURE_STRINGCONN);
 
-        const containerClient =
-            blobServiceClient.getContainerClient('lmsassets');
+        const containerClient = blobServiceClient.getContainerClient(container);
         // containerClient.create();
         // console.log(containerClient)
 
@@ -136,7 +196,7 @@ module.exports = {
         const blobOptions = { blobHTTPHeaders: { blobContentType: fileType } };
         const uploadBlobResponse = await blockBlobClient.uploadStream(
             file$,
-            file.size,
+            file.size || file?.vars?.uncompressedSize || undefined,
             undefined,
             blobOptions
         );
@@ -145,11 +205,17 @@ module.exports = {
         url =
             process.env.NODE_ENV === 'local'
                 ? url
-                : url.replace(AZURE_BLOB_URL, DOMAIN);
+                : url.replace(
+                      AZURE_BLOB_URL.substring(
+                          0,
+                          AZURE_BLOB_URL.lastIndexOf('/')
+                      ) + `/${container}`,
+                      DOMAIN
+                  );
         return url;
     },
 
-    async getAzureFile () {
+    async getAzureFile() {
         try {
             const env = process.env.NODE_ENV;
             const directory = env === 'production' ? 'producao' : 'homologacao';
@@ -182,7 +248,7 @@ module.exports = {
         // return await streamToBuffer(downloadFileResponse.readableStreamBody)
     },
 
-    async moveUserLoadToProcessed (buffer) {
+    async moveUserLoadToProcessed(buffer) {
         try {
             const env = process.env.NODE_ENV;
             const directory = env === 'production' ? 'producao' : 'homologacao';
@@ -208,7 +274,7 @@ module.exports = {
         }
     },
 
-    vimeoFilePathCreate (file, payload, user, mode = 'create') {
+    vimeoFilePathCreate(file, payload, user, mode = 'create') {
         let filePath;
         let fileType;
         let uploadStatus;
@@ -298,7 +364,7 @@ module.exports = {
         }, 5000);
     },
 
-    vimeoFilePathUpdate (file, payload, user, vimeoId) {
+    vimeoFilePathUpdate(file, payload, user, vimeoId) {
         let uploadStatus;
         const vimeoIdPath = `/videos/${vimeoId}`;
         const fileName = file.name;
@@ -373,7 +439,7 @@ module.exports = {
         }, 5000);
     },
 
-    async moveUpload (file) {
+    async moveUpload(file) {
         if (!file) return null;
 
         const hash = revHash(file.path);
@@ -393,17 +459,17 @@ module.exports = {
         )
     ),
 
-    mkdirSCORM (packageId) {
+    mkdirSCORM(packageId) {
         const _path = path.join(UPLOADS_PATH, 'scorm', packageId);
 
         try {
             shelljs.mkdir('-p', _path);
-        } catch { }
+        } catch {}
 
         return _path;
     },
 
-    mvFile (file, name) {
+    mvFile(file, name) {
         return new Promise((resolve, reject) => {
             try {
                 const _path = path.join(UPLOADS_PATH, name);
@@ -415,7 +481,7 @@ module.exports = {
         });
     },
 
-    readXLSX (file) {
+    readXLSX(file) {
         return new Promise((resolve, reject) => {
             xlsx(file)
                 .then((rows) => {
@@ -428,7 +494,7 @@ module.exports = {
         });
     },
 
-    readXLSXAlternative (file) {
+    readXLSXAlternative(file) {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.readFile(file).then(() => {
@@ -445,7 +511,7 @@ module.exports = {
         });
     },
 
-    readXLSXClassGroups (file) {
+    readXLSXClassGroups(file) {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.readFile(file).then(function () {
@@ -481,7 +547,7 @@ module.exports = {
         });
     },
 
-    writeXlsxClassGroupsResults (workbook, results) {
+    writeXlsxClassGroupsResults(workbook, results) {
         const worksheet = workbook.getWorksheet('Sua Carga Aqui');
 
         worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
@@ -497,102 +563,92 @@ module.exports = {
         return workbook;
     },
 
-    readXLSXUsers (file) {
+    async readXLSXUsers(file, onboarding = false) {
+        const getMapsResponse = await axios.get(
+            `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
+            {
+                headers: {
+                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                },
+            }
+        );
+        const connectMaps = getMapsResponse.data;
+
+        const map =
+            connectMaps.user &&
+            Object.keys(connectMaps.user).length > 0 &&
+            onboarding == false
+                ? connectMaps.user
+                : defaultUserMap;
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.readFile(file).then(function () {
-                var worksheet = workbook.getWorksheet('Sua CargaUsuario Aqui');
-                var objPattern = [];
-                var objUsers = [];
+                let worksheet = workbook.getWorksheet('Sua CargaUsuario Aqui');
 
-                worksheet.eachRow(
-                    { includeEmpty: false },
-                    function (row, rowNumber) {
-                        if (objPattern.length == 0) {
-                            for (var i = 0; i < row.values.length; i++) {
-                                let labelCarga = row.values[i]
-                                    ? _functions.clearString(row.values[i])
-                                    : row.values[i];
+                if (!worksheet) worksheet = workbook.worksheets[0];
 
-                                labelCarga = String(labelCarga).toUpperCase();
+                const labels = [];
+                const users = [];
+                let previousHyperLink = { index: -1 };
 
-                                const labelDB = mapUser[labelCarga];
+                worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+                    return forEachRow(
+                        row,
+                        rowNumber,
+                        map,
+                        labels,
+                        users,
+                        previousHyperLink
+                    );
+                });
 
-                                objPattern.push(labelDB);
-                            }
-                        } else {
-                            const tmpUser = {};
-
-                            for (var i = 0; i < row.values.length; i++) {
-                                tmpUser[objPattern[i]] =
-                                    row.values[i]?.text ?? row.values[i] ?? '';
-                            }
-
-                            delete tmpUser.undefined;
-
-                            if (tmpUser[objPattern[1]] != objPattern[1]) {
-                                objUsers.push(tmpUser);
-                            }
-                        }
-                    }
-                );
-                resolve(objUsers);
+                resolve(users);
             });
         });
     },
-    readXLSXUsersBuffer (file) {
+
+    async readXLSXUsersBuffer(file) {
+        const getMapsResponse = await axios.get(
+            `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
+            {
+                headers: {
+                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                },
+            }
+        );
+        const connectMaps = getMapsResponse.data;
+
+        const map =
+            connectMaps.user && Object.keys(connectMaps.user).length > 0
+                ? connectMaps.user
+                : defaultUserMap;
+
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.load(file).then(function () {
-                var worksheet = workbook.getWorksheet('Sua CargaUsuario Aqui');
-                var objPattern = [];
-                var objUsers = [];
+                let worksheet = workbook.getWorksheet('Sua CargaUsuario Aqui');
+                if (!worksheet) worksheet = workbook.worksheets[0];
 
-                worksheet.eachRow(
-                    { includeEmpty: false },
-                    function (row, rowNumber) {
-                        if (objPattern.length == 0) {
-                            for (var i = 0; i < row.values.length; i++) {
-                                let labelCarga = row.values[i]
-                                    ? _functions.clearString(row.values[i])
-                                    : row.values[i];
+                const labels = [];
+                const users = [];
+                let previousHyperLink = { index: -1 };
 
-                                labelCarga = String(labelCarga).toUpperCase();
-
-                                const labelDB = mapUser[labelCarga];
-
-                                objPattern.push(labelDB);
-                            }
-                        } else {
-                            const tmpUser = {};
-
-                            for (var i = 0; i < row.values.length; i++) {
-                                const val =
-                                    typeof row.values[i] === 'object' &&
-                                        row.values[i].text != undefined
-                                        ? row.values[i].text
-                                        : row.values[i];
-                                const tmpValue =
-                                    String(row.values[i]) != 'undefined'
-                                        ? String(val)
-                                        : '';
-                                tmpUser[objPattern[i]] = tmpValue;
-                            }
-
-                            delete tmpUser.undefined;
-
-                            if (tmpUser[objPattern[1]] != objPattern[1]) {
-                                objUsers.push(tmpUser);
-                            }
-                        }
-                    }
-                );
-                resolve(objUsers);
+                worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+                    return forEachRow(
+                        row,
+                        rowNumber,
+                        map,
+                        labels,
+                        users,
+                        previousHyperLink
+                    );
+                });
+                resolve(users);
             });
         });
     },
 
-    readCSV (file) {
+    readCSV(file) {
         return new Promise((resolve, reject) => {
             try {
                 const results = [];
@@ -609,7 +665,7 @@ module.exports = {
         });
     },
 
-    writeFile (header, records) {
+    writeFile(header, records) {
         return new Promise((resolve, reject) => {
             const csvWriter = createCsvWriter({
                 path: path.resolve() + '/src/public/lista_usuarios.csv',
@@ -627,7 +683,7 @@ module.exports = {
         });
     },
 
-    writeFileLogs (header, records) {
+    writeFileLogs(header, records) {
         return new Promise((resolve, reject) => {
             const csvWriter = createCsvWriter({
                 path:
@@ -648,7 +704,7 @@ module.exports = {
         });
     },
 
-    createCSVString (header, records) {
+    createCSVString(header, records) {
         const csvStringfier = createObjectCsvStringifier({
             header,
             encoding: 'utf8',
@@ -660,5 +716,28 @@ module.exports = {
         ].join('');
 
         return csvString;
+    },
+
+    readXLSXHeaders(file) {
+        return new Promise((resolve, reject) => {
+            const workbook = new ExcelJS.Workbook();
+            workbook.xlsx.readFile(file).then(function () {
+                let worksheet = workbook.getWorksheet('Sua CargaUsuario Aqui');
+                if (!worksheet) worksheet = workbook.getWorksheet(0);
+
+                const headers = [];
+
+                worksheet.eachRow(
+                    { includeEmpty: false },
+                    function (row, rowNumber) {
+                        if (rowNumber !== 1) return;
+                        for (let i = 0; i < row.values.length; i += 1) {
+                            if (row.values[i]) headers.push(row.values[i]);
+                        }
+                    }
+                );
+                resolve(headers);
+            });
+        });
     },
 };

@@ -4,6 +4,7 @@ const { User } = require('../users/model');
 const config = require('../../../config.json');
 const _messages = require('../../utils/messages');
 const { handleGroupTagsGamification } = require('./utils');
+const { getUserByToken } = require('../../utils/functions');
 
 const GamificationController = {
     async dispatch(networkLogin, categories, props) {
@@ -47,7 +48,8 @@ const GamificationController = {
     async getClientEvents(req, res) {
         if (config.gamification.active) {
             try {
-                const data = await GamificationBusiness.getClientEvents()
+                const { networkLogin } = await getUserByToken(req)
+                const data = await GamificationBusiness.getClientEvents(networkLogin)
 
                 return _messages.success(res, req, data);
             } catch (error) {

@@ -11,6 +11,7 @@ const {
     Block,
     userSchema,
     userProjection,
+    defaultUserMap,
 } = require('./model');
 
 const {
@@ -42,6 +43,8 @@ const {
     sendUpdatedDeviceIdToMessenger,
     createWelcomeCampaign,
     returnDateSinceFirstLogin,
+    persistUsers,
+    findUsers,
 } = require('./business');
 
 const {
@@ -82,7 +85,9 @@ const { EVENTS_CATEGORY } = require('../gamification/model');
 const GamificationController = require('../gamification/controller');
 const GamificationBusiness = require('../gamification/business');
 const { Group } = require('../groups/model');
-const { handleUserEligibilitiesGamification } = require('../gamification/utils');
+const {
+    handleUserEligibilitiesGamification,
+} = require('../gamification/utils');
 
 module.exports = {
     async create (req, res) {
@@ -104,7 +109,21 @@ module.exports = {
                 );
             }
 
-            const processedUser = processUsersLoad(req.body);
+            const elegibilityResponse = await axios.get(
+                `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+                {
+                    headers: {
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                    },
+                }
+            );
+            const fieldsForElegibility = elegibilityResponse.data.fields;
+
+            const processedUser = processUsersLoad(
+                req.body,
+                fieldsForElegibility
+            );
+
             await User.create(processedUser);
             const created = await User.findOne(
                 { networkLogin: processedUser.networkLogin },
@@ -270,7 +289,7 @@ module.exports = {
                         'profilePhoto',
                         'groupsAD',
                         'email',
-                        'webPushAuthorization'
+                        'webPushAuthorization',
                     ]
                 );
 
@@ -351,7 +370,10 @@ module.exports = {
                     );
                     const groupsIDS = await returnIdGroupUser(namesGroups);
 
-                    const authwebPush = user.webPushAuthorization[user.webPushAuthorization.length - 1]
+                    const authwebPush =
+                        user.webPushAuthorization[
+                        user.webPushAuthorization.length - 1
+                        ];
 
                     const token = generateToken({
                         ref: user._id,
@@ -414,7 +436,7 @@ module.exports = {
                             mfaToken: token_mfa,
                             networkLogin: user.networkLogin,
                             userId: user._id,
-                            authwebPush: authwebPush?.keys.auth
+                            authwebPush: authwebPush?.keys.auth,
                         },
                         'Sucesso ao logar',
                         'users',
@@ -1086,12 +1108,26 @@ module.exports = {
                 file = req.files.content;
             }
             const results = await _files.readXLSXUsers(file.path);
+
+            const elegibilityResponse = await axios.get(
+                `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+                {
+                    headers: {
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                    },
+                }
+            );
+            const fieldsForElegibility = elegibilityResponse.data.fields;
+
             for (const result of results) {
                 const existingUser = await User.findOne({
                     networkLogin: result.networkLogin,
                 });
 
-                const processedUser = processUsersLoad(result);
+                const processedUser = processUsersLoad(
+                    result,
+                    fieldsForElegibility
+                );
                 const account = await processUserAccount(processedUser);
 
                 processedUser.password = existingUser
@@ -1131,6 +1167,103 @@ module.exports = {
                 console.log(
                     `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
                 );
+
+                await User.insertMany(newUsers);
+
+                if (config.messenger.sendUsersToMicrosservice) {
+                    await sendAccountsToKafka(usersToSend);
+                    const campaign = createWelcomeCampaign();
+                    await sendMessageToKafka(campaign, newUsers);
+                    await NewMessage.create(campaign);
+                }
+            }
+
+            _messages.success(res, req, 'Importado com sucesso');
+        } catch (error) {
+            console.log(error);
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'users',
+                'import'
+            );
+        }
+    },
+
+    async importOnboarding (req, res) {
+        try {
+            const onboarding = true
+            var file = null;
+            const newUsers = [];
+            const existingUsers = [];
+            const usersToSend = [];
+            if (req.files.file) {
+                file = req.files.file;
+            } else {
+                file = req.files.content;
+            }
+            const results = await _files.readXLSXUsers(file.path, onboarding);
+            const elegibilityResponse = await axios.get(
+                `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+                {
+                    headers: {
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                    },
+                }
+            );
+            const fieldsForElegibility = elegibilityResponse.data.fields;
+
+            for (const result of results) {
+                const existingUser = await User.findOne({
+                    networkLogin: result.networkLogin,
+                });
+                const processedUser = processUsersLoad(
+                    result,
+                    fieldsForElegibility,
+                    onboarding
+                );
+                const account = await processUserAccount(processedUser);
+
+                processedUser.password = existingUser
+                    ? existingUser.password
+                    : processedUser.password;
+
+                if (existingUser) {
+                    existingUsers.push({
+                        _id: existingUser._id,
+                        processedUser,
+                    });
+                } else {
+                    usersToSend.push(account);
+                    newUsers.push(processedUser);
+                }
+            }
+
+            console.log(
+                `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
+            );
+            for (const user of existingUsers) {
+                await User.findByIdAndUpdate(user._id, {
+                    ...user.processedUser,
+                });
+            }
+
+            if (inactivateIfNotInSpreadsheet) {
+                const data_start = new Date();
+                await User.updateMany(
+                    { updatedAt: { $lt: data_start } },
+                    { $set: { status: 'INATIVO' } },
+                    { multi: true }
+                );
+            }
+
+            if (newUsers.length > 0) {
+                console.log(
+                    `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
+                );
+
                 await User.insertMany(newUsers);
 
                 if (config.messenger.sendUsersToMicrosservice) {
@@ -1165,17 +1298,17 @@ module.exports = {
                 searchBy
                     ? {
                         $or: [
-                            { name: { $regex: searchBy, $options: 'i' } },
+                            { name: { $regex: searchBy, $options: 'i' }, onboarding: { $ne: true } },
                             {
                                 registration: {
                                     $regex: searchBy,
                                     $options: 'i',
-                                },
+                                }, onboarding: { $ne: true }
                             },
-                            { email: { $regex: searchBy, $options: 'i' } },
+                            { email: { $regex: searchBy, $options: 'i' }, onboarding: { $ne: true } },
                         ],
                     }
-                    : {}
+                    : { onboarding: { $ne: true } }
             )
                 .sort({
                     [order]: sort,
@@ -1187,24 +1320,26 @@ module.exports = {
                 searchBy
                     ? {
                         $or: [
-                            { name: { $regex: searchBy, $options: 'i' } },
+                            { name: { $regex: searchBy, $options: 'i' }, onboarding: { $ne: true } },
                             {
                                 registration: {
                                     $regex: searchBy,
                                     $options: 'i',
-                                },
+                                }, onboarding: { $ne: true }
                             },
-                            { email: { $regex: searchBy, $options: 'i' } },
+                            { email: { $regex: searchBy, $options: 'i' }, onboarding: { $ne: true } },
                         ],
                     }
-                    : {}
+                    : { onboarding: { $ne: true } }
             ).countDocuments();
 
             const totalActive = await User.find({
                 status: 'ATIVO',
+                onboarding: { $ne: true }
             }).countDocuments();
             const totalInactive = await User.find({
                 status: 'INATIVO',
+                onboarding: { $ne: true }
             }).countDocuments();
 
             _messages.success(res, req, {
@@ -1213,6 +1348,22 @@ module.exports = {
                 totalActive,
                 totalInactive,
             });
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'users',
+                'returnUsers'
+            );
+        }
+    },
+
+    async returnUsersOnboarding (req, res) {
+        try {
+            const users = await findUsers(req, { onboarding: true });
+            _messages.success(res, req, users);
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -1580,7 +1731,7 @@ module.exports = {
                     ...dataToken,
                 });
                 const SAS = generateSASToken();
-                GamificationBusiness.createClientUser(networkLogin, groupsAD)
+                GamificationBusiness.createClientUser(networkLogin, groupsAD);
                 _messages.success(res, req, {
                     SAS,
                     token,
@@ -1942,7 +2093,6 @@ module.exports = {
         }
     },
 
-
     async deleteGroups (req, res) {
         const { tag, userId } = req.body;
 
@@ -1952,7 +2102,16 @@ module.exports = {
                 { $pull: { groupsAD: tag } },
                 { new: true }
             );
-            const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD)
+
+            const usersWithGroup = await User.countDocuments({ groupsAD: tag })
+            if (usersWithGroup == 0) {
+                await Group.deleteOne({ name: tag })
+            }
+
+            const eligibilities = await handleUserEligibilitiesGamification(
+                user.groupsAD
+            );
+
             GamificationBusiness.updateClientUser(user.networkLogin, {
                 eligibilities,
             });
@@ -1979,7 +2138,22 @@ module.exports = {
                 { $addToSet: { groupsAD: tag } },
                 { new: true }
             );
-            const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD)
+            for (const groupName of tag) {
+                const findGroup = await Group.findOne({
+                    name: groupName,
+                    deleted: 0,
+                });
+                if (!findGroup) {
+                    await Group.create({
+                        name: groupName,
+                    });
+                }
+            }
+
+
+            const eligibilities = await handleUserEligibilitiesGamification(
+                user.groupsAD
+            );
             GamificationBusiness.updateClientUser(user.networkLogin, {
                 eligibilities,
             });
@@ -1988,6 +2162,7 @@ module.exports = {
                 message: 'Tag de permissão adicionada ao usuário',
             });
         } catch (error) {
+            console.error(error)
             _messages.internalServer(
                 res,
                 req,
@@ -2202,7 +2377,7 @@ module.exports = {
                 user.name,
                 networkLogin
             );
-            console.log(tokenAndSecret)
+            console.log(tokenAndSecret);
             if (user.alternativeEmail) {
                 await sendMultiFactorToUser(
                     user.email,
@@ -2271,7 +2446,6 @@ module.exports = {
         }
     },
 
-
     async validateMfaToken (req, res) {
         try {
             const isTokenValid = await validateMfaToken(req);
@@ -2291,17 +2465,19 @@ module.exports = {
     async updateWebPushAuthorization (req, res) {
         try {
             const user = await getUserByToken(req);
-            const webPushAuthorization = req.body
-            const userDB = await User.findById(user._id)
-            let webPushAuthorizationArray = userDB.webPushAuthorization
+            const webPushAuthorization = req.body;
+            const userDB = await User.findById(user._id);
+            let webPushAuthorizationArray = userDB.webPushAuthorization;
             if (webPushAuthorizationArray) {
-
-                webPushAuthorizationArray.push(webPushAuthorization)
+                webPushAuthorizationArray.push(webPushAuthorization);
             } else {
-                webPushAuthorizationArray = [webPushAuthorization]
+                webPushAuthorizationArray = [webPushAuthorization];
             }
 
-            await User.updateOne({ _id: user._id }, { webPushAuthorization: webPushAuthorizationArray })
+            await User.updateOne(
+                { _id: user._id },
+                { webPushAuthorization: webPushAuthorizationArray }
+            );
 
             _messages.success(res, req, 'Sucess');
         } catch (error) {
@@ -2312,6 +2488,98 @@ module.exports = {
                 'Erro interno no servidor',
                 'users',
                 'WebPushAuthorization'
+            );
+        }
+    },
+
+    async getUserMap (req, res) {
+        try {
+            const { data } = await axios.get(
+                `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
+                {
+                    headers: {
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                    },
+                }
+            );
+
+            const userMap =
+                data.user && Object.keys(data.user).length > 0
+                    ? data.user
+                    : defaultUserMap;
+
+            const fields = Object.entries(defaultUserMap).map((entry) => ({
+                display: entry[1],
+                value: entry[0],
+            }));
+
+            _messages.success(res, req, { map: userMap, fields });
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'users',
+                'getUserMap'
+            );
+        }
+    },
+
+    async putUserMap (req, res) {
+        try {
+            const { body } = req;
+
+            const { data } = await axios.patch(
+                `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
+                {
+                    user: { ...body },
+                    elegibility: body.elegibility,
+                },
+                {
+                    headers: {
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                    },
+                }
+            );
+
+            _messages.success(res, req, data.user);
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'users',
+                'putUserMap'
+            );
+        }
+    },
+
+    async readSheetHeaders (req, res) {
+        try {
+            let file = null;
+            if (req.files.file) {
+                file = req.files.file;
+            } else {
+                file = req.files.content;
+            }
+
+            const data = await _files.readXLSXHeaders(file.path);
+            const fields = Object.entries(defaultUserMap).map((entry) => ({
+                display: entry[1],
+                value: entry[0],
+            }));
+
+            _messages.success(res, req, { headers: data, fields });
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'users',
+                'readSheetHeaders'
             );
         }
     },

@@ -357,7 +357,6 @@ const TrackingController = {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
-            const tags = await getTagsElegiblesByToken(req);
             const { userLogin, searchBy } = req.query;
 
             const trailsWithTracking = [];
@@ -387,52 +386,8 @@ const TrackingController = {
                     },
                 };
 
-            const newArrTrails = await Trail.find(query).populate({
-                path: 'items',
-                populate: {
-                    path: 'itemID',
-                    model: 'Item',
-                },
-            });
-
-            for (const p in newArrTrails) {
-                const trailFilter = await populateTrails(true, {
-                    _id: { $eq: newArrTrails[p] },
-                });
-                let trail = trailFilter[0];
-
-                if (trail) {
-                    const processedTrail = processTrailTracking(
-                        trail,
-                        allTrackingUser
-                    );
-                    trail = processedTrail.trail;
-                    if (
-                        processedTrail.containsACompletedItem &&
-                        isValidDate(trail.completionAt)
-                    ) {
-                        arrTrailsCompletedOrProgress.push(trail);
-                    } else {
-                        if (trail.tags.length || trail.tagsAnd.length) {
-                            if (
-                                checkEligibilityTagsAnd(
-                                    tags,
-                                    trail.tagsAnd,
-                                    trail.tags
-                                )
-                            ) {
-                                arrTrailsCompletedOrProgress.push(trail);
-                            }
-                        } else {
-                            arrTrailsCompletedOrProgress.push(trail);
-                        }
-                    }
-                }
-            }
-
             const trails = await Trail.find({
-                ...query,
-                _id: { $in: arrTrailsCompletedOrProgress.map((t) => t._id) },
+                ...query
             })
                 .populate({
                     path: 'items',
@@ -454,8 +409,7 @@ const TrackingController = {
             }
 
             const totalTrails = await Trail.find({
-                ...query,
-                _id: { $in: arrTrailsCompletedOrProgress.map((t) => t._id) },
+                ...query
             }).countDocuments();
 
             for (const v of trailsWithTracking) {

@@ -1,13 +1,15 @@
-const express = require('express')
-const formidable = require('express-formidable')
-const _controller = require('./controller')
+const express = require('express');
+const formidable = require('express-formidable');
+const _controller = require('./controller');
 const {
     isStudent,
     isAccountant,
     isAdmin,
-} = require('../../utils/middlewares')
+    isAdminOrAccountant,
+} = require('../../utils/middlewares');
 
-module.exports = express.Router()
+module.exports = express
+    .Router()
     .post('/', isAccountant, _controller.create)
     .post('/items', isAccountant, _controller.linkItems)
     .post('/separators', isAccountant, _controller.linkSeparators)
@@ -19,7 +21,7 @@ module.exports = express.Router()
     .put('/change-status', isAccountant, _controller.changeStatus)
     .put('/change-showcase', isAccountant, _controller.changeShowcase)
     .put('/', isAccountant, formidable(), _controller.multiUploadCreate)
-    .get('/', isAccountant, _controller.findAll)
+    .get('/', isAdminOrAccountant, _controller.findAll)
     .get('/banners-elegibles', isStudent, _controller.returnBannersElegibles)
     .get('/items/:id', isStudent, _controller.returnItemsByTrail)
     .get('/menu/:id', isStudent, _controller.returnItemsByTrailMenu)
@@ -33,8 +35,11 @@ module.exports = express.Router()
     .post('/list', _controller.returnTrailsByIDS)
     .post('/mandatory', _controller.mandatory)
     .get('/xapi', _controller.xapi)
-    .get('/course-information/:trailId/:itemId', _controller.getCourseInformation)
+    .get(
+        '/course-information/:trailId/:itemId',
+        _controller.getCourseInformation
+    )
     .post('/upload-material', formidable(), _controller.uploadMaterial)
     .get('/list-material/:id', _controller.listMaterial)
     .post('/download-material', _controller.downloadMaterial)
-    .post('/delete-material', _controller.deleteMaterial)
+    .post('/delete-material', _controller.deleteMaterial);

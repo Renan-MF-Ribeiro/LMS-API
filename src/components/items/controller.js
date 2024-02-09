@@ -54,16 +54,16 @@ const ITEM_KINDS = Object.freeze({
     SoundcloudItem: SoundcloudItem,
     EventItem: EventItem,
     ActivityItem: ActivityItem,
-    FormItem: FormItem
+    FormItem: FormItem,
 });
 
 const ItemController = {
-    async itemColaborativo (req, res) {
+    async itemColaborativo(req, res) {
         let payload = {};
         if (req.fields.payload) {
             try {
                 payload = JSON.parse(req.fields.payload);
-            } catch { }
+            } catch {}
         }
 
         const flag = _functions.checksIfTheEndDateIsLessThanTheStartDate(
@@ -117,9 +117,9 @@ const ItemController = {
                                 process.env.NODE_ENV === 'local'
                                     ? contentPath
                                     : contentPath.replace(
-                                        AZURE_BLOB_URL,
-                                        DOMAIN
-                                    );
+                                          AZURE_BLOB_URL,
+                                          DOMAIN
+                                      );
                         }
 
                         if (
@@ -255,7 +255,6 @@ const ItemController = {
                     //Evento novo conteúdo colaborativo
                     _messages.success(res, req, item._id);
                 } catch (error) {
-                    console.log(error);
                     if (error.message === 'Something went wrong') {
                         _messages.internalServer(
                             res,
@@ -302,7 +301,7 @@ const ItemController = {
         }
     },
 
-    async create (req, res) {
+    async create(req, res) {
         const ItemModel = ITEM_KINDS[req.body.kind] || Item;
 
         try {
@@ -321,12 +320,12 @@ const ItemController = {
         }
     },
 
-    async multiUploadCreate (req, res) {
+    async multiUploadCreate(req, res) {
         let payload = {};
         if (req.fields.payload) {
             try {
                 payload = JSON.parse(req.fields.payload);
-            } catch { }
+            } catch {}
         }
 
         const flag = _functions.checksIfTheEndDateIsLessThanTheStartDate(
@@ -380,9 +379,9 @@ const ItemController = {
                                 process.env.NODE_ENV === 'local'
                                     ? contentPath
                                     : contentPath.replace(
-                                        AZURE_BLOB_URL,
-                                        DOMAIN
-                                    );
+                                          AZURE_BLOB_URL,
+                                          DOMAIN
+                                      );
                         }
 
                         if (
@@ -439,17 +438,20 @@ const ItemController = {
                     }
 
                     if (payload.kind === 'FormItem') {
-                        delete payload.contentPath
-                        payload.statements = payload.statements.map((statement) => ({
-                            _id: new mongoose.Types.ObjectId(),
-                            title: statement.title,
-                            type: statement.type,
-                            alternatives: statement?.alternatives?.map(({ alternative }) => ({
+                        delete payload.contentPath;
+                        payload.statements = payload.statements.map(
+                            (statement) => ({
                                 _id: new mongoose.Types.ObjectId(),
-                                alternative
-                            })),
-                            numberCharacters: statement?.numberCharacters
-                        })
+                                title: statement.title,
+                                type: statement.type,
+                                alternatives: statement?.alternatives?.map(
+                                    ({ alternative }) => ({
+                                        _id: new mongoose.Types.ObjectId(),
+                                        alternative,
+                                    })
+                                ),
+                                numberCharacters: statement?.numberCharacters,
+                            })
                         );
                     }
 
@@ -497,12 +499,12 @@ const ItemController = {
         }
     },
 
-    async update (req, res) {
+    async update(req, res) {
         let payload = {};
         if (req.fields.payload) {
             try {
                 payload = JSON.parse(req.fields.payload);
-            } catch { }
+            } catch {}
         }
 
         const flag = _functions.checksIfTheEndDateIsLessThanTheStartDate(
@@ -556,9 +558,9 @@ const ItemController = {
                                 process.env.NODE_ENV === 'local'
                                     ? contentPath
                                     : contentPath.replace(
-                                        AZURE_BLOB_URL,
-                                        DOMAIN
-                                    );
+                                          AZURE_BLOB_URL,
+                                          DOMAIN
+                                      );
                         }
                     }
 
@@ -603,21 +605,28 @@ const ItemController = {
 
                     if (payload.kind === 'FormItem') {
                         for (let i = 0; i < payload?.statements.length; i++) {
-                            const statement = payload?.statements[i]
+                            const statement = payload?.statements[i];
                             payload.statements[i] = {
-                                _id: statement?._id || new mongoose.Types.ObjectId(),
+                                _id:
+                                    statement?._id ||
+                                    new mongoose.Types.ObjectId(),
                                 title: statement.title,
                                 type: statement.type,
                                 ...(statement?.alternatives && {
-                                    alternatives: statement.alternatives.map(({ _id, alternative }) => ({
-                                        _id: _id || new mongoose.Types.ObjectId(),
-                                        alternative
-                                    }))
+                                    alternatives: statement.alternatives.map(
+                                        ({ _id, alternative }) => ({
+                                            _id:
+                                                _id ||
+                                                new mongoose.Types.ObjectId(),
+                                            alternative,
+                                        })
+                                    ),
                                 }),
                                 ...(statement?.numberCharacters && {
-                                    numberCharacters: statement?.numberCharacters
-                                })
-                            }
+                                    numberCharacters:
+                                        statement?.numberCharacters,
+                                }),
+                            };
                         }
                     }
 
@@ -689,7 +698,7 @@ const ItemController = {
         }
     },
 
-    async updateById (req, res) {
+    async updateById(req, res) {
         const ItemModel = ITEM_KINDS[req.body.kind] || Item;
 
         try {
@@ -708,7 +717,7 @@ const ItemController = {
         }
     },
 
-    async updateStatus (req, res) {
+    async updateStatus(req, res) {
         try {
             const { _id, enabled } = req.body;
             const item = await Item.findOne({ _id });
@@ -739,7 +748,7 @@ const ItemController = {
         }
     },
 
-    async findItemTrails (req, res) {
+    async findItemTrails(req, res) {
         try {
             const _id = req.params.itemId;
             const trails = await Trail.find(
@@ -759,11 +768,11 @@ const ItemController = {
         }
     },
 
-    async disableById (req, res) {
+    async disableById(req, res) {
         ItemController.updateById({ ...req, body: { enabled: false } }, res);
     },
 
-    async findById (req, res) {
+    async findById(req, res) {
         try {
             const findValue = req.params.itemId;
 
@@ -787,7 +796,7 @@ const ItemController = {
         }
     },
 
-    async findItemById (req, res) {
+    async findItemById(req, res) {
         try {
             const findItemValue = req.params.itemId;
             const findITrailValue = req.params.trailId;
@@ -795,20 +804,20 @@ const ItemController = {
 
             const queryItem = findItemValue.match(/^[0-9a-fA-F]{24}$/)
                 ? {
-                    $or: [
-                        { _id: findItemValue },
-                        { titleURL: findItemValue },
-                    ],
-                }
+                      $or: [
+                          { _id: findItemValue },
+                          { titleURL: findItemValue },
+                      ],
+                  }
                 : { titleURL: findItemValue };
 
             const queryTrail = findITrailValue.match(/^[0-9a-fA-F]{24}$/)
                 ? {
-                    $or: [
-                        { _id: findITrailValue },
-                        { titleURL: findITrailValue },
-                    ],
-                }
+                      $or: [
+                          { _id: findITrailValue },
+                          { titleURL: findITrailValue },
+                      ],
+                  }
                 : { titleURL: findITrailValue };
 
             const tags = await getTagsElegiblesByToken(req);
@@ -868,27 +877,27 @@ const ItemController = {
         }
     },
 
-    async createDocument (req, res) {
+    async createDocument(req, res) {
         req.body.kind = 'DocumentItem';
         ItemController.create(req, res);
     },
 
-    async multiUploadDocument (req, res) {
+    async multiUploadDocument(req, res) {
         req.body.kind = 'DocumentItem';
         ItemController.multiUploadCreate(req, res);
     },
 
-    async createMedia (req, res) {
+    async createMedia(req, res) {
         req.body.kind = 'MediaItem';
         ItemController.create(req, res);
     },
 
-    async multiUploadMedia (req, res) {
+    async multiUploadMedia(req, res) {
         req.body.kind = 'MediaItem';
         ItemController.multiUploadCreate(req, res);
     },
 
-    async uploadSCORM (req, res) {
+    async uploadSCORM(req, res) {
         const user = await getUserByToken(req);
         if (req.method !== 'POST') {
             return res.status(httpStatus.NOT_FOUND).send();
@@ -955,11 +964,13 @@ const ItemController = {
                                             return;
                                         }
 
-                                        if (isSCORMManifestFile(entry.path)) {
+                                        if (
+                                            !entry.path.includes('/') &&
+                                            isSCORMManifestFile(entry.path)
+                                        ) {
                                             manifestP = entry.buffer();
                                             return;
                                         }
-
 
                                         filesP.push(
                                             azureBlob(
@@ -1053,7 +1064,7 @@ const ItemController = {
                             (el) =>
                                 el.name === 'resource' &&
                                 el.attributes.identifier ===
-                                $item.attributes.identifierref
+                                    $item.attributes.identifierref
                         );
                         const $title = $item.children.find(
                             (el) => el.name === 'title'
@@ -1107,7 +1118,7 @@ const ItemController = {
         }
     },
 
-    async updateSCORM (req, res) {
+    async updateSCORM(req, res) {
         if (req.method !== 'PUT') {
             return res.status(httpStatus.NOT_FOUND).send();
         }
@@ -1119,15 +1130,15 @@ const ItemController = {
         try {
             const _id = req.params.itemId;
             let { packageId } = await Item.findOne({ _id }, 'packageId');
-            const { contentPath } = await SCORMItem.findOne(
+            const { contentPath, scoId } = await SCORMItem.findOne(
                 { _id },
-                'contentPath'
+                'contentPath scoId'
             );
             const contentPathExplode = contentPath.split('/');
             const explodeUrl = contentPathExplode[0].split('_');
 
             contentPathExplode.shift();
-            const href = contentPathExplode.join('/');
+            // const href = contentPathExplode.join('/');
 
             if (!explodeUrl[1]) {
                 packageId = packageId + '_1';
@@ -1144,6 +1155,7 @@ const ItemController = {
                 },
             });
 
+            let manifestP = null;
             const filesP = [];
             let pathFile = null;
             let scormName = null;
@@ -1181,14 +1193,22 @@ const ItemController = {
                                     etl.map(async (entry) => {
                                         if (
                                             isSCORMSchemaFile(entry.path) ||
-                                            isSCORMManifestFile(entry.path)
+                                            entry.type === 'Directory'
                                         ) {
                                             filesP.push(
                                                 entry.autodrain().promise()
                                             );
+
                                             return;
                                         }
 
+                                        if (
+                                            !entry.path.includes('/') &&
+                                            isSCORMManifestFile(entry.path)
+                                        ) {
+                                            manifestP = entry.buffer();
+                                            return;
+                                        }
 
                                         filesP.push(
                                             azureBlob(
@@ -1210,12 +1230,78 @@ const ItemController = {
                 path: path,
                 name: scormName,
             };
-            await SCORMItem.findByIdAndUpdate(_id, {
-                contentPath: `${packageId}/${href}`,
-                scormPath: scormPath,
-            });
 
-            res.status(httpStatus.NO_CONTENT).send();
+            if (!manifestP) {
+                throw _errors.SCORM_UPLOAD.NO_MANIFEST;
+            }
+
+            try {
+                const manifest = (await manifestP).toString();
+                const $doc = parseXml(manifest);
+                const $manifest = $doc.children[0];
+                const $orgs = $manifest.children.find(
+                    (el) => el.name === 'organizations'
+                );
+                if (!$orgs) return _messages.success(res, req, []);
+                const defaultOrg = $orgs.attributes.default;
+                if (!defaultOrg) return _messages.success(res, req, []);
+
+                const $org = $orgs.children.find(
+                    (el) =>
+                        el.name === 'organization' &&
+                        el.attributes.identifier === defaultOrg
+                );
+
+                if (!$org) return _messages.success(res, req, []);
+
+                const itemReducer = pipe(
+                    filter((el) => el.type === 'element' && el.name === 'item'),
+                    reduce(
+                        (items, item) => [
+                            ...items,
+                            item,
+                            ...itemReducer(item.children),
+                        ],
+                        []
+                    )
+                );
+
+                const $items = itemReducer($org.children);
+                if (!$items.length) return _messages.success(res, req, []);
+
+                const $resources = $manifest.children.find(
+                    (el) => el.name === 'resources'
+                );
+
+                await Promise.all(
+                    $items.map(($item) => {
+                        const $resource = $resources.children.find(
+                            (el) =>
+                                el.name === 'resource' &&
+                                el.attributes.identifier ===
+                                    $item.attributes.identifierref
+                        );
+
+                        const href = $resource.attributes.href;
+                        const scoIdentifier = $item.attributes.identifier;
+                        if (scoId != scoIdentifier) {
+                            throw _errors.SCORM_UPLOAD.UNEXPECTED_IDENTIFIER;
+                        }
+
+                        return SCORMItem.findByIdAndUpdate(_id, {
+                            contentPath: `${packageId}/${href}`,
+                            scormPath: scormPath,
+                        });
+                    })
+                );
+
+                res.status(httpStatus.NO_CONTENT).send();
+            } catch (err) {
+                if (err) {
+                    throw _errors.SCORM_UPLOAD.UNEXPECTED_IDENTIFIER;
+                }
+                throw _errors.SCORM_UPLOAD.INVALID_MANIFEST;
+            }
         } catch (err) {
             if (err.code === _errors.SCORM_UPLOAD.INVALID_PACKAGE.code) {
                 res.status(httpStatus.UNPROCESSABLE_ENTITY).send(err);
@@ -1233,7 +1319,7 @@ const ItemController = {
         }
     },
 
-    async findAll (req, res) {
+    async findAll(req, res) {
         try {
             const { skip, limit } = _functions.pagination(req);
             const { sort, order } = _functions.ordernation(req);
@@ -1244,69 +1330,69 @@ const ItemController = {
             let total = await Item.find(
                 searchBy
                     ? {
-                        $or: [
-                            {
-                                description: {
-                                    $regex: searchBy,
-                                    $options: 'i',
-                                },
-                            },
-                            { title: { $regex: searchBy, $options: 'i' } },
-                            { notes: { $regex: searchBy, $options: 'i' } },
-                            {
-                                courseIdentifier: {
-                                    $regex: searchBy,
-                                    $options: 'i',
-                                },
-                            },
-                            { alias: { $regex: searchBy, $options: 'i' } },
-                            { keywords: { $regex: searchBy, $options: 'i' } },
-                            {
-                                responsible: {
-                                    $regex: searchBy,
-                                    $options: 'i',
-                                },
-                            },
-                        ],
-                        deleted: { $eq: 0 },
-                    }
+                          $or: [
+                              {
+                                  description: {
+                                      $regex: searchBy,
+                                      $options: 'i',
+                                  },
+                              },
+                              { title: { $regex: searchBy, $options: 'i' } },
+                              { notes: { $regex: searchBy, $options: 'i' } },
+                              {
+                                  courseIdentifier: {
+                                      $regex: searchBy,
+                                      $options: 'i',
+                                  },
+                              },
+                              { alias: { $regex: searchBy, $options: 'i' } },
+                              { keywords: { $regex: searchBy, $options: 'i' } },
+                              {
+                                  responsible: {
+                                      $regex: searchBy,
+                                      $options: 'i',
+                                  },
+                              },
+                          ],
+                          deleted: { $eq: 0 },
+                      }
                     : {
-                        deleted: { $eq: 0 },
-                    }
+                          deleted: { $eq: 0 },
+                      }
             ).count();
 
             let itens = await Item.find(
                 searchBy
                     ? {
-                        $or: [
-                            {
-                                description: {
-                                    $regex: searchBy,
-                                    $options: 'i',
-                                },
-                            },
-                            { title: { $regex: searchBy, $options: 'i' } },
-                            { notes: { $regex: searchBy, $options: 'i' } },
-                            {
-                                courseIdentifier: {
-                                    $regex: searchBy,
-                                    $options: 'i',
-                                },
-                            },
-                            { alias: { $regex: searchBy, $options: 'i' } },
-                            { keywords: { $regex: searchBy, $options: 'i' } },
-                            {
-                                responsible: {
-                                    $regex: searchBy,
-                                    $options: 'i',
-                                },
-                            },
-                        ],
-                        deleted: { $eq: 0 },
-                    }
+                          $or: [
+                              {
+                                  description: {
+                                      $regex: searchBy,
+                                      $options: 'i',
+                                  },
+                              },
+                              { title: { $regex: searchBy, $options: 'i' } },
+                              { notes: { $regex: searchBy, $options: 'i' } },
+                              {
+                                  courseIdentifier: {
+                                      $regex: searchBy,
+                                      $options: 'i',
+                                  },
+                              },
+                              { alias: { $regex: searchBy, $options: 'i' } },
+                              { keywords: { $regex: searchBy, $options: 'i' } },
+                              {
+                                  responsible: {
+                                      $regex: searchBy,
+                                      $options: 'i',
+                                  },
+                              },
+                          ],
+                          deleted: { $eq: 0 },
+                      }
                     : {
-                        deleted: { $eq: 0 },
-                    }
+                          deleted: { $eq: 0 },
+                      }
             )
                 .populate('idEvaluation', ['description'])
                 .skip(parseInt(skip))
@@ -1318,55 +1404,55 @@ const ItemController = {
                 const filterItens = await Item.find(
                     searchBy
                         ? {
-                            $or: [
-                                {
-                                    description: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    title: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    notes: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    courseIdentifier: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    alias: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    keywords: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    responsible: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                            ],
-                            deleted: { $eq: 0 },
-                        }
+                              $or: [
+                                  {
+                                      description: {
+                                          $regex: searchBy,
+                                          $options: 'i',
+                                      },
+                                  },
+                                  {
+                                      title: {
+                                          $regex: searchBy,
+                                          $options: 'i',
+                                      },
+                                  },
+                                  {
+                                      notes: {
+                                          $regex: searchBy,
+                                          $options: 'i',
+                                      },
+                                  },
+                                  {
+                                      courseIdentifier: {
+                                          $regex: searchBy,
+                                          $options: 'i',
+                                      },
+                                  },
+                                  {
+                                      alias: {
+                                          $regex: searchBy,
+                                          $options: 'i',
+                                      },
+                                  },
+                                  {
+                                      keywords: {
+                                          $regex: searchBy,
+                                          $options: 'i',
+                                      },
+                                  },
+                                  {
+                                      responsible: {
+                                          $regex: searchBy,
+                                          $options: 'i',
+                                      },
+                                  },
+                              ],
+                              deleted: { $eq: 0 },
+                          }
                         : {
-                            deleted: { $eq: 0 },
-                        }
+                              deleted: { $eq: 0 },
+                          }
                 );
 
                 await Promise.all(
@@ -1387,55 +1473,55 @@ const ItemController = {
                 const filterItens = await Item.find(
                     searchBy
                         ? {
-                            $or: [
-                                {
-                                    description: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    title: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    notes: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    courseIdentifier: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    alias: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    keywords: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    responsible: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                            ],
-                            deleted: { $eq: 0 },
-                        }
+                              $or: [
+                                  {
+                                      description: {
+                                          $regex: searchBy,
+                                          $options: 'i',
+                                      },
+                                  },
+                                  {
+                                      title: {
+                                          $regex: searchBy,
+                                          $options: 'i',
+                                      },
+                                  },
+                                  {
+                                      notes: {
+                                          $regex: searchBy,
+                                          $options: 'i',
+                                      },
+                                  },
+                                  {
+                                      courseIdentifier: {
+                                          $regex: searchBy,
+                                          $options: 'i',
+                                      },
+                                  },
+                                  {
+                                      alias: {
+                                          $regex: searchBy,
+                                          $options: 'i',
+                                      },
+                                  },
+                                  {
+                                      keywords: {
+                                          $regex: searchBy,
+                                          $options: 'i',
+                                      },
+                                  },
+                                  {
+                                      responsible: {
+                                          $regex: searchBy,
+                                          $options: 'i',
+                                      },
+                                  },
+                              ],
+                              deleted: { $eq: 0 },
+                          }
                         : {
-                            deleted: { $eq: 0 },
-                        }
+                              deleted: { $eq: 0 },
+                          }
                 );
 
                 await Promise.all(
@@ -1476,7 +1562,7 @@ const ItemController = {
         }
     },
 
-    async findItensActives (req, res) {
+    async findItensActives(req, res) {
         try {
             const itens = await Item.find({
                 enabled: { $eq: true },
@@ -1495,7 +1581,7 @@ const ItemController = {
         }
     },
 
-    async generateCertificate (req, res) {
+    async generateCertificate(req, res) {
         try {
             const { item } = req.params;
             const user = await _functions.getUserByToken(req);
@@ -1537,7 +1623,7 @@ const ItemController = {
         }
     },
 
-    async getItemWithTracking (req, res) {
+    async getItemWithTracking(req, res) {
         try {
             const { itemId } = req.params;
             const user = await getUserByToken(req);
@@ -1560,7 +1646,7 @@ const ItemController = {
         }
     },
 
-    async getProviders (req, res) {
+    async getProviders(req, res) {
         try {
             const items = await Item.find({});
             const providers = items

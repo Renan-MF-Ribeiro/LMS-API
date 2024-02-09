@@ -60,7 +60,7 @@ module.exports = {
                     if (indexBG >= 0) {
 
                         console.log(fileArray, indexBG)
-                        let pathBG = await azureBlob(fileArray[indexBG], 'showcase/textArea')
+                        let pathBG = await azureBlob(fileArray[indexBG], 'showcase/textArea', false, 'lmsassetsanon')
                         pathBG = pathBG.replace(AZURE_BLOB_URL, DOMAIN)
                         body.background = pathBG
                     }
@@ -70,7 +70,7 @@ module.exports = {
                     if (indexIMG >= 0) {
 
                         console.log(fileArray, indexIMG)
-                        let imgPath = await azureBlob(fileArray[indexIMG], 'showcase/textArea')
+                        let imgPath = await azureBlob(fileArray[indexIMG], 'showcase/textArea', false, 'lmsassetsanon')
                         imgPath = imgPath.replace(AZURE_BLOB_URL, DOMAIN)
                         body.imgPath = imgPath
                     }
@@ -113,7 +113,7 @@ module.exports = {
 
             const indexBG = fileArray.findIndex(el => el.name === body.background)
             if (indexBG >= 0) {
-                let pathBG = await azureBlob(fileArray[indexBG], 'showcase/textArea')
+                let pathBG = await azureBlob(fileArray[indexBG], 'showcase/textArea', false, 'lmsassetsanon')
                 pathBG = pathBG.replace(AZURE_BLOB_URL, DOMAIN)
                 body.background = pathBG
                 fileArray.splice(indexBG, 1)
@@ -123,7 +123,7 @@ module.exports = {
             if (indexIMG >= 0) {
 
                 console.log(fileArray, indexIMG)
-                let imgPath = await azureBlob(fileArray[indexIMG], 'showcase/textArea')
+                let imgPath = await azureBlob(fileArray[indexIMG], 'showcase/textArea', false, 'lmsassetsanon')
                 imgPath = imgPath.replace(AZURE_BLOB_URL, DOMAIN)
                 body.imgPath = imgPath
             }

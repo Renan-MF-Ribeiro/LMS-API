@@ -58,11 +58,17 @@ module.exports = {
                     //bg
                     const indexBG = fileArray.findIndex(el => el.name === body.background)
                     if (indexBG >= 0) {
-
-                        console.log(fileArray, indexBG)
-                        let pathBG = await azureBlob(fileArray[indexBG], 'showcase/depositions')
+                        let pathBG = await azureBlob(fileArray[indexBG], 'showcase/depositions', false, 'lmsassetsanon')
                         pathBG = pathBG.replace(AZURE_BLOB_URL, DOMAIN)
                         body.background = pathBG
+                        fileArray.splice(indexBG, 1)
+                    }
+
+                    for (const file of fileArray) {
+                        let path = await azureBlob(file, 'showcase/depositions/profile', false, 'lmsassetsanon')
+                        path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                        const index = body.depositions.findIndex((el) => el.profile == file.name)
+                        body.depositions[index].profile = path
                     }
 
                 }
@@ -103,14 +109,14 @@ module.exports = {
 
             const indexBG = fileArray.findIndex(el => el.name === body.background)
             if (indexBG >= 0) {
-                let pathBG = await azureBlob(fileArray[indexBG], 'showcase/depositions')
+                let pathBG = await azureBlob(fileArray[indexBG], 'showcase/depositions', false, 'lmsassetsanon')
                 pathBG = pathBG.replace(AZURE_BLOB_URL, DOMAIN)
                 body.background = pathBG
                 fileArray.splice(indexBG, 1)
             }
 
             for (const file of fileArray) {
-                let path = await azureBlob(file, 'showcase/depositions/profile')
+                let path = await azureBlob(file, 'showcase/depositions/profile', false, 'lmsassetsanon')
                 path = path.replace(AZURE_BLOB_URL, DOMAIN)
                 const index = body.depositions.findIndex((el) => el.profile == file.name)
                 body.depositions[index].profile = path

@@ -9,6 +9,10 @@ const schemaOptions = {
     collation: { locale: 'en_US', strength: 1 },
 }
 
+const CHANNEL_TYPES = Object.freeze({
+    alura: "alura"
+})
+
 const ChannelSchema = new mongoose.Schema({
     title: { type: String, required: true },
     enabled: { type: Boolean, default: true },
@@ -16,6 +20,7 @@ const ChannelSchema = new mongoose.Schema({
     banners: { type: Array },
     position: { type: Number, default: 0 },
     idSections: {  type: [{ type: 'ObjectId', ref: 'sections' }] },
+    type: { type: String, enum: Object.values(CHANNEL_TYPES), required: false, trim: true }
 }, {
     ...schemaOptions,
 })

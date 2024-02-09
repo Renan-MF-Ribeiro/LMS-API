@@ -1,3 +1,4 @@
+const { Trail } = require('../trails/model');
 const { User } = require('../users/model');
 
 module.exports = {
@@ -73,4 +74,32 @@ module.exports = {
             total,
         };
     },
+
+    async handleSearchByTrailOrUser(searchBy) {
+        const searchByTrailOrUser = []
+        if(searchBy) {
+            const trails = await Trail.find({ title: { $regex: searchBy, $options: 'i' } })
+            const users = await User.find({ name: { $regex: searchBy, $options: 'i' } })
+            if(trails) searchByTrailOrUser.push(trails.map(({ _id }) => _id.toString()))
+            if(users) searchByTrailOrUser.push(users.map(({ _id }) => _id.toString()))
+        }
+
+        return searchByTrailOrUser
+    },
+
+    async handleUserNameAndTrailTitle(data) {
+        const trails = await Trail.find({ _id: { $in: data.map(({ trailId }) => trailId) } }, 'title')
+        const users = await User.find({ _id: { $in: data.map(({ userId }) => userId)} }, 'name')
+
+        return data.map((comment) => {
+            const trail = trails.find(({ _id }) => _id.equals(comment.trailId))
+            const user = users.find(({ _id }) => _id.equals(comment.userId))
+
+            return {
+                ...comment,
+                userName: user.name,
+                trailTitle: trail.title
+            }
+        })
+    }
 };

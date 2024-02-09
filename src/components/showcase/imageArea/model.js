@@ -14,6 +14,7 @@ const schemaOptions = {
 
 const imageArea_ShowcaseSchema = new mongoose.Schema({
     imgPath: { type: String, required: false, trim: true },
+    title: { type: String, required: false, trim: true },
 
 }, {
     ...schemaOptions,

@@ -16,7 +16,8 @@ module.exports = {
                     },
                     {
                         headers: {
-                            'system-user-key': process.env.CONNECT_CLIENT_KEY,
+                            'connect-client-key':
+                                process.env.CONNECT_CLIENT_KEY,
                         },
                     }
                 );
@@ -56,7 +57,7 @@ module.exports = {
             try {
                 const { data: responseData } = await axios.get(uri, {
                     headers: {
-                        'system-user-key': process.env.CONNECT_CLIENT_KEY,
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
                     },
                 });
                 data = responseData;

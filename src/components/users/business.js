@@ -1,315 +1,531 @@
 /* eslint-disable handle-callback-err */
 /* eslint-disable no-async-promise-executor */
-const {
-    Block,
-    User,
-    LastLogin,
-} = require('./model')
+const { Block, User, LastLogin } = require('./model');
 const {
     formatDate,
     getDateToday,
     calculateDiffDate,
-} = require('../../utils/functions')
+    pagination,
+    ordernation,
+} = require('../../utils/functions');
 const {
     ldapClient,
     returnIdProfileUser,
     returnIdGroupUser,
-} = require('../../utils/auth')
+} = require('../../utils/auth');
 
-const { Log } = require('../logs/model')
-const bcrypt = require('bcryptjs')
-const _functions = require('../../utils/functions')
-const { Group } = require('../groups/model')
-const { CLIENT_ID } = process.env
-const kafka = require('../../utils/kafka')
-const { Trail } = require('../trails/model')
-const config = require('../../../config.json')
-const { Tracking } = require('../tracking/model')
-const emailTemplate = config.messenger.emailTemplate
-require('dotenv').config()
+const { Log } = require('../logs/model');
+const bcrypt = require('bcryptjs');
+const axios = require('axios');
+const _functions = require('../../utils/functions');
+const { Group } = require('../groups/model');
+const { CLIENT_ID } = process.env;
+const kafka = require('../../utils/kafka');
+const { Trail } = require('../trails/model');
+const config = require('../../../config.json');
+const { Tracking } = require('../tracking/model');
+const emailTemplate = config.messenger.emailTemplate;
+require('dotenv').config();
 
 module.exports = {
+    async findUsers(req, { onboarding }) {
+        const { skip, limit } = pagination(req);
+        const { order, sort } = ordernation(req);
+        const searchBy = req.query.searchBy;
+        const tag = req.query.tag;
+        let onboardingQuery;
+        if (tag) {
+            onboardingQuery = onboarding
+                ? [{ onboarding: { $eq: onboarding } }]
+                : [
+                      {
+                          $or: [
+                              {
+                                  onboarding: { $exists: false },
+                                  groupsAD: { $in: tag },
+                              },
+                              {
+                                  onboarding: { $eq: onboarding },
+                                  groupsAD: { $in: tag },
+                              },
+                          ],
+                      },
+                  ];
+        } else {
+            onboardingQuery = onboarding
+                ? [{ onboarding: { $eq: onboarding } }]
+                : [
+                      {
+                          $or: [
+                              { onboarding: { $exists: false } },
+                              { onboarding: { $eq: onboarding } },
+                          ],
+                      },
+                  ];
+        }
+
+        const searchByQuery = searchBy
+            ? {
+                  $or: [
+                      { name: { $regex: searchBy, $options: 'i' } },
+                      { registration: { $regex: searchBy, $options: 'i' } },
+                      { email: { $regex: searchBy, $options: 'i' } },
+                  ],
+                  $and: onboardingQuery,
+              }
+            : {
+                  $and: onboardingQuery,
+              };
+
+        const users = await User.find(searchByQuery)
+            .sort({ [order]: sort })
+            .skip(parseInt(skip))
+            .limit(parseInt(limit));
+
+        const total = await User.find(searchByQuery).countDocuments();
+        const totalActive = await User.find({
+            status: 'ATIVO',
+            $or: [...onboardingQuery],
+        }).countDocuments();
+        const totalInactive = await User.find({
+            status: 'INATIVO',
+            $or: [...onboardingQuery],
+        }).countDocuments();
+
+        return {
+            data: users,
+            total,
+            totalActive,
+            totalInactive,
+        };
+    },
+
     checkAmountOfLocks(id) {
-        return new Promise(async(resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             try {
                 const quantity = await Block.find({
                     user: { $eq: id },
                     unblocked: { $eq: false },
-                }).countDocuments()
+                }).countDocuments();
 
-                resolve(quantity)
+                resolve(quantity);
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
     returnLastLoginAttemp(id) {
-        return new Promise(async(resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             try {
-                const block = await Block
-                    .find({
-                        user: { $eq: id },
-                        unblocked: { $eq: false },
-                    })
+                const block = await Block.find({
+                    user: { $eq: id },
+                    unblocked: { $eq: false },
+                });
 
-                resolve(block[2].dateTimeBlock)
+                resolve(block[2].dateTimeBlock);
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
     checkLastAttemptTime(dateTimeBlock) {
-        return new Promise(async(resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             try {
-                const lastTimeBlock = formatDate(dateTimeBlock)
-                const dateCurrent = getDateToday()
-                const resultDiff = calculateDiffDate(dateCurrent, lastTimeBlock, 'minutes')
+                const lastTimeBlock = formatDate(dateTimeBlock);
+                const dateCurrent = getDateToday();
+                const resultDiff = calculateDiffDate(
+                    dateCurrent,
+                    lastTimeBlock,
+                    'minutes'
+                );
 
-                resolve(resultDiff)
+                resolve(resultDiff);
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
     // # Exclusivo para validação no LPAD
     // # TODO: Remover
     signInAndReturnRole(login, password, login2) {
-        return new Promise(async(resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             try {
-                await ldapClient.bind(login, password)
-                    // const ldapResponse = await ldapClient.bind('cn=read-only-admin,dc=example,dc=com', 'password')
+                await ldapClient.bind(login, password);
+                // const ldapResponse = await ldapClient.bind('cn=read-only-admin,dc=example,dc=com', 'password')
 
                 const opts = {
                     filter: `(sAMAccountName=${login2})`,
                     scope: 'sub',
                     timeLimit: 30000,
                     attributes: ['memberOf'],
-                }
+                };
 
-                await ldapClient.search('DC=brasil, DC=latam, DC=cea', opts, function(err, res) {
-                    res.on('searchEntry', async function(entry) {
-                        const ldapUser = entry.object
-                        const groups = ldapUser.memberOf
-                        const namesProfiles = []
-                        const namesGroups = []
+                await ldapClient.search(
+                    'DC=brasil, DC=latam, DC=cea',
+                    opts,
+                    function (err, res) {
+                        res.on('searchEntry', async function (entry) {
+                            const ldapUser = entry.object;
+                            const groups = ldapUser.memberOf;
+                            const namesProfiles = [];
+                            const namesGroups = [];
 
-                        for (const p in groups) {
-                            const groupsSplit = groups[p].split(',')
-                            const cnSplit = groupsSplit[0].split('=')[1]
+                            for (const p in groups) {
+                                const groupsSplit = groups[p].split(',');
+                                const cnSplit = groupsSplit[0].split('=')[1];
 
-                            if (cnSplit.indexOf('GL_ACADMODA_PF') >= 0) namesProfiles.push(cnSplit)
+                                if (cnSplit.indexOf('GL_ACADMODA_PF') >= 0)
+                                    namesProfiles.push(cnSplit);
 
-                            if (cnSplit.indexOf('GL_ACADMODA_LJ') >= 0 ||
-                                cnSplit.indexOf('GL_ACADMODA_EC') >= 0 ||
-                                cnSplit.indexOf('GL_APP') >= 0
-                            ) namesGroups.push(cnSplit)
-                        }
+                                if (
+                                    cnSplit.indexOf('GL_ACADMODA_LJ') >= 0 ||
+                                    cnSplit.indexOf('GL_ACADMODA_EC') >= 0 ||
+                                    cnSplit.indexOf('GL_APP') >= 0
+                                )
+                                    namesGroups.push(cnSplit);
+                            }
 
-                        const profilesIDS = await returnIdProfileUser(namesProfiles)
-                        const groupsIDS = await returnIdGroupUser(namesGroups)
+                            const profilesIDS = await returnIdProfileUser(
+                                namesProfiles
+                            );
+                            const groupsIDS = await returnIdGroupUser(
+                                namesGroups
+                            );
 
-                        resolve({
-                            token: {
-                                profiles: profilesIDS.result,
-                                numbers: profilesIDS.numbers,
-                                groups: groupsIDS,
-                            },
-                            names: namesProfiles.concat(namesGroups),
-                        })
-                    })
+                            resolve({
+                                token: {
+                                    profiles: profilesIDS.result,
+                                    numbers: profilesIDS.numbers,
+                                    groups: groupsIDS,
+                                },
+                                names: namesProfiles.concat(namesGroups),
+                            });
+                        });
 
-                    res.on('error', function(err) {
-                        reject(err)
-                    })
-                })
+                        res.on('error', function (err) {
+                            reject(err);
+                        });
+                    }
+                );
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
     returnDateSinceFirstLogin(userID) {
-        return new Promise(async(resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             try {
-                const userLastLogin = await LastLogin.find({ user: userID })
-                const userFirstLogin = userLastLogin[0].createdAt
-                const today = new Date()
-                const firstLogin = new Date(userFirstLogin)
-                let daysSinceFirstLogin = Math.floor((firstLogin - today) / (24 * 3600 * 1000))
-                daysSinceFirstLogin *= -1
-                resolve(daysSinceFirstLogin)
+                const userLastLogin = await LastLogin.find({ user: userID });
+                const userFirstLogin = userLastLogin[0].createdAt;
+                const today = new Date();
+                const firstLogin = new Date(userFirstLogin);
+                let daysSinceFirstLogin = Math.floor(
+                    (firstLogin - today) / (24 * 3600 * 1000)
+                );
+                daysSinceFirstLogin *= -1;
+                resolve(daysSinceFirstLogin);
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
     updateGroupsOfUser(userID, groups) {
-        return new Promise(async(resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             try {
-                await User.findByIdAndUpdate(userID, { groupsAD: groups })
-                resolve()
+                await User.findByIdAndUpdate(userID, { groupsAD: groups });
+                resolve();
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
     updateLastLoginUser(userID) {
-        return new Promise(async(resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             try {
-                const user = await LastLogin.findOne({ user: userID })
+                const user = await LastLogin.findOne({ user: userID });
                 if (user) {
-                    await LastLogin.updateOne({ user: userID }, { lastLogin: getDateToday() })
+                    await LastLogin.updateOne(
+                        { user: userID },
+                        { lastLogin: getDateToday() }
+                    );
                 } else {
                     await LastLogin.create({
                         user: userID,
                         lastLogin: getDateToday(),
-                    })
+                    });
                 }
-                resolve()
+                resolve();
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
     lastLoggedInUsers(userID) {
-        return new Promise(async(resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             try {
-                const arrUsers = []
-                const users = await LastLogin.find().populate('users')
+                const arrUsers = [];
+                const users = await LastLogin.find().populate('users');
                 for (const user of users) {
-                    const diff = calculateDiffDate(getDateToday(), user.lastLogin, 'minutes')
-                    if (diff <= 35) arrUsers.push(user)
+                    const diff = calculateDiffDate(
+                        getDateToday(),
+                        user.lastLogin,
+                        'minutes'
+                    );
+                    if (diff <= 35) arrUsers.push(user);
                 }
-                resolve(arrUsers)
+                resolve(arrUsers);
             } catch (error) {
-                reject(error)
+                reject(error);
             }
-        })
+        });
     },
 
     ldapSearch(login, name) {
-        return new Promise(async(resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             const opts = {
                 filter: `(sAMAccountName=${login})`,
                 scope: 'sub',
                 timeLimit: 30000,
                 attributes: ['memberOf'],
-            }
+            };
 
-            let response = null
+            let response = null;
 
-            await ldapClient.search('DC=brasil, DC=latam, DC=cea', opts, function(err, res) {
-                res.on('searchEntry', function(entry) {
-                    entry = entry.object
-                    response = entry
-                    resolve(response)
-                })
+            await ldapClient.search(
+                'DC=brasil, DC=latam, DC=cea',
+                opts,
+                function (err, res) {
+                    res.on('searchEntry', function (entry) {
+                        entry = entry.object;
+                        response = entry;
+                        resolve(response);
+                    });
 
-                res.on('error', function(err) {
-                    reject(err)
+                    res.on('error', function (err) {
+                        reject(err);
 
-                    Log.create({
-                        user: null,
-                        type: 'CREATE',
-                        message: `ROTINA AD - ${name} - ${err.message}`,
-                        component: 'CRON_GROUP',
-                        dataNew: [],
-                        dataOld: [],
-                        route: null,
-                        ip: null,
-                        login: null,
-                        groups: [],
-                    })
-                })
+                        Log.create({
+                            user: null,
+                            type: 'CREATE',
+                            message: `ROTINA AD - ${name} - ${err.message}`,
+                            component: 'CRON_GROUP',
+                            dataNew: [],
+                            dataOld: [],
+                            route: null,
+                            ip: null,
+                            login: null,
+                            groups: [],
+                        });
+                    });
 
-                res.on('end', function(result) {
-                    resolve(response)
-                })
-            })
-        })
+                    res.on('end', function (result) {
+                        resolve(response);
+                    });
+                }
+            );
+        });
     },
 
-    processUsersLoad(data) {
-        const salt = bcrypt.genSaltSync(10)
-        const initialPasswordKey = '1234'
-        data.password = [{ 
-            hash: bcrypt.hashSync(data?.password ?? initialPasswordKey, salt), 
-            valid: true, 
-            createdAt: new Date(Date.now()) 
-        }]
+    processUsersLoad(data, elegibilityFields = [], onboarding = false) {
+        const salt = bcrypt.genSaltSync(10);
+        const initialPasswordKey = '1234';
+        data.password = [
+            {
+                hash: bcrypt.hashSync(
+                    data?.password ?? initialPasswordKey,
+                    salt
+                ),
+                valid: true,
+                createdAt: new Date(Date.now()),
+            },
+        ];
 
-        data.clientUserKey = CLIENT_ID + '@@' + data.networkLogin
-        data.birthDate = _functions.formatDateWithoutHoursBrasilian(data.birthDate)
-        data.admission = _functions.formatDateWithoutHoursBrasilian(data.admission)
-        data.createDate = _functions.formatDateWithoutHoursBrasilian(data?.createDate ?? new Date())
-        data.enabled = true
+        data.clientUserKey = CLIENT_ID + '@@' + data.networkLogin;
+        data.birthDate = _functions.formatDateWithoutHoursBrasilian(
+            data.birthDate
+        );
+        data.admission = _functions.formatDateWithoutHoursBrasilian(
+            data.admission
+        );
+        data.createDate = _functions.formatDateWithoutHoursBrasilian(
+            data?.createDate ?? new Date()
+        );
+        data.enabled = true;
 
-        const roles = data.roles ? data.roles.split(',').map(item => item.trim()) : []
+        const groupsAD = onboarding === true ? ['PERFIL_Aluno', 'ELEGE_ONBOARDING'] : ['PERFIL_Aluno', 'ELEGE_CURSO'] 
 
-        const groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO']
-        if(!!data.company && !!data.office) {
-            groupsAD.push(`ELEGE_${_functions.clearString(data.company)}`)
-            groupsAD.push(`ELEGE_${_functions.clearString(data.office)}`)
-        }
-        const targetTags = ['optionalEligibility1','optionalEligibility2','optionalEligibility3']
-        targetTags.forEach((tag) => !!data[tag] && groupsAD.push(`ELEGE_${_functions.clearString(data[tag])}`));
-        groupsAD.forEach(async (groupName) => {
-            const group = await Group.findOne({ name: groupName })
-            if (!group) {
-                await Group.create({ 
-                    name: groupName,
-                    tags: [{
-                        display: groupName,
-                        value: groupName
-                    }] 
-                })
+        if (
+            elegibilityFields &&
+            elegibilityFields.length > 0 &&
+            onboarding == false
+        ) {
+            for (const field of elegibilityFields) {
+                if (data[field]) {
+                    console.log({
+                        field,
+                        datafield: data[field],
+                        type: typeof data[field],
+                    });
+                    const fieldType = typeof data[field];
+                    if (fieldType === 'object') continue;
+
+                    const value =
+                        fieldType !== 'string'
+                            ? data[field]
+                            : _functions.clearString(data[field]);
+
+                    groupsAD.push(`ELEGE_${value}`);
+                }
             }
-        })
+        } else {
+            if (!!data.company && !!data.office) {
+                groupsAD.push(`ELEGE_${_functions.clearString(data.company)}`);
+                groupsAD.push(`ELEGE_${_functions.clearString(data.office)}`);
+            }
+        }
+
+        const optionals = [
+            'optionalEligibility1',
+            'optionalEligibility2',
+            'optionalEligibility3',
+        ];
+
+        optionals.forEach(
+            (optional) =>
+                !!data[optional] &&
+                groupsAD.push(`ELEGE_${_functions.clearString(data[optional])}`)
+        );
+
+        groupsAD.forEach(async (groupName) => {
+            const group = await Group.findOne({ name: groupName });
+            if (!group) {
+                await Group.create({
+                    name: groupName,
+                    tags: [
+                        {
+                            display: groupName,
+                            value: groupName,
+                        },
+                    ],
+                });
+            }
+        });
+
+        const roles = data.roles
+            ? data.roles.split(',').map((item) => item.trim())
+            : [];
 
         if (roles.includes('Admin')) {
-            groupsAD.push('PERFIL_Admin')
+            groupsAD.push('PERFIL_Admin');
         }
 
         if (roles.includes('Analista')) {
-            groupsAD.push('PERFIL_Analista')
+            groupsAD.push('PERFIL_Analista');
         }
         if (roles.includes('Conteudista')) {
-            groupsAD.push('PERFIL_Conteudista')
+            groupsAD.push('PERFIL_Conteudista');
         }
 
-        data.groupsAD = groupsAD
+        data.groupsAD = groupsAD;
+
         if (data.cpf) {
-            data.cpf = String(data.cpf).replace(/[^a-z0-9]/gi, '')
-            data.cpf = _functions.formatNumberCpf(data.cpf)
-            data.networkLogin = data.cpf
+            data.cpf = String(data.cpf).replace(/[^a-z0-9]/gi, '');
+            data.cpf = _functions.formatNumberCpf(data.cpf);
+            // data.networkLogin = data.cpf
         }
 
-        return data
+        if (onboarding) {
+            data.networkLogin = data.cpf;
+            data.onboarding = true;
+        }
+
+        return data;
+    },
+
+    async persistUsers(results, { onboarding } = { onboarding: false }) {
+        const usersToSend = [];
+        const newUsers = [];
+        const updatedUsers = [];
+
+        const elegibilityResponse = await axios.get(
+            `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+            {
+                headers: {
+                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                },
+            }
+        );
+        const fieldsForElegibility = elegibilityResponse.data.fields;
+
+        for (const result of results) {
+            if (onboarding) {
+                const processedUser = await module.exports.processUsersLoad(
+                    result,
+                    fieldsForElegibility
+                );
+                const account = await module.exports.processUserAccount(
+                    processedUser
+                );
+
+                usersToSend.push(account);
+                if (processedUser.createdAt === processedUser.updatedAt) {
+                    newUsers.push(account);
+                } else {
+                    updatedUsers.push(updatedUsers.length + 1);
+                }
+            }
+        }
+
+        if (
+            config.messenger.sendUsersToMicrosservice &&
+            usersToSend.length > 0
+        ) {
+            const filterUsersToSend = usersToSend.filter(
+                (u) => u.status === 'ATIVO'
+            );
+            for (let i = 0; i < filterUsersToSend.length; i += 500) {
+                await sendAccountsToKafka(filterUsersToSend.slice(i, i + 500));
+            }
+
+            if (config.messenger.sendWelcomeCampaign) {
+                const campaign = createWelcomeCampaign();
+                for (let i = 0; i < newUsers.length; i += 500) {
+                    await sendMessageToKafka(
+                        campaign,
+                        newUsers.slice(i, i + 500)
+                    );
+                    await Message.create(campaign);
+                }
+            }
+        }
+
+        return { newUsers: newUsers.length, updatedUsers: updatedUsers.length };
     },
 
     async processUserAccount(data) {
         try {
-            const { groupsAD = [] } = data
+            const { groupsAD = [] } = data;
 
-            let groupsObj = []
+            let groupsObj = [];
 
             for (const value of groupsAD) {
-                const g = await Group.find({ name: value })
+                const g = await Group.find({ name: value });
                 if (g.length > 0) {
-                    groupsObj.push(...g)
+                    groupsObj.push(...g);
                 }
             }
-            groupsObj = groupsObj.map(obj => {
-                const tags = obj.tags.map(tag => tag.value)
-                const data = { name: obj.name, tags }
-                return data
-            })
+            groupsObj = groupsObj.map((obj) => {
+                const tags = obj.tags.map((tag) => tag.value);
+                const data = { name: obj.name, tags };
+                return data;
+            });
 
             const account = {
                 name: data.name,
@@ -317,133 +533,147 @@ module.exports = {
                 identifier: data.networkLogin,
                 clientid: process.env.CLIENT_ID,
                 group: groupsObj,
-            }
-            return { value: JSON.stringify(account) }
+            };
+            return { value: JSON.stringify(account) };
         } catch (error) {
-            console.log(error)
-            return error
+            console.log(error);
+            return error;
         }
     },
 
     async sendAccountsToKafka(accounts) {
         try {
-            const producer = kafka.producer()
-            await producer.connect()
+            const producer = kafka.producer();
+            await producer.connect();
 
-            await producer.send({ topic: process.env.TOPIC_ACC, messages: accounts })
+            await producer.send({
+                topic: process.env.TOPIC_ACC,
+                messages: accounts,
+            });
 
-            await producer.disconnect()
+            await producer.disconnect();
         } catch (error) {
-            console.log(error)
+            console.log(error);
         }
     },
 
     async getUsersByTrail(trailId, category) {
         try {
-            const trail = await Trail.findOne({ _id: trailId })
+            const trail = await Trail.findOne({ _id: trailId });
 
-            const tags = trail.tags
+            const tags = trail.tags;
 
-            let groups = []
+            let groups = [];
 
             for (const tag of tags) {
-                const group = await Group.find({ tags: { $in: tag } })
-                groups.push(...group)
+                const group = await Group.find({ tags: { $in: tag } });
+                groups.push(...group);
             }
-            groups = groups.map(group => group.name)
+            groups = groups.map((group) => group.name);
 
-            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin'])
+            const users = await User.find({ groupsAD: { $in: groups } }, [
+                'networkLogin',
+            ]);
 
-            const usersToReturn = []
+            const usersToReturn = [];
             if (category === 'charge') {
-                const items = trail.items.map(item => {
-                    return item.itemID._id
-                })
+                const items = trail.items.map((item) => {
+                    return item.itemID._id;
+                });
 
                 for (const user of users) {
-                    let completedTracking = 0
+                    let completedTracking = 0;
                     const allTrackingUser = await Tracking.find({
                         userLogin: { $eq: user.networkLogin },
                         item: { $in: items },
-                    })
+                    });
                     for (const tracking of allTrackingUser) {
                         if (tracking.completionAt !== null) {
-                            completedTracking++
+                            completedTracking++;
                         }
                     }
 
                     if (completedTracking !== items.length) {
-                        usersToReturn.push(user)
+                        usersToReturn.push(user);
                     }
                 }
 
-                return usersToReturn
+                return usersToReturn;
             } else {
-                usersToReturn.push(...users)
-                return usersToReturn
+                usersToReturn.push(...users);
+                return usersToReturn;
             }
         } catch (error) {
-            return error
+            return error;
         }
     },
 
     async getUsersByGroups(groups) {
         try {
-            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin'])
-            return users
+            const users = await User.find({ groupsAD: { $in: groups } }, [
+                'networkLogin',
+            ]);
+            return users;
         } catch (error) {
-            return error
+            return error;
         }
     },
 
     async getUsersByTags(tags) {
         try {
-            let groups = []
+            let groups = [];
 
             for (const tag of tags) {
-                const group = await Group.find({ tags: { $in: tag } })
-                groups.push(...group)
+                const group = await Group.find({ tags: { $in: tag } });
+                groups.push(...group);
             }
-            groups = groups.map(group => group.name)
+            groups = groups.map((group) => group.name);
 
-            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin'])
+            const users = await User.find({ groupsAD: { $in: groups } }, [
+                'networkLogin',
+            ]);
 
-            return users
+            return users;
         } catch (error) {
-            return error
+            return error;
         }
     },
 
     async getUsersByIds(ids) {
         try {
-            const users = await User.find({ _id: { $in: ids } }, ['networkLogin'])
+            const users = await User.find({ _id: { $in: ids } }, [
+                'networkLogin',
+            ]);
 
-            return users
+            return users;
         } catch (error) {
-            return error
+            return error;
         }
     },
 
     async sendUpdatedDeviceIdToMessenger(device, identifier) {
         try {
-            const producer = kafka.producer()
-            await producer.connect()
-            const obj = JSON.stringify({ device, identifier })
-            await producer.send({ topic: process.env.TOPIC_DEVICER, messages: [{ value: obj }] })
+            const producer = kafka.producer();
+            await producer.connect();
+            const obj = JSON.stringify({ device, identifier });
+            await producer.send({
+                topic: process.env.TOPIC_DEVICER,
+                messages: [{ value: obj }],
+            });
 
-            await producer.disconnect()
+            await producer.disconnect();
         } catch (error) {
-            console.log(error)
-            throw error
+            console.log(error);
+            throw error;
         }
     },
 
     async createWelcomeCampaign() {
-        const title = `Seja bem-vindo(a) à plataforma ${process.env.PROJECT_NAME}!`
-        const text = 'Venha conhecer a plataforma!'
-        const communication = ['notification']
-        const mode = 'automatic'
-        const category = 'notify'
-        return { title, text, communication, category, mode, ...emailTemplate }
+        const title = `Seja bem-vindo(a) à plataforma ${process.env.PROJECT_NAME}!`;
+        const text = 'Venha conhecer a plataforma!';
+        const communication = ['notification'];
+        const mode = 'automatic';
+        const category = 'notify';
+        return { title, text, communication, category, mode, ...emailTemplate };
     },
-}
+};

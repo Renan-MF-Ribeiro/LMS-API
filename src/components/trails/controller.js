@@ -304,6 +304,7 @@ module.exports = {
             const processedTrail = processTrailTracking(trail, allTrackingUser);
             _messages.success(res, req, processedTrail.trail);
         } catch (error) {
+            console.log(error)
             _messages.internalServer(
                 res,
                 req,

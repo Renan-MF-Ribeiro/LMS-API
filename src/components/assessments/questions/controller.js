@@ -1,10 +1,9 @@
-const { Question, QuestionsAlternatives } = require('./model')
+const { Question } = require('./model')
 const { Alternative } = require('../alternatives/model')
 const { Category } = require('../categories/model')
 const _messages = require('../../../utils/messages')
 const _business = require('../business')
 const _functions = require('../../../utils/functions')
-
 
 module.exports = {
     async returnQuestions (req, res) {
@@ -21,38 +20,33 @@ module.exports = {
                     repealed: { $eq: 0 },
                 }).countDocuments()
 
-            const questions = await QuestionsAlternatives
+            const questions = await Question
                 .find(
                     searchBy
-                    ? Number(categoryId) !== 1
-                        ? {
-                            $or: [
-                                { description: { $regex: searchBy, $options: 'i' } },
-                                { "alternatives.description": { $regex: searchBy, $options: 'i' } },
-                            ],
-                            
-                            idCategory: { $eq: categoryId },
-                            deleted: { $eq: 0 },
+                        ? Number(categoryId) !== 1
+                            ? {
+                                $or: [
+                                    { description: { $regex: searchBy, $options: 'i' } },
+                                ],
+                                idCategory: { $eq: categoryId },
+                                deleted: { $eq: 0 },
                             }
-                        : {
-                            $or: [
-                                { description: { $regex: searchBy, $options: 'i' } },
-                                { "alternatives.description": { $regex: searchBy, $options: 'i' } }],
-                            deleted: { $eq: 0 },
+                            : {
+                                $or: [{ description: { $regex: searchBy, $options: 'i' } }],
+                                deleted: { $eq: 0 },
                             }
-                    : Number(categoryId) !== 1
-                        ? {
-                            idCategory: { $eq: categoryId },
-                            deleted: { $eq: 0 },
-                        }
-                        : {
-                            idEvaluation: { $eq: id },
-                            deleted: { $eq: 0 },
-                            repealed: { $eq: 0 },
-                        }
-                    )
+                        : Number(categoryId) !== 1
+                            ? {
+                                idCategory: { $eq: categoryId },
+                                deleted: { $eq: 0 },
+                            }
+                            : {
+                                idEvaluation: { $eq: id },
+                                deleted: { $eq: 0 },
+                                repealed: { $eq: 0 },
+                            },
+                )
                 .populate('idCategory', 'description')
-                .populate({path: 'alternatives', model: 'alternatives'})
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
@@ -62,7 +56,7 @@ module.exports = {
                 total,
             })
         } catch (error) {
-            console.log(error)
+            console.error(error)
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'questions', 'returnQuestions')
         }
     },
@@ -88,12 +82,15 @@ module.exports = {
                 })
                 if (category.amountOfQuestions > totalQuestions.length + 1) {
                     alert = `${totalQuestions.length + 1} de ${category.amountOfQuestions} questões gravadas para a categoria. É necessário cadastrar no mínimo mais ${category.amountOfQuestions - (totalQuestions.length + 1)} ${category.amountOfQuestions - (totalQuestions.length + 1) > 1 ? 'questões' : 'questão'}.`
+                    await Category.findOneAndUpdate({ _id: category._id }, { amountOfQuestions: totalQuestions.length })
                 }
                 const objQuestion = { ...req.body }
                 const { idEvaluation } = await Category.findOne({ _id: { $eq: idCategory } })
                 objQuestion.idEvaluation = idEvaluation
                 const alternativeCreated = await Question.create(objQuestion)
-                _messages.success(res, req, 'Questão cadastrada com sucesso', 'questions', 'createQuestion', alternativeCreated, [], true, 'CREATE')
+                const question = await Question.findById(alternativeCreated._id).populate('idCategory', 'description')
+
+                _messages.success(res, req, question, 'questions', 'createQuestion', alternativeCreated, [], true, 'CREATE')
             } else {
                 _messages.badRequest(res, req, 'Essa questão já foi cadastrada!', 'Essa questão já foi cadastrada!', 'questions', 'createQuestion')
             }
@@ -108,9 +105,10 @@ module.exports = {
                 description: { $eq: req.body.description },
                 idEvaluation: { $eq: req.body.idEvaluation },
                 idCategory: { $eq: req.body.idCategory },
+                feedback: { $eq: req.body.feedback },
                 deleted: { $eq: 0 },
                 repealed: { $eq: 0 },
-            }).collation({ locale: "pt", strength: 2 })
+            })
             if (verify.length === 0) {
                 let alert = ''
                 const category = await Category.findOne({
@@ -123,9 +121,11 @@ module.exports = {
                 })
                 if (category.amountOfQuestions > totalQuestions.length + 1) {
                     alert = `${totalQuestions.length + 1} de ${category.amountOfQuestions} questões gravadas para a categoria. É necessário cadastrar no mínimo mais ${category.amountOfQuestions - (totalQuestions.length + 1)} ${category.amountOfQuestions - (totalQuestions.length + 1) > 1 ? 'questões' : 'questão'}.`
+                    const update = await Category.findOneAndUpdate({ _id: category._id }, { amountOfQuestions: totalQuestions.length })
                 }
                 const { _id } = req.body
                 await _business.updateAndRepealedQuestion(_id, req.body)
+
                 _messages.success(res, req, alert, 'Atualização de dados', 'questions', 'updateQuestion', [], [], true, 'UPDATE')
             } else {
                 _messages.badRequest(res, req, 'Essa questão já foi cadastrada!', 'Essa questão já foi cadastrada!', 'questions', 'updateQuestion')
@@ -150,7 +150,6 @@ module.exports = {
             const { idQuestion, idAlternative } = req.body
             const { rigthAnswer } = await Question.findOne({ _id: { $eq: idQuestion } })
             let oldData = []
-
             if (rigthAnswer) {
                 await _business.updateAndRepealedQuestion(idQuestion, req.body, 'alternative')
             } else {
@@ -173,6 +172,24 @@ module.exports = {
             _messages.success(res, req, 'Atualizado com sucesso', 'Atualização de dados', 'questions', 'changeStatus', newData, oldData, true, 'UPDATE')
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'questions', 'changeStatus')
+        }
+    },
+
+    async updateFeedback (req, res) {
+        try {
+            const { idQuestion, feedback } = req.body
+
+
+            if (idQuestion) {
+                const feedbackBody = { positive: feedback.positive, negative: feedback.negative }
+                await Question.findByIdAndUpdate(idQuestion, { feedback: feedbackBody })
+
+                _messages.success(res, req, 'Cadastro com sucesso', 'Criação de dados', 'feedbackQuestion', 'updateFeedback', feedbackBody, [], true, 'UPDATE')
+            } else {
+                _messages.badRequest(res, req, 'Questão não localizada!', 'Nenhuma questão foi localizada', 'questions', 'updateFeedback')
+            }
+        } catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'questions', 'updateFeedback')
         }
     },
 

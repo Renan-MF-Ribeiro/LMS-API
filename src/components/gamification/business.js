@@ -38,8 +38,8 @@ const GamificationBusiness = {
         return data;
     },
 
-    async getClientEvents() {
-        const uri = `${host}/clients/${clientId}/events`;
+    async getClientEvents(networkLogin) {
+        const uri = `${host}/clients/${clientId}/events/${networkLogin}`;
         const { data } = await axios.get(uri, { headers });
 
         return data;

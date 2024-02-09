@@ -1,0 +1,78 @@
+const axios = require('axios');
+const fs = require('fs');
+const FormData = require('form-data');
+
+const _messages = require('../../utils/messages');
+
+module.exports = {
+    async create(req, res) {
+        try {
+            const form = new FormData();
+
+            const reqPayload = JSON.parse(req.fields.payload);
+            const payload = {
+                ticket: {
+                    ...reqPayload.ticket,
+                },
+                clientName: process.env.COMPOSE_PROJECT_NAME,
+            };
+            const strPayload = JSON.stringify(payload);
+            form.append('payload', strPayload);
+
+            if (Object.entries(req.files).length > 0) {
+                for (const [_fileKey, file] of Object.entries(req.files)) {
+                    const fieldName = file.name.split('.')[0];
+                    const readStream = fs.createReadStream(file.path);
+                    form.append(fieldName, readStream);
+                }
+            }
+
+            const url = `${process.env.API_ZENDESK}/support/ticket/${process.env.CLIENT_ID}`;
+
+            const headers = {
+                ...form.getHeaders(),
+                Authorization: process.env.API_KEY_ZENDESK,
+            };
+
+            try {
+                const response = await axios({
+                    method: 'post',
+                    url,
+                    headers,
+                    data: form,
+                });
+                return _messages.success(
+                    res,
+                    req,
+                    response.data,
+                    'Sucesso',
+                    'support',
+                    'createTicket'
+                );
+            } catch (err) {
+                console.error(
+                    `Failed in zendesk microsservice: ${err.message}`
+                );
+                return _messages.internalServer(
+                    res,
+                    req,
+                    err.message,
+                    'Erro interno no servidor (happlearning-zendesk)',
+                    'support',
+                    'createTicket'
+                );
+            }
+        } catch (error) {
+            console.error(`Failed to process ticket data: ${error.message}`);
+
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'support',
+                'createTicket'
+            );
+        }
+    },
+};

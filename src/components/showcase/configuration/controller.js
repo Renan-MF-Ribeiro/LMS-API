@@ -203,5 +203,36 @@ module.exports = {
                 '/update',
             )
         }
+    },
+
+    async delete (req, res) {
+        try {
+            const { id } = req.params
+            const findSection = await Showcase.find({ _id: id })
+
+            if (findSection.length) {
+                await Showcase.deleteOne({ _id: id })
+            } else {
+                return _messages.badRequest(
+                    res,
+                    req,
+                    'Seção não encontrada',
+                    'Esta seção não foi encontrado.',
+                    'Showcase',
+                    'delete',
+                )
+            }
+            _messages.success(res, req, 'Seção removida!')
+        } catch (error) {
+            console.error(error)
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'Showcase',
+                'delete',
+            )
+        }
     }
 }

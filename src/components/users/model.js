@@ -93,6 +93,7 @@ const userSchema = new mongoose.Schema(
         store: { type: String, trim: true },
         storeCode: { type: String, trim: true },
         storeGroup: { type: String, trim: true },
+        storeGroupDescription: { type: String, trim: true },
         plant: { type: String, trim: true },
         managerRegistration: { type: String, trim: true },
         managerName: { type: String, trim: true },
@@ -105,7 +106,8 @@ const userSchema = new mongoose.Schema(
         optionalEligibility2: { type: String, trim: true },
         optionalEligibility3: { type: String, trim: true },
         task: { type: String, trim: true },
-        webPushAuthorization: { type: Array, required: false, default: [] }
+        webPushAuthorization: { type: Array, required: false, default: [] },
+        onboarding: { type: Boolean, default: false },
     },
     {
         ...optionsSchema,
@@ -171,7 +173,7 @@ userSchema.index({
     status: 'text',
 });
 
-const mapUser = {
+const mapUserOld = {
     LOGIN: 'networkLogin',
     SENHA: 'password',
     DATA_CRIACAO: 'createDate',
@@ -227,6 +229,46 @@ const mapUser = {
     OPCIONAL_ELEGIBILIDADE3: 'optionalEligibility3',
 };
 
+const defaultUserMap = {
+    networkLogin: 'LOGIN',
+    password: 'SENHA',
+    createDate: 'DATA_CRIACAO',
+    name: 'NOME',
+    email: 'EMAIL',
+    registration: 'MATRICULA',
+    status: 'STATUS',
+    cpf: 'CPF',
+    birthDate: 'DATA_NASC',
+    genderIdentity: 'IDENTIDADE_DE_GENERO',
+    country: 'PAIS',
+    city: 'CIDADE',
+    state: 'ESTADO',
+    state: 'UF',
+    company: 'EMPRESA',
+    admission: 'ADMISSAO',
+    locality: 'LOCALIDADE',
+    office: 'CARGO',
+    hierarchicalLevel: 'NIVEL_HIERARQUICO',
+    task: 'TAREFA',
+    costCenter: 'CENTRO_DE_CUSTO',
+    costCenterDescription: 'DESCRICAO_CENTRO_DE_CUSTO',
+    store: 'LOJA',
+    storeCode: 'IDENTIFICACAO_LOJA',
+    storeGroup: 'GRUPO_LOJA',
+    storeGroupDescription: 'GRUPO_LOJA_DESCRICAO',
+    plant: 'DISTRITAL',
+    manager: 'GESTOR',
+    managerRegistration: 'MATRICULA_GESTOR',
+    managerName: 'NOME_GESTOR',
+    area: 'AREA',
+    department: 'DEPARTAMENTO',
+    vp: 'VP',
+    business: 'NEGOCIO',
+    optionalEligibility1: 'OPCIONAL_ELEGIBILIDADE1',
+    optionalEligibility2: 'OPCIONAL_ELEGIBILIDADE2',
+    optionalEligibility3: 'OPCIONAL_ELEGIBILIDADE3',
+};
+
 const userProjection = {
     name: 1,
     cpf: 1,
@@ -257,7 +299,8 @@ module.exports = {
     statuses,
     User,
     UserTest,
-    mapUser,
+    defaultUserMap,
+    mapUserOld,
     Block,
     LastLogin,
     userSchema,
