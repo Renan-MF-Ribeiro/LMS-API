@@ -287,7 +287,7 @@ module.exports = {
                                 })
 
                                 if (question.length === 0) {
-                                    if (description && description.length <= 500) {
+                                    if (description && description.length <= 1000) {
                                         const alternatives = questions[p].slice(positionAlternative, positionCorrectAlternative)
                                         const positionLetter = _functions.returnsLetterPosition(questions[p][positionCorrectAlternative]) // RETORNA A POSIÇÃO DA LETRA DA ALTERNATIVA CORRETA
                                         const idAlternatives = []
