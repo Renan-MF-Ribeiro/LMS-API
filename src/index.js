@@ -93,6 +93,7 @@ const padletRoutes = require('./components/padlets/routes');
 const supportRoutes = require('./components/support/routes');
 const aluraRoutes = require('./components/alura/routes');
 const unsplashRoutes = require('./components/unsplash/routes');
+const assessmentRoutes = require('./components/assessment/routes');
 
 app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/tracking', validateTokenRoute, trackingRoutes)
@@ -121,6 +122,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/support', supportRoutes)
     .use('/alura', validateTokenRoute, aluraRoutes)
     .use('/unsplash', validateTokenRoute, unsplashRoutes)
+    .use('/assessmentRoutes', validateTokenRoute, assessmentRoutesRoutes)
 
 if (config.showcase.active) {
     app.use('/showcase', showCaseRoutes);
