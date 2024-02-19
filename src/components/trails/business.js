@@ -151,8 +151,8 @@ module.exports = {
                     for (const trail of trails) {
                         const arrItems = [];
                         for (const i of trail.items) {
-                            const item = await Item.findById(i.itemID);
-                            if (item !== null) {
+                             //const item = await Item.findById(i.itemID);
+                            if (i?.itemID !== null) {
                                 arrItems.push({
                                     urlItem: i.urlItem,
                                     urlTrail: i.urlTrail,
