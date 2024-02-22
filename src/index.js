@@ -122,7 +122,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/support', supportRoutes)
     .use('/alura', validateTokenRoute, aluraRoutes)
     .use('/unsplash', validateTokenRoute, unsplashRoutes)
-    .use('/assessmentRoutes', validateTokenRoute, assessmentRoutesRoutes)
+    .use('/assessment', validateTokenRoute, assessmentRoutes);
 
 if (config.showcase.active) {
     app.use('/showcase', showCaseRoutes);
