@@ -36,6 +36,35 @@ const AssessmentController = {
         } catch {}
     },
 
+    async listCycles(req, res) {
+        try {
+            const uri = `${host}/cycles/${clientId}`;
+            const { data } = await axios.get(uri, { headers });
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
+
+    async createCycle(req, res) {
+        try {
+            const uri = `${host}/cycles/${clientId}`;
+            const { data } = await axios.post(uri, req.body, { headers });
+
+            return _messages.success(res, req, data);
+        } catch {}
+    },
+
+    async updateCycle(req, res) {
+        try {
+            const uri = `${host}/cycles/${clientId}`;
+            const { data } = await axios.post(uri, req.body, { headers });
+
+            return _messages.success(res, req, data);
+        } catch {}
+    },
+
     async listClientMatrices(req, res) {
         try {
             const uri = `${host}/matrix/${clientId}`;
