@@ -7,7 +7,11 @@ const noCache = require('nocache');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
-const { htmlInjection, validateTokenRoute } = require('./utils/middlewares');
+const {
+    htmlInjection,
+    validateTokenRoute,
+    isAssessmentActive,
+} = require('./utils/middlewares');
 const { PUBLIC_PATH } = process.env;
 const app = express();
 const passport = require('./utils/passport');
@@ -122,7 +126,12 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/support', supportRoutes)
     .use('/alura', validateTokenRoute, aluraRoutes)
     .use('/unsplash', validateTokenRoute, unsplashRoutes)
-    .use('/assessment', validateTokenRoute, assessmentRoutes);
+    .use(
+        '/assessment',
+        validateTokenRoute,
+        isAssessmentActive,
+        assessmentRoutes
+    );
 
 if (config.showcase.active) {
     app.use('/showcase', showCaseRoutes);
