@@ -75,8 +75,16 @@ const AssessmentController = {
 
     async listClientMatrices(req, res) {
         try {
-            const uri = `${host}/matrix/${clientId}`;
-            console.log({ uri });
+            const searchBy = req.query.searchBy;
+            const { pageSize, pageIndex } = req.query;
+            const { orderBy, direction } = req.query;
+
+            let uri = `${host}/matrix/${clientId}`;
+
+            uri += `?pageSize=${pageSize}&pageIndex=${pageIndex}&orderBy=${orderBy}&direction=${direction}`;
+
+            if (searchBy && searchBy.length > 0) uri += `&searchBy=${searchBy}`;
+
             const { data } = await axios.get(uri, { headers });
 
             return _messages.success(res, req, data);
