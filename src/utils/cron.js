@@ -8,6 +8,7 @@ const { Group } = require('../components/groups/model');
 const { populateTrails } = require('../components/trails/business');
 const { Tracking } = require('../components/tracking/model');
 const { Trail } = require('../components/trails/model');
+const { TodayMostSeenTrails, TrailViews } = require('../components/trails/trail-views.model')
 const moment = require('moment');
 const axios = require('axios');
 const {
@@ -212,6 +213,18 @@ module.exports = {
         }
     },
 
+    startUpdateTrailsViewsCron () {
+        new CronJob(
+            '0 */1 * * *',
+            () => {
+                updateTrailsViews()
+            },
+            null,
+            true,
+            'America/Sao_Paulo',
+        )
+    },
+
     executeCronAverageCourses() {
         // userTemporaryTagsCron()
         // averageCourses()
@@ -245,14 +258,15 @@ module.exports = {
     executeExamDeleteTrackingCron() {
         examTrackingDeleteCron();
     },
+
+    executeUpdateTrailsViewsCron () {
+        updateTrailsViews()
+    },
 };
 
 async function recommendedTrailsCron() {
     try {
-        const completedTrackingsFromTheLastDay = await Tracking.find({
-            completionAt: { $ne: null },
-            createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-        });
+        const todayMostSeen = await TodayMostSeenTrails.find()
         const trails = [];
         for (const t of completedTrackingsFromTheLastDay) {
             const trail = await Trail.findOne({
@@ -261,10 +275,9 @@ async function recommendedTrailsCron() {
 
             trails.push(trail._id);
         }
-        const recommendedTrails = findMostOccurringElements(trails, 5);
         await Section.findOneAndUpdate(
             { defaultType: 'most_completed' },
-            { $set: { trails: recommendedTrails } }
+            { $set: { trails: todayMostSeen } }
         );
     } catch (error) {
         console.log(error);
@@ -1135,5 +1148,43 @@ async function revokeTrail() {
                 }
             );
         });
+    }
+}
+
+async function updateTrailsViews () {
+    try {
+        console.log('start cron todayMostSeen')
+        const todayMostSeen = await TodayMostSeenTrails.find()
+        console.log({ todayMostSeen })
+
+        for (const { views, updatedAt, _id } of todayMostSeen) {
+            console.log({ views, updatedAt, _id })
+            const trailId = _id.trailId.toString()
+            let viewsInfo = await TrailViews.findOne({ trailId })
+            if (!viewsInfo) {
+                viewsInfo = await TrailViews.create({
+                    trailId,
+                    views: [{ date: updatedAt, count: views }],
+                })
+                continue
+            }
+
+            const infoIndex = viewsInfo.views.findIndex(
+                info => info.date.getDate() === updatedAt.getDate() &&
+                    info.date.getMonth() === updatedAt.getMonth() &&
+                    info.date.getYear() === updatedAt.getYear(),
+            )
+            console.log({ infoIndex })
+
+            if (infoIndex === -1) {
+                viewsInfo.views.push({ date: updatedAt, count: views })
+            } else {
+                viewsInfo.views[infoIndex] = { date: updatedAt, count: views }
+            }
+
+            await viewsInfo.save()
+        }
+    } catch (error) {
+        console.log(error)
     }
 }
