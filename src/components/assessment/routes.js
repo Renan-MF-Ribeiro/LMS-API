@@ -10,7 +10,7 @@ router
     .post('/cycles', _controller.createCycle)
     .put('/cycles', _controller.updateCycle)
     .get('/matrix', _controller.listClientMatrices)
-    .post('/matrix', _controller.listClientMatrices)
+    .post('/matrix', _controller.createMatrix)
     .delete('/matrix/:id', _controller.softDeleteMatrix)
     .patch('/matrix/update-period', _controller.updateMatrixPeriod);
 

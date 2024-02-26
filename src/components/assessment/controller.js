@@ -24,7 +24,7 @@ const AssessmentController = {
             const { data } = await axios.post(uri, req.body, { headers });
 
             return _messages.success(res, req, data);
-        } catch {
+        } catch (error) {
             return handleError(res, req, error);
         }
     },
@@ -35,7 +35,7 @@ const AssessmentController = {
             const { data } = await axios.post(uri, req.body, { headers });
 
             return _messages.success(res, req, data);
-        } catch {
+        } catch (error) {
             return handleError(res, req, error);
         }
     },
@@ -57,7 +57,7 @@ const AssessmentController = {
             const { data } = await axios.post(uri, req.body, { headers });
 
             return _messages.success(res, req, data);
-        } catch {
+        } catch (error) {
             return handleError(res, req, error);
         }
     },
@@ -68,7 +68,7 @@ const AssessmentController = {
             const { data } = await axios.post(uri, req.body, { headers });
 
             return _messages.success(res, req, data);
-        } catch {
+        } catch (error) {
             return handleError(res, req, error);
         }
     },
@@ -96,7 +96,7 @@ const AssessmentController = {
             );
 
             return _messages.success(res, req, data);
-        } catch {
+        } catch (error) {
             return handleError(res, req, error);
         }
     },
@@ -114,7 +114,7 @@ const AssessmentController = {
             const { data } = await axios.patch(uri, body, { headers });
 
             return _messages.success(res, req, data);
-        } catch {
+        } catch (error) {
             return handleError(res, req, error);
         }
     },
@@ -128,7 +128,7 @@ const AssessmentController = {
             const { data } = await axios.delete(uri, { headers });
 
             return _messages.success(res, req, data);
-        } catch {
+        } catch (error) {
             return handleError(res, req, error);
         }
     },
