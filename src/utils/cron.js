@@ -266,18 +266,22 @@ module.exports = {
 
 async function recommendedTrailsCron() {
     try {
-        const todayMostSeen = await TodayMostSeenTrails.find()
+        const completedTrackingsFromTheLastWeek = await Tracking.find({
+            completionAt: { $ne: null },
+            createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+        });
         const trails = [];
-        for (const t of completedTrackingsFromTheLastDay) {
+        for (const t of completedTrackingsFromTheLastWeek) {
             const trail = await Trail.findOne({
                 'items.itemID': { $in: t.item },
             });
 
             trails.push(trail._id);
         }
+        const recommendedTrails = findMostOccurringElements(trails, 5);
         await Section.findOneAndUpdate(
             { defaultType: 'most_completed' },
-            { $set: { trails: todayMostSeen } }
+            { $set: { trails: recommendedTrails } }
         );
     } catch (error) {
         console.log(error);
