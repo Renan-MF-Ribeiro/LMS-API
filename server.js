@@ -15,6 +15,7 @@ const {
     cronNotifyResponsibleUsers,
     cronRevokeTrail,
     cronUpdateRecommendedTrails,
+    startUpdateTrailsViewsCron,
 } = require('./src/utils/cron')
 
 const server = app.listen(port, async () => {
@@ -29,6 +30,7 @@ const server = app.listen(port, async () => {
     deleteReprovedExamTracking()
     cronRevokeTrail()
     cronUpdateRecommendedTrails()
+    startUpdateTrailsViewsCron()
 })
 
 createTerminus(server, {
