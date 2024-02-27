@@ -144,15 +144,33 @@ const AssessmentController = {
         }
     },
 
+    async getCycleHistory(req, res) {
+        try {
+            const { cycleId, periodId } = req.params;
+            const { _id } = await getUserByToken(req);
+
+            const uri = `${host}/history/${_id.toString()}/${cycleId}/${periodId}`;
+
+            const { data } = await axios.get(uri, { headers });
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
+
     async getUserMatrixDetails(req, res) {
-        const { matrixId, periodId } = req.params;
-        const { _id } = await getUserByToken(req);
+        try {
+            const { matrixId, periodId } = req.params;
+            const { _id } = await getUserByToken(req);
 
-        const uri = `${host}/history/user-matrix-details/${_id.toString()}/${matrixId}/${periodId}`;
+            const uri = `${host}/history/user-matrix-details/${_id.toString()}/${matrixId}/${periodId}`;
 
-        const { data } = await axios.get(uri, { headers });
+            const { data } = await axios.get(uri, { headers });
 
-        return data;
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
     },
 };
 
