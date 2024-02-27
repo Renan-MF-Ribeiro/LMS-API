@@ -1,6 +1,7 @@
 const axios = require('axios');
 const _messages = require('../../utils/messages');
 const { getUserByToken } = require('../../utils/functions');
+const { handleError } = require('../../utils/errors');
 
 const host = process.env.API_ALURA;
 const clientId = process.env.CLIENT_ID;
@@ -106,29 +107,5 @@ const AluraController = {
 		}
 	}
 };
-
-function handleError (res, req, error) {
-    switch (error?.response?.status) {
-        case 400: {
-            return _messages.badRequest(res, req, error, error.response.data)
-        }
-
-        case 403: {
-            return _messages.forbidden(res, req, error, error.response.data)
-        }
-
-        case 404: {
-            return _messages.notFound(res, req, error, error.response.data)
-        }
-
-        case 409: {
-            return _messages.conflict(res, req, error, error.response.data)
-        }
-
-        default: {
-            return _messages.internalServer(res, req, error, error.response?.data)
-        }
-    }
-}
 
 module.exports = AluraController;

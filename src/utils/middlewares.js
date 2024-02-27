@@ -282,4 +282,12 @@ module.exports = {
             _messages.successEmpty(res, req, 'Feature "Alura" não está ativa');
         }
     },
+
+    isAssessmentActive: (req, res, next) => {
+        if (config?.assessment?.active) {
+            next();
+        } else {
+            _messages.successEmpty(res, req, 'Feature "Assessment" não está ativa');
+        }
+    },
 };
