@@ -143,6 +143,17 @@ const AssessmentController = {
             return handleError(res, req, error);
         }
     },
+
+    async getUserMatrixDetails(req, res) {
+        const { matrixId, periodId } = req.params;
+        const { _id } = await getUserByToken(req);
+
+        const uri = `${host}/history/user-matrix-details/${_id.toString()}/${matrixId}/${periodId}`;
+
+        const { data } = await axios.get(uri, { headers });
+
+        return data;
+    },
 };
 
 module.exports = AssessmentController;

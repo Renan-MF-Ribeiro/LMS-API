@@ -12,6 +12,10 @@ router
     .get('/matrix', _controller.listClientMatrices)
     .post('/matrix', _controller.createMatrix)
     .delete('/matrix/:id', _controller.softDeleteMatrix)
-    .patch('/matrix/update-period', _controller.updateMatrixPeriod);
+    .patch('/matrix/update-period', _controller.updateMatrixPeriod)
+    .get(
+        '/user-matrix-details/:matrixId/:periodId',
+        _controller.getUserMatrixDetails
+    );
 
 module.exports = router;
