@@ -187,7 +187,7 @@ const AssessmentController = {
 
     async review(req, res) {
         try {
-            const uri = `${host}/historics/${clientId}`;
+            const uri = `${host}/historics/${clientId}/review`;
             const { data } = await axios.post(uri, req.body, { headers });
 
             return _messages.success(res, req, data);
