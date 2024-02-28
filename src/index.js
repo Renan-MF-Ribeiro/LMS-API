@@ -11,6 +11,7 @@ const {
     htmlInjection,
     validateTokenRoute,
     isAssessmentActive,
+    isShowcaseActive,
 } = require('./utils/middlewares');
 const { PUBLIC_PATH } = process.env;
 const app = express();
@@ -116,6 +117,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/xapi', validateTokenRoute, xapiRoutes)
     .use('/suppliers', supplierRoutes)
     .use('/terms-of-use', validateTokenRoute, termsOfUseRoutes)
+    .use('/showcase', isShowcaseActive, showCaseRoutes)
     .use('/channels', validateTokenRoute, channelRoutes)
     .use('/messages', validateTokenRoute, messagesRoutes)
     .use('/messages/v2', validateTokenRoute, newMessagesRoutes)
@@ -128,14 +130,11 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/unsplash', validateTokenRoute, unsplashRoutes)
     .use(
         '/assessment',
-        validateTokenRoute,
         isAssessmentActive,
+        validateTokenRoute,
         assessmentRoutes
     );
 
-if (config.showcase.active) {
-    app.use('/showcase', showCaseRoutes);
-}
 app.use(function (err, req, res, next) {
     if (err.code !== 'EBADCSRFTOKEN') return next(err);
     res.status(403);

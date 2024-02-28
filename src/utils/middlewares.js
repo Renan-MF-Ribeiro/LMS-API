@@ -275,6 +275,18 @@ module.exports = {
         }
     },
 
+    isShowcaseActive: (req, res, next) => {
+        if (config?.showcase?.active) {
+            next();
+        } else {
+            _messages.successEmpty(
+                res,
+                req,
+                'Feature "Showcase" não está ativa'
+            );
+        }
+    },
+
     isAluraActive: (req, res, next) => {
         if (config?.alura?.active) {
             next();
@@ -287,7 +299,11 @@ module.exports = {
         if (config?.assessment?.active) {
             next();
         } else {
-            _messages.successEmpty(res, req, 'Feature "Assessment" não está ativa');
+            _messages.successEmpty(
+                res,
+                req,
+                'Feature "Assessment" não está ativa'
+            );
         }
     },
 };
