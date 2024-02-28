@@ -519,7 +519,7 @@ module.exports = {
 
             _messages.success(res, req, { removeGroup });
         } catch (error) {
-            conso;
+            console.log(error);
             _messages.internalServer(
                 res,
                 req,
