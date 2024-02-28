@@ -13,7 +13,7 @@ router
     .post('/matrix', _controller.createMatrix)
     .delete('/matrix/:id', _controller.softDeleteMatrix)
     .patch('/matrix/update-period', _controller.updateMatrixPeriod)
-    .get('/history/:cycleId/:periodId', _controller.getHistory)
+    .get('/history/:cycleId/:periodId', _controller.getCycleHistory)
     .get(
         '/user-matrix-details/:matrixId/:periodId',
         _controller.getUserMatrixDetails
