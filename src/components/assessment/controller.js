@@ -90,7 +90,16 @@ const AssessmentController = {
 
     async listClientMatrices(req, res) {
         try {
-            const uri = `${host}/matrix/${clientId}`;
+            const searchBy = req.query.searchBy;
+            const { pageSize, pageIndex } = req.query;
+            const { orderBy, direction } = req.query;
+
+            let uri = `${host}/matrix/${clientId}`;
+
+            uri += `?pageSize=${pageSize}&pageIndex=${pageIndex}&orderBy=${orderBy}&direction=${direction}`;
+
+            if (searchBy && searchBy.length > 0) uri += `&searchBy=${searchBy}`;
+
             const { data } = await axios.get(uri, { headers });
 
             return _messages.success(res, req, data);
@@ -140,6 +149,35 @@ const AssessmentController = {
             const uri = `${host}/matrix/${id}`;
 
             const { data } = await axios.delete(uri, { headers });
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
+
+    async getCycleHistory(req, res) {
+        try {
+            const { cycleId, periodId } = req.params;
+            const { _id } = await getUserByToken(req);
+
+            const uri = `${host}/history/${_id.toString()}/${cycleId}/${periodId}`;
+
+            const { data } = await axios.get(uri, { headers });
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
+
+    async getUserMatrixDetails(req, res) {
+        try {
+            const { matrixId, periodId } = req.params;
+            const { _id } = await getUserByToken(req);
+
+            const uri = `${host}/history/user-matrix-details/${_id.toString()}/${matrixId}/${periodId}`;
+
+            const { data } = await axios.get(uri, { headers });
 
             return _messages.success(res, req, data);
         } catch (error) {
