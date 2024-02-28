@@ -8,7 +8,7 @@ const { Group, InstructorGroup, ClassGroup } = require('./model');
 const { CourseModel } = require('../courses/model');
 
 module.exports = {
-    async create (req, res) {
+    async create(req, res) {
         try {
             const findGroup = await Group.find({
                 name: req.body.name,
@@ -50,7 +50,7 @@ module.exports = {
             );
         }
     },
-    async get (req, res) {
+    async get(req, res) {
         try {
             const { sort, order } = _functions.ordernation(req);
             const { skip, limit } = _functions.pagination(req);
@@ -59,18 +59,18 @@ module.exports = {
             const total = await Group.find(
                 searchBy
                     ? {
-                        $or: [{ name: { $regex: searchBy, $options: 'i' } }],
-                        deleted: { $eq: 0 },
-                    }
+                          $or: [{ name: { $regex: searchBy, $options: 'i' } }],
+                          deleted: { $eq: 0 },
+                      }
                     : { deleted: { $eq: 0 } }
             ).countDocuments();
 
             const groups = await Group.find(
                 searchBy
                     ? {
-                        $or: [{ name: { $regex: searchBy, $options: 'i' } }],
-                        deleted: { $eq: 0 },
-                    }
+                          $or: [{ name: { $regex: searchBy, $options: 'i' } }],
+                          deleted: { $eq: 0 },
+                      }
                     : { deleted: { $eq: 0 } }
             )
                 .sort({ [order]: sort })
@@ -93,7 +93,7 @@ module.exports = {
         }
     },
 
-    async update (req, res) {
+    async update(req, res) {
         try {
             const { _id } = req.body;
 
@@ -140,7 +140,7 @@ module.exports = {
             );
         }
     },
-    async delete (req, res) {
+    async delete(req, res) {
         try {
             const { id } = req.params;
             await Group.findByIdAndUpdate(id, { deleted: 1 });
@@ -169,7 +169,7 @@ module.exports = {
         }
     },
 
-    async getInstructorGroups (req, res) {
+    async getInstructorGroups(req, res) {
         try {
             const { sort, order } = _functions.ordernation(req);
             const { skip, limit } = _functions.pagination(req);
@@ -180,8 +180,8 @@ module.exports = {
             const groups = await InstructorGroup.find(
                 searchBy
                     ? {
-                        $or: [{ name: { $regex: searchBy, $options: 'i' } }],
-                    }
+                          $or: [{ name: { $regex: searchBy, $options: 'i' } }],
+                      }
                     : {}
             )
                 .sort({ [order]: sort })
@@ -204,7 +204,7 @@ module.exports = {
         }
     },
 
-    async getInstructorGroupsActives (req, res) {
+    async getInstructorGroupsActives(req, res) {
         try {
             const groups = await InstructorGroup.find();
             _messages.success(res, req, groups);
@@ -220,7 +220,7 @@ module.exports = {
         }
     },
 
-    async createInstructor (req, res) {
+    async createInstructor(req, res) {
         try {
             const { body } = req;
             const group = await InstructorGroup.find({
@@ -253,7 +253,7 @@ module.exports = {
         }
     },
 
-    async deleteInstructor (req, res) {
+    async deleteInstructor(req, res) {
         try {
             const { params } = req;
             const course = await CourseModel.find({
@@ -286,7 +286,7 @@ module.exports = {
         }
     },
 
-    async updateInstructor (req, res) {
+    async updateInstructor(req, res) {
         try {
             const { body } = req;
             const group = await InstructorGroup.findById(body.id);
@@ -326,7 +326,7 @@ module.exports = {
         }
     },
 
-    async getTags (req, res) {
+    async getTags(req, res) {
         try {
             const groups = await Group.find({});
             const trails = await Trail.find({});
@@ -355,16 +355,25 @@ module.exports = {
         }
     },
 
-    async getTagsList (req, res) {
+    async getTagsList(req, res) {
         try {
-
             const { sort, order } = _functions.ordernation(req);
             const { skip, limit } = _functions.pagination(req);
             const searchBy = req.query.searchBy;
-            const queryGroup = searchBy ? { deleted: 0, 'tags.display': { $regex: searchBy, $options: 'i' }, } : { deleted: 0, }
+            const queryGroup = searchBy
+                ? {
+                      deleted: 0,
+                      'tags.display': { $regex: searchBy, $options: 'i' },
+                  }
+                : { deleted: 0 };
             const groups = await Group.find(queryGroup);
 
-            const queryTrail = searchBy ? { tags: { $exists: true, $ne: [] }, 'tags.display': { $regex: searchBy, $options: 'i' }, } : { tags: { $exists: true, $ne: [] } }
+            const queryTrail = searchBy
+                ? {
+                      tags: { $exists: true, $ne: [] },
+                      'tags.display': { $regex: searchBy, $options: 'i' },
+                  }
+                : { tags: { $exists: true, $ne: [] } };
             const trails = await Trail.find(queryTrail);
 
             const groupTags = groups
@@ -381,17 +390,20 @@ module.exports = {
             let tags = [...groupTags, ...trailTags];
 
             tags = tags.reduce((prev, curr) => prev.concat(curr), []);
-            tags = tags.filter((tag, index, self) => self.indexOf(tag) === index).map((tag => ({ tag })))
+            tags = tags
+                .filter((tag, index, self) => self.indexOf(tag) === index)
+                .map((tag) => ({ tag }));
 
-            const total = tags.length
-
+            const total = tags.length;
 
             // Ordenação
             tags.sort((a, b) => {
                 const ordernation = sort === 'desc' ? 1 : -1;
-                return ordernation * (a[order] > b[order] ? 1 : a[order] < b[order] ? -1 : 0);
+                return (
+                    ordernation *
+                    (a[order] > b[order] ? 1 : a[order] < b[order] ? -1 : 0)
+                );
             });
-
 
             //paginação
 
@@ -400,20 +412,22 @@ module.exports = {
 
             //quantidade de grupos por tag
 
-            tagsPag = await Promise.all(tagsPag.map(async (tag) => {
-                const groupsCount = await Group.countDocuments({
-                    deleted: 0, 'tags.display': tag.tag,
-                });
-                return {
-                    ...tag,
-                    groups: groupsCount
-                };
-            }));
-
+            tagsPag = await Promise.all(
+                tagsPag.map(async (tag) => {
+                    const groupsCount = await Group.countDocuments({
+                        deleted: 0,
+                        'tags.display': tag.tag,
+                    });
+                    return {
+                        ...tag,
+                        groups: groupsCount,
+                    };
+                })
+            );
 
             _messages.success(res, req, {
                 data: tagsPag,
-                total
+                total,
             });
         } catch (error) {
             _messages.internalServer(
@@ -427,24 +441,25 @@ module.exports = {
         }
     },
 
-    async getGroupsByTag (req, res) {
+    async getGroupsByTag(req, res) {
         try {
-
             const tag = req.query.tag;
-            const groups = await Group.find({ deleted: { $eq: 0 }, 'tags.display': tag });
+            const groups = await Group.find({
+                deleted: { $eq: 0 },
+                'tags.display': tag,
+            });
 
             const groupTags = groups
                 .filter((value) => value.tags?.length > 0)
-                .map((group) => ({ name: group.name, _id: group._id }))
+                .map((group) => ({ name: group.name, _id: group._id }));
 
-
-            let tags = [...groupTags,];
+            let tags = [...groupTags];
 
             tags = tags.reduce((prev, curr) => prev.concat(curr), []);
 
             _messages.success(res, req, {
                 data: tags,
-                total: tags.length
+                total: tags.length,
             });
         } catch (error) {
             _messages.internalServer(
@@ -458,14 +473,13 @@ module.exports = {
         }
     },
 
-    async updateGroupsByTag (req, res) {
+    async updateGroupsByTag(req, res) {
         try {
-
-            const body = req.body
+            const body = req.body;
             const tag = body.tag;
             const old = body.old;
 
-            let remove
+            let remove;
             // Atualizando documentos para remover a tag específica
             if (old) {
                 remove = await Group.updateMany(
@@ -476,7 +490,7 @@ module.exports = {
 
             // Atualizando documentos para adicionar a tag em cada array 'tags'
             const update = await Group.updateMany(
-                { _id: { $in: body.groups.map(doc => doc._id) } },
+                { _id: { $in: body.groups.map((doc) => doc._id) } },
                 { $push: { tags: { display: tag, value: tag } } }
             );
 
@@ -493,19 +507,19 @@ module.exports = {
         }
     },
 
-    async removeGroupsByTag (req, res) {
+    async removeGroupsByTag(req, res) {
         try {
             const { tag } = req.params;
 
             // Atualizando documentos para remover a tag específica
             const removeGroup = await Group.updateMany(
-                { 'tags.display': tag, },
+                { 'tags.display': tag },
                 { $pull: { tags: { display: tag } } }
             );
 
             _messages.success(res, req, { removeGroup });
         } catch (error) {
-            conso
+            console.log(error);
             _messages.internalServer(
                 res,
                 req,
@@ -517,7 +531,7 @@ module.exports = {
         }
     },
 
-    async getSectionTags (req, res) {
+    async getSectionTags(req, res) {
         try {
             const sections = await Section.find({});
             const sectionTags = sections
@@ -542,7 +556,7 @@ module.exports = {
         }
     },
 
-    async createClassGroup (req, res) {
+    async createClassGroup(req, res) {
         try {
             const findGroup = await ClassGroup.find({
                 name: req.body.name,
@@ -585,7 +599,7 @@ module.exports = {
         }
     },
 
-    async importClassGroups (req, res) {
+    async importClassGroups(req, res) {
         try {
             let file = null;
             if (req.files.file) {
@@ -603,8 +617,8 @@ module.exports = {
                     typeof classGroupRow.LOGIN === 'string'
                         ? classGroupRow.LOGIN
                         : typeof classGroupRow.LOGIN === 'number'
-                            ? classGroupRow.LOGIN.toString()
-                            : classGroupRow.LOGIN.text;
+                        ? classGroupRow.LOGIN.toString()
+                        : classGroupRow.LOGIN.text;
 
                 if (!networkLogin) {
                     results.push(
@@ -619,6 +633,26 @@ module.exports = {
 
                 if (!foundUser) {
                     results.push(`USER NOT FOUND: ${networkLogin}`);
+                    continue;
+                }
+
+                if (
+                    !classGroupRow.DATA_INICIO &&
+                    classGroupRow.ACAO !== 'REMOVER' // remover nao precisa de data
+                ) {
+                    results.push(
+                        `Data inicio inválida: ${classGroupRow.DATA_INICIO}`
+                    );
+                    continue;
+                }
+
+                if (
+                    !classGroupRow.DATA_FIM &&
+                    classGroupRow.ACAO !== 'REMOVER' // remover nao precisa de data
+                ) {
+                    results.push(
+                        `Data fim inválida: ${classGroupRow.DATA_FIM}`
+                    );
                     continue;
                 }
 
@@ -640,8 +674,8 @@ module.exports = {
                                     limitDate: null,
                                     classId: Math.floor(
                                         Math.random() *
-                                        (100000000 - 1000000 + 1) +
-                                        1000000
+                                            (100000000 - 1000000 + 1) +
+                                            1000000
                                     ),
                                     status: 2,
                                 });
@@ -662,10 +696,10 @@ module.exports = {
                                 },
                             });
                             results.push('SUCESSO');
+                            continue;
                         } catch (error) {
                             results.push(`ERRO: ${error.message}`);
-                        } finally {
-                            break;
+                            continue;
                         }
 
                     case 'EDITAR':
@@ -698,10 +732,10 @@ module.exports = {
                                 },
                             });
                             results.push('SUCESSO');
+                            continue;
                         } catch (error) {
                             results.push(`ERRO: ${error.message}`);
-                        } finally {
-                            break;
+                            continue;
                         }
 
                     case 'REMOVER':
@@ -718,15 +752,15 @@ module.exports = {
                                 },
                             });
                             results.push('SUCESSO');
+                            continue;
                         } catch (error) {
                             results.push(`ERRO: ${error.message}`);
-                        } finally {
-                            break;
+                            continue;
                         }
 
                     default:
                         results.push(`AÇAO INVALIDA: ${classGroupRow.ACAO}`);
-                        break;
+                        continue;
                 }
             }
 
@@ -758,7 +792,7 @@ module.exports = {
         }
     },
 
-    async deleteClassGroup (req, res) {
+    async deleteClassGroup(req, res) {
         try {
             const { id } = req.params;
             await ClassGroup.deleteOne({ _id: id });
@@ -787,7 +821,7 @@ module.exports = {
         }
     },
 
-    async getClassGroups (req, res) {
+    async getClassGroups(req, res) {
         try {
             const { sort, order } = _functions.ordernation(req);
             const { skip, limit } = _functions.pagination(req);
@@ -798,8 +832,8 @@ module.exports = {
             const groups = await ClassGroup.find(
                 searchBy
                     ? {
-                        $or: [{ name: { $regex: searchBy, $options: 'i' } }],
-                    }
+                          $or: [{ name: { $regex: searchBy, $options: 'i' } }],
+                      }
                     : {}
             )
                 .sort({ [order]: sort })
@@ -822,7 +856,7 @@ module.exports = {
         }
     },
 
-    async updateClassGroup (req, res) {
+    async updateClassGroup(req, res) {
         try {
             const { _id } = req.body;
 
