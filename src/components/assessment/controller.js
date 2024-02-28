@@ -42,6 +42,18 @@ const AssessmentController = {
         }
     },
 
+    async getPillar(req, res) {
+        try {
+            const { pillarId } = req.params;
+            const uri = `${host}/pillars/${clientId}/${pillarId}`;
+            const { data } = await axios.get(uri, { headers });
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
+
     async listCycles(req, res) {
         try {
             const searchParams = new URLSearchParams(req.query);

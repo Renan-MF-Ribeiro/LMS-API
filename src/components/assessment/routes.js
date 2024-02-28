@@ -6,6 +6,7 @@ router
     .get('/pillars', _controller.listPillars)
     .post('/pillars', _controller.createPillar)
     .put('/pillars', _controller.updatePillar)
+    .get('/pillars/:pillarId', _controller.getPillar)
     .get('/cycles', _controller.listCycles)
     .post('/cycles', _controller.createCycle)
     .put('/cycles', _controller.updateCycle)
