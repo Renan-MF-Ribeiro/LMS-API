@@ -184,6 +184,17 @@ const AssessmentController = {
             return handleError(res, req, error);
         }
     },
+
+    async review(req, res) {
+        try {
+            const uri = `${host}/historics/${clientId}`;
+            const { data } = await axios.post(uri, req.body, { headers });
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
 };
 
 module.exports = AssessmentController;
