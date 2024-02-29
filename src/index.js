@@ -39,6 +39,7 @@ var corsOptions = {
         'Content-Range',
     ],
 };
+//
 
 // if (process.env.NODE_ENV === 'local') {
 //     corsOptions = Object.assign(corsOptions, { origin: 'http://localhost:4200' })
