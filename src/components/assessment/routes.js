@@ -8,6 +8,7 @@ router
     .put('/pillars', _controller.updatePillar)
     .get('/pillars/:pillarId', _controller.getPillar)
     .get('/cycles', _controller.listCycles)
+    .get('/cycles-and-pillars', _controller.listCyclesAndPillars)
     .post('/cycles', _controller.createCycle)
     .put('/cycles', _controller.updateCycle)
     .get('/matrix', _controller.listClientMatrices)
