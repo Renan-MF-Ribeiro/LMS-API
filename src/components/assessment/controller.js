@@ -68,7 +68,7 @@ const AssessmentController = {
 
     async listCyclesAndPillars(req, res) {
         try {
-            const uri = `${host}/cycles-and-pillars/${clientId}`;
+            const uri = `${host}/cycles/cycles-and-pillars/${clientId}`;
             const { data } = await axios.get(uri, { headers });
 
             return _messages.success(res, req, data);
