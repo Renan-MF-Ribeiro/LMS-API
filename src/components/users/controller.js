@@ -174,66 +174,70 @@ module.exports = {
         }
     },
     async signup (req, res) {
-        try {
-            var salt = bcrypt.genSaltSync(10);
-            const { networkLogin, properties } = req.body;
 
-            const { password, ...data } = properties;
+        //FUNÇÃO COMENTADA POR MOTIVOS DE SEGURANÇA
+        //REATIVAR APÓS UTILIZAÇÃO DO AMBIENTE PELA EQUIPE COMERCIAL
+        _messages.success(res, req);
+        // try {
+        //     var salt = bcrypt.genSaltSync(10);
+        //     const { networkLogin, properties } = req.body;
 
-            const user = await User.find({ networkLogin });
+        //     const { password, ...data } = properties;
 
-            if (user.length !== 0) {
-                _messages.badRequest(
-                    res,
-                    req,
-                    'Usuário já cadastrado',
-                    'Já existe um usuário cadastrado para este usuário',
-                    'users',
-                    'signup'
-                );
-            } else {
-                const hashPassword = {
-                    hash: bcrypt.hashSync(password, salt),
-                    valid: true,
-                    createdAt: new Date(Date.now()),
-                };
-                const userData = {
-                    networkLogin,
-                    password: hashPassword,
-                    passwordValid: true,
-                    clientUserKey: CLIENT_ID + '@@' + networkLogin,
-                    groupsAD: ['PERFIL_Aluno', 'ELEGE_CURSO'],
-                    status: sendSignUpActivationEmail ? 'INATIVO' : 'ATIVO',
-                    ...data,
-                };
+        //     const user = await User.find({ networkLogin });
 
-                const newUser = await User.create(userData);
+        //     if (user.length !== 0) {
+        //         _messages.badRequest(
+        //             res,
+        //             req,
+        //             'Usuário já cadastrado',
+        //             'Já existe um usuário cadastrado para este usuário',
+        //             'users',
+        //             'signup'
+        //         );
+        //     } else {
+        //         const hashPassword = {
+        //             hash: bcrypt.hashSync(password, salt),
+        //             valid: true,
+        //             createdAt: new Date(Date.now()),
+        //         };
+        //         const userData = {
+        //             networkLogin,
+        //             password: hashPassword,
+        //             passwordValid: true,
+        //             clientUserKey: CLIENT_ID + '@@' + networkLogin,
+        //             groupsAD: ['PERFIL_Aluno', 'ELEGE_CURSO'],
+        //             status: sendSignUpActivationEmail ? 'INATIVO' : 'ATIVO',
+        //             ...data,
+        //         };
 
-                if (newUser && sendSignUpActivationEmail) {
-                    const emailToken = generateToken({ networkLogin });
+        //         const newUser = await User.create(userData);
 
-                    const activationLink = `${process.env.DOMAIN}/login/ativacao?token=${emailToken}`;
+        //         if (newUser && sendSignUpActivationEmail) {
+        //             const emailToken = generateToken({ networkLogin });
 
-                    await sendSignupActivationEmail(
-                        newUser.email,
-                        activationLink
-                    );
-                }
-                const token = generateToken({ networkLogin });
+        //             const activationLink = `${process.env.DOMAIN}/login/ativacao?token=${emailToken}`;
 
-                _messages.success(res, req, token);
-            }
-        } catch (error) {
-            console.log(error);
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'users',
-                'signup'
-            );
-        }
+        //             await sendSignupActivationEmail(
+        //                 newUser.email,
+        //                 activationLink
+        //             );
+        //         }
+        //         const token = generateToken({ networkLogin });
+
+        //         _messages.success(res, req, token);
+        //     }
+        // } catch (error) {
+        //     console.log(error);
+        //     _messages.internalServer(
+        //         res,
+        //         req,
+        //         error.message,
+        //         'Erro interno no servidor',
+        //         'users',
+        //         'signup'
+        //     );
+        // }
     },
 
     async activateUser (req, res) {
