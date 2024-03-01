@@ -54,6 +54,18 @@ const AssessmentController = {
         }
     },
 
+    async deletePillar(req, res) {
+        try {
+            const { pillarId } = req.params;
+            const uri = `${host}/pillars/${clientId}/${pillarId}`;
+            const { data } = await axios.delete(uri, { headers });
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
+
     async listCycles(req, res) {
         try {
             const searchParams = new URLSearchParams(req.query);
@@ -81,6 +93,30 @@ const AssessmentController = {
         try {
             const uri = `${host}/cycles/${clientId}`;
             const { data } = await axios.put(uri, req.body, { headers });
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
+
+    async cycleReview(req, res) {
+        try {
+            const { cycleId } = req.params;
+            const uri = `${host}/cycles/review/${clientId}/${cycleId}`;
+            const { data } = await axios.get(uri, { headers });
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
+
+    async deleteCycle(req, res) {
+        try {
+            const { cycleId } = req.params;
+            const uri = `${host}/cycles/${clientId}/${cycleId}`;
+            const { data } = await axios.delete(uri, { headers });
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -161,7 +197,7 @@ const AssessmentController = {
             const { cycleId, periodId } = req.params;
             const { _id } = await getUserByToken(req);
 
-            const uri = `${host}/history/${_id.toString()}/${cycleId}/${periodId}`;
+            const uri = `${host}/historics/${_id.toString()}/${cycleId}/${periodId}`;
 
             const { data } = await axios.get(uri, { headers });
             return _messages.success(res, req, data);
@@ -175,7 +211,7 @@ const AssessmentController = {
             const { matrixId, periodId } = req.params;
             const { _id } = await getUserByToken(req);
 
-            const uri = `${host}/history/user-matrix-details/${_id.toString()}/${matrixId}/${periodId}`;
+            const uri = `${host}/historics/user-matrix-details/${_id.toString()}/${matrixId}/${periodId}`;
 
             const { data } = await axios.get(uri, { headers });
 
