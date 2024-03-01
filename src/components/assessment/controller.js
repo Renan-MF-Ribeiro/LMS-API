@@ -8,7 +8,7 @@ const clientId = process.env.CLIENT_ID;
 const headers = { 'x-client-key': process.env.API_KEY_ASSESSMENT };
 
 const AssessmentController = {
-    async listPillars(req, res) {
+    async listPillars (req, res) {
         try {
             const searchParams = new URLSearchParams(req.query);
             const uri = `${host}/pillars/${clientId}?${searchParams}`;
@@ -20,7 +20,7 @@ const AssessmentController = {
         }
     },
 
-    async createPillar(req, res) {
+    async createPillar (req, res) {
         try {
             const uri = `${host}/pillars/${clientId}`;
             const { data } = await axios.post(uri, req.body, { headers });
@@ -31,7 +31,7 @@ const AssessmentController = {
         }
     },
 
-    async updatePillar(req, res) {
+    async updatePillar (req, res) {
         try {
             const uri = `${host}/pillars/${clientId}`;
             const { data } = await axios.put(uri, req.body, { headers });
@@ -42,7 +42,7 @@ const AssessmentController = {
         }
     },
 
-    async getPillar(req, res) {
+    async getPillar (req, res) {
         try {
             const { pillarId } = req.params;
             const uri = `${host}/pillars/${clientId}/${pillarId}`;
@@ -54,7 +54,7 @@ const AssessmentController = {
         }
     },
 
-    async deletePillar(req, res) {
+    async deletePillar (req, res) {
         try {
             const { pillarId } = req.params;
             const uri = `${host}/pillars/${clientId}/${pillarId}`;
@@ -66,7 +66,7 @@ const AssessmentController = {
         }
     },
 
-    async listCycles(req, res) {
+    async listCycles (req, res) {
         try {
             const searchParams = new URLSearchParams(req.query);
             const uri = `${host}/cycles/${clientId}?${searchParams}`;
@@ -78,7 +78,7 @@ const AssessmentController = {
         }
     },
 
-    async listCyclesAndPillars(req, res) {
+    async listCyclesAndPillars (req, res) {
         try {
             const uri = `${host}/cycles/cycles-and-pillars/${clientId}`;
             const { data } = await axios.get(uri, { headers });
@@ -89,7 +89,7 @@ const AssessmentController = {
         }
     },
 
-    async createCycle(req, res) {
+    async createCycle (req, res) {
         try {
             const uri = `${host}/cycles/${clientId}`;
             const { data } = await axios.post(uri, req.body, { headers });
@@ -100,7 +100,7 @@ const AssessmentController = {
         }
     },
 
-    async updateCycle(req, res) {
+    async updateCycle (req, res) {
         try {
             const uri = `${host}/cycles/${clientId}`;
             const { data } = await axios.put(uri, req.body, { headers });
@@ -111,7 +111,7 @@ const AssessmentController = {
         }
     },
 
-    async cycleReview(req, res) {
+    async cycleReview (req, res) {
         try {
             const { cycleId } = req.params;
             const uri = `${host}/cycles/review/${clientId}/${cycleId}`;
@@ -123,7 +123,7 @@ const AssessmentController = {
         }
     },
 
-    async deleteCycle(req, res) {
+    async deleteCycle (req, res) {
         try {
             const { cycleId } = req.params;
             const uri = `${host}/cycles/${clientId}/${cycleId}`;
@@ -135,7 +135,7 @@ const AssessmentController = {
         }
     },
 
-    async listClientMatrices(req, res) {
+    async listClientMatrices (req, res) {
         try {
             const searchBy = req.query.searchBy;
             const { pageSize, pageIndex } = req.query;
@@ -155,7 +155,7 @@ const AssessmentController = {
         }
     },
 
-    async createMatrix(req, res) {
+    async createMatrix (req, res) {
         try {
             const uri = `${host}/matrix`;
 
@@ -171,8 +171,9 @@ const AssessmentController = {
         }
     },
 
-    async updateMatrixPeriod(req, res) {
+    async updateMatrixPeriod (req, res) {
         try {
+            const { matrixId, periodId } = req.params;
             const uri = `${host}/matrix/update-period/${matrixId}/${periodId}`;
 
             const body = {
@@ -180,7 +181,7 @@ const AssessmentController = {
                 xWeights: req.body.xWeights,
                 yWeights: req.body.yWeights,
             };
-
+            console.log(uri)
             const { data } = await axios.patch(uri, body, { headers });
 
             return _messages.success(res, req, data);
@@ -189,7 +190,7 @@ const AssessmentController = {
         }
     },
 
-    async softDeleteMatrix(req, res) {
+    async softDeleteMatrix (req, res) {
         try {
             const { id } = req.params;
 
@@ -203,7 +204,7 @@ const AssessmentController = {
         }
     },
 
-    async getCycleHistory(req, res) {
+    async getCycleHistory (req, res) {
         try {
             const { cycleId, periodId } = req.params;
             const { _id } = await getUserByToken(req);
@@ -217,7 +218,7 @@ const AssessmentController = {
         }
     },
 
-    async getUserMatrixDetails(req, res) {
+    async getUserMatrixDetails (req, res) {
         try {
             const { matrixId, periodId } = req.params;
             const { _id } = await getUserByToken(req);
@@ -232,7 +233,7 @@ const AssessmentController = {
         }
     },
 
-    async review(req, res) {
+    async review (req, res) {
         try {
             const uri = `${host}/historics/${clientId}/review`;
             const { data } = await axios.post(uri, req.body, { headers });
