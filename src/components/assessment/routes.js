@@ -9,6 +9,7 @@ router
     .get('/pillars/:pillarId', _controller.getPillar)
     .delete('/pillars/:pillarId', _controller.deletePillar)
     .get('/cycles', _controller.listCycles)
+    .get('/cycles-and-pillars', _controller.listCyclesAndPillars)
     .post('/cycles', _controller.createCycle)
     .put('/cycles', _controller.updateCycle)
     .get('/cycles/review/:cycleId', _controller.review)

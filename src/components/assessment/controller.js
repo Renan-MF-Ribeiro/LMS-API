@@ -78,6 +78,17 @@ const AssessmentController = {
         }
     },
 
+    async listCyclesAndPillars(req, res) {
+        try {
+            const uri = `${host}/cycles/cycles-and-pillars/${clientId}`;
+            const { data } = await axios.get(uri, { headers });
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
+
     async createCycle(req, res) {
         try {
             const uri = `${host}/cycles/${clientId}`;
