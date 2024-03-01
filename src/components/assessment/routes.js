@@ -12,7 +12,7 @@ router
     .get('/cycles-and-pillars', _controller.listCyclesAndPillars)
     .post('/cycles', _controller.createCycle)
     .put('/cycles', _controller.updateCycle)
-    .get('/cycles/review/:cycleId', _controller.review)
+    .get('/cycles/review/:cycleId', _controller.cycleReview)
     .delete('/cycles/:cycleId', _controller.deleteCycle)
     .get('/matrix', _controller.listClientMatrices)
     .post('/matrix', _controller.createMatrix)
