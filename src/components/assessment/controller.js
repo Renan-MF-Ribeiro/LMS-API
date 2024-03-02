@@ -198,8 +198,21 @@ const AssessmentController = {
 
     async review(req, res) {
         try {
+            const { _id: userId } = await getUserByToken(req);
+
             const uri = `${host}/historics/${clientId}/review`;
-            const { data } = await axios.post(uri, req.body, { headers });
+            const { data } = await axios.post(
+                uri,
+                {
+                    userId,
+                    pillarId: req.body.pillarId,
+                    cycleId: req.body.cycleId,
+                    periodId: req.body.periodId,
+                    questionId: req.body.questionId,
+                    alternativeId: req.body.alternativeId,
+                },
+                { headers }
+            );
 
             return _messages.success(res, req, data);
         } catch (error) {
