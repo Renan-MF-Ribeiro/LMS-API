@@ -112,18 +112,6 @@ const AssessmentController = {
         }
     },
 
-    async cycleReview(req, res) {
-        try {
-            const { cycleId } = req.params;
-            const uri = `${host}/cycles/review/${clientId}/${cycleId}`;
-            const { data } = await axios.get(uri, { headers });
-
-            return _messages.success(res, req, data);
-        } catch (error) {
-            return handleError(res, req, error);
-        }
-    },
-
     async deleteCycle(req, res) {
         try {
             const { cycleId } = req.params;
@@ -272,6 +260,19 @@ const AssessmentController = {
 
             const uri = `${host}/historics/${clientId}/interests?userId=${_id}&eligibilities=${eligibilities}`;
 
+            const { data } = await axios.get(uri, { headers });
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
+
+    async historicCycleQuestions(req, res) {
+        try {
+            const { _id } = await getUserByToken(req);
+            const { cycleId, periodId } = req.params;
+            const uri = `${host}/historics/${clientId}/questions/${cycleId}/${periodId}/${_id}`;
             const { data } = await axios.get(uri, { headers });
 
             return _messages.success(res, req, data);
