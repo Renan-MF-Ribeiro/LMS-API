@@ -174,6 +174,7 @@ const AssessmentController = {
 
     async updateMatrixPeriod(req, res) {
         try {
+            const { matrixId, periodId } = req.params;
             const uri = `${host}/matrix/update-period/${matrixId}/${periodId}`;
 
             const body = {
@@ -181,7 +182,6 @@ const AssessmentController = {
                 xWeights: req.body.xWeights,
                 yWeights: req.body.yWeights,
             };
-
             const { data } = await axios.patch(uri, body, { headers });
 
             return _messages.success(res, req, data);
@@ -235,8 +235,21 @@ const AssessmentController = {
 
     async review(req, res) {
         try {
+            const { _id: userId } = await getUserByToken(req);
+
             const uri = `${host}/historics/${clientId}/review`;
-            const { data } = await axios.post(uri, req.body, { headers });
+            const { data } = await axios.post(
+                uri,
+                {
+                    userId,
+                    pillarId: req.body.pillarId,
+                    cycleId: req.body.cycleId,
+                    periodId: req.body.periodId,
+                    questionId: req.body.questionId,
+                    alternativeId: req.body.alternativeId,
+                },
+                { headers }
+            );
 
             return _messages.success(res, req, data);
         } catch (error) {
