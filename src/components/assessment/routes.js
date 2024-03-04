@@ -18,11 +18,12 @@ router
     .post('/matrix', _controller.createMatrix)
     .delete('/matrix/:id', _controller.softDeleteMatrix)
     .patch('/matrix/update-period', _controller.updateMatrixPeriod)
-    .get('/historics/:cycleId/:periodId', _controller.getCycleHistory)
+    .get('/historics/:cycleId/:periodId', _controller.getHistoric)
     .get(
         '/user-matrix-details/:matrixId/:periodId',
         _controller.getUserMatrixDetails
     )
-    .post('/historics/review', _controller.review);
+    .post('/historics/review', _controller.review)
+    .get('/historics/interests', _controller.interests)
 
 module.exports = router;
