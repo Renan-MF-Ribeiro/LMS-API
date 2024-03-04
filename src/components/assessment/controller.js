@@ -2,6 +2,7 @@ const axios = require('axios');
 const _messages = require('../../utils/messages');
 const { getUserByToken } = require('../../utils/functions');
 const { handleError } = require('../../utils/errors');
+const { Group } = require('../groups/model');
 
 const host = process.env.API_ASSESSMENT;
 const clientId = process.env.CLIENT_ID;
@@ -183,7 +184,6 @@ const AssessmentController = {
                     yWeights: req.body.yWeights,
                 },
             };
-            console.log(uri);
             const { data } = await axios.patch(uri, body, { headers });
 
             return _messages.success(res, req, data);
@@ -206,12 +206,12 @@ const AssessmentController = {
         }
     },
 
-    async getCycleHistory(req, res) {
+    async getHistoric(req, res) {
         try {
             const { cycleId, periodId } = req.params;
             const { _id } = await getUserByToken(req);
 
-            const uri = `${host}/historics/${_id.toString()}/${cycleId}/${periodId}`;
+            const uri = `${host}/historics/${clientId}/${_id.toString()}/${cycleId}/${periodId}`;
 
             const { data } = await axios.get(uri, { headers });
             return _messages.success(res, req, data);
@@ -252,6 +252,29 @@ const AssessmentController = {
                 },
                 { headers }
             );
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
+
+    async interests(req, res) {
+        try {
+            const { _id, groupsAD } = await getUserByToken(req);
+            const groups = await Group.find({
+                name: { $in: groupsAD },
+            });
+            const eligibilities = groups
+                .flatMap((group) => group.tags)
+                .flatMap((tag) => tag.value)
+                .join(',');
+
+            console.log({ eligibilities });
+
+            const uri = `${host}/historics/${clientId}/interests?userId=${_id}&eligibilities=${eligibilities}`;
+
+            const { data } = await axios.get(uri, { headers });
 
             return _messages.success(res, req, data);
         } catch (error) {
