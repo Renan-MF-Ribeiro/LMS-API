@@ -259,6 +259,19 @@ const AssessmentController = {
         }
     },
 
+    async getCyclesAndPeriods(req, res) {
+        try {
+            const { _id: userId } = await getUserByToken(req);
+
+            const uri = `${host}/historics/${clientId}/cycles-and-periods?userId=${userId}`;
+            const { data } = await axios.get(uri, { headers });
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
+
     async interests(req, res) {
         try {
             const { _id, groupsAD } = await getUserByToken(req);

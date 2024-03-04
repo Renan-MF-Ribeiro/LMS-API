@@ -17,13 +17,17 @@ router
     .get('/matrix', _controller.listClientMatrices)
     .post('/matrix', _controller.createMatrix)
     .delete('/matrix/:id', _controller.softDeleteMatrix)
-    .patch('/matrix/update-period/:matrixId/:periodId', _controller.updateMatrixPeriod)
-    .get('/historics/:cycleId/:periodId', _controller.getHistoric)
+    .patch(
+        '/matrix/update-period/:matrixId/:periodId',
+        _controller.updateMatrixPeriod
+    )
     .get(
         '/user-matrix-details/:matrixId/:periodId',
         _controller.getUserMatrixDetails
     )
+    .get('/historics/cycles-and-periods', _controller.getCyclesAndPeriods)
+    .get('/historics/:cycleId/:periodId', _controller.getHistoric)
     .post('/historics/review', _controller.review)
-    .get('/historics/interests', _controller.interests)
+    .get('/historics/interests', _controller.interests);
 
 module.exports = router;
