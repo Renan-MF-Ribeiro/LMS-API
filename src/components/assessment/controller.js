@@ -208,6 +208,20 @@ const AssessmentController = {
         }
     },
 
+    async getHistoricDetails(req, res) {
+        try {
+            const { cycleId, periodId } = req.params;
+            const { _id } = await getUserByToken(req);
+
+            const uri = `${host}/historics/${clientId}/${_id.toString()}/${cycleId}/${periodId}/details`;
+
+            const { data } = await axios.get(uri, { headers });
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
+
     async getUserMatrixDetails(req, res) {
         try {
             const { matrixId, periodId } = req.params;
