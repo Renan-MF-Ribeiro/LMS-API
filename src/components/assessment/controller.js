@@ -166,9 +166,11 @@ const AssessmentController = {
             const uri = `${host}/matrix/update-period/${matrixId}/${periodId}`;
 
             const body = {
-                periodId,
-                xWeights: req.body.xWeights,
-                yWeights: req.body.yWeights,
+                weightsByPeriod: {
+                    periodId,
+                    xWeights: req.body.xWeights,
+                    yWeights: req.body.yWeights,
+                },
             };
             const { data } = await axios.patch(uri, body, { headers });
 
@@ -238,6 +240,19 @@ const AssessmentController = {
                 },
                 { headers }
             );
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
+
+    async getCyclesAndPeriods(req, res) {
+        try {
+            const { _id: userId } = await getUserByToken(req);
+
+            const uri = `${host}/historics/${clientId}/cycles-and-periods?userId=${userId}`;
+            const { data } = await axios.get(uri, { headers });
 
             return _messages.success(res, req, data);
         } catch (error) {

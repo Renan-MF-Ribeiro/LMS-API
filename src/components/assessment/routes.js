@@ -24,6 +24,7 @@ router
     .get('/historics/interests', _controller.interests)
     .get('/historics/questions/:cycleId/:periodId', _controller.historicCycleQuestions)
     .get('/historics/:cycleId/:periodId', _controller.getHistoric)
+    .get('/historics/cycles-and-periods', _controller.getCyclesAndPeriods)
     .get(
         '/user-matrix-details/:matrixId/:periodId',
         _controller.getUserMatrixDetails
