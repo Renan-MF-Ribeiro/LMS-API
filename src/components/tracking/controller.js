@@ -420,7 +420,7 @@ const TrackingController = {
                 const itemDataArr = [];
 
                 for (const item in trail.items) {
-                    if (trail.items[item].itemID?.completion) {
+                    if (trail.items[item].itemID?.completion == 1) {
                         completedTrails.push(trail.items[item]);
                     }
                     trail.items[item] = trail.items[item].itemID
