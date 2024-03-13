@@ -10,6 +10,7 @@ const { SCORMLessonStatus } = require('../components/tracking/model');
 const { HistoricEvaluation } = require('../components/assessments/model');
 const { Tracking } = require('../components/tracking/model');
 const { Trail } = require('../components/trails/model');
+const { Item } = require('../components/items/model');
 
 module.exports = {
     getDateToday() {
@@ -405,11 +406,22 @@ module.exports = {
                     if (trail.items.every(({ itemID }) => itemID?.completion === 1)) {
                         completedTrails.push(trail);
                     } else {
+                        let nextItem;
+                        const item = trail.items.find(({ itemID }) => !itemID?.completion);
+                        if (item) {
+                            foundItem = await Item.findById(item.itemID);
+                            nextItem = {
+                                _id: foundItem._id,
+                                titleURL: foundItem.titleURL,
+                            };
+                        }
+
                         inProgressTrails.push({
                             _id: trail._id,
                             title: trail.title,
                             thumbPath: trail.thumbPath,
                             titleURL: trail.titleURL,
+                            nextItem,
                         });
                     }
                 }
