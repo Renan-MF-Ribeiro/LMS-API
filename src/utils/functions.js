@@ -380,9 +380,7 @@ module.exports = {
                     'items.itemID': highestScoreSorted[0].item,
                 });
 
-                const highestScore = highestScoreTrail.title;
-
-                resolve({ average, highestScore });
+                resolve({ average, highestScoreTrail });
             } catch (error) {
                 reject(error);
             }

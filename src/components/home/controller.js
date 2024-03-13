@@ -205,7 +205,7 @@ const HomeController = {
                 endDate: { $gt: getDateTodayWithoutHours() },
             });
             const totalTrails = elegibleTrails.length;
-            const { average, highestScore } = await handleStudentAverage(user);
+            const { average, highestScoreTrail } = await handleStudentAverage(user);
             const { completedTrails, inProgressTrails } = await handleStudentTrails(
                 user,
                 elegibleTrails
@@ -214,13 +214,17 @@ const HomeController = {
                 ((completedTrails.length / totalTrails) * 100).toFixed(2)
             );
 
+            const highestScoreTitle = highestScoreTrail.title;
+            const highestScoreUrl = highestScoreTrail.titleURL;
+
             _messages.success(res, req, {
                 totalCompletedTrails: completedTrails.length,
                 totalTrails,
                 percentageCompletedTrails,
                 inProgressTrails,
                 average,
-                highestScore,
+                highestScoreTitle,
+                highestScoreUrl,
             });
         } catch (error) {
             console.log(error);
@@ -253,7 +257,7 @@ const HomeController = {
     async listCertificates(req, res) {
         try {
             const { searchBy } = req.query;
-            req.query = { ...req.query, pageSize: req.query.pageSize ?? 5}
+            req.query = { ...req.query, pageSize: req.query.pageSize ?? 5 };
             const { skip, limit } = pagination(req);
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
@@ -266,14 +270,8 @@ const HomeController = {
             const { completedTrails } = await handleStudentTrails(user, elegibleTrails);
             let certificates = await returnCertificates(completedTrails, user);
 
-            const resultTrails = await trailsCompletedOrInProgress(req);
-            let c = await returnCertificates(resultTrails.trailsCompleted, user);
-
             if (searchBy) {
                 certificates = certificates.filter(({ title }) => {
-                    return title.toLowerCase().includes(searchBy.toLowerCase());
-                });
-                c = c.filter(({ title }) => {
                     return title.toLowerCase().includes(searchBy.toLowerCase());
                 });
             }
@@ -282,14 +280,10 @@ const HomeController = {
                 const currConcludedAt = curr.concludedAt.getTime();
                 return currConcludedAt - prevConcludedAt;
             });
-            c = c.sort((prev, curr) => {
-                const prevConcludedAt = prev.concludedAt.getTime();
-                const currConcludedAt = curr.concludedAt.getTime();
-                return currConcludedAt - prevConcludedAt;
-            });
+
             certificates = certificates.slice(skip, skip + limit);
 
-            _messages.success(res, req, { c: c.slice(skip, skip + limit) });
+            _messages.success(res, req, certificates);
         } catch (error) {
             _messages.internalServer(
                 res,
