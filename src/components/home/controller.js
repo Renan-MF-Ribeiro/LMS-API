@@ -15,6 +15,7 @@ const {
     getDateTodayWithoutHours,
     handleStudentAverage,
     handleStudentTrails,
+    pagination,
 } = require('../../utils/functions');
 const {
     trailsCompletedOrInProgress,
@@ -25,7 +26,6 @@ const {
     returnCertificates,
     averageGroupCourses,
     averageGroupRatings,
-    trailsCompletedExpired,
 } = require('./business');
 
 const { populateTrails } = require('../trails/business');
@@ -206,16 +206,16 @@ const HomeController = {
             });
             const totalTrails = elegibleTrails.length;
             const { average, highestScore } = await handleStudentAverage(user);
-            const { totalCompletedTrails, inProgressTrails } = await handleStudentTrails(
+            const { completedTrails, inProgressTrails } = await handleStudentTrails(
                 user,
                 elegibleTrails
             );
             const percentageCompletedTrails = Number(
-                ((totalCompletedTrails / totalTrails) * 100).toFixed(2)
+                ((completedTrails.length / totalTrails) * 100).toFixed(2)
             );
 
             _messages.success(res, req, {
-                totalCompletedTrails,
+                totalCompletedTrails: completedTrails.length,
                 totalTrails,
                 percentageCompletedTrails,
                 inProgressTrails,
@@ -246,6 +246,58 @@ const HomeController = {
                 'Erro interno no servidor',
                 'home',
                 '/searchStudentCourses'
+            );
+        }
+    },
+
+    async listCertificates(req, res) {
+        try {
+            const { searchBy } = req.query;
+            req.query = { ...req.query, pageSize: req.query.pageSize ?? 5}
+            const { skip, limit } = pagination(req);
+            const user = await getUserByToken(req);
+            const tags = await getTagsElegiblesByToken(req);
+            const elegibleTrails = await Trail.find({
+                tags: { $in: tags },
+                enabled: true,
+                startDate: { $lt: getDateTodayWithoutHours() },
+                endDate: { $gt: getDateTodayWithoutHours() },
+            });
+            const { completedTrails } = await handleStudentTrails(user, elegibleTrails);
+            let certificates = await returnCertificates(completedTrails, user);
+
+            const resultTrails = await trailsCompletedOrInProgress(req);
+            let c = await returnCertificates(resultTrails.trailsCompleted, user);
+
+            if (searchBy) {
+                certificates = certificates.filter(({ title }) => {
+                    return title.toLowerCase().includes(searchBy.toLowerCase());
+                });
+                c = c.filter(({ title }) => {
+                    return title.toLowerCase().includes(searchBy.toLowerCase());
+                });
+            }
+            certificates = certificates.sort((prev, curr) => {
+                const prevConcludedAt = prev.concludedAt.getTime();
+                const currConcludedAt = curr.concludedAt.getTime();
+                return currConcludedAt - prevConcludedAt;
+            });
+            c = c.sort((prev, curr) => {
+                const prevConcludedAt = prev.concludedAt.getTime();
+                const currConcludedAt = curr.concludedAt.getTime();
+                return currConcludedAt - prevConcludedAt;
+            });
+            certificates = certificates.slice(skip, skip + limit);
+
+            _messages.success(res, req, { c: c.slice(skip, skip + limit) });
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'home',
+                '/certificates'
             );
         }
     },
