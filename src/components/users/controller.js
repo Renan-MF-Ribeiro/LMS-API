@@ -1309,6 +1309,7 @@ module.exports = {
                                     $options: 'i',
                                 }, onboarding: { $ne: true }
                             },
+                            { alternativeEmail: { $regex: searchBy, $options: "i" } },
                             { email: { $regex: searchBy, $options: 'i' }, onboarding: { $ne: true } },
                         ],
                     }
