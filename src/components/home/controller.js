@@ -5,22 +5,21 @@ const { Trail } = require('../trails/model');
 const {
     checkIfTheTrackIsValid,
     checkEligibilityTagsAnd,
+    getTagsElegiblesByToken,
 } = require('../sections/business');
 const { User } = require('../users/model');
 const {
     getUserByToken,
     getTagsGroupsByToken,
     processTrailTracking,
-    getDateTodayWithoutHours
+    getDateTodayWithoutHours,
+    handleStudentAverage,
+    handleStudentTrails,
 } = require('../../utils/functions');
 const {
     trailsCompletedOrInProgress,
     studentAverageCourses,
-    schoolAverageCourses,
-    schoolYearAverageCourses,
     calculateAverageStudent,
-    calculateAverageSchool,
-    calculateAverageSchoolYear,
     getNumberOfItemsCompletedOrInProgressOrNotStarted,
     getStudentCourses,
     returnCertificates,
@@ -31,9 +30,7 @@ const {
 
 const { populateTrails } = require('../trails/business');
 
-// const { updateAverageCourses } = require('../../utils/cron')
-
-const ItemController = {
+const HomeController = {
     async searchTrailsItems(req, res) {
         try {
             const user = await getUserByToken(req);
@@ -67,9 +64,7 @@ const ItemController = {
             filterTrails = filterTrails.filter((trail) =>
                 checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags)
             );
-            filterTrails = filterTrails.filter((trail) =>
-                checkIfTheTrackIsValid(trail)
-            );
+            filterTrails = filterTrails.filter((trail) => checkIfTheTrackIsValid(trail));
 
             const items = await Item.find({
                 description: new RegExp(searchBy, 'gi'),
@@ -80,10 +75,7 @@ const ItemController = {
             for (const item of items) {
                 const itemTrail = await populateTrails(true, {
                     'items.itemID': { $in: item._id },
-                    $or: [
-                        { tags: { $in: tags } },
-                        { mandatory: { $in: tags } },
-                    ],
+                    $or: [{ tags: { $in: tags } }, { mandatory: { $in: tags } }],
                     enabled: true,
                 });
 
@@ -91,9 +83,7 @@ const ItemController = {
                     for (const t of itemTrail) {
                         const isValidTrail = checkIfTheTrackIsValid(t);
                         if (isValidTrail) {
-                            const index = filterTrails.findIndex(
-                                (val) => val.id === itemTrail.id
-                            );
+                            const index = filterTrails.findIndex((val) => val.id === itemTrail.id);
                             if (index === -1) {
                                 filterTrails.push(t);
                             }
@@ -103,10 +93,7 @@ const ItemController = {
             }
 
             for (let trail of filterTrails) {
-                const processedTrail = processTrailTracking(
-                    trail,
-                    allTrackingUser
-                );
+                const processedTrail = processTrailTracking(trail, allTrackingUser);
                 trail = processedTrail.trail;
                 result.push(trail);
             }
@@ -132,10 +119,7 @@ const ItemController = {
             const allTrails = await Trail.countDocuments();
 
             const resultTrails = await trailsCompletedOrInProgress(req);
-            const certificates = await returnCertificates(
-                resultTrails.trailsCompleted,
-                user
-            );
+            const certificates = await returnCertificates(resultTrails.trailsCompleted, user);
             const {
                 numberOfItemsCompleted,
                 numberOfItemsInProgress,
@@ -144,34 +128,19 @@ const ItemController = {
                 numberOfItemsMandatoryCompleted,
                 numberOfItemsMandatoryInProgress,
             } = await getNumberOfItemsCompletedOrInProgressOrNotStarted(req);
-            const {
-                averageStudentCourses,
-                numberTrailsCompleted,
-                numberTrailsElegibles,
-            } = await studentAverageCourses(user, req); // Não necessita de mudanças
+            const { averageStudentCourses, numberTrailsCompleted, numberTrailsElegibles } =
+                await studentAverageCourses(user, req); // Não necessita de mudanças
 
             const groupA = process.env.groupA;
             const groupB = process.env.groupB;
 
-            const averageGroupACourses = await averageGroupCourses(
-                user,
-                groupA
-            );
-            const averageGroupBCourses = await averageGroupCourses(
-                user,
-                groupB
-            );
+            const averageGroupACourses = await averageGroupCourses(user, groupA);
+            const averageGroupBCourses = await averageGroupCourses(user, groupB);
 
             const averageStudent = await calculateAverageStudent(user); // Não necessita de mudanças
 
-            const averageGroupARatings = await averageGroupRatings(
-                user,
-                groupA
-            );
-            const averageGroupBRatings = await averageGroupRatings(
-                user,
-                groupB
-            );
+            const averageGroupARatings = await averageGroupRatings(user, groupA);
+            const averageGroupBRatings = await averageGroupRatings(user, groupB);
 
             const tags = await getTagsGroupsByToken(req);
 
@@ -179,7 +148,7 @@ const ItemController = {
                 delete tag.createdAt;
                 tags.push(tag);
             }
-            
+
             const allTrailsElegibles = await Trail.find({
                 tags: { $in: tags },
                 enabled: true,
@@ -224,48 +193,34 @@ const ItemController = {
             );
         }
     },
+
     async dashboardStudentv2(req, res) {
         try {
             const user = await getUserByToken(req);
-            const courses = await getStudentCourses(req);
-            const allTrails = await Trail.countDocuments();
-            const resultTrails = await trailsCompletedOrInProgress(req);
-            const resultTrailsExpired = await trailsCompletedExpired(req);
-
-            const certificates = await returnCertificates(
-                resultTrails.trailsCompleted,
-                user
-            );
-            const certificatesExpired = await returnCertificates(
-                resultTrailsExpired.trailsCompleted,
-                user
-            );
-
-            const tags = await getTagsGroupsByToken(req);
-
-            for (const tag of user.tags) {
-                delete tag.createdAt;
-                tags.push(tag);
-            }
-
-            const allTrailsElegibles = await Trail.find({
+            const tags = await getTagsElegiblesByToken(req);
+            const elegibleTrails = await Trail.find({
                 tags: { $in: tags },
                 enabled: true,
                 startDate: { $lt: getDateTodayWithoutHours() },
                 endDate: { $gt: getDateTodayWithoutHours() },
-            }).countDocuments();
-
-
-            // await User.findByIdAndUpdate(user._id, { averageRating: averageStudent.toFixed(2), numberTrailsCompleted, numberTrailsElegibles })
+            });
+            const totalTrails = elegibleTrails.length;
+            const { average, highestScore } = await handleStudentAverage(user);
+            const { totalCompletedTrails, inProgressTrails } = await handleStudentTrails(
+                user,
+                elegibleTrails
+            );
+            const percentageCompletedTrails = Number(
+                ((totalCompletedTrails / totalTrails) * 100).toFixed(2)
+            );
 
             _messages.success(res, req, {
-                resultTrails,
-                certificates,
-                allTrails,
-                allTrailsElegibles,
-                resultTrailsExpired,
-                certificatesExpired,
-                courses,
+                totalCompletedTrails,
+                totalTrails,
+                percentageCompletedTrails,
+                inProgressTrails,
+                average,
+                highestScore,
             });
         } catch (error) {
             console.log(error);
@@ -296,4 +251,4 @@ const ItemController = {
     },
 };
 
-module.exports = ItemController;
+module.exports = HomeController;
