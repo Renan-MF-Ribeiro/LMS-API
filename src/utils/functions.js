@@ -392,7 +392,7 @@ module.exports = {
     handleStudentTrails(user, trails) {
         return new Promise(async (resolve, reject) => {
             try {
-                let totalCompletedTrails = 0;
+                const completedTrails = [];
                 const inProgressTrails = [];
                 const allTrackingUser = await Tracking.find({
                     userLogin: { $eq: user.networkLogin },
@@ -405,7 +405,7 @@ module.exports = {
                     const { trail } = module.exports.processTrailTracking(t, allTrackingUser);
 
                     if (trail.items.every(({ itemID }) => itemID?.completion === 1)) {
-                        totalCompletedTrails++;
+                        completedTrails.push(trail);
                     } else {
                         inProgressTrails.push({
                             _id: trail._id,
@@ -416,7 +416,7 @@ module.exports = {
                     }
                 }
 
-                resolve({ totalCompletedTrails, inProgressTrails });
+                resolve({ completedTrails, inProgressTrails });
             } catch (error) {
                 reject(error);
             }
