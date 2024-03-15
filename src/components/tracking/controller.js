@@ -793,6 +793,8 @@ function processTrackingType (item) {
             return "AudioTracking";
         case "EventItem":
             return "EventTracking";
+        case "ActivityItem":
+            return "ActivityTracking";
         case "FormItem":
             return "FormTracking";
         default:
