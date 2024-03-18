@@ -1,6 +1,7 @@
 /* eslint-disable no-async-promise-executor */
 const { Section } = require('./model');
 const { Tracking } = require('../tracking/model');
+const { Channel } = require('../channels/model')
 const _messages = require('../../utils/messages');
 const { populateTrails } = require('../trails/business');
 const {
@@ -199,15 +200,31 @@ module.exports = {
         }
     },
 
-    async getSectionsElegibles(req, res) {
+    async getSectionsElegibles (req, res) {
+        console.time("Get Section Elegibles")
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
             const classGroups = await getGroupCodesByToken(req, tags);
+            const channelId = req.query.channel
+            const newArray = []
+            let sectionArray
+            if (channelId) {
+                const { idSections } = await Channel.findById(channelId).select('idSections -_id')
+                const trailsInSections = await Section.find({ _id: { $in: idSections } }).select('trails -_id')
+                newArray.push(...trailsInSections.map((e) => {
+                    return (e.trails)
+                }).flat(2))
+                delete req.query.channel
+                sectionArray = idSections
+            }
+
             let resultSections = [];
             if (tags.length > 0) {
                 const filter = req.query;
-                let trails = await populateTrails(true, {
+                console.time("populateTrails")
+
+                const query = {
                     enabled: true,
                     $or: [
                         {
@@ -221,7 +238,15 @@ module.exports = {
                             },
                         },
                     ],
-                });
+                }
+
+                if (channelId) {
+                    query["_id"] = { $in: newArray }
+                }
+
+                let trails = await populateTrails(true, query);
+                console.log("Total de trilhas:", trails.length)
+                console.timeEnd("populateTrails")
                 trails = trails.filter(
                     (trail) =>
                         checkEligibilityTagsAnd(
@@ -230,9 +255,11 @@ module.exports = {
                             trail.tags
                         ) && !trail.collaborative
                 );
+
                 trails = trails.filter((trail) =>
                     checkIfTheTrackIsValid(trail)
                 );
+
                 const allTrackingUser = await Tracking.find({
                     userLogin: { $eq: user.networkLogin },
                     $or: [
@@ -255,13 +282,14 @@ module.exports = {
                     for (const tag of trail.tags) {
                         for (const classGroup of classGroups) {
                             if (classGroup.groupCode === tag.value) {
-                                trail.classGroup = findObjectInRange(classGroups.filter((e)=> e.groupCode == tag.value), new Date())
+                                trail.classGroup = findObjectInRange(classGroups.filter((e) => e.groupCode == tag.value), new Date())
                             }
                         }
                     }
                 }
+                let arrSections = await elegiblesContents(trails);
 
-                const arrSections = await elegiblesContents(trails);
+
                 const arrMandatorySections = await mandatorySections(
                     trails,
                     tags
@@ -274,12 +302,20 @@ module.exports = {
 
                 const courses = await getStudentCourses(req);
                 const arrCoursesSections = await courseInSections(tags, courses, user._id);
+
                 resultSections = arrSections
                     .concat(arrMandatorySections)
                     .concat(arrRecentsSections)
                     .concat(arrKeepLearningSections)
                     .concat(arrConcludedSections)
                     .concat(arrCoursesSections);
+
+                if (channelId) {
+                    const filteredArray = resultSections.filter(obj => obj ? sectionArray.includes(obj._id) : false);
+                    resultSections = filteredArray
+                }
+
+
                 resultSections = resultSections.filter((val) => {
                     return val != null;
                 });
@@ -289,6 +325,7 @@ module.exports = {
                         a.position < b.position ? -1 : 1
                     );
                 }
+
 
                 if (filter && Object.values(filter).length > 0) {
                     const arrResultSections = [];
@@ -326,6 +363,7 @@ module.exports = {
                 '/elegiblesContents'
             );
         }
+        console.timeEnd("Get Section Elegibles")
     },
 
     async updatePosition(req, res) {
