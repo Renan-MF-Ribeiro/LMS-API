@@ -10,7 +10,8 @@ const {
     executeCronUsers,
     executeExamDeleteTrackingCron,
     executeRevokeTrail,
-    executeRecommendedTrails
+    executeRecommendedTrails,
+    executeUpdateTrailsViewsCron,
 } = require('../../utils/cron');
 
 module.exports = {
@@ -47,6 +48,11 @@ module.exports = {
     async executeDeleteTrackingCron(req, res) {
         executeExamDeleteTrackingCron();
         res.status(200).json('CRON INICIADO COM SUCESSO');
+    },
+
+    async executeUpdateTrailsViewsCron (req, res) {
+        executeUpdateTrailsViewsCron()
+        res.status(200).json('CRON INICIADO COM SUCESSO')
     },
 
     async LastExecuteDailyCharge(req, res) {

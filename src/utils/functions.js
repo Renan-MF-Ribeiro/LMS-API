@@ -9,6 +9,8 @@ const { Group } = require('../components/groups/model');
 const { SCORMLessonStatus } = require('../components/tracking/model');
 const { HistoricEvaluation } = require('../components/assessments/model');
 const { Tracking } = require('../components/tracking/model');
+const { Trail } = require('../components/trails/model');
+const { Item } = require('../components/items/model');
 
 module.exports = {
     getDateToday () {
@@ -40,10 +42,7 @@ module.exports = {
         let foundObject = null;
 
         for (const obj of data) {
-            if (
-                obj.startDate <= referenceDate &&
-                obj.limitDate >= referenceDate
-            ) {
+            if (obj.startDate <= referenceDate && obj.limitDate >= referenceDate) {
                 foundObject = obj;
                 break;
             }
@@ -85,9 +84,7 @@ module.exports = {
     },
 
     subtractHours (date) {
-        return momentz(date)
-            .subtract('3', 'hours')
-            .format('YYYY-MM-DD HH:mm:ss');
+        return momentz(date).subtract('3', 'hours').format('YYYY-MM-DD HH:mm:ss');
     },
 
     calculateDiffDate (dateInitial, dateFinal, format) {
@@ -106,11 +103,11 @@ module.exports = {
         const limitMonth = limitDate.getMonth() + 1;
         const limitYear = limitDate.getFullYear();
 
-        const startString = `${startYear}-${startMonth >= 10 ? startMonth : '0' + startMonth
-            }-${startDay >= 10 ? startDay : '0' + startDay}T00:00:00.000-03:00`;
+        const startString = `${startYear}-${startMonth >= 10 ? startMonth : '0' + startMonth}-${startDay >= 10 ? startDay : '0' + startDay
+            }T00:00:00.000-03:00`;
 
-        const limitString = `${limitYear}-${limitMonth >= 10 ? limitMonth : '0' + limitMonth
-            }-${limitDay >= 10 ? limitDay : '0' + limitDay}T23:59:59.000-03:00`;
+        const limitString = `${limitYear}-${limitMonth >= 10 ? limitMonth : '0' + limitMonth}-${limitDay >= 10 ? limitDay : '0' + limitDay
+            }T23:59:59.000-03:00`;
 
         return {
             startDate: new Date(startString),
@@ -345,6 +342,95 @@ module.exports = {
         });
     },
 
+    handleStudentAverage (user) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const evaluations = await HistoricEvaluation.find({
+                    user: { $eq: user._id },
+                });
+                const trackings = await Tracking.find({
+                    userLogin: { $eq: user.networkLogin },
+                    kind: { $eq: 'ExamTracking' },
+                });
+
+                const max = (evaluations.length + trackings.length) * 100;
+                let total = 0;
+
+                for (const e of evaluations) {
+                    const rating = await calculateRatingEvaluation(
+                        e.amountQuestionsCorrect,
+                        e.amountOfQuestions
+                    );
+                    total += rating.values.correct;
+                }
+
+                for (const t of trackings) {
+                    if (t.score) total += t.score;
+                }
+                const average = Number(((total * 100) / max).toFixed(2));
+
+                const highestScoreSorted = trackings.sort((prev, curr) => {
+                    const prevScore = prev?.score ?? 0;
+                    const currScore = curr?.score ?? 0;
+                    return currScore - prevScore;
+                });
+
+                const highestScoreTrail = await Trail.findOne({
+                    'items.itemID': highestScoreSorted[0].item,
+                });
+
+                resolve({ average, highestScoreTrail });
+            } catch (error) {
+                reject(error);
+            }
+        });
+    },
+
+    handleStudentTrails (user, trails) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const completedTrails = [];
+                const inProgressTrails = [];
+                const allTrackingUser = await Tracking.find({
+                    userLogin: { $eq: user.networkLogin },
+                    $or: [
+                        { expiredCompletion: { $exists: false } },
+                        { expiredCompletion: { $eq: null } },
+                    ],
+                });
+                for (const t of trails) {
+                    const { trail } = module.exports.processTrailTracking(t, allTrackingUser);
+
+                    if (trail.items.every(({ itemID }) => itemID?.completion === 1)) {
+                        completedTrails.push(trail);
+                    } else {
+                        let nextItem;
+                        const item = trail.items.find(({ itemID }) => !itemID?.completion);
+                        if (item) {
+                            foundItem = await Item.findById(item.itemID);
+                            nextItem = {
+                                _id: foundItem._id,
+                                titleURL: foundItem.titleURL,
+                            };
+                        }
+
+                        inProgressTrails.push({
+                            _id: trail._id,
+                            title: trail.title,
+                            thumbPath: trail.thumbPath,
+                            titleURL: trail.titleURL,
+                            nextItem,
+                        });
+                    }
+                }
+
+                resolve({ completedTrails, inProgressTrails });
+            } catch (error) {
+                reject(error);
+            }
+        });
+    },
+
     convertMinutesToHours (min) {
         return moment.utc().startOf('day').add(min, 'minutes').format('HH:mm');
     },
@@ -390,10 +476,7 @@ module.exports = {
 
     checksIfTheEndDateIsLessThanTheStartDate (startDate, endDate) {
         if (endDate) {
-            if (
-                momentz(endDate).format('YYYY-MM-DD') <
-                momentz(startDate).format('YYYY-MM-DD')
-            )
+            if (momentz(endDate).format('YYYY-MM-DD') < momentz(startDate).format('YYYY-MM-DD'))
                 return false;
         }
         return true;
@@ -425,8 +508,7 @@ module.exports = {
                 }
             })[0];
             lastTrackingUpdate = objTracking ? objTracking.updatedAt : null;
-            const score =
-                objTracking && objTracking.score ? objTracking.score : null;
+            const score = objTracking && objTracking.score ? objTracking.score : null;
             const completionAt = objTracking ? objTracking.completionAt : null;
             const updatedAt = objTracking ? objTracking.updatedAt : null;
             const createdAt = objTracking ? objTracking.createdAt : null;
@@ -446,11 +528,7 @@ module.exports = {
                     ) {
                         tmpCompletion = 2;
                     } else {
-                        tmpCompletion = _isSCORMCompleted(
-                            objTracking.lessonStatus
-                        )
-                            ? 1
-                            : 0;
+                        tmpCompletion = _isSCORMCompleted(objTracking.lessonStatus) ? 1 : 0;
                     }
                 } else {
                     tmpCompletion = objTracking.completion;
@@ -505,11 +583,8 @@ module.exports = {
         const trailReleaseDate = new Date(trail.startDate).getTime();
         if (expirationType && expirationType.type === 'availability') {
             const expirationDate =
-                userCreationDate > trailReleaseDate
-                    ? userCreationDate
-                    : trailReleaseDate;
-            const date =
-                1000 * 60 * 60 * 24 * expirationType.value + expirationDate;
+                userCreationDate > trailReleaseDate ? userCreationDate : trailReleaseDate;
+            const date = 1000 * 60 * 60 * 24 * expirationType.value + expirationDate;
             trail.expirationDate = new Date(date);
         } else if (expirationType && expirationType.type === 'fixed') {
             trail.expirationDate = new Date(expirationType.value);
@@ -598,10 +673,7 @@ function calculateRatingEvaluation (amountQuestionsCorrect, amountOfQuestions) {
         const result = {
             values: {
                 correct: parseFloat(
-                    (
-                        (amountQuestionsCorrect * 100) /
-                        amountOfQuestions
-                    ).toFixed(2)
+                    ((amountQuestionsCorrect * 100) / amountOfQuestions).toFixed(2)
                 ),
                 incorrect: parseFloat(
                     (
@@ -621,10 +693,10 @@ function getTrailCompletion (trail) {
     const completed = trail.items.find((val) => val.completion === 1);
     const incomplete = trail.items.find(
         (val) =>
-            val.completion != null && val.completion >= 0 && val.completion < 1
+            (val.completion != null && val.completion >= 0 && val.completion < 1) ||
+            val.completion == 2
     );
     const notAttempted = trail.items.find((val) => val.completion === null);
-
     if (incomplete) {
         return 0;
     } else if (completed && notAttempted) {

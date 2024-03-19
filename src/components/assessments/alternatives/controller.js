@@ -6,6 +6,7 @@ const _business = require('../business')
 const _functions = require('../../../utils/functions')
 
 module.exports = {
+
     async createAlternative (req, res) {
         try {
             const { idQuestion, description } = req.body
@@ -14,6 +15,7 @@ module.exports = {
                     description: { $eq: description },
                     idQuestion: { $eq: idQuestion },
                     deleted: 0,
+                    repealed: 0
                 })
 
             if (verify.length === 0) {
@@ -34,12 +36,12 @@ module.exports = {
     async updateAlternative (req, res) {
         try {
             const { _id, description } = req.body
-            // const verify = await Alternative
-            //     .find({
-            //         description: { $eq: description },
-            //         deleted: 0,
-            //     })
-            // if (verify.length === 0) {
+            const verify = await Alternative
+                .find({
+                    description: { $eq: description },
+                    deleted: 0,
+                })
+            if (verify.length === 0) {
                 const oldData = await Alternative.findByIdAndUpdate(_id, req.body)
                 const newData = await Alternative.find({ _id: { $eq: _id } })
 
@@ -50,9 +52,9 @@ module.exports = {
                 }
 
                 _messages.success(res, req, 'Atualizado com sucesso', 'Atualização de dados', 'alternatives', 'updateAlternative', newData, oldData, true, 'UPDATE')
-            // } else {
-            //     _messages.badRequest(res, req, 'Essa alternativa já foi cadastrada para essa questão!', 'Essa alternativa já foi cadastrada para essa questão!', 'alternatives', 'updateAlternative')
-            // }
+            } else {
+                _messages.badRequest(res, req, 'Essa alternativa já foi cadastrada para essa questão!', 'Essa alternativa já foi cadastrada para essa questão!', 'alternatives', 'updateAlternative')
+            }
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'alternatives', 'updateAlternative')
         }

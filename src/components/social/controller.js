@@ -3,6 +3,11 @@ const _business = require('./business');
 const _functions = require('../../utils/functions');
 const _messages = require('../../utils/messages');
 const { Trail } = require('../trails/model');
+const { generateSSOToken } = require('../../utils/auth');
+const { User } = require('../users/model');
+const config = require('../../../config.json');
+
+
 
 module.exports = {
     async getConfig(req, res) {
@@ -255,7 +260,7 @@ module.exports = {
         try {
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}`;
             const user = await _functions.getUserByToken(req)
-            const body = { ...req.body, userId: user._id };
+            const body = { ...req.body, userId: user._id, userName: user.name, moderated: config.socialCommentModeration.active};
             const { data } = await axios.post(uri, body);
             _messages.success(res, req, data, 'ok', 'social', 'createComment');
             return;
@@ -296,7 +301,6 @@ module.exports = {
             const { trailId } = req.params;
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/${trailId}`;
             const { data } = await axios.get(uri);
-
             _messages.success(
                 res,
                 req,
@@ -483,10 +487,9 @@ module.exports = {
 
     async getLikesByTrailId(req, res) {
         try {
-            const { trailId } = req.params;
-            const uri = `${process.env.API_SOCIAL}/home/like/${trailId}`;
+            const { trailId, userId } = req.params;
+            const uri = `${process.env.API_SOCIAL}/home/like/${trailId}/${userId}`;
             const { data } = await axios.get(uri);
-            console.log(data);
             _messages.success(
                 res,
                 req,
@@ -604,10 +607,48 @@ module.exports = {
 
     async shareSocialContent(req, res) {
         try {
-            const { favoriteId } = req.params;
-            const body = req.body;
+            const { trailId } = req.params;
+            const { name } = await _functions.getUserByToken(req);
+            const { usersArray } = req.body;
+
+            const trail = await Trail.findById(trailId, 'title titleURL');
+
+            const text = `Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!`;
+            const texthtml = `<br> <p>Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!</p> <br>`;
+            const messages = [];
+            const redirectTo = `/menu/${trail.titleURL}`;
+
+            for(let id of usersArray){
+                const foundUser = await User.findById(id)
+                const token = generateSSOToken({
+                    networkLogin: foundUser.networkLogin,
+                    communication: ['notification', 'email'],
+                    trailTitle: trail.title,
+                });
+    
+                const message = {
+                    clientid: process.env.CLIENT_ID,
+                    type: ['notification', 'email'],
+                    category: 'notify',
+                    mode: 'manual',
+                    text: text,
+                    texthtml: texthtml,
+                    title: `Happlearning - ${name} compartilhou um conteúdo com você!`,
+                    identifier: foundUser.networkLogin,
+                    viewed: false,
+                    userEmail: foundUser.email || null,
+                    userDevice: foundUser.userDevice || null,
+                    notificationlink: {
+                        trailid: trailId,
+                        itemid: null,
+                        url: `${process.env.DOMAIN}/login/entrar/sso?token=${token}&redirectTo=${redirectTo}`,
+                    },
+                };
+                messages.push(message)
+            }
+
             const uri = `${process.env.API_SOCIAL}/home/share/${process.env.CLIENT_ID}`;
-            const { data } = await axios.put(uri, body);
+            const { data } = await axios.put(uri, messages);
 
             _messages.success(
                 res,
@@ -619,6 +660,7 @@ module.exports = {
             );
             return;
         } catch (error) {
+            console.log(error)
             _messages.badRequest(
                 res,
                 req,

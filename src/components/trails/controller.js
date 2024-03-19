@@ -956,16 +956,20 @@ module.exports = {
                                         $regex: searchBy,
                                         $options: 'i',
                                     },
+                                    enabled: true,
                                 },
                                 {
                                     title: {
                                         $regex: searchBy,
                                         $options: 'i',
                                     },
+                                    enabled: true,
                                 },
                             ],
                         }
-                        : {}
+                        : {
+                            enabled: true
+                        }
                 ).countDocuments();
 
                 const trails = await Trail.find(
@@ -977,20 +981,26 @@ module.exports = {
                                         $regex: searchBy,
                                         $options: 'i',
                                     },
+                                    enabled: true,
                                 },
+                                
                                 {
                                     title: {
                                         $regex: searchBy,
                                         $options: 'i',
                                     },
+                                    enabled: true,
                                 },
                             ],
                         }
-                        : {}
+                        : {
+                            enabled: true
+                        }
                 )
+                    .populate('items.itemID')
                     .sort({ [order]: sort })
                     .skip(parseInt(skip))
-                    .limit(parseInt(noLimit ? 200 : limit));
+                    .limit(parseInt(noLimit ? 1500 : limit));
 
                 _messages.success(res, req, {
                     data: trails,

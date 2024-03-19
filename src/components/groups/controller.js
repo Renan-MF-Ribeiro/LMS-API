@@ -354,6 +354,183 @@ module.exports = {
             );
         }
     },
+
+    async getTagsList(req, res) {
+        try {
+            const { sort, order } = _functions.ordernation(req);
+            const { skip, limit } = _functions.pagination(req);
+            const searchBy = req.query.searchBy;
+            const queryGroup = searchBy
+                ? {
+                      deleted: 0,
+                      'tags.display': { $regex: searchBy, $options: 'i' },
+                  }
+                : { deleted: 0 };
+            const groups = await Group.find(queryGroup);
+
+            const queryTrail = searchBy
+                ? {
+                      tags: { $exists: true, $ne: [] },
+                      'tags.display': { $regex: searchBy, $options: 'i' },
+                  }
+                : { tags: { $exists: true, $ne: [] } };
+            const trails = await Trail.find(queryTrail);
+
+            const groupTags = groups
+                .filter((value) => value.tags?.length > 0)
+                .map((group) => group.tags.map((tag) => tag.value))
+                .filter((tag) => !/(\bPERFIL_)/.test(tag));
+
+            const trailTags = trails
+                .filter((value) => value.tags?.length > 0)
+                .map((trail) => trail.tags.map((tag) => tag.value))
+                .filter((tag) => !/(\bSECAO_)/.test(tag))
+                .filter((tag) => !/(\bPERFIL_)/.test(tag));
+
+            let tags = [...groupTags, ...trailTags];
+
+            tags = tags.reduce((prev, curr) => prev.concat(curr), []);
+            tags = tags
+                .filter((tag, index, self) => self.indexOf(tag) === index)
+                .map((tag) => ({ tag }));
+
+            const total = tags.length;
+
+            // Ordenação
+            tags.sort((a, b) => {
+                const ordernation = sort === 'desc' ? 1 : -1;
+                return (
+                    ordernation *
+                    (a[order] > b[order] ? 1 : a[order] < b[order] ? -1 : 0)
+                );
+            });
+
+            //paginação
+
+            var end = skip + Number(limit);
+            var tagsPag = tags.slice(skip, end);
+
+            //quantidade de grupos por tag
+
+            tagsPag = await Promise.all(
+                tagsPag.map(async (tag) => {
+                    const groupsCount = await Group.countDocuments({
+                        deleted: 0,
+                        'tags.display': tag.tag,
+                    });
+                    return {
+                        ...tag,
+                        groups: groupsCount,
+                    };
+                })
+            );
+
+            _messages.success(res, req, {
+                data: tagsPag,
+                total,
+            });
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'groups',
+                '/tagsList'
+            );
+        }
+    },
+
+    async getGroupsByTag(req, res) {
+        try {
+            const tag = req.query.tag;
+            const groups = await Group.find({
+                deleted: { $eq: 0 },
+                'tags.display': tag,
+            });
+
+            const groupTags = groups
+                .filter((value) => value.tags?.length > 0)
+                .map((group) => ({ name: group.name, _id: group._id }));
+
+            let tags = [...groupTags];
+
+            tags = tags.reduce((prev, curr) => prev.concat(curr), []);
+
+            _messages.success(res, req, {
+                data: tags,
+                total: tags.length,
+            });
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'groups',
+                '/tagsList'
+            );
+        }
+    },
+
+    async updateGroupsByTag(req, res) {
+        try {
+            const body = req.body;
+            const tag = body.tag;
+            const old = body.old;
+
+            let remove;
+            // Atualizando documentos para remover a tag específica
+            if (old) {
+                remove = await Group.updateMany(
+                    { 'tags.display': old },
+                    { $pull: { tags: { display: old } } }
+                );
+            }
+
+            // Atualizando documentos para adicionar a tag em cada array 'tags'
+            const update = await Group.updateMany(
+                { _id: { $in: body.groups.map((doc) => doc._id) } },
+                { $push: { tags: { display: tag, value: tag } } }
+            );
+
+            _messages.success(res, req, { remove, update });
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'groups',
+                '/updateGroupsByTag'
+            );
+        }
+    },
+
+    async removeGroupsByTag(req, res) {
+        try {
+            const { tag } = req.params;
+
+            // Atualizando documentos para remover a tag específica
+            const removeGroup = await Group.updateMany(
+                { 'tags.display': tag },
+                { $pull: { tags: { display: tag } } }
+            );
+
+            _messages.success(res, req, { removeGroup });
+        } catch (error) {
+            console.log(error);
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'groups',
+                '/updateGroupsByTag'
+            );
+        }
+    },
+
     async getSectionTags(req, res) {
         try {
             const sections = await Section.find({});
@@ -459,6 +636,26 @@ module.exports = {
                     continue;
                 }
 
+                if (
+                    !classGroupRow.DATA_INICIO &&
+                    classGroupRow.ACAO !== 'REMOVER' // remover nao precisa de data
+                ) {
+                    results.push(
+                        `Data inicio inválida: ${classGroupRow.DATA_INICIO}`
+                    );
+                    continue;
+                }
+
+                if (
+                    !classGroupRow.DATA_FIM &&
+                    classGroupRow.ACAO !== 'REMOVER' // remover nao precisa de data
+                ) {
+                    results.push(
+                        `Data fim inválida: ${classGroupRow.DATA_FIM}`
+                    );
+                    continue;
+                }
+
                 switch (classGroupRow.ACAO) {
                     case 'ADICIONAR':
                         try {
@@ -499,10 +696,10 @@ module.exports = {
                                 },
                             });
                             results.push('SUCESSO');
+                            continue;
                         } catch (error) {
                             results.push(`ERRO: ${error.message}`);
-                        } finally {
-                            break;
+                            continue;
                         }
 
                     case 'EDITAR':
@@ -535,10 +732,10 @@ module.exports = {
                                 },
                             });
                             results.push('SUCESSO');
+                            continue;
                         } catch (error) {
                             results.push(`ERRO: ${error.message}`);
-                        } finally {
-                            break;
+                            continue;
                         }
 
                     case 'REMOVER':
@@ -555,15 +752,15 @@ module.exports = {
                                 },
                             });
                             results.push('SUCESSO');
+                            continue;
                         } catch (error) {
                             results.push(`ERRO: ${error.message}`);
-                        } finally {
-                            break;
+                            continue;
                         }
 
                     default:
                         results.push(`AÇAO INVALIDA: ${classGroupRow.ACAO}`);
-                        break;
+                        continue;
                 }
             }
 
@@ -583,7 +780,7 @@ module.exports = {
                 res.end();
             });
         } catch (error) {
-            console.log(error);
+            console.error(error);
             _messages.internalServer(
                 res,
                 req,
