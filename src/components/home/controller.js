@@ -214,8 +214,8 @@ const HomeController = {
                 ((completedTrails.length / totalTrails) * 100).toFixed(2)
             );
 
-            const highestScoreTitle = highestScoreTrail.title;
-            const highestScoreUrl = highestScoreTrail.titleURL;
+            const highestScoreTitle = highestScoreTrail?.title;
+            const highestScoreUrl = highestScoreTrail?.titleURL;
 
             _messages.success(res, req, {
                 totalCompletedTrails: completedTrails.length,
