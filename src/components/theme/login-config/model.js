@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
-const AutoIncrement = require('mongoose-sequence')(mongoose);
 // Define the schema for the primary and secondary fields recoverPassword
 const fieldSchema = new Schema({
     mask: String,
@@ -30,12 +29,10 @@ const formLoginSchema = new Schema({
 
 // Define the main schema that includes all the forms
 const configLogin = new Schema({
-    _id: Number,
     ssoForm: { type: ssoFormSchema, required: false },
     formLogin: { type: formLoginSchema, required: false },
-}, { _id: false });
+});
 
-configLogin.plugin(AutoIncrement, { id: 'login_config', inc_field: '_id' })
 
 // Create the Mongoose model
 const ConfigLogin = mongoose.model('login_config', configLogin);
