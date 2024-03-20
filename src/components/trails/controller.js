@@ -965,9 +965,7 @@ module.exports = {
                                 },
                             ],
                         }
-                        : {
-                            enabled: true
-                        }
+                        : {}
                 ).countDocuments();
 
                 const trails = await Trail.find(
@@ -989,9 +987,7 @@ module.exports = {
                                 },
                             ],
                         }
-                        : {
-                            enabled: true
-                        }
+                        : {}
                 )
                     .populate('items.itemID')
                     .sort({ [order]: sort })
