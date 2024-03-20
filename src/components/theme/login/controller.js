@@ -65,7 +65,7 @@ module.exports = {
 
                 return _messages.success(res, req, theme)
             }
-            throw new Error('Nenhum tema de login encontrado!')
+            return _messages.conflict(res, req, null)
 
         }
         catch (error) {

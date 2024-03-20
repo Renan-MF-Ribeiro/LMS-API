@@ -1806,7 +1806,7 @@ module.exports = {
         const email =
             req.samlUserObject
                 .httpSchemasXmlsoapOrgWs200505IdentityClaimsEmailaddress;
-
+        console.log(email)
         const token = await jwt.sign({ networkLogin: email }, process.env.PROJECT_SECRET_KEY);
 
         res.redirect(

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose')
 const { connect } = require('../../../utils/db')
-
+const AutoIncrement = require('mongoose-sequence')(mongoose);
 connect()
 
 const schemaOptions = {
@@ -10,6 +10,7 @@ const schemaOptions = {
 }
 
 const loginSchema = new mongoose.Schema({
+    _id: Number,
     buttons: {
         login: {
             bgColor: { type: String },
@@ -39,6 +40,15 @@ const loginSchema = new mongoose.Schema({
             tooltip: { type: String },
             hint: { type: String },
         },
+        singleUser: {
+            type: { type: String },
+            label: { type: String },
+            bgColor: { type: String },
+            textColor: { type: String },
+            text: { type: String },
+            tooltip: { type: String },
+            hint: { type: String },
+        },
     },
     inputs: {
         login: {
@@ -56,10 +66,13 @@ const loginSchema = new mongoose.Schema({
     backgroundMobile: { type: String },
     logo: { type: String },
 }, {
+    _id: false,
     ...schemaOptions,
 })
 
-const ThemeLogin = mongoose.model('theme_login', loginSchema)
+loginSchema.plugin(AutoIncrement, { id: 'login_theme', inc_field: '_id' });
+
+const ThemeLogin = mongoose.model('login_theme', loginSchema)
 
 module.exports = {
     ThemeLogin,

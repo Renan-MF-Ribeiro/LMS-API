@@ -42,7 +42,7 @@ module.exports = {
 
                 return _messages.success(res, req, config)
             }
-            throw new Error('Nenhuma configuração de login encontrado!')
+            return _messages.conflict(res, req, null)
 
         }
         catch (error) {
