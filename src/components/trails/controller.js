@@ -979,7 +979,6 @@ module.exports = {
                                         $regex: searchBy,
                                         $options: 'i',
                                     },
-                                    enabled: true,
                                 },
                                 
                                 {
@@ -987,7 +986,6 @@ module.exports = {
                                         $regex: searchBy,
                                         $options: 'i',
                                     },
-                                    enabled: true,
                                 },
                             ],
                         }
