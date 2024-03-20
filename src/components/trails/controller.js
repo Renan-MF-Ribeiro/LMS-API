@@ -956,14 +956,12 @@ module.exports = {
                                         $regex: searchBy,
                                         $options: 'i',
                                     },
-                                    enabled: true,
                                 },
                                 {
                                     title: {
                                         $regex: searchBy,
                                         $options: 'i',
                                     },
-                                    enabled: true,
                                 },
                             ],
                         }
