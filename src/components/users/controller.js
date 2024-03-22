@@ -1404,6 +1404,7 @@ module.exports = {
     async updateUser (req, res) {
         try {
             const { _id, email, cpf, networkLogin, tags } = req.body;
+            delete req.body.ip;
             const user = await User.findOne({
                 _id: { $eq: _id },
             });

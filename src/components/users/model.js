@@ -108,7 +108,9 @@ const userSchema = new mongoose.Schema(
         task: { type: String, trim: true },
         webPushAuthorization: { type: Array, required: false, default: [] },
         onboarding: { type: Boolean, default: false },
-        assessmentGroups: { type: Array, default: [] }
+        assessmentGroups: { type: Array, default: [] },
+        civilName: { type: String , trim: true },
+        socialName: { type: String , trim: true },
     },
     {
         ...optionsSchema,
