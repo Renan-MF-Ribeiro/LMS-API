@@ -314,7 +314,7 @@ const AssessmentController = {
         const { data } = await axios.get(uri, { headers });
         const eligibilities = data.eligibilities.flatMap((eligibility) => eligibility.tags);
         const assessmentGroups = await Group.find({ 'tags.value': { $in: eligibilities } });
-        await User.updateOne({ _id }, { $set: { assessmentGroups } });
+        await User.updateOne({ _id }, { $set: { assessmentGroups: assessmentGroups.flatMap(({ name }) => name) } });
     },
 };
 

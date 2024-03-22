@@ -175,12 +175,8 @@ module.exports = {
                 }
                 if (user.assessmentGroups.length > 0) {
                     const assessmentGroups = await Group.find({ 'tags.value': { $in: user.assessmentGroups } });
-                    for (const assessmentGroup of assessmentGroups) {
-                        tags.push({
-                            display: assessmentGroup.groupCode,
-                            value: assessmentGroup.groupCode,
-                        });
-                    }
+                    const assessmentGroupsTags = assessmentGroups.flatMap(({ tags }) => tags);
+                    tags.push(...assessmentGroupsTags)
                 }
                 if (user.tags.length > 0) {
 
