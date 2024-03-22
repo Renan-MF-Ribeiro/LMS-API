@@ -1383,10 +1383,8 @@ module.exports = {
 
     async returnUserById (req, res) {
         try {
-            const { _id } = req.body;
-            const user = await User.findOne({ _id: _id });
-
-            user.password = undefined;
+            const { _id } = await getUserByToken(req)
+            const user = await User.findOne({ _id: _id }, { password: 0 });
 
             _messages.success(res, req, {
                 data: user,
