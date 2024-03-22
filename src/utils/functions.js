@@ -378,7 +378,7 @@ module.exports = {
                 });
 
                 const highestScoreTrail = await Trail.findOne({
-                    'items.itemID': highestScoreSorted[0].item,
+                    'items.itemID': highestScoreSorted[0]?.item,
                 });
 
                 resolve({ average, highestScoreTrail });
