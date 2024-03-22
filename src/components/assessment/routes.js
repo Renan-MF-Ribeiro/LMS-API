@@ -29,6 +29,7 @@ router
     .get(
         '/user-matrix-details/:matrixId/:periodId',
         _controller.getUserMatrixDetails
-    );
+    )
+    .patch('/users/eligibilities', _controller.updateUserEligibilities);
 
 module.exports = router;

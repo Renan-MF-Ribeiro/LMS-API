@@ -3,6 +3,7 @@ const _messages = require('../../utils/messages');
 const { getUserByToken } = require('../../utils/functions');
 const { handleError } = require('../../utils/errors');
 const { Group } = require('../groups/model');
+const { User } = require('../users/model');
 
 const host = process.env.API_ASSESSMENT;
 const clientId = process.env.CLIENT_ID;
@@ -148,11 +149,7 @@ const AssessmentController = {
         try {
             const uri = `${host}/matrix`;
 
-            const { data } = await axios.post(
-                uri,
-                { ...req.body, clientId },
-                { headers }
-            );
+            const { data } = await axios.post(uri, { ...req.body, clientId }, { headers });
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -254,6 +251,7 @@ const AssessmentController = {
                 },
                 { headers }
             );
+            await module.exports.updateUserEligibilities(req, res);
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -308,6 +306,15 @@ const AssessmentController = {
         } catch (error) {
             return handleError(res, req, error);
         }
+    },
+
+    async updateUserEligibilities(req, res) {
+        const { _id } = await getUserByToken(req);
+        const uri = `${host}/users/${clientId}/${_id}`;
+        const { data } = await axios.get(uri, { headers });
+        const eligibilities = data.eligibilities.flatMap((eligibility) => eligibility.tags);
+        const assessmentGroups = await Group.find({ 'tags.value': { $in: eligibilities } });
+        await User.updateOne({ _id }, { $set: { assessmentGroups } });
     },
 };
 

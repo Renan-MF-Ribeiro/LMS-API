@@ -168,9 +168,18 @@ module.exports = {
                 if (user.classGroups.length > 0) {
                     for (const classGroup of user.classGroups) {
                         tags.push({
-                                display: classGroup.groupCode,
-                                value: classGroup.groupCode,
-                            });
+                            display: classGroup.groupCode,
+                            value: classGroup.groupCode,
+                        });
+                    }
+                }
+                if (user.assessmentGroups.length > 0) {
+                    const assessmentGroups = await Group.find({ 'tags.value': { $in: user.assessmentGroups } });
+                    for (const assessmentGroup of assessmentGroups) {
+                        tags.push({
+                            display: assessmentGroup.groupCode,
+                            value: assessmentGroup.groupCode,
+                        });
                     }
                 }
                 if (user.tags.length > 0) {
@@ -431,6 +440,10 @@ module.exports = {
                 reject(error);
             }
         });
+    },
+
+    async assessmentSections(trails) {
+
     },
 
     async keepLearningSections(trails) {

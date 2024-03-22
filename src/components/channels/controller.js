@@ -50,6 +50,7 @@ module.exports = {
     },
     async getChannelsElegibles (req, res) {
         const tags = await getTagsElegiblesByToken(req);
+        console.log({tags})
         try {
             let channels = await Channel.find({
                 tags: { $in: tags.map((tag) => tag.value) },
@@ -60,7 +61,6 @@ module.exports = {
                 const sections = await Section.find({ _id: { $in: channel.idSections } }).select('trails');
 
                 const trailsIds = sections.reduce((trails, section) => trails.concat(section.trails), []);
-                console.log(trailsIds);
 
                 const trails = await Trail.find({ _id: { $in: trailsIds } });
 

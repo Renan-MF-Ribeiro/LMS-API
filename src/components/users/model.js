@@ -108,6 +108,7 @@ const userSchema = new mongoose.Schema(
         task: { type: String, trim: true },
         webPushAuthorization: { type: Array, required: false, default: [] },
         onboarding: { type: Boolean, default: false },
+        assessmentGroups: { type: Array, default: [] }
     },
     {
         ...optionsSchema,
