@@ -72,6 +72,7 @@ module.exports = express
             failureFlash: true,
         }),
         (req, res, next) => {
+
             const xmlResponse = req.body.SAMLResponse;
             const parser = new Saml2js(xmlResponse);
             req.samlUserObject = parser.toObject();
