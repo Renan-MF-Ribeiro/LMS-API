@@ -438,10 +438,6 @@ module.exports = {
         });
     },
 
-    async assessmentSections(trails) {
-
-    },
-
     async keepLearningSections(trails) {
         return new Promise(async (resolve, reject) => {
             try {
