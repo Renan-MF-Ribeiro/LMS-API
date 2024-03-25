@@ -537,9 +537,21 @@ module.exports = {
         const { token } = req.body;
         const secret = process.env.PROJECT_SECRET_KEY;
         const data = jwt.verify(token, secret);
+        console.log(data.networkLogin)
         const networkLogin = data.networkLogin
             ? data.networkLogin
             : data.data.networkLogin;
+
+        if (!networkLogin) {
+            _messages.forbidden(
+                res,
+                req,
+                'Usuário ou senha não informados',
+                'Erro de validação',
+                'users',
+                'ldapSignIn'
+            );
+        }
 
         if (data?.communication || data?.data?.communication) {
             const communication =
@@ -1793,7 +1805,9 @@ module.exports = {
         const email =
             req.samlUserObject
                 .httpSchemasXmlsoapOrgWs200505IdentityClaimsEmailaddress;
-        const token = await jwt.sign({ email }, process.env.JWT_SECRET);
+        console.log(email)
+        const token = await jwt.sign({ networkLogin: email }, process.env.PROJECT_SECRET_KEY);
+
         res.redirect(
             302,
             `${process.env.DOMAIN}/login/entrar/sso?token=${token}`

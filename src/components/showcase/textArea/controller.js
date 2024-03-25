@@ -4,6 +4,7 @@ const { TextArea_Showcase } = require('./model')
 const { DOMAIN, AZURE_BLOB_URL } = process.env
 const { azureBlob } = require('../../../utils/files')
 const { DEFAULT_TYPES, Showcase } = require('../configuration/model')
+
 module.exports = {
     async getList (req, res) {
         try {

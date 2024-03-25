@@ -31,7 +31,7 @@ const {
 const { populateTrails } = require('../trails/business');
 
 const HomeController = {
-    async searchTrailsItems(req, res) {
+    async searchTrailsItems (req, res) {
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsGroupsByToken(req);
@@ -111,7 +111,7 @@ const HomeController = {
         }
     },
 
-    async dashboardStudent(req, res) {
+    async dashboardStudent (req, res) {
         try {
             const user = await getUserByToken(req);
             const courses = await getStudentCourses(req);
@@ -194,7 +194,7 @@ const HomeController = {
         }
     },
 
-    async dashboardStudentv2(req, res) {
+    async dashboardStudentv2 (req, res) {
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
@@ -239,7 +239,7 @@ const HomeController = {
         }
     },
 
-    async searchStudentCourses(req, res) {
+    async searchStudentCourses (req, res) {
         try {
             await getStudentCourses(req);
         } catch (error) {
@@ -254,7 +254,7 @@ const HomeController = {
         }
     },
 
-    async listCertificates(req, res) {
+    async listCertificates (req, res) {
         try {
             const { searchBy } = req.query;
             req.query = { ...req.query, pageSize: req.query.pageSize ?? 5 };
