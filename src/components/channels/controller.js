@@ -50,7 +50,6 @@ module.exports = {
     },
     async getChannelsElegibles (req, res) {
         const tags = await getTagsElegiblesByToken(req);
-        console.log({tags})
         try {
             let channels = await Channel.find({
                 tags: { $in: tags.map((tag) => tag.value) },
