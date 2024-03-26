@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 // Define the schema for the primary and secondary fields recoverPassword
+const schemaOptions = {
+    strict: 'throw',
+    timestamps: true,
+    collation: { locale: 'en_US', strength: 1 },
+}
+
 const fieldSchema = new Schema({
     mask: String,
     field: String,
@@ -31,6 +37,8 @@ const formLoginSchema = new Schema({
 const configLogin = new Schema({
     ssoForm: { type: ssoFormSchema, required: false },
     formLogin: { type: formLoginSchema, required: false },
+}, {
+    ...schemaOptions,
 });
 
 
