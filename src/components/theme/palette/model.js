@@ -60,6 +60,7 @@ const paletteSchema = new mongoose.Schema({
 
 const themeSchema = new mongoose.Schema({
     logo: { type: String },
+    logo_admin: { type: String },
     palette: paletteSchema
 }, {
     ...schemaOptions,

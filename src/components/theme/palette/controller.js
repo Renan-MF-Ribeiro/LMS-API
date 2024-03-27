@@ -10,13 +10,7 @@ module.exports = {
             const fileArray = Object.keys(req.files).map(key => req.files[key])
 
 
-            // const indexBG = fileArray.findIndex(el => el.name === body.background)
-            // if (indexBG >= 0) {
-            //     let pathBG = await azureBlob(fileArray[indexBG], 'showcase/home', false, 'lmsassetsanon')
-            //     pathBG = pathBG.replace(AZURE_BLOB_URL, DOMAIN)
-            //     body.background = pathBG
-            // }
-            // //img
+
             const logo = fileArray.findIndex(el => el.name === body.logo)
             if (logo >= 0) {
 
@@ -24,14 +18,15 @@ module.exports = {
                 logoPath = logoPath.replace(AZURE_BLOB_URL, DOMAIN)
                 body.logo = logoPath
             }
-            // //backgroundMobile
-            // const backgroundMobile = fileArray.findIndex(el => el.name === body.backgroundMobile)
-            // if (backgroundMobile >= 0) {
 
-            //     let backgroundMobilePath = await azureBlob(fileArray[backgroundMobile], 'showcase/home', false, 'lmsassetsanon')
-            //     backgroundMobilePath = backgroundMobilePath.replace(AZURE_BLOB_URL, DOMAIN)
-            //     body.backgroundMobile = backgroundMobilePath
-            // }
+            const logo_admin = fileArray.findIndex(el => el.name === body.logo_admin)
+            if (logo_admin >= 0) {
+
+                let logo_adminPath = await azureBlob(fileArray[logo_admin], 'showcase/home', false, 'lmsassetsanon')
+                logo_adminPath = logo_adminPath.replace(AZURE_BLOB_URL, DOMAIN)
+                body.logo_admin = logo_adminPath
+            }
+
 
             let theme = await Theme.findOne({}).sort({ createdAt: -1 })
 
