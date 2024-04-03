@@ -408,12 +408,7 @@ module.exports = {
             if (!group) {
                 await Group.create({
                     name: groupName,
-                    tags: [
-                        {
-                            display: groupName,
-                            value: groupName,
-                        },
-                    ],
+                    tags: [],
                 });
             }
         });
