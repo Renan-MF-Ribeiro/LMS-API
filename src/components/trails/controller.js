@@ -978,6 +978,7 @@ module.exports = {
                                         $options: 'i',
                                     },
                                 },
+                                
                                 {
                                     title: {
                                         $regex: searchBy,
@@ -988,9 +989,10 @@ module.exports = {
                         }
                         : {}
                 )
+                    .populate('items.itemID')
                     .sort({ [order]: sort })
                     .skip(parseInt(skip))
-                    .limit(parseInt(noLimit ? 200 : limit));
+                    .limit(parseInt(noLimit ? 1500 : limit));
 
                 _messages.success(res, req, {
                     data: trails,

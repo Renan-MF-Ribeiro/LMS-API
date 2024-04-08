@@ -3,7 +3,9 @@ const _functions = require('../../utils/functions');
 const { Channel } = require('./model');
 const { azureBlob } = require('../../utils/files');
 const { DOMAIN, AZURE_BLOB_URL } = process.env;
-const { getTagsElegiblesByToken } = require('../sections/business');
+const { Section } = require('../sections/model');
+const { Trail } = require('../trails/model');
+const { getTagsElegiblesByToken, checkEligibilityTagsAnd } = require('../sections/business');
 module.exports = {
     async getChannels(req, res) {
         try {
@@ -46,14 +48,28 @@ module.exports = {
             );
         }
     },
-    async getChannelsElegibles(req, res) {
+    async getChannelsElegibles (req, res) {
         const tags = await getTagsElegiblesByToken(req);
         try {
-            const channels = await Channel.find({
+            let channels = await Channel.find({
                 tags: { $in: tags.map((tag) => tag.value) },
                 enabled: true,
             }).sort({ position: 'asc' });
 
+            channels = await Promise.all(channels.map(async (channel) => {
+                const sections = await Section.find({ _id: { $in: channel.idSections } }).select('trails');
+
+                const trailsIds = sections.reduce((trails, section) => trails.concat(section.trails), []);
+
+                const trails = await Trail.find({ _id: { $in: trailsIds } });
+
+                const hasEligibleTrails = trails.some((trail) =>
+                    checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative
+                );
+
+                return hasEligibleTrails ? channel : null;
+            }));
+            channels = channels.filter((channel) => channel)
             _messages.success(res, req, channels);
         } catch (error) {
             _messages.internalServer(

@@ -69,6 +69,7 @@ module.exports = {
                                 path: 'idEvaluation',
                                 select: 'description',
                             },
+                            select: 'title'
                         })
                         .sort(sortObj)
                         .skip(skip)
@@ -81,6 +82,7 @@ module.exports = {
                         .populate({
                             path: 'items.itemID',
                             match: matchObj,
+                            select: { '_id': 1,'title':1, 'contentPath': 1, 'durationHours': 1, 'thumbPath': 1, 'titleURL': 1,'bannerPath': 1, 'startDate': 1, 'endDate': 1, 'highlighted': 1  },
                             populate: {
                                 path: 'idEvaluation',
                                 select: 'description',
@@ -123,8 +125,6 @@ module.exports = {
                             backgroundPath: trail.backgroundPath,
                             bannerPath: trail.bannerPath,
                             startDate: trail.startDate,
-                            createdAt: trail.createdAt,
-                            updatedAt: trail.updatedAt,
                             endDate: trail.endDate,
                             tags: trail.tags,
                             tagsAnd: trail.tagsAnd || null,
@@ -151,8 +151,8 @@ module.exports = {
                     for (const trail of trails) {
                         const arrItems = [];
                         for (const i of trail.items) {
-                            const item = await Item.findById(i.itemID);
-                            if (item !== null) {
+                            //const item = await Item.findById(i.itemID);
+                            if (i?.itemID !== null) {
                                 arrItems.push({
                                     urlItem: i.urlItem,
                                     urlTrail: i.urlTrail,
@@ -192,8 +192,6 @@ module.exports = {
                             backgroundPath: trail.backgroundPath,
                             startDate: trail.startDate,
                             endDate: trail.endDate,
-                            createdAt: trail.createdAt,
-                            updatedAt: trail.updatedAt,
                             tags: trail.tags,
                             tagsAnd: trail.tagsAnd || null,
                             completion: trail.completion,

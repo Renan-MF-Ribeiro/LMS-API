@@ -1,25 +1,25 @@
 /* eslint-disable no-async-promise-executor */
-const { Tracking } = require("../tracking/model");
-const { Trail } = require("../trails/model");
-const { populateTrails } = require("../trails/business");
-const { checkItemCompleted } = require("../sections/business");
-const { AverageCourses, AverageRating } = require("../logs/model");
+const { Tracking } = require('../tracking/model');
+const { Trail } = require('../trails/model');
+const { populateTrails } = require('../trails/business');
+const { checkItemCompleted } = require('../sections/business');
+const { AverageCourses, AverageRating } = require('../logs/model');
 const {
     getUserByToken,
     calculateAverage,
     processTrailTracking,
-    isValidDate
-} = require("../../utils/functions");
+    isValidDate,
+} = require('../../utils/functions');
 const {
     getTrailCompletion,
     getTagsElegiblesByToken,
     getTagsElegibles,
     checkIfTheTrackIsValid,
-} = require("../sections/business");
-const { getCoursesByUserID } = require("../courses/business");
+} = require('../sections/business');
+const { getCoursesByUserID } = require('../courses/business');
 
 module.exports = {
-    trailsCompletedOrInProgress (req) {
+    trailsCompletedOrInProgress(req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const user = await getUserByToken(req);
@@ -35,7 +35,7 @@ module.exports = {
 
                 for (const t of allTrackingUser) {
                     const trails = await Trail.find({
-                        "items.itemID": { $in: t.item },
+                        'items.itemID': { $in: t.item },
                     });
 
                     for (const trail of trails) {
@@ -53,10 +53,7 @@ module.exports = {
                     let trail = trailFilter[0];
 
                     if (trail) {
-                        const processedTrail = processTrailTracking(
-                            trail,
-                            allTrackingUser
-                        );
+                        const processedTrail = processTrailTracking(trail, allTrackingUser);
                         trail = processedTrail.trail;
                         if (processedTrail.containsACompletedItem) {
                             arrTrailsCompletedOrProgress.push(trail);
@@ -73,7 +70,7 @@ module.exports = {
         });
     },
 
-    trailsCompletedExpired (req) {
+    trailsCompletedExpired(req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const user = await getUserByToken(req);
@@ -89,7 +86,7 @@ module.exports = {
 
                 for (const t of trackings) {
                     const trails = await Trail.find({
-                        "items.itemID": { $in: t.item },
+                        'items.itemID': { $in: t.item },
                     });
 
                     for (const trail of trails) {
@@ -106,10 +103,7 @@ module.exports = {
                     let trail = trailFilter[0];
 
                     if (trail) {
-                        const processedTrail = processTrailTracking(
-                            trail,
-                            trackings
-                        );
+                        const processedTrail = processTrailTracking(trail, trackings);
                         trail = processedTrail.trail;
                         if (
                             processedTrail.containsACompletedItem &&
@@ -129,7 +123,7 @@ module.exports = {
         });
     },
 
-    calculateAverageStudent (user) {
+    calculateAverageStudent(user) {
         return new Promise(async (resolve, reject) => {
             try {
                 const result = await calculateAverage(user);
@@ -141,7 +135,7 @@ module.exports = {
         });
     },
 
-    studentAverageCourses (user, req) {
+    studentAverageCourses(user, req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const { numberTrailsCompleted, numberTrailsElegibles } =
@@ -161,41 +155,37 @@ module.exports = {
         });
     },
 
-    averageGroupCourses (user, group) {
+    averageGroupCourses(user, group) {
         return new Promise(async (resolve, reject) => {
             try {
                 const data = user[group];
                 const averageGroupACourses = await AverageCourses.findOne({
-                    "store.group": group,
-                    "item.tag": data,
+                    'store.group': group,
+                    'item.tag': data,
                 });
-                resolve(
-                    averageGroupACourses ? averageGroupACourses.average : 0
-                );
+                resolve(averageGroupACourses ? averageGroupACourses.average : 0);
             } catch (error) {
                 reject(error);
             }
         });
     },
 
-    averageGroupRatings (user, group) {
+    averageGroupRatings(user, group) {
         return new Promise(async (resolve, reject) => {
             try {
                 const data = user[group];
                 const averageGroupACourses = await AverageRating.findOne({
-                    "store.group": group,
-                    "item.tag": data,
+                    'store.group': group,
+                    'item.tag': data,
                 });
-                resolve(
-                    averageGroupACourses ? averageGroupACourses.average : 0
-                );
+                resolve(averageGroupACourses ? averageGroupACourses.average : 0);
             } catch (error) {
                 reject(error);
             }
         });
     },
 
-    getNumberOfItemsCompletedOrInProgressOrNotStarted (req) {
+    getNumberOfItemsCompletedOrInProgressOrNotStarted(req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const user = await getUserByToken(req);
@@ -228,13 +218,8 @@ module.exports = {
 
                 for (const trail of arrTrails) {
                     for (const item of trail.items) {
-                        if (
-                            arrItemsID.indexOf(item.itemID._id.toString()) < 0
-                        ) {
-                            const completion = await checkItemCompleted(
-                                item,
-                                user
-                            );
+                        if (arrItemsID.indexOf(item.itemID._id.toString()) < 0) {
+                            const completion = await checkItemCompleted(item, user);
                             if (completion === null) {
                                 numberOfItemsNotStarted++;
                             }
@@ -242,11 +227,7 @@ module.exports = {
                                 numberOfItemsCompleted++;
                             }
 
-                            if (
-                                completion !== null &&
-                                completion >= 0 &&
-                                completion < 1
-                            ) {
+                            if (completion !== null && completion >= 0 && completion < 1) {
                                 numberOfItemsInProgress++;
                             }
                         }
@@ -258,11 +239,7 @@ module.exports = {
                     numberOfItemsMandatoryNotStarted,
                     numberOfItemsMandatoryCompleted,
                     numberOfItemsMandatoryInProgress,
-                } = await calculateNumberOfMandatoryItems(
-                    arrTrails,
-                    user,
-                    tags
-                );
+                } = await calculateNumberOfMandatoryItems(arrTrails, user, tags);
 
                 resolve({
                     numberOfItemsNotStarted,
@@ -277,7 +254,7 @@ module.exports = {
             }
         });
     },
-    getStudentCourses (req) {
+    getStudentCourses(req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const user = await getUserByToken(req);
@@ -291,7 +268,7 @@ module.exports = {
         });
     },
 
-    returnCertificates (trails, user) {
+    returnCertificates(trails, user) {
         return new Promise(async (resolve, reject) => {
             try {
                 const certs = [];
@@ -311,8 +288,7 @@ module.exports = {
 
                             const concludedAt = tracking.completionAt;
                             const { completion } = item;
-                            const { durationHours, title, thumbPath } =
-                                item.itemID;
+                            const { durationHours, title, thumbPath } = item.itemID;
                             certs.push({
                                 duration: durationHours,
                                 concludedAt,
@@ -321,10 +297,9 @@ module.exports = {
                                 thumbPath,
                                 completion,
                                 score: tracking.score,
-                                type: "item",
+                                type: 'item',
                                 itemId: item.itemID.id,
-                                certificateLayout:
-                                    item.itemID.certificateLayout,
+                                certificateLayout: item.itemID.certificateLayout,
                             });
                             itemsID.push(item.itemID.id);
                         }
@@ -352,9 +327,10 @@ module.exports = {
                             thumbPath,
                             completion,
                             scoreAverage: trail.scoreAverage,
-                            type: "trail",
+                            type: 'trail',
                             trailId: trail._id,
                             certificateLayout: trail.certificateLayout,
+                            certificateDue: trail?.certificateDue,
                         });
                     }
                 }
@@ -366,7 +342,7 @@ module.exports = {
     },
 };
 
-function numberOfCompleteAndEligibleCourses (user, flagToken, req) {
+function numberOfCompleteAndEligibleCourses(user, flagToken, req) {
     return new Promise(async (resolve, reject) => {
         try {
             const tags = flagToken
@@ -425,26 +401,21 @@ function numberOfCompleteAndEligibleCourses (user, flagToken, req) {
 //     }, false)
 // }
 
-function calculateNumberOfMandatoryItems (trails, user, userTags) {
+function calculateNumberOfMandatoryItems(trails, user, userTags) {
     return new Promise(async (resolve, reject) => {
         try {
             // Filtra todas as trilhas mandatórias para o usuário.
             const mandatoryTrails = trails
                 .filter((trail) => {
                     const trailMandatoryTags = trail.mandatory;
-                    const hasMandatory = trailMandatoryTags.reduce(
-                        (hasMandatory, tag) => {
-                            if (hasMandatory) {
-                                return true;
-                            }
-                            const filter = userTags.filter(
-                                (_tag) => _tag.value === tag.value
-                            );
+                    const hasMandatory = trailMandatoryTags.reduce((hasMandatory, tag) => {
+                        if (hasMandatory) {
+                            return true;
+                        }
+                        const filter = userTags.filter((_tag) => _tag.value === tag.value);
 
-                            return filter.length > 0;
-                        },
-                        false
-                    );
+                        return filter.length > 0;
+                    }, false);
 
                     if (hasMandatory) {
                         return trail;

@@ -91,13 +91,13 @@ module.exports = {
             {
                 perfil: obj.perfil,
                 clientID: obj.clientID,
+                dashFilters: obj.filters,
             },
             ANALYTICS_SECRET_KEY,
             {
                 expiresIn: '12h',
             }
         );
-
         return token;
     },
 
@@ -260,15 +260,11 @@ module.exports = {
                 const result = [];
 
                 for (const p in groups) {
-                    const group = await Group.findOne({
-                        $text: {
-                            $search: groups[p],
-                        },
-                    });
+                    const group = await Group.findOne({name: groups[p]})
 
-                    if (group) result.push(group._id);
+                    if (group) result.push(group._id)
                 }
-
+            
                 resolve(result);
             } catch (error) {
                 reject(error);

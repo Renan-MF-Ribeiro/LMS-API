@@ -88,6 +88,7 @@ const { Group } = require('../groups/model');
 const {
     handleUserEligibilitiesGamification,
 } = require('../gamification/utils');
+const { DashConfig } = require('../dashboard/model');
 
 module.exports = {
     async create (req, res) {
@@ -174,66 +175,70 @@ module.exports = {
         }
     },
     async signup (req, res) {
-        try {
-            var salt = bcrypt.genSaltSync(10);
-            const { networkLogin, properties } = req.body;
 
-            const { password, ...data } = properties;
+        //FUNÇÃO COMENTADA POR MOTIVOS DE SEGURANÇA
+        //REATIVAR APÓS UTILIZAÇÃO DO AMBIENTE PELA EQUIPE COMERCIAL
+        _messages.success(res, req);
+        // try {
+        //     var salt = bcrypt.genSaltSync(10);
+        //     const { networkLogin, properties } = req.body;
 
-            const user = await User.find({ networkLogin });
+        //     const { password, ...data } = properties;
 
-            if (user.length !== 0) {
-                _messages.badRequest(
-                    res,
-                    req,
-                    'Usuário já cadastrado',
-                    'Já existe um usuário cadastrado para este usuário',
-                    'users',
-                    'signup'
-                );
-            } else {
-                const hashPassword = {
-                    hash: bcrypt.hashSync(password, salt),
-                    valid: true,
-                    createdAt: new Date(Date.now()),
-                };
-                const userData = {
-                    networkLogin,
-                    password: hashPassword,
-                    passwordValid: true,
-                    clientUserKey: CLIENT_ID + '@@' + networkLogin,
-                    groupsAD: ['PERFIL_Aluno', 'ELEGE_CURSO'],
-                    status: sendSignUpActivationEmail ? 'INATIVO' : 'ATIVO',
-                    ...data,
-                };
+        //     const user = await User.find({ networkLogin });
 
-                const newUser = await User.create(userData);
+        //     if (user.length !== 0) {
+        //         _messages.badRequest(
+        //             res,
+        //             req,
+        //             'Usuário já cadastrado',
+        //             'Já existe um usuário cadastrado para este usuário',
+        //             'users',
+        //             'signup'
+        //         );
+        //     } else {
+        //         const hashPassword = {
+        //             hash: bcrypt.hashSync(password, salt),
+        //             valid: true,
+        //             createdAt: new Date(Date.now()),
+        //         };
+        //         const userData = {
+        //             networkLogin,
+        //             password: hashPassword,
+        //             passwordValid: true,
+        //             clientUserKey: CLIENT_ID + '@@' + networkLogin,
+        //             groupsAD: ['PERFIL_Aluno', 'ELEGE_CURSO'],
+        //             status: sendSignUpActivationEmail ? 'INATIVO' : 'ATIVO',
+        //             ...data,
+        //         };
 
-                if (newUser && sendSignUpActivationEmail) {
-                    const emailToken = generateToken({ networkLogin });
+        //         const newUser = await User.create(userData);
 
-                    const activationLink = `${process.env.DOMAIN}/login/ativacao?token=${emailToken}`;
+        //         if (newUser && sendSignUpActivationEmail) {
+        //             const emailToken = generateToken({ networkLogin });
 
-                    await sendSignupActivationEmail(
-                        newUser.email,
-                        activationLink
-                    );
-                }
-                const token = generateToken({ networkLogin });
+        //             const activationLink = `${process.env.DOMAIN}/login/ativacao?token=${emailToken}`;
 
-                _messages.success(res, req, token);
-            }
-        } catch (error) {
-            console.log(error);
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'users',
-                'signup'
-            );
-        }
+        //             await sendSignupActivationEmail(
+        //                 newUser.email,
+        //                 activationLink
+        //             );
+        //         }
+        //         const token = generateToken({ networkLogin });
+
+        //         _messages.success(res, req, token);
+        //     }
+        // } catch (error) {
+        //     console.log(error);
+        //     _messages.internalServer(
+        //         res,
+        //         req,
+        //         error.message,
+        //         'Erro interno no servidor',
+        //         'users',
+        //         'signup'
+        //     );
+        // }
     },
 
     async activateUser (req, res) {
@@ -268,6 +273,45 @@ module.exports = {
 
     async ldapSignIn (req, res) {
         let user = {};
+
+        let userMap = [
+            { description: 'LOGIN', value: 'networkLogin' },
+            { description: 'SENHA', value: 'password' },
+            { description: 'DATA_CRIACAO', value: 'createDate' },
+            { description: 'NOME', value: 'name' },
+            { description: 'EMAIL', value: 'email' },
+            { description: 'MATRICULA', value: 'registration' },
+            { description: 'STATUS', value: 'status' },
+            { description: 'CPF', value: 'cpf' },
+            { description: 'DATA_NASC', value: 'birthDate' },
+            { description: 'IDENTIDADE_DE_GENERO', value: 'genderIdentity' },
+            { description: 'PAIS', value: 'country' },
+            { description: 'CIDADE', value: 'city' },
+            { description: 'ESTADO', value: 'state' },
+            { description: 'EMPRESA', value: 'company' },
+            { description: 'ADMISSAO', value: 'admission' },
+            { description: 'LOCALIDADE', value: 'locality' },
+            { description: 'CARGO', value: 'office' },
+            { description: 'NIVEL_HIERARQUICO', value: 'hierarchicalLevel' },
+            { description: 'TAREFA', value: 'task' },
+            { description: 'CENTRO_DE_CUSTO', value: 'costCenter' },
+            { description: 'DESCRICAO_CENTRO_DE_CUSTO', value: 'costCenterDescription' },
+            { description: 'LOJA', value: 'store' },
+            { description: 'IDENTIFICACAO_LOJA', value: 'storeCode' },
+            { description: 'GRUPO_LOJA', value: 'storeGroup' },
+            { description: 'GRUPO_LOJA_DESCRICAO', value: 'storeGroupDescription' },
+            { description: 'DISTRITAL', value: 'plant' },
+            { description: 'GESTOR', value: 'manager' },
+            { description: 'MATRICULA_GESTOR', value: 'managerRegistration' },
+            { description: 'NOME_GESTOR', value: 'managerName' },
+            { description: 'AREA', value: 'area' },
+            { description: 'DEPARTAMENTO', value: 'department' },
+            { description: 'VP', value: 'vp' },
+            { description: 'NEGOCIO', value: 'business' },
+            { description: 'OPCIONAL_ELEGIBILIDADE1', value: 'optionalEligibility1' },
+            { description: 'OPCIONAL_ELEGIBILIDADE2', value: 'optionalEligibility2' },
+            { description: 'OPCIONAL_ELEGIBILIDADE3', value: 'optionalEligibility3' }
+        ]
         try {
             const { login, password } = req.body;
 
@@ -277,23 +321,30 @@ module.exports = {
 
             if (login !== undefined && password !== undefined) {
                 user = await User.findOne(
-                    { networkLogin: { $eq: login }, status: 'ATIVO' },
-                    [
-                        '_id',
-                        'networkLogin',
-                        'password',
-                        'acceptTerms',
-                        'acceptTermsCollaboration',
-                        'passwordValid',
-                        'name',
-                        'profilePhoto',
-                        'groupsAD',
-                        'email',
-                        'webPushAuthorization',
-                    ]
-                );
+                    { networkLogin: { $eq: login }, status: 'ATIVO' }
+                ).lean();
 
                 if (user) {
+                    const dashboardFilters = []
+                    const dashConfig = await DashConfig.find();
+                    if(dashConfig){
+                        let dashFilters = dashConfig.map((x)=>{
+                            return x.fields
+                        })
+                        dashFilters = dashFilters.flat(2)
+                        for(let filter of dashFilters){
+                            for (const map of userMap) {
+                                filter.userField = map.description == filter.userField ? map.value : filter.userField
+                                filter.dashFilter = map.description == filter.dashFilter ? map.value : filter.dashFilter
+                            }
+
+                            const userHasValidFieldValue = user[filter.userField] == filter.fieldValue
+                            if(userHasValidFieldValue){
+                                dashboardFilters.push({field: filter.dashFilter, value: user[filter.dashFilter], pages: filter.pages})
+                            }
+                        }
+                    }
+
                     const amountOfLocks = await checkAmountOfLocks(user._id);
                     // 5 Tentativas
                     if (amountOfLocks >= 50) {
@@ -385,6 +436,7 @@ module.exports = {
                     const token_analytics = generateTokenAnalytics({
                         perfil: profilesIDS.numbers,
                         clientID: CLIENT_ID,
+                        filters: dashboardFilters
                     });
 
                     const token_mfa = generateMfaToken({
@@ -530,12 +582,62 @@ module.exports = {
 
     async singleSignOn (req, res) {
         let user = {};
+        let userMap = [
+            { description: 'LOGIN', value: 'networkLogin' },
+            { description: 'SENHA', value: 'password' },
+            { description: 'DATA_CRIACAO', value: 'createDate' },
+            { description: 'NOME', value: 'name' },
+            { description: 'EMAIL', value: 'email' },
+            { description: 'MATRICULA', value: 'registration' },
+            { description: 'STATUS', value: 'status' },
+            { description: 'CPF', value: 'cpf' },
+            { description: 'DATA_NASC', value: 'birthDate' },
+            { description: 'IDENTIDADE_DE_GENERO', value: 'genderIdentity' },
+            { description: 'PAIS', value: 'country' },
+            { description: 'CIDADE', value: 'city' },
+            { description: 'ESTADO', value: 'state' },
+            { description: 'EMPRESA', value: 'company' },
+            { description: 'ADMISSAO', value: 'admission' },
+            { description: 'LOCALIDADE', value: 'locality' },
+            { description: 'CARGO', value: 'office' },
+            { description: 'NIVEL_HIERARQUICO', value: 'hierarchicalLevel' },
+            { description: 'TAREFA', value: 'task' },
+            { description: 'CENTRO_DE_CUSTO', value: 'costCenter' },
+            { description: 'DESCRICAO_CENTRO_DE_CUSTO', value: 'costCenterDescription' },
+            { description: 'LOJA', value: 'store' },
+            { description: 'IDENTIFICACAO_LOJA', value: 'storeCode' },
+            { description: 'GRUPO_LOJA', value: 'storeGroup' },
+            { description: 'GRUPO_LOJA_DESCRICAO', value: 'storeGroupDescription' },
+            { description: 'DISTRITAL', value: 'plant' },
+            { description: 'GESTOR', value: 'manager' },
+            { description: 'MATRICULA_GESTOR', value: 'managerRegistration' },
+            { description: 'NOME_GESTOR', value: 'managerName' },
+            { description: 'AREA', value: 'area' },
+            { description: 'DEPARTAMENTO', value: 'department' },
+            { description: 'VP', value: 'vp' },
+            { description: 'NEGOCIO', value: 'business' },
+            { description: 'OPCIONAL_ELEGIBILIDADE1', value: 'optionalEligibility1' },
+            { description: 'OPCIONAL_ELEGIBILIDADE2', value: 'optionalEligibility2' },
+            { description: 'OPCIONAL_ELEGIBILIDADE3', value: 'optionalEligibility3' }
+        ]
         const { token } = req.body;
         const secret = process.env.PROJECT_SECRET_KEY;
         const data = jwt.verify(token, secret);
+        console.log(data.networkLogin)
         const networkLogin = data.networkLogin
             ? data.networkLogin
             : data.data.networkLogin;
+
+        if (!networkLogin) {
+            _messages.forbidden(
+                res,
+                req,
+                'Usuário ou senha não informados',
+                'Erro de validação',
+                'users',
+                'ldapSignIn'
+            );
+        }
 
         if (data?.communication || data?.data?.communication) {
             const communication =
@@ -557,19 +659,27 @@ module.exports = {
 
         try {
             if (networkLogin) {
-                user = await User.findOne({ networkLogin, status: 'ATIVO' }, [
-                    '_id',
-                    'networkLogin',
-                    'user',
-                    'password',
-                    'acceptTerms',
-                    'passwordValid',
-                    'name',
-                    'profilePhoto',
-                    'groupsAD',
-                    'email',
-                ]);
+                user = await User.findOne({ networkLogin, status: 'ATIVO' }).lean();
                 if (user) {
+                    const dashboardFilters = []
+                    const dashConfig = await DashConfig.find();
+                    if(dashConfig){
+                        let dashFilters = dashConfig.map((x)=>{
+                            return x.fields
+                        })
+                        dashFilters = dashFilters.flat(2)
+                        for(let filter of dashFilters){
+                            for (const map of userMap) {
+                                filter.userField = map.description == filter.userField ? map.value : filter.userField
+                                filter.dashFilter = map.description == filter.dashFilter ? map.value : filter.dashFilter
+                            }
+
+                            const userHasValidFieldValue = user[filter.userField] == filter.fieldValue
+                            if(userHasValidFieldValue){
+                                dashboardFilters.push({field: filter.dashFilter, value: user[filter.dashFilter], pages: filter.pages})
+                            }
+                        }
+                    }
                     const amountOfLocks = await checkAmountOfLocks(user._id);
                     // 5 Tentativas
                     if (amountOfLocks >= 50) {
@@ -638,6 +748,7 @@ module.exports = {
                     const token_analytics = generateTokenAnalytics({
                         perfil: profilesIDS.numbers,
                         clientID: CLIENT_ID,
+                        filters: dashboardFilters
                     });
 
                     const token_happplace = generateHappPlaceToken({
@@ -1305,6 +1416,7 @@ module.exports = {
                                     $options: 'i',
                                 }, onboarding: { $ne: true }
                             },
+                            { alternativeEmail: { $regex: searchBy, $options: "i" } },
                             { email: { $regex: searchBy, $options: 'i' }, onboarding: { $ne: true } },
                         ],
                     }
@@ -1378,10 +1490,8 @@ module.exports = {
 
     async returnUserById (req, res) {
         try {
-            const { _id } = req.body;
-            const user = await User.findOne({ _id: _id });
-
-            user.password = undefined;
+            const { _id } = await getUserByToken(req)
+            const user = await User.findOne({ _id: _id }, { password: 0 });
 
             _messages.success(res, req, {
                 data: user,
@@ -1401,6 +1511,7 @@ module.exports = {
     async updateUser (req, res) {
         try {
             const { _id, email, cpf, networkLogin, tags } = req.body;
+            delete req.body.ip;
             const user = await User.findOne({
                 _id: { $eq: _id },
             });
@@ -1789,7 +1900,9 @@ module.exports = {
         const email =
             req.samlUserObject
                 .httpSchemasXmlsoapOrgWs200505IdentityClaimsEmailaddress;
-        const token = await jwt.sign({ email }, process.env.JWT_SECRET);
+        console.log(email)
+        const token = await jwt.sign({ networkLogin: email }, process.env.PROJECT_SECRET_KEY);
+
         res.redirect(
             302,
             `${process.env.DOMAIN}/login/entrar/sso?token=${token}`

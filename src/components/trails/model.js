@@ -237,5 +237,5 @@ const TrailsTagsWithUsersAndTrackings = mongoose.model(
 module.exports = {
     Trail,
     TrailsItems,
-    TrailsTagsWithUsersAndTrackings,
+    TrailsTagsWithUsersAndTrackings
 };

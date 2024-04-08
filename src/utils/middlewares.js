@@ -275,11 +275,35 @@ module.exports = {
         }
     },
 
+    isShowcaseActive: (req, res, next) => {
+        if (config?.showcase?.active) {
+            next();
+        } else {
+            _messages.successEmpty(
+                res,
+                req,
+                'Feature "Showcase" não está ativa'
+            );
+        }
+    },
+
     isAluraActive: (req, res, next) => {
         if (config?.alura?.active) {
             next();
         } else {
             _messages.successEmpty(res, req, 'Feature "Alura" não está ativa');
+        }
+    },
+
+    isAssessmentActive: (req, res, next) => {
+        if (config?.assessment?.active) {
+            next();
+        } else {
+            _messages.successEmpty(
+                res,
+                req,
+                'Feature "Assessment" não está ativa'
+            );
         }
     },
 };

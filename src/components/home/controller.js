@@ -5,36 +5,33 @@ const { Trail } = require('../trails/model');
 const {
     checkIfTheTrackIsValid,
     checkEligibilityTagsAnd,
+    getTagsElegiblesByToken,
 } = require('../sections/business');
 const { User } = require('../users/model');
 const {
     getUserByToken,
     getTagsGroupsByToken,
     processTrailTracking,
-    getDateTodayWithoutHours
+    getDateTodayWithoutHours,
+    handleStudentAverage,
+    handleStudentTrails,
+    pagination,
 } = require('../../utils/functions');
 const {
     trailsCompletedOrInProgress,
     studentAverageCourses,
-    schoolAverageCourses,
-    schoolYearAverageCourses,
     calculateAverageStudent,
-    calculateAverageSchool,
-    calculateAverageSchoolYear,
     getNumberOfItemsCompletedOrInProgressOrNotStarted,
     getStudentCourses,
     returnCertificates,
     averageGroupCourses,
     averageGroupRatings,
-    trailsCompletedExpired,
 } = require('./business');
 
 const { populateTrails } = require('../trails/business');
 
-// const { updateAverageCourses } = require('../../utils/cron')
-
-const ItemController = {
-    async searchTrailsItems(req, res) {
+const HomeController = {
+    async searchTrailsItems (req, res) {
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsGroupsByToken(req);
@@ -67,9 +64,7 @@ const ItemController = {
             filterTrails = filterTrails.filter((trail) =>
                 checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags)
             );
-            filterTrails = filterTrails.filter((trail) =>
-                checkIfTheTrackIsValid(trail)
-            );
+            filterTrails = filterTrails.filter((trail) => checkIfTheTrackIsValid(trail));
 
             const items = await Item.find({
                 description: new RegExp(searchBy, 'gi'),
@@ -80,10 +75,7 @@ const ItemController = {
             for (const item of items) {
                 const itemTrail = await populateTrails(true, {
                     'items.itemID': { $in: item._id },
-                    $or: [
-                        { tags: { $in: tags } },
-                        { mandatory: { $in: tags } },
-                    ],
+                    $or: [{ tags: { $in: tags } }, { mandatory: { $in: tags } }],
                     enabled: true,
                 });
 
@@ -91,9 +83,7 @@ const ItemController = {
                     for (const t of itemTrail) {
                         const isValidTrail = checkIfTheTrackIsValid(t);
                         if (isValidTrail) {
-                            const index = filterTrails.findIndex(
-                                (val) => val.id === itemTrail.id
-                            );
+                            const index = filterTrails.findIndex((val) => val.id === itemTrail.id);
                             if (index === -1) {
                                 filterTrails.push(t);
                             }
@@ -103,10 +93,7 @@ const ItemController = {
             }
 
             for (let trail of filterTrails) {
-                const processedTrail = processTrailTracking(
-                    trail,
-                    allTrackingUser
-                );
+                const processedTrail = processTrailTracking(trail, allTrackingUser);
                 trail = processedTrail.trail;
                 result.push(trail);
             }
@@ -124,7 +111,7 @@ const ItemController = {
         }
     },
 
-    async dashboardStudent(req, res) {
+    async dashboardStudent (req, res) {
         try {
             const user = await getUserByToken(req);
             const courses = await getStudentCourses(req);
@@ -132,10 +119,7 @@ const ItemController = {
             const allTrails = await Trail.countDocuments();
 
             const resultTrails = await trailsCompletedOrInProgress(req);
-            const certificates = await returnCertificates(
-                resultTrails.trailsCompleted,
-                user
-            );
+            const certificates = await returnCertificates(resultTrails.trailsCompleted, user);
             const {
                 numberOfItemsCompleted,
                 numberOfItemsInProgress,
@@ -144,34 +128,19 @@ const ItemController = {
                 numberOfItemsMandatoryCompleted,
                 numberOfItemsMandatoryInProgress,
             } = await getNumberOfItemsCompletedOrInProgressOrNotStarted(req);
-            const {
-                averageStudentCourses,
-                numberTrailsCompleted,
-                numberTrailsElegibles,
-            } = await studentAverageCourses(user, req); // Não necessita de mudanças
+            const { averageStudentCourses, numberTrailsCompleted, numberTrailsElegibles } =
+                await studentAverageCourses(user, req); // Não necessita de mudanças
 
             const groupA = process.env.groupA;
             const groupB = process.env.groupB;
 
-            const averageGroupACourses = await averageGroupCourses(
-                user,
-                groupA
-            );
-            const averageGroupBCourses = await averageGroupCourses(
-                user,
-                groupB
-            );
+            const averageGroupACourses = await averageGroupCourses(user, groupA);
+            const averageGroupBCourses = await averageGroupCourses(user, groupB);
 
             const averageStudent = await calculateAverageStudent(user); // Não necessita de mudanças
 
-            const averageGroupARatings = await averageGroupRatings(
-                user,
-                groupA
-            );
-            const averageGroupBRatings = await averageGroupRatings(
-                user,
-                groupB
-            );
+            const averageGroupARatings = await averageGroupRatings(user, groupA);
+            const averageGroupBRatings = await averageGroupRatings(user, groupB);
 
             const tags = await getTagsGroupsByToken(req);
 
@@ -179,7 +148,7 @@ const ItemController = {
                 delete tag.createdAt;
                 tags.push(tag);
             }
-            
+
             const allTrailsElegibles = await Trail.find({
                 tags: { $in: tags },
                 enabled: true,
@@ -224,48 +193,40 @@ const ItemController = {
             );
         }
     },
-    async dashboardStudentv2(req, res) {
+
+    async dashboardStudentv2 (req, res) {
         try {
             const user = await getUserByToken(req);
+            const tags = await getTagsElegiblesByToken(req);
             const courses = await getStudentCourses(req);
-            const allTrails = await Trail.countDocuments();
-            const resultTrails = await trailsCompletedOrInProgress(req);
-            const resultTrailsExpired = await trailsCompletedExpired(req);
-
-            const certificates = await returnCertificates(
-                resultTrails.trailsCompleted,
-                user
-            );
-            const certificatesExpired = await returnCertificates(
-                resultTrailsExpired.trailsCompleted,
-                user
-            );
-
-            const tags = await getTagsGroupsByToken(req);
-
-            for (const tag of user.tags) {
-                delete tag.createdAt;
-                tags.push(tag);
-            }
-
-            const allTrailsElegibles = await Trail.find({
+            const elegibleTrails = await Trail.find({
                 tags: { $in: tags },
                 enabled: true,
                 startDate: { $lt: getDateTodayWithoutHours() },
                 endDate: { $gt: getDateTodayWithoutHours() },
-            }).countDocuments();
+            });
+            const totalTrails = elegibleTrails.length;
+            const { average, highestScoreTrail } = await handleStudentAverage(user);
+            const { completedTrails, inProgressTrails } = await handleStudentTrails(
+                user,
+                elegibleTrails
+            );
+            const percentageCompletedTrails = Number(
+                ((completedTrails.length / totalTrails) * 100).toFixed(2)
+            );
 
-
-            // await User.findByIdAndUpdate(user._id, { averageRating: averageStudent.toFixed(2), numberTrailsCompleted, numberTrailsElegibles })
+            const highestScoreTitle = highestScoreTrail?.title;
+            const highestScoreUrl = highestScoreTrail?.titleURL;
 
             _messages.success(res, req, {
-                resultTrails,
-                certificates,
-                allTrails,
-                allTrailsElegibles,
-                resultTrailsExpired,
-                certificatesExpired,
-                courses,
+                totalCompletedTrails: completedTrails.length,
+                totalTrails,
+                percentageCompletedTrails,
+                inProgressTrails,
+                average,
+                highestScoreTitle,
+                highestScoreUrl,
+                courses
             });
         } catch (error) {
             console.log(error);
@@ -280,7 +241,7 @@ const ItemController = {
         }
     },
 
-    async searchStudentCourses(req, res) {
+    async searchStudentCourses (req, res) {
         try {
             await getStudentCourses(req);
         } catch (error) {
@@ -294,6 +255,48 @@ const ItemController = {
             );
         }
     },
+
+    async listCertificates (req, res) {
+        try {
+            const { searchBy } = req.query;
+            req.query = { ...req.query, pageSize: req.query.pageSize ?? 5 };
+            const { skip, limit } = pagination(req);
+            const user = await getUserByToken(req);
+            const tags = await getTagsElegiblesByToken(req);
+            const elegibleTrails = await Trail.find({
+                tags: { $in: tags },
+                enabled: true,
+                startDate: { $lt: getDateTodayWithoutHours() },
+                endDate: { $gt: getDateTodayWithoutHours() },
+            }).populate('items.itemID');
+            const { completedTrails } = await handleStudentTrails(user, elegibleTrails);
+            let certificates = await returnCertificates(completedTrails, user);
+
+            if (searchBy) {
+                certificates = certificates.filter(({ title }) => {
+                    return title.toLowerCase().includes(searchBy.toLowerCase());
+                });
+            }
+            certificates = certificates.sort((prev, curr) => {
+                const prevConcludedAt = prev.concludedAt.getTime();
+                const currConcludedAt = curr.concludedAt.getTime();
+                return currConcludedAt - prevConcludedAt;
+            });
+
+            certificates = certificates.slice(skip, skip + limit);
+
+            _messages.success(res, req, certificates);
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'home',
+                '/certificates'
+            );
+        }
+    },
 };
 
-module.exports = ItemController;
+module.exports = HomeController;

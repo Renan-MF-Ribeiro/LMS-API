@@ -9,13 +9,15 @@ const { Group } = require('../components/groups/model');
 const { SCORMLessonStatus } = require('../components/tracking/model');
 const { HistoricEvaluation } = require('../components/assessments/model');
 const { Tracking } = require('../components/tracking/model');
+const { Trail } = require('../components/trails/model');
+const { Item } = require('../components/items/model');
 
 module.exports = {
-    getDateToday() {
+    getDateToday () {
         return momentz().format('YYYY-MM-DD HH:mm:ss');
     },
 
-    getDateTodayExtensive() {
+    getDateTodayExtensive () {
         return (
             momentz().format('DD') +
             ' de ' +
@@ -25,25 +27,22 @@ module.exports = {
         );
     },
 
-    formatDate(date) {
+    formatDate (date) {
         return momentz(date).format('YYYY-MM-DD HH:mm:ss');
     },
 
-    formatDateWithoutHours(date) {
+    formatDateWithoutHours (date) {
         if (!date) {
             return null;
         }
         return momentz(date).format('YYYY-MM-DD');
     },
 
-    findObjectInRange(data, referenceDate) {
+    findObjectInRange (data, referenceDate) {
         let foundObject = null;
 
         for (const obj of data) {
-            if (
-                obj.startDate <= referenceDate &&
-                obj.limitDate >= referenceDate
-            ) {
+            if (obj.startDate <= referenceDate && obj.limitDate >= referenceDate) {
                 foundObject = obj;
                 break;
             }
@@ -73,28 +72,26 @@ module.exports = {
         }
     },
 
-    formatDateWithoutHoursBrasilian(date) {
+    formatDateWithoutHoursBrasilian (date) {
         if (!date) {
             return null;
         }
         return momentz(date).add(3, 'hours').format('DD/MM/YYYY');
     },
 
-    getDateTodayWithoutHours() {
+    getDateTodayWithoutHours () {
         return momentz().format('YYYY-MM-DD');
     },
 
-    subtractHours(date) {
-        return momentz(date)
-            .subtract('3', 'hours')
-            .format('YYYY-MM-DD HH:mm:ss');
+    subtractHours (date) {
+        return momentz(date).subtract('3', 'hours').format('YYYY-MM-DD HH:mm:ss');
     },
 
-    calculateDiffDate(dateInitial, dateFinal, format) {
+    calculateDiffDate (dateInitial, dateFinal, format) {
         return moment(dateInitial).diff(dateFinal, format);
     },
 
-    getDates(DATA_INICIO, DATA_FIM) {
+    getDates (DATA_INICIO, DATA_FIM) {
         const startDate = new Date(DATA_INICIO);
         const limitDate = new Date(DATA_FIM);
 
@@ -106,13 +103,11 @@ module.exports = {
         const limitMonth = limitDate.getMonth() + 1;
         const limitYear = limitDate.getFullYear();
 
-        const startString = `${startYear}-${
-            startMonth >= 10 ? startMonth : '0' + startMonth
-        }-${startDay >= 10 ? startDay : '0' + startDay}T00:00:00.000-03:00`;
+        const startString = `${startYear}-${startMonth >= 10 ? startMonth : '0' + startMonth}-${startDay >= 10 ? startDay : '0' + startDay
+            }T00:00:00.000-03:00`;
 
-        const limitString = `${limitYear}-${
-            limitMonth >= 10 ? limitMonth : '0' + limitMonth
-        }-${limitDay >= 10 ? limitDay : '0' + limitDay}T23:59:59.000-03:00`;
+        const limitString = `${limitYear}-${limitMonth >= 10 ? limitMonth : '0' + limitMonth}-${limitDay >= 10 ? limitDay : '0' + limitDay
+            }T23:59:59.000-03:00`;
 
         return {
             startDate: new Date(startString),
@@ -120,22 +115,22 @@ module.exports = {
         };
     },
 
-    getDataByToken(req) {
+    getDataByToken (req) {
         const dataToken = _auth.decodeToken(req.headers.authorization);
         return dataToken.data;
     },
 
-    returnsLetterPosition(letter) {
+    returnsLetterPosition (letter) {
         const alfabetic = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         return alfabetic.indexOf(letter);
     },
 
-    returnSliceDataRandom(data, initial, final) {
+    returnSliceDataRandom (data, initial, final) {
         const dataSlice = chance.shuffle(data).slice(initial, final);
         return dataSlice;
     },
 
-    pagination(req) {
+    pagination (req) {
         const { pageSize, pageIndex } = req.query;
         let skip = pageIndex || 0;
         const limit = pageSize || 10;
@@ -147,7 +142,7 @@ module.exports = {
         return { skip, limit };
     },
 
-    ordernation(req) {
+    ordernation (req) {
         const { orderBy, direction } = req.query;
         let order = 'createdAt';
         let sort = 'desc';
@@ -158,14 +153,14 @@ module.exports = {
         return { order, sort };
     },
 
-    formatExcelDateToString(date) {
+    formatExcelDateToString (date) {
         const dateArray = date.split(' ');
         const month = returnMonthNumber(dateArray[1]);
         const newDate = `${dateArray[2]}/${month}/${dateArray[3]}`;
         return newDate;
     },
 
-    recordLog(
+    recordLog (
         req,
         type,
         message,
@@ -185,7 +180,7 @@ module.exports = {
                     try {
                         var { data } = _auth.decodeToken(token);
                         user = await User.findOne({ _id: { $eq: data.ref } });
-                    } catch {}
+                    } catch { }
                 }
                 const userLogin = dataUser ? dataUser.networkLogin : null;
                 const userId = dataUser ? dataUser.userId : null;
@@ -208,11 +203,11 @@ module.exports = {
         });
     },
 
-    sleep(milliseconds) {
+    sleep (milliseconds) {
         return new Promise((resolve) => setTimeout(resolve, milliseconds));
     },
 
-    getUserByToken(req) {
+    getUserByToken (req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const token = req.headers.authorization;
@@ -225,7 +220,7 @@ module.exports = {
         });
     },
 
-    getGroupByToken(req) {
+    getGroupByToken (req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const token = req.headers.authorization;
@@ -239,7 +234,7 @@ module.exports = {
         });
     },
 
-    getTagsGroupsByToken(req) {
+    getTagsGroupsByToken (req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const token = req.headers.authorization;
@@ -272,7 +267,7 @@ module.exports = {
         });
     },
 
-    isSCORMCompleted(status = '') {
+    isSCORMCompleted (status = '') {
         return [
             SCORMLessonStatus.COMPLETED,
             SCORMLessonStatus.FAILED,
@@ -280,7 +275,7 @@ module.exports = {
         ].includes(status.toLowerCase());
     },
 
-    getTagsGroups(groupsID) {
+    getTagsGroups (groupsID) {
         return new Promise(async (resolve, reject) => {
             try {
                 const groups = groupsID;
@@ -310,7 +305,7 @@ module.exports = {
         });
     },
 
-    calculateAverage(user) {
+    calculateAverage (user) {
         return new Promise(async (resolve, reject) => {
             try {
                 const evaluations = await HistoricEvaluation.find({
@@ -347,11 +342,102 @@ module.exports = {
         });
     },
 
-    convertMinutesToHours(min) {
+    handleStudentAverage (user) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const evaluations = await HistoricEvaluation.find({
+                    user: { $eq: user._id },
+                });
+                const trackings = await Tracking.find({
+                    userLogin: { $eq: user.networkLogin },
+                    kind: { $eq: 'ExamTracking' },
+                });
+
+                const max = (evaluations.length + trackings.length) * 100;
+                let total = 0;
+
+                for (const e of evaluations) {
+                    const rating = await calculateRatingEvaluation(
+                        e.amountQuestionsCorrect,
+                        e.amountOfQuestions
+                    );
+                    total += rating.values.correct;
+                }
+
+                for (const t of trackings) {
+                    if (t.score) total += t.score;
+                }
+                const average = Number(((total * 100) / max).toFixed(2));
+
+                const highestScoreSorted = trackings.sort((prev, curr) => {
+                    const prevScore = prev?.score ?? 0;
+                    const currScore = curr?.score ?? 0;
+                    return currScore - prevScore;
+                });
+
+                const highestScoreTrail = await Trail.findOne({
+                    'items.itemID': highestScoreSorted[0]?.item,
+                });
+
+                resolve({ average, highestScoreTrail });
+            } catch (error) {
+                reject(error);
+            }
+        });
+    },
+
+    handleStudentTrails (user, trails) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const completedTrails = [];
+                const inProgressTrails = [];
+                const allTrackingUser = await Tracking.find({
+                    userLogin: { $eq: user.networkLogin },
+                    $or: [
+                        { expiredCompletion: { $exists: false } },
+                        { expiredCompletion: { $eq: null } },
+                    ],
+                });
+                for (const t of trails) {
+                    const { trail } = module.exports.processTrailTracking(t, allTrackingUser);
+
+                    if (trail.items.every(({ itemID }) => itemID?.completion === 1)) {
+                        completedTrails.push(trail);
+                    } else {
+                        let nextItem;
+                        const item = trail.items.find(({ itemID }) => !itemID?.completion);
+                        const progress = trail.items.filter(({ itemID }) => itemID?.completion === 1).length * 100 / trail.items.length
+                        if (item) {
+                            foundItem = await Item.findById(item.itemID);
+                            nextItem = {
+                                _id: foundItem._id,
+                                titleURL: foundItem.titleURL,
+                            };
+                        }
+
+                        inProgressTrails.push({
+                            _id: trail._id,
+                            title: trail.title,
+                            thumbPath: trail.thumbPath,
+                            titleURL: trail.titleURL,
+                            nextItem,
+                            progress
+                        });
+                    }
+                }
+
+                resolve({ completedTrails, inProgressTrails });
+            } catch (error) {
+                reject(error);
+            }
+        });
+    },
+
+    convertMinutesToHours (min) {
         return moment.utc().startOf('day').add(min, 'minutes').format('HH:mm');
     },
 
-    duration(inputMilliseconds) {
+    duration (inputMilliseconds) {
         var hours;
         var minutes;
         var seconds;
@@ -386,27 +472,24 @@ module.exports = {
         return rtnStr;
     },
 
-    addHours(date) {
+    addHours (date) {
         return momentz(date).add(3, 'hours').format('YYYY-MM-DD hh:mm:ss');
     },
 
-    checksIfTheEndDateIsLessThanTheStartDate(startDate, endDate) {
+    checksIfTheEndDateIsLessThanTheStartDate (startDate, endDate) {
         if (endDate) {
-            if (
-                momentz(endDate).format('YYYY-MM-DD') <
-                momentz(startDate).format('YYYY-MM-DD')
-            )
+            if (momentz(endDate).format('YYYY-MM-DD') < momentz(startDate).format('YYYY-MM-DD'))
                 return false;
         }
         return true;
     },
 
-    removeAccents(text) {
+    removeAccents (text) {
         if (!text) text = '';
         return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     },
 
-    clearString(text) {
+    clearString (text) {
         return this.removeAccents(text)
             .replace(/[\])}[{(]/g, '')
             .split(' ')
@@ -414,7 +497,7 @@ module.exports = {
             .toUpperCase();
     },
 
-    processTrailTracking(trail, allTrackingUser) {
+    processTrailTracking (trail, allTrackingUser) {
         let containsACompletedItem = false;
         const completionDate = [];
         const scoreArr = [];
@@ -427,8 +510,7 @@ module.exports = {
                 }
             })[0];
             lastTrackingUpdate = objTracking ? objTracking.updatedAt : null;
-            const score =
-                objTracking && objTracking.score ? objTracking.score : null;
+            const score = objTracking && objTracking.score ? objTracking.score : null;
             const completionAt = objTracking ? objTracking.completionAt : null;
             const updatedAt = objTracking ? objTracking.updatedAt : null;
             const createdAt = objTracking ? objTracking.createdAt : null;
@@ -448,11 +530,7 @@ module.exports = {
                     ) {
                         tmpCompletion = 2;
                     } else {
-                        tmpCompletion = _isSCORMCompleted(
-                            objTracking.lessonStatus
-                        )
-                            ? 1
-                            : 0;
+                        tmpCompletion = _isSCORMCompleted(objTracking.lessonStatus) ? 1 : 0;
                     }
                 } else {
                     tmpCompletion = objTracking.completion;
@@ -501,24 +579,21 @@ module.exports = {
         return { trail, containsACompletedItem };
     },
 
-    processExpirationDate(trail, user) {
+    processExpirationDate (trail, user) {
         const expirationType = trail.expirationType;
         const userCreationDate = new Date(user.createdAt).getTime();
         const trailReleaseDate = new Date(trail.startDate).getTime();
         if (expirationType && expirationType.type === 'availability') {
             const expirationDate =
-                userCreationDate > trailReleaseDate
-                    ? userCreationDate
-                    : trailReleaseDate;
-            const date =
-                1000 * 60 * 60 * 24 * expirationType.value + expirationDate;
+                userCreationDate > trailReleaseDate ? userCreationDate : trailReleaseDate;
+            const date = 1000 * 60 * 60 * 24 * expirationType.value + expirationDate;
             trail.expirationDate = new Date(date);
         } else if (expirationType && expirationType.type === 'fixed') {
             trail.expirationDate = new Date(expirationType.value);
         }
         return trail;
     },
-    formatNumberCpf(value) {
+    formatNumberCpf (value) {
         const cpfLength = 11;
         if (value.length < cpfLength) {
             for (let i = value.length; i < cpfLength; i++) {
@@ -528,12 +603,12 @@ module.exports = {
         return value;
     },
 
-    formatCnpj(value) {
+    formatCnpj (value) {
         const formatValue = value.replace(/[^\w\s]/gi, '');
         return formatValue;
     },
 
-    formatNumberRegistration(value) {
+    formatNumberRegistration (value) {
         const registrationLength = 6;
         if (value.length < registrationLength) {
             for (let i = value.length; i < registrationLength; i++) {
@@ -543,12 +618,12 @@ module.exports = {
         return value;
     },
 
-    isValidDate(date) {
+    isValidDate (date) {
         const d = new Date(date);
         return d instanceof Date && !isNaN(d);
     },
 
-    findMostOccurringElements(arr, numElements) {
+    findMostOccurringElements (arr, numElements) {
         const countMap = arr.reduce((countMap, element) => {
             countMap[element] = (countMap[element] || 0) + 1;
             return countMap;
@@ -558,9 +633,26 @@ module.exports = {
         const mostOccurringElements = countArray.slice(0, numElements);
         return mostOccurringElements.map(([element]) => element);
     },
+
+    async strategyConfig () {
+        const config = await ConfigLogin.findOne({})
+            .sort({ createdAt: -1 })
+            .select({ createdAt: 0, updatedAt: 0, _id: 0, __v: 0, "formLogin._id": 0, 'ssoForm._id': 0 })
+            .exec();
+
+        return strategy = new passportSaml.Strategy(
+            {
+                entryPoint: config.sso.entrypoint,
+                issuer: config.sso.issuer,
+                callbackUrl: config.sso.callback_url,
+                cert: config.sso.certifier,
+            },
+            (profile, done) => done(null, profile),
+        )
+    }
 };
 
-function nameMonth(month) {
+function nameMonth (month) {
     const months = [
         'Janeiro',
         'Fevereiro',
@@ -578,15 +670,12 @@ function nameMonth(month) {
     return months[month - 1];
 }
 
-function calculateRatingEvaluation(amountQuestionsCorrect, amountOfQuestions) {
+function calculateRatingEvaluation (amountQuestionsCorrect, amountOfQuestions) {
     return new Promise((resolve, reject) => {
         const result = {
             values: {
                 correct: parseFloat(
-                    (
-                        (amountQuestionsCorrect * 100) /
-                        amountOfQuestions
-                    ).toFixed(2)
+                    ((amountQuestionsCorrect * 100) / amountOfQuestions).toFixed(2)
                 ),
                 incorrect: parseFloat(
                     (
@@ -602,11 +691,12 @@ function calculateRatingEvaluation(amountQuestionsCorrect, amountOfQuestions) {
     });
 }
 
-function getTrailCompletion(trail) {
+function getTrailCompletion (trail) {
     const completed = trail.items.find((val) => val.completion === 1);
     const incomplete = trail.items.find(
         (val) =>
-        val.completion != null && val.completion >= 0 && val.completion < 1 || val.completion == 2
+            (val.completion != null && val.completion >= 0 && val.completion < 1) ||
+            val.completion == 2
     );
     const notAttempted = trail.items.find((val) => val.completion === null);
     if (incomplete) {
@@ -620,14 +710,14 @@ function getTrailCompletion(trail) {
     }
 }
 
-function _isSCORMCompleted(status = '') {
+function _isSCORMCompleted (status = '') {
     return [
         SCORMLessonStatus.COMPLETED,
         SCORMLessonStatus.FAILED,
         SCORMLessonStatus.PASSED,
     ].includes(status.toLowerCase());
 }
-function returnMonthNumber(month) {
+function returnMonthNumber (month) {
     switch (month) {
         case 'Jan':
             return '01';

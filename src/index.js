@@ -7,7 +7,12 @@ const noCache = require('nocache');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
-const { htmlInjection, validateTokenRoute } = require('./utils/middlewares');
+const {
+    htmlInjection,
+    validateTokenRoute,
+    isAssessmentActive,
+    isShowcaseActive,
+} = require('./utils/middlewares');
 const { PUBLIC_PATH } = process.env;
 const app = express();
 const passport = require('./utils/passport');
@@ -34,6 +39,7 @@ var corsOptions = {
         'Content-Range',
     ],
 };
+//
 
 // if (process.env.NODE_ENV === 'local') {
 //     corsOptions = Object.assign(corsOptions, { origin: 'http://localhost:4200' })
@@ -92,7 +98,10 @@ const socialRoutes = require('./components/social/routes');
 const padletRoutes = require('./components/padlets/routes');
 const supportRoutes = require('./components/support/routes');
 const aluraRoutes = require('./components/alura/routes');
+const dashboardRoutes = require('./components/dashboard/routes');
 const unsplashRoutes = require('./components/unsplash/routes');
+const assessmentRoutes = require('./components/assessment/routes');
+const themeRoutes = require('./components/theme/routes');
 
 app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/tracking', validateTokenRoute, trackingRoutes)
@@ -111,6 +120,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/xapi', validateTokenRoute, xapiRoutes)
     .use('/suppliers', supplierRoutes)
     .use('/terms-of-use', validateTokenRoute, termsOfUseRoutes)
+    .use('/showcase', isShowcaseActive, showCaseRoutes)
     .use('/channels', validateTokenRoute, channelRoutes)
     .use('/messages', validateTokenRoute, messagesRoutes)
     .use('/messages/v2', validateTokenRoute, newMessagesRoutes)
@@ -120,11 +130,16 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/padlets', validateTokenRoute, padletRoutes)
     .use('/support', supportRoutes)
     .use('/alura', validateTokenRoute, aluraRoutes)
+    .use('/theme', themeRoutes)
     .use('/unsplash', validateTokenRoute, unsplashRoutes)
+    .use('/dashboard', validateTokenRoute, dashboardRoutes)
+    .use(
+        '/assessment',
+        isAssessmentActive,
+        validateTokenRoute,
+        assessmentRoutes
+    );
 
-if (config.showcase.active) {
-    app.use('/showcase', showCaseRoutes);
-}
 app.use(function (err, req, res, next) {
     if (err.code !== 'EBADCSRFTOKEN') return next(err);
     res.status(403);

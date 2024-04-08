@@ -168,10 +168,15 @@ module.exports = {
                 if (user.classGroups.length > 0) {
                     for (const classGroup of user.classGroups) {
                         tags.push({
-                                display: classGroup.groupCode,
-                                value: classGroup.groupCode,
-                            });
+                            display: classGroup.groupCode,
+                            value: classGroup.groupCode,
+                        });
                     }
+                }
+                if (user.assessmentGroups.length > 0) {
+                    const assessmentGroups = await Group.find({ name: { $in: user.assessmentGroups } });
+                    const assessmentGroupsTags = assessmentGroups.flatMap(({ tags }) => tags);
+                    tags.push(...assessmentGroupsTags)
                 }
                 if (user.tags.length > 0) {
 

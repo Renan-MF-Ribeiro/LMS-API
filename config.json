@@ -67,5 +67,8 @@
     },
     "socialCommentModeration": {
         "active": false
+    },
+    "assessment": {
+        "active": true
     }
 }
