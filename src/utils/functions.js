@@ -406,6 +406,7 @@ module.exports = {
                     } else {
                         let nextItem;
                         const item = trail.items.find(({ itemID }) => !itemID?.completion);
+                        const progress = trail.items.filter(({ itemID }) => itemID?.completion === 1).length * 100 / trail.items.length
                         if (item) {
                             foundItem = await Item.findById(item.itemID);
                             nextItem = {
@@ -420,6 +421,7 @@ module.exports = {
                             thumbPath: trail.thumbPath,
                             titleURL: trail.titleURL,
                             nextItem,
+                            progress
                         });
                     }
                 }

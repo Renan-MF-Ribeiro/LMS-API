@@ -31,6 +31,7 @@ const formLoginSchema = new Schema({
 const configLogin = new Schema({
     ssoForm: { type: ssoFormSchema, required: false },
     formLogin: { type: formLoginSchema, required: false },
+    singleUser: { type: Number, default: 0 }
 });
 
 
