@@ -98,6 +98,7 @@ const socialRoutes = require('./components/social/routes');
 const padletRoutes = require('./components/padlets/routes');
 const supportRoutes = require('./components/support/routes');
 const aluraRoutes = require('./components/alura/routes');
+const dashboardRoutes = require('./components/dashboard/routes');
 const unsplashRoutes = require('./components/unsplash/routes');
 const assessmentRoutes = require('./components/assessment/routes');
 const themeRoutes = require('./components/theme/routes');
@@ -131,6 +132,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/alura', validateTokenRoute, aluraRoutes)
     .use('/theme', themeRoutes)
     .use('/unsplash', validateTokenRoute, unsplashRoutes)
+    .use('/dashboard', validateTokenRoute, dashboardRoutes)
     .use(
         '/assessment',
         isAssessmentActive,
