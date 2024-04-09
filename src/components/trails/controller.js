@@ -510,6 +510,32 @@ module.exports = {
         }
     },
 
+    async duplicate (req, res) {
+        try {
+            const body = req.body;
+
+            const docClone = new Trail(body);
+            await docClone.save();
+
+            _messages.success(
+                res,
+                req,
+                body,
+                'Trail duplication',
+                'trails',
+            );
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'trails',
+                'duplication'
+            );
+        }
+    },
+
     async changeShowcase (req, res) {
         try {
             const { _id, showcase } = req.body;
