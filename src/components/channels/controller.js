@@ -7,7 +7,7 @@ const { Section } = require('../sections/model');
 const { Trail } = require('../trails/model');
 const { getTagsElegiblesByToken, checkEligibilityTagsAnd } = require('../sections/business');
 module.exports = {
-    async getChannels(req, res) {
+    async getChannels (req, res) {
         try {
             const { sort, order } = _functions.ordernation(req);
             const { skip, limit } = _functions.pagination(req);
@@ -15,16 +15,16 @@ module.exports = {
             const total = await Channel.find(
                 searchBy
                     ? {
-                          $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-                      }
+                        $or: [{ title: { $regex: searchBy, $options: 'i' } }],
+                    }
                     : {}
             ).countDocuments();
 
             const channels = await Channel.find(
                 searchBy
                     ? {
-                          $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-                      }
+                        $or: [{ title: { $regex: searchBy, $options: 'i' } }],
+                    }
                     : {}
             )
                 .sort({
@@ -57,6 +57,7 @@ module.exports = {
             }).sort({ position: 'asc' });
 
             channels = await Promise.all(channels.map(async (channel) => {
+                if (channel.type === 'alura') return channel
                 const sections = await Section.find({ _id: { $in: channel.idSections } }).select('trails');
 
                 const trailsIds = sections.reduce((trails, section) => trails.concat(section.trails), []);
@@ -83,7 +84,7 @@ module.exports = {
         }
     },
 
-    async create(req, res) {
+    async create (req, res) {
         try {
             let body = JSON.parse(req.fields.payload);
 
@@ -132,7 +133,7 @@ module.exports = {
         }
     },
 
-    async update(req, res) {
+    async update (req, res) {
         try {
             let body = JSON.parse(req.fields.payload);
             const channelId = body.channelId;
@@ -150,7 +151,7 @@ module.exports = {
                 ) {
                     return r.concat(typeof v.path != 'string' ? i : []);
                 },
-                []);
+                    []);
 
                 for (let index in indexBannersWithNoPath) {
                     let path = await azureBlob(
@@ -188,7 +189,7 @@ module.exports = {
         }
     },
 
-    async delete(req, res) {
+    async delete (req, res) {
         try {
             const findChannel = await Channel.find({ _id: req.params.id });
             if (findChannel.length) {
@@ -216,7 +217,7 @@ module.exports = {
         }
     },
 
-    async updatePosition(req, res) {
+    async updatePosition (req, res) {
         try {
             const channels = req.body;
 
