@@ -42,4 +42,5 @@ module.exports = express
     .post('/upload-material', formidable(), _controller.uploadMaterial)
     .get('/list-material/:id', _controller.listMaterial)
     .post('/download-material', _controller.downloadMaterial)
-    .post('/delete-material', _controller.deleteMaterial);
+    .post('/delete-material', _controller.deleteMaterial)
+    .put('/duplicate', isAdmin, _controller.duplicate);
