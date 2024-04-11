@@ -327,20 +327,20 @@ module.exports = {
                 if (user) {
                     const dashboardFilters = []
                     const dashConfig = await DashConfig.find();
-                    if(dashConfig){
-                        let dashFilters = dashConfig.map((x)=>{
+                    if (dashConfig) {
+                        let dashFilters = dashConfig.map((x) => {
                             return x.fields
                         })
                         dashFilters = dashFilters.flat(2)
-                        for(let filter of dashFilters){
+                        for (let filter of dashFilters) {
                             for (const map of userMap) {
                                 filter.userField = map.description == filter.userField ? map.value : filter.userField
                                 filter.dashFilter = map.description == filter.dashFilter ? map.value : filter.dashFilter
                             }
 
                             const userHasValidFieldValue = user[filter.userField] == filter.fieldValue
-                            if(userHasValidFieldValue){
-                                dashboardFilters.push({field: filter.dashFilter, value: user[filter.dashFilter], pages: filter.pages})
+                            if (userHasValidFieldValue) {
+                                dashboardFilters.push({ field: filter.dashFilter, value: user[filter.dashFilter], pages: filter.pages })
                             }
                         }
                     }
@@ -422,9 +422,9 @@ module.exports = {
                     const groupsIDS = await returnIdGroupUser(namesGroups);
 
                     const authwebPush =
-                        user.webPushAuthorization[
-                        user.webPushAuthorization.length - 1
-                        ];
+                        user.webPushAuthorization ? user.webPushAuthorization[
+                            user.webPushAuthorization.length - 1
+                        ] : null;
 
                     const token = generateToken({
                         ref: user._id,
@@ -489,6 +489,7 @@ module.exports = {
                             networkLogin: user.networkLogin,
                             userId: user._id,
                             authwebPush: authwebPush?.keys.auth,
+                            email: user.email
                         },
                         'Sucesso ao logar',
                         'users',
@@ -663,20 +664,20 @@ module.exports = {
                 if (user) {
                     const dashboardFilters = []
                     const dashConfig = await DashConfig.find();
-                    if(dashConfig){
-                        let dashFilters = dashConfig.map((x)=>{
+                    if (dashConfig) {
+                        let dashFilters = dashConfig.map((x) => {
                             return x.fields
                         })
                         dashFilters = dashFilters.flat(2)
-                        for(let filter of dashFilters){
+                        for (let filter of dashFilters) {
                             for (const map of userMap) {
                                 filter.userField = map.description == filter.userField ? map.value : filter.userField
                                 filter.dashFilter = map.description == filter.dashFilter ? map.value : filter.dashFilter
                             }
 
                             const userHasValidFieldValue = user[filter.userField] == filter.fieldValue
-                            if(userHasValidFieldValue){
-                                dashboardFilters.push({field: filter.dashFilter, value: user[filter.dashFilter], pages: filter.pages})
+                            if (userHasValidFieldValue) {
+                                dashboardFilters.push({ field: filter.dashFilter, value: user[filter.dashFilter], pages: filter.pages })
                             }
                         }
                     }
@@ -795,6 +796,7 @@ module.exports = {
                             tokenHappPlace: token_happplace,
                             networkLogin: user.networkLogin,
                             userId: user._id,
+                            email: user.email,
                         },
                         'Sucesso ao logar',
                         'users',

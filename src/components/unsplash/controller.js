@@ -6,7 +6,6 @@ const axios = require('axios');
 module.exports = {
     async search (req, res) {
         try {
-            console.log(req.query)
             const { searchBy, order, orientation, page, per_page } = req.query
 
             const response = await axios.get('https://api.unsplash.com/search/photos', {

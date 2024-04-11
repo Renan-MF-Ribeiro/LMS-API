@@ -12,18 +12,33 @@ passport.deserializeUser((user, done) => {
 
 const configurePassport = async () => {
     try {
+        let strategy
         const config = await ConfigLogin.findOne({})
             .sort({ createdAt: -1 })
+        if (config) {
 
-        const strategy = new passportSaml.Strategy(
-            {
-                entryPoint: config.ssoForm.entrypoint,
-                issuer: config.ssoForm.issuer,
-                callbackUrl: config.ssoForm.callback_url,
-                cert: config.ssoForm.certifier,
-            },
-            (profile, done) => done(null, profile),
-        );
+
+            strategy = new passportSaml.Strategy(
+                {
+                    entryPoint: config.ssoForm.entrypoint,
+                    issuer: config.ssoForm.issuer,
+                    callbackUrl: config.ssoForm.callback_url,
+                    cert: config.ssoForm.certifier,
+                },
+                (profile, done) => done(null, profile),
+            );
+        } else {
+            strategy = new passportSaml.Strategy(
+                {
+                    forceAuthn: true,
+                    entryPoint: process.env.SSO_ENTRYPOINT,
+                    issuer: process.env.SSO_ISSUER,
+                    callbackUrl: process.env.SSO_CALLBACK_URL,
+                    cert: fs.readFileSync('cert/' + process.env.SSO_CERTIFIER + '.cer', 'utf-8'),
+                },
+                (profile, done) => done(null, profile),
+            )
+        }
 
         passport.use(strategy);
     } catch (error) {
