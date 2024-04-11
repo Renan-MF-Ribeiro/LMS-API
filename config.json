@@ -70,5 +70,8 @@
     },
     "assessment": {
         "active": true
+    },
+    "collaboration": {
+        "active": true
     }
 }

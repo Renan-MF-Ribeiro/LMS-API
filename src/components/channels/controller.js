@@ -6,6 +6,9 @@ const { DOMAIN, AZURE_BLOB_URL } = process.env;
 const { Section } = require('../sections/model');
 const { Trail } = require('../trails/model');
 const { getTagsElegiblesByToken, checkEligibilityTagsAnd } = require('../sections/business');
+const config = require('../../../config.json')
+
+
 module.exports = {
     async getChannels (req, res) {
         try {
@@ -58,6 +61,8 @@ module.exports = {
 
             channels = await Promise.all(channels.map(async (channel) => {
                 if (channel.type === 'alura') return channel
+                console.log('channel.type', channel.type)
+                if (config.collaboration.active && channel.type === 'collaboration') return channel
                 const sections = await Section.find({ _id: { $in: channel.idSections } }).select('trails');
 
                 const trailsIds = sections.reduce((trails, section) => trails.concat(section.trails), []);
