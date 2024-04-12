@@ -43,6 +43,7 @@ const {
 const {
     getAzureFile,
     readXLSXUsersBuffer,
+    readCSVUsersBuffer,
     moveUserLoadToProcessed,
 } = require('../utils/files');
 const { sendMessageToKafka } = require('../components/new-messages/business');
@@ -213,7 +214,7 @@ module.exports = {
         }
     },
 
-    startUpdateTrailsViewsCron () {
+    startUpdateTrailsViewsCron() {
         new CronJob(
             '0 */1 * * *',
             () => {
@@ -259,7 +260,7 @@ module.exports = {
         examTrackingDeleteCron();
     },
 
-    executeUpdateTrailsViewsCron () {
+    executeUpdateTrailsViewsCron() {
         updateTrailsViews()
     },
 };
@@ -443,7 +444,7 @@ function groupCron(usersLastLogin, grouping) {
                 const averageCompanyCourses =
                     numberTrailsElegiblesCompany > 0
                         ? (numberTrailsCompletedCompany * 100) /
-                          numberTrailsElegiblesCompany
+                        numberTrailsElegiblesCompany
                         : 0;
 
                 const log = await AverageCourses.findOne({
@@ -530,7 +531,14 @@ async function getUsersLoad() {
     try {
         const usersLoad = await getAzureFile();
         if (usersLoad) {
-            const users = await readXLSXUsersBuffer(usersLoad.buffer);
+            let users
+
+            if (config.userLoadCsv.active) {
+                users = await readCSVUsersBuffer(usersLoad.readableStream);
+            } else {
+                users = await readXLSXUsersBuffer(usersLoad.buffer);
+            }
+
             const newUsers = [];
             const existingUsers = [];
             const usersToSend = [];
@@ -608,7 +616,13 @@ async function getUsersLoad() {
                 }
             }
             console.log('Novos usuários criados');
-            await moveUserLoadToProcessed(usersLoad.buffer);
+
+            if (config.userLoadCsv.active) {
+                users = await moveUserLoadToProcessed(usersLoad.readableStream);
+            } else {
+                users = await moveUserLoadToProcessed(usersLoad.buffer);
+            }
+           
         }
     } catch (error) {
         console.log(error);
@@ -967,7 +981,7 @@ async function cronDegreedCharge(hours) {
                         'pt',
                         String(
                             Math.ceil((itemDetails.durationHours / 60) * 10) /
-                                10
+                            10
                         )
                             .split('.')
                             .join(','),
@@ -1100,8 +1114,8 @@ async function revokeTrail() {
                     const startDate = new Date(lastCompletionAt);
                     const expirationDate = !isFixed
                         ? moment(startDate)
-                              .add(trail.certificateDue.value, 'days')
-                              .toDate()
+                            .add(trail.certificateDue.value, 'days')
+                            .toDate()
                         : new Date(trail.certificateDue.value);
 
                     return {
@@ -1155,7 +1169,7 @@ async function revokeTrail() {
     }
 }
 
-async function updateTrailsViews () {
+async function updateTrailsViews() {
     try {
         console.log('start cron todayMostSeen')
         const todayMostSeen = await TodayMostSeenTrails.find()
