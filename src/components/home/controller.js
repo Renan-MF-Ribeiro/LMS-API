@@ -295,6 +295,48 @@ const HomeController = {
             );
         }
     },
+
+    async listExpiredCertificates (req, res) {
+        try {
+            const { searchBy } = req.query;
+            req.query = { ...req.query, pageSize: req.query.pageSize ?? 5 };
+            const { skip, limit } = pagination(req);
+            const user = await getUserByToken(req);
+            const tags = await getTagsElegiblesByToken(req);
+            const elegibleTrails = await Trail.find({
+                tags: { $in: tags },
+                enabled: true,
+                startDate: { $lt: getDateTodayWithoutHours() },
+                endDate: { $gt: getDateTodayWithoutHours() },
+            }).populate('items.itemID');
+            const { completedTrails } = await handleStudentTrails(user, elegibleTrails, true);
+            let certificates = await returnCertificates(completedTrails, user);
+
+            if (searchBy) {
+                certificates = certificates.filter(({ title }) => {
+                    return title.toLowerCase().includes(searchBy.toLowerCase());
+                });
+            }
+            certificates = certificates.sort((prev, curr) => {
+                const prevConcludedAt = prev.concludedAt.getTime();
+                const currConcludedAt = curr.concludedAt.getTime();
+                return currConcludedAt - prevConcludedAt;
+            });
+
+            certificates = certificates.slice(skip, skip + limit);
+
+            _messages.success(res, req, certificates);
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'home',
+                '/certificates/expired'
+            );
+        }
+    }
 };
 
 module.exports = HomeController;
