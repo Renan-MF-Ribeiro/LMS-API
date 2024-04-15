@@ -70,5 +70,11 @@
     },
     "assessment": {
         "active": true
+    },
+    "collaboration": {
+        "active": true
+    },
+    "userLoadCsv": {
+        "active": true
     }
 }

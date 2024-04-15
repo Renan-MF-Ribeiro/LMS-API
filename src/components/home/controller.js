@@ -198,6 +198,7 @@ const HomeController = {
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
+            const courses = await getStudentCourses(req);
             const elegibleTrails = await Trail.find({
                 tags: { $in: tags },
                 enabled: true,
@@ -225,6 +226,7 @@ const HomeController = {
                 average,
                 highestScoreTitle,
                 highestScoreUrl,
+                courses
             });
         } catch (error) {
             console.log(error);

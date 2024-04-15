@@ -510,6 +510,32 @@ module.exports = {
         }
     },
 
+    async duplicate (req, res) {
+        try {
+            const body = req.body;
+
+            const docClone = new Trail(body);
+            await docClone.save();
+
+            _messages.success(
+                res,
+                req,
+                body,
+                'Trail duplication',
+                'trails',
+            );
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'trails',
+                'duplication'
+            );
+        }
+    },
+
     async changeShowcase (req, res) {
         try {
             const { _id, showcase } = req.body;
@@ -947,55 +973,52 @@ module.exports = {
                     total,
                 });
             } else {
-                total = await Trail.find(
-                    searchBy
-                        ? {
-                            $or: [
-                                {
-                                    description: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    title: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                            ],
-                        }
-                        : {}
-                ).countDocuments();
+                let query = searchBy
+                    ? {
+                        $or: [
+                            {
+                                description: {
+                                    $regex: searchBy,
+                                    $options: 'i',
+                                }
+                            },
 
-                const trails = await Trail.find(
-                    searchBy
-                        ? {
-                            $or: [
-                                {
-                                    description: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
+                            {
+                                title: {
+                                    $regex: searchBy,
+                                    $options: 'i',
                                 },
-                                
-                                {
-                                    title: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                            ],
-                        }
-                        : {}
-                )
+                            },
+                        ],
+
+                    }
+                    : {}
+
+                if (noLimit) {
+                    query = {
+                        ...query,
+                        enabled: true,
+                        archive: { $ne: true }
+                    }
+                }
+                total = await Trail.find(query).countDocuments();
+
+                const trails = await Trail.find(query)
                     .populate('items.itemID')
                     .sort({ [order]: sort })
                     .skip(parseInt(skip))
-                    .limit(parseInt(noLimit ? 1500 : limit));
+                    .limit(parseInt(noLimit ? 0 : limit));
+
+                const data = trails.map((trail) => ({
+                    ...trail._doc,
+                    itensLength: trail.items.length,
+                    workload: trail.items.reduce((accumulator, currentValue) => {
+                        return accumulator + (currentValue.itemID.durationHours || 0);
+                    }, 0)
+                }))
 
                 _messages.success(res, req, {
-                    data: trails,
+                    data,
                     total,
                 });
             }
@@ -1010,6 +1033,7 @@ module.exports = {
             );
         }
     },
+
 
     async returnItemsByTrail (req, res) {
         try {

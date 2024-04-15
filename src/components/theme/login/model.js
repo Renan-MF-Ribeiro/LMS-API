@@ -39,7 +39,22 @@ const loginSchema = new mongoose.Schema({
             hint: { type: String },
         },
         singleUser: {
-            type: { type: String },
+            label: { type: String },
+            bgColor: { type: String },
+            textColor: { type: String },
+            text: { type: String },
+            tooltip: { type: String },
+            hint: { type: String },
+        },
+        formAcess: {
+            label: { type: String },
+            bgColor: { type: String },
+            textColor: { type: String },
+            text: { type: String },
+            tooltip: { type: String },
+            hint: { type: String },
+        },
+        samlAcess: {
             label: { type: String },
             bgColor: { type: String },
             textColor: { type: String },

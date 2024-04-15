@@ -1,0 +1,73 @@
+const mongoose = require('mongoose')
+const { connect } = require('../../../utils/db')
+connect()
+
+const schemaOptions = {
+    strict: 'throw',
+    timestamps: true,
+    collation: { locale: 'en_US', strength: 1 },
+}
+
+const ColorPaletteSchema = new mongoose.Schema({
+    _id: false,
+    50: { type: String },
+    100: { type: String },
+    200: { type: String },
+    300: { type: String },
+    400: { type: String },
+    500: { type: String },
+    600: { type: String },
+    700: { type: String },
+    800: { type: String },
+    900: { type: String },
+    A100: { type: String },
+    A200: { type: String },
+    A400: { type: String },
+    A700: { type: String },
+    contrast: {
+        _id: false,
+        50: { type: String },
+        100: { type: String },
+        200: { type: String },
+        300: { type: String },
+        400: { type: String },
+        500: { type: String },
+        600: { type: String },
+        700: { type: String },
+        800: { type: String },
+        900: { type: String },
+        A100: { type: String },
+        A200: { type: String },
+        A400: { type: String },
+        A700: { type: String },
+    }
+})
+
+const paletteSchema = new mongoose.Schema({
+    _id: false,
+    primary: { type: String },
+    primaryPalette: ColorPaletteSchema,
+    accent: { type: String },
+    accentPalette: ColorPaletteSchema,
+    tertiary: { type: String },
+    tertiaryPalette: ColorPaletteSchema,
+    quaternary: { type: String },
+    quaternaryPalette: ColorPaletteSchema,
+    quinary: { type: String },
+    quinaryPalette: ColorPaletteSchema,
+    sixth: { type: String },
+})
+
+const themeSchema = new mongoose.Schema({
+    logo: { type: String },
+    logo_admin: { type: String },
+    palette: paletteSchema
+}, {
+    ...schemaOptions,
+})
+
+const Theme = mongoose.model('theme', themeSchema)
+
+module.exports = {
+    Theme,
+}

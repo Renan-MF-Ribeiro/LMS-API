@@ -82,7 +82,7 @@ module.exports = {
                         .populate({
                             path: 'items.itemID',
                             match: matchObj,
-                            select: { '_id': 1,'title':1, 'contentPath': 1, 'durationHours': 1, 'thumbPath': 1, 'titleURL': 1,'bannerPath': 1, 'startDate': 1, 'endDate': 1, 'highlighted': 1  },
+                            select: { '_id': 1, 'title': 1, 'contentPath': 1, 'durationHours': 1, 'thumbPath': 1, 'titleURL': 1, 'bannerPath': 1, 'startDate': 1, 'endDate': 1, 'highlighted': 1, 'description': 1 },
                             populate: {
                                 path: 'idEvaluation',
                                 select: 'description',

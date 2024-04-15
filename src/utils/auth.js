@@ -91,13 +91,13 @@ module.exports = {
             {
                 perfil: obj.perfil,
                 clientID: obj.clientID,
+                dashFilters: obj.filters,
             },
             ANALYTICS_SECRET_KEY,
             {
                 expiresIn: '12h',
             }
         );
-
         return token;
     },
 
