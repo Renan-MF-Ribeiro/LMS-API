@@ -8,4 +8,4 @@ module.exports = express
     .get('/dashboard-student', isStudent, _controller.dashboardStudent)
     .get('/dashboard-studentv2', isStudent, _controller.dashboardStudentv2)
     .get('/certificates', isStudent, _controller.listCertificates)
-    .get('/certificates/expired', isStudent, _controller.listCertificates)
+    .get('/certificates/expired', isStudent, _controller.listExpiredCertificates)
