@@ -437,6 +437,29 @@ const TrackingController = {
                     itemDataArr.push(itemData);
                 }
 
+                let certificate = null
+                const completionAt = trail.completionAt.toString() != 'Invalid Date'
+                if (completionAt && trail.certificate === 1) {
+                    certificate = {
+                        clientId: process.env.CLIENT_ID,
+                        completionDate: trail.completionAt,
+                        courseLoad: trail.items.reduce((accumulator, currentValue) => {
+                            return accumulator + (currentValue.durationHours || 0);
+                        }, 0),
+                        userName: '',
+                        userId: userLogin,
+                        expirationDate: trail.expirationDate,
+                        certificateDue: trail.certificateDue,
+                        workload: trail.scoreAverage,
+                        layoutId: trail.certificateLayout,
+                        trailId: trail._id,
+                        trailName: trail.title,
+                        itemId: trail.itemId,
+                        itemName: trail.title,
+
+                    }
+                }
+
                 data = {
                     trailName: trail.title,
                     items: itemDataArr,
@@ -444,6 +467,8 @@ const TrackingController = {
                     completionAt: trail.completionAt,
                     updatedAt: trail.lastTrackingUpdate,
                     completion: (100 * completedTrails.length) / allItems,
+                    hasCertificate: certificate !== null,
+                    certificate
                 };
                 processedTrailsWithTracking.push(data);
             }
