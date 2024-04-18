@@ -15,26 +15,32 @@ module.exports = {
             const { sort, order } = _functions.ordernation(req);
             const { skip, limit } = _functions.pagination(req);
             const searchBy = req.query.searchBy;
-            const total = await Channel.find(
-                searchBy
-                    ? {
-                        $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-                    }
-                    : {}
-            ).countDocuments();
 
-            const channels = await Channel.find(
-                searchBy
-                    ? {
-                        $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-                    }
-                    : {}
-            )
+            let OptionalChannel = [{}]
+            if (!config.alura.active) {
+                OptionalChannel.push({ type: { $ne: 'alura' } })
+            }
+
+            if (!config.collaboration.active) {
+                OptionalChannel.push({ type: { $ne: 'collaboration' } })
+            }
+
+            let query = searchBy
+                ? {
+                    title: { $regex: searchBy, $options: 'i' },
+                    $and: OptionalChannel
+                }
+                : {
+                    $and: OptionalChannel
+                }
+
+
+            const total = await Channel.find(query).countDocuments();
+
+            const channels = await Channel.find(query)
                 .sort({
                     [order]: sort,
                 })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit));
 
             _messages.success(res, req, {
                 data: channels,

@@ -386,17 +386,26 @@ module.exports = {
         });
     },
 
-    handleStudentTrails (user, trails) {
+    handleStudentTrails (user, trails, onlyExpired = false) {
         return new Promise(async (resolve, reject) => {
             try {
                 const completedTrails = [];
                 const inProgressTrails = [];
                 const allTrackingUser = await Tracking.find({
                     userLogin: { $eq: user.networkLogin },
-                    $or: [
-                        { expiredCompletion: { $exists: false } },
-                        { expiredCompletion: { $eq: null } },
-                    ],
+                    ...(!onlyExpired
+                        ? {
+                              $or: [
+                                  { expiredCompletion: { $exists: false } },
+                                  { expiredCompletion: { $eq: null } },
+                              ],
+                          }
+                        : {
+                              $and: [
+                                  { expiredCompletion: { $exists: true } },
+                                  { expiredCompletion: { $ne: null } },
+                              ],
+                          }),
                 });
                 for (const t of trails) {
                     const { trail } = module.exports.processTrailTracking(t, allTrackingUser);

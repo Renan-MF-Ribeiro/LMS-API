@@ -71,6 +71,74 @@ function bufferToStream(binary) {
     return readableInstanceStream;
 }
 
+const forEachRowCSV = (
+    row,
+    rowNumber,
+    map,
+    labels,
+    users,
+    previousHyperLink
+) => {
+    if (rowNumber === 1) {
+        // rowNumber === 1 means its headers
+        for (const columnHeader of row.values) {
+            const mapEntries = Object.entries(map);
+            const labelDB = mapEntries.find(
+                (entry) => entry[1] && columnHeader && entry[1] === columnHeader
+            )?.[0];
+            labels.push(labelDB);
+        }
+    } else {
+        const tmpUser = {};
+        previousHyperLink.index = -1;
+
+        for (const value of row.values) {
+            if (!value) continue;
+
+            let labelIndex;
+            if (value.text) {
+                row.values.find((findValue, findIndex) => {
+                    if (!findValue?.text) return false;
+                    labelIndex = findIndex;
+                    return (
+                        findValue &&
+                        value &&
+                        findValue.text &&
+                        value.text &&
+                        findValue.text === value.text &&
+                        (previousHyperLink.index === -1 ||
+                            findIndex > previousHyperLink.index)
+                    );
+                });
+                previousHyperLink.index = labelIndex;
+            } else {
+                row.values.find((findValue, findIndex) => {
+                    if (findValue?.text) return false;
+                    if (
+                        tmpUser[labels[findIndex]] &&
+                        tmpUser[labels[findIndex]] === findValue
+                    )
+                        return false;
+
+                    labelIndex = findIndex;
+                    return findValue === value;
+                });
+            }
+
+            if (labels[labelIndex] && row.values[labelIndex]) {
+                let tmpValue =
+                    row.values[labelIndex].text ?? row.values[labelIndex] ?? '';
+
+                if (typeof tmpValue === 'string') {
+                    tmpValue = tmpValue.trim()
+                }
+                tmpUser[labels[labelIndex]] = tmpValue;
+            }
+        }
+        users.push(tmpUser);
+    }
+};
+
 const forEachRow = (row, rowNumber, map, labels, users, previousHyperLink) => {
     if (rowNumber === 1) {
         // rowNumber === 1 means its headers
@@ -206,12 +274,12 @@ module.exports = {
             process.env.NODE_ENV === 'local'
                 ? url
                 : url.replace(
-                      AZURE_BLOB_URL.substring(
-                          0,
-                          AZURE_BLOB_URL.lastIndexOf('/')
-                      ) + `/${container}`,
-                      DOMAIN
-                  );
+                    AZURE_BLOB_URL.substring(
+                        0,
+                        AZURE_BLOB_URL.lastIndexOf('/')
+                    ) + `/${container}`,
+                    DOMAIN
+                );
         return url;
     },
 
@@ -224,7 +292,7 @@ module.exports = {
             const containerClient =
                 blobServiceClient.getContainerClient('sftp');
             const blockBlobClient = containerClient.getBlockBlobClient(
-                `${directory}/Happmobi_Carga.xlsx`
+                config.userLoadCsv.active ? `${directory}/Happmobi_Carga.csv` : `${directory}/Happmobi_Carga.xlsx`
             );
             const downloadBlobResponse =
                 await blockBlobClient.downloadToBuffer();
@@ -258,7 +326,7 @@ module.exports = {
             const containerClient =
                 blobServiceClient.getContainerClient('sftp');
             const blockBlobClient = containerClient.getBlobClient(
-                `${directory}/Happmobi_Carga.xlsx`
+                config.userLoadCsv.active ? `${directory}/Happmobi_Carga.csv` : `${directory}/Happmobi_Carga.xlsx`
             );
             await blockBlobClient.delete();
 
@@ -464,7 +532,7 @@ module.exports = {
 
         try {
             shelljs.mkdir('-p', _path);
-        } catch {}
+        } catch { }
 
         return _path;
     },
@@ -576,8 +644,8 @@ module.exports = {
 
         const map =
             connectMaps.user &&
-            Object.keys(connectMaps.user).length > 0 &&
-            onboarding == false
+                Object.keys(connectMaps.user).length > 0 &&
+                onboarding == false
                 ? connectMaps.user
                 : defaultUserMap;
         return new Promise((resolve, reject) => {
@@ -605,6 +673,46 @@ module.exports = {
                 resolve(users);
             });
         });
+    },
+
+    async readCSVUsersBuffer(file, onboarding = false) {
+        const getMapsResponse = await axios.get(
+            `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
+            {
+                headers: {
+                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                },
+            }
+        );
+        const connectMaps = getMapsResponse.data;
+
+        const map =
+            connectMaps.user && Object.keys(connectMaps.user).length > 0
+                ? connectMaps.user
+                : defaultUserMap;
+
+        const workbook = new ExcelJS.Workbook();
+
+        const worksheet = await workbook.csv.read(file, {
+            parserOptions: { delimiter: ';' },
+        });
+
+        const labels = [];
+        const users = [];
+        let previousHyperLink = { index: -1 };
+
+        worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+            return forEachRowCSV(
+                row,
+                rowNumber,
+                map,
+                labels,
+                users,
+                previousHyperLink
+            );
+        });
+
+        return users;
     },
 
     async readXLSXUsersBuffer(file) {
