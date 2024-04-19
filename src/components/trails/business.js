@@ -220,4 +220,24 @@ module.exports = {
             }
         });
     },
+
+    async processTrailWorkload (trails) {
+        try {
+            return await Promise.all(trails.map(async (trail) => {
+                const itensLength = trail.items.length;
+                const workload = trail.items.reduce((accumulatorPromise, currentValue) => {
+                    const accumulator = accumulatorPromise;
+                    const durationHours = currentValue.itemID.enabled == 1 ? (currentValue.itemID.durationHours || 0) : 0;
+                    return accumulator + durationHours;
+                }, 0);
+                return {
+                    ...trail._doc,
+                    itensLength,
+                    workload
+                };
+            }));
+        } catch (error) {
+            throw new Error("Erro ao processar os dados: " + error.message);
+        }
+    }
 };
