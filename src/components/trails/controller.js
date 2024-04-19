@@ -1013,7 +1013,10 @@ module.exports = {
                     ...trail._doc,
                     itensLength: trail.items.length,
                     workload: trail.items.reduce((accumulator, currentValue) => {
-                        return accumulator + (currentValue.itemID.durationHours || 0);
+                        if (currentValue.itemID.enabled === 1) {
+                            return accumulator + (currentValue.itemID.durationHours || 0);
+                        }
+                        return accumulator
                     }, 0)
                 }))
 
