@@ -26,6 +26,7 @@ const AssessmentController = {
         try {
             const uri = `${host}/pillars/${clientId}`;
             const { data } = await axios.post(uri, req.body, { headers });
+            await handlePillarTags(req.body.eligibilities);
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -37,6 +38,7 @@ const AssessmentController = {
         try {
             const uri = `${host}/pillars/${clientId}`;
             const { data } = await axios.put(uri, req.body, { headers });
+            await handlePillarTags(req.body.eligibilities);
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -314,8 +316,31 @@ const AssessmentController = {
         const { data } = await axios.get(uri, { headers });
         const eligibilities = data.eligibilities.flatMap((eligibility) => eligibility.tags);
         const assessmentGroups = await Group.find({ 'tags.value': { $in: eligibilities } });
-        await User.updateOne({ _id }, { $set: { assessmentGroups: assessmentGroups.flatMap(({ name }) => name) } });
+        await User.updateOne(
+            { _id },
+            { $set: { assessmentGroups: assessmentGroups.flatMap(({ name }) => name) } }
+        );
     },
 };
+
+async function handlePillarTags(eligibilities) {
+    if (!eligibilities) return;
+
+    const tags = eligibilities.flatMap(({ tags }) => tags);
+    for (const tag of tags) {
+        const group = await Group.findOne({
+            $or: [{ 'tags.display': tag }, { 'tags.value': tag }],
+        });
+        if (!group) {
+            await Group.create({
+                name: tag,
+                tags: [{
+                    display: tag,
+                    value: tag
+                }],
+            });
+        }
+    }
+}
 
 module.exports = AssessmentController;
