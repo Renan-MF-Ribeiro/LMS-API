@@ -25,7 +25,7 @@ const { CourseModel } = require('../courses/model')
 const { Log } = require('../logs/model');
 const mongoose = require('mongoose');
 
-const { checkItem } = require('./business');
+const { checkItem, processTrailWorkload } = require('./business');
 
 const { Evaluation } = require('../assessments/model');
 const { User } = require('../users/model');
@@ -1009,13 +1009,7 @@ module.exports = {
                     .skip(parseInt(skip))
                     .limit(parseInt(noLimit ? 0 : limit));
 
-                const data = trails.map((trail) => ({
-                    ...trail._doc,
-                    itensLength: trail.items.length,
-                    workload: trail.items.reduce((accumulator, currentValue) => {
-                        return accumulator + (currentValue.itemID.durationHours || 0);
-                    }, 0)
-                }))
+                const data = await processTrailWorkload(trails)
 
                 _messages.success(res, req, {
                     data,
