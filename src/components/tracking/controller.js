@@ -438,8 +438,9 @@ const TrackingController = {
                 }
 
                 let certificate = null
-                const completionAt = trail.completionAt.toString() != 'Invalid Date'
-                if (completionAt && trail.certificate === 1) {
+
+                const completed = completedTrails.length == allItems
+                if (trail.certificate === 1 && completed) {
                     certificate = {
                         clientId: process.env.CLIENT_ID,
                         completionDate: trail.completionAt,
