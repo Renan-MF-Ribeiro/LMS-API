@@ -5,6 +5,7 @@ const _messages = require('../../utils/messages');
 const { Trail } = require('../trails/model');
 const { generateSSOToken } = require('../../utils/auth');
 const { User } = require('../users/model');
+const { UsersWithProcessedTags } = require('../courses/model')
 const config = require('../../../config.json');
 
 
@@ -260,7 +261,7 @@ module.exports = {
         try {
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}`;
             const user = await _functions.getUserByToken(req)
-            const body = { ...req.body, userId: user._id, userName: user.name, moderated: config.socialCommentModeration.active};
+            const body = { ...req.body, userId: user._id, userName: user.name, moderated: req.body.moderated};
             const { data } = await axios.post(uri, body);
             _messages.success(res, req, data, 'ok', 'social', 'createComment');
             return;
@@ -487,9 +488,39 @@ module.exports = {
 
     async getLikesByTrailId(req, res) {
         try {
+            let allowed = false
+            let blocked = false
+            let moderated = false
             const { trailId, userId } = req.params;
-            const uri = `${process.env.API_SOCIAL}/home/like/${trailId}/${userId}`;
+            const uri = `${process.env.API_SOCIAL}/home/like/${process.env.CLIENT_ID}/${trailId}/${userId}`;
             const { data } = await axios.get(uri);
+            const { users } = data
+
+            if(users){
+                for(const user of users.allowed){
+                    if(user.userId == userId){
+                        allowed = true
+                        data.userAllowed = allowed
+                    }
+                }
+
+                for(const user of users.blocked){
+                    if(user.userId == userId){
+                        blocked = true
+                        data.userBlocked = blocked
+                    }
+                }
+
+                for(const user of users.moderated){
+                    if(user.userId == userId){
+                        moderated = true
+                        data.userModerated = moderated
+                    }
+                }
+            }
+
+            delete data.users
+
             _messages.success(
                 res,
                 req,
@@ -604,12 +635,11 @@ module.exports = {
             return;
         }
     },
-
+    
     async shareSocialContent(req, res) {
         try {
-            const { trailId } = req.params;
             const { name } = await _functions.getUserByToken(req);
-            const { usersArray } = req.body;
+            const { users, trailId } = req.body;
 
             const trail = await Trail.findById(trailId, 'title titleURL');
 
@@ -618,7 +648,7 @@ module.exports = {
             const messages = [];
             const redirectTo = `/menu/${trail.titleURL}`;
 
-            for(let id of usersArray){
+            for(let id of users){
                 const foundUser = await User.findById(id)
                 const token = generateSSOToken({
                     networkLogin: foundUser.networkLogin,
@@ -668,6 +698,51 @@ module.exports = {
                 'Operação inválida',
                 'social',
                 'shareSocialContent'
+            );
+            return;
+        }
+    },
+
+    async getShareTargets(req, res) {
+        try {
+            const { trailId, searchBy } = req.query;
+            const elegibleUsers = []
+
+            const trail = await Trail.findById(trailId, 'title titleURL tags -_id');
+
+            const tags = trail.tags.map((e) => e.value);
+
+            const usersWithTags = await UsersWithProcessedTags.find(searchBy ? {
+                $or: [
+                    { name: { $regex: searchBy, $options: 'i' } },
+                ],
+                userTags: { $in: tags },
+            } : {
+                userTags: { $in: tags },
+            }).lean();
+
+            for(const user of usersWithTags){
+                elegibleUsers.push({name: user.name, _id: user._id})
+            }
+
+            _messages.success(
+                res,
+                req,
+                elegibleUsers,
+                'ok',
+                'social',
+                'getShareTargets'
+            );
+            return;
+        } catch (error) {
+            console.log(error)
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'getShareTargets'
             );
             return;
         }
