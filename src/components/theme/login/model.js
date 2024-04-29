@@ -13,6 +13,7 @@ const loginSchema = new mongoose.Schema({
         login: {
             bgColor: { type: String },
             textColor: { type: String },
+            border: { type: Number },
             text: { type: String },
             tooltip: { type: String },
             hint: { type: String },
@@ -20,6 +21,7 @@ const loginSchema = new mongoose.Schema({
         sso: {
             bgColor: { type: String },
             textColor: { type: String },
+            border: { type: Number },
             text: { type: String },
             tooltip: { type: String },
             hint: { type: String },
@@ -27,6 +29,7 @@ const loginSchema = new mongoose.Schema({
         recoveryPassword: {
             bgColor: { type: String },
             textColor: { type: String },
+            border: { type: Number },
             text: { type: String },
             tooltip: { type: String },
             hint: { type: String },
@@ -34,6 +37,7 @@ const loginSchema = new mongoose.Schema({
         singin: {
             bgColor: { type: String },
             textColor: { type: String },
+            border: { type: Number },
             text: { type: String },
             tooltip: { type: String },
             hint: { type: String },
@@ -42,6 +46,7 @@ const loginSchema = new mongoose.Schema({
             label: { type: String },
             bgColor: { type: String },
             textColor: { type: String },
+            border: { type: Number },
             text: { type: String },
             tooltip: { type: String },
             hint: { type: String },
@@ -50,6 +55,7 @@ const loginSchema = new mongoose.Schema({
             label: { type: String },
             bgColor: { type: String },
             textColor: { type: String },
+            border: { type: Number },
             text: { type: String },
             tooltip: { type: String },
             hint: { type: String },
@@ -58,6 +64,7 @@ const loginSchema = new mongoose.Schema({
             label: { type: String },
             bgColor: { type: String },
             textColor: { type: String },
+            border: { type: Number },
             text: { type: String },
             tooltip: { type: String },
             hint: { type: String },
@@ -78,6 +85,7 @@ const loginSchema = new mongoose.Schema({
     background: { type: String },
     backgroundMobile: { type: String },
     logo: { type: String },
+    cardColor: { type: String }
 }, {
     ...schemaOptions,
 })

@@ -33,12 +33,20 @@ const CourseSChema = new mongoose.Schema(
             required: true,
             default: false,
         },
-        qrCode: { type: String, required: true, trim: true },
+        qrCode: {
+            type: String, required: true, trim: true,
+            transform: (qrCode) => {
+                if (qrCode == 'undefined' || qrCode == 'null' || !qrCode) {
+                    return null
+                }
+                return qrCode
+            },
+        },
         tags: { type: Array, required: false },
         mandatory: { type: Array, required: false },
         completion: { type: Date, required: false },
         completionAt: { type: Date, required: false },
-        thumbPath: { type: String, trim: true, required: false  },
+        thumbPath: { type: String, trim: true, required: false },
         instructor: { type: 'ObjectId', ref: 'users', required: false },
         inWaitList: { type: Boolean, required: false, default: false },
         score: { type: Number, required: false, default: null },
@@ -64,7 +72,7 @@ const WaitListSchema = new mongoose.Schema(
         userID: { type: 'ObjectId', ref: 'users', required: true },
         courseID: { type: 'ObjectId', ref: 'course', required: true },
         joinDate: { type: Date, required: false },
-        sent: {type: Boolean, default: false }
+        sent: { type: Boolean, default: false }
     },
     {
         ...schemaOptions,
@@ -156,13 +164,13 @@ const vwCoursesWithTagsAndUsers = new mongoose.Schema({
 const vwWaitListsByCourses = new mongoose.Schema({
     title: { type: String, required: true, trim: true },
     users: { type: Array, required: true },
-    sent: {type: Boolean, default: false }
+    sent: { type: Boolean, default: false }
 });
 
 const vwWaitListsUser = new mongoose.Schema({
-    course: { type: Object, required: true},
+    course: { type: Object, required: true },
     user: { type: Object, required: true },
-    sent: {type: Boolean, default: false }
+    sent: { type: Boolean, default: false }
 });
 
 const vwCoursesWithUsers = new mongoose.Schema({

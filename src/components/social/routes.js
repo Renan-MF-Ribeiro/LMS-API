@@ -2,8 +2,7 @@ const express = require('express');
 const _controller = require('./controller');
 const { isAdmin } = require('../../utils/middlewares');
 
-module.exports = express
-    .Router()
+module.exports = express.Router()
     .get('/config', isAdmin, _controller.getConfig)
     .put('/config', isAdmin, _controller.putConfig)
     .get('/users-lists', isAdmin, _controller.getUsers)
@@ -27,4 +26,5 @@ module.exports = express
     .get('/favorite/:userId', _controller.getFavoritesByUserId)
     .put('/favorite/update/:favoriteId', _controller.updateFavorite)
     //share
-    .post('/share/:trailId', _controller.shareSocialContent);
+    .post('/share', _controller.shareSocialContent)
+    .get('/share/users', _controller.getShareTargets);

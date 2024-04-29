@@ -5,6 +5,8 @@ const {
 
 const { Trail } = require('./model');
 const { Item } = require('../items/model');
+const config = require('../../../config.json')
+const axios = require('axios');
 
 module.exports = {
     async checkItem (item) {
@@ -47,6 +49,15 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             try {
                 let trails = [];
+                let socialConfig;
+                let socialStatus = ""
+
+                if (config.social.active) {
+                    const uri = `${process.env.API_SOCIAL}/client-config/${process.env.CLIENT_ID}`;
+                    const { data } = await axios.get(uri);
+                    socialConfig = data
+                }
+
 
                 const matchObj = filterEnabled
                     ? {
@@ -113,6 +124,27 @@ module.exports = {
                             supportMaterialEnabled = true;
                         }
 
+                        if (socialConfig) {
+                            const trailTags = trail.tags.map((tag) => tag.value)
+                            for (const tag of socialConfig.tagsLists.allowed) {
+                                if (trailTags.includes(tag)) {
+                                    socialStatus = "ALLOWED"
+                                }
+                            }
+
+                            for (const tag of socialConfig.tagsLists.blocked) {
+                                if (trailTags.includes(tag)) {
+                                    socialStatus = "BLOCKED"
+                                }
+                            }
+
+                            for (const tag of socialConfig.tagsLists.moderated) {
+                                if (trailTags.includes(tag)) {
+                                    socialStatus = "MODERATED"
+                                }
+                            }
+                        }
+
                         arrTrails.push({
                             _id: trail._id,
                             enabled: trail.enabled,
@@ -145,6 +177,8 @@ module.exports = {
                             externalPlayer: trail.externalPlayer,
                             certificateLayout: trail.certificateLayout,
                             supportMaterialEnabled: supportMaterialEnabled,
+                            socialStatus: socialStatus || null,
+                            innerTextBanner: trail.innerTextBanner
                         });
                     }
                 } else {
@@ -179,6 +213,27 @@ module.exports = {
                             supportMaterialEnabled = true;
                         }
 
+                        if (socialConfig) {
+                            const trailTags = trail.tags.map((tag) => tag.value)
+                            for (const tag of socialConfig.tagsLists.allowed) {
+                                if (trailTags.includes(tag)) {
+                                    socialStatus = "ALLOWED"
+                                }
+                            }
+
+                            for (const tag of socialConfig.tagsLists.blocked) {
+                                if (trailTags.includes(tag)) {
+                                    socialStatus = "BLOCKED"
+                                }
+                            }
+
+                            for (const tag of socialConfig.tagsLists.moderated) {
+                                if (trailTags.includes(tag)) {
+                                    socialStatus = "MODERATED"
+                                }
+                            }
+                        }
+
                         arrTrails.push({
                             _id: trail._id,
                             enabled: trail.enabled,
@@ -211,6 +266,8 @@ module.exports = {
                             externalPlayer: trail.externalPlayer,
                             certificateLayout: trail.certificateLayout,
                             supportMaterialEnabled: supportMaterialEnabled,
+                            socialStatus: socialStatus || null,
+                            innerTextBanner: trail.innerTextBanner
                         });
                     }
                 }
@@ -227,7 +284,7 @@ module.exports = {
                 const itensLength = trail.items.length;
                 const workload = trail.items.reduce((accumulatorPromise, currentValue) => {
                     const accumulator = accumulatorPromise;
-                    const durationHours = currentValue.itemID.enabled == 1 ? (currentValue.itemID.durationHours || 0) : 0;
+                    const durationHours = currentValue.itemID?.enabled == 1 ? (currentValue.itemID.durationHours || 0) : 0;
                     return accumulator + durationHours;
                 }, 0);
                 return {

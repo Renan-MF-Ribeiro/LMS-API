@@ -65,6 +65,9 @@
     "alura": {
         "active": true
     },
+    "social": {
+        "active": true
+    },
     "socialCommentModeration": {
         "active": false
     },

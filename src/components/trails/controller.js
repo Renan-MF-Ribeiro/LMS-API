@@ -580,9 +580,9 @@ module.exports = {
 
     async update (req, res) {
         try {
-            const { thumb, banner, background } = req.files
+            let { thumb, banner, background, innerTextBanner } = req.files
             const { _id } = JSON.parse(req.fields.payload)
-            let { thumbPath, bannerPath, backgroundPath } = await Trail.findOne(
+            let { thumbPath, bannerPath, backgroundPath, } = await Trail.findOne(
                 { _id: { $eq: _id } },
             )
 
@@ -628,6 +628,10 @@ module.exports = {
                     }
                     if (banner) {
                         bannerPath = await azureBlob(banner, 'trails/banners')
+                    }
+
+                    if (innerTextBanner) {
+                        innerTextBanner = await azureBlob(innerTextBanner, 'trails/banners')
                     }
 
                     if (background) {
@@ -695,6 +699,7 @@ module.exports = {
                         thumbPath,
                         bannerPath,
                         backgroundPath,
+                        innerTextBanner
                     }
 
                     const [trail] = await Trail.find({
