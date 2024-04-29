@@ -13,6 +13,7 @@ const {
     returnIdProfileUser,
     returnIdGroupUser,
 } = require('../../utils/auth');
+const { DashConfig } = require('../dashboard/model');
 
 const { Log } = require('../logs/model');
 const bcrypt = require('bcryptjs');
@@ -331,6 +332,74 @@ module.exports = {
                 }
             );
         });
+    },
+
+    async processDashFilters(user) {
+        let userMap = [
+            { description: 'LOGIN', value: 'networkLogin' },
+            { description: 'SENHA', value: 'password' },
+            { description: 'DATA_CRIACAO', value: 'createDate' },
+            { description: 'NOME', value: 'name' },
+            { description: 'EMAIL', value: 'email' },
+            { description: 'MATRICULA', value: 'registration' },
+            { description: 'STATUS', value: 'status' },
+            { description: 'CPF', value: 'cpf' },
+            { description: 'DATA_NASC', value: 'birthDate' },
+            { description: 'IDENTIDADE_DE_GENERO', value: 'genderIdentity' },
+            { description: 'PAIS', value: 'country' },
+            { description: 'CIDADE', value: 'city' },
+            { description: 'ESTADO', value: 'state' },
+            { description: 'EMPRESA', value: 'company' },
+            { description: 'ADMISSAO', value: 'admission' },
+            { description: 'LOCALIDADE', value: 'locality' },
+            { description: 'CARGO', value: 'office' },
+            { description: 'NIVEL_HIERARQUICO', value: 'hierarchicalLevel' },
+            { description: 'TAREFA', value: 'task' },
+            { description: 'CENTRO_DE_CUSTO', value: 'costCenter' },
+            { description: 'DESCRICAO_CENTRO_DE_CUSTO', value: 'costCenterDescription' },
+            { description: 'LOJA', value: 'store' },
+            { description: 'IDENTIFICACAO_LOJA', value: 'storeCode' },
+            { description: 'GRUPO_LOJA', value: 'storeGroup' },
+            { description: 'GRUPO_LOJA_DESCRICAO', value: 'storeGroupDescription' },
+            { description: 'DISTRITAL', value: 'plant' },
+            { description: 'GESTOR', value: 'manager' },
+            { description: 'MATRICULA_GESTOR', value: 'managerRegistration' },
+            { description: 'NOME_GESTOR', value: 'managerName' },
+            { description: 'AREA', value: 'area' },
+            { description: 'DEPARTAMENTO', value: 'department' },
+            { description: 'VP', value: 'vp' },
+            { description: 'NEGOCIO', value: 'business' },
+            { description: 'OPCIONAL_ELEGIBILIDADE1', value: 'optionalEligibility1' },
+            { description: 'OPCIONAL_ELEGIBILIDADE2', value: 'optionalEligibility2' },
+            { description: 'OPCIONAL_ELEGIBILIDADE3', value: 'optionalEligibility3' }
+        ]
+        const dashboardFilters = []
+        const dashConfig = await DashConfig.find();
+        try {
+            if (dashConfig) {
+                let dashFilters = dashConfig.map((x) => {
+                    return x.fields
+                })
+                dashFilters = dashFilters.flat(2)
+                for (let filter of dashFilters) {
+                    for (const map of userMap) {
+                        filter.userField = map.description == filter.userField ? map.value : filter.userField
+                        filter.dashFilter = map.description == filter.dashFilter ? map.value : filter.dashFilter
+                    }
+    
+                    const userHasValidFieldValue = user[filter.userField] == filter.fieldValue && (user[filter.dashFilter] != undefined && user[filter.dashFilter] != "undefined" && user[filter.dashFilter] != null && user[filter.dashFilter] != "null" && user[filter.dashFilter] != "")
+                    if (userHasValidFieldValue) {
+                        if (dashboardFilters.length == 0) {
+                            dashboardFilters.push({ field: filter.dashFilter, value: user[filter.dashFilter], pages: filter.pages })
+                        }
+                    }
+                }
+                return dashboardFilters;
+            }
+        } catch (error) {
+            console.log(error)
+            return error
+        }
     },
 
     processUsersLoad(data, elegibilityFields = [], onboarding = false) {

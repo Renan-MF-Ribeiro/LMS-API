@@ -45,6 +45,7 @@ const {
     returnDateSinceFirstLogin,
     persistUsers,
     findUsers,
+    processDashFilters
 } = require('./business');
 
 const {
@@ -325,25 +326,7 @@ module.exports = {
                 ).lean();
 
                 if (user) {
-                    const dashboardFilters = []
-                    const dashConfig = await DashConfig.find();
-                    if (dashConfig) {
-                        let dashFilters = dashConfig.map((x) => {
-                            return x.fields
-                        })
-                        dashFilters = dashFilters.flat(2)
-                        for (let filter of dashFilters) {
-                            for (const map of userMap) {
-                                filter.userField = map.description == filter.userField ? map.value : filter.userField
-                                filter.dashFilter = map.description == filter.dashFilter ? map.value : filter.dashFilter
-                            }
-
-                            const userHasValidFieldValue = user[filter.userField] == filter.fieldValue
-                            if (userHasValidFieldValue) {
-                                dashboardFilters.push({ field: filter.dashFilter, value: user[filter.dashFilter], pages: filter.pages })
-                            }
-                        }
-                    }
+                    const dashboardFilters = await processDashFilters(user)
 
                     const amountOfLocks = await checkAmountOfLocks(user._id);
                     // 5 Tentativas
@@ -662,25 +645,8 @@ module.exports = {
             if (networkLogin) {
                 user = await User.findOne({ networkLogin, status: 'ATIVO' }).lean();
                 if (user) {
-                    const dashboardFilters = []
-                    const dashConfig = await DashConfig.find();
-                    if (dashConfig) {
-                        let dashFilters = dashConfig.map((x) => {
-                            return x.fields
-                        })
-                        dashFilters = dashFilters.flat(2)
-                        for (let filter of dashFilters) {
-                            for (const map of userMap) {
-                                filter.userField = map.description == filter.userField ? map.value : filter.userField
-                                filter.dashFilter = map.description == filter.dashFilter ? map.value : filter.dashFilter
-                            }
-
-                            const userHasValidFieldValue = user[filter.userField] == filter.fieldValue
-                            if (userHasValidFieldValue) {
-                                dashboardFilters.push({ field: filter.dashFilter, value: user[filter.dashFilter], pages: filter.pages })
-                            }
-                        }
-                    }
+                    const dashboardFilters = await processDashFilters(user)
+                    
                     const amountOfLocks = await checkAmountOfLocks(user._id);
                     // 5 Tentativas
                     if (amountOfLocks >= 50) {
@@ -1813,6 +1779,7 @@ module.exports = {
 
             const namesProfiles = [];
             const namesGroups = [];
+            const dashboardFilters = await processDashFilters(user)
 
             for (const p in groupsAD) {
                 const cnSplit =
@@ -1843,6 +1810,11 @@ module.exports = {
                     ref: body._id,
                     ...dataToken,
                 });
+                const token_analytics = generateTokenAnalytics({
+                    perfil: profilesIDS.numbers,
+                    clientID: CLIENT_ID,
+                    filters: dashboardFilters
+                });
                 const SAS = generateSASToken();
                 GamificationBusiness.createClientUser(networkLogin, groupsAD);
                 _messages.success(res, req, {
@@ -1853,6 +1825,7 @@ module.exports = {
                     networkLogin,
                     name,
                     profilePhoto,
+                    tokenAnalytics: token_analytics
                 });
             } else {
                 _messages.badRequest(
