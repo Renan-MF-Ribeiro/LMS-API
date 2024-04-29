@@ -622,9 +622,8 @@ module.exports = {
             { description: 'OPCIONAL_ELEGIBILIDADE3', value: 'optionalEligibility3' }
         ]
         const { token } = req.body;
-        const secret = process.env.PROJECT_SECRET_KEY;
+        const secret = process.env.JWT_SECRET;
         const data = jwt.verify(token, secret);
-        console.log(data.networkLogin)
         const networkLogin = data.networkLogin
             ? data.networkLogin
             : data.data.networkLogin;
@@ -1902,8 +1901,7 @@ module.exports = {
         const email =
             req.samlUserObject
                 .httpSchemasXmlsoapOrgWs200505IdentityClaimsEmailaddress;
-        console.log(email)
-        const token = await jwt.sign({ networkLogin: email }, process.env.PROJECT_SECRET_KEY);
+        const token = await jwt.sign({ networkLogin: email }, process.env.JWT_SECRET);
 
         res.redirect(
             302,
