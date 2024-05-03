@@ -1735,7 +1735,7 @@ module.exports = {
     async emulation (req, res) {
         try {
             const { body } = req;
-            const { groupsAD, name, acceptTerms, profilePhoto, networkLogin } =
+            const { groupsAD, name, acceptTerms, profilePhoto, networkLogin, ...user } =
                 await User.findById(body._id);
 
             const namesProfiles = [];
