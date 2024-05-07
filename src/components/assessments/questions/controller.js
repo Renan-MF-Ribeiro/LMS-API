@@ -138,10 +138,18 @@ module.exports = {
     async deleteQuestion (req, res) {
         try {
             const { id } = req.params
-            await Question.findByIdAndUpdate(id, { deleted: 1 })
-            _messages.success(res, req, 'Deletado com sucesso', 'Exclusão de dados', 'questions', 'deleteQuestion', [], [], true, 'DELETE')
+            const question = await Question.findByIdAndUpdate(id, { deleted: 1 })
+
+            const { amountOfQuestions } = await Category.findById(question.idCategory).select('amountOfQuestions');
+            const questionsOfSameCategory = await Question.find({ idCategory: { $eq: question.idCategory }, repealed: { $eq: 0 }, deleted: { $eq: 0 }, active: { $eq: 1 } }).countDocuments()
+
+            if (amountOfQuestions > questionsOfSameCategory) {
+                await Category.findByIdAndUpdate(question.idCategory, { amountOfQuestions: questionsOfSameCategory })
+            }
+
+            return _messages.success(res, req, 'Deletado com sucesso', 'Exclusão de dados', 'questions', 'deleteQuestion', [], [], true, 'DELETE')
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'questions', 'deleteQuestion')
+            return _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'questions', 'deleteQuestion')
         }
     },
 
