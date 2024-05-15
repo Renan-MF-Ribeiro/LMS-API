@@ -607,7 +607,7 @@ module.exports = {
                 user = await User.findOne({ networkLogin, status: 'ATIVO' }).lean();
                 if (user) {
                     const dashboardFilters = await processDashFilters(user)
-                    
+
                     const amountOfLocks = await checkAmountOfLocks(user._id);
                     // 5 Tentativas
                     if (amountOfLocks >= 50) {
@@ -2401,7 +2401,7 @@ module.exports = {
             const { networkLogins } = req.body;
             const users = await User.find(
                 { networkLogin: { $in: networkLogins } },
-                ['name', 'networkLogin']
+                ['name', 'networkLogin', 'profilePhoto']
             );
 
             return _messages.success(res, req, users);
