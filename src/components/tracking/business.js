@@ -1,11 +1,9 @@
 const {
-    Tracking,
     DocumentTracking,
     MediaTracking,
     AudioTracking,
     SCORMTracking,
     ExamTracking,
-    SCORMTrackingHistory,
     SCORMLessonStatus,
     EventTracking,
     FormTracking,
@@ -22,6 +20,8 @@ const TRACKING_KINDS = Object.freeze({
     FormTracking: FormTracking,
     ActivityTracking: ActivityTracking,
 });
+
+const { HistoricEvaluation } = require('../assessments/model')
 
 module.exports = {
     async createCompleteTracking (item, trackingType, networkLogin) {
@@ -58,4 +58,43 @@ module.exports = {
             { upsert: true, omitUndefined: true },
         )
     },
+
+    async processExamTracking (historic, passingScore, attempts, tracking) {
+
+        const result = {
+            remainingAttempts: 0,
+            lessonStatus: SCORMLessonStatus.INCOMPLETE,
+            completionAt: null
+        }
+        const passed = parseFloat((historic.amountQuestionsCorrect * 100 / historic.amountOfQuestions).toFixed(2)) >= passingScore
+
+        if (passed) {
+            result.lessonStatus = SCORMLessonStatus.PASSED
+            await HistoricEvaluation.findByIdAndUpdate(historic._id, { lessonStatus: SCORMLessonStatus.PASSED })
+        } else {
+            if (
+                attempts &&
+                tracking.remainingAttempts
+            ) {
+                result.remainingAttempts = tracking.remainingAttempts - 1;
+                result.lessonStatus = result.remainingAttempts
+                    ? SCORMLessonStatus.INCOMPLETE
+                    : SCORMLessonStatus.FAILED;
+
+            } else if (!attempts) {
+                result.lessonStatus = SCORMLessonStatus.INCOMPLETE
+            } else {
+                result.lessonStatus = SCORMLessonStatus.FAILED
+            }
+
+            await HistoricEvaluation.findByIdAndUpdate(historic._id, { lessonStatus: SCORMLessonStatus.FAILED })
+
+        }
+        if (result.lessonStatus == SCORMLessonStatus.PASSED ||
+            result.lessonStatus == SCORMLessonStatus.FAILED) {
+            result.completionAt = new Date()
+        }
+        await ExamTracking.findByIdAndUpdate(tracking._id, { ...result })
+        return result
+    }
 }

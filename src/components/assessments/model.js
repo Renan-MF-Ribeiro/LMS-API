@@ -9,6 +9,13 @@ const optionsSchema = {
     collation: { locale: 'en_US', strength: 1 },
 }
 
+const lessonStatus = Object.freeze({
+    NOT_ATTEMPTED: 'not attempted',
+    INCOMPLETE: 'incomplete',
+    FAILED: 'failed',
+    PASSED: 'passed',
+})
+
 const EvalutionsSchema = new mongoose.Schema({
     description: { type: String, required: true, trim: true },
     sort: { type: Number, required: true, default: 0 }, // 0 - SORTEAMENTO NA CATEGORIA / 1 - SORTEAMENTO GERAL
@@ -32,6 +39,12 @@ const HistoricEvaluationSchema = new mongoose.Schema({
     answers: { type: Array, required: false }, // SERÁ UM ARRAY DE OBJETOS, CONTENDO A QUESTÃO RESPONDIDA, ALTERNATIVA CORRETA, E ALTERNATIVA RESPONDIDA
     user: { type: 'ObjectId', ref: 'users' },
     item: { type: 'ObjectId', ref: 'Item' },
+    lessonStatus: {
+        type: String,
+        enum: Object.values(lessonStatus),
+        default: lessonStatus.NOT_ATTEMPTED,
+        required: true
+    },
     duration: { type: Number, default: 0 },
     expiredCompletion: { type: Date, default: null }
 }, {

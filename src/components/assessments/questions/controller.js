@@ -101,35 +101,21 @@ module.exports = {
 
     async updateQuestion (req, res) {
         try {
-            const verify = await Question.find({
-                description: { $eq: req.body.description },
-                idEvaluation: { $eq: req.body.idEvaluation },
+            let alert = ''
+            const category = await Category.findOne({
+                _id: { $eq: req.body.idCategory },
+            })
+            const totalQuestions = await Question.find({
                 idCategory: { $eq: req.body.idCategory },
-                feedback: { $eq: req.body.feedback },
                 deleted: { $eq: 0 },
                 repealed: { $eq: 0 },
             })
-            if (verify.length === 0) {
-                let alert = ''
-                const category = await Category.findOne({
-                    _id: { $eq: req.body.idCategory },
-                })
-                const totalQuestions = await Question.find({
-                    idCategory: { $eq: req.body.idCategory },
-                    deleted: { $eq: 0 },
-                    repealed: { $eq: 0 },
-                })
-                if (category.amountOfQuestions > totalQuestions.length + 1) {
-                    alert = `${totalQuestions.length + 1} de ${category.amountOfQuestions} questões gravadas para a categoria. É necessário cadastrar no mínimo mais ${category.amountOfQuestions - (totalQuestions.length + 1)} ${category.amountOfQuestions - (totalQuestions.length + 1) > 1 ? 'questões' : 'questão'}.`
-                    const update = await Category.findOneAndUpdate({ _id: category._id }, { amountOfQuestions: totalQuestions.length })
-                }
-                const { _id } = req.body
-                await _business.updateAndRepealedQuestion(_id, req.body)
-
-                _messages.success(res, req, alert, 'Atualização de dados', 'questions', 'updateQuestion', [], [], true, 'UPDATE')
-            } else {
-                _messages.badRequest(res, req, 'Essa questão já foi cadastrada!', 'Essa questão já foi cadastrada!', 'questions', 'updateQuestion')
+            if (category.amountOfQuestions > totalQuestions.length + 1) {
+                alert = `${totalQuestions.length + 1} de ${category.amountOfQuestions} questões gravadas para a categoria. É necessário cadastrar no mínimo mais ${category.amountOfQuestions - (totalQuestions.length + 1)} ${category.amountOfQuestions - (totalQuestions.length + 1) > 1 ? 'questões' : 'questão'}.`
             }
+            const { _id } = req.body
+            await _business.updateAndRepealedQuestion(_id, req.body)
+            _messages.success(res, req, alert, 'Atualização de dados', 'questions', 'updateQuestion', [], [], true, 'UPDATE')
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'questions', 'updateQuestion')
         }
@@ -138,35 +124,27 @@ module.exports = {
     async deleteQuestion (req, res) {
         try {
             const { id } = req.params
-            const question = await Question.findByIdAndUpdate(id, { deleted: 1 })
-
-            const { amountOfQuestions } = await Category.findById(question.idCategory).select('amountOfQuestions');
-            const questionsOfSameCategory = await Question.find({ idCategory: { $eq: question.idCategory }, repealed: { $eq: 0 }, deleted: { $eq: 0 }, active: { $eq: 1 } }).countDocuments()
-
-            if (amountOfQuestions > questionsOfSameCategory) {
-                await Category.findByIdAndUpdate(question.idCategory, { amountOfQuestions: questionsOfSameCategory })
-            }
-
-            return _messages.success(res, req, 'Deletado com sucesso', 'Exclusão de dados', 'questions', 'deleteQuestion', [], [], true, 'DELETE')
+            await Question.findByIdAndUpdate(id, { deleted: 1 })
+            _messages.success(res, req, 'Deletado com sucesso', 'Exclusão de dados', 'questions', 'deleteQuestion', [], [], true, 'DELETE')
         } catch (error) {
-            return _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'questions', 'deleteQuestion')
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'questions', 'deleteQuestion')
         }
     },
 
     async rigthAnswer (req, res) {
         try {
-            const { idQuestion, idAlternative } = req.body
-            const { rigthAnswer } = await Question.findOne({ _id: { $eq: idQuestion } })
-            let oldData = []
-            if (rigthAnswer) {
-                await _business.updateAndRepealedQuestion(idQuestion, req.body, 'alternative')
-            } else {
-                oldData = await Question.findByIdAndUpdate(idQuestion, { rigthAnswer: idAlternative })
-                await Alternative.findByIdAndUpdate(idAlternative, { correct: true })
-            }
+            const { question, idAlternative } = req.body
 
-            const newData = await Question.find({ _id: { $eq: idQuestion } })
-            _messages.success(res, req, 'Atualizado com sucesso', 'Atualização de dados', 'questions', 'rigthAnswer', newData, oldData, true, 'UPDATE')
+            const foundQuestion = await Question.findOne({ _id: question._id })
+
+            let newData = await Question.findByIdAndUpdate(question._id, { rigthAnswer: idAlternative }, { new: true })
+
+            await Alternative.findByIdAndUpdate(foundQuestion.rigthAnswer, { correct: false })
+
+            await Alternative.findByIdAndUpdate(idAlternative, { correct: true })
+
+
+            _messages.success(res, req, 'Atualizado com sucesso', 'Atualização de dados', 'questions', 'rigthAnswer', newData, true, 'UPDATE')
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'questions', 'rigthAnswer')
         }

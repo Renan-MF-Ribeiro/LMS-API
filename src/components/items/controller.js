@@ -17,6 +17,8 @@ const { error } = require('../../utils/logger');
 const _errors = require('../../utils/errors');
 const _messages = require('../../utils/messages');
 const _functions = require('../../utils/functions');
+const { HistoricEvaluation, Evaluation } = require('../assessments/model')
+const { processExamTracking } = require('../tracking/business')
 const {
     Item,
     DocumentItem,
@@ -30,6 +32,8 @@ const {
     FormItem,
 } = require('./model');
 const { Tracking } = require('../tracking/model');
+const { Tracking, SCORMLessonStatus } = require('../tracking/model');
+
 const {
     azureBlob,
     isSCORMManifestFile,
@@ -58,12 +62,12 @@ const ITEM_KINDS = Object.freeze({
 });
 
 const ItemController = {
-    async itemColaborativo(req, res) {
+    async itemColaborativo (req, res) {
         let payload = {};
         if (req.fields.payload) {
             try {
                 payload = JSON.parse(req.fields.payload);
-            } catch {}
+            } catch { }
         }
 
         const flag = _functions.checksIfTheEndDateIsLessThanTheStartDate(
@@ -117,9 +121,9 @@ const ItemController = {
                                 process.env.NODE_ENV === 'local'
                                     ? contentPath
                                     : contentPath.replace(
-                                          AZURE_BLOB_URL,
-                                          DOMAIN
-                                      );
+                                        AZURE_BLOB_URL,
+                                        DOMAIN
+                                    );
                         }
 
                         if (
@@ -301,7 +305,7 @@ const ItemController = {
         }
     },
 
-    async create(req, res) {
+    async create (req, res) {
         const ItemModel = ITEM_KINDS[req.body.kind] || Item;
 
         try {
@@ -320,12 +324,12 @@ const ItemController = {
         }
     },
 
-    async multiUploadCreate(req, res) {
+    async multiUploadCreate (req, res) {
         let payload = {};
         if (req.fields.payload) {
             try {
                 payload = JSON.parse(req.fields.payload);
-            } catch {}
+            } catch { }
         }
 
         const flag = _functions.checksIfTheEndDateIsLessThanTheStartDate(
@@ -379,9 +383,9 @@ const ItemController = {
                                 process.env.NODE_ENV === 'local'
                                     ? contentPath
                                     : contentPath.replace(
-                                          AZURE_BLOB_URL,
-                                          DOMAIN
-                                      );
+                                        AZURE_BLOB_URL,
+                                        DOMAIN
+                                    );
                         }
 
                         if (
@@ -499,12 +503,12 @@ const ItemController = {
         }
     },
 
-    async update(req, res) {
+    async update (req, res) {
         let payload = {};
         if (req.fields.payload) {
             try {
                 payload = JSON.parse(req.fields.payload);
-            } catch {}
+            } catch { }
         }
 
         const flag = _functions.checksIfTheEndDateIsLessThanTheStartDate(
@@ -558,9 +562,9 @@ const ItemController = {
                                 process.env.NODE_ENV === 'local'
                                     ? contentPath
                                     : contentPath.replace(
-                                          AZURE_BLOB_URL,
-                                          DOMAIN
-                                      );
+                                        AZURE_BLOB_URL,
+                                        DOMAIN
+                                    );
                         }
                     }
 
@@ -698,7 +702,7 @@ const ItemController = {
         }
     },
 
-    async updateById(req, res) {
+    async updateById (req, res) {
         const ItemModel = ITEM_KINDS[req.body.kind] || Item;
 
         try {
@@ -717,7 +721,7 @@ const ItemController = {
         }
     },
 
-    async updateStatus(req, res) {
+    async updateStatus (req, res) {
         try {
             const { _id, enabled } = req.body;
             const item = await Item.findOne({ _id });
@@ -748,7 +752,7 @@ const ItemController = {
         }
     },
 
-    async findItemTrails(req, res) {
+    async findItemTrails (req, res) {
         try {
             const _id = req.params.itemId;
             const trails = await Trail.find(
@@ -768,11 +772,11 @@ const ItemController = {
         }
     },
 
-    async disableById(req, res) {
+    async disableById (req, res) {
         ItemController.updateById({ ...req, body: { enabled: false } }, res);
     },
 
-    async findById(req, res) {
+    async findById (req, res) {
         try {
             const findValue = req.params.itemId;
 
@@ -796,7 +800,7 @@ const ItemController = {
         }
     },
 
-    async findItemById(req, res) {
+    async findItemById (req, res) {
         try {
             const findItemValue = req.params.itemId;
             const findITrailValue = req.params.trailId;
@@ -804,20 +808,20 @@ const ItemController = {
 
             const queryItem = findItemValue.match(/^[0-9a-fA-F]{24}$/)
                 ? {
-                      $or: [
-                          { _id: findItemValue },
-                          { titleURL: findItemValue },
-                      ],
-                  }
+                    $or: [
+                        { _id: findItemValue },
+                        { titleURL: findItemValue },
+                    ],
+                }
                 : { titleURL: findItemValue };
 
             const queryTrail = findITrailValue.match(/^[0-9a-fA-F]{24}$/)
                 ? {
-                      $or: [
-                          { _id: findITrailValue },
-                          { titleURL: findITrailValue },
-                      ],
-                  }
+                    $or: [
+                        { _id: findITrailValue },
+                        { titleURL: findITrailValue },
+                    ],
+                }
                 : { titleURL: findITrailValue };
 
             const tags = await getTagsElegiblesByToken(req);
@@ -877,27 +881,27 @@ const ItemController = {
         }
     },
 
-    async createDocument(req, res) {
+    async createDocument (req, res) {
         req.body.kind = 'DocumentItem';
         ItemController.create(req, res);
     },
 
-    async multiUploadDocument(req, res) {
+    async multiUploadDocument (req, res) {
         req.body.kind = 'DocumentItem';
         ItemController.multiUploadCreate(req, res);
     },
 
-    async createMedia(req, res) {
+    async createMedia (req, res) {
         req.body.kind = 'MediaItem';
         ItemController.create(req, res);
     },
 
-    async multiUploadMedia(req, res) {
+    async multiUploadMedia (req, res) {
         req.body.kind = 'MediaItem';
         ItemController.multiUploadCreate(req, res);
     },
 
-    async uploadSCORM(req, res) {
+    async uploadSCORM (req, res) {
         const user = await getUserByToken(req);
         if (req.method !== 'POST') {
             return res.status(httpStatus.NOT_FOUND).send();
@@ -1064,7 +1068,7 @@ const ItemController = {
                             (el) =>
                                 el.name === 'resource' &&
                                 el.attributes.identifier ===
-                                    $item.attributes.identifierref
+                                $item.attributes.identifierref
                         );
                         const $title = $item.children.find(
                             (el) => el.name === 'title'
@@ -1118,7 +1122,7 @@ const ItemController = {
         }
     },
 
-    async updateSCORM(req, res) {
+    async updateSCORM (req, res) {
         if (req.method !== 'PUT') {
             return res.status(httpStatus.NOT_FOUND).send();
         }
@@ -1279,7 +1283,7 @@ const ItemController = {
                             (el) =>
                                 el.name === 'resource' &&
                                 el.attributes.identifier ===
-                                    $item.attributes.identifierref
+                                $item.attributes.identifierref
                         );
 
                         const href = $resource.attributes.href;
@@ -1319,7 +1323,7 @@ const ItemController = {
         }
     },
 
-    async findAll(req, res) {
+    async findAll (req, res) {
         try {
             const { skip, limit } = _functions.pagination(req);
             const { sort, order } = _functions.ordernation(req);
@@ -1330,69 +1334,69 @@ const ItemController = {
             let total = await Item.find(
                 searchBy
                     ? {
-                          $or: [
-                              {
-                                  description: {
-                                      $regex: searchBy,
-                                      $options: 'i',
-                                  },
-                              },
-                              { title: { $regex: searchBy, $options: 'i' } },
-                              { notes: { $regex: searchBy, $options: 'i' } },
-                              {
-                                  courseIdentifier: {
-                                      $regex: searchBy,
-                                      $options: 'i',
-                                  },
-                              },
-                              { alias: { $regex: searchBy, $options: 'i' } },
-                              { keywords: { $regex: searchBy, $options: 'i' } },
-                              {
-                                  responsible: {
-                                      $regex: searchBy,
-                                      $options: 'i',
-                                  },
-                              },
-                          ],
-                          deleted: { $eq: 0 },
-                      }
+                        $or: [
+                            {
+                                description: {
+                                    $regex: searchBy,
+                                    $options: 'i',
+                                },
+                            },
+                            { title: { $regex: searchBy, $options: 'i' } },
+                            { notes: { $regex: searchBy, $options: 'i' } },
+                            {
+                                courseIdentifier: {
+                                    $regex: searchBy,
+                                    $options: 'i',
+                                },
+                            },
+                            { alias: { $regex: searchBy, $options: 'i' } },
+                            { keywords: { $regex: searchBy, $options: 'i' } },
+                            {
+                                responsible: {
+                                    $regex: searchBy,
+                                    $options: 'i',
+                                },
+                            },
+                        ],
+                        deleted: { $eq: 0 },
+                    }
                     : {
-                          deleted: { $eq: 0 },
-                      }
+                        deleted: { $eq: 0 },
+                    }
             ).count();
 
             let itens = await Item.find(
                 searchBy
                     ? {
-                          $or: [
-                              {
-                                  description: {
-                                      $regex: searchBy,
-                                      $options: 'i',
-                                  },
-                              },
-                              { title: { $regex: searchBy, $options: 'i' } },
-                              { notes: { $regex: searchBy, $options: 'i' } },
-                              {
-                                  courseIdentifier: {
-                                      $regex: searchBy,
-                                      $options: 'i',
-                                  },
-                              },
-                              { alias: { $regex: searchBy, $options: 'i' } },
-                              { keywords: { $regex: searchBy, $options: 'i' } },
-                              {
-                                  responsible: {
-                                      $regex: searchBy,
-                                      $options: 'i',
-                                  },
-                              },
-                          ],
-                          deleted: { $eq: 0 },
-                      }
+                        $or: [
+                            {
+                                description: {
+                                    $regex: searchBy,
+                                    $options: 'i',
+                                },
+                            },
+                            { title: { $regex: searchBy, $options: 'i' } },
+                            { notes: { $regex: searchBy, $options: 'i' } },
+                            {
+                                courseIdentifier: {
+                                    $regex: searchBy,
+                                    $options: 'i',
+                                },
+                            },
+                            { alias: { $regex: searchBy, $options: 'i' } },
+                            { keywords: { $regex: searchBy, $options: 'i' } },
+                            {
+                                responsible: {
+                                    $regex: searchBy,
+                                    $options: 'i',
+                                },
+                            },
+                        ],
+                        deleted: { $eq: 0 },
+                    }
                     : {
-                          deleted: { $eq: 0 },
-                      }
+                        deleted: { $eq: 0 },
+                    }
             )
                 .populate('idEvaluation', ['description'])
                 .skip(parseInt(skip))
@@ -1404,55 +1408,55 @@ const ItemController = {
                 const filterItens = await Item.find(
                     searchBy
                         ? {
-                              $or: [
-                                  {
-                                      description: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                                  {
-                                      title: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                                  {
-                                      notes: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                                  {
-                                      courseIdentifier: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                                  {
-                                      alias: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                                  {
-                                      keywords: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                                  {
-                                      responsible: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                              ],
-                              deleted: { $eq: 0 },
-                          }
+                            $or: [
+                                {
+                                    description: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                                {
+                                    title: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                                {
+                                    notes: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                                {
+                                    courseIdentifier: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                                {
+                                    alias: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                                {
+                                    keywords: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                                {
+                                    responsible: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                            ],
+                            deleted: { $eq: 0 },
+                        }
                         : {
-                              deleted: { $eq: 0 },
-                          }
+                            deleted: { $eq: 0 },
+                        }
                 );
 
                 await Promise.all(
@@ -1473,55 +1477,55 @@ const ItemController = {
                 const filterItens = await Item.find(
                     searchBy
                         ? {
-                              $or: [
-                                  {
-                                      description: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                                  {
-                                      title: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                                  {
-                                      notes: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                                  {
-                                      courseIdentifier: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                                  {
-                                      alias: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                                  {
-                                      keywords: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                                  {
-                                      responsible: {
-                                          $regex: searchBy,
-                                          $options: 'i',
-                                      },
-                                  },
-                              ],
-                              deleted: { $eq: 0 },
-                          }
+                            $or: [
+                                {
+                                    description: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                                {
+                                    title: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                                {
+                                    notes: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                                {
+                                    courseIdentifier: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                                {
+                                    alias: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                                {
+                                    keywords: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                                {
+                                    responsible: {
+                                        $regex: searchBy,
+                                        $options: 'i',
+                                    },
+                                },
+                            ],
+                            deleted: { $eq: 0 },
+                        }
                         : {
-                              deleted: { $eq: 0 },
-                          }
+                            deleted: { $eq: 0 },
+                        }
                 );
 
                 await Promise.all(
@@ -1562,7 +1566,7 @@ const ItemController = {
         }
     },
 
-    async findItensActives(req, res) {
+    async findItensActives (req, res) {
         try {
             const itens = await Item.find({
                 enabled: { $eq: true },
@@ -1581,7 +1585,7 @@ const ItemController = {
         }
     },
 
-    async generateCertificate(req, res) {
+    async generateCertificate (req, res) {
         try {
             const { item } = req.params;
             const user = await _functions.getUserByToken(req);
@@ -1623,7 +1627,7 @@ const ItemController = {
         }
     },
 
-    async getItemWithTracking(req, res) {
+    async getItemWithTracking (req, res) {
         try {
             const { itemId } = req.params;
             const user = await getUserByToken(req);
@@ -1632,6 +1636,31 @@ const ItemController = {
                 item: item._id,
                 userLogin: user.networkLogin,
             });
+
+            if (tracking?.kind == 'ExamTracking') {
+
+                const historicEvaluations = await HistoricEvaluation.find({
+                    idEvaluation: item.idEvaluation,
+                    user: user._id,
+                    lessonStatus: { $eq: SCORMLessonStatus.NOT_ATTEMPTED }
+                }).sort({ createdAt: 'desc' }).limit(1)
+
+                if (historicEvaluations.length) {
+
+                    const historic = historicEvaluations[0]
+
+                    if (historic.amountQuestionsAnswered >= historic.amountOfQuestions) {
+                        const { attempts } = await Evaluation.findOne({
+                            _id: item.idEvaluation,
+                        });
+
+                        const processed = await processExamTracking(historic, item.passingScore, attempts, tracking)
+
+                        tracking = { ...tracking._doc, ...processed }
+                    }
+                }
+            }
+
 
             _messages.success(res, req, { item, tracking });
         } catch (error) {
@@ -1646,7 +1675,7 @@ const ItemController = {
         }
     },
 
-    async getProviders(req, res) {
+    async getProviders (req, res) {
         try {
             const items = await Item.find({});
             const providers = items

@@ -3,12 +3,13 @@ const { Category } = require('./categories/model')
 const { Question } = require('./questions/model')
 const { Alternative } = require('./alternatives/model')
 const { Item } = require('../items/model')
-const { returnLinkTrailByItem } = require('../trails/controller')
-
 const _messages = require('../../utils/messages')
 const _business = require('./business')
 const _functions = require('../../utils/functions')
 const _files = require('../../utils/files')
+const { Tracking, SCORMLessonStatus } = require('../tracking/model')
+const { processExamTracking } = require('../tracking/business')
+
 
 module.exports = {
     async createEvaluation (req, res) {
@@ -47,7 +48,11 @@ module.exports = {
                 })
                 .populate({ path: 'categories', match: { deleted: { $eq: 0 }, active: { $eq: 1 }, } })
 
-            const timeDuration = await HistoricEvaluation.find({ user: { $eq: user._id }, idEvaluation: { $eq: idEvaluation } }).sort({ [order]: sort })
+            const timeDuration = await HistoricEvaluation.find({
+                user: { $eq: user._id },
+                idEvaluation: { $eq: idEvaluation }
+            })
+                .sort({ [order]: sort })
 
             var result = null
             var amountOfQuestions = null
@@ -75,14 +80,16 @@ module.exports = {
                     }
                 }
             }
+            const attemptsNotCompleted = timeDuration.filter(historic => historic.lessonStatus == SCORMLessonStatus.NOT_ATTEMPTED)
+            const attemptsCompleted = timeDuration.filter(historic => historic.lessonStatus != SCORMLessonStatus.NOT_ATTEMPTED)
 
             const obj = {
                 description,
                 attempts,
                 duration,
                 amountOfQuestions: amountOfQuestions > totalQuestions ? totalQuestions : amountOfQuestions,
-                attemptsHistory: timeDuration.length,
-                historicDuration: timeDuration.length > 0 ? timeDuration[0].duration : null,
+                attemptsHistory: attemptsCompleted.length,
+                historicDuration: attemptsNotCompleted.length > 0 ? attemptsNotCompleted[0].duration : null,
                 values: result != null ? result.values : { correct: 0, incorrect: 0 },
             }
 
@@ -214,11 +221,8 @@ module.exports = {
             }).countDocuments()
 
             if (evaluationCheck < 1) {
-                const evaluations = await Evaluation.findByIdAndUpdate(_id, req.body)
-                const newData = await Evaluation.find({
-                    _id: { $eq: _id },
-                })
-                _messages.success(res, req, evaluations, 'Atualização de dados', 'assessments', 'updateEvaluation', newData, evaluations, true, 'UPDATE')
+                const evaluations = await Evaluation.findByIdAndUpdate(_id, { randomQuestions: req.body.randomQuestions, ...req.body }, { new: true })
+                _messages.success(res, req, evaluations, 'Atualização de dados', 'assessments', 'updateEvaluation', evaluations, evaluations, true, 'UPDATE')
             } else {
                 _messages.badRequest(res, req, 'Avaliação com essa descrição já existe', 'Já existe uma avaliação com essa descrição!', 'assessments', 'updateEvaluation')
             }
@@ -412,46 +416,11 @@ module.exports = {
     async nextQuestion (req, res) {
         try {
             const { id } = req.params
-            const user = await _functions.getUserByToken(req)
-            const {
-                amountQuestionsAnswered,
-                amountOfQuestions,
-                amountQuestionsCorrect,
-                idEvaluation,
-                answers,
-                item,
+            const { duration } = await HistoricEvaluation.findOne({ _id: { $eq: id } })
+
+            _messages.success(res, req, {
                 duration,
-            } = await HistoricEvaluation.findOne({ _id: { $eq: id } })
-
-            const totalQuestions = await Question.countDocuments({
-                idEvaluation: { $eq: idEvaluation },
-                deleted: { $eq: false },
             })
-
-            const amountQuestions = amountOfQuestions > totalQuestions ? totalQuestions : amountOfQuestions
-
-            const { passingScore } = await Item.findOne({ _id: { $eq: item } })
-            const result = await _business.calculateRatingEvaluation(amountQuestionsCorrect, amountOfQuestions)
-
-            if (amountQuestionsAnswered === amountQuestions) {
-                const { idEvaluation, title } = await Item.findOne({ _id: { $eq: item } }, ['idEvaluation', 'title'])
-                const { attempts, feedback } = await Evaluation.findOne({ _id: { $eq: idEvaluation } })
-                const history = await HistoricEvaluation.find({ user: { $eq: user._id }, idEvaluation: { $eq: idEvaluation } })
-                const questions = await _business.returnsQuestionsAnswered(answers, feedback)
-                result.questions = questions
-                result.finished = true
-                result.passingScore = passingScore
-                result.attemptsHistory = history.length
-                result.attempts = attempts
-                result.title = title
-
-                _messages.success(res, req, result)
-            } else {
-
-                _messages.success(res, req, {
-                    duration,
-                })
-            }
         } catch (error) {
             console.error(error)
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'nextQuestion')
@@ -475,19 +444,25 @@ module.exports = {
 
     async finalizeEvaluation (req, res) {
         try {
-            const { evaluationID, itemID } = req.body
-            const { passingScore } = await Item.findOne({ _id: { $eq: itemID } })
+            const { itemID } = req.body
+            const user = await _functions.getUserByToken(req)
+            const { passingScore, idEvaluation, title } = await Item.findOne({ _id: { $eq: itemID } })
 
-            const { amountQuestionsCorrect, amountOfQuestions, answers } = await HistoricEvaluation.findOne({
-                _id: { $eq: evaluationID },
-            })
-
-            await HistoricEvaluation.findByIdAndUpdate(evaluationID, { amountQuestionsAnswered: amountOfQuestions, duration: 0 })
-            const result = await _business.calculateRatingEvaluation(amountQuestionsCorrect, amountOfQuestions)
-            const questions = await _business.returnsQuestionsAnswered(answers)
+            const history = await HistoricEvaluation.find({ user: { $eq: user._id }, idEvaluation: { $eq: idEvaluation } }).sort({ createdAt: 'desc' })
+            const historic = history[0]
+            const { attempts, feedback } = await Evaluation.findOne({ _id: { $eq: idEvaluation } })
+            const result = await _business.calculateRatingEvaluation(historic.amountQuestionsCorrect, historic.amountOfQuestions)
+            const questions = await _business.returnsQuestionsAnswered(historic.answers, feedback)
             result.questions = questions
             result.finished = true
             result.passingScore = passingScore
+            result.attemptsHistory = history.length
+            result.attempts = attempts
+            result.title = title
+
+
+            const tracking = await Tracking.findOne({ item: itemID, userLogin: user.networkLogin });
+            await processExamTracking(historic, passingScore, attempts, tracking)
 
             _messages.success(res, req, result)
         } catch (error) {
@@ -503,18 +478,14 @@ module.exports = {
 
             const historicEvaluationArray = await HistoricEvaluation.find({
                 item: idItem,
-                user: user._id
+                user: user._id,
+                lessonStatus: { $eq: SCORMLessonStatus.NOT_ATTEMPTED }
             })
                 .sort({ createdAt: 'desc' })
                 .limit(1)
 
             const historicEvaluation = historicEvaluationArray[0]
-
-            const currentAttempt =
-                historicEvaluation &&
-                historicEvaluation.amountQuestionsAnswered < historicEvaluation.amountOfQuestions
-
-            if (currentAttempt) {
+            if (historicEvaluation) {
                 const sortedQuestions = await _business.returnQuestionsByCategoryFromHistoric(historicEvaluation.questions)
 
                 questionsAnswers = historicEvaluation.answers

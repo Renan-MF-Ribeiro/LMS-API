@@ -33,28 +33,22 @@ module.exports = {
         }
     },
 
+
     async updateAlternative (req, res) {
         try {
-            const { _id, description } = req.body
-            const verify = await Alternative
-                .find({
-                    description: { $eq: description },
-                    deleted: 0,
-                })
-            if (verify.length === 0) {
-                const oldData = await Alternative.findByIdAndUpdate(_id, req.body)
-                const newData = await Alternative.find({ _id: { $eq: _id } })
+            const { _id } = req.body
+            const oldData = await Alternative.findByIdAndUpdate(_id, req.body)
+            const newData = await Alternative.find({ _id: { $eq: _id } })
+            let response
 
-                const respondida = await HistoricEvaluation.find({ questions: newData[0].idQuestion })
+            const respondida = await HistoricEvaluation.find({ questions: newData[0].idQuestion })
 
-                if (respondida != '') {
-                    _business.updateAndRepealedQuestion(newData[0].idQuestion, {})
-                }
-
-                _messages.success(res, req, 'Atualizado com sucesso', 'Atualização de dados', 'alternatives', 'updateAlternative', newData, oldData, true, 'UPDATE')
-            } else {
-                _messages.badRequest(res, req, 'Essa alternativa já foi cadastrada para essa questão!', 'Essa alternativa já foi cadastrada para essa questão!', 'alternatives', 'updateAlternative')
+            if (respondida != '' && respondida != []) {
+                response = await _business.updateAndRepealedQuestion(newData[0].idQuestion, {})
             }
+
+            _messages.success(res, req, response, 'Atualização de dados', 'alternatives', 'updateAlternative', newData, oldData, true, 'UPDATE')
+
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'alternatives', 'updateAlternative')
         }

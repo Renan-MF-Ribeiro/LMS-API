@@ -56,56 +56,40 @@ module.exports = {
                         idCategory: body.idCategory ? body.idCategory : question.idCategory,
                         idEvaluation: question.idEvaluation,
                         description: strDescription,
+                        rigthAnswer: body.idAlternative
                     })
 
                     for (const alternative of question.alternatives) {
-                        let correct = false
-                        if (action) {
-                            if (alternative._id == body.idAlternative) correct = true
-                        } else {
-                            if (question.rigthAnswer) {
-
-                                if (alternative.description === question.rigthAnswer.description) {
-                                    correct = true
-                                }
-                            }
-                        }
-
                         const alternativeCreated = await Alternative.create({
                             description: alternative.description,
                             idQuestion: questionCreated._id,
-                            correct,
+                            correct: alternative.correct,
                         })
-
-                        if (action) {
-                            if (alternative._id == body.idAlternative) idRigthAnswer = alternativeCreated._id
-                        } else {
-                            if (question.rigthAnswer) {
-                                if (alternative.description === question.rigthAnswer.description) idRigthAnswer = alternativeCreated._id
-                            }
+                        if (alternativeCreated.correct == true) {
+                            idRigthAnswer = alternativeCreated._id
                         }
-
                         arrIdAlternatives.push(alternativeCreated._id)
                     }
 
                     await Question.findByIdAndUpdate(questionCreated._id, { alternatives: arrIdAlternatives, rigthAnswer: idRigthAnswer, description: strDescription })
+                    resolve(questionCreated)
                 } else {
                     if (body) {
-                        // oldData = await Question.findByIdAndUpdate(idQuestion, { rigthAnswer: idAlternative })
-
-                        const newRigthAnswer = body.idAlternative && body.idAlternative != question.rigthAnswer?._id
-
-                        await Question.findByIdAndUpdate(id, {
-                            description: body.description ? body.description : question.description,
-                            idCategory: body.idCategory ? body.idCategory : question.idCategory,
-                            rigthAnswer: newRigthAnswer ? (body.idAlternative) : question.rigthAnswer?._id,
-                            feedback: body.feedback
-
-                        })
-                        if (newRigthAnswer) {
-                            await Alternative.findByIdAndUpdate(question.rigthAnswer._id, { correct: false })
-                            await Alternative.findByIdAndUpdate(body.idAlternative, { correct: true })
+                        const questionFind = await Question
+                            .findOne({ _id: { $eq: body._id } })
+                            .populate(
+                                [{
+                                    path: 'alternatives',
+                                }
+                                ],
+                            )
+                        for (const alternative of questionFind.alternatives) {
+                            if (alternative.correct == true) {
+                                idRigthAnswer = alternative._id
+                            }
                         }
+
+                        await Question.findByIdAndUpdate(id, { description: body.description ? body.description : question.description, idCategory: body.idCategory ? body.idCategory : question.idCategory, rigthAnswer: body.idAlternative })
                     }
                 }
                 resolve()
