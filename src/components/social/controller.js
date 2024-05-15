@@ -2,6 +2,10 @@ const { default: axios } = require('axios');
 const _business = require('./business');
 const _functions = require('../../utils/functions');
 const _messages = require('../../utils/messages');
+const {
+    sendMessageToKafka,
+    processTargetUsers,
+} = require('../new-messages/business');
 const { Trail } = require('../trails/model');
 const { generateSSOToken } = require('../../utils/auth');
 const { User } = require('../users/model');
@@ -261,7 +265,7 @@ module.exports = {
         try {
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}`;
             const user = await _functions.getUserByToken(req)
-            const body = { ...req.body, userId: user._id, userName: user.name, moderated: req.body.moderated};
+            const body = { ...req.body, userId: user._id, userName: user.name, moderationStatus: req.body.socialStatus || "MODERATED"};
             const { data } = await axios.post(uri, body);
             _messages.success(res, req, data, 'ok', 'social', 'createComment');
             return;
@@ -269,8 +273,8 @@ module.exports = {
             _messages.badRequest(
                 res,
                 req,
-                'Operação inválida',
-                'Operação inválida',
+                error.response.data.message,
+                error.response.data.message,
                 'social',
                 'createComment'
             );
@@ -646,39 +650,28 @@ module.exports = {
             const text = `Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!`;
             const texthtml = `<br> <p>Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!</p> <br>`;
             const messages = [];
-            const redirectTo = `/menu/${trail.titleURL}`;
 
             for(let id of users){
-                const foundUser = await User.findById(id)
-                const token = generateSSOToken({
-                    networkLogin: foundUser.networkLogin,
-                    communication: ['notification', 'email'],
-                    trailTitle: trail.title,
-                });
-    
                 const message = {
-                    clientid: process.env.CLIENT_ID,
-                    type: ['notification', 'email'],
                     category: 'notify',
+                    communication: ['notification', 'email'],
                     mode: 'manual',
+                    target: {
+                        type: 'users',
+                        value: {
+                            users: [id],
+                        },
+                    },
                     text: text,
                     texthtml: texthtml,
+                    thumbnail: config.messenger.emailTemplate.thumbnail,
                     title: `Happlearning - ${name} compartilhou um conteúdo com você!`,
-                    identifier: foundUser.networkLogin,
-                    viewed: false,
-                    userEmail: foundUser.email || null,
-                    userDevice: foundUser.userDevice || null,
-                    notificationlink: {
-                        trailid: trailId,
-                        itemid: null,
-                        url: `${process.env.DOMAIN}/login/entrar/sso?token=${token}&redirectTo=${redirectTo}`,
-                    },
                 };
-                messages.push(message)
+                createMessagesFromBackend(message)
             }
 
             const uri = `${process.env.API_SOCIAL}/home/share/${process.env.CLIENT_ID}`;
-            const { data } = await axios.put(uri, messages);
+            const { data } = await axios.post(uri, { users: users, trailId });
 
             _messages.success(
                 res,
@@ -690,7 +683,7 @@ module.exports = {
             );
             return;
         } catch (error) {
-            console.log(error)
+            console.log(error.response.data)
             _messages.badRequest(
                 res,
                 req,
@@ -748,3 +741,21 @@ module.exports = {
         }
     },
 };
+
+async function createMessagesFromBackend(body) {
+    try {
+        const campaign = body;
+        const target = campaign.target;
+        let targetUsers = [];
+
+        if (!target.value.user) {
+            targetUsers = await processTargetUsers(target, campaign.category);
+        } else {
+            targetUsers.push({ ...target.value.user });
+        }
+
+        await sendMessageToKafka(campaign, targetUsers);
+    } catch (error) {
+        console.log(error);
+    }
+}
