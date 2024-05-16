@@ -31,7 +31,6 @@ const {
     ActivityItem,
     FormItem,
 } = require('./model');
-const { Tracking } = require('../tracking/model');
 const { Tracking, SCORMLessonStatus } = require('../tracking/model');
 
 const {
