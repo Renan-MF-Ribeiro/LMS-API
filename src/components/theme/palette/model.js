@@ -55,7 +55,16 @@ const paletteSchema = new mongoose.Schema({
     quaternaryPalette: ColorPaletteSchema,
     quinary: { type: String },
     quinaryPalette: ColorPaletteSchema,
-    sixth: { type: String },
+    senary: { type: String },
+    senaryPalette: ColorPaletteSchema,
+    sevenfold: { type: String },
+    sevenfoldPalette: ColorPaletteSchema,
+    octal: { type: String },
+    octalPalette: ColorPaletteSchema,
+    nonary: { type: String },
+    nonaryPalette: ColorPaletteSchema,
+    decimal: { type: String },
+    decimalPalette: ColorPaletteSchema,
 })
 
 const themeSchema = new mongoose.Schema({
