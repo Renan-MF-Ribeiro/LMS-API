@@ -1,6 +1,7 @@
 const passport = require('passport');
 const passportSaml = require('passport-saml');
 const { ConfigLogin } = require('../components/theme/login-config/model');
+const fs = require('fs')
 
 passport.serializeUser((user, done) => {
     done(null, user);
