@@ -1631,7 +1631,7 @@ const ItemController = {
             const { itemId } = req.params;
             const user = await getUserByToken(req);
             const item = await Item.findById(itemId);
-            const tracking = await Tracking.findOne({
+            let tracking = await Tracking.findOne({
                 item: item._id,
                 userLogin: user.networkLogin,
             });

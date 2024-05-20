@@ -29,8 +29,8 @@ const { checkItem, processTrailWorkload } = require('./business');
 
 const { Evaluation } = require('../assessments/model');
 const { User } = require('../users/model');
-const { NewMessage } = require('../new-messages/model');
-const { sendMessageToKafka } = require('../new-messages/business');
+const { sendMessageToKafka, processTargetUsers } = require('../new-messages/business');
+
 const {
     elegiblesContents,
     keepLearningSections,
@@ -706,7 +706,7 @@ module.exports = {
                         _id: { $eq: payload._id },
                     })
 
-                    if (payload.mandatory.length == 0) {
+                    if (payload.mandatory?.length == 0) {
                         // Setar todos os mandatory de itens como false.
                         trail.items.forEach(item => {
                             item.mandatory = false
@@ -719,7 +719,7 @@ module.exports = {
 
                     const items = []
 
-                    payload.items.forEach((item) => {
+                    payload.items?.forEach((item) => {
                         items.push({
                             ...item,
                             urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}/${item.itemID._id}`,
@@ -1665,8 +1665,7 @@ module.exports = {
                     trail,
                     moderation === 'approved' ? 'aprovado' : 'recusado'
                 );
-                await NewMessage.create(campaign);
-                sendMessageToKafka(campaign, [user]);
+                createMessagesFromBackend()
             }
 
             _messages.success(res, req, { message: 'Trilha atualizada' });
@@ -1870,6 +1869,7 @@ function prepareObject (trail) {
 function createModerationAlert (trail, verb) {
     const title = `O conteúdo ${trail.title} foi ${verb}!`;
     const text = `Seu conteúdo ${trail.title} acabou de ser ${verb} por um moderador!`;
+    const texthtml = `<p>Seu conteúdo ${trail.title} acabou de ser ${verb} por um moderador!</p>`;
     const communication = ['notification'];
     const mode = 'automatic';
     const category = 'notify';
@@ -1877,5 +1877,23 @@ function createModerationAlert (trail, verb) {
         trailid: trail._id,
         url: `${process.env.DOMAIN}/#/login/entrar?redirectTo=/menu/${trail._id}`,
     };
-    return { title, text, communication, category, target, mode };
+    return { title, text, communication, category, target, mode, texthtml };
+}
+
+async function createMessagesFromBackend (body) {
+    try {
+        const campaign = body;
+        const target = campaign.target;
+        let targetUsers = [];
+
+        if (!target.value.user) {
+            targetUsers = await processTargetUsers(target, campaign.category);
+        } else {
+            targetUsers.push({ ...target.value.user });
+        }
+
+        await sendMessageToKafka(campaign, targetUsers);
+    } catch (error) {
+        console.log(error);
+    }
 }

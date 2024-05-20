@@ -125,7 +125,7 @@ module.exports = {
                         }
 
                         if (socialConfig) {
-                            const trailTags = trail.tags.map((tag) => tag.value)
+                            const trailTags = trail.tags?.map((tag) => tag.value)
                             for (const tag of socialConfig.tagsLists.allowed) {
                                 if (trailTags.includes(tag)) {
                                     socialStatus = "ALLOWED"
@@ -214,7 +214,7 @@ module.exports = {
                         }
 
                         if (socialConfig) {
-                            const trailTags = trail.tags.map((tag) => tag.value)
+                            const trailTags = trail.tags?.map((tag) => tag.value)
                             for (const tag of socialConfig.tagsLists.allowed) {
                                 if (trailTags.includes(tag)) {
                                     socialStatus = "ALLOWED"
