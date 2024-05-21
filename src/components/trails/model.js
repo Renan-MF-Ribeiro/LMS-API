@@ -111,6 +111,8 @@ const TrailSchema = new mongoose.Schema(
         expirationDate: { type: Date, default: null },
         supportMaterial: { type: Array },
         isPadletEnabled: { type: Boolean, default: false },
+        archive: { type: Boolean, required: false, default: false },
+        archivedAt: { type: Date, required: false, default: null },
     },
     {
         strict: 'throw',

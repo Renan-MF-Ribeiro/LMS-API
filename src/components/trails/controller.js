@@ -967,6 +967,7 @@ module.exports = {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
             const searchBy = req.query.searchBy;
+            const archive = req.query.archive;
             const noLimit = req.query?.all;
 
             let total = 0;
@@ -998,7 +999,7 @@ module.exports = {
 
                     }
                     : {}
-
+                query['archive'] = archive ? { $eq: archive === 'true' } : { $ne: true };
                 if (noLimit) {
                     query = {
                         ...query,
