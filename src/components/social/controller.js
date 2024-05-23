@@ -11,6 +11,7 @@ const { generateSSOToken } = require('../../utils/auth');
 const { User } = require('../users/model');
 const { UsersWithProcessedTags } = require('../courses/model')
 const config = require('../../../config.json');
+const { getTagsElegiblesByToken } = require('../sections/business');
 
 
 
@@ -44,6 +45,47 @@ module.exports = {
                 res,
                 req,
                 { ...data, blockedTrails: blockedTrailsWithName },
+                'configurações encontradas',
+                'social',
+                'getConfig'
+            );
+        } catch (error) {
+            console.log(error);
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                null,
+                'social',
+                'getConfig'
+            );
+        }
+    },
+
+    async getSocialStatus(req, res) {
+        try {
+            const userTags = await getTagsElegiblesByToken(req)
+            const uri = `${process.env.API_SOCIAL}/client-config/${process.env.CLIENT_ID}`;
+            const { data } = await axios.get(uri);
+
+            let trailBlocked = false;
+            let tagBlocked = false;
+            if (data.blockedTrails.length > 0) {
+                trailBlocked = data.blockedTrails.some((trail)=>{
+                    return trail.trailId === req.query.trailId
+                })
+                tagBlocked = data.tagsLists.blocked.some((tag)=>{
+                    return userTags.some((t)=>{
+                        console.log(t.value, tag)
+                        return t.value === tag
+                    })
+                })
+            } 
+
+            _messages.success(
+                res,
+                req,
+                { trailBlocked, tagBlocked },
                 'configurações encontradas',
                 'social',
                 'getConfig'
@@ -304,7 +346,7 @@ module.exports = {
         try {
             const { trailId } = req.params;
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/${trailId}`;
-            const { data } = await axios.get(uri);
+            const { data } = await axios.get(uri, { params: req.query });
             _messages.success(
                 res,
                 req,
