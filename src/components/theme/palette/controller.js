@@ -9,8 +9,6 @@ module.exports = {
             const body = JSON.parse(req.fields.body)
             const fileArray = Object.keys(req.files).map(key => req.files[key])
 
-
-
             const logo = fileArray.findIndex(el => el.name === body.logo)
             if (logo >= 0) {
 
@@ -30,7 +28,7 @@ module.exports = {
 
             let theme = await Theme.findOne({}).sort({ createdAt: -1 })
 
-            if (theme) {
+            if (theme && !body.defaultPalette) {
                 theme = await Theme.findByIdAndUpdate(theme._id, body, { new: true })
             } else {
                 theme = await Theme.create(body)
@@ -53,10 +51,33 @@ module.exports = {
 
     async getTheme (req, res) {
         try {
-            const theme = await Theme.findOne({}).sort({ createdAt: -1 }).select('-createdAt -updatedAt -_id -__v -palette._id')
+            const theme = await Theme.findOne({ defaultPalette: { $ne: true } }).sort({ createdAt: -1 }).select('-createdAt -updatedAt -_id -__v -palette._id')
             if (theme) {
 
                 return _messages.success(res, req, theme)
+            }
+            return _messages.conflict(res, req, null)
+
+        }
+        catch (error) {
+            console.error(error)
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'theme',
+                'getTheme',
+            )
+        }
+    },
+
+    async getDefaultTheme (req, res) {
+        try {
+            const theme = await Theme.findOne({ defaultPalette: { $eq: true } }).sort({ createdAt: -1 }).select('-createdAt -updatedAt -_id -__v -palette._id')
+            return _messages.success(res, req, theme)
+            if (theme) {
+
             }
             return _messages.conflict(res, req, null)
 
