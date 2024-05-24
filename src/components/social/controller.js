@@ -11,6 +11,7 @@ const { generateSSOToken } = require('../../utils/auth');
 const { User } = require('../users/model');
 const { UsersWithProcessedTags } = require('../courses/model')
 const config = require('../../../config.json');
+const { getTagsElegiblesByToken } = require('../sections/business');
 
 
 
@@ -61,6 +62,47 @@ module.exports = {
         }
     },
 
+    async getSocialStatus(req, res) {
+        try {
+            const userTags = await getTagsElegiblesByToken(req)
+            const uri = `${process.env.API_SOCIAL}/client-config/${process.env.CLIENT_ID}`;
+            const { data } = await axios.get(uri);
+
+            let trailBlocked = false;
+            let tagBlocked = false;
+            if (data.blockedTrails.length > 0) {
+                trailBlocked = data.blockedTrails.some((trail)=>{
+                    return trail.trailId === req.query.trailId
+                })
+                tagBlocked = data.tagsLists.blocked.some((tag)=>{
+                    return userTags.some((t)=>{
+                        console.log(t.value, tag)
+                        return t.value === tag
+                    })
+                })
+            } 
+
+            _messages.success(
+                res,
+                req,
+                { trailBlocked, tagBlocked },
+                'configurações encontradas',
+                'social',
+                'getConfig'
+            );
+        } catch (error) {
+            console.log(error);
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                null,
+                'social',
+                'getConfig'
+            );
+        }
+    },
+
     async putConfig(req, res) {
         try {
             const reqBody = req.body;
@@ -90,7 +132,6 @@ module.exports = {
                     'putConfig'
                 );
             } catch (err) {
-                console.log(err.response.data);
                 if (err.response.data.statusCode === 404) {
                     return _messages.notFound(
                         res,
@@ -265,7 +306,7 @@ module.exports = {
         try {
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}`;
             const user = await _functions.getUserByToken(req)
-            const body = { ...req.body, userId: user._id, userName: user.name, moderationStatus: req.body.socialStatus || "MODERATED"};
+            const body = { ...req.body, userId: user._id, userName: user.name, moderationStatus: req.body.socialStatus || "MODERATED" };
             const { data } = await axios.post(uri, body);
             _messages.success(res, req, data, 'ok', 'social', 'createComment');
             return;
@@ -305,7 +346,7 @@ module.exports = {
         try {
             const { trailId } = req.params;
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/${trailId}`;
-            const { data } = await axios.get(uri);
+            const { data } = await axios.get(uri, { params: req.query });
             _messages.success(
                 res,
                 req,
@@ -353,7 +394,7 @@ module.exports = {
     async getPendingComments(req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/pending`;
-            const { searchBy, ...query } =  req.query
+            const { searchBy, ...query } = req.query
             const searchByTrailOrUser = await _business.handleSearchByTrailOrUser(searchBy)
 
             const { data } = await axios.get(uri, {
@@ -384,7 +425,7 @@ module.exports = {
     async getApprovedComments(req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/approved`;
-            const { searchBy, ...query } =  req.query
+            const { searchBy, ...query } = req.query
             const searchByTrailOrUser = await _business.handleSearchByTrailOrUser(searchBy)
 
             const { data } = await axios.get(uri, {
@@ -416,7 +457,7 @@ module.exports = {
     async getRejectedComments(req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/rejected`;
-            const { searchBy, ...query } =  req.query
+            const { searchBy, ...query } = req.query
             const searchByTrailOrUser = await _business.handleSearchByTrailOrUser(searchBy)
 
             const { data } = await axios.get(uri, {
@@ -500,23 +541,23 @@ module.exports = {
             const { data } = await axios.get(uri);
             const { users } = data
 
-            if(users){
-                for(const user of users.allowed){
-                    if(user.userId == userId){
+            if (users) {
+                for (const user of users.allowed) {
+                    if (user.userId == userId) {
                         allowed = true
                         data.userAllowed = allowed
                     }
                 }
 
-                for(const user of users.blocked){
-                    if(user.userId == userId){
+                for (const user of users.blocked) {
+                    if (user.userId == userId) {
                         blocked = true
                         data.userBlocked = blocked
                     }
                 }
 
-                for(const user of users.moderated){
-                    if(user.userId == userId){
+                for (const user of users.moderated) {
+                    if (user.userId == userId) {
                         moderated = true
                         data.userModerated = moderated
                     }
@@ -639,7 +680,7 @@ module.exports = {
             return;
         }
     },
-    
+
     async shareSocialContent(req, res) {
         try {
             const { name } = await _functions.getUserByToken(req);
@@ -647,36 +688,44 @@ module.exports = {
 
             const trail = await Trail.findById(trailId, 'title titleURL');
 
-            const text = `Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!`;
-            const texthtml = `<br> <p>Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!</p> <br>`;
-            const messages = [];
 
-            for(let id of users){
-                const message = {
-                    category: 'notify',
-                    communication: ['notification', 'email'],
-                    mode: 'manual',
-                    target: {
-                        type: 'users',
-                        value: {
-                            users: [id],
+            for (let id of users) {
+                let userIsValid = false
+                const trail = await Trail.findById(trailId, 'title titleURL');
+
+                const usersWithTags = await UsersWithProcessedTags.find({
+                    userTags: { $in: tags },
+                }).lean();
+
+                if (userIsValid) {
+                    const text = `Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!`;
+                    const texthtml = `<br> <p>Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!</p> <br>`;
+                    const message = {
+                        category: 'notify',
+                        communication: ['notification', 'email'],
+                        mode: 'manual',
+                        target: {
+                            type: 'users',
+                            value: {
+                                users: [id],
+                            },
                         },
-                    },
-                    text: text,
-                    texthtml: texthtml,
-                    thumbnail: config.messenger.emailTemplate.thumbnail,
-                    title: `Happlearning - ${name} compartilhou um conteúdo com você!`,
-                };
-                createMessagesFromBackend(message)
+                        text: text,
+                        texthtml: texthtml,
+                        thumbnail: config.messenger.emailTemplate.thumbnail,
+                        title: `Happlearning - ${name} compartilhou um conteúdo com você!`,
+                    };
+                    // createMessagesFromBackend(message)
+                }
             }
 
-            const uri = `${process.env.API_SOCIAL}/home/share/${process.env.CLIENT_ID}`;
-            const { data } = await axios.post(uri, { users: users, trailId });
+            // const uri = `${process.env.API_SOCIAL}/home/share/${process.env.CLIENT_ID}`;
+            // const { data } = await axios.post(uri, { users: users, trailId });
 
             _messages.success(
                 res,
                 req,
-                data,
+                "data",
                 'ok',
                 'social',
                 'shareSocialContent'
@@ -714,8 +763,8 @@ module.exports = {
                 userTags: { $in: tags },
             }).lean();
 
-            for(const user of usersWithTags){
-                elegibleUsers.push({name: user.name, _id: user._id})
+            for (const user of usersWithTags) {
+                elegibleUsers.push({ name: user.name, _id: user._id })
             }
 
             _messages.success(
