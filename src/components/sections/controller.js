@@ -265,9 +265,9 @@ module.exports = {
                         }
                     }
                     trail.completionPercentage = trail?.trackings?.find((tracking) => {
-                        return t.networkLogin === user.networkLogin
+                        return tracking.networkLogin === user.networkLogin
                     })?.completionPercentage
-                    
+
                     delete trail.trackings
 
                     return trail
