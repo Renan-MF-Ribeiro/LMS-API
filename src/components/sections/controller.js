@@ -26,6 +26,7 @@ const {
     processExpirationDate,
     findObjectInRange,
 } = require('../../utils/functions');
+const { TrailsUsersProgress } = require('../trails/model');
 
 module.exports = {
     async returnSections(req, res) {
@@ -201,7 +202,6 @@ module.exports = {
     },
 
     async getSectionsElegibles(req, res) {
-        console.time('Get Section Elegibles');
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
@@ -214,13 +214,7 @@ module.exports = {
                 const trailsInSections = await Section.find({ _id: { $in: idSections } }).select(
                     'trails -_id'
                 );
-                newArray.push(
-                    ...trailsInSections
-                        .map((e) => {
-                            return e.trails;
-                        })
-                        .flat(2)
-                );
+                newArray.push(...trailsInSections.map((e) => e.trails).flat(2));
                 delete req.query.channel;
                 sectionArray = idSections;
             }
@@ -228,7 +222,6 @@ module.exports = {
             let resultSections = [];
             if (tags.length > 0) {
                 const filter = req.query;
-                console.time('populateTrails');
 
                 const query = {
                     enabled: true,
@@ -244,15 +237,10 @@ module.exports = {
                             },
                         },
                     ],
+                    ...(!!channelId && { _id: { $in: newArray } })
                 };
 
-                if (channelId) {
-                    query['_id'] = { $in: newArray };
-                }
-
-                let trails = await populateTrails(true, query);
-                console.log('Total de trilhas:', trails.length);
-                console.timeEnd('populateTrails');
+                let trails = await TrailsUsersProgress.find(query).lean();
                 trails = trails.filter(
                     (trail) =>
                         checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) &&
@@ -260,23 +248,11 @@ module.exports = {
                 );
 
                 trails = trails.filter((trail) => checkIfTheTrackIsValid(trail));
-
-                const allTrackingUser = await Tracking.find({
-                    userLogin: { $eq: user.networkLogin },
-                    $or: [
-                        { expiredCompletion: { $exists: false } },
-                        { expiredCompletion: { $eq: null } },
-                    ],
-                });
-
-                for (let trail of trails) {
-                    const processedTrail = processTrailTracking(trail, allTrackingUser);
-
+                trails = trails.map((trail) => {
                     if (trail.expirationType) {
                         trail = processExpirationDate(trail, user);
                     }
 
-                    trail = processedTrail.trail;
                     for (const tag of trail.tags) {
                         for (const classGroup of classGroups) {
                             if (classGroup.groupCode === tag.value) {
@@ -287,7 +263,12 @@ module.exports = {
                             }
                         }
                     }
-                }
+                    trail.completion = trail?.trackings?.find((t) => t.networkLogin === user.networkLogin)?.completion
+                    delete trail.trackings
+
+                    return trail
+                })
+
                 let arrSections = await elegiblesContents(trails);
 
                 const arrMandatorySections = await mandatorySections(trails, tags);
@@ -352,7 +333,6 @@ module.exports = {
                 '/elegiblesContents'
             );
         }
-        console.timeEnd('Get Section Elegibles');
     },
 
     async updatePosition(req, res) {
