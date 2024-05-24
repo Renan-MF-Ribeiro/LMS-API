@@ -14,6 +14,7 @@ const {
     recentsSections,
     keepLearningSections,
     concludedSections,
+    favoriteSections,
     getGroupCodesByToken,
     checkEligibilityTagsAnd,
     courseInSections,
@@ -263,7 +264,10 @@ module.exports = {
                             }
                         }
                     }
-                    trail.completion = trail?.trackings?.find((t) => t.networkLogin === user.networkLogin)?.completion
+                    trail.completionPercentage = trail?.trackings?.find((tracking) => {
+                        return t.networkLogin === user.networkLogin
+                    })?.completionPercentage
+                    
                     delete trail.trackings
 
                     return trail
@@ -275,16 +279,17 @@ module.exports = {
                 const arrRecentsSections = await recentsSections(trails);
                 const arrKeepLearningSections = await keepLearningSections(trails);
                 const arrConcludedSections = await concludedSections(trails);
+                const arrFavoriteSections = await favoriteSections(trails, user._id);
 
                 const courses = await getStudentCourses(req);
                 const arrCoursesSections = await courseInSections(tags, courses, user._id);
-
                 resultSections = arrSections
                     .concat(arrMandatorySections)
                     .concat(arrRecentsSections)
                     .concat(arrKeepLearningSections)
                     .concat(arrConcludedSections)
-                    .concat(arrCoursesSections);
+                    .concat(arrCoursesSections)
+                    .concat(arrFavoriteSections);
 
                 if (channelId) {
                     const filteredArray = resultSections.filter((obj) =>

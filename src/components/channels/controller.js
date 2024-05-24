@@ -67,8 +67,10 @@ module.exports = {
 
             channels = await Promise.all(channels.map(async (channel) => {
                 if (channel.type === 'alura') return channel
+
                 console.log('channel.type', channel.type)
                 if (config.collaboration.active && channel.type === 'collaboration') return channel
+
                 const sections = await Section.find({ _id: { $in: channel.idSections } }).select('trails');
 
                 const trailsIds = sections.reduce((trails, section) => trails.concat(section.trails), []);

@@ -66,6 +66,8 @@ const ItemSchema = new mongoose.Schema(
         expirationDate: { type: Date, required: false },
         responsible: { type: String, required: false },
         fileName: { type: String },
+        archive: { type: Boolean, required: false, default: false },
+        archivedAt: { type: Date, required: false, default: null },
     },
     {
         ...schemaOptions,

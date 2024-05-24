@@ -110,7 +110,9 @@ const TrailSchema = new mongoose.Schema(
         certificateDue: { type: Object, default: null },
         expirationDate: { type: Date, default: null },
         supportMaterial: { type: Array },
-        isPadletEnabled: { type: Boolean, default: false }
+        isPadletEnabled: { type: Boolean, default: false },
+        archive: { type: Boolean, required: false, default: false },
+        archivedAt: { type: Date, required: false, default: null },
     },
     {
         strict: 'throw',
@@ -324,7 +326,9 @@ const vwTrailsUsersProgress = new mongoose.Schema({
     expirationDate: { type: Date, default: null },
     supportMaterial: { type: Array },
     isPadletEnabled: { type: Boolean, default: false },
-    completionPercentage: { type: Number }
+    archive: { type: Boolean, required: false, default: false },
+    archivedAt: { type: Date, required: false, default: null },
+    completionPercentage: { type: Number },
 },);
 const TrailsUsersProgress = mongoose.model(
     'vwTrailsUsersProgress',
