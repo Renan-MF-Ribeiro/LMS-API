@@ -324,6 +324,7 @@ const vwTrailsUsersProgress = new mongoose.Schema({
     expirationDate: { type: Date, default: null },
     supportMaterial: { type: Array },
     isPadletEnabled: { type: Boolean, default: false },
+    completionPercentage: { type: Number }
 },);
 const TrailsUsersProgress = mongoose.model(
     'vwTrailsUsersProgress',
