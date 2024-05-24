@@ -9,3 +9,4 @@ module.exports = express
     .get('/dashboard-studentv2', isStudent, _controller.dashboardStudentv2)
     .get('/certificates', isStudent, _controller.listCertificates)
     .get('/certificates/expired', isStudent, _controller.listExpiredCertificates)
+    .get('/no-certificates', isStudent, _controller.noCertificates)
