@@ -203,6 +203,161 @@ module.exports = {
     },
 
     async getSectionsElegibles(req, res) {
+        console.time('Get Section Elegibles');
+        try {
+            const user = await getUserByToken(req);
+            const tags = await getTagsElegiblesByToken(req);
+            const classGroups = await getGroupCodesByToken(req, tags);
+            const channelId = req.query.channel;
+            const newArray = [];
+            let sectionArray;
+            if (channelId) {
+                const { idSections } = await Channel.findById(channelId).select('idSections -_id');
+                const trailsInSections = await Section.find({ _id: { $in: idSections } }).select(
+                    'trails -_id'
+                );
+                newArray.push(
+                    ...trailsInSections
+                        .map((e) => {
+                            return e.trails;
+                        })
+                        .flat(2)
+                );
+                delete req.query.channel;
+                sectionArray = idSections;
+            }
+
+            let resultSections = [];
+            if (tags.length > 0) {
+                const filter = req.query;
+                console.time('populateTrails');
+
+                const query = {
+                    enabled: true,
+                    $or: [
+                        {
+                            tags: {
+                                $in: tags,
+                            },
+                        },
+                        {
+                            tagsAnd: {
+                                $in: tags,
+                            },
+                        },
+                    ],
+                };
+
+                if (channelId) {
+                    query['_id'] = { $in: newArray };
+                }
+
+                let trails = await populateTrails(true, query);
+                console.log('Total de trilhas:', trails.length);
+                console.timeEnd('populateTrails');
+                trails = trails.filter(
+                    (trail) =>
+                        checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) &&
+                        !trail.collaborative
+                );
+
+                trails = trails.filter((trail) => checkIfTheTrackIsValid(trail));
+
+                const allTrackingUser = await Tracking.find({
+                    userLogin: { $eq: user.networkLogin },
+                    $or: [
+                        { expiredCompletion: { $exists: false } },
+                        { expiredCompletion: { $eq: null } },
+                    ],
+                });
+
+                for (let trail of trails) {
+                    const processedTrail = processTrailTracking(trail, allTrackingUser);
+
+                    if (trail.expirationType) {
+                        trail = processExpirationDate(trail, user);
+                    }
+
+                    trail = processedTrail.trail;
+                    for (const tag of trail.tags) {
+                        for (const classGroup of classGroups) {
+                            if (classGroup.groupCode === tag.value) {
+                                trail.classGroup = findObjectInRange(
+                                    classGroups.filter((e) => e.groupCode == tag.value),
+                                    new Date()
+                                );
+                            }
+                        }
+                    }
+                }
+                let arrSections = await elegiblesContents(trails);
+
+                const arrMandatorySections = await mandatorySections(trails, tags);
+                const arrRecentsSections = await recentsSections(trails);
+                const arrKeepLearningSections = await keepLearningSections(trails);
+                const arrConcludedSections = await concludedSections(trails);
+
+                const courses = await getStudentCourses(req);
+                const arrCoursesSections = await courseInSections(tags, courses, user._id);
+
+                resultSections = arrSections
+                    .concat(arrMandatorySections)
+                    .concat(arrRecentsSections)
+                    .concat(arrKeepLearningSections)
+                    .concat(arrConcludedSections)
+                    .concat(arrCoursesSections);
+
+                if (channelId) {
+                    const filteredArray = resultSections.filter((obj) =>
+                        obj ? sectionArray.includes(obj._id) : false
+                    );
+                    resultSections = filteredArray;
+                }
+
+                resultSections = resultSections.filter((val) => {
+                    return val != null;
+                });
+
+                if (resultSections.length > 0) {
+                    resultSections.sort((a, b) => (a.position < b.position ? -1 : 1));
+                }
+
+                if (filter && Object.values(filter).length > 0) {
+                    const arrResultSections = [];
+                    for (const section of resultSections) {
+                        section.trails = filterTrails(filter, section.trails, tags);
+                        if (section.trails.length > 0) {
+                            // Verifica a obrigatoriedade da trilha.
+                            arrResultSections.push(section);
+                        }
+                    }
+
+                    resultSections = arrResultSections;
+                }
+
+                for (const section of resultSections) {
+                    for (const trail of section.trails) {
+                        setTrailMandatory(trail, tags);
+                    }
+                }
+            }
+
+            _messages.success(res, req, resultSections);
+        } catch (error) {
+            console.log(error);
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'sections',
+                '/elegiblesContents'
+            );
+        }
+        console.timeEnd('Get Section Elegibles');
+    },
+
+    async getSectionsElegiblesNew(req, res) {
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
