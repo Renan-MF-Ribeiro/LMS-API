@@ -15,7 +15,7 @@ const { Section, DEFAULT_TYPES } = require('./model');
 const { default: axios } = require('axios');
 
 module.exports = {
-    checkIfTheTrackIsValid(trail) {
+    checkIfTheTrackIsValid (trail) {
         const today = getDateTodayWithoutHours();
 
         if (trail.classGroup) {
@@ -39,7 +39,7 @@ module.exports = {
         return true;
     },
 
-    calculateDiffDateTrail(trail) {
+    calculateDiffDateTrail (trail) {
         const today = getDateTodayWithoutHours();
         const diffCreate = calculateDiffDate(
             today,
@@ -56,7 +56,7 @@ module.exports = {
         return false;
     },
 
-    checkIfUserCanSeeTheTrail(trail, userTags) {
+    checkIfUserCanSeeTheTrail (trail, userTags) {
         const trailTags = trail.tags;
         let flag = false;
 
@@ -71,7 +71,7 @@ module.exports = {
         if (flag) return true;
         return false;
     },
-    getTrailCompletion(trail) {
+    getTrailCompletion (trail) {
         const completed = trail.items.find((val) => {
             return val.completion === 1;
         });
@@ -96,7 +96,7 @@ module.exports = {
             return null;
         }
     },
-    filterTrails(filter, trails, elegibleTags) {
+    filterTrails (filter, trails, elegibleTags) {
         const filteredTrails = [];
         for (const i in trails) {
             let completed = false;
@@ -136,7 +136,7 @@ module.exports = {
         }
         return filteredTrails;
     },
-    setTrailMandatory(trail, tags) {
+    setTrailMandatory (trail, tags) {
         const mandatoryTags = trail.mandatory;
 
         if (!mandatoryTags || !mandatoryTags.length) {
@@ -198,7 +198,7 @@ module.exports = {
         });
     },
 
-    getGroupCodesByToken(req, tags) {
+    getGroupCodesByToken (req, tags) {
         return new Promise(async (resolve, reject) => {
             try {
                 const user = await getUserByToken(req);
@@ -221,7 +221,7 @@ module.exports = {
         });
     },
 
-    getTagsElegibles(user) {
+    getTagsElegibles (user) {
         return new Promise(async (resolve, reject) => {
             try {
                 const namesGroups = user.groupsAD;
@@ -242,7 +242,7 @@ module.exports = {
         });
     },
 
-    checkItemCompleted(item, user) {
+    checkItemCompleted (item, user) {
         return new Promise(async (resolve, reject) => {
             try {
                 let completion = null;
@@ -300,7 +300,7 @@ module.exports = {
         });
     },
 
-    async elegiblesContents(trails) {
+    async elegiblesContents (trails) {
         return new Promise(async (resolve, reject) => {
             try {
                 const arrSections = [];
@@ -349,7 +349,7 @@ module.exports = {
         });
     },
 
-    async mandatorySections(trails, tags) {
+    async mandatorySections (trails, tags) {
         return new Promise(async (resolve, reject) => {
             try {
                 const section = await Section.findOne({
@@ -360,14 +360,14 @@ module.exports = {
                 if (section) {
                     const sortFnc =
                         section &&
-                        section.ordination !== undefined &&
-                        section.ordination === 0
+                            section.ordination !== undefined &&
+                            section.ordination === 0
                             ? function (a, b) {
-                                  return b.createdAt - a.createdAt;
-                              }
+                                return b.createdAt - a.createdAt;
+                            }
                             : function (a, b) {
-                                  return a.title.localeCompare(b.title);
-                              };
+                                return a.title.localeCompare(b.title);
+                            };
 
                     trails = trails.filter((trail) => {
                         const trailItems = trail.items.filter((item) =>
@@ -402,7 +402,7 @@ module.exports = {
         });
     },
 
-    async recentsSections(trails) {
+    async recentsSections (trails) {
         return new Promise(async (resolve, reject) => {
             try {
                 const section = await Section.findOne({
@@ -413,14 +413,14 @@ module.exports = {
                 if (section) {
                     const sortFnc =
                         section &&
-                        section.ordination !== undefined &&
-                        section.ordination === 0
+                            section.ordination !== undefined &&
+                            section.ordination === 0
                             ? function (a, b) {
-                                  return b.createdAt - a.createdAt;
-                              }
+                                return b.createdAt - a.createdAt;
+                            }
                             : function (a, b) {
-                                  return a.title.localeCompare(b.title);
-                              };
+                                return a.title.localeCompare(b.title);
+                            };
 
                     for (const trail of trails) {
                         const flag = calculateDiffDateTrail(trail);
@@ -439,7 +439,7 @@ module.exports = {
         });
     },
 
-    async keepLearningSections(trails) {
+    async keepLearningSections (trails) {
         return new Promise(async (resolve, reject) => {
             try {
                 const section = await Section.findOne({
@@ -450,14 +450,14 @@ module.exports = {
                 if (section) {
                     const sortFnc =
                         section &&
-                        section.ordination !== undefined &&
-                        section.ordination === 0
+                            section.ordination !== undefined &&
+                            section.ordination === 0
                             ? function (a, b) {
-                                  return b.createdAt - a.createdAt;
-                              }
+                                return b.createdAt - a.createdAt;
+                            }
                             : function (a, b) {
-                                  return a.title.localeCompare(b.title);
-                              };
+                                return a.title.localeCompare(b.title);
+                            };
 
                     for (const trail of trails) {
                         if (trail.completion === 0) {
@@ -476,7 +476,7 @@ module.exports = {
         });
     },
 
-    async concludedSections(trails) {
+    async concludedSections (trails) {
         return new Promise(async (resolve, reject) => {
             try {
                 const section = await Section.findOne({
@@ -487,14 +487,14 @@ module.exports = {
                 if (section) {
                     const sortFnc =
                         section &&
-                        section.ordination !== undefined &&
-                        section.ordination === 0
+                            section.ordination !== undefined &&
+                            section.ordination === 0
                             ? function (a, b) {
-                                  return b.createdAt - a.createdAt;
-                              }
+                                return b.createdAt - a.createdAt;
+                            }
                             : function (a, b) {
-                                  return a.title.localeCompare(b.title);
-                              };
+                                return a.title.localeCompare(b.title);
+                            };
 
                     for (const trail of trails) {
                         if (trail.completion) {
@@ -513,7 +513,7 @@ module.exports = {
         });
     },
 
-    async favoriteSections(trails, userId) {
+    async favoriteSections (trails, userId) {
         return new Promise(async (resolve, reject) => {
             try {
                 const section = await Section.findOne({
@@ -523,22 +523,22 @@ module.exports = {
 
                 const uri = `${process.env.API_SOCIAL}/home/favorite/${userId}`;
                 const { data } = await axios.get(uri);
-                const favoriteTrails = data.map((f)=>{
-                    if(f.target){
+                const favoriteTrails = data.map((f) => {
+                    if (f.target) {
                         return f.trailId
                     }
                 })
                 if (section) {
                     const sortFnc =
                         section &&
-                        section.ordination !== undefined &&
-                        section.ordination === 0
+                            section.ordination !== undefined &&
+                            section.ordination === 0
                             ? function (a, b) {
-                                  return b.createdAt - a.createdAt;
-                              }
+                                return b.createdAt - a.createdAt;
+                            }
                             : function (a, b) {
-                                  return a.title.localeCompare(b.title);
-                              };
+                                return a.title.localeCompare(b.title);
+                            };
 
                     for (const trail of trails) {
                         console.log(favoriteTrails.includes(String(trail._id)))
@@ -590,8 +590,8 @@ module.exports = {
                     courses.map((e) => {
                         if (String(e.courseID._id) == String(i._id)) {
                             const presence = e.users[0].presence
-                            const grade = e.users[0].grades ?  e.users[0].grades : 0
-                            const passingScore = i.passingScore ?  i.passingScore: 0
+                            const grade = e.users[0].grades ? e.users[0].grades : 0
+                            const passingScore = i.passingScore ? i.passingScore : 0
                             const certificateElegible = grade >= passingScore ? true : false
                             i.certificateElegible = certificateElegible
                             i.presence = presence
@@ -632,7 +632,7 @@ module.exports = {
     },
 
 
-    checkEligibilityTagsAnd(tagsUser, tagsAnd, tagsOr) {
+    checkEligibilityTagsAnd (tagsUser, tagsAnd, tagsOr) {
         const eligibilityUser = tagsUser.map((tag) =>
             tag.value.toLocaleLowerCase()
         );
@@ -663,7 +663,7 @@ module.exports = {
     },
 };
 
-function isNecessary(trail, tags) {
+function isNecessary (trail, tags) {
     const mandatoryTags = trail.mandatory;
 
     if (mandatoryTags.length === 0) {
@@ -701,7 +701,7 @@ function isNecessary(trail, tags) {
     return hasMandatory && hasMandatoryItems;
 }
 
-function isCompleted(trail) {
+function isCompleted (trail) {
     if (trail.completion === 1) {
         return true;
     } else {
@@ -709,7 +709,7 @@ function isCompleted(trail) {
     }
 }
 
-function isIncomplete(trail) {
+function isIncomplete (trail) {
     if (
         trail.completion >= 0 &&
         trail.completion < 1 &&
@@ -721,7 +721,7 @@ function isIncomplete(trail) {
     }
 }
 
-function isHighlight(trail) {
+function isHighlight (trail) {
     let flag = false;
     const today = getDateTodayWithoutHours();
 
@@ -742,7 +742,7 @@ function isHighlight(trail) {
     return flag;
 }
 
-function isNotStarted(trail) {
+function isNotStarted (trail) {
     if (trail.completion === null) {
         return true;
     } else {
@@ -750,7 +750,7 @@ function isNotStarted(trail) {
     }
 }
 
-function isMostRecent(trail) {
+function isMostRecent (trail) {
     const today = getDateTodayWithoutHours();
     const diffCreate = calculateDiffDate(
         today,
@@ -776,7 +776,7 @@ function isMostRecent(trail) {
     }
 }
 
-function checkIfTheTrackIsValid(trail) {
+function checkIfTheTrackIsValid (trail) {
     const today = getDateTodayWithoutHours();
 
     if (trail.classGroup) {
@@ -798,7 +798,7 @@ function checkIfTheTrackIsValid(trail) {
     return true;
 }
 
-function calculateDiffDateTrail(trail) {
+function calculateDiffDateTrail (trail) {
     const today = getDateTodayWithoutHours();
     const diffCreate = calculateDiffDate(
         today,

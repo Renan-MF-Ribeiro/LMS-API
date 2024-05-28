@@ -229,13 +229,7 @@ module.exports = {
             body.mandatory = JSON.parse(body.mandatory);
             body.certificateDue = JSON.parse(body.certificateDue);
 
-            const dateInitialCourse = formatDateWithoutHours(
-                addHours(body.dateInitial)
-            );
-            const dataFinalCourse = formatDateWithoutHours(
-                addHours(body.dateFinal)
-            );
-            
+
             let thumbPath;
             const { thumb } = req.files;
             if (thumb) {
@@ -248,9 +242,9 @@ module.exports = {
             if (!body.certificateLayout || body.certificateLayout === 'null')
                 body.certificateLayout = null;
 
-            if (dateInitialCourse > dataFinalCourse) flagDate = false;
+            if (body.dateInitial > body.dateFinal) flagDate = false;
 
-            
+
 
             if (!flagDate) {
                 badRequest(
@@ -262,11 +256,6 @@ module.exports = {
                     '/updateCourse'
                 );
             } else {
-                // if(body.passingScore === "null") {
-                //     body.passingScore = null;
-                // } else {
-                //     body.passingScore = +body.passingScore; // Converte para inteiro
-                // }
 
                 if (body.isEvaluationAvailable) {
                     body.isEvaluationAvailable =
@@ -293,10 +282,7 @@ module.exports = {
                     const programID = await returnProgramaID(body.program);
                     body.program = programID;
 
-                    body.dateInitial = formatDateWithoutHours(body.dateInitial);
-                    if (body.dateFinal) {
-                        body.dateFinal = formatDateWithoutHours(body.dateFinal);
-                    }
+
 
                     if (materials) {
                         const materialsArray = Array.isArray(materials)
