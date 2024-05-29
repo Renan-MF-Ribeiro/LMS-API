@@ -26,7 +26,7 @@ module.exports = {
             }
 
 
-            let theme = await Theme.findOne({}).sort({ createdAt: -1 })
+            let theme = await Theme.findOne({ defaultPalette: false }).sort({ createdAt: 1 })
 
             if (theme && !body.defaultPalette) {
                 theme = await Theme.findByIdAndUpdate(theme._id, body, { new: true })
