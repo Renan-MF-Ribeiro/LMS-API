@@ -338,7 +338,45 @@ const HomeController = {
                 '/certificates/expired'
             );
         }
-    }
+    },
+
+    async noCertificates (req, res) {
+        try {
+            const { searchBy } = req.query;
+            req.query = { ...req.query, pageSize: req.query.pageSize ?? 5 };
+            const { skip, limit } = pagination(req);
+            const user = await getUserByToken(req);
+            const tags = await getTagsElegiblesByToken(req);
+            const elegibleTrails = await Trail.find({
+                tags: { $in: tags },
+                enabled: true,
+                startDate: { $lt: getDateTodayWithoutHours() },
+                endDate: { $gt: getDateTodayWithoutHours() },
+                certificate: 0,
+            }).populate('items.itemID');
+            let { completedTrails } = await handleStudentTrails(user, elegibleTrails);
+
+
+            if (searchBy) {
+                completedTrails = completedTrails.filter(({ title }) => {
+                    return title.toLowerCase().includes(searchBy.toLowerCase());
+                });
+            }
+            completedTrails = completedTrails.slice(skip, skip + limit);
+
+            _messages.success(res, req, completedTrails);
+        } catch (error) {
+            console.log({ error });
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'home',
+                '/certificates/expired'
+            );
+        }
+    },
 };
 
 module.exports = HomeController;

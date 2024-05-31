@@ -16,7 +16,7 @@ const { getTagsElegiblesByToken } = require('../sections/business');
 
 
 module.exports = {
-    async getConfig(req, res) {
+    async getConfig (req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/client-config/${process.env.CLIENT_ID}`;
             const { data } = await axios.get(uri);
@@ -62,30 +62,38 @@ module.exports = {
         }
     },
 
-    async getSocialStatus(req, res) {
+    async getSocialStatus (req, res) {
         try {
             const userTags = await getTagsElegiblesByToken(req)
+            const user = await _functions.getUserByToken(req)
             const uri = `${process.env.API_SOCIAL}/client-config/${process.env.CLIENT_ID}`;
             const { data } = await axios.get(uri);
 
             let trailBlocked = false;
             let tagBlocked = false;
+            let userBlocked = false;
+
             if (data.blockedTrails.length > 0) {
-                trailBlocked = data.blockedTrails.some((trail)=>{
+                trailBlocked = data.blockedTrails.some((trail) => {
                     return trail.trailId === req.query.trailId
                 })
-                tagBlocked = data.tagsLists.blocked.some((tag)=>{
-                    return userTags.some((t)=>{
-                        console.log(t.value, tag)
+                tagBlocked = data.tagsLists.blocked.some((tag) => {
+                    return userTags.some((t) => {
                         return t.value === tag
                     })
                 })
-            } 
+            }
+            if (data.usersLists.blocked.length > 0) {
+                userBlocked = data.usersLists.blocked.some((u) => {
+                    return u.userId == user._id
+                })
+
+            }
 
             _messages.success(
                 res,
                 req,
-                { trailBlocked, tagBlocked },
+                { trailBlocked, tagBlocked, userBlocked },
                 'configurações encontradas',
                 'social',
                 'getConfig'
@@ -103,7 +111,7 @@ module.exports = {
         }
     },
 
-    async putConfig(req, res) {
+    async putConfig (req, res) {
         try {
             const reqBody = req.body;
             const blockedTrailsIdAndTitle = reqBody.blockedTrails.map(
@@ -167,7 +175,7 @@ module.exports = {
         }
     },
 
-    async getUsers(req, res) {
+    async getUsers (req, res) {
         try {
             const { skip, limit } = _functions.pagination(req);
             const { order, sort } = _functions.ordernation(req);
@@ -216,7 +224,7 @@ module.exports = {
         }
     },
 
-    async addOrRemoveFromUserList(req, res) {
+    async addOrRemoveFromUserList (req, res) {
         try {
             const { operation, listName } = req.body;
 
@@ -302,7 +310,7 @@ module.exports = {
         }
     },
 
-    async createComment(req, res) {
+    async createComment (req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}`;
             const user = await _functions.getUserByToken(req)
@@ -322,7 +330,7 @@ module.exports = {
         }
     },
 
-    async getAllComments(req, res) {
+    async getAllComments (req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}`;
             const { data } = await axios.get(uri, { params: req.query });
@@ -342,7 +350,7 @@ module.exports = {
         }
     },
 
-    async getCommentsByTrailId(req, res) {
+    async getCommentsByTrailId (req, res) {
         try {
             const { trailId } = req.params;
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/${trailId}`;
@@ -369,7 +377,7 @@ module.exports = {
         }
     },
 
-    async updateComment(req, res) {
+    async updateComment (req, res) {
         try {
             const { commentId } = req.params;
             const body = req.body;
@@ -391,7 +399,7 @@ module.exports = {
         }
     },
 
-    async getPendingComments(req, res) {
+    async getPendingComments (req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/pending`;
             const { searchBy, ...query } = req.query
@@ -422,7 +430,7 @@ module.exports = {
         }
     },
 
-    async getApprovedComments(req, res) {
+    async getApprovedComments (req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/approved`;
             const { searchBy, ...query } = req.query
@@ -454,7 +462,7 @@ module.exports = {
         }
     },
 
-    async getRejectedComments(req, res) {
+    async getRejectedComments (req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/rejected`;
             const { searchBy, ...query } = req.query
@@ -486,7 +494,7 @@ module.exports = {
         }
     },
 
-    async updateCommentStatus(req, res) {
+    async updateCommentStatus (req, res) {
         try {
             const { commentId } = req.params
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/${commentId}`;
@@ -509,7 +517,7 @@ module.exports = {
         }
     },
 
-    async createLike(req, res) {
+    async createLike (req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/home/like/${process.env.CLIENT_ID}`;
             const body = req.body;
@@ -531,7 +539,7 @@ module.exports = {
         }
     },
 
-    async getLikesByTrailId(req, res) {
+    async getLikesByTrailId (req, res) {
         try {
             let allowed = false
             let blocked = false
@@ -589,7 +597,7 @@ module.exports = {
         }
     },
 
-    async deleteLike(req, res) {
+    async deleteLike (req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/home/like`;
             const body = req.body;
@@ -610,7 +618,7 @@ module.exports = {
         }
     },
 
-    async createFavorite(req, res) {
+    async createFavorite (req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/home/favorite/${process.env.CLIENT_ID}`;
             const body = req.body;
@@ -631,7 +639,7 @@ module.exports = {
         }
     },
 
-    async getFavoritesByUserId(req, res) {
+    async getFavoritesByUserId (req, res) {
         try {
             const { userId } = req.params;
             const uri = `${process.env.API_SOCIAL}/home/favorite/${userId}`;
@@ -659,7 +667,7 @@ module.exports = {
         }
     },
 
-    async updateFavorite(req, res) {
+    async updateFavorite (req, res) {
         try {
             const { favoriteId } = req.params;
             const body = req.body;
@@ -681,7 +689,7 @@ module.exports = {
         }
     },
 
-    async shareSocialContent(req, res) {
+    async shareSocialContent (req, res) {
         try {
             const { name } = await _functions.getUserByToken(req);
             const { users, trailId } = req.body;
@@ -693,9 +701,9 @@ module.exports = {
                 let userIsValid = false
                 const trail = await Trail.findById(trailId, 'title titleURL');
 
-                const usersWithTags = await UsersWithProcessedTags.find({
-                    userTags: { $in: tags },
-                }).lean();
+                // const usersWithTags = await UsersWithProcessedTags.find({
+                //     userTags: { $in: tags },
+                // }).lean();
 
                 if (userIsValid) {
                     const text = `Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!`;
@@ -732,7 +740,7 @@ module.exports = {
             );
             return;
         } catch (error) {
-            console.log(error.response.data)
+            console.log(error)
             _messages.badRequest(
                 res,
                 req,
@@ -745,7 +753,7 @@ module.exports = {
         }
     },
 
-    async getShareTargets(req, res) {
+    async getShareTargets (req, res) {
         try {
             const { trailId, searchBy } = req.query;
             const elegibleUsers = []
@@ -761,7 +769,7 @@ module.exports = {
                 userTags: { $in: tags },
             } : {
                 userTags: { $in: tags },
-            }).lean();
+            }).lean().limit(10);
 
             for (const user of usersWithTags) {
                 elegibleUsers.push({ name: user.name, _id: user._id })
@@ -791,7 +799,7 @@ module.exports = {
     },
 };
 
-async function createMessagesFromBackend(body) {
+async function createMessagesFromBackend (body) {
     try {
         const campaign = body;
         const target = campaign.target;
