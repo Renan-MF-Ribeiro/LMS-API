@@ -4,7 +4,7 @@ const { isStudent } = require('../../utils/middlewares');
 
 module.exports = express
     .Router()
-    .get('/searchBy', isStudent, _controller.searchTrailsItems)
+    .get('/searchBy', isStudent, _controller.searchBy)
     .get('/dashboard-student', isStudent, _controller.dashboardStudent)
     .get('/dashboard-studentv2', isStudent, _controller.dashboardStudentv2)
     .get('/certificates', isStudent, _controller.listCertificates)

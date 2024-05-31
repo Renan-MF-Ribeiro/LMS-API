@@ -6,6 +6,7 @@ const {
     checkIfTheTrackIsValid,
     checkEligibilityTagsAnd,
     getTagsElegiblesByToken,
+    filterTrails,
 } = require('../sections/business');
 const { User } = require('../users/model');
 const {
@@ -29,8 +30,120 @@ const {
 } = require('./business');
 
 const { populateTrails } = require('../trails/business');
+const { Section } = require('../sections/model');
 
 const HomeController = {
+    async searchBy(req, res) {
+        try {
+            const user = await getUserByToken(req);
+            const tags = await getTagsGroupsByToken(req);
+            const { searchBy, ...filters } = req.query;
+            let filteredTrails = [];
+            let result = [];
+
+            for (const tag of user.tags) {
+                delete tag.createdAt;
+                tags.push(tag);
+            }
+
+            const items = await Item.find({
+                $or: [
+                    { title: new RegExp(searchBy, 'gi') },
+                    { description: new RegExp(searchBy, 'gi') },
+                ],
+                enabled: true,
+                deleted: { $eq: 0 },
+            });
+
+            filteredTrails = await populateTrails(true, {
+                $or: [
+                    {
+                        $or: [
+                            { title: new RegExp(searchBy, 'gi') },
+                            { description: new RegExp(searchBy, 'gi') },
+                        ],
+                        tags: { $in: tags },
+                        enabled: true,
+                    },
+                    {
+                        'items.itemID': { $in: items.map((item) => item._id) },
+                        $or: [{ tags: { $in: tags } }, { mandatory: { $in: tags } }],
+                        enabled: true,
+                    },
+                ],
+            });
+
+            filteredTrails = filteredTrails.filter((trail) =>{
+                return checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && checkIfTheTrackIsValid(trail)
+            });
+
+            const itemsIds = filteredTrails.flatMap((t) => t.items.map((i) => i.itemID._id));
+            const allTrackingUser = await Tracking.find({
+                userLogin: { $eq: user.networkLogin },
+                item: { $in: itemsIds },
+                $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } },
+                ],
+            });
+
+            for (let trail of filteredTrails) {
+                const processedTrail = processTrailTracking(trail, allTrackingUser);
+                trail = processedTrail.trail;
+                result.push(trail);
+            }
+
+            if (Object.keys(filters).length > 0) {
+                result = filterTrails(filters, result, tags);
+            }
+            
+            const sections = await Section.find({
+                trails: { $in: result.map((t) => t._id) },
+                active: 1,
+                deleted: 0,
+            }).lean();
+            const trailMap = new Map();
+            sections.forEach((section) => {
+                section.trails.forEach((trail) => {
+                    if (!trailMap.has(trail._id)) {
+                        trailMap.set(trail._id, section._id);
+                    }
+                });
+            });
+            result = sections
+                .filter((section) => {
+                    return section.trails.every((trail) =>
+                        section._id.equals(trailMap.get(trail._id))
+                    );
+                })
+                .map((section) => {
+                    return {
+                        ...section,
+                        trails: section.trails
+                            .filter((trail) => {
+                                return result.find(({ _id }) => trail._id.equals(_id));
+                            })
+                            .map((trail) => {
+                                return result.find(({ _id }) => trail._id.equals(_id));
+                            }),
+                    };
+                });
+
+            console.log({ resultLength: result.length });
+
+            _messages.success(res, req, { result });
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'home',
+                'searchTrailsItems'
+            );
+        }
+    },
+
     async searchTrailsItems (req, res) {
         try {
             const user = await getUserByToken(req);
