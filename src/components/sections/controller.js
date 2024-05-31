@@ -17,8 +17,7 @@ const {
     favoriteSections,
     getGroupCodesByToken,
     checkEligibilityTagsAnd,
-    courseInSections,
-    favoriteSections
+    courseInSections
 } = require('./business');
 
 const { getStudentCourses } = require('../home/business');
