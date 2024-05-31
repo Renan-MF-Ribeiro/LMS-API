@@ -7,6 +7,8 @@ module.exports = express.Router()
     .put('/config', isAdmin, _controller.putConfig)
     .get('/users-lists', isAdmin, _controller.getUsers)
     .post('/users-lists', isAdmin, _controller.addOrRemoveFromUserList)
+    .get('/status', _controller.getSocialStatus)
+
     //comments
     .post('/comments/create', _controller.createComment)
     .get('/comments/all', _controller.getAllComments)

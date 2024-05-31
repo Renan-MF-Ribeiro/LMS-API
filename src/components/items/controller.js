@@ -1330,73 +1330,43 @@ const ItemController = {
             const q = {};
             if (req.query.enabled !== undefined) q.enabled = true;
             const searchBy = req.query.searchBy;
-            let total = await Item.find(
-                searchBy
-                    ? {
-                        $or: [
-                            {
-                                description: {
-                                    $regex: searchBy,
-                                    $options: 'i',
-                                },
+            const archive = req.query.archive;
+            const query = searchBy
+                ? {
+                    $or: [
+                        {
+                            description: {
+                                $regex: searchBy,
+                                $options: 'i',
                             },
-                            { title: { $regex: searchBy, $options: 'i' } },
-                            { notes: { $regex: searchBy, $options: 'i' } },
-                            {
-                                courseIdentifier: {
-                                    $regex: searchBy,
-                                    $options: 'i',
-                                },
+                        },
+                        { title: { $regex: searchBy, $options: 'i' } },
+                        { notes: { $regex: searchBy, $options: 'i' } },
+                        {
+                            courseIdentifier: {
+                                $regex: searchBy,
+                                $options: 'i',
                             },
-                            { alias: { $regex: searchBy, $options: 'i' } },
-                            { keywords: { $regex: searchBy, $options: 'i' } },
-                            {
-                                responsible: {
-                                    $regex: searchBy,
-                                    $options: 'i',
-                                },
+                        },
+                        { alias: { $regex: searchBy, $options: 'i' } },
+                        { keywords: { $regex: searchBy, $options: 'i' } },
+                        {
+                            responsible: {
+                                $regex: searchBy,
+                                $options: 'i',
                             },
-                        ],
-                        deleted: { $eq: 0 },
-                    }
-                    : {
-                        deleted: { $eq: 0 },
-                    }
-            ).count();
+                        },
+                    ],
+                    deleted: { $eq: 0 },
+                }
+                : {
+                    deleted: { $eq: 0 },
+                }
 
-            let itens = await Item.find(
-                searchBy
-                    ? {
-                        $or: [
-                            {
-                                description: {
-                                    $regex: searchBy,
-                                    $options: 'i',
-                                },
-                            },
-                            { title: { $regex: searchBy, $options: 'i' } },
-                            { notes: { $regex: searchBy, $options: 'i' } },
-                            {
-                                courseIdentifier: {
-                                    $regex: searchBy,
-                                    $options: 'i',
-                                },
-                            },
-                            { alias: { $regex: searchBy, $options: 'i' } },
-                            { keywords: { $regex: searchBy, $options: 'i' } },
-                            {
-                                responsible: {
-                                    $regex: searchBy,
-                                    $options: 'i',
-                                },
-                            },
-                        ],
-                        deleted: { $eq: 0 },
-                    }
-                    : {
-                        deleted: { $eq: 0 },
-                    }
-            )
+            query['archive'] = archive ? { $eq: archive === 'true' } : { $ne: true };
+            let total = await Item.find(query).count();
+
+            let itens = await Item.find(query)
                 .populate('idEvaluation', ['description'])
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
@@ -1404,59 +1374,7 @@ const ItemController = {
 
             if (req.query.activityItemFilter === 'true') {
                 const dataItens = [];
-                const filterItens = await Item.find(
-                    searchBy
-                        ? {
-                            $or: [
-                                {
-                                    description: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    title: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    notes: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    courseIdentifier: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    alias: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    keywords: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    responsible: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                            ],
-                            deleted: { $eq: 0 },
-                        }
-                        : {
-                            deleted: { $eq: 0 },
-                        }
-                );
+                const filterItens = await Item.find(query);
 
                 await Promise.all(
                     filterItens.reverse().map(async (item) => {
@@ -1473,59 +1391,7 @@ const ItemController = {
             }
             if (req.query.filterNotRelated === 'true') {
                 const dataItens = [];
-                const filterItens = await Item.find(
-                    searchBy
-                        ? {
-                            $or: [
-                                {
-                                    description: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    title: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    notes: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    courseIdentifier: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    alias: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    keywords: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    responsible: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                            ],
-                            deleted: { $eq: 0 },
-                        }
-                        : {
-                            deleted: { $eq: 0 },
-                        }
-                );
+                const filterItens = await Item.find(query);
 
                 await Promise.all(
                     filterItens.map(async (item) => {
@@ -1631,7 +1497,7 @@ const ItemController = {
             const { itemId } = req.params;
             const user = await getUserByToken(req);
             const item = await Item.findById(itemId);
-            const tracking = await Tracking.findOne({
+            let tracking = await Tracking.findOne({
                 item: item._id,
                 userLogin: user.networkLogin,
             });

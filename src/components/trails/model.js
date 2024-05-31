@@ -111,6 +111,8 @@ const TrailSchema = new mongoose.Schema(
         expirationDate: { type: Date, default: null },
         supportMaterial: { type: Array },
         isPadletEnabled: { type: Boolean, default: false },
+        archive: { type: Boolean, required: false, default: false },
+        archivedAt: { type: Date, required: false, default: null },
     },
     {
         strict: 'throw',
@@ -235,8 +237,108 @@ const TrailsTagsWithUsersAndTrackings = mongoose.model(
     'vwTrailsTagsWithUsersAndTrackings'
 );
 
+const vwTrailsUsersProgress = new mongoose.Schema({
+    enabled: { type: Boolean, default: false },
+    title: { type: String, required: true, trim: true },
+    titleURL: { type: String, required: true, trim: true },
+    description: { type: String, required: true, trim: true },
+    mandatory: { type: Array, default: [] },
+    highlighted: { type: Boolean, default: false },
+    level: { type: String, enum: ['basic', 'intermediate', 'advanced'] },
+    showcase: { type: Boolean, default: false },
+    collaborative: { type: Boolean, default: false },
+    certificateLayout: { type: 'ObjectId' },
+    author: { type: 'ObjectId', ref: 'users', required: true },
+    thumbPath: { type: String, required: ifEnabledAndNotHighlighted },
+    backgroundPath: { type: String, required: false },
+    bannerPath: { type: String, required: ifEnabledAndHighlighted },
+    expirationType: { type: Object },
+    complaints: [ComplaintSchema],
+    moderation: {
+        type: String,
+        enum: ['pending', 'approved', 'disapproved', 'denounced'],
+    },
+    separators: {
+        type: [
+            {
+                _id: { type: String },
+                kind: { type: String, required: true },
+                title: { type: String, required: true },
+                items: {
+                    type: [{ type: 'ObjectId', ref: 'Item' }],
+                    default: [],
+                },
+            },
+        ],
+    },
+    items: {
+        type: [
+            {
+                itemID: { type: 'ObjectId', ref: 'Item' },
+                urlItem: { type: String, required: false, default: null },
+                urlTrail: { type: String, required: false, default: null },
+                mandatory: { type: Boolean, default: false },
+                chief: { type: Boolean, default: false },
+                optional: { type: Boolean, default: false },
+                afterSeparator: {
+                    type: String,
+                    required: false,
+                    default: null,
+                },
+            },
+        ],
+        default: [],
+    },
+    items_new: {
+        type: [
+            {
+                itemID: { type: 'ObjectId', ref: 'Item' },
+                urlItem: { type: String, required: false, default: null },
+                urlTrail: { type: String, required: false, default: null },
+            },
+        ],
+        default: [],
+    },
+    completion: { type: Number, default: null },
+    startDate: { type: Date },
+    endDate: { type: Date },
+    tags: { type: Array },
+    tagsAnd: { type: Array, required: false },
+    certificate: { type: Number, default: 0 },
+    isSequenceEnabled: {
+        type: String,
+        enum: ['NONE', 'ALL', 'EXAME'],
+        default: 'NONE',
+        required: true,
+    },
+    createdAt: { type: Date },
+    updatedAt: { type: Date },
+    externalPlayer: {
+        type: String,
+        enum: ['NONE', 'ALL', 'FIRST_ITEM'],
+        default: 'NONE',
+    },
+    clientId: { type: Number, default: CLIENT_ID },
+    innerTextStatus: { type: Boolean, default: false },
+    innerTextBanner: { type: String, required: false, default: null },
+    innerText: { type: String, required: ifInnerTextEnabled },
+    certificateDue: { type: Object, default: null },
+    expirationDate: { type: Date, default: null },
+    supportMaterial: { type: Array },
+    isPadletEnabled: { type: Boolean, default: false },
+    archive: { type: Boolean, required: false, default: false },
+    archivedAt: { type: Date, required: false, default: null },
+    completionPercentage: { type: Number },
+},);
+const TrailsUsersProgress = mongoose.model(
+    'vwTrailsUsersProgress',
+    vwTrailsUsersProgress,
+    'vwTrailsUsersProgress'
+);
+
 module.exports = {
     Trail,
     TrailsItems,
-    TrailsTagsWithUsersAndTrackings
+    TrailsTagsWithUsersAndTrackings,
+    TrailsUsersProgress
 };

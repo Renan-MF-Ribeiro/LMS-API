@@ -15,6 +15,15 @@ const DEFAULT_TYPES = Object.freeze({
     KEEP_LEARNING: 'keep_learning',
     CONCLUDED: 'concluded',
     COURSES: 'courses',
+    FAVORITES: 'favorites',
+});
+
+const CARD_TYPE = Object.freeze({
+    progressBarCard: 0,
+    topTenCard: 1,
+    defaultCard: 2,
+    inPersonTraining: 3,
+    topTenSlimCard: 4,
 });
 
 const SectionSchema = new mongoose.Schema(
@@ -35,6 +44,12 @@ const SectionSchema = new mongoose.Schema(
             enum: Object.values(DEFAULT_TYPES),
             required: false,
         },
+        cardType: {
+            type: Number, 
+            enum: Object.values(CARD_TYPE), 
+            required: false, 
+            trim: true
+        }
     },
     {
         ...schemaOptions,

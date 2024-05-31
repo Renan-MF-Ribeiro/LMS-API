@@ -65,12 +65,14 @@ const paletteSchema = new mongoose.Schema({
     nonaryPalette: ColorPaletteSchema,
     decimal: { type: String },
     decimalPalette: ColorPaletteSchema,
+
 })
 
 const themeSchema = new mongoose.Schema({
     logo: { type: String },
     logo_admin: { type: String },
-    palette: paletteSchema
+    palette: paletteSchema,
+    defaultPalette: { type: Boolean, default: false, required: false }
 }, {
     ...schemaOptions,
 })
