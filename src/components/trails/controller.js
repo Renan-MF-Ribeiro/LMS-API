@@ -61,7 +61,7 @@ module.exports = {
 
             _messages.success(res, req, { trails, total });
         } catch (error) {
-            _messages.internalServer(thumbPath,
+            _messages.internalServer(
                 res,
                 req,
                 error.message,
