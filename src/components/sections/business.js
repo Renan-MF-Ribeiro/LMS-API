@@ -476,7 +476,50 @@ module.exports = {
         });
     },
 
-    async concludedSections (trails) {
+    async favoriteSections(trails, userId) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const section = await Section.findOne({
+                    defaultType: DEFAULT_TYPES.FAVORITES,
+                    active: 1,
+                }).lean();
+
+                const uri = `${process.env.API_SOCIAL}/home/favorite/${userId}`;
+                const { data } = await axios.get(uri);
+                const favoriteTrails = data.map((f)=>{
+                    if(f.target){
+                        return f.trailId
+                    }
+                })
+                if (section) {
+                    const sortFnc =
+                        section &&
+                        section.ordination !== undefined &&
+                        section.ordination === 0
+                            ? function (a, b) {
+                                  return b.createdAt - a.createdAt;
+                              }
+                            : function (a, b) {
+                                  return a.title.localeCompare(b.title);
+                              };
+
+                    for (const trail of trails) {
+                        if (favoriteTrails.includes(String(trail._id))) {
+                            section.trails.push(trail);
+                        }
+                    }
+                    section.trails.sort(sortFnc);
+                }
+
+                resolve(section && section.trails.length > 0 ? section : []);
+            } catch (error) {
+                console.log(error);
+                reject(error);
+            }
+        });
+    },
+
+    async concludedSections(trails) {
         return new Promise(async (resolve, reject) => {
             try {
                 const section = await Section.findOne({
