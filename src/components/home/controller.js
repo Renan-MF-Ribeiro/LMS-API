@@ -1,3 +1,4 @@
+const axios = require('axios');
 const _messages = require('../../utils/messages');
 const { Item } = require('../items/model');
 const { Tracking } = require('../tracking/model');
@@ -31,6 +32,7 @@ const {
 
 const { populateTrails } = require('../trails/business');
 const { Section } = require('../sections/model');
+const config = require('../../../config.json')
 
 const HomeController = {
     async searchBy(req, res) {
@@ -129,7 +131,15 @@ const HomeController = {
                     };
                 });
 
-            console.log({ resultLength: result.length });
+                if (config.alura.active) {
+                    const host = process.env.API_ALURA;
+                    const clientId = process.env.CLIENT_ID;
+                    const headers = { 'x-client-key': process.env.API_KEY_ALURA };
+                    const email = user.email;
+                    const uri = `${host}/courses/search/${clientId}?email=${email}&searchBy=${encodeURI(searchBy)}`;
+                    const { data } = await axios.get(uri, { headers });
+                    result.push(...data.map((section) => ({ ...section, sectionType: 'alura' })));
+                }
 
             _messages.success(res, req, { result });
         } catch (error) {
