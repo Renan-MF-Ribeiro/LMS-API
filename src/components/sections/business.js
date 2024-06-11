@@ -704,6 +704,37 @@ module.exports = {
         }
         return false;
     },
+
+    filterAlura(filters, data) {
+        const results = []
+
+        function aluraItemCond (item) {
+            if(filters.completed === 'true') {
+                return item?.tracking?.completion === 100
+            } else if(filters.incompleted === 'true') {
+                return !!item?.tracking?.completion
+            } else if(filters.uninitiated === 'true') {
+                return !item?.tracking
+            }
+            return true
+        }
+
+        if (filters.completed === 'true') {
+            results.push(...data.filter((section) => section?.items.every(aluraItemCond)));
+        }
+        if (filters.incompleted === 'true') {
+            results.push(...data.filter((section) => section?.items.some(aluraItemCond)));
+        }
+        if (filters.uninitiated === 'true') {
+            results.push(...data.filter((section) => section?.items.every(aluraItemCond)));
+        }
+
+        return results.map((section) => ({
+            ...section,
+            sectionType: 'alura',
+            items: section?.items.filter(aluraItemCond),
+        }));
+    }
 };
 
 function isNecessary (trail, tags) {
