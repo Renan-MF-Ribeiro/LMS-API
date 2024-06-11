@@ -716,7 +716,7 @@ module.exports = {
             } else if(filters.uninitiated === 'true') {
                 return !item?.tracking
             }
-            return true
+            return false
         }
 
         if (filters.completed === 'true') {
@@ -729,11 +729,7 @@ module.exports = {
             results.push(...data.filter((section) => section?.items.every(aluraItemCond)));
         }
 
-        return results.map((section) => ({
-            ...section,
-            sectionType: 'alura',
-            items: section?.items.filter(aluraItemCond),
-        }));
+        return results.map((section) => ({ ...section, items: section?.items.filter(aluraItemCond) }));
     }
 };
 
