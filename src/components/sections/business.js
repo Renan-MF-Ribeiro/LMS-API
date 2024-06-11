@@ -584,7 +584,6 @@ module.exports = {
                             };
 
                     for (const trail of trails) {
-                        console.log(favoriteTrails.includes(String(trail._id)))
                         if (favoriteTrails.includes(String(trail._id))) {
                             section.trails.push(trail);
                         }

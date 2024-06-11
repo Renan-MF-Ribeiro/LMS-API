@@ -290,8 +290,8 @@ module.exports = {
                         }
                     }
                 }
-                let arrSections = await elegiblesContents(trails);
 
+                let arrSections = await elegiblesContents(trails);
                 const arrMandatorySections = await mandatorySections(trails, tags);
                 const arrRecentsSections = await recentsSections(trails);
                 const arrKeepLearningSections = await keepLearningSections(trails);
