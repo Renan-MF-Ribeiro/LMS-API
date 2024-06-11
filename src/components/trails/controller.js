@@ -632,6 +632,8 @@ module.exports = {
 
                     if (innerTextBanner) {
                         innerTextBanner = await azureBlob(innerTextBanner, 'trails/banners')
+                    } else {
+                        innerTextBanner = payload.innerTextBanner
                     }
 
                     if (background) {

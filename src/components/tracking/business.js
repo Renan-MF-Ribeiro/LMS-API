@@ -64,9 +64,13 @@ module.exports = {
         const result = {
             remainingAttempts: 0,
             lessonStatus: SCORMLessonStatus.INCOMPLETE,
-            completionAt: null
+            completionAt: null,
+            score: null
         }
-        const passed = parseFloat((historic.amountQuestionsCorrect * 100 / historic.amountOfQuestions).toFixed(2)) >= passingScore
+        const score = parseFloat((historic.amountQuestionsCorrect * 100 / historic.amountOfQuestions).toFixed(2))
+        const passed = score >= passingScore
+
+        result.score = score
 
         if (passed) {
             result.lessonStatus = SCORMLessonStatus.PASSED
