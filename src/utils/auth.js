@@ -114,8 +114,8 @@ module.exports = {
                     containerName,
                     AZURE_BLOBNAME,
                     permissions: storage.BlobSASPermissions.parse('r'),
-                    startsOn: new Date(),
-                    expiresOn: new Date(new Date().valueOf() + 14400000),
+                    startsOn: new Date(Date.now() - 5 * 60 * 1000),
+                    expiresOn: new Date(Date.now() + 16 * 60 * 60 * 1000),
                 },
                 credentials
             )

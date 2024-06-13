@@ -585,6 +585,11 @@ module.exports = {
         trail.lastTrackingUpdate = lastTrackingUpdate;
         trail.completionAt = mostRecentDate;
         trail.completion = getTrailCompletion(trail);
+
+        const itemsCompletion = trail.items.map((item) => item?.completion || 0);
+        const completionTotal = itemsCompletion.reduce((acc, curr) => acc + curr, 0);
+        trail.completionPercentage = +((completionTotal / trail.items.length) * 100).toFixed(2);
+
         return { trail, containsACompletedItem };
     },
 
