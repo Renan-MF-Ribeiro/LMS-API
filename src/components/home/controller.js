@@ -37,16 +37,21 @@ const config = require('../../../config.json')
 
 const HomeController = {
     async searchBy(req, res) {
-        const { searchBy, ...filters } = req.query;
+        const { searchBy, pageIndex, pageSize, ...filters } = req.query;
 
-        if(!searchBy && !filters) {
+        if(!searchBy?.length && !Object.keys(filters).length) {
             return _messages.success(res, req, {});
         }
 
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsGroupsByToken(req);
-            const { skip, limit } = pagination(req)
+            const { skip, limit } = pagination({ 
+                query: { 
+                    pageIndex: Number(pageIndex), 
+                    pageSize: Number(pageSize)
+                } 
+            })
             let filteredTrails = [];
             let result = [];
 
@@ -138,23 +143,23 @@ const HomeController = {
                     };
                 });
 
-                if (config.alura.active) {
-                    const host = process.env.API_ALURA;
-                    const clientId = process.env.CLIENT_ID;
-                    const headers = { 'x-client-key': process.env.API_KEY_ALURA };
-                    const email = user.email;
-                    const uri = `${host}/courses/search/${clientId}?email=${email}&searchBy=${encodeURI(searchBy)}`;
-                    const { data } = await axios.get(uri, { headers });
-                    let aluraResults = data.map((section) => ({ ...section, sectionType: 'alura' }))
+            if (config.alura.active) {
+                const host = process.env.API_ALURA;
+                const clientId = process.env.CLIENT_ID;
+                const headers = { 'x-client-key': process.env.API_KEY_ALURA };
+                const email = user.email;
+                const uri = `${host}/courses/search/${clientId}?email=${email}&searchBy=${encodeURI(searchBy)}`;
+                const { data } = await axios.get(uri, { headers });
+                let aluraResults = data.map((section) => ({ ...section, sectionType: 'alura' }))
 
-                    if (Object.keys(filters).length > 0) {
-                        aluraResults = filterAlura(filters, data)
-                    } 
+                if (Object.keys(filters).length > 0) {
+                    aluraResults = filterAlura(filters, data)
+                } 
 
-                    result.push(...aluraResults);
-                }
+                result.push(...aluraResults);
+            }
 
-            _messages.success(res, req, { result: result.slice(skip, limit) });
+            _messages.success(res, req, { data: result.slice(skip, skip + limit), total: result.length });
         } catch (error) {
             _messages.internalServer(
                 res,
