@@ -37,10 +37,16 @@ const config = require('../../../config.json')
 
 const HomeController = {
     async searchBy(req, res) {
+        const { searchBy, ...filters } = req.query;
+
+        if(!searchBy && !filters) {
+            return _messages.success(res, req, {});
+        }
+
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsGroupsByToken(req);
-            const { searchBy, ...filters } = req.query;
+            const { skip, limit } = pagination(req)
             let filteredTrails = [];
             let result = [];
 
@@ -148,7 +154,7 @@ const HomeController = {
                     result.push(...aluraResults);
                 }
 
-            _messages.success(res, req, { result });
+            _messages.success(res, req, { result: result.slice(skip, limit) });
         } catch (error) {
             _messages.internalServer(
                 res,
