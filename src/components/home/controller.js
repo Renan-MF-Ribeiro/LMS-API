@@ -38,8 +38,11 @@ const config = require('../../../config.json')
 const HomeController = {
     async searchBy(req, res) {
         const { searchBy, pageIndex, pageSize, ...filters } = req.query;
+        const filtersValues = Object.values(filters)
+        const hasFilters = filtersValues.some((filter) => filter === 'true')
 
-        if(!searchBy?.length && !Object.keys(filters).length) {
+
+        if(!searchBy?.length && !hasFilters) {
             return _messages.success(res, req, {});
         }
 
@@ -107,7 +110,7 @@ const HomeController = {
                 result.push(trail);
             }
 
-            if (Object.keys(filters).length > 0) {
+            if (hasFilters) {
                 result = filterTrails(filters, result, tags);
             }
             
@@ -119,28 +122,28 @@ const HomeController = {
             const trailMap = new Map();
             sections.forEach((section) => {
                 section.trails.forEach((trail) => {
-                    if (!trailMap.has(trail._id)) {
-                        trailMap.set(trail._id, section._id);
+                    if (!trailMap.has(trail._id.toString())) {
+                        trailMap.set(trail._id.toString(), section._id);
                     }
                 });
             });
             result = sections
-                .filter((section) => {
-                    return section.trails.every((trail) =>
-                        section._id.equals(trailMap.get(trail._id))
-                    );
-                })
                 .map((section) => {
                     return {
                         ...section,
                         trails: section.trails
                             .filter((trail) => {
-                                return result.find(({ _id }) => trail._id.equals(_id));
+                                return result.findIndex(({ _id }) => trail._id.equals(_id)) !== -1;
                             })
                             .map((trail) => {
                                 return result.find(({ _id }) => trail._id.equals(_id));
                             }),
                     };
+                })
+                .filter((section) => {
+                    return section.trails.every((trail) =>
+                        section._id.equals(trailMap.get(trail._id.toString()))
+                    );
                 });
 
             if (config.alura.active) {
@@ -150,9 +153,10 @@ const HomeController = {
                 const email = user.email;
                 const uri = `${host}/courses/search/${clientId}?email=${email}&searchBy=${encodeURI(searchBy)}`;
                 const { data } = await axios.get(uri, { headers });
+                const aluraFilters = ['completed', 'incompleted', 'uninitiated']
                 let aluraResults = data.map((section) => ({ ...section, sectionType: 'alura' }))
 
-                if (Object.keys(filters).length > 0) {
+                if (Object.keys(filters).length > 0 && aluraFilters.some((key) => filters[key] === 'true')) {
                     aluraResults = filterAlura(filters, data)
                 } 
 

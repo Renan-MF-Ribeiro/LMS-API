@@ -314,7 +314,14 @@ module.exports = {
         try {
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}`;
             const user = await _functions.getUserByToken(req)
-            const body = { ...req.body, userId: user._id, userName: user.name, moderationStatus: req.body.socialStatus || "MODERATED" };
+            const userTags = await getTagsElegiblesByToken(req)
+
+            const body = { 
+                ...req.body, 
+                userId: user._id, 
+                userName: user.name,
+                userTags: userTags.map((tag) => tag.value)
+            };
             const { data } = await axios.post(uri, body);
             _messages.success(res, req, data, 'ok', 'social', 'createComment');
             return;
