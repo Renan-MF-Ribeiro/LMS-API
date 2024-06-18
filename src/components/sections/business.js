@@ -705,6 +705,11 @@ module.exports = {
     },
 
     filterAlura(filters, data) {
+        const aluraFilters = ['completed', 'incompleted', 'uninitiated']
+        if (Object.keys(filters).length === 0 || aluraFilters.every((key) => filters[key] !== 'true')) {
+            return data
+        }
+
         const results = []
 
         function aluraItemCond (item) {
