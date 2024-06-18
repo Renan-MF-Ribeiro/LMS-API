@@ -1735,7 +1735,7 @@ module.exports = {
     async emulation (req, res) {
         try {
             const { body } = req;
-            const { groupsAD, name, acceptTerms, profilePhoto, networkLogin, ...user } =
+            const { groupsAD, name, acceptTerms, acceptTermsCollaboration, profilePhoto, networkLogin, ...user } =
                 await User.findById(body._id);
 
             const namesProfiles = [];
@@ -1782,6 +1782,7 @@ module.exports = {
                     SAS,
                     token,
                     accept: acceptTerms,
+                    acceptCollaboration: acceptTermsCollaboration,
                     numbers: result.token.numbers,
                     networkLogin,
                     name,
