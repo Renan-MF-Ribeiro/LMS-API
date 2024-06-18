@@ -150,9 +150,10 @@ const HomeController = {
                 const email = user.email;
                 const uri = `${host}/courses/search/${clientId}?email=${email}&searchBy=${encodeURI(searchBy)}`;
                 const { data } = await axios.get(uri, { headers });
+                const aluraFilters = ['completed', 'incompleted', 'uninitiated']
                 let aluraResults = data.map((section) => ({ ...section, sectionType: 'alura' }))
 
-                if (Object.keys(filters).length > 0) {
+                if (Object.keys(filters).length > 0 && aluraFilters.some((key) => filters[key] === 'true')) {
                     aluraResults = filterAlura(filters, data)
                 } 
 
