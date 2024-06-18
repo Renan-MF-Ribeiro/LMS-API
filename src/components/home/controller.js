@@ -119,28 +119,28 @@ const HomeController = {
             const trailMap = new Map();
             sections.forEach((section) => {
                 section.trails.forEach((trail) => {
-                    if (!trailMap.has(trail._id)) {
-                        trailMap.set(trail._id, section._id);
+                    if (!trailMap.has(trail._id.toString())) {
+                        trailMap.set(trail._id.toString(), section._id);
                     }
                 });
             });
             result = sections
-                .filter((section) => {
-                    return section.trails.every((trail) =>
-                        section._id.equals(trailMap.get(trail._id))
-                    );
-                })
                 .map((section) => {
                     return {
                         ...section,
                         trails: section.trails
                             .filter((trail) => {
-                                return result.find(({ _id }) => trail._id.equals(_id));
+                                return result.findIndex(({ _id }) => trail._id.equals(_id)) !== -1;
                             })
                             .map((trail) => {
                                 return result.find(({ _id }) => trail._id.equals(_id));
                             }),
                     };
+                })
+                .filter((section) => {
+                    return section.trails.every((trail) =>
+                        section._id.equals(trailMap.get(trail._id.toString()))
+                    );
                 });
 
             if (config.alura.active) {
