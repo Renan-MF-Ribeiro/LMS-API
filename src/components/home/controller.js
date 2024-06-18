@@ -38,8 +38,11 @@ const config = require('../../../config.json')
 const HomeController = {
     async searchBy(req, res) {
         const { searchBy, pageIndex, pageSize, ...filters } = req.query;
+        const filtersValues = Object.values(filters)
+        const hasFilters = filtersValues.some((filter) => filter === 'true')
 
-        if(!searchBy?.length && !Object.keys(filters).length) {
+
+        if(!searchBy?.length && !hasFilters) {
             return _messages.success(res, req, {});
         }
 
@@ -107,7 +110,7 @@ const HomeController = {
                 result.push(trail);
             }
 
-            if (Object.keys(filters).length > 0) {
+            if (hasFilters) {
                 result = filterTrails(filters, result, tags);
             }
             
