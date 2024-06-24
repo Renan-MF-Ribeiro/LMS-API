@@ -53,7 +53,7 @@ const TRACKING_KINDS = Object.freeze({
 });
 
 const TrackingController = {
-    async createOrUpdate (req, res) {
+    async createOrUpdate(req, res) {
         const TrackingModel = TRACKING_KINDS[req.body.kind] || Tracking;
 
         try {
@@ -278,7 +278,7 @@ const TrackingController = {
         }
     },
 
-    async findOrCreate (req, res) {
+    async findOrCreate(req, res) {
         try {
             const { item, trailId, chief } = req.query;
             const { data } = await decodeToken(req.headers.authorization);
@@ -353,7 +353,7 @@ const TrackingController = {
         }
     },
 
-    async list (req, res) {
+    async list(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -489,19 +489,34 @@ const TrackingController = {
         }
     },
 
-    async deleteQuery (req, res) {
+    async deleteQuery(req, res) {
         try {
             const { item, userLogin } = req.query;
             var networkLogin = userLogin;
-            const tracking = await Tracking.findOne({ item, userLogin });
+            const tracking = await Tracking.findOne({
+                item, userLogin, $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } },
+                ],
+            });
 
             if (tracking.kind === 'ExamTracking') {
                 const userFind = await User.findOne({ networkLogin });
                 const user = userFind._id;
-                await HistoricEvaluation.deleteMany({ item, user });
+                await HistoricEvaluation.deleteMany({
+                    item, user, $or: [
+                        { expiredCompletion: { $exists: false } },
+                        { expiredCompletion: { $eq: null } },
+                    ],
+                });
             }
 
-            await Tracking.deleteMany({ item, userLogin });
+            await Tracking.deleteMany({
+                item, userLogin, $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } },
+                ],
+            });
 
             _messages.successEmpty(res, req);
         } catch (error) {
@@ -516,17 +531,18 @@ const TrackingController = {
         }
     },
 
-    async createOrUpdateDocument (req, res) {
+
+    async createOrUpdateDocument(req, res) {
         req.body.kind = 'DocumentTracking';
         return TrackingController.createOrUpdate(req, res);
     },
 
-    async createOrUpdateMedia (req, res) {
+    async createOrUpdateMedia(req, res) {
         req.body.kind = 'MediaTracking';
         return TrackingController.createOrUpdate(req, res);
     },
 
-    async createOrUpdateSCORM (req, res) {
+    async createOrUpdateSCORM(req, res) {
         var decrypted = cryptoJS.AES.decrypt(req.headers.tokendata, 'commit');
         const tmpStatus = decrypted.toString(cryptoJS.enc.Utf8);
 
@@ -538,7 +554,7 @@ const TrackingController = {
         req.body.kind = 'SCORMTracking';
         return TrackingController.createOrUpdate(req, res);
     },
-    async listActivitiesHistoric (req, res) {
+    async listActivitiesHistoric(req, res) {
         try {
             const { skip, limit } = pagination(req);
             let { order, sort } = ordernation(req);
@@ -635,7 +651,7 @@ const TrackingController = {
         }
     },
 
-    async listActivitiesForCorrection (req, res) {
+    async listActivitiesForCorrection(req, res) {
         try {
             const { skip, limit } = pagination(req);
             let { order, sort } = ordernation(req);
@@ -704,7 +720,7 @@ const TrackingController = {
         }
     },
 
-    async updateActivityAdmin (req, res) {
+    async updateActivityAdmin(req, res) {
         try {
             const { trackingId } = req.query;
             const todayDate = new Date();
@@ -758,11 +774,16 @@ const TrackingController = {
         }
     },
 
-    async updateActivityUser (req, res) {
+    async updateActivityUser(req, res) {
         try {
             const { item, userLogin } = req.query;
             const todayDate = new Date();
-            const tracking = await Tracking.findOne({ item, userLogin })
+            const tracking = await Tracking.findOne({
+                item, userLogin, $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } },
+                ],
+            })
                 .populate({
                     path: 'item',
                     populate: {
@@ -805,7 +826,7 @@ const TrackingController = {
     },
 };
 
-function processTrackingType (item) {
+function processTrackingType(item) {
     switch (item.kind) {
         case "MediaItem":
             return "MediaTracking";
