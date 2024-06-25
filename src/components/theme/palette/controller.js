@@ -2,16 +2,35 @@ const { Theme } = require('./model')
 const _messages = require('../../../utils/messages')
 const { DOMAIN, AZURE_BLOB_URL } = process.env
 const { azureBlob } = require('../../../utils/files')
+const { pagination } = require('../../../utils/functions')
 
 module.exports = {
     async list (req, res) {
         try {
-            const themes = await Theme.find({ deleted: { $ne: true } })
+            const { skip, limit } = pagination(req);
+            const searchBy = req.query.searchBy;
+            const query = {
+                deleted: { $ne: true }
+            }
+            if (searchBy) query['title'] = { $regex: searchBy, $options: 'i' }
 
-            return _messages.success(res, req, themes)
+            const total = await Theme.find(query).count();
+            const themes = await Theme.find(query)
+                .skip(parseInt(skip))
+                .limit(parseInt(limit))
+
+            return _messages.success(res, req, { data: themes, total })
         }
         catch (error) {
-
+            console.error(error)
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'theme',
+                'list'
+            );
         }
     },
 
@@ -69,7 +88,7 @@ module.exports = {
     async getTheme (req, res) {
         try {
             const theme = await Theme.findOne({ enabled: true }).select('-createdAt -updatedAt -_id -__v -palette._id')
-            console.log(theme)
+
             if (theme) {
 
                 return _messages.success(res, req, theme)
