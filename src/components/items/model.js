@@ -217,6 +217,7 @@ const SCORMItem = Item.discriminator(
             scoId: { type: String, required: true },
             masteryScore: { type: Number },
             contentPath: { type: String, required: true },
+            scormBlockReplaceLessonStatus: { type: Boolean, default: false },
             scormPath: { type: { path: String, name: String }, required: true },
             ...endpointOptions,
         },
