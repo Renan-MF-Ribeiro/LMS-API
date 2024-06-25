@@ -4,7 +4,10 @@ const formidable = require('express-formidable')
 const { validateTokenRoute, isAdmin } = require('../../../utils/middlewares');
 
 module.exports = express.Router()
-    .put('/', formidable(), validateTokenRoute, _controller.createOrUpdate)
-    .get('/default', validateTokenRoute, isAdmin, _controller.getDefaultTheme)
     .get('/', _controller.getTheme)
+    .put('/', formidable(), validateTokenRoute, isAdmin, _controller.createOrUpdate)
+    .delete('/:_id', validateTokenRoute, isAdmin, _controller.delete)
+    .get('/list', validateTokenRoute, isAdmin, _controller.list)
+    .put('/enable', validateTokenRoute, isAdmin, _controller.changeEnable)
+    .get('/default', validateTokenRoute, isAdmin, _controller.getDefaultTheme)
 

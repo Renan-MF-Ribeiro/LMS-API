@@ -2,8 +2,38 @@ const { Theme } = require('./model')
 const _messages = require('../../../utils/messages')
 const { DOMAIN, AZURE_BLOB_URL } = process.env
 const { azureBlob } = require('../../../utils/files')
+const { pagination } = require('../../../utils/functions')
 
 module.exports = {
+    async list (req, res) {
+        try {
+            const { skip, limit } = pagination(req);
+            const searchBy = req.query.searchBy;
+            const query = {
+                deleted: { $ne: true }
+            }
+            if (searchBy) query['title'] = { $regex: searchBy, $options: 'i' }
+
+            const total = await Theme.find(query).count();
+            const themes = await Theme.find(query)
+                .skip(parseInt(skip))
+                .limit(parseInt(limit))
+
+            return _messages.success(res, req, { data: themes, total })
+        }
+        catch (error) {
+            console.error(error)
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'theme',
+                'list'
+            );
+        }
+    },
+
     async createOrUpdate (req, res) {
         try {
             const body = JSON.parse(req.fields.body)
@@ -24,12 +54,18 @@ module.exports = {
                 logo_adminPath = logo_adminPath.replace(AZURE_BLOB_URL, DOMAIN)
                 body.logo_admin = logo_adminPath
             }
+            let theme
+            if (body._id) {
+                if (body.enabled && body.defaultPalette) {
+                    await Theme.updateMany({}, { $set: { enabled: false, defaultPalette: false } });
+                } else if (body.defaultPalette) {
+                    await Theme.updateMany({}, { $set: { defaultPalette: false } });
+                } else if (body.enabled) {
+                    await Theme.updateMany({}, { $set: { enabled: false } });
+                }
 
+                theme = await Theme.findByIdAndUpdate(body._id, body, { new: true })
 
-            let theme = await Theme.findOne({ defaultPalette: false }).sort({ createdAt: 1 })
-
-            if (theme && !body.defaultPalette) {
-                theme = await Theme.findByIdAndUpdate(theme._id, body, { new: true })
             } else {
                 theme = await Theme.create(body)
             }
@@ -51,12 +87,15 @@ module.exports = {
 
     async getTheme (req, res) {
         try {
-            const theme = await Theme.findOne({ defaultPalette: { $ne: true } }).sort({ createdAt: -1 }).select('-createdAt -updatedAt -_id -__v -palette._id')
+            const theme = await Theme.findOne({ enabled: true }).select('-createdAt -updatedAt -_id -__v -palette._id')
+
             if (theme) {
 
                 return _messages.success(res, req, theme)
             }
-            return _messages.conflict(res, req, null)
+            return _messages.conflict(res, req, null, 'Erro interno no servidor',
+                'theme',
+                'getTheme')
 
         }
         catch (error) {
@@ -91,6 +130,51 @@ module.exports = {
                 'Erro interno no servidor',
                 'theme',
                 'getTheme',
+            )
+        }
+    },
+
+    async changeEnable (req, res) {
+        try {
+            const { _id } = req.body
+            await Theme.updateMany({}, { $set: { enabled: false } });
+
+            // 2. Definir o documento com o id recebido como enabled: true
+            await Theme.updateOne({ _id }, { $set: { enabled: true } });
+
+            return _messages.success(res, req, 'Atualizado com sucesso')
+        }
+        catch (error) {
+            console.error(error)
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'theme',
+                'createOrUpdate',
+            )
+        }
+    },
+
+    async delete (req, res) {
+        try {
+            const { _id } = req.params
+
+            // soft delete
+            await Theme.updateOne({ _id }, { $set: { deleted: true } });
+
+            return _messages.success(res, req, 'Removido com sucesso')
+        }
+        catch (error) {
+            console.error(error)
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'theme',
+                'createOrUpdate',
             )
         }
     }
