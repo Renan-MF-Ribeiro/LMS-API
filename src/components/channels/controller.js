@@ -6,7 +6,8 @@ const { DOMAIN, AZURE_BLOB_URL } = process.env;
 const { Section } = require('../sections/model');
 const { Trail } = require('../trails/model');
 const { getTagsElegiblesByToken, checkEligibilityTagsAnd } = require('../sections/business');
-const config = require('../../../config.json')
+const config = require('../../../config.json');
+const { Theme } = require('../theme/palette/model');
 
 
 module.exports = {
@@ -63,7 +64,7 @@ module.exports = {
             let channels = await Channel.find({
                 tags: { $in: tags.map((tag) => tag.value) },
                 enabled: true,
-            }).sort({ position: 'asc' });
+            }).sort({ position: 'asc' }).populate('theme')
 
             channels = await Promise.all(channels.map(async (channel) => {
                 if (channel.type === 'alura') return channel
