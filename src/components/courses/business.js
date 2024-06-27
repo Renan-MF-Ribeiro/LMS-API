@@ -182,9 +182,10 @@ module.exports = {
                 }
 
                 resolve({
+                    _id: classID,
                     dateApplicationInitial,
                     dateApplicationFinal,
-                    arrUsers,
+                    users: arrUsers,
                     materials,
                     qrcode,
                     instructor,
