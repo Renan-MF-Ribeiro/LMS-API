@@ -696,7 +696,7 @@ module.exports = {
         if (filters.uninitiated === 'true') {
             results.push(
                 ...data.filter((section) => {
-                    return section?.items.every(item => {
+                    return section?.items.every((item) => {
                         return !item?.tracking;
                     });
                 })
@@ -704,6 +704,36 @@ module.exports = {
         }
 
         return results;
+    },
+
+    mapAlura(results) {
+        const data = [];
+
+        results.forEach((result) => {
+            const found = data.find((d) => d.title === result.section);
+            if (!found) {
+                data.push({
+                    id: result.sectionId,
+                    title: result.section,
+                    trails: [
+                        {
+                            id: result.id,
+                            title: result.title,
+                            tracking: mapAluraTrackings(result.items),
+                        },
+                    ],
+                    sectionType: 'alura',
+                });
+            } else {
+                found.trails.push({
+                    id: result.id,
+                    title: result.title,
+                    tracking: mapAluraTrackings(result.items),
+                });
+            }
+        });
+
+        return data;
     },
 };
 
@@ -833,4 +863,17 @@ function calculateDiffDateTrail(trail) {
 
     if (diffCreate <= 30 || diffUpdate <= 30) return true;
     return false;
+}
+
+function mapAluraTrackings(items) {
+    if (items.every((item) => !item?.tracking)) {
+        return null;
+    }
+    const mapCompletion = items.map((t) => t?.tracking?.completion || 0);
+    const totalCompletion = mapCompletion?.reduce((acc, curr) => acc + curr, 0);
+
+    return {
+        email: items.find((item) => !!item?.tracking?.email)?.tracking?.email,
+        completion: Number((totalCompletion / items?.length).toFixed(2)),
+    };
 }
