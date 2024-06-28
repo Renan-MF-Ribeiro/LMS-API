@@ -44,7 +44,7 @@ router
     .get('/instructor/users', isInstructor, _controller.getUsers)
     .get('/instructor/applied-courses', _controller.appliedCourses)
     .get('/instructor/applied-course/:courseID/:classID', _controller.appliedCourse)
-    .get('/instructor/search-user/:id', isInstructor, _controller.searchUser)
+    .post('/instructor/search-user/:id', isInstructor, _controller.searchUser)
     .post(
         '/instructor/create-class',
         isInstructor,

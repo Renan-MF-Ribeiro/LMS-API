@@ -1,4 +1,5 @@
 const { User, groups } = require('../users/model');
+const mongoose = require('mongoose');
 
 const {
     CourseModel,
@@ -589,6 +590,7 @@ module.exports = {
                 dateApplicationFinal,
                 qrCodeSelfRegistration,
                 isSelfRegistrationEnabled,
+                limit
             } = req.fields;
             const materials = JSON.parse(req.fields.materials);
             const files = req.files;
@@ -602,14 +604,7 @@ module.exports = {
                 if (dateApplicationInitial && dateApplicationFinal === '') {
                     flagDate = true;
                 } else {
-                    const dateInitialAPP = formatDateWithoutHours(
-                        addHours(dateApplicationInitial)
-                    );
-                    const dateFinalAPP = formatDateWithoutHours(
-                        addHours(dateApplicationFinal)
-                    );
-
-                    if (dateInitialAPP > dateFinalAPP) flagDate = false;
+                    if (dateApplicationInitial > dateApplicationFinal) flagDate = false;
                 }
             }
 
@@ -689,6 +684,7 @@ module.exports = {
                         isSelfRegistrationEnabled: isSelfRegistrationEnabled,
                         dateApplicationInitial,
                         dateApplicationFinal,
+                        limit
                     });
 
                     success(res, req, 'Atualizado com sucesso!');
@@ -839,10 +835,11 @@ module.exports = {
     async searchUser (req, res) {
         try {
             const { searchBy } = req.query;
+            let { usersInClass } = req.body;
             const { skip, limit } = pagination(req);
             const { id } = req.params;
-
-            const query = { $and: [{ _id: id }, { 'user.status': 'ATIVO' }] };
+            usersInClass = usersInClass.map(userID => mongoose.Types.ObjectId(userID))
+            const query = { $and: [{ _id: id }, { 'user.status': 'ATIVO' }, { 'user._id': { $nin: usersInClass } }] };
             if (searchBy) {
                 query.$and.push({
                     $or: [
