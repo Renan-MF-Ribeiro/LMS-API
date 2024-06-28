@@ -8,7 +8,8 @@ const {
     checkEligibilityTagsAnd,
     getTagsElegiblesByToken,
     filterTrails,
-    filterAlura
+    filterAlura,
+    mapAlura
 } = require('../sections/business');
 const { User } = require('../users/model');
 const {
@@ -153,9 +154,8 @@ const HomeController = {
                 const aluraSearchBy = encodeURI(searchBy || ' ') ?? ''
                 const uri = `${host}/courses/search/${clientId}?email=${email}&searchBy=${aluraSearchBy}`;
                 const { data } = await axios.get(uri, { headers });
-                const aluraResults = data.map((section) => ({ ...section, sectionType: 'alura' }));
 
-                result.push(...filterAlura(filters, aluraResults));
+                result.push(...mapAlura(filterAlura(filters, data)));
             }
 
             _messages.success(res, req, { data: result.slice(skip, skip + limit), total: result.length });
