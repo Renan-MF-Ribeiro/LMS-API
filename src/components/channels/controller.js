@@ -64,7 +64,7 @@ module.exports = {
             let channels = await Channel.find({
                 tags: { $in: tags.map((tag) => tag.value) },
                 enabled: true,
-            }).sort({ position: 'asc' }).populate('theme')
+            }).sort({ position: 'asc' }).populate({ path: 'theme', match: { deleted: 0 }, })
 
             channels = await Promise.all(channels.map(async (channel) => {
                 if (channel.type === 'alura') return channel
