@@ -450,9 +450,12 @@ module.exports = {
                 qrCode,
                 qrCodeSelfRegistration,
                 isSelfRegistrationEnabled,
+                limit,
+                location,
+                cousts
             } = req.fields;
             let flagDate = true;
-
+            const coustsArray = JSON.parse(cousts);
             if (dateApplicationInitial || dateApplicationFinal) {
                 if (dateApplicationInitial && dateApplicationFinal === '') {
                     flagDate = true;
@@ -548,6 +551,9 @@ module.exports = {
                             qrCodeSelfRegistration: qrCodeSelfRegistration,
                             isSelfRegistrationEnabled:
                                 isSelfRegistrationEnabled,
+                            limit,
+                            location,
+                            cousts: coustsArray
                         });
 
                         success(res, req, 'Criado com sucesso!');
@@ -590,9 +596,12 @@ module.exports = {
                 dateApplicationFinal,
                 qrCodeSelfRegistration,
                 isSelfRegistrationEnabled,
-                limit
+                limit,
+                location,
+                cousts
             } = req.fields;
             const materials = JSON.parse(req.fields.materials);
+            const coustsArray = JSON.parse(cousts);
             const files = req.files;
             const user = await getUserByToken(req);
             const currentMaterials = await ClassModel.findById(classID);
@@ -684,7 +693,9 @@ module.exports = {
                         isSelfRegistrationEnabled: isSelfRegistrationEnabled,
                         dateApplicationInitial,
                         dateApplicationFinal,
-                        limit
+                        limit,
+                        location,
+                        cousts: coustsArray
                     });
 
                     success(res, req, 'Atualizado com sucesso!');
@@ -751,7 +762,7 @@ module.exports = {
                 .populate('program', 'title');
 
             const classUsers = await getClassByID(classID);
-            course.materials = course.materials.concat(classUsers.materials);
+
 
             course.dateInitial = addHours(course.dateInitial);
             course.dateFinal = addHours(course.dateFinal);
