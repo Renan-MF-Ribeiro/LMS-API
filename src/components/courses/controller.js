@@ -1088,11 +1088,10 @@ module.exports = {
                     '/getCourseByQrCodeSelfRegistration'
                 );
 
-            const register = course.users.find((user) => user.userID == _id)
-                ? true
-                : false;
-
-            success(res, req, register ? 'registered' : course);
+            const user = course.users.find((user) => user._id == _id)
+            success(res, req, {
+                title: course.courseID.title, inClass: user ? true : false, _id: course._id, registered: user?.presence
+            });
         } catch (error) {
             internalServer(
                 res,
@@ -1132,15 +1131,17 @@ module.exports = {
 
             var userID = String(user._id);
 
-            const course = await ClassModel.updateOne(
+            const course = await ClassModel.findOneAndUpdate(
                 {
                     _id: { $eq: body.qrcode },
+                    'users._id': userID
                 },
                 {
-                    $push: {
-                        users: { userID: userID, presence: true, grades: '' },
+                    $set: {
+                        'users.$.presence': true
                     },
-                }
+                },
+                { new: true }
             );
 
             success(res, req, course);
