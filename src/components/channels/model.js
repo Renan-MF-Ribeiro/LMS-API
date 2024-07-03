@@ -19,7 +19,8 @@ const ChannelSchema = new mongoose.Schema({
     tags: { type: Array },
     banners: { type: Array },
     position: { type: Number, default: 0 },
-    idSections: {  type: [{ type: 'ObjectId', ref: 'sections' }] },
+    idSections: { type: [{ type: 'ObjectId', ref: 'sections' }] },
+    theme: { type: 'ObjectId', ref: 'theme', required: false },
     type: { type: String, enum: Object.values(CHANNEL_TYPES), required: false, trim: true }
 }, {
     ...schemaOptions,

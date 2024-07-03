@@ -1025,7 +1025,8 @@ module.exports = {
                 });
             }
         } catch (error) {
-            _messages.internalServer(
+            console.error(error)
+            return _messages.internalServer(
                 res,
                 req,
                 error.message,

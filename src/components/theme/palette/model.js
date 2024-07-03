@@ -69,10 +69,13 @@ const paletteSchema = new mongoose.Schema({
 })
 
 const themeSchema = new mongoose.Schema({
+    title: { type: String },
     logo: { type: String },
     logo_admin: { type: String },
     palette: paletteSchema,
-    defaultPalette: { type: Boolean, default: false, required: false }
+    enabled: { type: Boolean, default: false, required: true },
+    defaultPalette: { type: Boolean, default: false, required: false },
+    deleted: { type: Boolean, default: false, required: false },
 }, {
     ...schemaOptions,
 })
