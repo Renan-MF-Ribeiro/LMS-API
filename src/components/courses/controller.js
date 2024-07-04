@@ -1,4 +1,5 @@
 const { User, groups } = require('../users/model');
+const mongoose = require('mongoose');
 
 const {
     CourseModel,
@@ -449,9 +450,12 @@ module.exports = {
                 qrCode,
                 qrCodeSelfRegistration,
                 isSelfRegistrationEnabled,
+                limit,
+                location,
+                cousts
             } = req.fields;
             let flagDate = true;
-
+            const coustsArray = JSON.parse(cousts);
             if (dateApplicationInitial || dateApplicationFinal) {
                 if (dateApplicationInitial && dateApplicationFinal === '') {
                     flagDate = true;
@@ -547,6 +551,9 @@ module.exports = {
                             qrCodeSelfRegistration: qrCodeSelfRegistration,
                             isSelfRegistrationEnabled:
                                 isSelfRegistrationEnabled,
+                            limit,
+                            location,
+                            cousts: coustsArray
                         });
 
                         success(res, req, 'Criado com sucesso!');
@@ -589,8 +596,12 @@ module.exports = {
                 dateApplicationFinal,
                 qrCodeSelfRegistration,
                 isSelfRegistrationEnabled,
+                limit,
+                location,
+                cousts
             } = req.fields;
             const materials = JSON.parse(req.fields.materials);
+            const coustsArray = JSON.parse(cousts);
             const files = req.files;
             const user = await getUserByToken(req);
             const currentMaterials = await ClassModel.findById(classID);
@@ -602,14 +613,7 @@ module.exports = {
                 if (dateApplicationInitial && dateApplicationFinal === '') {
                     flagDate = true;
                 } else {
-                    const dateInitialAPP = formatDateWithoutHours(
-                        addHours(dateApplicationInitial)
-                    );
-                    const dateFinalAPP = formatDateWithoutHours(
-                        addHours(dateApplicationFinal)
-                    );
-
-                    if (dateInitialAPP > dateFinalAPP) flagDate = false;
+                    if (dateApplicationInitial > dateApplicationFinal) flagDate = false;
                 }
             }
 
@@ -689,6 +693,9 @@ module.exports = {
                         isSelfRegistrationEnabled: isSelfRegistrationEnabled,
                         dateApplicationInitial,
                         dateApplicationFinal,
+                        limit,
+                        location,
+                        cousts: coustsArray
                     });
 
                     success(res, req, 'Atualizado com sucesso!');
@@ -755,7 +762,7 @@ module.exports = {
                 .populate('program', 'title');
 
             const classUsers = await getClassByID(classID);
-            course.materials = course.materials.concat(classUsers.materials);
+
 
             course.dateInitial = addHours(course.dateInitial);
             course.dateFinal = addHours(course.dateFinal);
@@ -839,10 +846,11 @@ module.exports = {
     async searchUser (req, res) {
         try {
             const { searchBy } = req.query;
+            let { usersInClass } = req.body;
             const { skip, limit } = pagination(req);
             const { id } = req.params;
-
-            const query = { $and: [{ _id: id }, { 'user.status': 'ATIVO' }] };
+            usersInClass = usersInClass.map(userID => mongoose.Types.ObjectId(userID))
+            const query = { $and: [{ _id: id }, { 'user.status': 'ATIVO' }, { 'user._id': { $nin: usersInClass } }] };
             if (searchBy) {
                 query.$and.push({
                     $or: [
@@ -1080,11 +1088,10 @@ module.exports = {
                     '/getCourseByQrCodeSelfRegistration'
                 );
 
-            const register = course.users.find((user) => user.userID == _id)
-                ? true
-                : false;
-
-            success(res, req, register ? 'registered' : course);
+            const user = course.users.find((user) => user._id == _id)
+            success(res, req, {
+                title: course.courseID.title, inClass: user ? true : false, _id: course._id, registered: user?.presence
+            });
         } catch (error) {
             internalServer(
                 res,
@@ -1124,15 +1131,17 @@ module.exports = {
 
             var userID = String(user._id);
 
-            const course = await ClassModel.updateOne(
+            const course = await ClassModel.findOneAndUpdate(
                 {
                     _id: { $eq: body.qrcode },
+                    'users._id': userID
                 },
                 {
-                    $push: {
-                        users: { userID: userID, presence: true, grades: '' },
+                    $set: {
+                        'users.$.presence': true
                     },
-                }
+                },
+                { new: true }
             );
 
             success(res, req, course);

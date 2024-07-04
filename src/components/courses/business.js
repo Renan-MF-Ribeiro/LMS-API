@@ -154,43 +154,13 @@ module.exports = {
     getClassByID (classID) {
         return new Promise(async (resolve, reject) => {
             try {
-                const arrUsers = [];
-                const {
-                    users,
-                    materials,
-                    qrcode,
-                    dateApplicationInitial,
-                    dateApplicationFinal,
-                    instructor,
-                    instructorTemp,
-                    qrCodeSelfRegistration,
-                    isSelfRegistrationEnabled,
-                } = await ClassModel.findById(classID)
+                const { _doc } = await ClassModel.findById(classID)
                     .populate('materials')
                     .populate('instructor', 'name');
 
-                for (const user of users) {
-                    const result = await User.findById(user.userID);
-
-                    arrUsers.push({
-                        _id: result._id,
-                        name: result.name,
-                        registration: result.registration,
-                        presence: user.presence,
-                        grades: user.grades,
-                    });
-                }
-
                 resolve({
-                    dateApplicationInitial,
-                    dateApplicationFinal,
-                    arrUsers,
-                    materials,
-                    qrcode,
-                    instructor,
-                    instructorTemp,
-                    qrCodeSelfRegistration,
-                    isSelfRegistrationEnabled,
+                    _id: classID,
+                    ..._doc
                 });
             } catch (error) {
                 reject(error);

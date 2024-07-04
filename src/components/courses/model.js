@@ -110,6 +110,9 @@ const ClassSchema = new mongoose.Schema(
         dateApplicationInitial: { type: Date, required: false },
         dateApplicationFinal: { type: Date, required: false },
         canCreateClass: { type: Boolean, required: false },
+        limit: { type: Number, required: false },
+        location: { type: String, required: true },
+        cousts: { type: [{ description: { type: String }, value: { type: Number } }], required: true },
     },
     {
         ...schemaOptions,
