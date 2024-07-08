@@ -452,10 +452,11 @@ module.exports = {
                 isSelfRegistrationEnabled,
                 limit,
                 location,
-                cousts
+                costs
             } = req.fields;
             let flagDate = true;
-            const coustsArray = JSON.parse(cousts);
+            console.log(costs)
+            const costsArray = JSON.parse(costs);
             if (dateApplicationInitial || dateApplicationFinal) {
                 if (dateApplicationInitial && dateApplicationFinal === '') {
                     flagDate = true;
@@ -553,7 +554,7 @@ module.exports = {
                                 isSelfRegistrationEnabled,
                             limit,
                             location,
-                            cousts: coustsArray
+                            costs: costsArray
                         });
 
                         success(res, req, 'Criado com sucesso!');
@@ -598,10 +599,10 @@ module.exports = {
                 isSelfRegistrationEnabled,
                 limit,
                 location,
-                cousts
+                costs
             } = req.fields;
             const materials = JSON.parse(req.fields.materials);
-            const coustsArray = JSON.parse(cousts);
+            const costsArray = JSON.parse(costs);
             const files = req.files;
             const user = await getUserByToken(req);
             const currentMaterials = await ClassModel.findById(classID);
@@ -695,7 +696,7 @@ module.exports = {
                         dateApplicationFinal,
                         limit,
                         location,
-                        cousts: coustsArray
+                        costs: costsArray
                     });
 
                     success(res, req, 'Atualizado com sucesso!');
