@@ -1,67 +1,69 @@
-const _messages = require('../../utils/messages');
+const { getUserByToken } = require('../../utils/functions')
+const _messages = require('../../utils/messages')
 const {
     elegiblesContents,
     recentsSections,
     checkIfTheTrackIsValid,
-} = require('../sections/business');
-const { populateTrails } = require('../trails/business');
+    getTagsElegiblesByToken,
+} = require('../sections/business')
+const { populateTrails } = require('../trails/business')
 
 module.exports = {
-    async getShowCaseTrails(req, res) {
+    async getShowCaseTrails (req, res) {
         try {
             let trails = await populateTrails(true, {
                 enabled: true,
                 showcase: true,
-            });
+            })
 
-            trails = trails.map((trail) => {
-                trail = processTrailAndItems(trail);
-                return prepareObject(trail);
-            });
+            trails = trails.map(trail => {
+                trail = processTrailAndItems(trail)
+                return prepareObject(trail)
+            })
 
-            let resultSections = [];
+            let resultSections = []
 
-            const arrSections = await elegiblesContents(trails);
-            const arrRecentsSections = await recentsSections(trails);
+            const arrSections = await elegiblesContents(trails)
+            const arrRecentsSections = await recentsSections(trails)
 
-            resultSections = arrSections.concat(arrRecentsSections);
+            resultSections = arrSections.concat(arrRecentsSections)
 
             if (resultSections.length > 0) {
                 resultSections.sort((a, b) =>
-                    a.position < b.position ? -1 : 1
-                );
+                    a.position < b.position ? -1 : 1,
+                )
             }
 
-            _messages.success(res, req, resultSections);
+            _messages.success(res, req, resultSections)
         } catch (error) {
-            console.log(error);
+            console.log(error)
             _messages.internalServer(
                 res,
                 req,
                 error.message,
                 'Erro interno no servidor',
                 'showcase',
-                'getShowCaseTrails'
-            );
+                'getShowCaseTrails',
+            )
         }
     },
 
-    async getShowCaseTrailById(req, res) {
+    async getShowCaseTrailById (req, res) {
         try {
-            const findValue = req.params.trailId;            
+            const { trailId } = req.params
 
-            const query = findValue.match(/^[0-9a-fA-F]{24}$/)
+            const find = trailId.match(/^[0-9a-fA-F]{24}$/)
                 ? {
-                      $or: [{ _id: findValue }, { titleURL: findValue }],
-                  }
-                : { titleURL: findValue };
+                    $or: [{ _id: trailId }, { titleURL: trailId }],
+                }
+                : { titleURL: trailId }
 
-            const trails = await populateTrails(true, query);
+            const trails = await populateTrails(true, find)
 
-            const trail = processTrailAndItems(trails[0]);
+            const trail = processTrailAndItems(trails[0])
 
-            const obj = prepareObject(trail);
-            _messages.success(res, req, obj);
+            const obj = prepareObject(trail)
+            _messages.success(res, req, obj)
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -69,57 +71,57 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'showcase',
-                'getShowCaseTrailById'
-            );
+                'getShowCaseTrailById',
+            )
         }
     },
 
-    async getOnlyShowCaseTrails(req, res) {
+    async getOnlyShowCaseTrails (req, res) {
         try {
             let trails = await populateTrails(
                 true,
                 { showcase: true },
-                { createdAt: -1 }
-            );
+                { createdAt: -1 },
+            )
 
-            trails = trails.map((trail) => {
-                trail = processTrailAndItems(trail);
-                return prepareObject(trail);
-            });
+            trails = trails.map(trail => {
+                trail = processTrailAndItems(trail)
+                return prepareObject(trail)
+            })
 
             if (trails.length > 0) {
                 trails.sort((a, b) =>
-                    new Date(a.startDate).getTime() <
-                    new Date(b.startDate).getTime()
+                    new Date(a.startDate).getTime() >
+                        new Date(b.startDate).getTime()
                         ? -1
-                        : 1
-                );
+                        : 1,
+                )
             }
 
-            _messages.success(res, req, trails);
-        } catch (error) {}
+            _messages.success(res, req, trails)
+        } catch (error) { }
     },
 
-    async searchTrails(req, res) {
+    async searchTrails (req, res) {
         try {
-            const searchBy = req.query.searchBy;
-            let filterTrails = [];
+            const searchBy = req.query.searchBy
+            let filterTrails = []
 
             filterTrails = await populateTrails(true, {
                 $text: { $search: `"${searchBy}"` },
                 showcase: true,
                 enabled: true,
-            });
-            filterTrails = filterTrails.filter((trail) =>
-                checkIfTheTrackIsValid(trail)
-            );
+            })
+            filterTrails = filterTrails.filter(trail =>
+                checkIfTheTrackIsValid(trail),
+            )
 
-            filterTrails = filterTrails.map((trail) => {
-                trail = processTrailAndItems(trail);
-                return prepareObject(trail);
-            });
+            filterTrails = filterTrails.map(trail => {
+                trail = processTrailAndItems(trail)
+                return prepareObject(trail)
+            })
 
-            _messages.success(res, req, filterTrails);
+            _messages.success(res, req, filterTrails)
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -127,19 +129,19 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'home',
-                'searchTrailsItems'
-            );
+                'searchTrailsItems',
+            )
         }
     },
-};
+}
 
-function processTrailAndItems(trail) {
-    let duration = 0;
+function processTrailAndItems (trail) {
+    let duration = 0
     for (const item of trail.items) {
-        duration += item.itemID.durationHours;
+        duration += item.itemID.durationHours
     }
 
-    trail.items = trail.items.map((item) => {
+    trail.items = trail.items.map(item => {
         return {
             _id: item.itemID._id,
             title: item.itemID.title,
@@ -147,16 +149,16 @@ function processTrailAndItems(trail) {
             durationHours: item.itemID.durationHours,
             kind: item.itemID.kind,
             contentPath: item.itemID.contentPath,
-            afterSeparator:item.afterSeparator
-        };
-    });
+            afterSeparator: item.afterSeparator,
+        }
+    })
 
-    trail.duration = duration;
+    trail.duration = duration
 
-    return trail;
+    return trail
 }
 
-function prepareObject(trail) {
+function prepareObject (trail) {
     return {
         _id: trail._id,
         title: trail.title,
@@ -174,5 +176,5 @@ function prepareObject(trail) {
         externalPlayer: trail.externalPlayer,
         innerTextStatus: trail.innerTextStatus,
         innerText: trail.innerText,
-    };
+    }
 }

@@ -14,6 +14,7 @@ module.exports = {
             const query = searchBy
                 ? {
                     $or: [{ title: { $regex: searchBy, $options: 'i' } }],
+
                 }
                 : {}
 
