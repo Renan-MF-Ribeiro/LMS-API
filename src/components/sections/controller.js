@@ -15,6 +15,7 @@ const {
     keepLearningSections,
     concludedSections,
     favoriteSections,
+    mostSeenSections,
     getGroupCodesByToken,
     checkEligibilityTagsAnd,
     courseInSections
@@ -297,6 +298,7 @@ module.exports = {
                 const arrKeepLearningSections = await keepLearningSections(trails);
                 const arrConcludedSections = await concludedSections(trails);
                 const arrFavoriteSections = await favoriteSections(trails, user._id);
+                const arrMostSeenSections = await mostSeenSections(trails)
 
                 const courses = await getStudentCourses(req);
                 const arrCoursesSections = await courseInSections(tags, courses, user._id);
@@ -307,7 +309,8 @@ module.exports = {
                     .concat(arrKeepLearningSections)
                     .concat(arrConcludedSections)
                     .concat(arrCoursesSections)
-                    .concat(arrFavoriteSections);
+                    .concat(arrFavoriteSections)
+                    .concat(arrMostSeenSections);
 
                 if (channelId) {
                     const filteredArray = resultSections.filter((obj) =>
@@ -343,6 +346,7 @@ module.exports = {
                     }
                 }
             }
+
 
             _messages.success(res, req, resultSections);
         } catch (error) {

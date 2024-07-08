@@ -13,6 +13,8 @@ const { CourseModel, WaitListModel, ClassModel } = require('../courses/model');
 const { Tracking } = require('../tracking/model');
 const { Section, DEFAULT_TYPES } = require('./model');
 const { default: axios } = require('axios');
+const moment = require('moment');
+const { TrailViews } = require('../trails/trail-views.model');
 
 module.exports = {
     checkIfTheTrackIsValid(trail) {
@@ -521,48 +523,6 @@ module.exports = {
         });
     },
 
-    async favoriteSections(trails, userId) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const section = await Section.findOne({
-                    defaultType: DEFAULT_TYPES.FAVORITES,
-                    active: 1,
-                }).lean();
-
-                const uri = `${process.env.API_SOCIAL}/home/favorite/${userId}`;
-                const { data } = await axios.get(uri);
-                const favoriteTrails = data.map((f) => {
-                    if (f.target) {
-                        return f.trailId;
-                    }
-                });
-                if (section) {
-                    const sortFnc =
-                        section && section.ordination !== undefined && section.ordination === 0
-                            ? function (a, b) {
-                                return b.createdAt - a.createdAt;
-                            }
-                            : function (a, b) {
-                                return a.title.localeCompare(b.title);
-                            };
-
-                    for (const trail of trails) {
-                        if (favoriteTrails.includes(String(trail._id))) {
-                            section.trails.push(trail);
-                        }
-                    }
-
-                    section.trails.sort(sortFnc);
-                }
-
-                resolve(section && section.trails.length > 0 ? section : []);
-            } catch (error) {
-                console.log(error);
-                reject(error);
-            }
-        });
-    },
-
     async courseInSections(tags, courses, userId) {
         return new Promise(async (resolve, reject) => {
             try {
@@ -658,6 +618,115 @@ module.exports = {
                 resolve(section && section.trails.length > 0 ? section : []);
             } catch (error) {
                 console.log(error);
+                reject(error);
+            }
+        });
+    },
+
+    async mostSeenSections(trails) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const section = await Section.findOne({
+                    defaultType: DEFAULT_TYPES.MOST_SEEN,
+                    active: 1,
+                }).lean();
+
+                if (section) {
+                    const lastNinetyDays = moment().subtract(90, 'days').toISOString();
+                    const mostSeenTrails = await TrailViews.aggregate([
+                        {
+                            $match: {
+                                trailId: {
+                                    $in: trails.map(({ _id }) => _id),
+                                },
+                            },
+                        },
+                        {
+                            $project: {
+                                trailId: 1,
+                                count: {
+                                    $sum: {
+                                        $reduce: {
+                                            input: '$views',
+                                            initialValue: 0,
+                                            in: {
+                                                $cond: {
+                                                    if: { $gte: ['$$this.date', lastNinetyDays] },
+                                                    then: { $add: ['$$value', '$$this.count'] },
+                                                    else: { $add: ['$$value', 0] },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            $sort: {
+                                count: -1,
+                            },
+                        },
+                        {
+                            $limit: 10,
+                        },
+                        {
+                            $lookup: {
+                                from: 'trails',
+                                as: 'trail',
+                                foreignField: '_id',
+                                localField: 'trailId',
+                            },
+                        },
+                        {
+                            $unwind: '$trail',
+                        },
+                        {
+                            $lookup: {
+                                from: 'items',
+                                as: 'trailItems',
+                                foreignField: '_id',
+                                localField: 'trail.items.itemID'
+                            }
+                        },
+                        {
+                            $addFields: {
+                                'trail.items': {
+                                    $map: {
+                                        input: '$trail.items',
+                                        as: 'item',
+                                        in: {
+                                            $mergeObjects: [
+                                                '$$item',
+                                                {
+                                                    itemID: {
+                                                        $arrayElemAt: [
+                                                            '$trailItems',
+                                                            {
+                                                                $indexOfArray: ['$trailItems._id', '$$item.itemID'],
+                                                            },
+                                                        ],
+                                                    },
+                                                },
+                                            ],
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            $project: {
+                                trail: 1,
+                                count: 1,
+                                _id: 0,
+                            },
+                        },
+                    ]);
+
+                    section.trails = mostSeenTrails.map(({ trail , count }) => ({ ...trail, count }))
+                }
+
+                resolve(trails.length > 0 ? section : []);
+            } catch (error) {
                 reject(error);
             }
         });
