@@ -34,7 +34,7 @@ const {
 
 const { populateTrails } = require('../trails/business');
 const { Section } = require('../sections/model');
-const config = require('../../../config.json')
+const config = require('../../../config.json');
 
 const HomeController = {
     async searchBy(req, res) {
@@ -362,8 +362,9 @@ const HomeController = {
                 totalCompletedTrails: completedTrails.length,
                 totalTrails,
                 percentageCompletedTrails,
-                inProgressTrails,
+                inProgressTrails: inProgressTrails.filter(x=>x.notStarted == true),
                 average,
+                lastTrail: inProgressTrails[0],
                 highestScoreTitle,
                 highestScoreUrl,
                 courses

@@ -1180,10 +1180,8 @@ async function updateTrailsViews() {
     try {
         console.log('start cron todayMostSeen')
         const todayMostSeen = await TodayMostSeenTrails.find()
-        console.log({ todayMostSeen })
 
         for (const { views, updatedAt, _id } of todayMostSeen) {
-            console.log({ views, updatedAt, _id })
             const trailId = _id.trailId.toString()
             let viewsInfo = await TrailViews.findOne({ trailId })
             if (!viewsInfo) {
@@ -1199,7 +1197,6 @@ async function updateTrailsViews() {
                     info.date.getMonth() === updatedAt.getMonth() &&
                     info.date.getYear() === updatedAt.getYear(),
             )
-            console.log({ infoIndex })
 
             if (infoIndex === -1) {
                 viewsInfo.views.push({ date: updatedAt, count: views })
