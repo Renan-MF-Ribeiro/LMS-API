@@ -91,6 +91,8 @@ const {
 } = require('../gamification/utils');
 const { DashConfig } = require('../dashboard/model');
 
+const { ConfigLogin } = require('../theme/login-config/model')
+
 module.exports = {
     async create (req, res) {
         try {
@@ -566,14 +568,17 @@ module.exports = {
 
     async singleSignOn (req, res) {
         let user = {};
+        const { ssoForm } = await ConfigLogin.findOne({})
+            .sort({ createdAt: -1 })
+
         const { token } = req.body;
         const secret = process.env.JWT_SECRET;
         const data = jwt.verify(token, secret);
-        const networkLogin = data.networkLogin
-            ? data.networkLogin
-            : data.data.networkLogin;
+        const claim = data[ssoForm.claim]
+            ? data[ssoForm.claim]
+            : data.data[ssoForm.claim];
 
-        if (!networkLogin) {
+        if (!claim) {
             _messages.forbidden(
                 res,
                 req,
@@ -603,8 +608,8 @@ module.exports = {
         }
 
         try {
-            if (networkLogin) {
-                user = await User.findOne({ networkLogin, status: 'ATIVO' }).lean();
+            if (claim) {
+                user = await User.findOne({ claim, status: 'ATIVO' }).lean();
                 if (user) {
                     const dashboardFilters = await processDashFilters(user)
 

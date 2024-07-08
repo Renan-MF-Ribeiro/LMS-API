@@ -19,6 +19,7 @@ const ssoFormSchema = new Schema({
     issuer: { type: String, },
     callback_url: { type: String, },
     certifier: { type: String, },
+    claim: { type: String, },
     enabled: { type: Number, default: 0 }
 });
 

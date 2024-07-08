@@ -3,7 +3,8 @@ const _functions = require('../../../utils/functions')
 const { Showcase } = require('./model')
 const { Tracking } = require('../../tracking/model')
 const { Trail } = require('../../trails/model')
-
+const { TrailViews } = require('../../trails/trail-views.model')
+const moment = require('moment')
 
 module.exports = {
     async getList (req, res) {
@@ -47,8 +48,7 @@ module.exports = {
                 .sort({ position: 1 }).select('_id, type')
 
             _messages.success(res, req, blocks)
-        }
-        catch (error) {
+        } catch (error) {
             _messages.internalServer(
                 res,
                 req,
@@ -58,49 +58,91 @@ module.exports = {
                 'getBlocks',
             )
         }
-
     },
+
     async getById (req, res) {
         try {
-
             const { id } = req.params
-            const block = await Showcase.findById({ _id: id, enabled: true, })
+            const block = await Showcase.findById({ _id: id, enabled: true })
             if (block.type == 'mostSeen') {
-                let tracking = await Tracking.aggregate([
-                    {
-                        $group: {
-                            _id: "$item",
-                            qtd: { $sum: 1 }
+                const lastNinetyDays = moment().subtract(90, 'days').toISOString()
+                const showcaseTrails = await Trail.find({ showcase: true })
+                const trails = await TrailViews.aggregate(
+                    [
+                        {
+                            $match: {
+                                trailId: {
+                                    $in: showcaseTrails.map(({ _id }) => _id)
+                                }
+                            }
+                        },
+                        {
+                            $project: {
+                                trailId: 1,
+                                count: {
+                                    $sum: {
+                                        $reduce: {
+                                            input: '$views',
+                                            initialValue: 0,
+                                            in: {
+                                                $cond: {
+                                                    if: { $gte: ['$$this.date', lastNinetyDays] },
+                                                    then: { $add: ['$$value', '$$this.count'] },
+                                                    else: { $add: ['$$value', 0] }
+                                                }
+
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            $sort: {
+                                count: -1
+                            }
+                        },
+                        {
+                            $limit: 6
+                        },
+                        {
+                            $lookup: {
+                                from: 'trails',
+                                as: 'trail',
+                                foreignField: '_id',
+                                localField: 'trailId'
+                            }
+                        },
+                        {
+                            $unwind: '$trail'
+                        },
+                        {
+                            $project: {
+                                'trail._id': 1,
+                                'trail.title': 1,
+                                'trail.thumbPath': 1,
+                                'trail.titleURL': 1,
+                                count: 1,
+                                _id: 0
+                            }
                         }
-                    },
-                    {
-                        $project: {
-                            _id: 0,
-                            item: "$_id",
-                            qtd: 1
-                        }
-                    }
-                ]).sort({ qtd: -1 })
-                tracking = tracking.map((tr) => tr.item)
-                const today = new Date();
-                let trails = await Trail.find({
-                    enabled: true,
-                    startDate: { $lt: today }, // startDate seja menor do que hoje
-                    endDate: { $gt: today }, // endDate seja maior do que hoje
-                    "items.itemID": { $in: tracking }
-                }).sort({ updatedAt: -1 }).limit(6)
-                block.trails = trails
+                    ]
+                )
+
+                block.trails = trails.map(({ trail, count }) => ({
+                    _id: trail._id,
+                    title: trail.title,
+                    thumbPath: trail.thumbPath,
+                    titleURL: trail.titleURL,
+                    count
+                }))
             }
             if (block.type == 'selection') {
                 block.trails = await Trail.find({ _id: { $in: block.trails } }).sort({ _id: -1 })
             }
 
-
-
-
             _messages.success(res, req, block)
-        }
-        catch (error) {
+        } catch (error) {
             _messages.internalServer(
                 res,
                 req,
@@ -110,7 +152,6 @@ module.exports = {
                 'getBlocks',
             )
         }
-
     },
 
     async orderChange (req, res) {
@@ -140,8 +181,6 @@ module.exports = {
             const body = req.body
             const sectionId = body._id
             delete body.sectionId
-
-
 
             const findSection = await Showcase.find({ _id: sectionId })
 
@@ -190,9 +229,7 @@ module.exports = {
                     'update',
                 )
             }
-
-        }
-        catch (error) {
+        } catch (error) {
             console.error(error)
             _messages.internalServer(
                 res,
