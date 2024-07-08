@@ -111,8 +111,9 @@ const ClassSchema = new mongoose.Schema(
         dateApplicationFinal: { type: Date, required: false },
         canCreateClass: { type: Boolean, required: false },
         limit: { type: Number, required: false },
+        name: { type: String, required: false },
         location: { type: String, required: true },
-        cousts: { type: [{ description: { type: String }, value: { type: Number } }], required: true },
+        costs: { type: [{ description: { type: String }, value: { type: Number } }], required: true },
     },
     {
         ...schemaOptions,
