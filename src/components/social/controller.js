@@ -730,7 +730,7 @@ module.exports = {
             _messages.success(
                 res,
                 req,
-                "data",
+                data,
                 'ok',
                 'social',
                 'shareSocialContent'
@@ -745,6 +745,51 @@ module.exports = {
                 'Operação inválida',
                 'social',
                 'shareSocialContent'
+            );
+            return;
+        }
+    },
+
+    async getUsersElegibleForSharing(req, res) {
+        try {
+            const { trailId, searchBy } = req.query;
+            const elegibleUsers = []
+    
+            const trail = await Trail.findById(trailId, 'title titleURL tags -_id');
+    
+            const tags = trail.tags.map((e) => e.value);
+    
+            const usersWithTags = await UsersWithProcessedTags.find(searchBy ? {
+                $or: [
+                    { name: { $regex: searchBy, $options: 'i' } },
+                ],
+                userTags: { $in: tags },
+            } : {
+                userTags: { $in: tags },
+            }).lean().limit(10);
+    
+            for (const user of usersWithTags) {
+                elegibleUsers.push({ name: user.name, _id: user._id })
+            }
+    
+            _messages.success(
+                res,
+                req,
+                elegibleUsers,
+                'ok',
+                'social',
+                'getShareTargets'
+            );
+            return;
+        } catch (error) {
+            console.log(error)
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'getShareTargets'
             );
             return;
         }
