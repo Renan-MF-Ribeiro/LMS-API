@@ -558,7 +558,11 @@ module.exports = {
                     const today = new Date()
                     const classesFromCourse = await ClassModel.find({
                         courseID: course._id
-                    });
+                    }).populate({
+                        path: 'materials',
+                        match: { author: 'INSTRUTOR' },
+                    })
+                        .populate('instructor', ['name']);;
 
                     let inWaitList = false;
                     if (alreadyJoined) {
@@ -579,7 +583,7 @@ module.exports = {
                                 certificateElegible = grade >= passingScore;
 
                             }
-                            if (certificateElegible)
+                            if (certificateElegible && presence)
                                 certificateData = {
                                     completionAt: e.dateApplicationFinal,
                                     certificate: course.certificate,
@@ -599,7 +603,9 @@ module.exports = {
                     });
                     const classes = certificateData ? [] : classesFromCourse.map((classFromCourse) => {
                         const inClass = classFromCourse.users.some((user) => user._id == userId || user.userID == userId)
+                        console.log(classFromCourse.name, inClass)
                         return classFromCourse.dateApplicationFinal <= today ? null : {
+                            _id: classFromCourse._id,
                             name: classFromCourse.name,
                             dateApplicationInitial: classFromCourse.dateApplicationInitial,
                             dateApplicationFinal: classFromCourse.dateApplicationFinal,
@@ -1001,17 +1007,17 @@ function getClassStatus (classFromCourse, inClass) {
         const isCourseOpen = classFromCourse.dateApplicationInitial >= today
         const isCourseClosed = classFromCourse.dateApplicationFinal <= today
 
-        if (isCourseClosed || !courseHasSeats) {
-            return "closed"
-        }
-        if (isCourseOpen) {
-            return "open"
-        }
         if (isCourseInProgress) {
             return "in-progress"
         }
         if (inClass) {
             return "registered"
+        }
+        if (isCourseClosed || !courseHasSeats) {
+            return "closed"
+        }
+        if (isCourseOpen) {
+            return "open"
         }
 
         return null

@@ -452,11 +452,12 @@ module.exports = {
                 isSelfRegistrationEnabled,
                 limit,
                 location,
-                costs
+                costs,
+                name
             } = req.fields;
             let flagDate = true;
             console.log(costs)
-            const costsArray = JSON.parse(costs);
+            const costsArray = costs ? JSON.parse(costs) : null;
             if (dateApplicationInitial || dateApplicationFinal) {
                 if (dateApplicationInitial && dateApplicationFinal === '') {
                     flagDate = true;
@@ -554,7 +555,8 @@ module.exports = {
                                 isSelfRegistrationEnabled,
                             limit,
                             location,
-                            costs: costsArray
+                            costs: costsArray,
+                            name
                         });
 
                         success(res, req, 'Criado com sucesso!');
@@ -599,7 +601,8 @@ module.exports = {
                 isSelfRegistrationEnabled,
                 limit,
                 location,
-                costs
+                costs,
+                name
             } = req.fields;
             const materials = JSON.parse(req.fields.materials);
             const costsArray = JSON.parse(costs);
@@ -696,7 +699,8 @@ module.exports = {
                         dateApplicationFinal,
                         limit,
                         location,
-                        costs: costsArray
+                        costs: costsArray,
+                        name
                     });
 
                     success(res, req, 'Atualizado com sucesso!');
@@ -1144,6 +1148,47 @@ module.exports = {
                 },
                 { new: true }
             );
+
+            success(res, req, course);
+        } catch (error) {
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'courses',
+                '/getCourseByQrCode'
+            );
+        }
+    },
+
+    async listJoin (req, res) {
+        try {
+            const { body } = req;
+            const user = await getUserByToken(req);
+
+            var userID = String(user._id);
+            console.log(body.classesID)
+
+            const course = await ClassModel.findOneAndUpdate(
+                {
+                    _id: body.classesID,
+                    $or: [{ 'users._id': { $ne: userID } }, { 'users.userID': { $ne: userID } }]  // Verifica se o usuário não está presente no array
+                },
+                {
+                    $push: {
+                        users: {
+                            _id: userID,
+                            presence: false,
+                            grades: 0,
+                            name: user.name,
+                            registration: user.registration
+                        }
+                    }
+                },
+                { new: true }
+            );
+
 
             success(res, req, course);
         } catch (error) {

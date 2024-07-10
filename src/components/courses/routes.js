@@ -39,6 +39,7 @@ router
         _controller.deleteMaterialCourse
     )
     .post('/self-registration', multiparty(), _controller.selfRegistration)
+    .post('/list-join', multiparty(), _controller.listJoin)
     .get('/instructor/all', isInstructor, _controller.instructorAllCourses)
     .get('/instructor/course/:id', isInstructor, _controller.getCourseById)
     .get('/instructor/users', isInstructor, _controller.getUsers)
