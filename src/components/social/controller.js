@@ -753,8 +753,7 @@ module.exports = {
     async getShareTargets(req, res) {
         try {
             const { users, trailId } = req.body;
-            const elegibleUsers = []
-            const unelegibleUsers = []
+            const returnUsers = []
 
             const trail = await Trail.findById(trailId, 'title titleURL tags -_id');
 
@@ -762,17 +761,13 @@ module.exports = {
 
             for (let user of users) {
                 const userWithTags = await UsersWithProcessedTags.find({ networkLogin: user.networkLogin }).lean().limit(10);
-                if (userWithTags.length > 0) {
-                    elegibleUsers.push({ name: user.name, _id: user._id, networkLogin: user.networkLogin })
-                } else {
-                    unelegibleUsers.push({ name: user.name, _id: user._id, networkLogin: user.networkLogin })
-                }
+                returnUsers.push({ name: user.name, _id: user._id, networkLogin: user.networkLogin, elegible: userWithTags.length > 0 ? true : false })
             }
 
             _messages.success(
                 res,
                 req,
-                { elegibleUsers, unelegibleUsers },
+                returnUsers,
                 'ok',
                 'social',
                 'getShareTargets'
