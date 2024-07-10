@@ -805,7 +805,7 @@ module.exports = {
             const tags = trail.tags.map((e) => e.value);
 
             for (let user of users) {
-                const userWithTags = await UsersWithProcessedTags.find({ networkLogin: user.networkLogin }).lean().limit(10);
+                const userWithTags = await UsersWithProcessedTags.find({ networkLogin: user.networkLogin, userTags: { $in: tags } }).lean().limit(10);
                 returnUsers.push({ _id: user._id, elegible: userWithTags.length > 0 ? true : false })
             }
 
