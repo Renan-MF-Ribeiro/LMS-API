@@ -761,7 +761,7 @@ module.exports = {
 
             for (let user of users) {
                 const userWithTags = await UsersWithProcessedTags.find({ networkLogin: user.networkLogin }).lean().limit(10);
-                returnUsers.push({ name: user.name, _id: user._id, networkLogin: user.networkLogin, elegible: userWithTags.length > 0 ? true : false })
+                returnUsers.push({ _id: user._id, elegible: userWithTags.length > 0 ? true : false })
             }
 
             _messages.success(
