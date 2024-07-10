@@ -16,7 +16,7 @@ const { getTagsElegiblesByToken } = require('../sections/business');
 
 
 module.exports = {
-    async getConfig (req, res) {
+    async getConfig(req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/client-config/${process.env.CLIENT_ID}`;
             const { data } = await axios.get(uri);
@@ -62,7 +62,7 @@ module.exports = {
         }
     },
 
-    async getSocialStatus (req, res) {
+    async getSocialStatus(req, res) {
         try {
             const userTags = await getTagsElegiblesByToken(req)
             const user = await _functions.getUserByToken(req)
@@ -111,7 +111,7 @@ module.exports = {
         }
     },
 
-    async putConfig (req, res) {
+    async putConfig(req, res) {
         try {
             const reqBody = req.body;
             const blockedTrailsIdAndTitle = reqBody.blockedTrails.map(
@@ -175,7 +175,7 @@ module.exports = {
         }
     },
 
-    async getUsers (req, res) {
+    async getUsers(req, res) {
         try {
             const { skip, limit } = _functions.pagination(req);
             const { order, sort } = _functions.ordernation(req);
@@ -224,7 +224,7 @@ module.exports = {
         }
     },
 
-    async addOrRemoveFromUserList (req, res) {
+    async addOrRemoveFromUserList(req, res) {
         try {
             const { operation, listName } = req.body;
 
@@ -310,15 +310,15 @@ module.exports = {
         }
     },
 
-    async createComment (req, res) {
+    async createComment(req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}`;
             const user = await _functions.getUserByToken(req)
             const userTags = await getTagsElegiblesByToken(req)
 
-            const body = { 
-                ...req.body, 
-                userId: user._id, 
+            const body = {
+                ...req.body,
+                userId: user._id,
                 userName: user.name,
                 userTags: userTags.map((tag) => tag.value)
             };
@@ -337,7 +337,7 @@ module.exports = {
         }
     },
 
-    async getAllComments (req, res) {
+    async getAllComments(req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}`;
             const { data } = await axios.get(uri, { params: req.query });
@@ -357,7 +357,7 @@ module.exports = {
         }
     },
 
-    async getCommentsByTrailId (req, res) {
+    async getCommentsByTrailId(req, res) {
         try {
             const { trailId } = req.params;
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/${trailId}`;
@@ -384,7 +384,7 @@ module.exports = {
         }
     },
 
-    async updateComment (req, res) {
+    async updateComment(req, res) {
         try {
             const { commentId } = req.params;
             const body = req.body;
@@ -406,7 +406,7 @@ module.exports = {
         }
     },
 
-    async getPendingComments (req, res) {
+    async getPendingComments(req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/pending`;
             const { searchBy, ...query } = req.query
@@ -437,7 +437,7 @@ module.exports = {
         }
     },
 
-    async getApprovedComments (req, res) {
+    async getApprovedComments(req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/approved`;
             const { searchBy, ...query } = req.query
@@ -469,7 +469,7 @@ module.exports = {
         }
     },
 
-    async getRejectedComments (req, res) {
+    async getRejectedComments(req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/rejected`;
             const { searchBy, ...query } = req.query
@@ -501,7 +501,7 @@ module.exports = {
         }
     },
 
-    async updateCommentStatus (req, res) {
+    async updateCommentStatus(req, res) {
         try {
             const { commentId } = req.params
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/${commentId}`;
@@ -524,7 +524,7 @@ module.exports = {
         }
     },
 
-    async createLike (req, res) {
+    async createLike(req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/home/like/${process.env.CLIENT_ID}`;
             const body = req.body;
@@ -546,7 +546,7 @@ module.exports = {
         }
     },
 
-    async getLikesByTrailId (req, res) {
+    async getLikesByTrailId(req, res) {
         try {
             let allowed = false
             let blocked = false
@@ -604,7 +604,7 @@ module.exports = {
         }
     },
 
-    async deleteLike (req, res) {
+    async deleteLike(req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/home/like`;
             const body = req.body;
@@ -625,7 +625,7 @@ module.exports = {
         }
     },
 
-    async createFavorite (req, res) {
+    async createFavorite(req, res) {
         try {
             const uri = `${process.env.API_SOCIAL}/home/favorite/${process.env.CLIENT_ID}`;
             const body = req.body;
@@ -646,7 +646,7 @@ module.exports = {
         }
     },
 
-    async getFavoritesByUserId (req, res) {
+    async getFavoritesByUserId(req, res) {
         try {
             const { userId } = req.params;
             const uri = `${process.env.API_SOCIAL}/home/favorite/${userId}`;
@@ -674,7 +674,7 @@ module.exports = {
         }
     },
 
-    async updateFavorite (req, res) {
+    async updateFavorite(req, res) {
         try {
             const { favoriteId } = req.params;
             const body = req.body;
@@ -696,46 +696,36 @@ module.exports = {
         }
     },
 
-    async shareSocialContent (req, res) {
+    async shareSocialContent(req, res) {
         try {
             const { name } = await _functions.getUserByToken(req);
             const { users, trailId } = req.body;
 
-            const trail = await Trail.findById(trailId, 'title titleURL');
-
-
             for (let id of users) {
-                let userIsValid = false
                 const trail = await Trail.findById(trailId, 'title titleURL');
 
-                // const usersWithTags = await UsersWithProcessedTags.find({
-                //     userTags: { $in: tags },
-                // }).lean();
-
-                if (userIsValid) {
-                    const text = `Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!`;
-                    const texthtml = `<br> <p>Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!</p> <br>`;
-                    const message = {
-                        category: 'notify',
-                        communication: ['notification', 'email'],
-                        mode: 'manual',
-                        target: {
-                            type: 'users',
-                            value: {
-                                users: [id],
-                            },
+                const text = `Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!`;
+                const texthtml = `<br> <p>Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!</p> <br>`;
+                const message = {
+                    category: 'notify',
+                    communication: ['notification', 'email'],
+                    mode: 'manual',
+                    target: {
+                        type: 'users',
+                        value: {
+                            users: [id],
                         },
-                        text: text,
-                        texthtml: texthtml,
-                        thumbnail: config.messenger.emailTemplate.thumbnail,
-                        title: `Happlearning - ${name} compartilhou um conteúdo com você!`,
-                    };
-                    // createMessagesFromBackend(message)
-                }
+                    },
+                    text: text,
+                    texthtml: texthtml,
+                    thumbnail: config.messenger.emailTemplate.thumbnail,
+                    title: `Happlearning - ${name} compartilhou um conteúdo com você!`,
+                };
+                createMessagesFromBackend(message)
             }
 
-            // const uri = `${process.env.API_SOCIAL}/home/share/${process.env.CLIENT_ID}`;
-            // const { data } = await axios.post(uri, { users: users, trailId });
+            const uri = `${process.env.API_SOCIAL}/home/share/${process.env.CLIENT_ID}`;
+            const { data } = await axios.post(uri, { users: users, trailId });
 
             _messages.success(
                 res,
@@ -760,32 +750,29 @@ module.exports = {
         }
     },
 
-    async getShareTargets (req, res) {
+    async getShareTargets(req, res) {
         try {
-            const { trailId, searchBy } = req.query;
+            const { users, trailId } = req.body;
             const elegibleUsers = []
+            const unelegibleUsers = []
 
             const trail = await Trail.findById(trailId, 'title titleURL tags -_id');
 
             const tags = trail.tags.map((e) => e.value);
 
-            const usersWithTags = await UsersWithProcessedTags.find(searchBy ? {
-                $or: [
-                    { name: { $regex: searchBy, $options: 'i' } },
-                ],
-                userTags: { $in: tags },
-            } : {
-                userTags: { $in: tags },
-            }).lean().limit(10);
-
-            for (const user of usersWithTags) {
-                elegibleUsers.push({ name: user.name, _id: user._id })
+            for (let user of users) {
+                const userWithTags = await UsersWithProcessedTags.find({ networkLogin: user.networkLogin }).lean().limit(10);
+                if (userWithTags.length > 0) {
+                    elegibleUsers.push({ name: user.name, _id: user._id, networkLogin: user.networkLogin })
+                } else {
+                    unelegibleUsers.push({ name: user.name, _id: user._id, networkLogin: user.networkLogin })
+                }
             }
 
             _messages.success(
                 res,
                 req,
-                elegibleUsers,
+                { elegibleUsers, unelegibleUsers },
                 'ok',
                 'social',
                 'getShareTargets'
@@ -806,7 +793,7 @@ module.exports = {
     },
 };
 
-async function createMessagesFromBackend (body) {
+async function createMessagesFromBackend(body) {
     try {
         const campaign = body;
         const target = campaign.target;

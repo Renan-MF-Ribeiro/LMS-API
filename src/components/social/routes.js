@@ -29,4 +29,4 @@ module.exports = express.Router()
     .put('/favorite/update/:favoriteId', _controller.updateFavorite)
     //share
     .post('/share', _controller.shareSocialContent)
-    .get('/share/users', _controller.getShareTargets);
+    .post('/share/users', _controller.getShareTargets);
