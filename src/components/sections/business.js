@@ -1003,7 +1003,7 @@ function getClassStatus (classFromCourse, inClass) {
     try {
         const today = new Date()
         const courseHasSeats = classFromCourse.users.length < classFromCourse.limit ? true : false
-        const isCourseInProgress = classFromCourse.dateApplicationInitial <= today && classFromCourse.dateApplicationFinal >= today
+        const isCourseInProgress = classFromCourse.dateApplicationInitial <= today && classFromCourse.dateApplicationFinal >= today && courseHasSeats
         const isCourseOpen = classFromCourse.dateApplicationInitial >= today
         const isCourseClosed = classFromCourse.dateApplicationFinal <= today
 
