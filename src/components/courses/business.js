@@ -114,11 +114,11 @@ module.exports = {
                         instructor: { $eq: instructor },
                     }
                 let courses = await ClassModel.find(query,
-                    ['users', 'createdAt']
+                    ['users', 'createdAt', 'name', 'dateApplicationInitial', 'dateApplicationFinal']
                 )
                     .populate({
                         path: 'courseID',
-                        select: ['title', 'createdAt', 'description'],
+                        select: ['title',],
                         match: searchBy
                             ? {
                                 $text: {
@@ -196,7 +196,7 @@ module.exports = {
             try {
                 const classes = await ClassModel.find(
                     {
-                        'users.userID': userID,
+                        $or: [{ 'users.userID': userID, }, { 'users._id': userID, }]
                     },
                     [
                         'users',
@@ -218,7 +218,7 @@ module.exports = {
 
                 const classesFilter = classes.filter((item) => {
                     const usersFilter = item.users.filter((user) => {
-                        if (user.presence && user.userID === userID) {
+                        if (user.presence && (user.userID === userID || user._id === userID)) {
                             return user;
                         }
                     });

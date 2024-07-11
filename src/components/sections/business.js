@@ -603,7 +603,7 @@ module.exports = {
                     });
                     const classes = certificateData ? [] : classesFromCourse.map((classFromCourse) => {
                         const inClass = classFromCourse.users.some((user) => user._id == userId || user.userID == userId)
-                        console.log(classFromCourse.name, inClass)
+
                         return classFromCourse.dateApplicationFinal <= today ? null : {
                             _id: classFromCourse._id,
                             name: classFromCourse.name,

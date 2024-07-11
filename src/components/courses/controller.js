@@ -1143,7 +1143,10 @@ module.exports = {
                 },
                 {
                     $set: {
-                        'users.$.presence': true
+                        'users.$.presence': true,
+                        'users.$.device': body.browser,
+                        'users.$.browser': body.device,
+                        'users.$.origin': 'QRCODE'
                     },
                 },
                 { new: true }
