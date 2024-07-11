@@ -586,6 +586,7 @@ module.exports = {
                             if (certificateElegible && presence)
                                 certificateData = {
                                     completionAt: e.dateApplicationFinal,
+                                    qrcode: e.qrcode,
                                     certificate: course.certificate,
                                     certificateLayout: course.certificateLayout,
                                     studentMaterials: e.materials,
