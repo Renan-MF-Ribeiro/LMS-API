@@ -574,11 +574,10 @@ module.exports = {
         const { token } = req.body;
         const secret = process.env.JWT_SECRET;
         const data = jwt.verify(token, secret);
-        console.log(ssoForm)
         const claim = data[ssoForm.claim]
             ? data[ssoForm.claim]
             : data.data[ssoForm.claim];
-
+        console.log(claim)
         if (!claim) {
             _messages.forbidden(
                 res,
