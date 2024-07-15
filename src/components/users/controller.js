@@ -610,6 +610,7 @@ module.exports = {
         try {
             if (claim) {
                 user = await User.findOne({ claim, status: 'ATIVO' }).lean();
+                console.log(user)
                 if (user) {
                     const dashboardFilters = await processDashFilters(user)
 
