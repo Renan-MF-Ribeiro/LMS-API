@@ -577,6 +577,7 @@ module.exports = {
         const claim = data[ssoForm.claim]
             ? data[ssoForm.claim]
             : data.data[ssoForm.claim];
+        console.log(claim)
         if (!claim) {
             _messages.forbidden(
                 res,
@@ -604,6 +605,7 @@ module.exports = {
                     },
                 }
             );
+        }
 
         try {
             if (claim) {
