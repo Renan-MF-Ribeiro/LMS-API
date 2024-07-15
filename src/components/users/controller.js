@@ -608,9 +608,9 @@ module.exports = {
 
         try {
             if (claim) {
-                const query = {};
+                const query = { status: 'ATIVO' };
                 query[ssoForm.claim] = claim;
-                user = await User.findOne({ query, status: 'ATIVO' }).lean();
+                user = await User.findOne({ query }).lean();
                 console.log(query, user)
                 if (user) {
                     const dashboardFilters = await processDashFilters(user)
