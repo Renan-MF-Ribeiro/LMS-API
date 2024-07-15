@@ -577,7 +577,6 @@ module.exports = {
         const claim = data[ssoForm.claim]
             ? data[ssoForm.claim]
             : data.data[ssoForm.claim];
-        console.log(claim)
         if (!claim) {
             _messages.forbidden(
                 res,
@@ -612,6 +611,7 @@ module.exports = {
                 const query = {};
                 query[ssoForm.claim] = claim;
                 user = await User.findOne({ query, status: 'ATIVO' }).lean();
+                console.log(query, user)
                 if (user) {
                     const dashboardFilters = await processDashFilters(user)
 
