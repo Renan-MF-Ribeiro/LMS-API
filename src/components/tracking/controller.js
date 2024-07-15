@@ -12,6 +12,7 @@ const {
     isValidDate,
     pagination,
     ordernation,
+    getUserByToken
 } = require('../../utils/functions');
 const {
     Tracking,
@@ -53,7 +54,7 @@ const TRACKING_KINDS = Object.freeze({
 });
 
 const TrackingController = {
-    async createOrUpdate(req, res) {
+    async createOrUpdate (req, res) {
         const TrackingModel = TRACKING_KINDS[req.body.kind] || Tracking;
 
         try {
@@ -278,7 +279,7 @@ const TrackingController = {
         }
     },
 
-    async findOrCreate(req, res) {
+    async findOrCreate (req, res) {
         try {
             const { item, trailId, chief } = req.query;
             const { data } = await decodeToken(req.headers.authorization);
@@ -353,7 +354,7 @@ const TrackingController = {
         }
     },
 
-    async list(req, res) {
+    async list (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -489,7 +490,7 @@ const TrackingController = {
         }
     },
 
-    async deleteQuery(req, res) {
+    async deleteQuery (req, res) {
         try {
             const { item, userLogin } = req.query;
             var networkLogin = userLogin;
@@ -532,17 +533,17 @@ const TrackingController = {
     },
 
 
-    async createOrUpdateDocument(req, res) {
+    async createOrUpdateDocument (req, res) {
         req.body.kind = 'DocumentTracking';
         return TrackingController.createOrUpdate(req, res);
     },
 
-    async createOrUpdateMedia(req, res) {
+    async createOrUpdateMedia (req, res) {
         req.body.kind = 'MediaTracking';
         return TrackingController.createOrUpdate(req, res);
     },
 
-    async createOrUpdateSCORM(req, res) {
+    async createOrUpdateSCORM (req, res) {
         var decrypted = cryptoJS.AES.decrypt(req.headers.tokendata, 'commit');
         const tmpStatus = decrypted.toString(cryptoJS.enc.Utf8);
 
@@ -554,7 +555,7 @@ const TrackingController = {
         req.body.kind = 'SCORMTracking';
         return TrackingController.createOrUpdate(req, res);
     },
-    async listActivitiesHistoric(req, res) {
+    async listActivitiesHistoric (req, res) {
         try {
             const { skip, limit } = pagination(req);
             let { order, sort } = ordernation(req);
@@ -651,7 +652,7 @@ const TrackingController = {
         }
     },
 
-    async listActivitiesForCorrection(req, res) {
+    async listActivitiesForCorrection (req, res) {
         try {
             const { skip, limit } = pagination(req);
             let { order, sort } = ordernation(req);
@@ -720,7 +721,7 @@ const TrackingController = {
         }
     },
 
-    async updateActivityAdmin(req, res) {
+    async updateActivityAdmin (req, res) {
         try {
             const { trackingId } = req.query;
             const todayDate = new Date();
@@ -774,7 +775,7 @@ const TrackingController = {
         }
     },
 
-    async updateActivityUser(req, res) {
+    async updateActivityUser (req, res) {
         try {
             const { item, userLogin } = req.query;
             const todayDate = new Date();
@@ -824,9 +825,44 @@ const TrackingController = {
             );
         }
     },
+
+    async registerViewPost (req, res) {
+        try {
+            const { _id } = req.body;
+            const user = await getUserByToken(req);
+            const trail = await Trail.findById(_id).populate({
+                path: 'items.itemID',
+                match: { kind: { $eq: 'PostItem' } },
+            })
+            const item = trail.items.find((item) => item.itemID)?.itemID
+            if (item) {
+                createCompleteTracking(item, 'PostTracking', user.networkLogin)
+
+                return _messages.success(res, req, 'Registrado com sucesso!');
+            }
+
+            return _messages.badRequest(
+                res,
+                req,
+                'PostItem notfound',
+                'PostItem notfound',
+                'resgisterViewPost'
+            );
+
+        } catch (error) {
+            console.error(error)
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'resgisterViewPost'
+            );
+        }
+    }
 };
 
-function processTrackingType(item) {
+function processTrackingType (item) {
     switch (item.kind) {
         case "MediaItem":
             return "MediaTracking";

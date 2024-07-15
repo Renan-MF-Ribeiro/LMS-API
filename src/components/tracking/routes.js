@@ -19,7 +19,7 @@ const events = [
 ];
 try {
     shelljs.mkdir("-p", UPLOADS_PATH);
-} catch {}
+} catch { }
 module.exports = express.Router()
     .put('/', _controller.createOrUpdate)
     .get('/', _controller.list)
@@ -37,4 +37,5 @@ module.exports = express.Router()
         "/update-activity-user",
         formidable({ maxFileSize: 1024 * 1024 * 1024 }, events),
         _controller.updateActivityUser
-    );
+    )
+    .put("/registerViewPost", _controller.registerViewPost)

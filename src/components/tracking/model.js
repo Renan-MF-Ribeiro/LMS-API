@@ -47,6 +47,11 @@ const AudioTracking = Tracking.discriminator('AudioTracking', new mongoose.Schem
 }, {
     ...schemaOptions,
 }))
+const PostTracking = Tracking.discriminator('PostTracking', new mongoose.Schema({
+    completion: { type: Number, min: 0, max: 1 },
+}, {
+    ...schemaOptions,
+}))
 
 const EventTracking = Tracking.discriminator('EventTracking', new mongoose.Schema({
     clickedStatus: [{ id: String, title: String, completion: Boolean }], default: [],
@@ -104,7 +109,7 @@ const activityLessonStatus = Object.freeze({
 const ActivityTracking = Tracking.discriminator('ActivityTracking', new mongoose.Schema({
     item: { type: 'ObjectId', ref: 'Item', required: true },
     format: { type: String, enum: Object.values(fileFormats), default: fileFormats.COMPACT_FILES, required: true },
-    contentPath: { type: String, required: false  },
+    contentPath: { type: String, required: false },
     completion: { type: Number, min: 0, max: 1 },
     score: { type: Number, min: 0, max: 100 },
     reviewerComment: { type: String },
@@ -158,6 +163,7 @@ module.exports = {
     SCORMTrackingHistory,
     ExamTracking,
     AudioTracking,
+    PostTracking,
     EventTracking,
     ActivityTracking,
     FormTracking

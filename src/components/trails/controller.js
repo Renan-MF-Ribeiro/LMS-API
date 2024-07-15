@@ -8,7 +8,7 @@ const {
     processTrailTracking,
 } = require('../../utils/functions');
 const { Trail } = require('./model');
-const { Item } = require('../items/model');
+const { Item, PostItem } = require('../items/model');
 const { populateTrails } = require('../trails/business');
 const { Tracking } = require('../tracking/model');
 const {
@@ -317,6 +317,7 @@ module.exports = {
     },
 
     async multiUploadCreate (req, res) {
+
         try {
             const { thumb, banner, background } = req.files;
 
@@ -408,7 +409,31 @@ module.exports = {
                         backgroundPath,
                     };
 
-                    const idItem = payload.items.map((item) => item.itemID._id)
+                    if (payload.post) {
+                        const noHasPostItem = !payload.items.some((item) => item.kind === 'PostItem')
+                        if (noHasPostItem) {
+
+                            const item = {
+                                title: payload.title,
+                                description: payload.description,
+                                enabled: payload.enabled,
+                                thumbPath: payload.thumbPath,
+                                titleURL: payload.titleURL,
+                                author: payload.author,
+                                kind: 'PostItem'
+                            }
+                            const postItem = await PostItem.create(item);
+                            payload.items = [{
+                                "mandatory": false,
+                                "chief": false,
+                                "optional": false,
+                                "afterSeparator": "empty",
+                                "itemID": postItem._id
+                            }]
+
+                        }
+
+                    }
 
                     const items = []
 
@@ -425,11 +450,12 @@ module.exports = {
 
                     trail.items = items
 
-                    const oldData = await Trail.updateOne(
+                    const newData = await Trail.updateOne(
                         { _id: { $eq: trail._id } },
-                        trail
+                        trail,
+                        { new: true }
                     );
-                    const newData = await Trail.find({ _id: { $eq: trail._id } });
+                    // const newData = await Trail.find({ _id: { $eq: trail._id } });
 
                     _messages.success(
                         res,
@@ -719,17 +745,68 @@ module.exports = {
                         })
                     }
 
-                    const items = []
+                    if (payload.post) {
+                        const noHasPostItem = !payload.items.some((item) => item.kind === 'PostItem')
+                        if (noHasPostItem) {
+                            const user = await getUserByToken(req);
+                            const item = {
+                                title: payload.title,
+                                description: payload.description,
+                                enabled: true,
+                                thumbPath: payload.thumbPath,
+                                titleURL: payload.titleURL,
+                                author: user._id,
+                                kind: 'PostItem'
+                            }
+                            const postItem = await PostItem.create(item);
+                            payload.items = [{
+                                "mandatory": false,
+                                "chief": false,
+                                "optional": false,
+                                "afterSeparator": "empty",
+                                "itemID": postItem
+                            }]
+                        }
+                    }
 
-                    payload.items?.forEach((item) => {
-                        items.push({
+                    const processItem = async (payload, item) => {
+                        if (item.itemID.kind === 'PostItem' && item.itemID.title !== payload.title) {
+                            const updatedItem = {
+                                ...item.itemID,
+                                title: payload.title,
+                                description: payload.description,
+                                enabled: true,
+                                thumbPath: payload.thumbPath,
+                                titleURL: payload.titleURL,
+                            };
+                            const { _doc } = await PostItem.findOneAndUpdate({ _id: item.itemID._id }, updatedItem, { new: true })
+                            return { ...item, itemID: _doc }
+                        }
+                        return item;
+                    };
+
+                    const createItemPayload = (item, trail) => {
+                        return {
                             ...item,
                             urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}/${item.itemID._id}`,
                             urlTrail: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}`,
                             itemID: item.itemID._id,
-                        })
-                    })
+                        };
+                    };
 
+                    const processItems = async (payload, trail) => {
+                        const items = [];
+
+                        await Promise.all(payload.items?.map(async (item) => {
+                            const processedItem = await processItem(payload, item);
+                            items.push(createItemPayload(processedItem, trail));
+                        }));
+
+                        return items;
+                    };
+
+                    // Uso da função processItems
+                    const items = await processItems(payload, trail);
                     payload.items = items
                     const oldData = await Trail.updateOne(
                         { _id: { $eq: payload._id } },
@@ -1361,9 +1438,6 @@ module.exports = {
                 { highlighted: true }
             );
 
-            // console.log('trilhas ' + trails.length)
-            // console.log(trails)
-
             for (const trail of trails) {
                 for (const item of trail.items) {
                     // if (itemsIDProcessados.indexOf(item.itemID) < 0 && arrItemsID.indexOf(String(item.itemID)) > -1) {
@@ -1381,8 +1455,6 @@ module.exports = {
                     // }
                 }
             }
-
-            // console.log('banners > ' + banners.length)
 
             if (banners.length > 0)
                 banners = banners.sort((a, b) =>

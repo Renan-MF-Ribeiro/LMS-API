@@ -1364,6 +1364,7 @@ const ItemController = {
                 }
 
             query['archive'] = archive ? { $eq: archive === 'true' } : { $ne: true };
+            query['kind'] = { $ne: 'PostItem' };
             let total = await Item.find(query).count();
 
             let itens = await Item.find(query)
