@@ -316,6 +316,23 @@ const SoonItem = Item.discriminator(
     )
 );
 
+const PostItem = Item.discriminator(
+    'PostItem',
+    new mongoose.Schema(
+        {
+            contentPath: {
+                type: String,
+                required: false,
+            },
+            description: { type: String, required: false },
+            durationHours: { type: Number, required: false },
+
+            ...endpointOptions,
+        },
+        { ...schemaOptions }
+    )
+);
+
 const FORM_ITEM_TYPE = Object.freeze({
     DICHOTOMOUS: 'dichotomous',
     MULTIPLE: 'multiple',
@@ -366,6 +383,7 @@ module.exports = {
     EventItem,
     ActivityItem,
     SoonItem,
+    PostItem,
     FormItem,
     FORM_ITEM_TYPE
 };

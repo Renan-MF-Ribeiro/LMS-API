@@ -68,6 +68,7 @@ module.exports = {
                     : {
                         deleted: 0,
                     };
+                matchObj['kind'] = { $ne: 'PostItem' };
                 if (skip !== null) {
                     trails = await Trail.find(findObj)
                         .populate({
@@ -185,7 +186,8 @@ module.exports = {
                             supportMaterialEnabled: supportMaterialEnabled,
                             socialStatus: socialStatus || null,
                             innerTextBanner: trail.innerTextBanner,
-                            durationHours: trail.durationHours
+                            durationHours: trail.durationHours,
+                            post: trail.post,
                         });
                     }
                 } else {
@@ -210,7 +212,6 @@ module.exports = {
                         if (trail.author) {
                             userName = trail.author.name;
                         }
-
                         let supportMaterialEnabled = false;
                         const filteredSupportArray =
                             trail.supportMaterial.filter(
@@ -281,7 +282,8 @@ module.exports = {
                             supportMaterialEnabled: supportMaterialEnabled,
                             socialStatus: socialStatus || null,
                             innerTextBanner: trail.innerTextBanner,
-                            durationHours: trail.durationHours
+                            durationHours: trail.durationHours,
+                            post: trail.post,
                         });
                     }
                 }
