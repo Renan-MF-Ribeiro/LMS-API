@@ -570,7 +570,6 @@ module.exports = {
         let user = {};
         const { ssoForm } = await ConfigLogin.findOne({})
             .sort({ createdAt: -1 })
-        const claimField = ssoForm[claim]
 
         const { token } = req.body;
         const secret = process.env.JWT_SECRET;
@@ -605,12 +604,12 @@ module.exports = {
                     },
                 }
             );
-        }
 
         try {
             if (claim) {
-                user = await User.findOne({ claimField: claim, status: 'ATIVO' }).lean();
-                console.log(user)
+                const query = {};
+                query[ssoForm.claim] = claim;
+                user = await User.findOne({ query, status: 'ATIVO' }).lean();
                 if (user) {
                     const dashboardFilters = await processDashFilters(user)
 
