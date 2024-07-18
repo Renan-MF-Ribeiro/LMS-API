@@ -102,6 +102,7 @@ const dashboardRoutes = require('./components/dashboard/routes');
 const unsplashRoutes = require('./components/unsplash/routes');
 const assessmentRoutes = require('./components/assessment/routes');
 const themeRoutes = require('./components/theme/routes');
+const calendarRoutes = require('./components/calendar/routes');
 
 app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/tracking', validateTokenRoute, trackingRoutes)
@@ -129,6 +130,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/social', validateTokenRoute, socialRoutes)
     .use('/padlets', validateTokenRoute, padletRoutes)
     .use('/support', supportRoutes)
+    .use('/calendar', validateTokenRoute, calendarRoutes)
     .use('/alura', validateTokenRoute, aluraRoutes)
     .use('/theme', themeRoutes)
     .use('/unsplash', validateTokenRoute, unsplashRoutes)

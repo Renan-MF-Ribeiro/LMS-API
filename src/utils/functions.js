@@ -510,6 +510,7 @@ module.exports = {
         const scoreArr = [];
         let lastTrackingUpdate;
         trail.notStarted = false
+        let duration = 0;
 
         for (const item of trail.items) {
             const objTracking = allTrackingUser.filter((obj) => {
@@ -520,6 +521,7 @@ module.exports = {
             if (dashboard && objTracking && objTracking[0] === undefined) {
                 trail.notStarted = true
             }
+            duration += item.itemID.durationHours ? item.itemID.durationHours : 0;
             lastTrackingUpdate = objTracking ? objTracking.updatedAt : null;
             const score = objTracking && objTracking.score ? objTracking.score : null;
             const completionAt = objTracking ? objTracking.completionAt : null;
@@ -587,6 +589,7 @@ module.exports = {
         trail.lastTrackingUpdate = lastTrackingUpdate;
         trail.completionAt = mostRecentDate;
         trail.completion = getTrailCompletion(trail);
+        trail.duration = duration
 
         const itemsCompletion = trail.items.map((item) => item?.completion || 0);
         const completionTotal = itemsCompletion.reduce((acc, curr) => acc + curr, 0);

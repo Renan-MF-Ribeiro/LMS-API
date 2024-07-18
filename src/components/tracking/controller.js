@@ -14,6 +14,7 @@ const {
     ordernation,
     getUserByToken
 } = require('../../utils/functions');
+const { calendarEventConclusion } = require('../calendar/events/controller')
 const {
     Tracking,
     DocumentTracking,
@@ -54,7 +55,7 @@ const TRACKING_KINDS = Object.freeze({
 });
 
 const TrackingController = {
-    async createOrUpdate (req, res) {
+    async createOrUpdate(req, res) {
         const TrackingModel = TRACKING_KINDS[req.body.kind] || Tracking;
 
         try {
@@ -207,8 +208,6 @@ const TrackingController = {
                 }
             }
 
-
-
             if (TrackingModel === ExamTracking) {
                 const { idEvaluation } = await Item.findOne({
                     _id: req.body.item,
@@ -243,6 +242,15 @@ const TrackingController = {
                 if (!!req.body.completionAt) req.body.completion = 1
                 if (req.body.completion === 1) completionAt = new Date();
             }
+
+            //EVENTO CONCLUSAO
+            await calendarEventConclusion(
+                q.userLogin,
+                {
+                    item: q.item,
+                    completion: req.body?.completion,
+                    lessonStatus: req.body?.lessonStatus,
+                })
 
             // GAMIFICATION DISPATCH
             await GamificationController.dispatch(
@@ -279,7 +287,7 @@ const TrackingController = {
         }
     },
 
-    async findOrCreate (req, res) {
+    async findOrCreate(req, res) {
         try {
             const { item, trailId, chief } = req.query;
             const { data } = await decodeToken(req.headers.authorization);
@@ -354,7 +362,7 @@ const TrackingController = {
         }
     },
 
-    async list (req, res) {
+    async list(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -490,7 +498,7 @@ const TrackingController = {
         }
     },
 
-    async deleteQuery (req, res) {
+    async deleteQuery(req, res) {
         try {
             const { item, userLogin } = req.query;
             var networkLogin = userLogin;
@@ -533,17 +541,17 @@ const TrackingController = {
     },
 
 
-    async createOrUpdateDocument (req, res) {
+    async createOrUpdateDocument(req, res) {
         req.body.kind = 'DocumentTracking';
         return TrackingController.createOrUpdate(req, res);
     },
 
-    async createOrUpdateMedia (req, res) {
+    async createOrUpdateMedia(req, res) {
         req.body.kind = 'MediaTracking';
         return TrackingController.createOrUpdate(req, res);
     },
 
-    async createOrUpdateSCORM (req, res) {
+    async createOrUpdateSCORM(req, res) {
         var decrypted = cryptoJS.AES.decrypt(req.headers.tokendata, 'commit');
         const tmpStatus = decrypted.toString(cryptoJS.enc.Utf8);
 
@@ -555,7 +563,7 @@ const TrackingController = {
         req.body.kind = 'SCORMTracking';
         return TrackingController.createOrUpdate(req, res);
     },
-    async listActivitiesHistoric (req, res) {
+    async listActivitiesHistoric(req, res) {
         try {
             const { skip, limit } = pagination(req);
             let { order, sort } = ordernation(req);
@@ -652,7 +660,7 @@ const TrackingController = {
         }
     },
 
-    async listActivitiesForCorrection (req, res) {
+    async listActivitiesForCorrection(req, res) {
         try {
             const { skip, limit } = pagination(req);
             let { order, sort } = ordernation(req);
@@ -721,7 +729,7 @@ const TrackingController = {
         }
     },
 
-    async updateActivityAdmin (req, res) {
+    async updateActivityAdmin(req, res) {
         try {
             const { trackingId } = req.query;
             const todayDate = new Date();
@@ -775,7 +783,7 @@ const TrackingController = {
         }
     },
 
-    async updateActivityUser (req, res) {
+    async updateActivityUser(req, res) {
         try {
             const { item, userLogin } = req.query;
             const todayDate = new Date();
@@ -826,7 +834,7 @@ const TrackingController = {
         }
     },
 
-    async registerViewPost (req, res) {
+    async registerViewPost(req, res) {
         try {
             const { _id } = req.body;
             const user = await getUserByToken(req);
@@ -862,7 +870,7 @@ const TrackingController = {
     }
 };
 
-function processTrackingType (item) {
+function processTrackingType(item) {
     switch (item.kind) {
         case "MediaItem":
             return "MediaTracking";
