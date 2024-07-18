@@ -195,6 +195,31 @@ module.exports = {
                 delete payload.supportFileMaterial
             }
 
+            if (payload.galleryFiles) {
+                const fileArray = payload.galleryFiles.map(
+                    key => req.files[key],
+                )
+                const gallery = []
+
+                for (const file of fileArray) {
+                    let path = await azureBlob(file, 'trails/gallery')
+                    path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                    const material = {
+                        _id: new mongoose.Types.ObjectId(),
+                        url: path,
+                        name: file.name,
+                        size: file.size,
+                        deleted: false,
+                    }
+                    gallery.push(material)
+                }
+                payload.gallery = [
+                    ...payload.gallery,
+                    ...gallery,
+                ]
+                delete payload.galleryFiles
+            }
+
             const trail = await Trail.create(payload)
 
             _messages.success(
@@ -399,6 +424,31 @@ module.exports = {
                             ...supportMaterial,
                         ]
                         delete payload.supportFileMaterial
+                    }
+
+                    if (payload.galleryFiles) {
+                        const fileArray = payload.galleryFiles.map(
+                            key => req.files[key],
+                        )
+                        const gallery = []
+
+                        for (const file of fileArray) {
+                            let path = await azureBlob(file, 'trails/gallery')
+                            path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                            const material = {
+                                _id: new mongoose.Types.ObjectId(),
+                                url: path,
+                                name: file.name,
+                                size: file.size,
+                                deleted: false,
+                            }
+                            gallery.push(material)
+                        }
+                        payload.gallery = [
+                            ...payload.gallery,
+                            ...gallery,
+                        ]
+                        delete payload.galleryFiles
                     }
 
                     payload = {
@@ -720,6 +770,35 @@ module.exports = {
                             ...supportMaterial,
                         ]
                         delete payload.supportFileMaterial
+                    }
+
+                    if (payload.galleryFiles) {
+                        const fileArray = payload.galleryFiles.map(
+                            file => ({ ...file, file: req.files[file.name] }),
+                        )
+                        const gallery = []
+
+                        for (const image of fileArray) {
+                            const file = image.file
+                            let path = await azureBlob(file, 'trails/gallery')
+                            path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                            const material = {
+                                _id: new mongoose.Types.ObjectId(),
+                                url: path,
+                                name: file.name,
+                                size: file.size,
+                                deleted: false,
+                                title: image.title,
+                                description: image.description
+                            }
+                            gallery.push(material)
+                        }
+
+                        payload.gallery = [
+                            ...payload.gallery,
+                            ...gallery,
+                        ]
+                        delete payload.galleryFiles
                     }
 
                     payload = {
@@ -1828,6 +1907,26 @@ module.exports = {
                 (x) => x.deleted === false
             );
             _messages.success(res, req, filteredSupportArray);
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno do servidor',
+                'trails',
+                'listMaterial'
+            );
+        }
+    },
+
+    async listGallery (req, res) {
+        try {
+            let trailId = req.params.id;
+            const trail = await Trail.findById(trailId);
+            const filteredGalleryArray = trail.gallery.filter(
+                (x) => x.deleted === false
+            );
+            _messages.success(res, req, filteredGalleryArray);
         } catch (error) {
             _messages.internalServer(
                 res,

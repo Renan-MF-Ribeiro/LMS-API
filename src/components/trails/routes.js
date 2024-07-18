@@ -43,4 +43,5 @@ module.exports = express
     .get('/list-material/:id', _controller.listMaterial)
     .post('/download-material', _controller.downloadMaterial)
     .post('/delete-material', _controller.deleteMaterial)
-    .put('/duplicate', isAdmin, _controller.duplicate);
+    .put('/duplicate', isAdmin, _controller.duplicate)
+    .get('/list-gallery/:id', _controller.listGallery)
