@@ -62,9 +62,9 @@ const EventsController = {
                 classId,
                 type: EVENT_TYPE.COURSE
             })
-            return _messages.success(res, req, event);
+            return _messages.success();
         } catch (error) {
-            return handleError(res, req, error)
+						console.log(error)
         }
     },
 
