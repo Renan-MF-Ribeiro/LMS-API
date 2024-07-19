@@ -19,10 +19,10 @@ module.exports = {
 
     const processedTrail = processTrailTracking(trail, allTrackingUser);
     return {
-      duration: processedTrail.trail.duration,
-      concludedAt: processedTrail.trail.completionAt,
-      scoreAverage: processedTrail.trail.scoreAverage,
-      certificateLayout: processedTrail.trail.certificateLayout,
+      duration: processedTrail.trail.duration ? processedTrail.trail.duration : 0,
+      completionDate: processedTrail.trail.completionAt,
+      workload: processedTrail.trail.scoreAverage ? processedTrail.trail.scoreAverage : 0,
+      layoutId: processedTrail.trail.certificateLayout,
       trailId: trail._id,
       title: processedTrail.trail.title,
     }
