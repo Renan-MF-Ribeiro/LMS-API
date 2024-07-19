@@ -577,6 +577,7 @@ module.exports = {
                 }
             }
         } catch (error) {
+            console.log(error)
             internalServer(
                 res,
                 req,
