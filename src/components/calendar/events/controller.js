@@ -121,9 +121,9 @@ const EventsController = {
 					})
 				}
 			}
-			return _messages.success(res, req);
+			return
 		} catch (error) {
-			return handleError(res, req, error)
+			console.log(error)
 		}
 	},
 };
