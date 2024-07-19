@@ -9,6 +9,7 @@ const { EventModel, EVENT_TYPE } = require('./model');
 const { User } = require('../../users/model.js');
 const { CourseModel } = require('../../courses/model.js');
 const { Tracking } = require('../../tracking/model.js')
+
 const EventsController = {
 	async createCalendarEvent(req, res) {
 		try {
@@ -69,7 +70,7 @@ const EventsController = {
 
 	async calendarEventConclusion(user, props) {
 		try {
-			const { item, completion = null, lessonStatus = null } = props;
+			const { item } = props;
 			const trails = await populateTrails(true, {
 				'items.itemID': { $in: [item] },
 			});
@@ -88,37 +89,42 @@ const EventsController = {
 
 			for (const trail of trails) {
 				const processedTrail = processTrailTracking(trail, allTrackingUser);
-				const isAboutToComplete = {
-					...processedTrail.trail,
-					items: processedTrail.trail.items.map((i) => {
-						return i.itemID._id.equals(item)
-							? {
-								...i,
-								completion: !lessonStatus
-									? completion
-									: lessonStatus === 'passed'
-										? 1
-										: 0,
-							}
-							: i;
-					}),
-				};
+				// const isAboutToComplete = {
+				// 	...processedTrail.trail,
+				// 	items: processedTrail.trail.items.map((i) => {
+				// 		return i.itemID._id.equals(item)
+				// 			? {
+				// 				...i,
+				// 				completion: !lessonStatus
+				// 					? completion
+				// 					: lessonStatus === 'passed'
+				// 						? 1
+				// 						: 0,
+				// 			}
+				// 			: i;
+				// 	}),
+				// };
 
-				const foundItem = processedTrail.trail.items.find((i) => {
-					return i.itemID._id.equals(item);
-				});
+				// const foundItem = processedTrail.trail.items.find((i) => {
+				// 	return i.itemID._id.equals(item);
+				// });
 
 				if (
-					!!foundItem &&
-					foundItem.completion !== 1 &&
-					getTrailCompletion(isAboutToComplete) === 1
+					!!processedTrail &&
+					processedTrail.completion === 1
 				) {
-					await EventModel.create({
-						title: trail.title,
+					await EventModel.findOneAndUpdate({
 						userId: foundUser._id,
 						trailid: trail._id,
 						type: EVENT_TYPE.CONCLUSION
-					})
+					}, {
+						$set: {
+							title: trail.title,
+							userId: foundUser._id,
+							trailid: trail._id,
+							type: EVENT_TYPE.CONCLUSION
+						}
+					}, {upsert: true})
 				}
 			}
 			return
