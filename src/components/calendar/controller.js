@@ -13,6 +13,8 @@ const CalendarController = {
             let events = await _events.getCalendarEventsByDate(start, end, _id)
 
             for (let event of events) {
+                event.startDate = event.createdAt
+                delete event.createdAt
                 if (event.type === EVENT_TYPE.COURSE) {
                    event.content = await returnContentCourses(event.classId, _id)
                 } else {
