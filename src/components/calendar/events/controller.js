@@ -1,6 +1,6 @@
 const _messages = require('../../../utils/messages');
 const {
-	getTrailCompletion,
+    getTrailCompletion,
 } = require('../../sections/business');
 const { processTrailTracking } = require('../../../utils/functions.js');
 const { handleError } = require('../../../utils/errors');
@@ -11,127 +11,109 @@ const { CourseModel } = require('../../courses/model.js');
 const { Tracking } = require('../../tracking/model.js')
 
 const EventsController = {
-	async createCalendarEvent(req, res) {
-		try {
-			const event = await EventModel.create(req.body)
-			return _messages.success(res, req, event);
-		} catch (error) {
-			return handleError(res, req, error)
-		}
-	},
+    async createCalendarEvent (req, res) {
+        try {
+            const event = await EventModel.create(req.body)
+            return _messages.success(res, req, event);
+        } catch (error) {
+            return handleError(res, req, error)
+        }
+    },
 
-	async updateCalendarEvent(req, res) {
-		try {
-			const event = await EventModel.findByIdAndUpdate(req.body._id, req.body)
-			return _messages.success(res, req, event);
-		} catch (error) {
-			return handleError(res, req, error)
-		}
-	},
+    async updateCalendarEvent (req, res) {
+        try {
+            const event = await EventModel.findByIdAndUpdate(req.body._id, req.body)
+            return _messages.success(res, req, event);
+        } catch (error) {
+            return handleError(res, req, error)
+        }
+    },
 
-	async removeCalendarEvent(req, res) {
-		try {
-			const event = await EventModel.findByIdAndDelete(req.body._id)
-			return _messages.success(res, req, event);
-		} catch (error) {
-			return handleError(res, req, error)
-		}
-	},
+    async removeCalendarEvent (req, res) {
+        try {
+            const event = await EventModel.findByIdAndDelete(req.body._id)
+            return _messages.success(res, req, event);
+        } catch (error) {
+            return handleError(res, req, error)
+        }
+    },
 
-	async getCalendarEventsByDate(start, end, userId) {
-		try {
-			const events = await EventModel.find({
-				$and: [
-					{ createdAt: { $gte: start } },
-					{ createdAt: { $lte: end } },
-					{ userId }
-				]
-			}).select('title type createdAt trailId classId').lean()
-			return events
-		} catch (error) {
-			console.log(error)
-		}
-	},
+    async getCalendarEventsByDate (start, end, userId) {
+        try {
+            const events = await EventModel.find({
+                $and: [
+                    { createdAt: { $gte: start } },
+                    { createdAt: { $lte: end } },
+                    { userId }
+                ]
+            }).select('title type createdAt trailId classId').lean()
+            return events
+        } catch (error) {
+            console.log(error)
+        }
+    },
 
-	async createCalendarClass(courseId, classId, userId) {
-		try {
-			const course = await CourseModel.findById(courseId)
-			await EventModel.create({
-				title: course.title,
-				userId,
-				classId,
-				type: EVENT_TYPE.COURSE
-			})
-			return _messages.success(res, req, event);
-		} catch (error) {
-			return handleError(res, req, error)
-		}
-	},
+    async createCalendarClass (courseId, classId, userId) {
+        try {
+            const course = await CourseModel.findById(courseId)
+            await EventModel.create({
+                title: course.title,
+                userId,
+                classId,
+                type: EVENT_TYPE.COURSE
+            })
+            return _messages.success(res, req, event);
+        } catch (error) {
+            return handleError(res, req, error)
+        }
+    },
 
-	async calendarEventConclusion(user, props) {
-		try {
-			const { item } = props;
-			const trails = await populateTrails(true, {
-				'items.itemID': { $in: [item] },
-			});
+    async calendarEventConclusion (networkLogin, props) {
+        try {
+            const { item } = props;
 
-			const foundUser = await User.findOne({
-				networkLogin: user.networkLogin,
-			});
+            const trails = await populateTrails(true, {
+                'items.itemID': { $in: [item] },
+            });
 
-			const allTrackingUser = await Tracking.find({
-				userLogin: user.networkLogin,
-				$or: [
-					{ expiredCompletion: { $exists: false } },
-					{ expiredCompletion: { $eq: null } },
-				],
-			});
+            const foundUser = await User.findOne({
+                networkLogin: networkLogin,
+            });
 
-			for (const trail of trails) {
-				const processedTrail = processTrailTracking(trail, allTrackingUser);
-				// const isAboutToComplete = {
-				// 	...processedTrail.trail,
-				// 	items: processedTrail.trail.items.map((i) => {
-				// 		return i.itemID._id.equals(item)
-				// 			? {
-				// 				...i,
-				// 				completion: !lessonStatus
-				// 					? completion
-				// 					: lessonStatus === 'passed'
-				// 						? 1
-				// 						: 0,
-				// 			}
-				// 			: i;
-				// 	}),
-				// };
+            const allTrackingUser = await Tracking.find({
+                userLogin: networkLogin,
+                $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } },
+                ],
+            });
 
-				// const foundItem = processedTrail.trail.items.find((i) => {
-				// 	return i.itemID._id.equals(item);
-				// });
+            for (const trail of trails) {
+                const processedTrail = processTrailTracking(trail, allTrackingUser).trail;
 
-				if (
-					!!processedTrail &&
-					processedTrail.completion === 1
-				) {
-					await EventModel.findOneAndUpdate({
-						userId: foundUser._id,
-						trailid: trail._id,
-						type: EVENT_TYPE.CONCLUSION
-					}, {
-						$set: {
-							title: trail.title,
-							userId: foundUser._id,
-							trailid: trail._id,
-							type: EVENT_TYPE.CONCLUSION
-						}
-					}, {upsert: true})
-				}
-			}
-			return
-		} catch (error) {
-			console.log(error)
-		}
-	},
+                if (
+                    !!processedTrail &&
+                    processedTrail.completion === 1
+                ) {
+                    await EventModel.findOneAndUpdate({
+                        userId: foundUser._id,
+                        trailId: processedTrail._id,
+                        type: EVENT_TYPE.CONCLUSION
+                    }, {
+                        $set: {
+                            title: processedTrail.title,
+                            userId: foundUser._id,
+                            trailId: processedTrail._id,
+                            type: EVENT_TYPE.CONCLUSION
+                        }
+                    }, { upsert: true })
+                }
+            }
+            return
+        } catch (error) {
+            console.log(error)
+        }
+    },
 };
 
 module.exports = EventsController;
