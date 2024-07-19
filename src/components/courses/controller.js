@@ -50,6 +50,7 @@ const {
     getTagsElegiblesByToken,
     getTagsElegibles,
 } = require('../sections/business');
+const { createCalendarClass } = require('../calendar/events/controller');
 
 module.exports = {
     async createCourse (req, res) {
@@ -456,7 +457,6 @@ module.exports = {
                 name
             } = req.fields;
             let flagDate = true;
-            console.log(costs)
             const costsArray = costs ? JSON.parse(costs) : null;
             if (dateApplicationInitial || dateApplicationFinal) {
                 if (dateApplicationInitial && dateApplicationFinal === '') {
@@ -539,7 +539,7 @@ module.exports = {
                                 arrMaterials.push(materialID);
                             }
                         }
-                        await ClassModel.create({
+                        const createdClass = await ClassModel.create({
                             courseID,
                             users: JSON.parse(users),
                             instructor: instructorID,
@@ -558,6 +558,8 @@ module.exports = {
                             costs: costsArray,
                             name
                         });
+
+                        await createCalendarClass(courseID, createdClass._id, user._id)
 
                         success(res, req, 'Criado com sucesso!');
                         return;

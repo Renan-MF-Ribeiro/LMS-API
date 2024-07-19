@@ -7,6 +7,7 @@ const { handleError } = require('../../../utils/errors');
 const { populateTrails } = require('../../trails/business');
 const { EventModel, EVENT_TYPE } = require('./model');
 const { User } = require('../../users/model.js');
+const { CourseModel } = require('../../courses/model.js');
 
 const EventsController = {
 	async createCalendarEvent(req, res) {
@@ -48,6 +49,21 @@ const EventsController = {
 			return events
 		} catch (error) {
 			console.log(error)
+		}
+	},
+
+	async createCalendarClass(courseId, classId, userId) {
+		try {
+			const course = await CourseModel.findById(courseId)
+			await EventModel.create({
+				title: course.title,
+				userId,
+				classId,
+				type: EVENT_TYPE.COURSE
+			})
+			return _messages.success(res, req, event);
+		} catch (error) {
+			return handleError(res, req, error)
 		}
 	},
 
