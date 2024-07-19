@@ -8,7 +8,7 @@ const { populateTrails } = require('../../trails/business');
 const { EventModel, EVENT_TYPE } = require('./model');
 const { User } = require('../../users/model.js');
 const { CourseModel } = require('../../courses/model.js');
-
+const { Tracking } = require('../../tracking/model.js')
 const EventsController = {
 	async createCalendarEvent(req, res) {
 		try {
