@@ -11,7 +11,7 @@ const { CourseModel } = require('../../courses/model.js');
 const { Tracking } = require('../../tracking/model.js')
 
 const EventsController = {
-    async createCalendarEvent (req, res) {
+    async createCalendarEvent(req, res) {
         try {
             const event = await EventModel.create(req.body)
             return _messages.success(res, req, event);
@@ -20,7 +20,7 @@ const EventsController = {
         }
     },
 
-    async updateCalendarEvent (req, res) {
+    async updateCalendarEvent(req, res) {
         try {
             const event = await EventModel.findByIdAndUpdate(req.body._id, req.body)
             return _messages.success(res, req, event);
@@ -29,7 +29,7 @@ const EventsController = {
         }
     },
 
-    async removeCalendarEvent (req, res) {
+    async removeCalendarEvent(req, res) {
         try {
             const event = await EventModel.findByIdAndDelete(req.body._id)
             return _messages.success(res, req, event);
@@ -38,7 +38,7 @@ const EventsController = {
         }
     },
 
-    async getCalendarEventsByDate (start, end, userId) {
+    async getCalendarEventsByDate(start, end, userId) {
         try {
             const events = await EventModel.find({
                 $and: [
@@ -53,7 +53,7 @@ const EventsController = {
         }
     },
 
-    async createCalendarClass (courseId, classId, userId) {
+    async calendarEventClass(courseId, classId, userId) {
         try {
             const course = await CourseModel.findById(courseId)
             await EventModel.create({
@@ -64,11 +64,25 @@ const EventsController = {
             })
             return _messages.success();
         } catch (error) {
-						console.log(error)
+            console.log(error)
         }
     },
 
-    async calendarEventConclusion (networkLogin, props) {
+    async calendarEventRevoked(userId, trail) {
+        try {
+            await EventModel.create({
+                title: trail.title,
+                userId,
+                trailId: trail._id,
+                type: EVENT_TYPE.REVOKED
+            })
+            return _messages.success();
+        } catch (error) {
+            console.log(error)
+        }
+    },
+
+    async calendarEventConclusion(networkLogin, props) {
         try {
             const { item } = props;
 

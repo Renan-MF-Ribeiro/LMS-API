@@ -57,6 +57,7 @@ const {
     notifyResponsibleUsers,
 } = require('../components/new-messages/controller');
 const { Section } = require('../components/sections/model');
+const { calendarEventRevoked } = require('../components/calendar/events/controller')
 
 const emailTemplate = config.messenger.emailTemplate;
 const groupingA = config.cron.average.groupA;
@@ -1108,6 +1109,7 @@ async function revokeTrail() {
 
             for (const userToBeRevoked of usersToBeRevoked) {
                 const { _id, expirationDate, userLogin } = userToBeRevoked;
+                await calendarEventRevoked(_id, trail)
                 await Tracking.updateMany(
                     {
                         userLogin: userLogin,
