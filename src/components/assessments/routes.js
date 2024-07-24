@@ -8,6 +8,7 @@ const _controllerAlternative = require('./alternatives/controller')
 const {
     isStudent,
     isAccountant,
+    isAdmin
 } = require('../../utils/middlewares')
 
 const formidable = require('express-formidable')
