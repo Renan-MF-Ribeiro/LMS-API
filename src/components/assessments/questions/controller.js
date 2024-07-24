@@ -25,6 +25,7 @@ module.exports = {
                     searchBy
                         ? Number(categoryId) !== 1
                             ? {
+                                idEvaluation: { $eq: id },
                                 $or: [
                                     { description: { $regex: searchBy, $options: 'i' } },
                                 ],
@@ -32,6 +33,7 @@ module.exports = {
                                 deleted: { $eq: 0 },
                             }
                             : {
+                                idEvaluation: { $eq: id },
                                 $or: [{ description: { $regex: searchBy, $options: 'i' } }],
                                 deleted: { $eq: 0 },
                             }

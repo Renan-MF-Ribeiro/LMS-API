@@ -1168,7 +1168,10 @@ module.exports = {
                 total = await Trail.find(query).countDocuments();
 
                 const trails = await Trail.find(query)
-                    .populate('items.itemID')
+                    .populate({
+                        path: 'items.itemID',
+                        populate: { path: 'idEvaluation', select: ['description'] },
+                    })
                     .sort({ [order]: sort })
                     .skip(parseInt(skip))
                     .limit(parseInt(noLimit ? 0 : limit));

@@ -553,6 +553,7 @@ const ItemController = {
 
                     if (payload.kind !== 'MediaItem') {
                         if (content) {
+                            payload.fileName = content.name;
                             contentPath = await azureBlob(
                                 content,
                                 'items/content'

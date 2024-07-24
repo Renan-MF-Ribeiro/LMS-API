@@ -47,6 +47,7 @@ router
     .get('/evaluation/:id', isStudent, _controller.returnEvaluation)
     .get('/actives', isAccountant, _controller.getActivesEvaluations)
     .get('/', isAccountant, _controller.getAllEvaluations)
+    .get('/:id', isAdmin, _controller.getById)
     .delete('/:id', isAccountant, _controller.deleteEvaluation)
 
     .get('/allQuestions/:idItem/:id', isStudent, _controller.getAllQuestions)
