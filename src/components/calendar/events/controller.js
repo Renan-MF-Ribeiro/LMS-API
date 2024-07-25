@@ -56,7 +56,7 @@ const EventsController = {
             for (const course of courses) {
                 if (course.classes) {
                     for (let c of course.classes) {
-                        if(new Date(c.dateApplicationInitial) >= new Date(start) && new Date(c.dateApplicationFinal) <= new Date(end)){
+                        if (new Date(c.dateApplicationInitial) >= new Date(start) && new Date(c.dateApplicationFinal) <= new Date(end)) {
                             const courseEvent = {
                                 title: c.name,
                                 userId: user._id,
@@ -317,13 +317,13 @@ function getClassStatus(classFromCourse, inClass, presence) {
     }
 }
 
-async function getAllExpDatesByUser(start, end,user, token) {
+async function getAllExpDatesByUser(start, end, user, token) {
     try {
         const uri = `${process.env.API_CERTIFIER}/certificates/find/${user.networkLogin}`;
         const { data } = await axios.get(uri, { headers: { Authorization: 'Bearer ' + token } });
         const events = []
         for (let certificate of data) {
-            if(certificate.emissionDate >= start && certificate.emissionDate <= end){
+            if (certificate.emissionDate >= start && certificate.emissionDate <= end) {
                 const certificateEvent = {
                     title: certificate.trailName,
                     userId: user._id,
