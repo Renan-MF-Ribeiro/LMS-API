@@ -56,24 +56,24 @@ const EventsController = {
             for (const course of courses) {
                 if (course.classes) {
                     for (let c of course.classes) {
-                            const courseEvent = {
-                                title: c.name,
-                                userId: user._id,
-                                target: {
-                                    id: c._id,
-                                    type: TARGET_ID.COURSE
-                                },
-                                type: EVENT_TYPE.COURSE,
-                                eventStartDate: c.dateApplicationInitial,
-                                eventEndDate: c.dateApplicationFinal,
-                                content: {
-                                    dateApplicationInitial: c.dateApplicationInitial,
-                                    dateApplicationFinal: c.dateApplicationFinal,
-                                    location: c.location,
-                                    status: c.status,
-                                }
+                        const courseEvent = {
+                            title: c.name,
+                            userId: user._id,
+                            target: {
+                                id: c._id,
+                                type: TARGET_ID.COURSE
+                            },
+                            type: EVENT_TYPE.COURSE,
+                            eventStartDate: c.dateApplicationInitial,
+                            eventEndDate: c.dateApplicationFinal,
+                            content: {
+                                dateApplicationInitial: c.dateApplicationInitial,
+                                dateApplicationFinal: c.dateApplicationFinal,
+                                location: c.location,
+                                status: c.status,
                             }
-                            events.push(courseEvent)
+                        }
+                        events.push(courseEvent)
                     }
                 }
             }
@@ -181,7 +181,7 @@ const EventsController = {
     },
 };
 
-async function getCoursesElegible(start, end,user, tags) {
+async function getCoursesElegible(start, end, user, tags) {
     return new Promise(async (resolve, reject) => {
         try {
             let elegibleCourses = await CourseModel.find({
@@ -338,17 +338,19 @@ async function getAllExpDatesByUser(start, end, user, token) {
             }
 
             if (certificate.expirationDate) {
-                const revokedEvent = {
-                    title: certificate.trailName,
-                    userId: user._id,
-                    eventStartDate: certificate.expirationDate,
-                    target: {
-                        id: certificate.trailId,
-                        type: TARGET_ID.TRAIL
-                    },
-                    type: EVENT_TYPE.REVOKED,
+                if (certificate.expirationDate >= start && certificate.expirationDate <= end) {
+                    const revokedEvent = {
+                        title: certificate.trailName,
+                        userId: user._id,
+                        eventStartDate: certificate.expirationDate,
+                        target: {
+                            id: certificate.trailId,
+                            type: TARGET_ID.TRAIL
+                        },
+                        type: EVENT_TYPE.REVOKED,
+                    }
+                    events.push(revokedEvent)
                 }
-                events.push(revokedEvent)
             }
         }
         return events
