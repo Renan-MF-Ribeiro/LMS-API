@@ -4,7 +4,7 @@ const { Trail } = require('../trails/model');
 const { ClassModel } = require('../courses/model');
 
 module.exports = {
-  async returnContentConcludedOrRevoked(trailId, networkLogin) {
+  async returnContentConclusion(trailId, networkLogin) {
     const trail = await Trail.findById(trailId).lean()
 
     const itemsIds = trail.items.map((i) => i.itemID._id);
@@ -27,46 +27,4 @@ module.exports = {
       title: processedTrail.trail.title,
     }
   },
-
-  async returnContentCourses(classId, userId) {
-    const classFromCourse = await ClassModel.findById(classId)
-    const inClass = classFromCourse.users.some((user) => user._id == userId || user.userID == userId)
-    return {
-      name: classFromCourse.name,
-      dateApplicationInitial: classFromCourse.dateApplicationInitial,
-      dateApplicationFinal: classFromCourse.dateApplicationFinal,
-      location: classFromCourse.location,
-      status: getClassStatus(classFromCourse, inClass),
-    }
-  },
-
 };
-
-
-function getClassStatus (classFromCourse, inClass) {
-  try {
-      const today = new Date()
-      const courseHasSeats = classFromCourse.users.length < classFromCourse.limit ? true : false
-      const isCourseInProgress = classFromCourse.dateApplicationInitial <= today && classFromCourse.dateApplicationFinal >= today && courseHasSeats
-      const isCourseOpen = classFromCourse.dateApplicationInitial >= today
-      const isCourseClosed = classFromCourse.dateApplicationFinal <= today
-
-      if (isCourseInProgress) {
-          return "in-progress"
-      }
-      if (inClass) {
-          return "registered"
-      }
-      if (isCourseClosed || !courseHasSeats) {
-          return "closed"
-      }
-      if (isCourseOpen) {
-          return "open"
-      }
-
-      return null
-  } catch (error) {
-      console.log(error);
-      reject(error);
-  }
-}

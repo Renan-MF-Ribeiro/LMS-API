@@ -2,23 +2,20 @@ const _messages = require('../../utils/messages');
 const _events = require('./events/controller')
 const { handleError } = require('../../utils/errors');
 const { getUserByToken } = require('../../utils/functions');
+const { getTagsElegiblesByToken } = require('../sections/business');
 const { EVENT_TYPE } = require("./events/model");
-const { returnContentConcludedOrRevoked, returnContentCourses } = require('./business')
+const { returnContentConclusion } = require('./business')
 
 const CalendarController = {
     async getCalendarEvents(req, res) {
         try {
-            const { _id, networkLogin } = await getUserByToken(req);
+            const user = await getUserByToken(req);
+            const tags = await getTagsElegiblesByToken(req);
             const { start, end } = req.query
-            let events = await _events.getCalendarEventsByDate(start, end, _id)
-
+            let events = await _events.getCalendarEventsByDate(start, end, user, tags, req.headers.authorization)
             for (let event of events) {
-                event.startDate = event.createdAt
-                delete event.createdAt
-                if (event.type === EVENT_TYPE.COURSE) {
-                   event.content = await returnContentCourses(event.classId, _id)
-                } else {
-                   event.content = await returnContentConcludedOrRevoked(event.trailId, networkLogin)
+                if (event.type === EVENT_TYPE.CONCLUSION) {
+                    event.content = await returnContentConclusion(event.target.id, user.networkLogin)
                 }
             }
 

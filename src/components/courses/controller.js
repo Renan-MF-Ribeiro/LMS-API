@@ -50,7 +50,6 @@ const {
     getTagsElegiblesByToken,
     getTagsElegibles,
 } = require('../sections/business');
-const { calendarEventClass } = require('../calendar/events/controller');
 
 module.exports = {
     async createCourse (req, res) {
@@ -559,7 +558,6 @@ module.exports = {
                             name
                         });
 
-                        await calendarEventClass(courseID, createdClass._id, user._id)
 
                         success(res, req, 'Criado com sucesso!');
                         return;
