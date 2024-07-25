@@ -43,7 +43,7 @@ const EventsController = {
         try {
             const events = []
             const courses = await getCoursesElegible(user, tags)
-            const certificateEvents = await getAllExpDatesByUser(user, token)
+            const certificateEvents = await getAllExpDatesByUser(start, end, user, token)
 
             const foundEvents = await EventModel.find({
                 $and: [
@@ -56,26 +56,27 @@ const EventsController = {
             for (const course of courses) {
                 if (course.classes) {
                     for (let c of course.classes) {
-                        const courseEvent = {
-                            title: c.name,
-                            userId: user._id,
-                            target: {
-                                id: c._id,
-                                type: TARGET_ID.COURSE
-                            },
-                            type: EVENT_TYPE.COURSE,
-                            eventStartDate: c.dateApplicationInitial,
-                            eventEndDate: c.dateApplicationFinal,
-                            content: {
-                                dateApplicationInitial: c.dateApplicationInitial,
-                                dateApplicationFinal: c.dateApplicationFinal,
-                                location: c.location,
-                                status: c.status,
+                        if(c.dateApplicationInitial >= start && dateApplicationFinal <= end){
+                            const courseEvent = {
+                                title: c.name,
+                                userId: user._id,
+                                target: {
+                                    id: c._id,
+                                    type: TARGET_ID.COURSE
+                                },
+                                type: EVENT_TYPE.COURSE,
+                                eventStartDate: c.dateApplicationInitial,
+                                eventEndDate: c.dateApplicationFinal,
+                                content: {
+                                    dateApplicationInitial: c.dateApplicationInitial,
+                                    dateApplicationFinal: c.dateApplicationFinal,
+                                    location: c.location,
+                                    status: c.status,
+                                }
                             }
+                            events.push(courseEvent)
                         }
-                        events.push(courseEvent)
                     }
-
                 }
             }
 
@@ -316,32 +317,25 @@ function getClassStatus(classFromCourse, inClass, presence) {
     }
 }
 
-async function getAllExpDatesByUser(user, token) {
+async function getAllExpDatesByUser(start, end,user, token) {
     try {
         const uri = `${process.env.API_CERTIFIER}/certificates/find/${user.networkLogin}`;
         const { data } = await axios.get(uri, { headers: { Authorization: 'Bearer ' + token } });
         const events = []
         for (let certificate of data) {
-            const certificateEvent = {
-                title: certificate.trailName,
-                userId: user._id,
-                eventStartDate: certificate.emissionDate,
-                target: {
-                    id: certificate._id,
-                    type: TARGET_ID.CERTIFICATE
-                },
-                type: EVENT_TYPE.CERTIFICATE,
+            if(certificate.emissionDate >= start && certificate.emissionDate <= end){
+                const certificateEvent = {
+                    title: certificate.trailName,
+                    userId: user._id,
+                    eventStartDate: certificate.emissionDate,
+                    target: {
+                        id: certificate.trailId,
+                        type: TARGET_ID.TRAIL
+                    },
+                    type: EVENT_TYPE.CERTIFICATE,
+                }
+                events.push(certificateEvent)
             }
-            // {
-            //     duration: processedTrail.trail.duration ? processedTrail.trail.duration : 0,
-            //     completionDate: processedTrail.trail.completionAt,
-            //     workload: processedTrail.trail.scoreAverage ? processedTrail.trail.scoreAverage : 0,
-            //     layoutId: processedTrail.trail.certificateLayout,
-            //     trailId: trail._id,
-            //     title: processedTrail.trail.title,
-            // }
-
-            events.push(certificateEvent)
 
             if (certificate.expirationDate) {
                 const revokedEvent = {
@@ -349,8 +343,8 @@ async function getAllExpDatesByUser(user, token) {
                     userId: user._id,
                     eventDate: certificate.expirationDate,
                     target: {
-                        id: certificate._id,
-                        type: TARGET_ID.CERTIFICATE
+                        id: certificate.trailId,
+                        type: TARGET_ID.TRAIL
                     },
                     type: EVENT_TYPE.REVOKED,
                 }

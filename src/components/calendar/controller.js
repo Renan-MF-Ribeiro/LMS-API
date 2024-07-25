@@ -14,8 +14,9 @@ const CalendarController = {
             const { start, end } = req.query
             let events = await _events.getCalendarEventsByDate(start, end, user, tags, req.headers.authorization)
             for (let event of events) {
-                if (event.type === EVENT_TYPE.CONCLUSION) {
+                if (event.type === EVENT_TYPE.CONCLUSION || event.type === EVENT_TYPE.CERTIFICATE) {
                     event.content = await returnContentConclusion(event.target.id, user.networkLogin)
+                    console.log(event.content)
                 }
             }
 
