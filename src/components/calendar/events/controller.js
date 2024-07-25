@@ -56,7 +56,7 @@ const EventsController = {
             for (const course of courses) {
                 if (course.classes) {
                     for (let c of course.classes) {
-                        if(c.dateApplicationInitial >= start && dateApplicationFinal <= end){
+                        if(new Date(c.dateApplicationInitial) >= new Date(start) && new Date(c.dateApplicationFinal) <= new Date(end)){
                             const courseEvent = {
                                 title: c.name,
                                 userId: user._id,

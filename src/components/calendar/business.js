@@ -18,7 +18,6 @@ module.exports = {
       });
   
       const processedTrail = processTrailTracking(trail, allTrackingUser).trail;
-      console.log(processedTrail)
       return {
         duration: processedTrail.duration ? processedTrail.duration : 0,
         completionDate: processedTrail.completionAt,
