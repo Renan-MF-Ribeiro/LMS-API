@@ -40,7 +40,6 @@ const EventsController = {
     },
 
     async getCalendarEventsByDate(start, end, user, tags, token) {
-        // trazer os cursos presenciais e certificados revogados
         try {
             const events = []
             const courses = await getCoursesElegible(user, tags)
@@ -48,8 +47,8 @@ const EventsController = {
 
             const foundEvents = await EventModel.find({
                 $and: [
-                    { eventDate: { $gte: start } },
-                    { eventDate: { $lte: end } },
+                    { eventStartDate: { $gte: start } },
+                    { eventEndDate: { $lte: end } },
                     { userId: user._id }
                 ]
             }).lean()
@@ -317,34 +316,6 @@ function getClassStatus(classFromCourse, inClass, presence) {
     }
 }
 
-function getEventDateForCourse(course) {
-    try {
-        if (course.certificateElegible) {
-            return course.certificateElegible.completionAt
-        }
-        if (course.hasClasses) {
-            const validClass = course.classes.filter(obj =>
-                obj.dateApplicationInitial && obj.dateApplicationFinal
-            );
-            let classFromCourse;
-            if (validClass.length > 0) {
-                classFromCourse = validClass.reduce((prev, current) =>
-                    (new Date(prev.createdAt) < new Date(current.createdAt)) ? prev : current
-                );
-            } else {
-                classFromCourse = course.classes.reduce((prev, current) =>
-                    (new Date(prev.createdAt) > new Date(current.createdAt)) ? prev : current
-                );
-            }
-            return classFromCourse.dateApplicationInitial
-        }
-        return new Date()
-    } catch (error) {
-        console.log(error);
-        reject(error);
-    }
-}
-
 async function getAllExpDatesByUser(user, token) {
     try {
         const uri = `${process.env.API_CERTIFIER}/certificates/find/${user.networkLogin}`;
@@ -354,7 +325,7 @@ async function getAllExpDatesByUser(user, token) {
             const certificateEvent = {
                 title: certificate.trailName,
                 userId: user._id,
-                eventDate: certificate.emissionDate,
+                eventStartDate: certificate.emissionDate,
                 target: {
                     id: certificate._id,
                     type: TARGET_ID.CERTIFICATE
