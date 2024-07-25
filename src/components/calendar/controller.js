@@ -15,10 +15,9 @@ const CalendarController = {
             let events = await _events.getCalendarEventsByDate(start, end, user, tags, req.headers.authorization)
             for (let event of events) {
                 if (event.type === EVENT_TYPE.CONCLUSION || event.type === EVENT_TYPE.CERTIFICATE || event.type === EVENT_TYPE.REVOKED) {
-                    event.content = await returnContentConclusion(event.target.id, user.networkLogin)
+                    event.content = await returnContentConclusion(event.target.id, user.networkLogin, event)
                 }
             }
-
             return _messages.success(res, req, events);
         } catch (error) {
             return handleError(res, req, error)
