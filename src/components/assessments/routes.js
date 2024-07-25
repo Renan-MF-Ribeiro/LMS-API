@@ -8,6 +8,7 @@ const _controllerAlternative = require('./alternatives/controller')
 const {
     isStudent,
     isAccountant,
+    isAdmin
 } = require('../../utils/middlewares')
 
 const formidable = require('express-formidable')
@@ -47,6 +48,7 @@ router
     .get('/evaluation/:id', isStudent, _controller.returnEvaluation)
     .get('/actives', isAccountant, _controller.getActivesEvaluations)
     .get('/', isAccountant, _controller.getAllEvaluations)
+    .get('/:id', isAdmin, _controller.getById)
     .delete('/:id', isAccountant, _controller.deleteEvaluation)
 
     .get('/allQuestions/:idItem/:id', isStudent, _controller.getAllQuestions)

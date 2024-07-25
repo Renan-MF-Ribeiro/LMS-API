@@ -55,6 +55,7 @@ const {
     ordernation,
     getUserByToken,
     formatNumberCpf,
+    removeAccents,
 } = require('../../utils/functions');
 
 const {
@@ -89,8 +90,6 @@ const { Group } = require('../groups/model');
 const {
     handleUserEligibilitiesGamification,
 } = require('../gamification/utils');
-const { DashConfig } = require('../dashboard/model');
-
 const { ConfigLogin } = require('../theme/login-config/model')
 
 module.exports = {
@@ -2188,12 +2187,14 @@ module.exports = {
     async addGroups (req, res) {
         const { tag, userId } = req.body;
         try {
+            const normalizedTags = tag.map(t => removeAccents(t))
+            
             const user = await User.findByIdAndUpdate(
                 userId,
-                { $addToSet: { groupsAD: tag } },
+                { $addToSet: { groupsAD: normalizedTags } },
                 { new: true }
             );
-            for (const groupName of tag) {
+            for (const groupName of normalizedTags) {
                 const findGroup = await Group.findOne({
                     name: groupName,
                     deleted: 0,
