@@ -55,24 +55,28 @@ const EventsController = {
             }).lean()
 
             for (const course of courses) {
-                if(course.classes){
-                    console.log(course.classes)
-                    const courseEvent = {
-                    title: course.title,
-                    userId: user._id,
-                    target: {
-                        id: course._id,
-                        type: TARGET_ID.COURSE
-                    },
-                    type: EVENT_TYPE.COURSE,
-                    certificateElegible: course.certificateElegible,
-                    inWaitList: course.inWaitList,
-                    classes: course.classes,
-                    hasClasses: course.hasClasses,
-                    eventStartDate: course.dateInitial,
-                    eventEndDate: course.dateFinal,
-                }
-                events.push(courseEvent)
+                if (course.classes) {
+                    for (let c of course.classes) {
+                        const courseEvent = {
+                            title: c.name,
+                            userId: user._id,
+                            target: {
+                                id: c._id,
+                                type: TARGET_ID.COURSE
+                            },
+                            type: EVENT_TYPE.COURSE,
+                            eventStartDate: c.dateApplicationInitial,
+                            eventEndDate: c.dateApplicationFinal,
+                            content: {
+                                dateApplicationInitial: c.dateApplicationInitial,
+                                dateApplicationFinal: c.dateApplicationFinal,
+                                location: c.location,
+                                status: c.status,
+                            }
+                        }
+                        events.push(courseEvent)
+                    }
+
                 }
             }
 
@@ -254,15 +258,14 @@ async function getCoursesElegible(user, tags) {
                 });
                 const classes = classesFromCourse.map((classFromCourse) => {
                     const inClass = classFromCourse.users.some((u) => u._id == user._id || u.userID == user._id)
-
-                    return classFromCourse.dateApplicationFinal <= today ? null : {
+                    return {
                         _id: classFromCourse._id,
                         createdAt: classFromCourse.createdAt,
                         name: classFromCourse.name,
                         dateApplicationInitial: classFromCourse.dateApplicationInitial,
                         dateApplicationFinal: classFromCourse.dateApplicationFinal,
                         location: classFromCourse.location,
-                        status: getClassStatus(classFromCourse, inClass),
+                        status: getClassStatus(classFromCourse, inClass, course.presence),
                     };
                 }).filter((classCourse) => classCourse)
 
@@ -283,7 +286,7 @@ async function getCoursesElegible(user, tags) {
     });
 }
 
-function getClassStatus(classFromCourse, inClass) {
+function getClassStatus(classFromCourse, inClass, presence) {
     try {
         const today = new Date()
         const courseHasSeats = classFromCourse.users.length < classFromCourse.limit ? true : false
@@ -291,6 +294,9 @@ function getClassStatus(classFromCourse, inClass) {
         const isCourseOpen = classFromCourse.dateApplicationInitial >= today
         const isCourseClosed = classFromCourse.dateApplicationFinal <= today
 
+        if (presence) {
+            return "concluded"
+        }
         if (isCourseInProgress) {
             return "in-progress"
         }
@@ -363,7 +369,7 @@ async function getAllExpDatesByUser(user, token) {
             //     trailId: trail._id,
             //     title: processedTrail.trail.title,
             // }
-           
+
             events.push(certificateEvent)
 
             if (certificate.expirationDate) {
