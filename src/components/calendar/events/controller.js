@@ -341,7 +341,7 @@ async function getAllExpDatesByUser(start, end,user, token) {
                 const revokedEvent = {
                     title: certificate.trailName,
                     userId: user._id,
-                    eventDate: certificate.expirationDate,
+                    eventStartDate: certificate.expirationDate,
                     target: {
                         id: certificate.trailId,
                         type: TARGET_ID.TRAIL
