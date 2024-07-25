@@ -42,7 +42,7 @@ const EventsController = {
     async getCalendarEventsByDate(start, end, user, tags, token) {
         try {
             const events = []
-            const courses = await getCoursesElegible(user, tags)
+            const courses = await getCoursesElegible(start, end, user, tags)
             const certificateEvents = await getAllExpDatesByUser(start, end, user, token)
 
             const foundEvents = await EventModel.find({
@@ -56,7 +56,6 @@ const EventsController = {
             for (const course of courses) {
                 if (course.classes) {
                     for (let c of course.classes) {
-                        if (new Date(c.dateApplicationInitial) >= new Date(start) && new Date(c.dateApplicationFinal) <= new Date(end)) {
                             const courseEvent = {
                                 title: c.name,
                                 userId: user._id,
@@ -75,7 +74,6 @@ const EventsController = {
                                 }
                             }
                             events.push(courseEvent)
-                        }
                     }
                 }
             }
@@ -183,10 +181,12 @@ const EventsController = {
     },
 };
 
-async function getCoursesElegible(user, tags) {
+async function getCoursesElegible(start, end,user, tags) {
     return new Promise(async (resolve, reject) => {
         try {
             let elegibleCourses = await CourseModel.find({
+                dateInitial: { $gte: start },
+                dateFinal: { $lte: end },
                 tags: { $in: tags },
                 deleted: { $eq: 0 },
                 status: { $eq: 1 },
