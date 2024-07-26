@@ -316,9 +316,9 @@ module.exports = {
             const user = await _functions.getUserByToken(req)
             const userTags = await getTagsElegiblesByToken(req)
 
-            const body = { 
-                ...req.body, 
-                userId: user._id, 
+            const body = {
+                ...req.body,
+                userId: user._id,
                 userName: user.name,
                 userTags: userTags.map((tag) => tag.value)
             };
@@ -701,46 +701,36 @@ module.exports = {
             const { name } = await _functions.getUserByToken(req);
             const { users, trailId } = req.body;
 
-            const trail = await Trail.findById(trailId, 'title titleURL');
-
-
             for (let id of users) {
-                let userIsValid = false
                 const trail = await Trail.findById(trailId, 'title titleURL');
 
-                // const usersWithTags = await UsersWithProcessedTags.find({
-                //     userTags: { $in: tags },
-                // }).lean();
-
-                if (userIsValid) {
-                    const text = `Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!`;
-                    const texthtml = `<br> <p>Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!</p> <br>`;
-                    const message = {
-                        category: 'notify',
-                        communication: ['notification', 'email'],
-                        mode: 'manual',
-                        target: {
-                            type: 'users',
-                            value: {
-                                users: [id],
-                            },
+                const text = `Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!`;
+                const texthtml = `<br> <p>Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!</p> <br>`;
+                const message = {
+                    category: 'notify',
+                    communication: ['notification', 'email'],
+                    mode: 'manual',
+                    target: {
+                        type: 'users',
+                        value: {
+                            users: [id],
                         },
-                        text: text,
-                        texthtml: texthtml,
-                        thumbnail: config.messenger.emailTemplate.thumbnail,
-                        title: `Happlearning - ${name} compartilhou um conteúdo com você!`,
-                    };
-                    // createMessagesFromBackend(message)
-                }
+                    },
+                    text: text,
+                    texthtml: texthtml,
+                    thumbnail: config.messenger.emailTemplate.thumbnail,
+                    title: `Happlearning - ${name} compartilhou um conteúdo com você!`,
+                };
+                createMessagesFromBackend(message)
             }
 
-            // const uri = `${process.env.API_SOCIAL}/home/share/${process.env.CLIENT_ID}`;
-            // const { data } = await axios.post(uri, { users: users, trailId });
+            const uri = `${process.env.API_SOCIAL}/home/share/${process.env.CLIENT_ID}`;
+            const { data } = await axios.post(uri, { users: users, trailId });
 
             _messages.success(
                 res,
                 req,
-                "data",
+                data,
                 'ok',
                 'social',
                 'shareSocialContent'
@@ -760,32 +750,60 @@ module.exports = {
         }
     },
 
-    async getShareTargets (req, res) {
+    async getUsersElegibleForSharing (req, res) {
         try {
             const { trailId, searchBy } = req.query;
             const elegibleUsers = []
+
+            const usersWithTags = await User.find({
+                name: { $regex: searchBy, $options: 'i' }
+            }).lean().select('name networkLogin').limit(10);
+
+            // for (const user of users) {
+            //     elegibleUsers.push({ name: user.name, _id: user._id, networkLogin: user.networkLogin })
+            // }
+
+            _messages.success(
+                res,
+                req,
+                usersWithTags,
+                'ok',
+                'social',
+                'getShareTargets'
+            );
+            return;
+        } catch (error) {
+            console.log(error)
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'getShareTargets'
+            );
+            return;
+        }
+    },
+
+    async getShareTargets (req, res) {
+        try {
+            const { users, trailId } = req.body;
+            const returnUsers = []
 
             const trail = await Trail.findById(trailId, 'title titleURL tags -_id');
 
             const tags = trail.tags.map((e) => e.value);
 
-            const usersWithTags = await UsersWithProcessedTags.find(searchBy ? {
-                $or: [
-                    { name: { $regex: searchBy, $options: 'i' } },
-                ],
-                userTags: { $in: tags },
-            } : {
-                userTags: { $in: tags },
-            }).lean().limit(10);
-
-            for (const user of usersWithTags) {
-                elegibleUsers.push({ name: user.name, _id: user._id })
+            for (let user of users) {
+                const userWithTags = await UsersWithProcessedTags.find({ networkLogin: user.networkLogin, userTags: { $in: tags } }).lean().limit(10);
+                returnUsers.push({ _id: user._id, elegible: userWithTags.length > 0 ? true : false })
             }
 
             _messages.success(
                 res,
                 req,
-                elegibleUsers,
+                returnUsers,
                 'ok',
                 'social',
                 'getShareTargets'

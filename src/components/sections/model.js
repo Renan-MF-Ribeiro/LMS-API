@@ -16,6 +16,7 @@ const DEFAULT_TYPES = Object.freeze({
     CONCLUDED: 'concluded',
     COURSES: 'courses',
     FAVORITES: 'favorites',
+    MOST_SEEN: 'most_seen'
 });
 
 const CARD_TYPE = Object.freeze({

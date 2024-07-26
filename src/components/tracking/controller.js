@@ -12,7 +12,9 @@ const {
     isValidDate,
     pagination,
     ordernation,
+    getUserByToken
 } = require('../../utils/functions');
+const { calendarEventConclusion } = require('../calendar/events/controller')
 const {
     Tracking,
     DocumentTracking,
@@ -206,8 +208,6 @@ const TrackingController = {
                 }
             }
 
-
-
             if (TrackingModel === ExamTracking) {
                 const { idEvaluation } = await Item.findOne({
                     _id: req.body.item,
@@ -243,6 +243,7 @@ const TrackingController = {
                 if (req.body.completion === 1) completionAt = new Date();
             }
 
+
             // GAMIFICATION DISPATCH
             await GamificationController.dispatch(
                 q.userLogin,
@@ -264,6 +265,15 @@ const TrackingController = {
                 { ...req.body, totalTime, isAllowedToSendXAPI, completionAt },
                 { upsert: true, omitUndefined: true }
             );
+            //EVENTO CONCLUSAO
+            await calendarEventConclusion(
+                q.userLogin,
+                {
+                    item: q.item,
+                    completion: req.body?.completion,
+                    lessonStatus: req.body?.lessonStatus,
+                })
+
 
             res.status(httpStatus.NO_CONTENT).send();
         } catch (error) {
@@ -493,15 +503,30 @@ const TrackingController = {
         try {
             const { item, userLogin } = req.query;
             var networkLogin = userLogin;
-            const tracking = await Tracking.findOne({ item, userLogin });
+            const tracking = await Tracking.findOne({
+                item, userLogin, $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } },
+                ],
+            });
 
             if (tracking.kind === 'ExamTracking') {
                 const userFind = await User.findOne({ networkLogin });
                 const user = userFind._id;
-                await HistoricEvaluation.deleteMany({ item, user });
+                await HistoricEvaluation.deleteMany({
+                    item, user, $or: [
+                        { expiredCompletion: { $exists: false } },
+                        { expiredCompletion: { $eq: null } },
+                    ],
+                });
             }
 
-            await Tracking.deleteMany({ item, userLogin });
+            await Tracking.deleteMany({
+                item, userLogin, $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } },
+                ],
+            });
 
             _messages.successEmpty(res, req);
         } catch (error) {
@@ -515,6 +540,7 @@ const TrackingController = {
             );
         }
     },
+
 
     async createOrUpdateDocument (req, res) {
         req.body.kind = 'DocumentTracking';
@@ -762,7 +788,12 @@ const TrackingController = {
         try {
             const { item, userLogin } = req.query;
             const todayDate = new Date();
-            const tracking = await Tracking.findOne({ item, userLogin })
+            const tracking = await Tracking.findOne({
+                item, userLogin, $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } },
+                ],
+            })
                 .populate({
                     path: 'item',
                     populate: {
@@ -803,6 +834,41 @@ const TrackingController = {
             );
         }
     },
+
+    async registerViewPost (req, res) {
+        try {
+            const { _id } = req.body;
+            const user = await getUserByToken(req);
+            const trail = await Trail.findById(_id).populate({
+                path: 'items.itemID',
+                match: { kind: { $eq: 'PostItem' } },
+            })
+            const item = trail.items.find((item) => item.itemID)?.itemID
+            if (item) {
+                createCompleteTracking(item, 'PostTracking', user.networkLogin)
+
+                return _messages.success(res, req, 'Registrado com sucesso!');
+            }
+
+            return _messages.badRequest(
+                res,
+                req,
+                'PostItem notfound',
+                'PostItem notfound',
+                'resgisterViewPost'
+            );
+
+        } catch (error) {
+            console.error(error)
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'resgisterViewPost'
+            );
+        }
+    }
 };
 
 function processTrackingType (item) {

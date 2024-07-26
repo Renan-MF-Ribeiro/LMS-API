@@ -55,6 +55,7 @@ const {
     ordernation,
     getUserByToken,
     formatNumberCpf,
+    removeAccents,
 } = require('../../utils/functions');
 
 const {
@@ -89,7 +90,7 @@ const { Group } = require('../groups/model');
 const {
     handleUserEligibilitiesGamification,
 } = require('../gamification/utils');
-const { DashConfig } = require('../dashboard/model');
+const { ConfigLogin } = require('../theme/login-config/model')
 
 module.exports = {
     async create (req, res) {
@@ -566,14 +567,16 @@ module.exports = {
 
     async singleSignOn (req, res) {
         let user = {};
+        const { ssoForm } = await ConfigLogin.findOne({})
+            .sort({ createdAt: -1 })
+
         const { token } = req.body;
         const secret = process.env.JWT_SECRET;
         const data = jwt.verify(token, secret);
-        const networkLogin = data.networkLogin
-            ? data.networkLogin
-            : data.data.networkLogin;
-
-        if (!networkLogin) {
+        const claim = data[ssoForm.claim]
+            ? data[ssoForm.claim]
+            : data.data[ssoForm.claim];
+        if (!claim) {
             _messages.forbidden(
                 res,
                 req,
@@ -603,8 +606,10 @@ module.exports = {
         }
 
         try {
-            if (networkLogin) {
-                user = await User.findOne({ networkLogin, status: 'ATIVO' }).lean();
+            if (claim) {
+                const query = { status: 'ATIVO' };
+                query[ssoForm.claim] = claim;
+                user = await User.findOne(query).lean();
                 if (user) {
                     const dashboardFilters = await processDashFilters(user)
 
@@ -2182,12 +2187,14 @@ module.exports = {
     async addGroups (req, res) {
         const { tag, userId } = req.body;
         try {
+            const normalizedTags = tag.map(t => removeAccents(t))
+            
             const user = await User.findByIdAndUpdate(
                 userId,
-                { $addToSet: { groupsAD: tag } },
+                { $addToSet: { groupsAD: normalizedTags } },
                 { new: true }
             );
-            for (const groupName of tag) {
+            for (const groupName of normalizedTags) {
                 const findGroup = await Group.findOne({
                     name: groupName,
                     deleted: 0,

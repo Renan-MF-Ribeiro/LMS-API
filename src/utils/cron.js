@@ -1033,35 +1033,12 @@ async function cronDegreedCharge(hours) {
 }
 
 async function revokeTrail() {
-    const trails = await populateTrails(true, {
+    const trailsToBeRevoked = await populateTrails(true, {
         'certificateDue.type': { $in: ['fixed', 'availability'] },
     });
 
-    const trailsToBeRevoked = trails.filter((trail) => {
-        const expirationDate = trail.certificateDue.value;
-        const isFixed = trail.certificateDue.type === 'fixed';
-        const today = moment(new Date());
-        const future = moment(
-            new Date(!isFixed ? trail.startDate : expirationDate)
-        );
-        const diff = today.diff(
-            !isFixed ? future.add(expirationDate, 'days') : future,
-            'days',
-            true
-        );
-
-        return diff >= 0;
-    });
-
     if (trailsToBeRevoked.length) {
-        const groupTags = [];
-        trailsToBeRevoked.forEach((trail) => {
-            trail.tags.forEach(
-                (tag) => !groupTags.includes(tag) && groupTags.push(tag)
-            );
-        });
-
-        trailsToBeRevoked.map(async (trail) => {
+        for (const trail of trailsToBeRevoked) {
             const trailItems = trail.items
                 .filter(({ itemID }) => !!itemID.enabled)
                 .map(({ itemID }) => itemID._id);
@@ -1069,18 +1046,14 @@ async function revokeTrail() {
             const trackings = await Tracking.aggregate([
                 {
                     $match: {
-                        item: {
-                            $in: trailItems,
-                        },
-                        $or: [
-                            {
-                                completionAt: { $exists: true },
-                                completionAt: { $ne: null },
-                            },
-                        ],
+                        item: { $in: trailItems },
+                        completionAt: { $exists: true },
+                        completionAt: { $ne: null },
                         $or: [
                             {
                                 expiredCompletion: { $exists: false },
+                            },
+                            {
                                 expiredCompletion: { $eq: null },
                             },
                         ],
@@ -1121,8 +1094,8 @@ async function revokeTrail() {
                     const startDate = new Date(lastCompletionAt);
                     const expirationDate = !isFixed
                         ? moment(startDate)
-                            .add(trail.certificateDue.value, 'days')
-                            .toDate()
+                              .add(trail.certificateDue.value, 'days')
+                              .toDate()
                         : new Date(trail.certificateDue.value);
 
                     return {
@@ -1133,46 +1106,49 @@ async function revokeTrail() {
                 })
                 .filter(({ expirationDate }) => expirationDate < new Date());
 
-            usersToBeRevoked.forEach(
-                async ({ _id, expirationDate, userLogin }) => {
-                    await Tracking.updateMany(
-                        {
-                            userLogin: userLogin,
-                            item: { $in: trailItems },
-                            $or: [
-                                {
-                                    expiredCompletion: { $exists: false },
-                                    expiredCompletion: { $eq: null },
-                                },
-                            ],
-                        },
-                        {
-                            $set: {
-                                expiredCompletion: expirationDate,
+            for (const userToBeRevoked of usersToBeRevoked) {
+                const { _id, expirationDate, userLogin } = userToBeRevoked;
+                await Tracking.updateMany(
+                    {
+                        userLogin: userLogin,
+                        item: { $in: trailItems },
+                        $or: [
+                            {
+                                expiredCompletion: { $exists: false },
                             },
-                        }
-                    );
+                            {
+                                expiredCompletion: { $eq: null },
+                            },
+                        ],
+                    },
+                    {
+                        $set: {
+                            expiredCompletion: expirationDate,
+                        },
+                    }
+                );
 
-                    await HistoricEvaluation.updateMany(
-                        {
-                            user: _id,
-                            item: { $in: trailItems },
-                            $or: [
-                                {
-                                    expiredCompletion: { $exists: false },
-                                    expiredCompletion: { $eq: null },
-                                },
-                            ],
-                        },
-                        {
-                            $set: {
-                                expiredCompletion: expirationDate,
+                await HistoricEvaluation.updateMany(
+                    {
+                        user: _id,
+                        item: { $in: trailItems },
+                        $or: [
+                            {
+                                expiredCompletion: { $exists: false },
                             },
-                        }
-                    );
-                }
-            );
-        });
+                            {
+                                expiredCompletion: { $eq: null },
+                            },
+                        ],
+                    },
+                    {
+                        $set: {
+                            expiredCompletion: expirationDate,
+                        },
+                    }
+                );
+            }
+        }
     }
 }
 
@@ -1180,10 +1156,8 @@ async function updateTrailsViews() {
     try {
         console.log('start cron todayMostSeen')
         const todayMostSeen = await TodayMostSeenTrails.find()
-        console.log({ todayMostSeen })
 
         for (const { views, updatedAt, _id } of todayMostSeen) {
-            console.log({ views, updatedAt, _id })
             const trailId = _id.trailId.toString()
             let viewsInfo = await TrailViews.findOne({ trailId })
             if (!viewsInfo) {
@@ -1199,7 +1173,6 @@ async function updateTrailsViews() {
                     info.date.getMonth() === updatedAt.getMonth() &&
                     info.date.getYear() === updatedAt.getYear(),
             )
-            console.log({ infoIndex })
 
             if (infoIndex === -1) {
                 viewsInfo.views.push({ date: updatedAt, count: views })

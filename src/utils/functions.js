@@ -395,46 +395,45 @@ module.exports = {
                     userLogin: { $eq: user.networkLogin },
                     ...(!onlyExpired
                         ? {
-                              $or: [
-                                  { expiredCompletion: { $exists: false } },
-                                  { expiredCompletion: { $eq: null } },
-                              ],
-                          }
+                            $or: [
+                                { expiredCompletion: { $exists: false } },
+                                { expiredCompletion: { $eq: null } },
+                            ],
+                        }
                         : {
-                              $and: [
-                                  { expiredCompletion: { $exists: true } },
-                                  { expiredCompletion: { $ne: null } },
-                              ],
-                          }),
+                            $and: [
+                                { expiredCompletion: { $exists: true } },
+                                { expiredCompletion: { $ne: null } },
+                            ],
+                        }),
                 });
                 for (const t of trails) {
-                    const { trail } = module.exports.processTrailTracking(t, allTrackingUser);
-
-                    if (trail.items.every(({ itemID }) => itemID?.completion === 1)) {
+                    const { trail } = module.exports.processTrailTracking(t, allTrackingUser, true);
+                    if (trail !== null && trail.items.every(({ itemID }) => itemID?.completion === 1)) {
                         completedTrails.push(trail);
-                    } else {
+                    } else if (trail !== null) {
                         let nextItem;
                         const item = trail.items.find(({ itemID }) => !itemID?.completion);
                         const progress = trail.items.filter(({ itemID }) => itemID?.completion === 1).length * 100 / trail.items.length
-                        if (item) {
-                            foundItem = await Item.findById(item.itemID);
+                        if (item !== null) {
+                            console.log(item)
+                            foundItem = await Item.findById(item?.itemID);
                             nextItem = {
-                                _id: foundItem._id,
-                                titleURL: foundItem.titleURL,
+                                _id: foundItem?._id,
+                                titleURL: foundItem?.titleURL,
                             };
                         }
-
                         inProgressTrails.push({
                             _id: trail._id,
                             title: trail.title,
                             thumbPath: trail.thumbPath,
                             titleURL: trail.titleURL,
                             nextItem,
-                            progress
+                            progress,
+                            notStarted: trail.notStarted,
                         });
                     }
                 }
-
                 resolve({ completedTrails, inProgressTrails });
             } catch (error) {
                 reject(error);
@@ -506,11 +505,13 @@ module.exports = {
             .toUpperCase();
     },
 
-    processTrailTracking (trail, allTrackingUser) {
+    processTrailTracking (trail, allTrackingUser, dashboard = false) {
         let containsACompletedItem = false;
         const completionDate = [];
         const scoreArr = [];
         let lastTrackingUpdate;
+        trail.notStarted = false
+        let duration = 0;
 
         for (const item of trail.items) {
             const objTracking = allTrackingUser.filter((obj) => {
@@ -518,6 +519,10 @@ module.exports = {
                     return true;
                 }
             })[0];
+            if (dashboard && objTracking && objTracking[0] === undefined) {
+                trail.notStarted = true
+            }
+            duration += item.itemID.durationHours ? item.itemID.durationHours : 0;
             lastTrackingUpdate = objTracking ? objTracking.updatedAt : null;
             const score = objTracking && objTracking.score ? objTracking.score : null;
             const completionAt = objTracking ? objTracking.completionAt : null;
@@ -585,11 +590,11 @@ module.exports = {
         trail.lastTrackingUpdate = lastTrackingUpdate;
         trail.completionAt = mostRecentDate;
         trail.completion = getTrailCompletion(trail);
+        trail.duration = duration
 
         const itemsCompletion = trail.items.map((item) => item?.completion || 0);
         const completionTotal = itemsCompletion.reduce((acc, curr) => acc + curr, 0);
         trail.completionPercentage = +((completionTotal / trail.items.length) * 100).toFixed(2);
-
         return { trail, containsACompletedItem };
     },
 

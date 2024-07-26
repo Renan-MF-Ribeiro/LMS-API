@@ -476,7 +476,7 @@ module.exports = {
     async updateGroupsByTag(req, res) {
         try {
             const body = req.body;
-            const tag = body.tag;
+            const tag = _functions.removeAccents(body.tag);
             const old = body.old;
 
             let remove;

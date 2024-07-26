@@ -15,6 +15,7 @@ const {
     keepLearningSections,
     concludedSections,
     favoriteSections,
+    mostSeenSections,
     getGroupCodesByToken,
     checkEligibilityTagsAnd,
     courseInSections
@@ -30,7 +31,7 @@ const {
 const { TrailsUsersProgress } = require('../trails/model');
 
 module.exports = {
-    async returnSections(req, res) {
+    async returnSections (req, res) {
         try {
             const searchBy = req.query.searchBy;
             const total = await Section.find({
@@ -45,12 +46,12 @@ module.exports = {
             const sections = await Section.find(
                 searchBy
                     ? {
-                          $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-                          deleted: { $eq: 0 },
-                      }
+                        $or: [{ title: { $regex: searchBy, $options: 'i' } }],
+                        deleted: { $eq: 0 },
+                    }
                     : {
-                          deleted: { $eq: 0 },
-                      }
+                        deleted: { $eq: 0 },
+                    }
             )
                 .sort({ position: 'asc' })
                 .populate(populateTrails);
@@ -71,7 +72,7 @@ module.exports = {
         }
     },
 
-    async createSection(req, res) {
+    async createSection (req, res) {
         try {
             const verify = await Section.find({
                 title: { $eq: req.body.title },
@@ -113,7 +114,7 @@ module.exports = {
         }
     },
 
-    async updateSection(req, res) {
+    async updateSection (req, res) {
         try {
             const { _id } = req.body;
             const verify = await Section.find({
@@ -159,7 +160,7 @@ module.exports = {
         }
     },
 
-    async deleteSection(req, res) {
+    async deleteSection (req, res) {
         try {
             const { id } = req.params;
             const section = await Section.findById(id);
@@ -202,7 +203,7 @@ module.exports = {
         }
     },
 
-    async getSectionsElegibles(req, res) {
+    async getSectionsElegibles (req, res) {
         console.time('Get Section Elegibles');
         try {
             const user = await getUserByToken(req);
@@ -297,9 +298,9 @@ module.exports = {
                 const arrKeepLearningSections = await keepLearningSections(trails);
                 const arrConcludedSections = await concludedSections(trails);
                 const arrFavoriteSections = await favoriteSections(trails, user._id);
+                const arrMostSeenSections = await mostSeenSections(trails)
 
-                const courses = await getStudentCourses(req);
-                const arrCoursesSections = await courseInSections(tags, courses, user._id);
+                const arrCoursesSections = await courseInSections(tags, user._id);
 
                 resultSections = arrSections
                     .concat(arrMandatorySections)
@@ -307,7 +308,8 @@ module.exports = {
                     .concat(arrKeepLearningSections)
                     .concat(arrConcludedSections)
                     .concat(arrCoursesSections)
-                    .concat(arrFavoriteSections);
+                    .concat(arrFavoriteSections)
+                    .concat(arrMostSeenSections);
 
                 if (channelId) {
                     const filteredArray = resultSections.filter((obj) =>
@@ -344,6 +346,7 @@ module.exports = {
                 }
             }
 
+
             _messages.success(res, req, resultSections);
         } catch (error) {
             console.log(error);
@@ -359,7 +362,7 @@ module.exports = {
         console.timeEnd('Get Section Elegibles');
     },
 
-    async getSectionsElegiblesNew(req, res) {
+    async getSectionsElegiblesNew (req, res) {
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
@@ -438,8 +441,7 @@ module.exports = {
                 const arrConcludedSections = await concludedSections(trails);
                 const arrFavoriteSections = await favoriteSections(trails, user._id);
 
-                const courses = await getStudentCourses(req);
-                const arrCoursesSections = await courseInSections(tags, courses, user._id);
+                const arrCoursesSections = await courseInSections(tags, user._id);
                 resultSections = arrSections
                     .concat(arrMandatorySections)
                     .concat(arrRecentsSections)
@@ -497,7 +499,7 @@ module.exports = {
         }
     },
 
-    async updatePosition(req, res) {
+    async updatePosition (req, res) {
         try {
             const sections = req.body;
 

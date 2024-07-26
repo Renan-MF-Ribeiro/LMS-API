@@ -68,6 +68,7 @@ module.exports = {
                     : {
                         deleted: 0,
                     };
+                matchObj['kind'] = { $ne: 'PostItem' };
                 if (skip !== null) {
                     trails = await Trail.find(findObj)
                         .populate({
@@ -93,7 +94,7 @@ module.exports = {
                         .populate({
                             path: 'items.itemID',
                             match: matchObj,
-                            select: { '_id': 1, 'title': 1, 'contentPath': 1, 'durationHours': 1, 'thumbPath': 1, 'titleURL': 1, 'bannerPath': 1, 'startDate': 1, 'endDate': 1, 'highlighted': 1, 'description': 1, "format": 1 },
+                            select: { '_id': 1, 'title': 1, 'contentPath': 1, 'durationHours': 1, 'thumbPath': 1, 'titleURL': 1, 'bannerPath': 1, 'startDate': 1, 'endDate': 1, 'highlighted': 1, 'description': 1, "format": 1, 'passingScore': 1 },
                             populate: {
                                 path: 'idEvaluation',
                                 select: 'description',
@@ -185,7 +186,8 @@ module.exports = {
                             supportMaterialEnabled: supportMaterialEnabled,
                             socialStatus: socialStatus || null,
                             innerTextBanner: trail.innerTextBanner,
-                            durationHours: trail.durationHours
+                            durationHours: trail.durationHours,
+                            post: trail.post,
                         });
                     }
                 } else {
@@ -210,7 +212,6 @@ module.exports = {
                         if (trail.author) {
                             userName = trail.author.name;
                         }
-
                         let supportMaterialEnabled = false;
                         const filteredSupportArray =
                             trail.supportMaterial.filter(
@@ -281,7 +282,8 @@ module.exports = {
                             supportMaterialEnabled: supportMaterialEnabled,
                             socialStatus: socialStatus || null,
                             innerTextBanner: trail.innerTextBanner,
-                            durationHours: trail.durationHours
+                            durationHours: trail.durationHours,
+                            post: trail.post,
                         });
                     }
                 }

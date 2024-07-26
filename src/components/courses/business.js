@@ -114,11 +114,11 @@ module.exports = {
                         instructor: { $eq: instructor },
                     }
                 let courses = await ClassModel.find(query,
-                    ['users', 'createdAt']
+                    ['users', 'createdAt', 'name', 'dateApplicationInitial', 'dateApplicationFinal']
                 )
                     .populate({
                         path: 'courseID',
-                        select: ['title', 'createdAt', 'description'],
+                        select: ['title',],
                         match: searchBy
                             ? {
                                 $text: {
@@ -154,43 +154,13 @@ module.exports = {
     getClassByID (classID) {
         return new Promise(async (resolve, reject) => {
             try {
-                const arrUsers = [];
-                const {
-                    users,
-                    materials,
-                    qrcode,
-                    dateApplicationInitial,
-                    dateApplicationFinal,
-                    instructor,
-                    instructorTemp,
-                    qrCodeSelfRegistration,
-                    isSelfRegistrationEnabled,
-                } = await ClassModel.findById(classID)
+                const { _doc } = await ClassModel.findById(classID)
                     .populate('materials')
                     .populate('instructor', 'name');
 
-                for (const user of users) {
-                    const result = await User.findById(user.userID);
-
-                    arrUsers.push({
-                        _id: result._id,
-                        name: result.name,
-                        registration: result.registration,
-                        presence: user.presence,
-                        grades: user.grades,
-                    });
-                }
-
                 resolve({
-                    dateApplicationInitial,
-                    dateApplicationFinal,
-                    arrUsers,
-                    materials,
-                    qrcode,
-                    instructor,
-                    instructorTemp,
-                    qrCodeSelfRegistration,
-                    isSelfRegistrationEnabled,
+                    _id: classID,
+                    ..._doc
                 });
             } catch (error) {
                 reject(error);
@@ -226,7 +196,7 @@ module.exports = {
             try {
                 const classes = await ClassModel.find(
                     {
-                        'users.userID': userID,
+                        $or: [{ 'users.userID': userID, }, { 'users._id': userID, }]
                     },
                     [
                         'users',
@@ -248,7 +218,7 @@ module.exports = {
 
                 const classesFilter = classes.filter((item) => {
                     const usersFilter = item.users.filter((user) => {
-                        if (user.presence && user.userID === userID) {
+                        if (user.presence && (user.userID === userID || user._id === userID)) {
                             return user;
                         }
                     });

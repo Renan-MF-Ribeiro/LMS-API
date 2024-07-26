@@ -7,7 +7,8 @@ const {
     SCORMLessonStatus,
     EventTracking,
     FormTracking,
-    ActivityTracking
+    ActivityTracking,
+    PostTracking
 } = require("./model");
 
 const TRACKING_KINDS = Object.freeze({
@@ -19,6 +20,7 @@ const TRACKING_KINDS = Object.freeze({
     EventTracking: EventTracking,
     FormTracking: FormTracking,
     ActivityTracking: ActivityTracking,
+    PostTracking: PostTracking,
 });
 
 const { HistoricEvaluation } = require('../assessments/model')

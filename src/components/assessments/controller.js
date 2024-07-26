@@ -231,6 +231,19 @@ module.exports = {
         }
     },
 
+
+    async getById (req, res) {
+        try {
+            const { id } = req.params
+            const evaluation = await Evaluation.findById(id)
+
+            _messages.success(res, req, evaluation,)
+        }
+        catch (error) {
+            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'getById')
+        }
+    },
+
     async deleteEvaluation (req, res) {
         try {
             const { id } = req.params

@@ -553,6 +553,7 @@ const ItemController = {
 
                     if (payload.kind !== 'MediaItem') {
                         if (content) {
+                            payload.fileName = content.name;
                             contentPath = await azureBlob(
                                 content,
                                 'items/content'
@@ -1364,6 +1365,7 @@ const ItemController = {
                 }
 
             query['archive'] = archive ? { $eq: archive === 'true' } : { $ne: true };
+            query['kind'] = { $ne: 'PostItem' };
             let total = await Item.find(query).count();
 
             let itens = await Item.find(query)

@@ -8,7 +8,8 @@ const {
     checkEligibilityTagsAnd,
     getTagsElegiblesByToken,
     filterTrails,
-    filterAlura
+    filterAlura,
+    mapAlura
 } = require('../sections/business');
 const { User } = require('../users/model');
 const {
@@ -33,7 +34,7 @@ const {
 
 const { populateTrails } = require('../trails/business');
 const { Section } = require('../sections/model');
-const config = require('../../../config.json')
+const config = require('../../../config.json');
 
 const HomeController = {
     async searchBy(req, res) {
@@ -153,9 +154,8 @@ const HomeController = {
                 const aluraSearchBy = encodeURI(searchBy || ' ') ?? ''
                 const uri = `${host}/courses/search/${clientId}?email=${email}&searchBy=${aluraSearchBy}`;
                 const { data } = await axios.get(uri, { headers });
-                const aluraResults = data.map((section) => ({ ...section, sectionType: 'alura' }));
 
-                result.push(...filterAlura(filters, aluraResults));
+                result.push(...mapAlura(filterAlura(filters, data)));
             }
 
             _messages.success(res, req, { data: result.slice(skip, skip + limit), total: result.length });
@@ -362,8 +362,9 @@ const HomeController = {
                 totalCompletedTrails: completedTrails.length,
                 totalTrails,
                 percentageCompletedTrails,
-                inProgressTrails,
+                inProgressTrails: inProgressTrails.filter(x=>x.notStarted == true),
                 average,
+                lastTrail: inProgressTrails[0],
                 highestScoreTitle,
                 highestScoreUrl,
                 courses

@@ -281,7 +281,7 @@ module.exports = {
                             itemsID.indexOf(item.itemID.id) < 0
                         ) {
                             const tracking = await Tracking.findOne({
-                                $text: { $search: user.networkLogin },
+                                userLogin: user.networkLogin,
                                 item: item.itemID._id,
                             }).sort({ createdAt: -1 });
                             item.itemID.completionAt = tracking.completionAt;

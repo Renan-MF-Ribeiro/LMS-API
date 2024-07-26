@@ -28,20 +28,6 @@ const CourseSChema = new mongoose.Schema(
         status: { type: Number, default: 1 },
         passingScore: { type: Number, required: false, default: null },
         isEvaluationAvailable: { type: Boolean, required: true, default: true },
-        isSelfRegistrationEnabled: {
-            type: Boolean,
-            required: true,
-            default: false,
-        },
-        qrCode: {
-            type: String, required: true, trim: true,
-            transform: (qrCode) => {
-                if (qrCode == 'undefined' || qrCode == 'null' || !qrCode) {
-                    return null
-                }
-                return qrCode
-            },
-        },
         tags: { type: Array, required: false },
         mandatory: { type: Array, required: false },
         completion: { type: Date, required: false },
@@ -110,6 +96,10 @@ const ClassSchema = new mongoose.Schema(
         dateApplicationInitial: { type: Date, required: false },
         dateApplicationFinal: { type: Date, required: false },
         canCreateClass: { type: Boolean, required: false },
+        limit: { type: Number, required: false },
+        name: { type: String, required: false },
+        location: { type: String, required: true },
+        costs: { type: [{ description: { type: String }, value: { type: Number } }], required: true },
     },
     {
         ...schemaOptions,

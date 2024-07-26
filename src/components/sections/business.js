@@ -9,13 +9,15 @@ const {
     isSCORMCompleted,
 } = require('../../utils/functions');
 const { Group } = require('../groups/model');
-const { CourseModel, WaitListModel } = require('../courses/model');
+const { CourseModel, WaitListModel, ClassModel } = require('../courses/model');
 const { Tracking } = require('../tracking/model');
 const { Section, DEFAULT_TYPES } = require('./model');
 const { default: axios } = require('axios');
+const moment = require('moment');
+const { TrailViews } = require('../trails/trail-views.model');
 
 module.exports = {
-    checkIfTheTrackIsValid(trail) {
+    checkIfTheTrackIsValid (trail) {
         const today = getDateTodayWithoutHours();
 
         if (trail.classGroup) {
@@ -37,7 +39,7 @@ module.exports = {
         return true;
     },
 
-    calculateDiffDateTrail(trail) {
+    calculateDiffDateTrail (trail) {
         const today = getDateTodayWithoutHours();
         const diffCreate = calculateDiffDate(
             today,
@@ -54,7 +56,7 @@ module.exports = {
         return false;
     },
 
-    checkIfUserCanSeeTheTrail(trail, userTags) {
+    checkIfUserCanSeeTheTrail (trail, userTags) {
         const trailTags = trail.tags;
         let flag = false;
 
@@ -69,7 +71,7 @@ module.exports = {
         if (flag) return true;
         return false;
     },
-    getTrailCompletion(trail) {
+    getTrailCompletion (trail) {
         const completed = trail.items.find((val) => {
             return val.completion === 1;
         });
@@ -90,7 +92,7 @@ module.exports = {
             return null;
         }
     },
-    filterTrails(filter, trails, elegibleTags) {
+    filterTrails (filter, trails, elegibleTags) {
         const filteredTrails = [];
         for (const i in trails) {
             let completed = false;
@@ -123,7 +125,7 @@ module.exports = {
         }
         return filteredTrails;
     },
-    setTrailMandatory(trail, tags) {
+    setTrailMandatory (trail, tags) {
         const mandatoryTags = trail.mandatory;
 
         if (!mandatoryTags || !mandatoryTags.length) {
@@ -147,7 +149,7 @@ module.exports = {
             });
         }
     },
-    getTagsElegiblesByToken(req) {
+    getTagsElegiblesByToken (req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const user = await getUserByToken(req);
@@ -186,7 +188,7 @@ module.exports = {
         });
     },
 
-    getGroupCodesByToken(req, tags) {
+    getGroupCodesByToken (req, tags) {
         return new Promise(async (resolve, reject) => {
             try {
                 const user = await getUserByToken(req);
@@ -209,7 +211,7 @@ module.exports = {
         });
     },
 
-    getTagsElegibles(user) {
+    getTagsElegibles (user) {
         return new Promise(async (resolve, reject) => {
             try {
                 const namesGroups = user.groupsAD;
@@ -230,7 +232,7 @@ module.exports = {
         });
     },
 
-    checkItemCompleted(item, user) {
+    checkItemCompleted (item, user) {
         return new Promise(async (resolve, reject) => {
             try {
                 let completion = null;
@@ -283,7 +285,7 @@ module.exports = {
         });
     },
 
-    async elegiblesContents(trails) {
+    async elegiblesContents (trails) {
         return new Promise(async (resolve, reject) => {
             try {
                 const arrSections = [];
@@ -326,7 +328,7 @@ module.exports = {
         });
     },
 
-    async mandatorySections(trails, tags) {
+    async mandatorySections (trails, tags) {
         return new Promise(async (resolve, reject) => {
             try {
                 const section = await Section.findOne({
@@ -338,11 +340,11 @@ module.exports = {
                     const sortFnc =
                         section && section.ordination !== undefined && section.ordination === 0
                             ? function (a, b) {
-                                  return b.createdAt - a.createdAt;
-                              }
+                                return b.createdAt - a.createdAt;
+                            }
                             : function (a, b) {
-                                  return a.title.localeCompare(b.title);
-                              };
+                                return a.title.localeCompare(b.title);
+                            };
 
                     trails = trails.filter((trail) => {
                         const trailItems = trail.items.filter((item) =>
@@ -375,7 +377,7 @@ module.exports = {
         });
     },
 
-    async recentsSections(trails) {
+    async recentsSections (trails) {
         return new Promise(async (resolve, reject) => {
             try {
                 const section = await Section.findOne({
@@ -387,11 +389,11 @@ module.exports = {
                     const sortFnc =
                         section && section.ordination !== undefined && section.ordination === 0
                             ? function (a, b) {
-                                  return b.createdAt - a.createdAt;
-                              }
+                                return b.createdAt - a.createdAt;
+                            }
                             : function (a, b) {
-                                  return a.title.localeCompare(b.title);
-                              };
+                                return a.title.localeCompare(b.title);
+                            };
 
                     for (const trail of trails) {
                         const flag = calculateDiffDateTrail(trail);
@@ -410,7 +412,7 @@ module.exports = {
         });
     },
 
-    async keepLearningSections(trails) {
+    async keepLearningSections (trails) {
         return new Promise(async (resolve, reject) => {
             try {
                 const section = await Section.findOne({
@@ -422,11 +424,11 @@ module.exports = {
                     const sortFnc =
                         section && section.ordination !== undefined && section.ordination === 0
                             ? function (a, b) {
-                                  return b.createdAt - a.createdAt;
-                              }
+                                return b.createdAt - a.createdAt;
+                            }
                             : function (a, b) {
-                                  return a.title.localeCompare(b.title);
-                              };
+                                return a.title.localeCompare(b.title);
+                            };
 
                     for (const trail of trails) {
                         if (trail.completion === 0) {
@@ -445,7 +447,7 @@ module.exports = {
         });
     },
 
-    async favoriteSections(trails, userId) {
+    async favoriteSections (trails, userId) {
         return new Promise(async (resolve, reject) => {
             try {
                 const section = await Section.findOne({
@@ -464,11 +466,11 @@ module.exports = {
                     const sortFnc =
                         section && section.ordination !== undefined && section.ordination === 0
                             ? function (a, b) {
-                                  return b.createdAt - a.createdAt;
-                              }
+                                return b.createdAt - a.createdAt;
+                            }
                             : function (a, b) {
-                                  return a.title.localeCompare(b.title);
-                              };
+                                return a.title.localeCompare(b.title);
+                            };
 
                     for (const trail of trails) {
                         if (favoriteTrails.includes(String(trail._id))) {
@@ -486,7 +488,7 @@ module.exports = {
         });
     },
 
-    async concludedSections(trails) {
+    async concludedSections (trails) {
         return new Promise(async (resolve, reject) => {
             try {
                 const section = await Section.findOne({
@@ -498,11 +500,11 @@ module.exports = {
                     const sortFnc =
                         section && section.ordination !== undefined && section.ordination === 0
                             ? function (a, b) {
-                                  return b.createdAt - a.createdAt;
-                              }
+                                return b.createdAt - a.createdAt;
+                            }
                             : function (a, b) {
-                                  return a.title.localeCompare(b.title);
-                              };
+                                return a.title.localeCompare(b.title);
+                            };
 
                     for (const trail of trails) {
                         if (trail.completion) {
@@ -521,49 +523,7 @@ module.exports = {
         });
     },
 
-    async favoriteSections(trails, userId) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const section = await Section.findOne({
-                    defaultType: DEFAULT_TYPES.FAVORITES,
-                    active: 1,
-                }).lean();
-
-                const uri = `${process.env.API_SOCIAL}/home/favorite/${userId}`;
-                const { data } = await axios.get(uri);
-                const favoriteTrails = data.map((f) => {
-                    if (f.target) {
-                        return f.trailId;
-                    }
-                });
-                if (section) {
-                    const sortFnc =
-                        section && section.ordination !== undefined && section.ordination === 0
-                            ? function (a, b) {
-                                  return b.createdAt - a.createdAt;
-                              }
-                            : function (a, b) {
-                                  return a.title.localeCompare(b.title);
-                              };
-
-                    for (const trail of trails) {
-                        if (favoriteTrails.includes(String(trail._id))) {
-                            section.trails.push(trail);
-                        }
-                    }
-
-                    section.trails.sort(sortFnc);
-                }
-
-                resolve(section && section.trails.length > 0 ? section : []);
-            } catch (error) {
-                console.log(error);
-                reject(error);
-            }
-        });
-    },
-
-    async courseInSections(tags, courses, userId) {
+    async courseInSections (tags, userId) {
         return new Promise(async (resolve, reject) => {
             try {
                 const section = await Section.findOne({
@@ -588,42 +548,94 @@ module.exports = {
                     })
                     .lean();
 
-                for (let i of elegibleCourses) {
+                const coursePromises = elegibleCourses.map(async (course) => {
                     const alreadyJoined = await WaitListModel.findOne({
                         userID: userId,
-                        courseID: i._id,
+                        courseID: course._id,
                         sent: false,
                     });
+
+                    const today = new Date()
+                    const classesFromCourse = await ClassModel.find({
+                        courseID: course._id
+                    }).populate({
+                        path: 'materials',
+                        match: { author: 'INSTRUTOR' },
+                    })
+                        .populate('instructor', ['name']);;
+
                     let inWaitList = false;
                     if (alreadyJoined) {
                         inWaitList = true;
                     }
-                    courses.map((e) => {
-                        if (String(e.courseID._id) == String(i._id)) {
-                            const presence = e.users[0].presence;
-                            const grade = e.users[0].grades ? e.users[0].grades : 0;
-                            const passingScore = i.passingScore ? i.passingScore : 0;
-                            const certificateElegible = grade >= passingScore ? true : false;
-                            i.certificateElegible = certificateElegible;
-                            i.presence = presence;
-                            i.grade = grade;
-                            i.completionAt = e.dateApplicationFinal;
-                            i.studentMaterials = e.materials;
-                            i.instructor = e.instructor;
+                    let certificateElegible = false
+                    let certificateData = null
+
+                    classesFromCourse.forEach((e) => {
+                        if (String(e.courseID._id) === String(course._id)) {
+                            const userInClass = e.users.find((user) => user._id == userId || user.userID == userId)
+                            let grade = 0
+                            let presence = false
+                            if (userInClass) {
+                                presence = userInClass.presence;
+                                grade = userInClass.grades ? userInClass.grades : 0;
+                                const passingScore = course.passingScore ? course.passingScore : 0;
+                                certificateElegible = grade >= passingScore;
+
+                            }
+                            if (certificateElegible && presence)
+                                certificateData = {
+                                    completionAt: e.dateApplicationFinal,
+                                    qrcode: e.qrcode,
+                                    certificate: course.certificate,
+                                    certificateLayout: course.certificateLayout,
+                                    studentMaterials: e.materials,
+                                    workload: course.workload,
+                                    instructor: e.instructor,
+                                    grade: grade,
+                                    status: certificateElegible,
+                                };
+
+                            course.presence = presence;
+                            course.completionAt = e.dateApplicationFinal;
+                            course.instructor = e.instructor;
+
                         }
                     });
-                    i.inWaitList = inWaitList;
-                }
+                    const classes = certificateData ? [] : classesFromCourse.map((classFromCourse) => {
+                        const inClass = classFromCourse.users.some((user) => user._id == userId || user.userID == userId)
+
+                        return classFromCourse.dateApplicationFinal <= today ? null : {
+                            _id: classFromCourse._id,
+                            name: classFromCourse.name,
+                            dateApplicationInitial: classFromCourse.dateApplicationInitial,
+                            dateApplicationFinal: classFromCourse.dateApplicationFinal,
+                            location: classFromCourse.location,
+                            status: getClassStatus(classFromCourse, inClass),
+                        };
+                    }).filter((classCourse) => classCourse)
+
+
+                    course.certificateElegible = certificateData;
+                    course.inWaitList = inWaitList;
+                    course.classes = classes;
+                    course.hasClasses = classes.length > 0;
+                    return course;
+                });
+
+                elegibleCourses = await Promise.all(coursePromises);
+
+
 
                 if (section) {
                     const sortFnc =
                         section && section.ordination !== undefined && section.ordination === 0
                             ? function (a, b) {
-                                  return -1;
-                              }
+                                return -1;
+                            }
                             : function (a, b) {
-                                  return a.title?.localeCompare(b.title);
-                              };
+                                return a.title?.localeCompare(b.title);
+                            };
                     for (const course of elegibleCourses) {
                         section.trails.push(course);
                     }
@@ -639,7 +651,116 @@ module.exports = {
         });
     },
 
-    checkEligibilityTagsAnd(tagsUser, tagsAnd, tagsOr) {
+    async mostSeenSections (trails) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const section = await Section.findOne({
+                    defaultType: DEFAULT_TYPES.MOST_SEEN,
+                    active: 1,
+                }).lean();
+
+                if (section) {
+                    const lastNinetyDays = moment().subtract(90, 'days').toISOString();
+                    const mostSeenTrails = await TrailViews.aggregate([
+                        {
+                            $match: {
+                                trailId: {
+                                    $in: trails.map(({ _id }) => _id),
+                                },
+                            },
+                        },
+                        {
+                            $project: {
+                                trailId: 1,
+                                count: {
+                                    $sum: {
+                                        $reduce: {
+                                            input: '$views',
+                                            initialValue: 0,
+                                            in: {
+                                                $cond: {
+                                                    if: { $gte: ['$$this.date', lastNinetyDays] },
+                                                    then: { $add: ['$$value', '$$this.count'] },
+                                                    else: { $add: ['$$value', 0] },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            $sort: {
+                                count: -1,
+                            },
+                        },
+                        {
+                            $limit: 10,
+                        },
+                        {
+                            $lookup: {
+                                from: 'trails',
+                                as: 'trail',
+                                foreignField: '_id',
+                                localField: 'trailId',
+                            },
+                        },
+                        {
+                            $unwind: '$trail',
+                        },
+                        {
+                            $lookup: {
+                                from: 'items',
+                                as: 'trailItems',
+                                foreignField: '_id',
+                                localField: 'trail.items.itemID'
+                            }
+                        },
+                        {
+                            $addFields: {
+                                'trail.items': {
+                                    $map: {
+                                        input: '$trail.items',
+                                        as: 'item',
+                                        in: {
+                                            $mergeObjects: [
+                                                '$$item',
+                                                {
+                                                    itemID: {
+                                                        $arrayElemAt: [
+                                                            '$trailItems',
+                                                            {
+                                                                $indexOfArray: ['$trailItems._id', '$$item.itemID'],
+                                                            },
+                                                        ],
+                                                    },
+                                                },
+                                            ],
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            $project: {
+                                trail: 1,
+                                count: 1,
+                                _id: 0,
+                            },
+                        },
+                    ]);
+
+                    section.trails = mostSeenTrails.map(({ trail, count }) => ({ ...trail, count }))
+                }
+
+                resolve(trails.length > 0 ? section : []);
+            } catch (error) {
+                reject(error);
+            }
+        });
+    },
+
+    checkEligibilityTagsAnd (tagsUser, tagsAnd, tagsOr) {
         const eligibilityUser = tagsUser.map((tag) => tag.value.toLocaleLowerCase());
 
         const eligibilitytagsAnd = eligibilityUser.some((eligibility) =>
@@ -665,7 +786,7 @@ module.exports = {
         return false;
     },
 
-    filterAlura(filters, data) {
+    filterAlura (filters, data) {
         const aluraFilters = ['completed', 'incompleted', 'uninitiated'];
         if (
             Object.keys(filters).length === 0 ||
@@ -696,7 +817,7 @@ module.exports = {
         if (filters.uninitiated === 'true') {
             results.push(
                 ...data.filter((section) => {
-                    return section?.items.every(item => {
+                    return section?.items.every((item) => {
                         return !item?.tracking;
                     });
                 })
@@ -705,9 +826,39 @@ module.exports = {
 
         return results;
     },
+
+    mapAlura (results) {
+        const data = [];
+
+        results.forEach((result) => {
+            const found = data.find((d) => d.title === result.section);
+            if (!found) {
+                data.push({
+                    id: result.sectionId,
+                    title: result.section,
+                    trails: [
+                        {
+                            id: result.id,
+                            title: result.title,
+                            tracking: mapAluraTrackings(result.items),
+                        },
+                    ],
+                    sectionType: 'alura',
+                });
+            } else {
+                found.trails.push({
+                    id: result.id,
+                    title: result.title,
+                    tracking: mapAluraTrackings(result.items),
+                });
+            }
+        });
+
+        return data;
+    },
 };
 
-function isNecessary(trail, tags) {
+function isNecessary (trail, tags) {
     const mandatoryTags = trail.mandatory;
 
     if (mandatoryTags.length === 0) {
@@ -745,7 +896,7 @@ function isNecessary(trail, tags) {
     return hasMandatory && hasMandatoryItems;
 }
 
-function isCompleted(trail) {
+function isCompleted (trail) {
     if (trail.completion === 1) {
         return true;
     } else {
@@ -753,7 +904,7 @@ function isCompleted(trail) {
     }
 }
 
-function isIncomplete(trail) {
+function isIncomplete (trail) {
     if (trail.completion >= 0 && trail.completion < 1 && trail.completion !== null) {
         return true;
     } else {
@@ -761,7 +912,7 @@ function isIncomplete(trail) {
     }
 }
 
-function isHighlight(trail) {
+function isHighlight (trail) {
     let flag = false;
     const today = getDateTodayWithoutHours();
 
@@ -778,7 +929,7 @@ function isHighlight(trail) {
     return flag;
 }
 
-function isNotStarted(trail) {
+function isNotStarted (trail) {
     if (trail.completion === null) {
         return true;
     } else {
@@ -786,7 +937,7 @@ function isNotStarted(trail) {
     }
 }
 
-function isMostRecent(trail) {
+function isMostRecent (trail) {
     const today = getDateTodayWithoutHours();
     const diffCreate = calculateDiffDate(today, formatDateWithoutHours(trail.createdAt), 'days');
     const diffUpdate = calculateDiffDate(today, formatDateWithoutHours(trail.updatedAt), 'days');
@@ -804,7 +955,7 @@ function isMostRecent(trail) {
     }
 }
 
-function checkIfTheTrackIsValid(trail) {
+function checkIfTheTrackIsValid (trail) {
     const today = getDateTodayWithoutHours();
 
     if (trail.classGroup) {
@@ -826,11 +977,53 @@ function checkIfTheTrackIsValid(trail) {
     return true;
 }
 
-function calculateDiffDateTrail(trail) {
+function calculateDiffDateTrail (trail) {
     const today = getDateTodayWithoutHours();
     const diffCreate = calculateDiffDate(today, formatDateWithoutHours(trail.createdAt), 'days');
     const diffUpdate = calculateDiffDate(today, formatDateWithoutHours(trail.updatedAt), 'days');
 
     if (diffCreate <= 30 || diffUpdate <= 30) return true;
     return false;
+}
+
+function mapAluraTrackings (items) {
+    if (items.every((item) => !item?.tracking)) {
+        return null;
+    }
+    const mapCompletion = items.map((t) => t?.tracking?.completion || 0);
+    const totalCompletion = mapCompletion?.reduce((acc, curr) => acc + curr, 0);
+
+    return {
+        email: items.find((item) => !!item?.tracking?.email)?.tracking?.email,
+        completion: Number((totalCompletion / items?.length).toFixed(2)),
+    };
+}
+
+
+function getClassStatus (classFromCourse, inClass) {
+    try {
+        const today = new Date()
+        const courseHasSeats = classFromCourse.users.length < classFromCourse.limit || !classFromCourse.limit ? true : false
+        const isCourseInProgress = classFromCourse.dateApplicationInitial <= today && classFromCourse.dateApplicationFinal >= today && courseHasSeats
+        const isCourseOpen = classFromCourse.dateApplicationInitial >= today
+        const isCourseClosed = classFromCourse.dateApplicationFinal <= today
+
+        if (isCourseInProgress) {
+            return "in-progress"
+        }
+        if (inClass) {
+            return "registered"
+        }
+        if (isCourseClosed || !courseHasSeats) {
+            return "closed"
+        }
+        if (isCourseOpen) {
+            return "open"
+        }
+
+        return null
+    } catch (error) {
+        console.log(error);
+        reject(error);
+    }
 }
