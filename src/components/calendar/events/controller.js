@@ -185,7 +185,7 @@ async function getCoursesElegible(start, end, user, tags) {
     return new Promise(async (resolve, reject) => {
         try {
             let elegibleCourses = await CourseModel.find({
-                dateInitial: { $gte: start },
+                // dateInitial: { $gte: start },
                 // dateFinal: { $lte: end },    
                 tags: { $in: tags },
                 deleted: { $eq: 0 },
@@ -203,7 +203,6 @@ async function getCoursesElegible(start, end, user, tags) {
                     instructor: 1,
                 })
                 .lean();
-
             const coursePromises = elegibleCourses.map(async (course) => {
                 const alreadyJoined = await WaitListModel.findOne({
                     userID: user._id,
