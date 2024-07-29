@@ -186,7 +186,7 @@ async function getCoursesElegible(start, end, user, tags) {
         try {
             let elegibleCourses = await CourseModel.find({
                 dateInitial: { $gte: start },
-                dateFinal: { $lte: end },
+                // dateFinal: { $lte: end },    
                 tags: { $in: tags },
                 deleted: { $eq: 0 },
                 status: { $eq: 1 },
