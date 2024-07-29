@@ -562,7 +562,7 @@ module.exports = {
                             courseID
                         })
             
-                        for(let user of users){
+                        for(let user of JSON.parse(users)){
                             console.log(user)
                             const removalPromises = classesFromCourse.map(classFromCourse => {
                                 const inClass = classFromCourse.users.some((u) => u._id == user._id || u.userID == user._id)
@@ -729,7 +729,7 @@ module.exports = {
                         courseID
                     })
         
-                    for(let user of users){
+                    for(let user of JSON.parse(users)){
                         console.log(user)
                         const removalPromises = classesFromCourse.map(classFromCourse => {
                             const inClass = classFromCourse.users.some((u) => u._id == user._id || u.userID == user._id)
