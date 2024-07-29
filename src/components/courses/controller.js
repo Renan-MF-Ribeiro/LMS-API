@@ -558,6 +558,27 @@ module.exports = {
                             name
                         });
 
+                        const classesFromCourse = await ClassModel.find({
+                            courseID
+                        })
+            
+                        for(let user of users){
+                            console.log(user)
+                            const removalPromises = classesFromCourse.map(classFromCourse => {
+                                const inClass = classFromCourse.users.some((u) => u._id == user._id || u.userID == user._id)
+                
+                                if (classFromCourse._id.equals(createdClass._id) || !inClass) {
+                                    return Promise.resolve();
+                                }
+                
+                                return ClassModel.findOneAndUpdate(
+                                    { _id: classFromCourse._id },
+                                    { $pull: { users: { _id: user._id } } }
+                                );
+                            });
+                
+                            await Promise.all(removalPromises);
+                        }
 
                         success(res, req, 'Criado com sucesso!');
                         return;
@@ -703,6 +724,28 @@ module.exports = {
                         costs: costsArray,
                         name
                     });
+                    
+                    const classesFromCourse = await ClassModel.find({
+                        courseID
+                    })
+        
+                    for(let user of users){
+                        console.log(user)
+                        const removalPromises = classesFromCourse.map(classFromCourse => {
+                            const inClass = classFromCourse.users.some((u) => u._id == user._id || u.userID == user._id)
+            
+                            if (classFromCourse._id.equals(classID) || !inClass) {
+                                return Promise.resolve();
+                            }
+            
+                            return ClassModel.findOneAndUpdate(
+                                { _id: classFromCourse._id },
+                                { $pull: { users: { _id: user._id } } }
+                            );
+                        });
+            
+                        await Promise.all(removalPromises);
+                    }
 
                     success(res, req, 'Atualizado com sucesso!');
                 } else {
@@ -1211,6 +1254,24 @@ module.exports = {
             });
 
             await Promise.all(removalPromises);
+
+            //notificar usuario
+            // const message = {
+            //     category: 'notify',
+            //     communication: ['notification', 'email'],
+            //     mode: 'manual',
+            //     target: {
+            //         type: 'users',
+            //         value: {
+            //             users: [item.responsible],
+            //         },
+            //     },
+            //     text: `O item ${item.title} perderá a validade em ${diffDays} dias!\n`,
+            //     textHtml: `<p>O item ${item.title} perderá a validade em ${diffDays} dias!<p>`,
+            //     thumbnail: config.messenger.emailTemplate.thumbnail,
+            //     title: `${item.title}`,
+            // }
+            // createMessagesFromBackend(message)
 
             success(res, req, course);
         } catch (error) {
