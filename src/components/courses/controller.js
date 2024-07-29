@@ -573,7 +573,7 @@ module.exports = {
                 
                                 return ClassModel.findOneAndUpdate(
                                     { _id: classFromCourse._id },
-                                    { $pull: { users: { _id: user._id } } }
+                                    { $pull: { users: { _id: user._id, presence: false } } }
                                 );
                             });
                 
@@ -740,7 +740,7 @@ module.exports = {
             
                             return ClassModel.findOneAndUpdate(
                                 { _id: classFromCourse._id },
-                                { $pull: { users: { _id: user._id } } }
+                                { $pull: { users: { _id: user._id, presence: false } } }
                             );
                         });
             
@@ -1246,14 +1246,16 @@ module.exports = {
                 if (classFromCourse._id.equals(body.classesID) || !inClass) {
                     return Promise.resolve();
                 }
+                //SÓ REMOVER SE PRESENCE FOR FALSE
 
                 return ClassModel.findOneAndUpdate(
                     { _id: classFromCourse._id },
-                    { $pull: { users: { _id: userID } } }
+                    { $pull: { users: { _id: userID, presence: false} } }
                 );
             });
 
             await Promise.all(removalPromises);
+
 
             //notificar usuario
             // const message = {
