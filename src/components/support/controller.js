@@ -82,7 +82,6 @@ module.exports = {
             const url = `${process.env.API_ZENDESK}/support/ticket/${process.env.CLIENT_ID}`;
 
             const headers = {
-                ...form.getHeaders(),
                 Authorization: process.env.API_KEY_ZENDESK,
             };
 
