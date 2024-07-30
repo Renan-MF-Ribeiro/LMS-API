@@ -79,8 +79,8 @@ module.exports = {
     async getZendeskTickets(req, res) {
         try {
             const { query } = req;
-            const url = `${process.env.API_ZENDESK}/support/ticket/${process.env.CLIENT_ID}`;
-
+            const url = `${process.env.API_ZENDESK}/support/tickets/${process.env.CLIENT_ID}`;
+            console.log(url)
             const headers = {
                 Authorization: process.env.API_KEY_ZENDESK,
             };
