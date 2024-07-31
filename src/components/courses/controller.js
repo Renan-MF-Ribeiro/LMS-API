@@ -22,6 +22,11 @@ const { Group, InstructorGroup } = require('../groups/model');
 
 const { Trail } = require('../trails/model');
 
+const {
+    sendMessageToKafka,
+    processTargetUsers,
+} = require('../new-messages/business');
+
 const { internalServer, success, badRequest } = require('../../utils/messages');
 
 const {
@@ -561,9 +566,10 @@ module.exports = {
                         const classesFromCourse = await ClassModel.find({
                             courseID
                         })
-            
+                        
+                        const arrUserId = []
                         for(let user of JSON.parse(users)){
-                            console.log(user)
+                            arrUserId.push(user._id)
                             const removalPromises = classesFromCourse.map(classFromCourse => {
                                 const inClass = classFromCourse.users.some((u) => u._id == user._id || u.userID == user._id)
                 
@@ -579,6 +585,23 @@ module.exports = {
                 
                             await Promise.all(removalPromises);
                         }
+
+                        const message = {
+                            category: 'notify',
+                            communication: ['notification', 'email'],
+                            mode: 'manual',
+                            target: {
+                                type: 'users',
+                                value: {
+                                    users: arrUserId,
+                                },
+                            },
+                            text: `Você está na turma presencial ${course.name}!\n`,
+                            textHtml: `<p>Você está na turma presencial ${course.name}!<p>`,
+                            thumbnail: config.messenger.emailTemplate.thumbnail,
+                            title: `Treinamentos Presenciais: ${course.name}`,
+                        }
+                        await createMessagesFromBackend(message)
 
                         success(res, req, 'Criado com sucesso!');
                         return;
@@ -728,9 +751,9 @@ module.exports = {
                     const classesFromCourse = await ClassModel.find({
                         courseID
                     })
-        
+                    const arrUserId = []
                     for(let user of JSON.parse(users)){
-                        console.log(user)
+                        arrUserId.push(user._id)
                         const removalPromises = classesFromCourse.map(classFromCourse => {
                             const inClass = classFromCourse.users.some((u) => u._id == user._id || u.userID == user._id)
             
@@ -746,6 +769,23 @@ module.exports = {
             
                         await Promise.all(removalPromises);
                     }
+
+                    const message = {
+                        category: 'notify',
+                        communication: ['notification', 'email'],
+                        mode: 'manual',
+                        target: {
+                            type: 'users',
+                            value: {
+                                users: arrUserId,
+                            },
+                        },
+                        text: `Você está na turma presencial ${course.name}!\n`,
+                        textHtml: `<p>Você está na turma presencial ${course.name}!<p>`,
+                        thumbnail: config.messenger.emailTemplate.thumbnail,
+                        title: `Treinamentos Presenciais: ${course.name}`,
+                    }
+                    await createMessagesFromBackend(message)
 
                     success(res, req, 'Atualizado com sucesso!');
                 } else {
@@ -1257,23 +1297,22 @@ module.exports = {
             await Promise.all(removalPromises);
 
 
-            //notificar usuario
-            // const message = {
-            //     category: 'notify',
-            //     communication: ['notification', 'email'],
-            //     mode: 'manual',
-            //     target: {
-            //         type: 'users',
-            //         value: {
-            //             users: [item.responsible],
-            //         },
-            //     },
-            //     text: `O item ${item.title} perderá a validade em ${diffDays} dias!\n`,
-            //     textHtml: `<p>O item ${item.title} perderá a validade em ${diffDays} dias!<p>`,
-            //     thumbnail: config.messenger.emailTemplate.thumbnail,
-            //     title: `${item.title}`,
-            // }
-            // createMessagesFromBackend(message)
+            const message = {
+                category: 'notify',
+                communication: ['notification', 'email'],
+                mode: 'manual',
+                target: {
+                    type: 'users',
+                    value: {
+                        users: [userID],
+                    },
+                },
+                text: `Você está na turma presencial ${course.name}!\n`,
+                textHtml: `<p>Você está na turma presencial ${course.name}!<p>`,
+                thumbnail: config.messenger.emailTemplate.thumbnail,
+                title: `Treinamentos Presenciais: ${course.name}`,
+            }
+            await createMessagesFromBackend(message)
 
             success(res, req, course);
         } catch (error) {
@@ -1650,3 +1689,21 @@ module.exports = {
         }
     },
 };
+
+async function createMessagesFromBackend (body) {
+    try {
+        const campaign = body;
+        const target = campaign.target;
+        let targetUsers = [];
+
+        if (!target.value.user) {
+            targetUsers = await processTargetUsers(target, campaign.category);
+        } else {
+            targetUsers.push({ ...target.value.user });
+        }
+
+        await sendMessageToKafka(campaign, targetUsers);
+    } catch (error) {
+        console.log(error);
+    }
+}
