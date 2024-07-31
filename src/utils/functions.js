@@ -195,6 +195,8 @@ module.exports = {
                     ip: req.ip,
                     login: req.body.login ? req.body.login : userLogin,
                     groups: namesGroups,
+                    deviceType: req.body.deviceType ? req.body.deviceType : null,
+                    browserDetails: req.body.browserDetails ? req.body.browserDetails : null
                 });
                 resolve();
             } catch (error) {

@@ -20,6 +20,8 @@ const logSchema = new mongoose.Schema({
     ip: { type: String },
     login: { type: String },
     groups: { type: Array, required: false, default: [] },
+    deviceType: { type: String, require: false },
+    browserDetails: { type: Object, require: false }
 }, {
     ...optionsSchema,
 })
