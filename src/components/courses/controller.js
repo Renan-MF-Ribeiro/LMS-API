@@ -566,7 +566,7 @@ module.exports = {
                         const classesFromCourse = await ClassModel.find({
                             courseID
                         })
-                        
+
                         const arrUserId = []
                         for(let user of JSON.parse(users)){
                             arrUserId.push(user._id)
@@ -596,10 +596,10 @@ module.exports = {
                                     users: arrUserId,
                                 },
                             },
-                            text: `Você está na turma presencial ${course.name}!\n`,
-                            textHtml: `<p>Você está na turma presencial ${course.name}!<p>`,
+                            text: `Você está na turma presencial ${name}!\n`,
+                            textHtml: `<p>Você está na turma presencial ${name}!<p>`,
                             thumbnail: config.messenger.emailTemplate.thumbnail,
-                            title: `Treinamentos Presenciais: ${course.name}`,
+                            title: `Treinamentos Presenciais: ${name}`,
                         }
                         await createMessagesFromBackend(message)
 
@@ -780,10 +780,10 @@ module.exports = {
                                 users: arrUserId,
                             },
                         },
-                        text: `Você está na turma presencial ${course.name}!\n`,
-                        textHtml: `<p>Você está na turma presencial ${course.name}!<p>`,
+                        text: `Você está na turma presencial ${name}!\n`,
+                        textHtml: `<p>Você está na turma presencial ${name}!<p>`,
                         thumbnail: config.messenger.emailTemplate.thumbnail,
-                        title: `Treinamentos Presenciais: ${course.name}`,
+                        title: `Treinamentos Presenciais: ${name}`,
                     }
                     await createMessagesFromBackend(message)
 
