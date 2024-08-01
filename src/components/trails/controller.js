@@ -439,7 +439,8 @@ module.exports = {
                         )
                         const gallery = []
 
-                        for (const file of fileArray) {
+                        for (const image of fileArray) {
+                            const file = image.file
                             let path = await azureBlob(file, 'trails/gallery')
                             path = path.replace(AZURE_BLOB_URL, DOMAIN)
                             const material = {
@@ -448,6 +449,8 @@ module.exports = {
                                 name: file.name,
                                 size: file.size,
                                 deleted: false,
+                                title: image.title,
+                                description: image.description
                             }
                             gallery.push(material)
                         }
