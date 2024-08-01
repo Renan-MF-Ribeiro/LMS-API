@@ -9,7 +9,7 @@ router
     // .get('/find', _controller.getCertificate)
     // .get('/find-open', _controller.getCertificateOpen)
     // .get('/file', _controller.downloadCertificate)
-    // .get('/preview', _controller.previewCertificate)
+    .get('/preview', _controller.previewCertificate)
     // .post('/', _controller.createCertificate)
     // .delete('/:id', _controller.deleteCertificate)
     

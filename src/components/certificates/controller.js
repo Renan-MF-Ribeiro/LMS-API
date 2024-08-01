@@ -1,8 +1,6 @@
-const { default: axios } = require('axios');
 const _messages = require('../../utils/messages');
 const { Trail } = require('../trails/model');
-
-const { API_CERTIFICATES } = process.env;
+const { certificateClient } = require('./business');
 
 const getHeaders = (req) => ({
     Authorization: `Bearer ${req.headers.authorization}`
@@ -13,7 +11,21 @@ module.exports = {
     // async getCertificate(req, res) { _messages.success(res, req, { fn: "getCertificate" }) },
     // async getCertificateOpen(req, res) { _messages.success(res, req, { fn: "getCertificateOpen" }) },
     // async downloadCertificate(req, res) { _messages.success(res, req, { fn: "downloadCertificate" }) },
-    // async previewCertificate(req, res) { _messages.success(res, req, { fn: "previewCertificate" }) },
+    async previewCertificate(req, res) {
+        try {
+            const { data } = await certificateClient.get(
+                `/certificates/preview`,
+                { headers: getHeaders(req), params: req.query, responseType: 'arraybuffer' }
+            );
+
+            const file = Buffer.from(data, 'binary');
+
+            res.setHeader('Content-Type', 'application/pdf');
+            res.send(file);
+        } catch (error) {
+            _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'previewCertificate');
+        }
+    },
     // async createCertificate(req, res) { _messages.success(res, req, { fn: "createCertificate" }) },
     // async deleteCertificate(req, res) { _messages.success(res, req, { fn: "deleteCertificate" }) },
     // async updateLayout(req, res) { _messages.success(res, req, { fn: "updateLayout" }) },
@@ -24,8 +36,8 @@ module.exports = {
         try {
             const layoutId = req.params.id;
 
-            const { data: dataTrails } = await axios.get(
-                `${API_CERTIFICATES}/certificates/trails-by-layout/${layoutId}`,
+            const { data: dataTrails } = await certificateClient.get(
+                `/certificates/trails-by-layout/${layoutId}`,
                 { headers: getHeaders(req) }
             );
 
@@ -49,8 +61,8 @@ module.exports = {
                 }
             }
 
-            const { data } = await axios.delete(
-                `${API_CERTIFICATES}/layouts/${layoutId}`,
+            const { data } = await certificateClient.delete(
+                `/layouts/${layoutId}`,
                 { headers: getHeaders(req) }
             );
 
