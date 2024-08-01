@@ -1265,7 +1265,7 @@ module.exports = {
                         'users.$.device': body.browser,
                         'users.$.browser': body.device,
                         'users.$.origin': 'QRCODE',
-                        'users.$.presenceAt ': new Date(),
+                        'users.$.presenceAt': moment().utc().format(),
                         'users.$.ip ': ip,
                     },
                 },
@@ -1292,10 +1292,11 @@ module.exports = {
 
             var userID = String(user._id);
 
-            const course = await ClassModel.findOneAndUpdate(
+            let course = null
+            course = await ClassModel.findOneAndUpdate(
                 {
-                    _id: body.classesID,
-                    $nor: [{ 'users._id': { $ne: userID } }, { 'users.userID': { $ne: userID } }]
+                    _id: body.classesID, 'users._id': { $ne: userID }, 'users.userID': { $ne: userID }
+
                 },
                 {
                     $addToSet: {
@@ -1306,6 +1307,7 @@ module.exports = {
                             name: user.name,
                             registration: user.registration,
                             createdAt: moment().utc().format(),
+                            origin: 'user'
                         }
                     }
                 },
@@ -1313,16 +1315,8 @@ module.exports = {
             );
 
             if (!course) {
-                return badRequest(
-                    res,
-                    req,
-                    'Usuário já registrado.',
-                    'Você já esta matriculado nesta turma.',
-                    'courses',
-                    '/getCourseByQrCode'
-                );
+                course = await ClassModel.findOne({ _id: body.classesID })
             }
-
 
             const classesFromCourse = await ClassModel.find({
                 courseID: course.courseID
@@ -1370,10 +1364,11 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'courses',
-                '/getCourseByQrCode'
+                '/list-join'
             );
         }
     },
+
     async getInstructorByInstructorGroup (req, res) {
         try {
             const { params } = req;
