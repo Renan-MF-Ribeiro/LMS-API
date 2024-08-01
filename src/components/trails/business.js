@@ -125,6 +125,15 @@ module.exports = {
                             supportMaterialEnabled = true;
                         }
 
+                        let galleryEnabled = false;
+                        const filteredGallery =
+                            trail.gallery.filter(
+                                (x) => x.deleted === false
+                            );
+                        if (filteredGallery.length > 0) {
+                            galleryEnabled = true;
+                        }
+
                         if (socialConfig) {
                             const trailTags = trail.tags?.map((tag) => tag.value)
                             for (const tag of socialConfig.tagsLists.allowed) {
@@ -188,6 +197,7 @@ module.exports = {
                             innerTextBanner: trail.innerTextBanner,
                             durationHours: trail.durationHours,
                             post: trail.post,
+                            gallery: galleryEnabled
                         });
                     }
                 } else {
@@ -221,6 +231,15 @@ module.exports = {
                             supportMaterialEnabled = true;
                         }
 
+                        let galleryEnabled = false;
+                        const filteredGallery =
+                            trail.gallery.filter(
+                                (x) => x.deleted === false
+                            );
+                        if (filteredGallery.length > 0) {
+                            galleryEnabled = true;
+                        }
+
                         if (socialConfig) {
                             const trailTags = trail.tags?.map((tag) => tag.value)
                             for (const tag of socialConfig.tagsLists.allowed) {
@@ -284,6 +303,7 @@ module.exports = {
                             innerTextBanner: trail.innerTextBanner,
                             durationHours: trail.durationHours,
                             post: trail.post,
+                            gallery: galleryEnabled
                         });
                     }
                 }
