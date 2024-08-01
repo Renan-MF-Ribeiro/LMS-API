@@ -8,6 +8,7 @@ const _messages = require('../../utils/messages');
 module.exports = {
     async create(req, res) {
         try {
+            const user = await getUserByToken(req)
             const form = new FormData();
 
             const reqPayload = JSON.parse(req.fields.payload);
@@ -17,6 +18,7 @@ module.exports = {
                 },
                 clientName: process.env.COMPOSE_PROJECT_NAME,
             };
+            payload.ticket.requester._id = user._id
             const strPayload = JSON.stringify(payload);
             form.append('payload', strPayload);
             if (Object.entries(req.files).length > 0) {
@@ -80,8 +82,8 @@ module.exports = {
         try {
             const { query } = req;
             const user = await getUserByToken(req)
-            const url = `${process.env.API_ZENDESK}/support/tickets/${process.env.CLIENT_ID}/${user.cpf}`;
-            console.log(url)
+            const url = `${process.env.API_ZENDESK}/support/tickets/${process.env.CLIENT_ID}/${user._id}`;
+
             const headers = {
                 Authorization: process.env.API_KEY_ZENDESK,
             };
