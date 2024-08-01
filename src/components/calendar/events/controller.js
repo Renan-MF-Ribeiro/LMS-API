@@ -71,6 +71,7 @@ const EventsController = {
                                 dateApplicationFinal: c.dateApplicationFinal,
                                 location: c.location,
                                 status: c.status,
+                                courseID: course._id
                             }
                         }
                         events.push(courseEvent)
