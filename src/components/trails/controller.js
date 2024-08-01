@@ -345,6 +345,7 @@ module.exports = {
 
         try {
             const { thumb, banner, background } = req.files;
+            let { innerTextBanner } = req.files;
 
             let payload = {};
             if (req.fields.payload) {
@@ -388,6 +389,12 @@ module.exports = {
                         bannerPath = await azureBlob(banner, 'trails/banners');
                     }
 
+                    if (innerTextBanner) {
+                        innerTextBanner = await azureBlob(innerTextBanner, 'trails/banners')
+                    } else {
+                        innerTextBanner = payload.innerTextBanner
+                    }
+
                     if (background) {
                         backgroundPath = await azureBlob(
                             background,
@@ -428,7 +435,7 @@ module.exports = {
 
                     if (payload.galleryFiles) {
                         const fileArray = payload.galleryFiles.map(
-                            key => req.files[key],
+                            key => req.files[key.name],
                         )
                         const gallery = []
 
@@ -457,34 +464,57 @@ module.exports = {
                         thumbPath: thumbPath,
                         bannerPath: bannerPath,
                         backgroundPath,
+                        innerTextBanner
                     };
 
                     if (payload.post) {
-                        const noHasPostItem = !payload.items.some((item) => item.kind === 'PostItem')
-                        if (noHasPostItem) {
-
+                        const hasPostItem = payload.items.some((item) => item.itemID.kind === 'PostItem')
+                        if (hasPostItem) {
+                            const itemPostIndex = payload.items.findIndex((item) => item.itemID.kind === 'PostItem')
+                            const item = payload.items[itemPostIndex]
+                            if (item.itemID.title !== payload.title) {
+                                const updatedItem = {
+                                    ...item.itemID,
+                                    title: payload.title,
+                                    description: payload.description,
+                                    enabled: true,
+                                    thumbPath: payload.thumbPath,
+                                    titleURL: payload.titleURL,
+                                };
+                                const { _doc } = await PostItem.findOneAndUpdate({ _id: item.itemID._id }, updatedItem, { new: true })
+                                payload.items[itemPostIndex].itemID = _doc
+                            }
+                        } else {
+                            const user = await getUserByToken(req);
                             const item = {
                                 title: payload.title,
                                 description: payload.description,
-                                enabled: payload.enabled,
+                                enabled: true,
                                 thumbPath: payload.thumbPath,
                                 titleURL: payload.titleURL,
-                                author: payload.author,
+                                author: user._id,
                                 kind: 'PostItem'
                             }
                             const postItem = await PostItem.create(item);
-                            payload.items = [{
-                                "mandatory": false,
-                                "chief": false,
-                                "optional": false,
-                                "afterSeparator": "empty",
-                                "itemID": postItem._id
-                            }]
-
+                            if (payload.items.length) {
+                                payload.items.push({
+                                    "mandatory": false,
+                                    "chief": false,
+                                    "optional": false,
+                                    "afterSeparator": "empty",
+                                    "itemID": postItem
+                                })
+                            } else {
+                                payload.items = [{
+                                    "mandatory": false,
+                                    "chief": false,
+                                    "optional": false,
+                                    "afterSeparator": "empty",
+                                    "itemID": postItem
+                                }]
+                            }
                         }
-
                     }
-
                     const items = []
 
                     const trail = await Trail.create(payload);
@@ -669,6 +699,7 @@ module.exports = {
                     payload = JSON.parse(req.fields.payload)
                 } catch { }
             }
+
             if (typeof payload.backgroundPath === 'object') {
                 payload.backgroundPath = ''
             }
@@ -691,7 +722,6 @@ module.exports = {
                     title: { $eq: payload.title },
                     _id: { $ne: _id },
                 })
-
                 if (verify.length === 0) {
                     if (thumb) {
                         thumbPath = await azureBlob(thumb, 'trails/thumbs')
@@ -747,6 +777,7 @@ module.exports = {
                             }
                         }
                     }
+
                     if (payload.supportFileMaterial) {
                         const fileArray = payload.supportFileMaterial.map(
                             key => req.files[key],
@@ -825,8 +856,23 @@ module.exports = {
                     }
 
                     if (payload.post) {
-                        const noHasPostItem = !payload.items.some((item) => item.kind === 'PostItem')
-                        if (noHasPostItem) {
+                        const hasPostItem = payload.items.some((item) => item.itemID.kind === 'PostItem')
+                        if (hasPostItem) {
+                            const itemPostIndex = payload.items.findIndex((item) => item.itemID.kind === 'PostItem')
+                            const item = payload.items[itemPostIndex]
+                            if (item.itemID.title !== payload.title) {
+                                const updatedItem = {
+                                    ...item.itemID,
+                                    title: payload.title,
+                                    description: payload.description,
+                                    enabled: true,
+                                    thumbPath: payload.thumbPath,
+                                    titleURL: payload.titleURL,
+                                };
+                                const { _doc } = await PostItem.findOneAndUpdate({ _id: item.itemID._id }, updatedItem, { new: true })
+                                payload.items[itemPostIndex].itemID = _doc
+                            }
+                        } else {
                             const user = await getUserByToken(req);
                             const item = {
                                 title: payload.title,
@@ -838,55 +884,40 @@ module.exports = {
                                 kind: 'PostItem'
                             }
                             const postItem = await PostItem.create(item);
-                            payload.items = [{
-                                "mandatory": false,
-                                "chief": false,
-                                "optional": false,
-                                "afterSeparator": "empty",
-                                "itemID": postItem
-                            }]
+                            if (payload.items.length) {
+                                payload.items.push({
+                                    "mandatory": false,
+                                    "chief": false,
+                                    "optional": false,
+                                    "afterSeparator": "empty",
+                                    "itemID": postItem
+                                })
+                            } else {
+                                payload.items = [{
+                                    "mandatory": false,
+                                    "chief": false,
+                                    "optional": false,
+                                    "afterSeparator": "empty",
+                                    "itemID": postItem
+                                }]
+                            }
                         }
                     }
 
-                    const processItem = async (payload, item) => {
-                        if (item.itemID.kind === 'PostItem' && item.itemID.title !== payload.title) {
-                            const updatedItem = {
-                                ...item.itemID,
-                                title: payload.title,
-                                description: payload.description,
-                                enabled: true,
-                                thumbPath: payload.thumbPath,
-                                titleURL: payload.titleURL,
-                            };
-                            const { _doc } = await PostItem.findOneAndUpdate({ _id: item.itemID._id }, updatedItem, { new: true })
-                            return { ...item, itemID: _doc }
-                        }
-                        return item;
-                    };
 
-                    const createItemPayload = (item, trail) => {
-                        return {
+                    const items = []
+
+                    payload.items?.forEach((item) => {
+                        items.push({
                             ...item,
                             urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}/${item.itemID._id}`,
                             urlTrail: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}`,
                             itemID: item.itemID._id,
-                        };
-                    };
+                        })
+                    })
 
-                    const processItems = async (payload, trail) => {
-                        const items = [];
-
-                        await Promise.all(payload.items?.map(async (item) => {
-                            const processedItem = await processItem(payload, item);
-                            items.push(createItemPayload(processedItem, trail));
-                        }));
-
-                        return items;
-                    };
-
-                    // Uso da função processItems
-                    const items = await processItems(payload, trail);
                     payload.items = items
+
                     const oldData = await Trail.updateOne(
                         { _id: { $eq: payload._id } },
                         payload,
