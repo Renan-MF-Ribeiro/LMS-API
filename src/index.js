@@ -103,6 +103,7 @@ const unsplashRoutes = require('./components/unsplash/routes');
 const assessmentRoutes = require('./components/assessment/routes');
 const themeRoutes = require('./components/theme/routes');
 const calendarRoutes = require('./components/calendar/routes');
+const certificateRoutes = require('./components/certificates/routes');
 
 app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/tracking', validateTokenRoute, trackingRoutes)
@@ -135,6 +136,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/theme', themeRoutes)
     .use('/unsplash', validateTokenRoute, unsplashRoutes)
     .use('/dashboard', validateTokenRoute, dashboardRoutes)
+    .use('/certificates', validateTokenRoute, certificateRoutes)
     .use(
         '/assessment',
         isAssessmentActive,
