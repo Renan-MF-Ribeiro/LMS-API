@@ -10,7 +10,7 @@ router
     // .get('/find-open', _controller.getCertificateOpen)
     // .get('/file', _controller.downloadCertificate)
     .get('/preview', _controller.previewCertificate)
-    // .post('/', _controller.createCertificate)
+    .post('/', _controller.createCertificate)
     // .delete('/:id', _controller.deleteCertificate)
     
     // // /certificates/layouts

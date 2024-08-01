@@ -26,7 +26,25 @@ module.exports = {
             _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'previewCertificate');
         }
     },
-    // async createCertificate(req, res) { _messages.success(res, req, { fn: "createCertificate" }) },
+    async createCertificate(req, res) {
+        try {
+            const { userName, trailName, itemName } = req.body;
+            
+            const { data } = await certificateClient.post(
+                '/certificates',
+                req.body,
+                { headers: getHeaders(req), responseType: 'arraybuffer' }
+            );
+
+            const file = Buffer.from(data, 'binary');
+
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="certificado-${userName}-${trailName || itemName}.pdf"`);
+            res.send(file);
+        } catch (error) {
+            _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'createCertificate');
+        }
+    },
     // async deleteCertificate(req, res) { _messages.success(res, req, { fn: "deleteCertificate" }) },
     // async updateLayout(req, res) { _messages.success(res, req, { fn: "updateLayout" }) },
     // async createLayout(req, res) { _messages.success(res, req, { fn: "createLayout" }) },
