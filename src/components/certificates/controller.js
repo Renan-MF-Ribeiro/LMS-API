@@ -36,7 +36,7 @@ module.exports = {
                         enabled: true,
                     })
                     .sort({ createdAt: -1 })
-                    .limit(3)
+                    .limit(4)
                     .select('_id title');
 
                 if (trails.length > 0) {
