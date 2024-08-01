@@ -1,6 +1,6 @@
 const { User, groups } = require('../users/model');
 const mongoose = require('mongoose');
-
+const config = require('../../../config.json')
 const {
     CourseModel,
     ClassModel,
@@ -13,7 +13,7 @@ const {
     UsersWithProcessedTags,
     WaitListModel
 } = require('./model');
-
+const moment = require('moment');
 const { DOMAIN, AZURE_BLOB_URL } = process.env;
 
 const { azureBlob } = require('../../utils/files');
@@ -57,7 +57,7 @@ const {
 } = require('../sections/business');
 
 module.exports = {
-    async createCourse(req, res) {
+    async createCourse (req, res) {
         try {
             const materials = JSON.parse(req.fields.materials);
             const files = req.files;
@@ -162,7 +162,7 @@ module.exports = {
         }
     },
 
-    async allCourses(req, res) {
+    async allCourses (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -224,7 +224,7 @@ module.exports = {
         }
     },
 
-    async updateCourse(req, res) {
+    async updateCourse (req, res) {
         try {
             const materials = req.fields.materials ? JSON.parse(req.fields.materials) : null;
             const body = req.fields;
@@ -338,7 +338,7 @@ module.exports = {
         }
     },
 
-    async deleteCourse(req, res) {
+    async deleteCourse (req, res) {
         try {
             const { id } = req.params;
             await CourseModel.findByIdAndUpdate(id, { deleted: 1 });
@@ -355,7 +355,7 @@ module.exports = {
         }
     },
 
-    async instructorAllCourses(req, res) {
+    async instructorAllCourses (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -409,7 +409,7 @@ module.exports = {
         }
     },
 
-    async getCourseById(req, res) {
+    async getCourseById (req, res) {
         try {
             const { id } = req.params;
             const course = await CourseModel.findById(id).populate('materials');
@@ -426,7 +426,7 @@ module.exports = {
         }
     },
 
-    async getUsers(req, res) {
+    async getUsers (req, res) {
         try {
             const user = await getUserByToken(req);
             const storeUsers = await getStoreUSers(user.store);
@@ -443,7 +443,7 @@ module.exports = {
         }
     },
 
-    async createClass(req, res) {
+    async createClass (req, res) {
         try {
             let {
                 courseID,
@@ -543,9 +543,25 @@ module.exports = {
                                 arrMaterials.push(materialID);
                             }
                         }
+
+                        const newUsers = JSON.parse(users).map((user) => {
+                            if (user.presence) {
+                                const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+                                user.createdAt = moment().utc().format()
+                                return ({
+                                    ...user,
+                                    ip,
+                                    presenceAt: moment().utc().format()
+                                })
+                            } else {
+                                user.presenceAt = null
+                            }
+
+                            return user
+                        })
                         const createdClass = await ClassModel.create({
                             courseID,
-                            users: JSON.parse(users),
+                            users: newUsers,
                             instructor: instructorID,
                             qrcode: req.body.qrCode,
                             materials: arrMaterials,
@@ -567,22 +583,24 @@ module.exports = {
                             courseID
                         })
 
+
+
                         const arrUserId = []
-                        for(let user of JSON.parse(users)){
+                        for (let user of JSON.parse(users)) {
                             arrUserId.push(user._id)
                             const removalPromises = classesFromCourse.map(classFromCourse => {
                                 const inClass = classFromCourse.users.some((u) => u._id == user._id || u.userID == user._id)
-                
+
                                 if (classFromCourse._id.equals(createdClass._id) || !inClass) {
                                     return Promise.resolve();
                                 }
-                
+
                                 return ClassModel.findOneAndUpdate(
                                     { _id: classFromCourse._id },
                                     { $pull: { users: { _id: user._id, presence: false } } }
                                 );
                             });
-                
+
                             await Promise.all(removalPromises);
                         }
 
@@ -631,7 +649,7 @@ module.exports = {
         }
     },
 
-    async updateClass(req, res) {
+    async updateClass (req, res) {
         try {
             let {
                 courseID,
@@ -730,9 +748,25 @@ module.exports = {
                         }
                     }
 
+                    const newUsers = JSON.parse(users).map((user) => {
+                        if (user.presence) {
+                            const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+                            user.createdAt = moment().utc().format()
+                            return ({
+                                ...user,
+                                ip,
+                                presenceAt: moment().utc().format()
+                            })
+                        } else {
+                            user.presenceAt = null
+                        }
+
+                        return user
+                    })
+
                     await ClassModel.findByIdAndUpdate(classID, {
                         courseID,
-                        users: JSON.parse(users),
+                        users: newUsers,
                         instructor,
                         instructorTemp,
                         // instructor: user._id,
@@ -747,26 +781,26 @@ module.exports = {
                         costs: costsArray,
                         name
                     });
-                    
+
                     const classesFromCourse = await ClassModel.find({
                         courseID
                     })
                     const arrUserId = []
-                    for(let user of JSON.parse(users)){
+                    for (let user of JSON.parse(users)) {
                         arrUserId.push(user._id)
                         const removalPromises = classesFromCourse.map(classFromCourse => {
                             const inClass = classFromCourse.users.some((u) => u._id == user._id || u.userID == user._id)
-            
+
                             if (classFromCourse._id.equals(classID) || !inClass) {
                                 return Promise.resolve();
                             }
-            
+
                             return ClassModel.findOneAndUpdate(
                                 { _id: classFromCourse._id },
                                 { $pull: { users: { _id: user._id, presence: false } } }
                             );
                         });
-            
+
                         await Promise.all(removalPromises);
                     }
 
@@ -811,7 +845,7 @@ module.exports = {
         }
     },
 
-    async appliedCourses(req, res) {
+    async appliedCourses (req, res) {
         try {
             const user = await getUserByToken(req);
             const { skip, limit } = pagination(req);
@@ -843,7 +877,7 @@ module.exports = {
         }
     },
 
-    async appliedCourse(req, res) {
+    async appliedCourse (req, res) {
         try {
             const { courseID, classID } = req.params;
             const course = await CourseModel.findById(courseID)
@@ -872,7 +906,7 @@ module.exports = {
         }
     },
 
-    async deleteMaterial(req, res) {
+    async deleteMaterial (req, res) {
         try {
             const arrMaterials = [];
             const { materialID, classID } = req.params;
@@ -902,7 +936,7 @@ module.exports = {
         }
     },
 
-    async deleteMaterialCourse(req, res) {
+    async deleteMaterialCourse (req, res) {
         try {
             const arrMaterials = [];
             const { materialID, courseID } = req.params;
@@ -932,7 +966,7 @@ module.exports = {
         }
     },
 
-    async searchUser(req, res) {
+    async searchUser (req, res) {
         try {
             const { searchBy } = req.query;
             let { usersInClass } = req.body;
@@ -985,7 +1019,7 @@ module.exports = {
         }
     },
 
-    async deleteClass(req, res) {
+    async deleteClass (req, res) {
         try {
             const { classID } = req.params;
             const { materials } = await ClassModel.findById(classID);
@@ -1007,7 +1041,7 @@ module.exports = {
         }
     },
 
-    async courseEvaluation(req, res) {
+    async courseEvaluation (req, res) {
         try {
             const { classID, answers } = req.body;
             const student = await getUserByToken(req);
@@ -1049,7 +1083,7 @@ module.exports = {
         }
     },
 
-    async verifyCourseEvaluation(req, res) {
+    async verifyCourseEvaluation (req, res) {
         try {
             const { classID } = req.params;
             const student = await getUserByToken(req);
@@ -1100,7 +1134,7 @@ module.exports = {
         }
     },
 
-    async getCourseEvaluations(req, res) {
+    async getCourseEvaluations (req, res) {
         try {
             const { classID } = req.params;
             const student = await getUserByToken(req);
@@ -1122,7 +1156,7 @@ module.exports = {
         }
     },
 
-    async getCourseByQrCode(req, res) {
+    async getCourseByQrCode (req, res) {
         try {
             const body = req.body;
             const course = await ClassModel.findOne({
@@ -1142,7 +1176,7 @@ module.exports = {
         }
     },
 
-    async getCourseByQrCodeSelfRegistration(req, res) {
+    async getCourseByQrCodeSelfRegistration (req, res) {
         try {
             const { body } = req;
             const { _id } = await getUserByToken(req);
@@ -1193,7 +1227,7 @@ module.exports = {
         }
     },
 
-    async getCourseDetailByQrCode(req, res) {
+    async getCourseDetailByQrCode (req, res) {
         try {
             const { body } = req;
             const course = await CourseModel.findOne({
@@ -1213,11 +1247,11 @@ module.exports = {
         }
     },
 
-    async selfRegistration(req, res) {
+    async selfRegistration (req, res) {
         try {
             const { body } = req;
             const user = await getUserByToken(req);
-
+            const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
             var userID = String(user._id);
 
             const course = await ClassModel.findOneAndUpdate(
@@ -1230,7 +1264,9 @@ module.exports = {
                         'users.$.presence': true,
                         'users.$.device': body.browser,
                         'users.$.browser': body.device,
-                        'users.$.origin': 'QRCODE'
+                        'users.$.origin': 'QRCODE',
+                        'users.$.presenceAt ': new Date(),
+                        'users.$.ip ': ip,
                     },
                 },
                 { new: true }
@@ -1249,7 +1285,7 @@ module.exports = {
         }
     },
 
-    async listJoin(req, res) {
+    async listJoin (req, res) {
         try {
             const { body } = req;
             const user = await getUserByToken(req);
@@ -1259,7 +1295,7 @@ module.exports = {
             const course = await ClassModel.findOneAndUpdate(
                 {
                     _id: body.classesID,
-                    $or: [{ 'users._id': { $ne: userID } }, { 'users.userID': { $ne: userID } }]
+                    $nor: [{ 'users._id': { $ne: userID } }, { 'users.userID': { $ne: userID } }]
                 },
                 {
                     $addToSet: {
@@ -1268,12 +1304,24 @@ module.exports = {
                             presence: false,
                             grades: 0,
                             name: user.name,
-                            registration: user.registration
+                            registration: user.registration,
+                            createdAt: moment().utc().format(),
                         }
                     }
                 },
                 { new: true }
             );
+
+            if (!course) {
+                return badRequest(
+                    res,
+                    req,
+                    'Usuário já registrado.',
+                    'Você já esta matriculado nesta turma.',
+                    'courses',
+                    '/getCourseByQrCode'
+                );
+            }
 
 
             const classesFromCourse = await ClassModel.find({
@@ -1290,7 +1338,7 @@ module.exports = {
 
                 return ClassModel.findOneAndUpdate(
                     { _id: classFromCourse._id },
-                    { $pull: { users: { _id: userID, presence: false} } }
+                    { $pull: { users: { _id: userID, presence: false } } }
                 );
             });
 
@@ -1326,7 +1374,7 @@ module.exports = {
             );
         }
     },
-    async getInstructorByInstructorGroup(req, res) {
+    async getInstructorByInstructorGroup (req, res) {
         try {
             const { params } = req;
             const tags = [];
@@ -1384,7 +1432,7 @@ module.exports = {
         }
     },
 
-    async verifyInstructor(req, res) {
+    async verifyInstructor (req, res) {
         try {
             const { params } = req;
             const trails = [];
@@ -1487,7 +1535,7 @@ module.exports = {
         }
     },
 
-    async joinWaitList(req, res) {
+    async joinWaitList (req, res) {
         try {
             let { body } = req;
             const alreadyJoined = await WaitListModel.findOne({
@@ -1523,7 +1571,7 @@ module.exports = {
         }
     },
 
-    async getWaitListByUser(req, res) {
+    async getWaitListByUser (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1567,7 +1615,7 @@ module.exports = {
         }
     },
 
-    async getWaitListByCourse(req, res) {
+    async getWaitListByCourse (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1609,7 +1657,7 @@ module.exports = {
         }
     },
 
-    async getWaitlistAndElegibleUsersByCourse(req, res) {
+    async getWaitlistAndElegibleUsersByCourse (req, res) {
         try {
             const courseId = req.query.courseId;
             const elegibleUsers = [];
