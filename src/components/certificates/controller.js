@@ -1,25 +1,6 @@
-const formData = require('form-data');
-const fs = require('fs')
-
 const _messages = require('../../utils/messages');
 const { Trail } = require('../trails/model');
-const { certificateClient } = require('./business');
-
-const getHeaders = (req) => ({
-    Authorization: `Bearer ${req.headers.authorization}`
-});
-
-const prepareFormData = (req) => {
-    const form = new formData();
-
-    Object.keys(req.fields).forEach(key => {
-        form.append(key, req.fields[key]);
-    });
-
-    form.append("file", fs.createReadStream(req.files.file.path));
-
-    return form;
-}
+const { certificateClient, getHeaders, prepareFormData } = require('./business');
 
 module.exports = {
     async getCertificates(req, res) {
