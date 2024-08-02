@@ -450,7 +450,7 @@ module.exports = {
                 users,
                 dateApplicationInitial,
                 dateApplicationFinal,
-                instructor,
+                minister,
                 requester,
                 qrCode,
                 qrCodeSelfRegistration,
@@ -461,6 +461,7 @@ module.exports = {
                 name
             } = req.fields;
             let flagDate = true;
+
             const costsArray = costs ? JSON.parse(costs) : null;
             if (dateApplicationInitial || dateApplicationFinal) {
                 if (dateApplicationInitial && dateApplicationFinal === '') {
@@ -491,6 +492,8 @@ module.exports = {
                 const files = req.files;
                 const arrMaterials = [];
                 const trails = [];
+                let user = await getUserByToken(req);
+                let instructorID = user.id;
                 let namesCourse = '';
                 let canCreateClass = true;
 
@@ -561,8 +564,9 @@ module.exports = {
                         const createdClass = await ClassModel.create({
                             courseID,
                             users: newUsers,
-                            instructor,
+                            instructor: instructorID,
                             requester,
+                            minister,
                             qrcode: req.body.qrCode,
                             materials: arrMaterials,
                             dateApplicationInitial,
@@ -655,7 +659,7 @@ module.exports = {
                 users,
                 classID,
                 qrCode,
-                instructor,
+                minister,
                 requester,
                 dateApplicationInitial,
                 dateApplicationFinal,
@@ -693,7 +697,8 @@ module.exports = {
                 );
             } else {
 
-
+                let user = await getUserByToken(req);
+                let instructorID = user.id;
                 const course = await CourseModel.findById(courseID).populate({
                     path: 'groups',
                     select: 'trails',
@@ -763,8 +768,9 @@ module.exports = {
                     await ClassModel.findByIdAndUpdate(classID, {
                         courseID,
                         users: newUsers,
-                        instructor,
+                        instructor: instructorID,
                         requester,
+                        minister,
                         materials: arrMaterials,
                         qrcode: qrCode,
                         qrCodeSelfRegistration: qrCodeSelfRegistration,

@@ -109,8 +109,11 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             try {
 
-
-                let courses = await ClassModel.find({},
+                const query = isAdmin ?
+                    {} : {
+                        instructor: { $eq: instructor },
+                    }
+                let courses = await ClassModel.find(query,
                     ['users', 'createdAt', 'name', 'dateApplicationInitial', 'dateApplicationFinal']
                 )
                     .populate({
@@ -128,7 +131,7 @@ module.exports = {
                     .skip(parseInt(skip))
                     .limit(parseInt(limit));
 
-                const total = await ClassModel.find({},
+                const total = await ClassModel.find(query,
                     ['users', 'createdAt']
                 ).countDocuments();
 
@@ -153,7 +156,7 @@ module.exports = {
             try {
                 const { _doc } = await ClassModel.findById(classID)
                     .populate('materials')
-
+                    .populate('instructor', 'name');
 
                 resolve({
                     _id: classID,
@@ -211,7 +214,7 @@ module.exports = {
                         path: 'materials',
                         match: { author: 'INSTRUTOR' },
                     })
-
+                    .populate('instructor', ['name']);
 
                 const classesFilter = classes.filter((item) => {
                     const usersFilter = item.users.filter((user) => {

@@ -1369,7 +1369,7 @@ const ItemController = {
             let total = await Item.find(query).count();
 
             let itens = await Item.find(query)
-                .populate('idEvaluation', ['description'])
+                .populate('idEvaluation', ['description', 'duration'])
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
                 .sort({ [order]: sort });
