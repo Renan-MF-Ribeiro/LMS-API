@@ -1,3 +1,6 @@
+const formData = require('form-data');
+const fs = require('fs')
+
 const _messages = require('../../utils/messages');
 const { Trail } = require('../trails/model');
 const { certificateClient } = require('./business');
@@ -6,11 +9,72 @@ const getHeaders = (req) => ({
     Authorization: `Bearer ${req.headers.authorization}`
 });
 
+const prepareFormData = (req) => {
+    const form = new formData();
+
+    Object.keys(req.fields).forEach(key => {
+        form.append(key, req.fields[key]);
+    });
+
+    form.append("file", fs.createReadStream(req.files.file.path));
+
+    return form;
+}
+
 module.exports = {
-    // async getCertificates(req, res) { _messages.success(res, req, { fn: "getCertificates" }) },
-    // async getCertificate(req, res) { _messages.success(res, req, { fn: "getCertificate" }) },
-    // async getCertificateOpen(req, res) { _messages.success(res, req, { fn: "getCertificateOpen" }) },
-    // async downloadCertificate(req, res) { _messages.success(res, req, { fn: "downloadCertificate" }) },
+    async getCertificates(req, res) {
+        try {
+            const clientId = req.params.clientId;
+
+            const { data } = await certificateClient.get(
+                `/certificates/findall/${clientId}`,
+                { headers: getHeaders(req), params: req.query }
+            );
+
+            _messages.success(res, req, data, 'ok', 'certifier', 'getCertificates');
+        } catch (error) {
+            _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'getCertificates');
+        }
+    },
+    async getCertificate(req, res) {
+        try {
+            const { data } = await certificateClient.get(
+                '/certificates/find',
+                { headers: getHeaders(req), params: req.query }
+            );
+
+            _messages.success(res, req, data, 'ok', 'certifier', 'getCertificate');
+        } catch (error) {
+            _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'getCertificate');
+        }
+    },
+    async getCertificateOpen(req, res) {
+        try {
+            const { data } = await certificateClient.get(
+                '/certificates/find-open',
+                { headers: getHeaders(req), params: req.query }
+            );
+
+            _messages.success(res, req, data, 'ok', 'certifier', 'getCertificateOpen');
+        } catch (error) {
+            _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'getCertificateOpen');
+        }
+    },
+    async downloadCertificate(req, res) {
+        try {
+            const { data } = await certificateClient.get(
+                `/certificates/file`,
+                { headers: getHeaders(req), params: req.query, responseType: 'arraybuffer' }
+            );
+
+            const file = Buffer.from(data, 'binary');
+
+            res.setHeader('Content-Type', 'application/pdf');
+            res.send(file);
+        } catch (error) {
+            _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'downloadCertificate');
+        }
+    },
     async previewCertificate(req, res) {
         try {
             const { data } = await certificateClient.get(
@@ -29,7 +93,7 @@ module.exports = {
     async createCertificate(req, res) {
         try {
             const { userName, trailName, itemName } = req.body;
-            
+
             const { data } = await certificateClient.post(
                 '/certificates',
                 req.body,
@@ -45,11 +109,78 @@ module.exports = {
             _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'createCertificate');
         }
     },
-    // async deleteCertificate(req, res) { _messages.success(res, req, { fn: "deleteCertificate" }) },
-    // async updateLayout(req, res) { _messages.success(res, req, { fn: "updateLayout" }) },
-    // async createLayout(req, res) { _messages.success(res, req, { fn: "createLayout" }) },
-    // async getLayout(req, res) { _messages.success(res, req, { fn: "getLayout" }) },
-    // async getLayouts(req, res) { _messages.success(res, req, { fn: "getLayouts" }) },
+    async deleteCertificate(req, res) {
+        try {
+            const certificateId = req.params.id;
+
+            const { data } = await certificateClient.delete(
+                `/certificates/delete/${certificateId}`,
+                { headers: getHeaders(req) }
+            );
+
+            _messages.success(res, req, data, 'ok', 'certifier', 'deleteCertificate');
+        } catch (error) {
+            _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'deleteCertificate');
+        }
+    },
+    async updateLayout(req, res) {
+        try {
+            const form = prepareFormData(req);
+
+            const { data } = await certificateClient.post(
+                '/layouts/update',
+                form,
+                { headers: { ...getHeaders(req), ...form.getHeaders() } }
+            );
+
+            _messages.success(res, req, data, 'ok', 'certifier', 'updateLayout');
+        } catch (error) {
+            _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'updateLayout');
+        }
+    },
+    async createLayout(req, res) {
+        try {
+            const form = prepareFormData(req);
+
+            const { data } = await certificateClient.post(
+                '/layouts/create',
+                form,
+                { headers: { ...getHeaders(req), ...form.getHeaders() } }
+            );
+
+            _messages.success(res, req, data, 'ok', 'certifier', 'createLayout');
+        } catch (error) {
+            _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'createLayout');
+        }
+    },
+    async getLayout(req, res) {
+        try {
+            const layoutId = req.params.id;
+
+            const { data } = await certificateClient.get(
+                `/layouts/find-one/${layoutId}`,
+                { headers: getHeaders(req) }
+            );
+
+            _messages.success(res, req, data, 'ok', 'certifier', 'getLayout');
+        } catch (error) {
+            _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'getLayout');
+        }
+    },
+    async getLayouts(req, res) {
+        try {
+            const clientId = req.params.clientId;
+
+            const { data } = await certificateClient.get(
+                `/layouts/${clientId}`,
+                { headers: getHeaders(req) }
+            );
+
+            _messages.success(res, req, data, 'ok', 'certifier', 'getLayouts');
+        } catch (error) {
+            _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'getLayouts');
+        }
+    },
     async deleteLayout(req, res) {
         try {
             const layoutId = req.params.id;
