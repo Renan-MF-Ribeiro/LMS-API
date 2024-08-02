@@ -451,7 +451,7 @@ module.exports = {
                 dateApplicationInitial,
                 dateApplicationFinal,
                 instructor,
-                instructorTemp,
+                requester,
                 qrCode,
                 qrCodeSelfRegistration,
                 isSelfRegistrationEnabled,
@@ -493,8 +493,7 @@ module.exports = {
                 const trails = [];
                 let namesCourse = '';
                 let canCreateClass = true;
-                let user = await getUserByToken(req);
-                let instructorID = user.id;
+
                 const course = await CourseModel.findById(courseID).populate({
                     path: 'groups',
                     select: 'trails',
@@ -562,13 +561,13 @@ module.exports = {
                         const createdClass = await ClassModel.create({
                             courseID,
                             users: newUsers,
-                            instructor: instructorID,
+                            instructor,
+                            requester,
                             qrcode: req.body.qrCode,
                             materials: arrMaterials,
                             dateApplicationInitial,
                             dateApplicationFinal,
                             canCreateClass,
-                            instructorTemp,
                             qrcode: qrCode,
                             qrCodeSelfRegistration: qrCodeSelfRegistration,
                             isSelfRegistrationEnabled:
@@ -657,7 +656,7 @@ module.exports = {
                 classID,
                 qrCode,
                 instructor,
-                instructorTemp,
+                requester,
                 dateApplicationInitial,
                 dateApplicationFinal,
                 qrCodeSelfRegistration,
@@ -670,7 +669,6 @@ module.exports = {
             const materials = JSON.parse(req.fields.materials);
             const costsArray = JSON.parse(costs);
             const files = req.files;
-            const user = await getUserByToken(req);
             const currentMaterials = await ClassModel.findById(classID);
             const arrMaterials = currentMaterials.materials;
             let flagDate = true;
@@ -694,9 +692,7 @@ module.exports = {
                     '/createClass'
                 );
             } else {
-                if (!instructor) {
-                    instructor = user._id;
-                }
+
 
                 const course = await CourseModel.findById(courseID).populate({
                     path: 'groups',
@@ -768,8 +764,7 @@ module.exports = {
                         courseID,
                         users: newUsers,
                         instructor,
-                        instructorTemp,
-                        // instructor: user._id,
+                        requester,
                         materials: arrMaterials,
                         qrcode: qrCode,
                         qrCodeSelfRegistration: qrCodeSelfRegistration,
@@ -883,7 +878,6 @@ module.exports = {
             const course = await CourseModel.findById(courseID)
                 .populate('materials')
                 .populate('program', 'title');
-
             const classUsers = await getClassByID(classID);
 
 
@@ -895,6 +889,7 @@ module.exports = {
                 classUsers,
             });
         } catch (error) {
+            console.error(error)
             internalServer(
                 res,
                 req,
