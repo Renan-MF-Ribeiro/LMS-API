@@ -128,7 +128,7 @@ module.exports = {
                     .skip(parseInt(skip))
                     .limit(parseInt(limit));
 
-                const total = await ClassModel.find(query,
+                const total = await ClassModel.find({},
                     ['users', 'createdAt']
                 ).countDocuments();
 
