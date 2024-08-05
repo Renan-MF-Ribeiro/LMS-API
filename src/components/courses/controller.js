@@ -62,12 +62,6 @@ module.exports = {
             body.tags = JSON.parse(body.tags);
             body.mandatory = JSON.parse(body.mandatory);
             body.certificateDue = JSON.parse(body.certificateDue);
-            const dateInitialCourse = formatDateWithoutHours(
-                addHours(body.dateInitial)
-            );
-            const dataFinalCourse = formatDateWithoutHours(
-                addHours(body.dateFinal)
-            );
 
             let thumbPath;
             const { thumb } = req.files;
@@ -80,7 +74,7 @@ module.exports = {
                 delete body.passingScore;
             if (!body.certificateLayout || body.certificateLayout === 'null')
                 delete body.certificateLayout;
-            if (dateInitialCourse > dataFinalCourse) flagDate = false;
+            if (body.dateInitial > body.dateFinal) flagDate = false;
 
             if (flagDate) {
                 if (body.isEvaluationAvailable) {
@@ -108,10 +102,6 @@ module.exports = {
                     const programID = await returnProgramaID(body.program);
                     body.program = programID;
 
-                    body.dateInitial = formatDateWithoutHours(body.dateInitial);
-                    if (body.dateFinal) {
-                        body.dateFinal = formatDateWithoutHours(body.dateFinal);
-                    }
                     delete body.materials;
                     const courseCreated = await CourseModel.create(body);
 
