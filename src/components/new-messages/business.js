@@ -57,6 +57,23 @@ module.exports = {
         }
     },
 
+    async sendCustomMessageToKafka(message, topic) {
+        try {
+            const producer = kafka.producer();
+            await producer.connect();
+            const stringMessage = JSON.stringify(message);
+            await producer.send({
+                topic,
+                messages: [{ value: stringMessage }],
+            });
+
+            await producer.disconnect();
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    },
+
     async sendMfaToKafka(campaign, users) {
         try {
             const producer = kafka.producer();
