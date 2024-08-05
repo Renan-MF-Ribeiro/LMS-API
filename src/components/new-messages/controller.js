@@ -8,6 +8,7 @@ const {
     returnListOfIds,
     sendMessageToKafka,
     processTargetUsers,
+    sendCustomMessageToKafka,
 } = require('./business');
 const { Item } = require('../items/model');
 const _messages = require('../../utils/messages');
@@ -30,21 +31,35 @@ module.exports = {
     async createMessagingList(req, res) {
         const { name, trailFilters, userFilter } = req.body;
         let listId = null;
+        let messageList = new MessageList();
+        
 
         try {
             const user = await getUserByToken(req);
 
-            const urlCreate = `${API_MESSENGER}/createsendinglist`;
-            const messagingList = await axios.post(urlCreate, {
-                clientId: CLIENT_ID,
-                name,
-                status: 'PROCESSING',
-                isListProcessed: false,
-                creatorId: user._id,
-                appliedFilters: { trailFilters, userFilter },
-            });
-            listId = messagingList.data.id;
-
+            messageList = {
+                listName: name,
+                client: CLIENT_ID,
+                userId: user._id,
+                trail: trailFilters.filters?.[0].trail,
+                notInit: trailFilters.filters?.[0].notInit,
+                inProgress: trailFilters.filters?.[0].inProgress,
+                inProgressInitialDate: trailFilters.filters?.[0].inProgressInitialDate,
+                inProgressFinalDate: trailFilters.filters?.[0].inProgressFinalDate,
+                inProgressPercent: trailFilters.filters?.[0].inProgressSlider,
+                completed: trailFilters.filters?.[0].finished,
+                completedInitialDate: trailFilters.filters?.[0].finishedInitialDate,
+                completedFinalDate: trailFilters.filters?.[0].finishedFinalDate,
+                enableScore: trailFilters.filters?.[0].enableScore,
+                percentScore: trailFilters.filters?.[0].finishedSlider,
+                user: userFilter.filters.enabled,
+                registrationInitialDate: userFilter.filters?.[0].registrationInitialDate,
+                registrationFinalDate: userFilter.filters?.[0].registrationFinalDate,
+                accessInitialDate: userFilter.filters?.[0].accessInitialDate,
+                accessFinalDate: userFilter.filters?.[0].accessFinalDate,
+            };
+            
+            sendCustomMessageToKafka(messageList, process.env.TOPIC_MSG_LIST);
             const notification = {
                 category: 'notify',
                 communication: ['notification'],
@@ -59,6 +74,34 @@ module.exports = {
                 texthtml: `<p>Sua lista de contatos está sendo processada<p>`,
                 title: `Sua lista está sendo processada!`,
             };
+
+            _messages.success(res, req, notification);
+            return;
+            const urlCreate = `${API_MESSENGER}/createsendinglist`;
+            const messagingList = await axios.post(urlCreate, {
+                clientId: CLIENT_ID,
+                name,
+                status: 'PROCESSING',
+                isListProcessed: false,
+                creatorId: user._id,
+                appliedFilters: { trailFilters, userFilter },
+            });
+            listId = messagingList.data.id;
+
+            // const notification = {
+            //     category: 'notify',
+            //     communication: ['notification'],
+            //     mode: 'manual',
+            //     target: {
+            //         type: 'users',
+            //         value: {
+            //             users: [`${user._id}`],
+            //         },
+            //     },
+            //     text: `Sua lista de contatos está sendo processada\n`,
+            //     texthtml: `<p>Sua lista de contatos está sendo processada<p>`,
+            //     title: `Sua lista está sendo processada!`,
+            // };
 
             _messages.success(res, req, notification);
             createMessagesFromBackend(notification);
@@ -477,4 +520,26 @@ async function createMessagesFromBackend(body) {
     } catch (error) {
         console.log(error);
     }
+}
+
+class MessageList {
+    listName;
+    client;
+    userId;
+    trail;
+    notInit;
+    inProgress;
+    inProgressInitialDate;
+    inProgressFinalDate;
+    inProgressPercent;
+    completed;
+    completedInitialDate;
+    completedFinalDate;
+    enableScore;
+    percentScore;
+    user;
+    registrationInitialDate;
+    registrationFinalDate;
+    accessInitialDate;
+    accessFinalDate;
 }
