@@ -319,7 +319,7 @@ function getClassStatus(classFromCourse, inClass, presence) {
 
 async function getAllExpDatesByUser(start, end, user, token) {
     try {
-        const uri = `${process.env.API_CERTIFIER}/certificates/find/${user.networkLogin}`;
+        const uri = `${process.env.API_CERTIFIER}/certificates/find/${user.networkLogin}?clientId=${process.env.CLIENT_ID}`;
         const { data } = await axios.get(uri, { headers: { Authorization: 'Bearer ' + token } });
         const events = []
         for (let certificate of data) {
