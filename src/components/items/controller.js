@@ -1343,12 +1343,6 @@ const ItemController = {
                         },
                         { title: { $regex: searchBy, $options: 'i' } },
                         { notes: { $regex: searchBy, $options: 'i' } },
-                        {
-                            courseIdentifier: {
-                                $regex: searchBy,
-                                $options: 'i',
-                            },
-                        },
                         { alias: { $regex: searchBy, $options: 'i' } },
                         { keywords: { $regex: searchBy, $options: 'i' } },
                         {
