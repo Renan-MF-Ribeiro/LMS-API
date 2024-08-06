@@ -13,7 +13,7 @@ const {
     UsersWithProcessedTags,
     WaitListModel
 } = require('./model');
-const moment = require('moment');
+const moment = require('moment-timezone');
 const { DOMAIN, AZURE_BLOB_URL } = process.env;
 
 const { azureBlob } = require('../../utils/files');
@@ -55,6 +55,7 @@ const {
     getTagsElegiblesByToken,
     getTagsElegibles,
 } = require('../sections/business');
+const { default: axios } = require('axios');
 
 module.exports = {
     async createCourse (req, res) {
@@ -903,6 +904,55 @@ module.exports = {
                 'Erro interno no servidor',
                 'courses',
                 '/appliedCourse'
+            );
+        }
+    },
+
+    async printAttendanceList(req, res) {
+        try {
+            const { courseId, classId } = req.params;
+            const onlyPresenceFlag = req.query?.onlyPresence !== undefined;
+            
+            const course = await CourseModel.findById(courseId);
+            const classUsers = await getClassByID(classId);
+
+            const { data } = await axios.post(
+                `${process.env.API_PDF_PRINTER}/attendance-list`,
+                {
+                    courseName: course.title ?? ' ',
+                    startDate: course.dateInitial ? moment(course.dateInitial).locale('pt-BR').format('DD [de] MMMM [de] YYYY - HH:mm[h]') : ' ',
+                    endDate: course.dateFinal ? moment(course.dateFinal).locale('pt-BR').format('DD [de] MMMM [de] YYYY - HH:mm[h]') : ' ',
+                    instructor: classUsers.instructor?.name ?? ' ',
+                    attendances: classUsers.users
+                        .filter(user => onlyPresenceFlag ? !!user.presence : true)
+                        .map(user => ({
+                            userName: user.name ?? ' ',
+                            networkLogin: user.registration ?? ' ',
+                            attendance: user.presence ?? false,
+                            attendanceDate: user.presenceAt ? moment(user.presenceAt).format('DD/MM/YYYY') : ' ',
+                            attendanceType: user.origin ? (user.origin === 'instructor' ? 'Instrutor' : 'QR Code') : ' ',
+                        }))
+                },
+                {
+                    headers: { Authorization: req.headers.authorization },
+                    responseType: 'arraybuffer'
+                }
+            )
+
+            const file = Buffer.from(data, 'binary');
+
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename=${course.title}.pdf`);
+            res.send(file)
+        } catch (error) {
+            console.error(error)
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'courses',
+                '/print-attendance-list'
             );
         }
     },
