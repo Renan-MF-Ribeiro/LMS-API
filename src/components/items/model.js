@@ -59,7 +59,7 @@ const ItemSchema = new mongoose.Schema(
         endDate: { type: Date },
         survey: { type: String, enum: ['required', 'optional', 'none'] },
         notes: { type: String, required: false },
-        courseIdentifier: { type: String, required: false },
+        courseIdentifier: { type: Number, required: false, unique: true },
         alias: { type: String, required: false },
         provider: { type: String, required: false },
         keywords: { type: String, required: false },
@@ -80,6 +80,13 @@ ItemSchema.index({
     titleURL: 'text',
     description: 'text',
 });
+
+ItemSchema.pre('save', async function(next) {
+    const latestIdentifier = await Item.findOne({}, 'courseIdentifier',  { sort: { courseIdentifier: -1 }});
+    const nextIdentifier = Number(latestIdentifier?.courseIdentifier || 0) + 1;
+    this.courseIdentifier = nextIdentifier;
+    next();
+})
 
 const Item = mongoose.model('Item', ItemSchema);
 
