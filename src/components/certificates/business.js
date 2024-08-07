@@ -17,7 +17,7 @@ const prepareFormData = (req) => {
         form.append(key, req.fields[key]);
     });
 
-    form.append("file", fs.createReadStream(req.files.file.path));
+    if(req.files.file) form.append("file", fs.createReadStream(req.files.file.path));
 
     return form;
 }
