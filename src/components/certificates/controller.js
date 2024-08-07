@@ -116,6 +116,28 @@ module.exports = {
 
             _messages.success(res, req, data, 'ok', 'certifier', 'updateLayout');
         } catch (error) {
+            console.log(error);
+            _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'updateLayout');
+        }
+    },
+    async updateStatus(req, res) {
+        if(!req.body?.id) {
+            return _messages.badRequest(res, req, 'Operação inválida', 'Informe o id do layout', 'certifier', 'updateLayout');
+        }
+
+        try {
+            const { data } = await certificateClient.post(
+                '/layouts/status',
+                { 
+                    id: req.body.id,
+                    active: req.body.active ?? false 
+                },
+                { headers: { ...getHeaders(req) } }
+            );
+
+            _messages.success(res, req, data, 'ok', 'certifier', 'updateLayout');
+        } catch (error) {
+            console.log(error);
             _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'updateLayout');
         }
     },
@@ -171,24 +193,25 @@ module.exports = {
                 { headers: getHeaders(req) }
             );
 
-            if (dataTrails.length > 0) {
-                const trails = await Trail
-                    .find({
-                        _id: { $in: dataTrails },
-                        enabled: true,
-                    })
-                    .sort({ createdAt: -1 })
-                    .limit(4)
-                    .select('_id title');
+            const trails = await Trail
+                .find({
+                    enabled: true,
+                    $or: [
+                        { _id: { $in: dataTrails } },
+                        { certificateLayout: layoutId },
+                    ],
+                })
+                .sort({ createdAt: -1 })
+                .limit(4)
+                .select('_id title');
 
-                if (trails.length > 0) {
-                    const errorData = {
-                        message: 'Existem trilhas ativas com este modelo de certificado',
-                        trails,
-                    };
+            if (trails.length > 0) {
+                const errorData = {
+                    message: 'Existem trilhas ativas com este modelo de certificado',
+                    trails,
+                };
 
-                    return _messages.badRequest(res, req, 'Operação inválida', errorData, 'certifier', 'deleteLayout');
-                }
+                return _messages.badRequest(res, req, 'Operação inválida', errorData, 'certifier', 'deleteLayout');
             }
 
             const { data } = await certificateClient.delete(

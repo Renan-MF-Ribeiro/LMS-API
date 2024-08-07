@@ -17,6 +17,7 @@ router
 
     // /certificates/layouts
     .post('/layouts/update', formidable(), _controller.updateLayout)
+    .post('/layouts/status', _controller.updateStatus)
     .post('/layouts/create', formidable(), _controller.createLayout)
     .get('/layouts/find-one/:id', _controller.getLayout)
     .get('/layouts/:clientId', _controller.getLayouts)
