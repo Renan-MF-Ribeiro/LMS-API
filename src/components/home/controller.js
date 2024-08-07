@@ -362,9 +362,8 @@ const HomeController = {
                 totalCompletedTrails: completedTrails.length,
                 totalTrails,
                 percentageCompletedTrails,
-                inProgressTrails: inProgressTrails.filter(x=>x.notStarted == true),
+                inProgressTrails,
                 average,
-                lastTrail: inProgressTrails[0],
                 highestScoreTitle,
                 highestScoreUrl,
                 courses
