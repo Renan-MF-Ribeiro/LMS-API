@@ -397,46 +397,45 @@ module.exports = {
                     userLogin: { $eq: user.networkLogin },
                     ...(!onlyExpired
                         ? {
-                              $or: [
-                                  { expiredCompletion: { $exists: false } },
-                                  { expiredCompletion: { $eq: null } },
-                              ],
-                          }
+                            $or: [
+                                { expiredCompletion: { $exists: false } },
+                                { expiredCompletion: { $eq: null } },
+                            ],
+                        }
                         : {
-                              $and: [
-                                  { expiredCompletion: { $exists: true } },
-                                  { expiredCompletion: { $ne: null } },
-                              ],
-                          }),
+                            $and: [
+                                { expiredCompletion: { $exists: true } },
+                                { expiredCompletion: { $ne: null } },
+                            ],
+                        }),
                 });
                 for (const t of trails) {
-                    const { trail } = module.exports.processTrailTracking(t, allTrackingUser);
-
-                    if (trail.items.every(({ itemID }) => itemID?.completion === 1)) {
+                    const { trail } = module.exports.processTrailTracking(t, allTrackingUser, true);
+                    if (trail !== null && trail.items.every(({ itemID }) => itemID?.completion === 1)) {
                         completedTrails.push(trail);
-                    } else {
+                    } else if (trail !== null) {
                         let nextItem;
                         const item = trail.items.find(({ itemID }) => !itemID?.completion);
                         const progress = trail.items.filter(({ itemID }) => itemID?.completion === 1).length * 100 / trail.items.length
-                        if (item) {
-                            foundItem = await Item.findById(item.itemID);
+                        if (item !== null) {
+                            console.log(item)
+                            foundItem = await Item.findById(item?.itemID);
                             nextItem = {
-                                _id: foundItem._id,
-                                titleURL: foundItem.titleURL,
+                                _id: foundItem?._id,
+                                titleURL: foundItem?.titleURL,
                             };
                         }
-
                         inProgressTrails.push({
                             _id: trail._id,
                             title: trail.title,
                             thumbPath: trail.thumbPath,
                             titleURL: trail.titleURL,
                             nextItem,
-                            progress
+                            progress,
+                            notStarted: trail.notStarted,
                         });
                     }
                 }
-
                 resolve({ completedTrails, inProgressTrails });
             } catch (error) {
                 reject(error);
