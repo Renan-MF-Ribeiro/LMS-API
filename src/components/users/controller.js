@@ -45,7 +45,8 @@ const {
     returnDateSinceFirstLogin,
     persistUsers,
     findUsers,
-    processDashFilters
+    processDashFilters,
+    getLoginConfig
 } = require('./business');
 
 const {
@@ -56,6 +57,7 @@ const {
     getUserByToken,
     formatNumberCpf,
     removeAccents,
+    deepGet,
 } = require('../../utils/functions');
 
 const {
@@ -90,7 +92,6 @@ const { Group } = require('../groups/model');
 const {
     handleUserEligibilitiesGamification,
 } = require('../gamification/utils');
-const { ConfigLogin } = require('../theme/login-config/model')
 
 module.exports = {
     async create (req, res) {
@@ -529,8 +530,7 @@ module.exports = {
 
     async singleSignOn (req, res) {
         let user = {};
-        const { ssoForm } = await ConfigLogin.findOne({})
-            .sort({ createdAt: -1 })
+        const { ssoForm } = await getLoginConfig();
 
         const { token } = req.body;
         const secret = process.env.JWT_SECRET;
@@ -1800,11 +1800,38 @@ module.exports = {
         }
     },
 
-    async ssoCallback (req, res) {
-        const email =
-            req.samlUserObject
-                .httpSchemasXmlsoapOrgWs200505IdentityClaimsEmailaddress;
-        const token = await jwt.sign({ networkLogin: email }, process.env.JWT_SECRET);
+    async ssoCallback(req, res) {
+        const loginConfig = await getLoginConfig();
+
+        const claim = loginConfig?.ssoForm?.claim ?? 'networkLogin';
+        const claimKey = loginConfig?.ssoForm?.claimKey ?? 'no-claim-key-value';
+
+        const value = claimKey.split(',').reduce((acc, key) => {
+            if (acc !== null && acc !== undefined && acc !== '') return acc;
+
+            return deepGet(req.samlUserObject, key, null);
+        }, null);
+
+        if (value === undefined || value === null) {
+            console.log('ssoCallback req.samlUserObject', req.samlUserObject);
+
+            return _messages.internalServer(
+                res,
+                req,
+                'SSO não retornou o valor esperado',
+                {
+                    message: 'SSO não retornou o valor esperado',
+                    claim,
+                    claimKey,
+                    samlUserObject:
+                        req.samlUserObject
+                },
+                'users',
+                'ssoCallback'
+            );
+        }
+
+        const token = jwt.sign({ [claim]: value }, process.env.JWT_SECRET);
 
         res.redirect(
             302,
