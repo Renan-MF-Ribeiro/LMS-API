@@ -116,6 +116,7 @@ const TrailSchema = new mongoose.Schema(
         archivedAt: { type: Date, required: false, default: null },
         post: { type: Boolean, required: false, default: false },
         trailIdentifier: { type: Number, trim: true, unique: true },
+        trailCategory: { type: String, trim: true, required: false }
     },
     {
         strict: 'throw',
@@ -130,8 +131,8 @@ TrailSchema.index({
     description: 'text',
 });
 
-TrailSchema.pre('save', async function(next) {
-    const latestIdentifier = await Trail.findOne({}, 'trailIdentifier',  { sort: { trailIdentifier: -1 }});
+TrailSchema.pre('save', async function (next) {
+    const latestIdentifier = await Trail.findOne({}, 'trailIdentifier', { sort: { trailIdentifier: -1 } });
     const nextIdentifier = Number(latestIdentifier?.trailIdentifier || 0) + 1;
     this.trailIdentifier = nextIdentifier;
     next();
