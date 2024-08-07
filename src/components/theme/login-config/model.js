@@ -20,6 +20,7 @@ const ssoFormSchema = new Schema({
     callback_url: { type: String, },
     certifier: { type: String, },
     claim: { type: String, },
+    claimKey: { type: String, },
     enabled: { type: Number, default: 0 }
 });
 
