@@ -64,7 +64,15 @@ const TrackingController = {
             const { isChiefItem } = req.query
             delete req.body._id;
 
-            const tracking = await Tracking.findOne(q);
+            const filterQuery = {
+                ...q,
+                $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } },
+                ],
+            };
+
+            const tracking = await Tracking.findOne(filterQuery);
 
             delete req.body.migratedDate;
 
@@ -261,7 +269,7 @@ const TrackingController = {
             );
             delete req.body.optionalItems
             await TrackingModel.findOneAndUpdate(
-                q,
+                filterQuery,
                 { ...req.body, totalTime, isAllowedToSendXAPI, completionAt },
                 { upsert: true, omitUndefined: true }
             );
