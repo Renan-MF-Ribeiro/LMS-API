@@ -3,152 +3,126 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/docker
 
 trigger:
-    - main
-    - staging
-    # - development
+  - main
+  - staging
+  # - development
 
 resources:
-    - repo: self
+  - repo: self
 
 variables:
-    # Container registry service connection established during pipeline creation
-    name: 'magalu'
-    dockerRegistryServiceConnection: '75b53dae-446c-4ffe-92f5-6d232b74b91e'
-    stagingRunningPort1: '3159'
-    stagingRunningPort2: '3259'
-    prodRunningPort1: '3159'
-    prodRunningPort2: '3259'
-    imageRepositoryProd: 'magalu-backend-prod'
-    imageRepositoryStaging: 'magalu-backend-staging'
-    containerRegistry: 'happlearning2.azurecr.io'
-    dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
-    tag: 'latest'
+  # Container registry service connection established during pipeline creation
+  name: "happlearning-v2"
+  dockerRegistryServiceConnection: "75b53dae-446c-4ffe-92f5-6d232b74b91e"
+  stagingRunningPort: "3097"
+  prodRunningPort: "3097"
+  imageRepositoryProd: "happlearning-v2-backend-prod"
+  imageRepositoryStaging: "happlearning-v2-backend-staging"
+  containerRegistry: "happlearning2.azurecr.io"
+  dockerfilePath: "$(Build.SourcesDirectory)/Dockerfile"
+  tag: "latest"
 
-    # Agent VM image name
-    vmImageName: 'ubuntu-latest'
+  # Agent VM image name
+  vmImageName: "ubuntu-latest"
 
 stages:
-    - stage: Build
-      displayName: Build and push stage
-      jobs:
-          - job: Build
-            displayName: Build
-            pool:
-                vmImage: $(vmImageName)
-            steps:
-                - task: DownloadSecureFile@1
-                  displayName: 'Download secure file'
-                  name: dotenvstaging
-                  inputs:
-                      secureFile: '$(name).env.staging'
-                  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
-                - task: DownloadSecureFile@1
-                  displayName: 'Download secure file'
-                  name: dotenvprod
-                  inputs:
-                      secureFile: '$(name).env.prod'
-                  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
-                - task: CmdLine@2
-                  inputs:
-                      script: 'mv $(dotenvstaging.secureFilePath) $(System.DefaultWorkingDirectory)/.env'
-                  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
-                - task: CmdLine@2
-                  inputs:
-                      script: 'mv $(dotenvprod.secureFilePath) $(System.DefaultWorkingDirectory)/.env'
-                  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
-                - task: Docker@2
-                  displayName: Build and push an image to container registry
-                  inputs:
-                      command: buildAndPush
-                      repository: $(imageRepositoryStaging)
-                      dockerfile: $(dockerfilePath)
-                      containerRegistry: $(dockerRegistryServiceConnection)
-                      tags: |
-                          $(tag)
-                  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
-                - task: Docker@2
-                  displayName: Build and push an image to container registry
-                  inputs:
-                      command: buildAndPush
-                      repository: $(imageRepositoryProd)
-                      dockerfile: $(dockerfilePath)
-                      containerRegistry: $(dockerRegistryServiceConnection)
-                      tags: |
-                          $(tag)
-                  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
-    - stage: Deploy
-      displayName: Deploy to container instance
-      jobs:
-          - deployment: DeployStaging
-            displayName: Deploy staging
-            variables:
-                - group: DockerLogin
-            environment:
-                name: HomologVM_Test
-                resourceType: VirtualMachine
-            strategy:
-                runOnce:
-                    deploy:
-                        steps:
-                            - script: sudo docker login $(URL) -u $(user) -p $(password)
-                              displayName: Login azure ACR
-                            - script: sudo docker pull $(URL)/$(imageRepositoryStaging):$(tag)
-                              displayName: Pull latest image
-
-                            # Container 1
-                            - script: sudo docker stop $(imageRepositoryStaging) || true
-                              displayName: Stop current container
-                            - script: sudo docker rm $(imageRepositoryStaging) || true
-                              displayName: Remove current container
-                            - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryStaging) -p $(stagingRunningPort1):3000 --env NAMESPACE=PRIMARY $(URL)/$(imageRepositoryStaging):$(tag)
-                              displayName: Execute new container instance
-
-                              # Container 2
-                            - script: sudo docker stop $(imageRepositoryStaging)_2 || true
-                              displayName: Stop current container
-                            - script: sudo docker rm $(imageRepositoryStaging)_2 || true
-                              displayName: Remove current container
-                            - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryStaging)_2 -p $(stagingRunningPort2):3000 --env NAMESPACE=SECONDARY $(URL)/$(imageRepositoryStaging):$(tag)
-                              displayName: Execute new container instance
-
-                            # Container status
-                            - script: sudo docker ps
-                              displayName: Container status
+  - stage: Build
+    displayName: Build and push stage
+    jobs:
+      - job: Build
+        displayName: Build
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - task: DownloadSecureFile@1
+            displayName: "Download secure file"
+            name: dotenvstaging
+            inputs:
+              secureFile: "$(name).env.staging"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
-          - deployment: DeployProd
-            displayName: Deploy prod
-            variables:
-                - group: DockerLogin
-            environment:
-                name: Production
-                resourceType: VirtualMachine
-                tags: prod02
-            strategy:
-                runOnce:
-                    deploy:
-                        steps:
-                            - script: sudo docker login $(URL) -u $(user) -p $(password)
-                              displayName: Login azure ACR
-                            - script: sudo docker pull $(URL)/$(imageRepositoryProd):$(tag)
-                              displayName: Pull latest image
-
-                              # Container 1
-                            - script: sudo docker stop $(imageRepositoryProd) || true
-                              displayName: Stop running container 1
-                            - script: sudo docker rm $(imageRepositoryProd) || true
-                              displayName: Remove container 1
-                            - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryProd) -p $(prodRunningPort1):3000 --env NAMESPACE=PRIMARY $(URL)/$(imageRepositoryProd):$(tag)
-                              displayName: Execute new container instance 1
-
-                            # Container 2
-                            - script: sudo docker stop $(imageRepositoryProd)_2 || true
-                              displayName: Stop running container 2
-                            - script: sudo docker rm $(imageRepositoryProd)_2 || true
-                              displayName: Remove container 2
-                            - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryProd)_2 -p $(prodRunningPort2):3000 --env NAMESPACE=SECONDARY $(URL)/$(imageRepositoryProd):$(tag)
-                              displayName: Execute new container instance 2
-
-                            # Container status
-                            - script: sudo docker ps
-                              displayName: Container status
+          - task: DownloadSecureFile@1
+            displayName: "Download secure file"
+            name: dotenvprod
+            inputs:
+              secureFile: "$(name).env.prod"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+          - task: CmdLine@2
+            inputs:
+              script: "mv $(dotenvstaging.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
+          - task: CmdLine@2
+            inputs:
+              script: "mv $(dotenvprod.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+          - task: Docker@2
+            displayName: Build and push an image to container registry
+            inputs:
+              command: buildAndPush
+              repository: $(imageRepositoryStaging)
+              dockerfile: $(dockerfilePath)
+              containerRegistry: $(dockerRegistryServiceConnection)
+              tags: |
+                $(tag)
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
+          - task: Docker@2
+            displayName: Build and push an image to container registry
+            inputs:
+              command: buildAndPush
+              repository: $(imageRepositoryProd)
+              dockerfile: $(dockerfilePath)
+              containerRegistry: $(dockerRegistryServiceConnection)
+              tags: |
+                $(tag)
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  - stage: Deploy
+    displayName: Deploy to container instance
+    jobs:
+      - deployment: DeployStaging
+        displayName: Deploy staging
+        variables:
+        - group: DockerLogin
+        environment:
+          name: HomologVM_Test
+          resourceType: VirtualMachine
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - script: sudo docker login $(URL) -u $(user) -p $(password)
+                  displayName: Login azure ACR
+                - script: sudo docker pull $(URL)/$(imageRepositoryStaging):$(tag)
+                  displayName: Pull latest image
+                - script: sudo docker stop $(imageRepositoryStaging) || true
+                  displayName: Stop current container
+                - script: sudo docker rm $(imageRepositoryStaging) || true
+                  displayName: Remove current container
+                - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryStaging) -p $(stagingRunningPort):3000 $(URL)/$(imageRepositoryStaging):$(tag)
+                  displayName: Execute new container instance
+                - script: sudo docker ps
+                  displayName: Container status
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
+      - deployment: DeployProd
+        displayName: Deploy prod
+        variables:
+        - group: DockerLogin
+        environment:
+          name: Production
+          resourceType: VirtualMachine
+          tags: prod02
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - script: sudo docker login $(URL) -u $(user) -p $(password)
+                  displayName: Login azure ACR
+                - script: sudo docker pull $(URL)/$(imageRepositoryProd):$(tag)
+                  displayName: Pull latest image
+                - script: sudo docker stop $(imageRepositoryProd) || true
+                  displayName: Stop current container
+                - script: sudo docker rm $(imageRepositoryProd) || true
+                  displayName: Remove current container
+                - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryProd) -p $(prodRunningPort):3000 $(URL)/$(imageRepositoryProd):$(tag)
+                  displayName: Execute new container instance
+                - script: sudo docker ps
+                  displayName: Container status
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
