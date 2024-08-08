@@ -98,6 +98,10 @@ module.exports = {
 
             const allTrackingUser = await Tracking.find({
                 userLogin: { $eq: user.networkLogin },
+                $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } },
+                ],
             });
 
             for (let trail of filteredTrails) {
@@ -270,6 +274,10 @@ module.exports = {
             const tags = await getTagsElegiblesByToken(req);
             const allTrackingUser = await Tracking.find({
                 userLogin: { $eq: user.networkLogin },
+                $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } },
+                ],
             });
 
             const query = findValue.match(/^[0-9a-fA-F]{24}$/)

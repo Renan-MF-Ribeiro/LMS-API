@@ -655,6 +655,10 @@ module.exports = {
                     const allTrackingUser = await Tracking.find({
                         userLogin: { $eq: user.networkLogin },
                         item: { $in: items },
+                        $or: [
+                            { expiredCompletion: { $exists: false } },
+                            { expiredCompletion: { $eq: null } },
+                        ]
                     });
                     for (const tracking of allTrackingUser) {
                         if (tracking.completionAt !== null) {

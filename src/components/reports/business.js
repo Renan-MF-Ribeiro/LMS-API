@@ -15,6 +15,10 @@ module.exports = {
     async getLastConclusion() {
         const tracking = await Tracking.find({
             completion: 1,
+            $or: [
+                { expiredCompletion: { $exists: false } },
+                { expiredCompletion: { $eq: null } },
+            ],
         })
             .limit(1)
             .sort({ createdAt: -1 });

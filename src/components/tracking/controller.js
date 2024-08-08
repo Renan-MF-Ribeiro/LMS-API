@@ -327,7 +327,15 @@ const TrackingController = {
                 }
             }
 
-            const tracking = await Tracking.findOne({ item, userLogin });
+            const tracking = await Tracking.findOne({ 
+                item,
+                userLogin,
+                $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } },
+                ],
+            });
+
             if (tracking?.kind === 'FormTracking') {
                 const formItem = await Item.findById(item).lean()
                 for (let i = 0; i < formItem?.statements.length; i++) {
