@@ -1,16 +1,16 @@
 version: "3"
 services:
     happlearning-backend-staging:
-        container_name: happlearning-backend-staging
+        container_name: magalu-backend-staging
         build: .
-        image: happlearning.azurecr.io/happlearning-backend-staging
+        image: happlearning.azurecr.io/magalu-backend-staging
         restart: always
         ports:
             - "3000:3000"
     happlearning-backend-prod:
-        container_name: happlearning-backend-prod
+        container_name: magalu-backend-prod
         build: .
-        image: happlearning.azurecr.io/happlearning-backend-prod
+        image: happlearning.azurecr.io/magalu-backend-prod
         restart: always
         ports:
             - "3000:3000"

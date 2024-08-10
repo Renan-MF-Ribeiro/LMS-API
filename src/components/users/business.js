@@ -25,10 +25,15 @@ const kafka = require('../../utils/kafka');
 const { Trail } = require('../trails/model');
 const config = require('../../../config.json');
 const { Tracking } = require('../tracking/model');
+const { ConfigLogin } = require('../theme/login-config/model');
 const emailTemplate = config.messenger.emailTemplate;
 require('dotenv').config();
 
 module.exports = {
+    async getLoginConfig() {
+        return await ConfigLogin.findOne().sort({ createdAt: -1 })
+    },
+    
     async findUsers(req, { onboarding }) {
         const { skip, limit } = pagination(req);
         const { order, sort } = ordernation(req);
@@ -650,6 +655,10 @@ module.exports = {
                     const allTrackingUser = await Tracking.find({
                         userLogin: { $eq: user.networkLogin },
                         item: { $in: items },
+                        $or: [
+                            { expiredCompletion: { $exists: false } },
+                            { expiredCompletion: { $eq: null } },
+                        ]
                     });
                     for (const tracking of allTrackingUser) {
                         if (tracking.completionAt !== null) {

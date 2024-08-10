@@ -1,6 +1,6 @@
 const { User, groups } = require('../users/model');
 const mongoose = require('mongoose');
-
+const config = require('../../../config.json')
 const {
     CourseModel,
     ClassModel,
@@ -13,7 +13,7 @@ const {
     UsersWithProcessedTags,
     WaitListModel
 } = require('./model');
-
+const moment = require('moment-timezone');
 const { DOMAIN, AZURE_BLOB_URL } = process.env;
 
 const { azureBlob } = require('../../utils/files');
@@ -21,6 +21,11 @@ const { azureBlob } = require('../../utils/files');
 const { Group, InstructorGroup } = require('../groups/model');
 
 const { Trail } = require('../trails/model');
+
+const {
+    sendMessageToKafka,
+    processTargetUsers,
+} = require('../new-messages/business');
 
 const { internalServer, success, badRequest } = require('../../utils/messages');
 
@@ -50,6 +55,7 @@ const {
     getTagsElegiblesByToken,
     getTagsElegibles,
 } = require('../sections/business');
+const { default: axios } = require('axios');
 
 module.exports = {
     async createCourse (req, res) {
@@ -435,8 +441,8 @@ module.exports = {
                 users,
                 dateApplicationInitial,
                 dateApplicationFinal,
-                instructor,
-                instructorTemp,
+                minister,
+                requester,
                 qrCode,
                 qrCodeSelfRegistration,
                 isSelfRegistrationEnabled,
@@ -446,6 +452,7 @@ module.exports = {
                 name
             } = req.fields;
             let flagDate = true;
+
             const costsArray = costs ? JSON.parse(costs) : null;
             if (dateApplicationInitial || dateApplicationFinal) {
                 if (dateApplicationInitial && dateApplicationFinal === '') {
@@ -476,10 +483,11 @@ module.exports = {
                 const files = req.files;
                 const arrMaterials = [];
                 const trails = [];
-                let namesCourse = '';
-                let canCreateClass = true;
                 let user = await getUserByToken(req);
                 let instructorID = user.id;
+                let namesCourse = '';
+                let canCreateClass = true;
+
                 const course = await CourseModel.findById(courseID).populate({
                     path: 'groups',
                     select: 'trails',
@@ -528,16 +536,33 @@ module.exports = {
                                 arrMaterials.push(materialID);
                             }
                         }
+
+                        const newUsers = JSON.parse(users).map((user) => {
+                            if (user.presence) {
+                                const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+                                user.createdAt = moment().utc().format()
+                                return ({
+                                    ...user,
+                                    ip,
+                                    presenceAt: moment().utc().format()
+                                })
+                            } else {
+                                user.presenceAt = null
+                            }
+
+                            return user
+                        })
                         const createdClass = await ClassModel.create({
                             courseID,
-                            users: JSON.parse(users),
+                            users: newUsers,
                             instructor: instructorID,
+                            requester,
+                            minister,
                             qrcode: req.body.qrCode,
                             materials: arrMaterials,
                             dateApplicationInitial,
                             dateApplicationFinal,
                             canCreateClass,
-                            instructorTemp,
                             qrcode: qrCode,
                             qrCodeSelfRegistration: qrCodeSelfRegistration,
                             isSelfRegistrationEnabled:
@@ -548,6 +573,47 @@ module.exports = {
                             name
                         });
 
+                        const classesFromCourse = await ClassModel.find({
+                            courseID
+                        })
+
+
+
+                        const arrUserId = []
+                        for (let user of JSON.parse(users)) {
+                            arrUserId.push(user._id)
+                            const removalPromises = classesFromCourse.map(classFromCourse => {
+                                const inClass = classFromCourse.users.some((u) => u._id == user._id || u.userID == user._id)
+
+                                if (classFromCourse._id.equals(createdClass._id) || !inClass) {
+                                    return Promise.resolve();
+                                }
+
+                                return ClassModel.findOneAndUpdate(
+                                    { _id: classFromCourse._id },
+                                    { $pull: { users: { _id: user._id, presence: false } } }
+                                );
+                            });
+
+                            await Promise.all(removalPromises);
+                        }
+
+                        const message = {
+                            category: 'notify',
+                            communication: ['notification', 'email'],
+                            mode: 'manual',
+                            target: {
+                                type: 'users',
+                                value: {
+                                    users: arrUserId,
+                                },
+                            },
+                            text: `Você está na turma presencial ${name}!\n`,
+                            textHtml: `<p>Você está na turma presencial ${name}!<p>`,
+                            thumbnail: config.messenger.emailTemplate.thumbnail,
+                            title: `Treinamentos Presenciais: ${name}`,
+                        }
+                        await createMessagesFromBackend(message)
 
                         success(res, req, 'Criado com sucesso!');
                         return;
@@ -584,8 +650,8 @@ module.exports = {
                 users,
                 classID,
                 qrCode,
-                instructor,
-                instructorTemp,
+                minister,
+                requester,
                 dateApplicationInitial,
                 dateApplicationFinal,
                 qrCodeSelfRegistration,
@@ -598,7 +664,6 @@ module.exports = {
             const materials = JSON.parse(req.fields.materials);
             const costsArray = JSON.parse(costs);
             const files = req.files;
-            const user = await getUserByToken(req);
             const currentMaterials = await ClassModel.findById(classID);
             const arrMaterials = currentMaterials.materials;
             let flagDate = true;
@@ -622,10 +687,9 @@ module.exports = {
                     '/createClass'
                 );
             } else {
-                if (!instructor) {
-                    instructor = user._id;
-                }
 
+                let user = await getUserByToken(req);
+                let instructorID = user.id;
                 const course = await CourseModel.findById(courseID).populate({
                     path: 'groups',
                     select: 'trails',
@@ -676,12 +740,28 @@ module.exports = {
                         }
                     }
 
+                    const newUsers = JSON.parse(users).map((user) => {
+                        if (user.presence) {
+                            const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+                            user.createdAt = moment().utc().format()
+                            return ({
+                                ...user,
+                                ip,
+                                presenceAt: moment().utc().format()
+                            })
+                        } else {
+                            user.presenceAt = null
+                        }
+
+                        return user
+                    })
+
                     await ClassModel.findByIdAndUpdate(classID, {
                         courseID,
-                        users: JSON.parse(users),
-                        instructor,
-                        instructorTemp,
-                        // instructor: user._id,
+                        users: newUsers,
+                        instructor: instructorID,
+                        requester,
+                        minister,
                         materials: arrMaterials,
                         qrcode: qrCode,
                         qrCodeSelfRegistration: qrCodeSelfRegistration,
@@ -693,6 +773,45 @@ module.exports = {
                         costs: costsArray,
                         name
                     });
+
+                    const classesFromCourse = await ClassModel.find({
+                        courseID
+                    })
+                    const arrUserId = []
+                    for (let user of JSON.parse(users)) {
+                        arrUserId.push(user._id)
+                        const removalPromises = classesFromCourse.map(classFromCourse => {
+                            const inClass = classFromCourse.users.some((u) => u._id == user._id || u.userID == user._id)
+
+                            if (classFromCourse._id.equals(classID) || !inClass) {
+                                return Promise.resolve();
+                            }
+
+                            return ClassModel.findOneAndUpdate(
+                                { _id: classFromCourse._id },
+                                { $pull: { users: { _id: user._id, presence: false } } }
+                            );
+                        });
+
+                        await Promise.all(removalPromises);
+                    }
+
+                    const message = {
+                        category: 'notify',
+                        communication: ['notification', 'email'],
+                        mode: 'manual',
+                        target: {
+                            type: 'users',
+                            value: {
+                                users: arrUserId,
+                            },
+                        },
+                        text: `Você está na turma presencial ${name}!\n`,
+                        textHtml: `<p>Você está na turma presencial ${name}!<p>`,
+                        thumbnail: config.messenger.emailTemplate.thumbnail,
+                        title: `Treinamentos Presenciais: ${name}`,
+                    }
+                    await createMessagesFromBackend(message)
 
                     success(res, req, 'Atualizado com sucesso!');
                 } else {
@@ -756,7 +875,6 @@ module.exports = {
             const course = await CourseModel.findById(courseID)
                 .populate('materials')
                 .populate('program', 'title');
-
             const classUsers = await getClassByID(classID);
 
 
@@ -768,6 +886,7 @@ module.exports = {
                 classUsers,
             });
         } catch (error) {
+            console.error(error)
             internalServer(
                 res,
                 req,
@@ -775,6 +894,55 @@ module.exports = {
                 'Erro interno no servidor',
                 'courses',
                 '/appliedCourse'
+            );
+        }
+    },
+
+    async printAttendanceList(req, res) {
+        try {
+            const { courseId, classId } = req.params;
+            const onlyPresenceFlag = req.query?.onlyPresence !== undefined;
+            
+            const course = await CourseModel.findById(courseId);
+            const classUsers = await getClassByID(classId);
+
+            const { data } = await axios.post(
+                `${process.env.API_PDF_PRINTER}/attendance-list`,
+                {
+                    courseName: course.title ?? ' ',
+                    startDate: course.dateInitial ? moment(course.dateInitial).locale('pt-BR').format('DD [de] MMMM [de] YYYY - HH:mm[h]') : ' ',
+                    endDate: course.dateFinal ? moment(course.dateFinal).locale('pt-BR').format('DD [de] MMMM [de] YYYY - HH:mm[h]') : ' ',
+                    instructor: classUsers.instructor?.name ?? ' ',
+                    attendances: classUsers.users
+                        .filter(user => onlyPresenceFlag ? !!user.presence : true)
+                        .map(user => ({
+                            userName: user.name ?? ' ',
+                            networkLogin: user.registration ?? ' ',
+                            attendance: user.presence ?? false,
+                            attendanceDate: user.presenceAt ? moment(user.presenceAt).format('DD/MM/YYYY') : ' ',
+                            attendanceType: user.origin ? (user.origin === 'instructor' ? 'Instrutor' : 'QR Code') : ' ',
+                        }))
+                },
+                {
+                    headers: { Authorization: req.headers.authorization },
+                    responseType: 'arraybuffer'
+                }
+            )
+
+            const file = Buffer.from(data, 'binary');
+
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename=${course.title}.pdf`);
+            res.send(file)
+        } catch (error) {
+            console.error(error)
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'courses',
+                '/print-attendance-list'
             );
         }
     },
@@ -1124,7 +1292,7 @@ module.exports = {
         try {
             const { body } = req;
             const user = await getUserByToken(req);
-
+            const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
             var userID = String(user._id);
 
             const course = await ClassModel.findOneAndUpdate(
@@ -1137,7 +1305,9 @@ module.exports = {
                         'users.$.presence': true,
                         'users.$.device': body.browser,
                         'users.$.browser': body.device,
-                        'users.$.origin': 'QRCODE'
+                        'users.$.origin': 'QRCODE',
+                        'users.$.presenceAt': moment().utc().format(),
+                        'users.$.ip ': ip,
                     },
                 },
                 { new: true }
@@ -1162,27 +1332,70 @@ module.exports = {
             const user = await getUserByToken(req);
 
             var userID = String(user._id);
-            console.log(body.classesID)
 
-            const course = await ClassModel.findOneAndUpdate(
+            let course = null
+            course = await ClassModel.findOneAndUpdate(
                 {
-                    _id: body.classesID,
-                    $or: [{ 'users._id': { $ne: userID } }, { 'users.userID': { $ne: userID } }]  // Verifica se o usuário não está presente no array
+                    _id: body.classesID, 'users._id': { $ne: userID }, 'users.userID': { $ne: userID }
+
                 },
                 {
-                    $push: {
+                    $addToSet: {
                         users: {
                             _id: userID,
                             presence: false,
                             grades: 0,
                             name: user.name,
-                            registration: user.registration
+                            registration: user.registration,
+                            createdAt: moment().utc().format(),
+                            origin: 'user'
                         }
                     }
                 },
                 { new: true }
             );
 
+            if (!course) {
+                course = await ClassModel.findOne({ _id: body.classesID })
+            }
+
+            const classesFromCourse = await ClassModel.find({
+                courseID: course.courseID
+            })
+
+            const removalPromises = classesFromCourse.map(classFromCourse => {
+                const inClass = classFromCourse.users.some((u) => u._id == user._id || u.userID == user._id)
+
+                if (classFromCourse._id.equals(body.classesID) || !inClass) {
+                    return Promise.resolve();
+                }
+                //SÓ REMOVER SE PRESENCE FOR FALSE
+
+                return ClassModel.findOneAndUpdate(
+                    { _id: classFromCourse._id },
+                    { $pull: { users: { _id: userID, presence: false } } }
+                );
+            });
+
+            await Promise.all(removalPromises);
+
+
+            const message = {
+                category: 'notify',
+                communication: ['notification', 'email'],
+                mode: 'manual',
+                target: {
+                    type: 'users',
+                    value: {
+                        users: [userID],
+                    },
+                },
+                text: `Você está na turma presencial ${course.name}!\n`,
+                textHtml: `<p>Você está na turma presencial ${course.name}!<p>`,
+                thumbnail: config.messenger.emailTemplate.thumbnail,
+                title: `Treinamentos Presenciais: ${course.name}`,
+            }
+            await createMessagesFromBackend(message)
 
             success(res, req, course);
         } catch (error) {
@@ -1192,10 +1405,11 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'courses',
-                '/getCourseByQrCode'
+                '/list-join'
             );
         }
     },
+
     async getInstructorByInstructorGroup (req, res) {
         try {
             const { params } = req;
@@ -1559,3 +1773,21 @@ module.exports = {
         }
     },
 };
+
+async function createMessagesFromBackend (body) {
+    try {
+        const campaign = body;
+        const target = campaign.target;
+        let targetUsers = [];
+
+        if (!target.value.user) {
+            targetUsers = await processTargetUsers(target, campaign.category);
+        } else {
+            targetUsers.push({ ...target.value.user });
+        }
+
+        await sendMessageToKafka(campaign, targetUsers);
+    } catch (error) {
+        console.log(error);
+    }
+}

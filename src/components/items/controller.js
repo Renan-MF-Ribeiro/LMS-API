@@ -1343,12 +1343,6 @@ const ItemController = {
                         },
                         { title: { $regex: searchBy, $options: 'i' } },
                         { notes: { $regex: searchBy, $options: 'i' } },
-                        {
-                            courseIdentifier: {
-                                $regex: searchBy,
-                                $options: 'i',
-                            },
-                        },
                         { alias: { $regex: searchBy, $options: 'i' } },
                         { keywords: { $regex: searchBy, $options: 'i' } },
                         {
@@ -1369,7 +1363,7 @@ const ItemController = {
             let total = await Item.find(query).count();
 
             let itens = await Item.find(query)
-                .populate('idEvaluation', ['description'])
+                .populate('idEvaluation', ['description', 'duration'])
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
                 .sort({ [order]: sort });
@@ -1502,6 +1496,10 @@ const ItemController = {
             let tracking = await Tracking.findOne({
                 item: item._id,
                 userLogin: user.networkLogin,
+                $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } }
+                ]
             });
 
             if (tracking?.kind == 'ExamTracking') {

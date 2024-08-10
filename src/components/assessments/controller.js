@@ -50,7 +50,11 @@ module.exports = {
 
             const timeDuration = await HistoricEvaluation.find({
                 user: { $eq: user._id },
-                idEvaluation: { $eq: idEvaluation }
+                idEvaluation: { $eq: idEvaluation },
+                $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } },
+                ]
             })
                 .sort({ [order]: sort })
 
@@ -105,7 +109,15 @@ module.exports = {
             const { id } = req.params
             const { userId } = req.query
             const { idEvaluation, passingScore } = await Item.findOne({ _id: { $eq: id } })
-            const historicEvaluation = await HistoricEvaluation.find({ user: { $eq: userId }, idEvaluation: { $eq: idEvaluation }, item: { $eq: id } }).populate({
+            const historicEvaluation = await HistoricEvaluation.find({ 
+                user: { $eq: userId }, 
+                idEvaluation: { $eq: idEvaluation }, 
+                item: { $eq: id },
+                $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } },
+                ]
+            }).populate({
                 path: 'questions',
                 populate: {
                     path: 'alternatives',
@@ -474,7 +486,14 @@ module.exports = {
             result.title = title
 
 
-            const tracking = await Tracking.findOne({ item: itemID, userLogin: user.networkLogin });
+            const tracking = await Tracking.findOne({ 
+                item: itemID,
+                userLogin: user.networkLogin,
+                $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } },
+                ]
+            });
             await processExamTracking(historic, passingScore, attempts, tracking)
 
             _messages.success(res, req, result)

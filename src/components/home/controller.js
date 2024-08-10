@@ -453,6 +453,7 @@ const HomeController = {
                 endDate: { $gt: getDateTodayWithoutHours() },
             }).populate('items.itemID');
             const { completedTrails } = await handleStudentTrails(user, elegibleTrails, true);
+            
             let certificates = await returnCertificates(completedTrails, user);
 
             if (searchBy) {

@@ -80,7 +80,8 @@ const ClassSchema = new mongoose.Schema(
         courseID: { type: 'ObjectId', ref: 'course', required: true },
         users: { type: Array, required: true },
         instructor: { type: 'ObjectId', ref: 'users', required: false },
-        instructorTemp: { type: String, required: false },
+        minister: { type: String, required: true },
+        requester: { type: String, required: false },
         materials: {
             type: [{ type: 'ObjectId', ref: 'material' }],
             default: [],

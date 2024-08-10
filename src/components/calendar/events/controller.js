@@ -71,6 +71,7 @@ const EventsController = {
                                 dateApplicationFinal: c.dateApplicationFinal,
                                 location: c.location,
                                 status: c.status,
+                                courseID: course._id
                             }
                         }
                         events.push(courseEvent)
@@ -185,8 +186,8 @@ async function getCoursesElegible(start, end, user, tags) {
     return new Promise(async (resolve, reject) => {
         try {
             let elegibleCourses = await CourseModel.find({
-                dateInitial: { $gte: start },
-                dateFinal: { $lte: end },
+                // dateInitial: { $gte: start },
+                // dateFinal: { $lte: end },    
                 tags: { $in: tags },
                 deleted: { $eq: 0 },
                 status: { $eq: 1 },
@@ -203,7 +204,6 @@ async function getCoursesElegible(start, end, user, tags) {
                     instructor: 1,
                 })
                 .lean();
-
             const coursePromises = elegibleCourses.map(async (course) => {
                 const alreadyJoined = await WaitListModel.findOne({
                     userID: user._id,
@@ -319,7 +319,7 @@ function getClassStatus(classFromCourse, inClass, presence) {
 
 async function getAllExpDatesByUser(start, end, user, token) {
     try {
-        const uri = `${process.env.API_CERTIFIER}/certificates/find/${user.networkLogin}`;
+        const uri = `${process.env.API_CERTIFIER}/certificates/find/${user.networkLogin}?clientId=${process.env.CLIENT_ID}`;
         const { data } = await axios.get(uri, { headers: { Authorization: 'Bearer ' + token } });
         const events = []
         for (let certificate of data) {

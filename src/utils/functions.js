@@ -195,6 +195,8 @@ module.exports = {
                     ip: req.ip,
                     login: req.body.login ? req.body.login : userLogin,
                     groups: namesGroups,
+                    deviceType: req.body.deviceType ? req.body.deviceType : null,
+                    browserDetails: req.body.browserDetails ? req.body.browserDetails : null
                 });
                 resolve();
             } catch (error) {
@@ -395,45 +397,46 @@ module.exports = {
                     userLogin: { $eq: user.networkLogin },
                     ...(!onlyExpired
                         ? {
-                            $or: [
-                                { expiredCompletion: { $exists: false } },
-                                { expiredCompletion: { $eq: null } },
-                            ],
-                        }
+                              $or: [
+                                  { expiredCompletion: { $exists: false } },
+                                  { expiredCompletion: { $eq: null } },
+                              ],
+                          }
                         : {
-                            $and: [
-                                { expiredCompletion: { $exists: true } },
-                                { expiredCompletion: { $ne: null } },
-                            ],
-                        }),
+                              $and: [
+                                  { expiredCompletion: { $exists: true } },
+                                  { expiredCompletion: { $ne: null } },
+                              ],
+                          }),
                 });
                 for (const t of trails) {
-                    const { trail } = module.exports.processTrailTracking(t, allTrackingUser, true);
-                    if (trail !== null && trail.items.every(({ itemID }) => itemID?.completion === 1)) {
+                    const { trail } = module.exports.processTrailTracking(t, allTrackingUser);
+
+                    if (trail.items.every(({ itemID }) => itemID?.completion === 1)) {
                         completedTrails.push(trail);
-                    } else if (trail !== null) {
+                    } else {
                         let nextItem;
                         const item = trail.items.find(({ itemID }) => !itemID?.completion);
                         const progress = trail.items.filter(({ itemID }) => itemID?.completion === 1).length * 100 / trail.items.length
-                        if (item !== null) {
-                            console.log(item)
+                        if (item) {
                             foundItem = await Item.findById(item?.itemID);
                             nextItem = {
                                 _id: foundItem?._id,
                                 titleURL: foundItem?.titleURL,
                             };
                         }
+
                         inProgressTrails.push({
                             _id: trail._id,
                             title: trail.title,
                             thumbPath: trail.thumbPath,
                             titleURL: trail.titleURL,
                             nextItem,
-                            progress,
-                            notStarted: trail.notStarted,
+                            progress
                         });
                     }
                 }
+
                 resolve({ completedTrails, inProgressTrails });
             } catch (error) {
                 reject(error);
@@ -668,6 +671,18 @@ module.exports = {
             },
             (profile, done) => done(null, profile),
         )
+    },
+
+    deepGet(obj, query, defaultVal) {
+        query = Array.isArray(query) ? query : query.replace(/(\[(\d)\])/g, '.$2').replace(/^\./, '').split('.');
+        if (!(query[0] in obj)) {
+            return defaultVal;
+        }
+        obj = obj[query[0]];
+        if (obj && query.length > 1) {
+            return deepGet(obj, query.slice(1), defaultVal);
+        }
+        return obj;
     }
 };
 

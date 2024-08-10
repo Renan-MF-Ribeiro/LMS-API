@@ -45,7 +45,8 @@ const {
     returnDateSinceFirstLogin,
     persistUsers,
     findUsers,
-    processDashFilters
+    processDashFilters,
+    getLoginConfig
 } = require('./business');
 
 const {
@@ -56,6 +57,7 @@ const {
     getUserByToken,
     formatNumberCpf,
     removeAccents,
+    deepGet,
 } = require('../../utils/functions');
 
 const {
@@ -90,7 +92,6 @@ const { Group } = require('../groups/model');
 const {
     handleUserEligibilitiesGamification,
 } = require('../gamification/utils');
-const { ConfigLogin } = require('../theme/login-config/model')
 
 module.exports = {
     async create (req, res) {
@@ -276,44 +277,6 @@ module.exports = {
     async ldapSignIn (req, res) {
         let user = {};
 
-        let userMap = [
-            { description: 'LOGIN', value: 'networkLogin' },
-            { description: 'SENHA', value: 'password' },
-            { description: 'DATA_CRIACAO', value: 'createDate' },
-            { description: 'NOME', value: 'name' },
-            { description: 'EMAIL', value: 'email' },
-            { description: 'MATRICULA', value: 'registration' },
-            { description: 'STATUS', value: 'status' },
-            { description: 'CPF', value: 'cpf' },
-            { description: 'DATA_NASC', value: 'birthDate' },
-            { description: 'IDENTIDADE_DE_GENERO', value: 'genderIdentity' },
-            { description: 'PAIS', value: 'country' },
-            { description: 'CIDADE', value: 'city' },
-            { description: 'ESTADO', value: 'state' },
-            { description: 'EMPRESA', value: 'company' },
-            { description: 'ADMISSAO', value: 'admission' },
-            { description: 'LOCALIDADE', value: 'locality' },
-            { description: 'CARGO', value: 'office' },
-            { description: 'NIVEL_HIERARQUICO', value: 'hierarchicalLevel' },
-            { description: 'TAREFA', value: 'task' },
-            { description: 'CENTRO_DE_CUSTO', value: 'costCenter' },
-            { description: 'DESCRICAO_CENTRO_DE_CUSTO', value: 'costCenterDescription' },
-            { description: 'LOJA', value: 'store' },
-            { description: 'IDENTIFICACAO_LOJA', value: 'storeCode' },
-            { description: 'GRUPO_LOJA', value: 'storeGroup' },
-            { description: 'GRUPO_LOJA_DESCRICAO', value: 'storeGroupDescription' },
-            { description: 'DISTRITAL', value: 'plant' },
-            { description: 'GESTOR', value: 'manager' },
-            { description: 'MATRICULA_GESTOR', value: 'managerRegistration' },
-            { description: 'NOME_GESTOR', value: 'managerName' },
-            { description: 'AREA', value: 'area' },
-            { description: 'DEPARTAMENTO', value: 'department' },
-            { description: 'VP', value: 'vp' },
-            { description: 'NEGOCIO', value: 'business' },
-            { description: 'OPCIONAL_ELEGIBILIDADE1', value: 'optionalEligibility1' },
-            { description: 'OPCIONAL_ELEGIBILIDADE2', value: 'optionalEligibility2' },
-            { description: 'OPCIONAL_ELEGIBILIDADE3', value: 'optionalEligibility3' }
-        ]
         try {
             const { login, password } = req.body;
 
@@ -567,8 +530,7 @@ module.exports = {
 
     async singleSignOn (req, res) {
         let user = {};
-        const { ssoForm } = await ConfigLogin.findOne({})
-            .sort({ createdAt: -1 })
+        const { ssoForm } = await getLoginConfig();
 
         const { token } = req.body;
         const secret = process.env.JWT_SECRET;
@@ -1838,11 +1800,38 @@ module.exports = {
         }
     },
 
-    async ssoCallback (req, res) {
-        const email =
-            req.samlUserObject
-                .httpSchemasXmlsoapOrgWs200505IdentityClaimsEmailaddress;
-        const token = await jwt.sign({ networkLogin: email }, process.env.JWT_SECRET);
+    async ssoCallback(req, res) {
+        const loginConfig = await getLoginConfig();
+
+        const claim = loginConfig?.ssoForm?.claim ?? 'networkLogin';
+        const claimKey = loginConfig?.ssoForm?.claimKey ?? 'no-claim-key-value';
+
+        const value = claimKey.split(',').reduce((acc, key) => {
+            if (acc !== null && acc !== undefined && acc !== '') return acc;
+
+            return deepGet(req.samlUserObject, key, null);
+        }, null);
+
+        if (value === undefined || value === null) {
+            console.log('ssoCallback req.samlUserObject', req.samlUserObject);
+
+            return _messages.internalServer(
+                res,
+                req,
+                'SSO não retornou o valor esperado',
+                {
+                    message: 'SSO não retornou o valor esperado',
+                    claim,
+                    claimKey,
+                    samlUserObject:
+                        req.samlUserObject
+                },
+                'users',
+                'ssoCallback'
+            );
+        }
+
+        const token = jwt.sign({ [claim]: value }, process.env.JWT_SECRET);
 
         res.redirect(
             302,

@@ -94,7 +94,7 @@ module.exports = {
                         .populate({
                             path: 'items.itemID',
                             match: matchObj,
-                            select: { '_id': 1, 'title': 1, 'contentPath': 1, 'durationHours': 1, 'thumbPath': 1, 'titleURL': 1, 'bannerPath': 1, 'startDate': 1, 'endDate': 1, 'highlighted': 1, 'description': 1, "format": 1, 'passingScore': 1 },
+                            select: { '_id': 1, 'title': 1, 'contentPath': 1, 'durationHours': 1, 'thumbPath': 1, 'titleURL': 1, 'bannerPath': 1, 'startDate': 1, 'endDate': 1, 'highlighted': 1, 'description': 1, "format": 1, 'passingScore': 1, 'enabled': 1 },
                             populate: {
                                 path: 'idEvaluation',
                                 select: 'description',
@@ -125,6 +125,15 @@ module.exports = {
                             supportMaterialEnabled = true;
                         }
 
+                        let galleryEnabled = false;
+                        const filteredGallery =
+                            trail.gallery.filter(
+                                (x) => x.deleted === false
+                            );
+                        if (filteredGallery.length > 0) {
+                            galleryEnabled = true;
+                        }
+
                         if (socialConfig) {
                             const trailTags = trail.tags?.map((tag) => tag.value)
                             for (const tag of socialConfig.tagsLists.allowed) {
@@ -188,6 +197,7 @@ module.exports = {
                             innerTextBanner: trail.innerTextBanner,
                             durationHours: trail.durationHours,
                             post: trail.post,
+                            gallery: galleryEnabled
                         });
                     }
                 } else {
@@ -204,6 +214,7 @@ module.exports = {
                                     chief: i.chief,
                                     optional: i.optional,
                                     afterSeparator: i.afterSeparator,
+                                    enabled: i.enabled,
                                 });
                             }
                         }
@@ -221,6 +232,15 @@ module.exports = {
                             supportMaterialEnabled = true;
                         }
 
+                        let galleryEnabled = false;
+                        const filteredGallery =
+                            trail.gallery.filter(
+                                (x) => x.deleted === false
+                            );
+                        if (filteredGallery.length > 0) {
+                            galleryEnabled = true;
+                        }
+
                         if (socialConfig) {
                             const trailTags = trail.tags?.map((tag) => tag.value)
                             for (const tag of socialConfig.tagsLists.allowed) {
@@ -284,6 +304,7 @@ module.exports = {
                             innerTextBanner: trail.innerTextBanner,
                             durationHours: trail.durationHours,
                             post: trail.post,
+                            gallery: galleryEnabled
                         });
                     }
                 }

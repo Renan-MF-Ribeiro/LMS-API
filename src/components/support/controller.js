@@ -1,12 +1,14 @@
 const axios = require('axios');
 const fs = require('fs');
 const FormData = require('form-data');
+const { getUserByToken } = require('../../utils/functions');
 
 const _messages = require('../../utils/messages');
 
 module.exports = {
     async create(req, res) {
         try {
+            const user = await getUserByToken(req)
             const form = new FormData();
 
             const reqPayload = JSON.parse(req.fields.payload);
@@ -16,9 +18,9 @@ module.exports = {
                 },
                 clientName: process.env.COMPOSE_PROJECT_NAME,
             };
+            payload.ticket.requester._id = user._id
             const strPayload = JSON.stringify(payload);
             form.append('payload', strPayload);
-
             if (Object.entries(req.files).length > 0) {
                 for (const [_fileKey, file] of Object.entries(req.files)) {
                     const fieldName = file.name.split('.')[0];
@@ -79,10 +81,10 @@ module.exports = {
     async getZendeskTickets(req, res) {
         try {
             const { query } = req;
-            const url = `${process.env.API_ZENDESK}/support/ticket/${process.env.CLIENT_ID}`;
+            const user = await getUserByToken(req)
+            const url = `${process.env.API_ZENDESK}/support/tickets/${process.env.CLIENT_ID}/${user._id}`;
 
             const headers = {
-                ...form.getHeaders(),
                 Authorization: process.env.API_KEY_ZENDESK,
             };
 
