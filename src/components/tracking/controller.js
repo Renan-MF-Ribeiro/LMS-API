@@ -648,6 +648,10 @@ const TrackingController = {
                     networkLogin: activity.userLogin,
                 });
 
+                const trails = await Trail.find({
+                    "items.itemID": activity.item._id
+                });
+
                 const activityObj = {
                     trackingId: activity._id,
                     itemId: activity.item ? activity.item._id : null,
@@ -661,6 +665,7 @@ const TrackingController = {
                     passingScore: activity.item.passingScore,
                     score: activity.score,
                     reviewerComment: activity.reviewerComment,
+                    trails: trails.map(trail => trail.title).join()
                 };
                 activities.push(activityObj);
             }
@@ -718,6 +723,9 @@ const TrackingController = {
                 const user = await User.findOne({
                     networkLogin: activity.userLogin,
                 });
+                const trails = await Trail.find({
+                    "items.itemID": activity.item._id
+                });
                 const activityObj = {
                     trackingId: activity._id,
                     itemId: activity.item ? activity.item._id : null,
@@ -730,6 +738,7 @@ const TrackingController = {
                     passingScore: activity.passingScore,
                     score: activity.score,
                     reviewerComment: activity.reviewerComment,
+                    trails: trails.map(trail => trail.title).join()
                 };
                 activities.push(activityObj);
             }
