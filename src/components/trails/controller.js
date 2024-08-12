@@ -635,6 +635,7 @@ module.exports = {
     async duplicate (req, res) {
         try {
             const body = req.body;
+            delete body?.descriptionView;
 
             const docClone = new Trail(body);
             await docClone.save();
