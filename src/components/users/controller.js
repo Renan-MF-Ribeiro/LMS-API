@@ -94,7 +94,7 @@ const {
 } = require('../gamification/utils');
 
 module.exports = {
-    async create (req, res) {
+    async create(req, res) {
         try {
             const { registration, cpf } = req.body;
 
@@ -161,7 +161,7 @@ module.exports = {
         }
     },
 
-    async findById (req, res) {
+    async findById(req, res) {
         try {
             const _id = req.params.userId;
             const user = await User.findOne({ _id });
@@ -177,7 +177,7 @@ module.exports = {
             );
         }
     },
-    async signup (req, res) {
+    async signup(req, res) {
 
         //FUNÇÃO COMENTADA POR MOTIVOS DE SEGURANÇA
         //REATIVAR APÓS UTILIZAÇÃO DO AMBIENTE PELA EQUIPE COMERCIAL
@@ -244,7 +244,7 @@ module.exports = {
         // }
     },
 
-    async activateUser (req, res) {
+    async activateUser(req, res) {
         try {
             const { token, email } = req.body;
             const isUser = await bcrypt.compare(email, token);
@@ -274,7 +274,7 @@ module.exports = {
         }
     },
 
-    async ldapSignIn (req, res) {
+    async ldapSignIn(req, res) {
         let user = {};
 
         try {
@@ -490,7 +490,7 @@ module.exports = {
         }
     },
 
-    async feedbackElegible (req, res) {
+    async feedbackElegible(req, res) {
         const user = await getUserByToken(req);
         const today = new Date();
         const uri = `${process.env.API_SURVEY}/feedback/listbyuser?userid=${user._id}`;
@@ -528,46 +528,47 @@ module.exports = {
         }
     },
 
-    async singleSignOn (req, res) {
+    async singleSignOn(req, res) {
         let user = {};
         const { ssoForm } = await getLoginConfig();
 
         const { token } = req.body;
         const secret = process.env.JWT_SECRET;
-        const data = jwt.verify(token, secret);
-        const claim = data[ssoForm.claim]
-            ? data[ssoForm.claim]
-            : data.data[ssoForm.claim];
-        if (!claim) {
-            _messages.forbidden(
-                res,
-                req,
-                'Usuário ou senha não informados',
-                'Erro de validação',
-                'users',
-                'ldapSignIn'
-            );
-        }
-
-        if (data?.communication || data?.data?.communication) {
-            const communication =
-                data?.communication || data?.data?.communication;
-            const communicationCategory = String(communication).toUpperCase();
-            const eventCategory =
-                EVENTS_CATEGORY[`OPENED_FROM_${communicationCategory}`];
-
-            await GamificationController.dispatch(
-                networkLogin,
-                [eventCategory],
-                {
-                    trail: {
-                        title: data?.trailTitle || data?.data?.trailTitle,
-                    },
-                }
-            );
-        }
-
         try {
+            const data = jwt.verify(token, secret);
+            const claim = data[ssoForm.claim]
+                ? data[ssoForm.claim]
+                : data.data[ssoForm.claim];
+            if (!claim) {
+                _messages.forbidden(
+                    res,
+                    req,
+                    'Usuário ou senha não informados',
+                    'Erro de validação',
+                    'users',
+                    'ldapSignIn'
+                );
+            }
+
+            if (data?.communication || data?.data?.communication) {
+                const communication =
+                    data?.communication || data?.data?.communication;
+                const communicationCategory = String(communication).toUpperCase();
+                const eventCategory =
+                    EVENTS_CATEGORY[`OPENED_FROM_${communicationCategory}`];
+
+                await GamificationController.dispatch(
+                    networkLogin,
+                    [eventCategory],
+                    {
+                        trail: {
+                            title: data?.trailTitle || data?.data?.trailTitle,
+                        },
+                    }
+                );
+            }
+
+
             if (claim) {
                 const query = { status: 'ATIVO' };
                 query[ssoForm.claim] = claim;
@@ -723,25 +724,12 @@ module.exports = {
                 );
             }
         } catch (error) {
-            await sleep(3000);
-            await Block.create({
-                user: user._id,
-                dateTimeBlock: getDateToday(),
-                ip: req.ip,
-            });
-            _messages.forbidden(
-                res,
-                req,
-                error.message,
-                'Usuário ou senha inválidos.',
-                '<strong>Usuário ou senha inválidos. </strong>',
-                'users',
-                'ldapSignIn'
-            );
+            console.log(error)
+            _messages.internalServer(res, req, error.message);
         }
     },
 
-    async acceptTerms (req, res) {
+    async acceptTerms(req, res) {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, { acceptTerms: true });
@@ -769,7 +757,7 @@ module.exports = {
         }
     },
 
-    async acceptTermsCollaboration (req, res) {
+    async acceptTermsCollaboration(req, res) {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
@@ -799,7 +787,7 @@ module.exports = {
         }
     },
 
-    async recoveryPassword (req, res) {
+    async recoveryPassword(req, res) {
         try {
             const { body, domain, changeByEmail } = req.body;
 
@@ -903,7 +891,7 @@ module.exports = {
         }
     },
 
-    async changePassword (req, res) {
+    async changePassword(req, res) {
         try {
             const { password_old, password_new, password_newConfirm } =
                 req.body;
@@ -1005,7 +993,7 @@ module.exports = {
         }
     },
 
-    async changePasswordByEmail (req, res) {
+    async changePasswordByEmail(req, res) {
         try {
             const { password_new, password_newConfirm } = req.body;
             const { data } = decodeToken(req.headers.authorization);
@@ -1103,7 +1091,7 @@ module.exports = {
         }
     },
 
-    async import (req, res) {
+    async import(req, res) {
         try {
             var file = null;
             const newUsers = [];
@@ -1199,7 +1187,7 @@ module.exports = {
         }
     },
 
-    async importOnboarding (req, res) {
+    async importOnboarding(req, res) {
         try {
             const onboarding = true
             var file = null;
@@ -1295,7 +1283,7 @@ module.exports = {
         }
     },
 
-    async returnUsers (req, res) {
+    async returnUsers(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1368,7 +1356,7 @@ module.exports = {
         }
     },
 
-    async returnUsersOnboarding (req, res) {
+    async returnUsersOnboarding(req, res) {
         try {
             const users = await findUsers(req, { onboarding: true });
             _messages.success(res, req, users);
@@ -1384,7 +1372,7 @@ module.exports = {
         }
     },
 
-    async returnUserById (req, res) {
+    async returnUserById(req, res) {
         try {
             const { _id } = await getUserByToken(req)
             const user = await User.findOne({ _id: _id }, { password: 0 });
@@ -1404,7 +1392,7 @@ module.exports = {
         }
     },
 
-    async updateUser (req, res) {
+    async updateUser(req, res) {
         try {
             const { _id, email, cpf, networkLogin, tags } = req.body;
             delete req.body.ip;
@@ -1485,7 +1473,7 @@ module.exports = {
         }
     },
 
-    async updateUserById (req, res) {
+    async updateUserById(req, res) {
         try {
             const { _id } = req.body;
             await User.findByIdAndUpdate(_id, req.body);
@@ -1502,7 +1490,7 @@ module.exports = {
         }
     },
 
-    async changePhoto (req, res) {
+    async changePhoto(req, res) {
         try {
             const user = await getUserByToken(req);
             const file = req.files.file;
@@ -1522,7 +1510,7 @@ module.exports = {
         }
     },
 
-    async isAuthenticated (req, res) {
+    async isAuthenticated(req, res) {
         if (await validateToken(req)) {
             _messages.success(res, req, true);
         } else {
@@ -1537,7 +1525,7 @@ module.exports = {
         }
     },
 
-    async isAuthenticatedNginx (req, res) {
+    async isAuthenticatedNginx(req, res) {
         if (await validateTokenNginx(req.params.token)) {
             _messages.success(res, req, true);
         } else {
@@ -1552,7 +1540,7 @@ module.exports = {
         }
     },
 
-    async selfData (req, res) {
+    async selfData(req, res) {
         try {
             const { data } = await decodeToken(req.headers.authorization);
             const user = await User.findOne(
@@ -1572,7 +1560,7 @@ module.exports = {
         }
     },
 
-    async importUserTest (req, res) {
+    async importUserTest(req, res) {
         try {
             const usersTest = await UserTest.find();
             for (const result of usersTest) {
@@ -1630,7 +1618,7 @@ module.exports = {
         }
     },
 
-    async exportUsers (req, res) {
+    async exportUsers(req, res) {
         try {
             const users = await User.find();
             const records = [];
@@ -1656,7 +1644,7 @@ module.exports = {
         }
     },
 
-    async email (req, res) {
+    async email(req, res) {
         try {
             const error = { message: 'ERRO NA CARGA DIÁRIA', stack: 'erro' };
             await sendLogEmail(
@@ -1678,7 +1666,7 @@ module.exports = {
         }
     },
 
-    async importUsersDisabled (req, res) {
+    async importUsersDisabled(req, res) {
         try {
             const { file } = req.files;
             const results = await _files.readCSV(file.path);
@@ -1699,7 +1687,7 @@ module.exports = {
         }
     },
 
-    async emulation (req, res) {
+    async emulation(req, res) {
         try {
             const { body } = req;
             const { groupsAD, name, acceptTerms, acceptTermsCollaboration, profilePhoto, networkLogin, ...user } =
@@ -1778,7 +1766,7 @@ module.exports = {
         }
     },
 
-    async importUpdateStatusUsers (req, res, next) {
+    async importUpdateStatusUsers(req, res, next) {
         try {
             const { file } = req.files;
             const results = await _files.readCSV(file.path);
@@ -1801,45 +1789,57 @@ module.exports = {
     },
 
     async ssoCallback(req, res) {
-        const loginConfig = await getLoginConfig();
+        try {
+            const loginConfig = await getLoginConfig();
 
-        const claim = loginConfig?.ssoForm?.claim ?? 'networkLogin';
-        const claimKey = loginConfig?.ssoForm?.claimKey ?? 'no-claim-key-value';
+            const claim = loginConfig?.ssoForm?.claim ?? 'networkLogin';
+            const claimKey = loginConfig?.ssoForm?.claimKey ?? 'no-claim-key-value';
 
-        const value = claimKey.split(',').reduce((acc, key) => {
-            if (acc !== null && acc !== undefined && acc !== '') return acc;
+            const value = claimKey.split(',').reduce((acc, key) => {
+                if (acc !== null && acc !== undefined && acc !== '') return acc;
 
-            return deepGet(req.samlUserObject, key, null);
-        }, null);
+                return deepGet(req.samlUserObject, key, null);
+            }, null);
 
-        if (value === undefined || value === null) {
-            console.log('ssoCallback req.samlUserObject', req.samlUserObject);
+            if (value === undefined || value === null) {
+                console.log('ssoCallback req.samlUserObject', req.samlUserObject);
 
-            return _messages.internalServer(
+                return _messages.internalServer(
+                    res,
+                    req,
+                    'SSO não retornou o valor esperado',
+                    {
+                        message: 'SSO não retornou o valor esperado',
+                        claim,
+                        claimKey,
+                        samlUserObject:
+                            req.samlUserObject
+                    },
+                    'users',
+                    'ssoCallback'
+                );
+            }
+
+            const token = jwt.sign({ [claim]: value }, process.env.JWT_SECRET);
+
+            res.redirect(
+                302,
+                `${process.env.DOMAIN}/login/entrar/sso?token=${token}`
+            );
+        } catch (error) {
+            console.log(error)
+            _messages.internalServer(
                 res,
                 req,
-                'SSO não retornou o valor esperado',
-                {
-                    message: 'SSO não retornou o valor esperado',
-                    claim,
-                    claimKey,
-                    samlUserObject:
-                        req.samlUserObject
-                },
+                error.message,
+                'Erro interno no servidor',
                 'users',
-                'ssoCallback'
+                'device'
             );
         }
-
-        const token = jwt.sign({ [claim]: value }, process.env.JWT_SECRET);
-
-        res.redirect(
-            302,
-            `${process.env.DOMAIN}/login/entrar/sso?token=${token}`
-        );
     },
 
-    async updateDeviceId (req, res) {
+    async updateDeviceId(req, res) {
         try {
             const user = await getUserByToken(req);
             const { deviceId } = req.body;
@@ -1858,7 +1858,7 @@ module.exports = {
         }
     },
 
-    async returnCollaborativeUsers (req, res) {
+    async returnCollaborativeUsers(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1951,7 +1951,7 @@ module.exports = {
         }
     },
 
-    async setCollaborator (req, res) {
+    async setCollaborator(req, res) {
         try {
             const { userId, moderation } = req.body;
             if (!userId || !moderation) {
@@ -1983,7 +1983,7 @@ module.exports = {
         }
     },
 
-    async toggleCollaboratorModeration (req, res) {
+    async toggleCollaboratorModeration(req, res) {
         try {
             const { userId, moderation } = req.body;
 
@@ -2023,7 +2023,7 @@ module.exports = {
         }
     },
 
-    async removeCollaborator (req, res) {
+    async removeCollaborator(req, res) {
         try {
             const { userId } = req.body;
 
@@ -2054,7 +2054,7 @@ module.exports = {
         }
     },
 
-    async resetUserPassword (req, res) {
+    async resetUserPassword(req, res) {
         try {
             const { userId, password, generate } = req.body;
 
@@ -2136,7 +2136,7 @@ module.exports = {
         }
     },
 
-    async deleteGroups (req, res) {
+    async deleteGroups(req, res) {
         const { tag, userId } = req.body;
 
         try {
@@ -2173,11 +2173,11 @@ module.exports = {
         }
     },
 
-    async addGroups (req, res) {
+    async addGroups(req, res) {
         const { tag, userId } = req.body;
         try {
             const normalizedTags = tag.map(t => removeAccents(t))
-            
+
             const user = await User.findByIdAndUpdate(
                 userId,
                 { $addToSet: { groupsAD: normalizedTags } },
@@ -2218,7 +2218,7 @@ module.exports = {
         }
     },
 
-    async deleteClassTag (req, res) {
+    async deleteClassTag(req, res) {
         const { tag, userId } = req.body;
 
         try {
@@ -2237,7 +2237,7 @@ module.exports = {
         }
     },
 
-    async addClassTag (req, res) {
+    async addClassTag(req, res) {
         const { tag, userId } = req.body;
         try {
             await User.findByIdAndUpdate(userId, {
@@ -2263,7 +2263,7 @@ module.exports = {
         }
     },
 
-    async updateClassTag (req, res) {
+    async updateClassTag(req, res) {
         const { tag, _id } = req.body;
         try {
             const { classGroups } = await User.findOne({ _id });
@@ -2300,7 +2300,7 @@ module.exports = {
         }
     },
 
-    async evaluationProgress (req, res) {
+    async evaluationProgress(req, res) {
         try {
             const { idEvaluation } = req.params;
             const user = await getUserByToken(req);
@@ -2375,7 +2375,7 @@ module.exports = {
         }
     },
 
-    async getAllConteudistas (req, res) {
+    async getAllConteudistas(req, res) {
         try {
             const users = await User.find({
                 groupsAD: { $in: ['PERFIL_Conteudista'] },
@@ -2393,7 +2393,7 @@ module.exports = {
         }
     },
 
-    async handleNames (req, res) {
+    async handleNames(req, res) {
         try {
             const { networkLogins } = req.body;
             const users = await User.find(
@@ -2414,7 +2414,7 @@ module.exports = {
         }
     },
 
-    async generateMultiFactor (req, res) {
+    async generateMultiFactor(req, res) {
         try {
             const { networkLogin } = req.body;
             const user = await User.findOne({ networkLogin: networkLogin });
@@ -2454,7 +2454,7 @@ module.exports = {
         }
     },
 
-    async validateMultiFactor (req, res) {
+    async validateMultiFactor(req, res) {
         try {
             const user = await getUserByToken(req);
             const { secret, token } = req.body;
@@ -2491,7 +2491,7 @@ module.exports = {
         }
     },
 
-    async validateMfaToken (req, res) {
+    async validateMfaToken(req, res) {
         try {
             const isTokenValid = await validateMfaToken(req);
             _messages.success(res, req, isTokenValid);
@@ -2507,7 +2507,7 @@ module.exports = {
         }
     },
 
-    async updateWebPushAuthorization (req, res) {
+    async updateWebPushAuthorization(req, res) {
         try {
             const user = await getUserByToken(req);
             const webPushAuthorization = req.body;
@@ -2537,7 +2537,7 @@ module.exports = {
         }
     },
 
-    async getUserMap (req, res) {
+    async getUserMap(req, res) {
         try {
             const { data } = await axios.get(
                 `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
@@ -2571,7 +2571,7 @@ module.exports = {
         }
     },
 
-    async putUserMap (req, res) {
+    async putUserMap(req, res) {
         try {
             const { body } = req;
 
@@ -2601,7 +2601,7 @@ module.exports = {
         }
     },
 
-    async readSheetHeaders (req, res) {
+    async readSheetHeaders(req, res) {
         try {
             let file = null;
             if (req.files.file) {

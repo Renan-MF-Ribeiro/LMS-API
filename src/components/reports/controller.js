@@ -9,7 +9,6 @@ const _messages = require("../../utils/messages");
 
 module.exports = {
     async getHealthStatus(req, res) {
-        console.time("Find")
         const dbState = await getDbState();
         console.log(dbState);
         if (dbState) {
@@ -17,7 +16,6 @@ module.exports = {
                 runtimeStatus: true,
                 databaseStatus: dbState,
             };
-            console.timeEnd("Find")
             return _messages.success(res, req, systemHealth);
         } else {
             const systemHealth = {

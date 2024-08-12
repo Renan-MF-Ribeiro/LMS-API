@@ -203,8 +203,7 @@ module.exports = {
         }
     },
 
-    async getSectionsElegibles (req, res) {
-        console.time('Get Section Elegibles');
+    async getSectionsElegibles(req, res) {
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
@@ -231,7 +230,6 @@ module.exports = {
             let resultSections = [];
             if (tags.length > 0) {
                 const filter = req.query;
-                console.time('populateTrails');
 
                 const query = {
                     enabled: true,
@@ -255,7 +253,6 @@ module.exports = {
 
                 let trails = await populateTrails(true, query);
                 console.log('Total de trilhas:', trails.length);
-                console.timeEnd('populateTrails');
                 trails = trails.filter(
                     (trail) =>
                         checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) &&
@@ -359,7 +356,6 @@ module.exports = {
                 '/elegiblesContents'
             );
         }
-        console.timeEnd('Get Section Elegibles');
     },
 
     async getSectionsElegiblesNew (req, res) {
