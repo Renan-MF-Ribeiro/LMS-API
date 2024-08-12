@@ -724,21 +724,8 @@ module.exports = {
                 );
             }
         } catch (error) {
-            await sleep(3000);
-            await Block.create({
-                user: user._id,
-                dateTimeBlock: getDateToday(),
-                ip: req.ip,
-            });
-            _messages.forbidden(
-                res,
-                req,
-                error.message,
-                'Usuário ou senha inválidos.',
-                '<strong>Usuário ou senha inválidos. </strong>',
-                'users',
-                'ldapSignIn'
-            );
+            console.log(error)
+            _messages.internalServer(res, req, error.message);
         }
     },
 
