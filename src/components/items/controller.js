@@ -1496,6 +1496,10 @@ const ItemController = {
             let tracking = await Tracking.findOne({
                 item: item._id,
                 userLogin: user.networkLogin,
+                $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } }
+                ]
             });
 
             if (tracking?.kind == 'ExamTracking') {
