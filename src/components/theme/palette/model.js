@@ -65,7 +65,17 @@ const paletteSchema = new mongoose.Schema({
     nonaryPalette: ColorPaletteSchema,
     decimal: { type: String },
     decimalPalette: ColorPaletteSchema,
-
+    
+    primaryContrast: { type: String, required: false },
+    secondaryContrast: { type: String, required: false },
+    tertiaryContrast: { type: String, required: false },
+    quaternaryContrast: { type: String, required: false },
+    quinaryContrast: { type: String, required: false },
+    senaryContrast: { type: String, required: false },
+    sevenfoldContrast: { type: String, required: false },
+    octalContrast: { type: String, required: false },
+    nonaryContrast: { type: String, required: false },
+    decimalContrast: { type: String, required: false },
 })
 
 const themeSchema = new mongoose.Schema({
