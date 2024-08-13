@@ -359,6 +359,7 @@ module.exports = {
             if (req.fields.payload) {
                 try {
                     payload = JSON.parse(req.fields.payload);
+                    delete payload?.descriptionView
                 } catch { }
             }
 
@@ -442,8 +443,12 @@ module.exports = {
                     }
 
                     if (payload.galleryFiles) {
-                        const fileArray = payload.galleryFiles.map(
-                            key => req.files[key.name],
+                        const fileArray = payload.galleryFiles.map((item) => {
+                                return {
+                                    ...item,
+                                    file: req.files[item.name]
+                                }
+                            },
                         )
                         const gallery = []
 
@@ -630,6 +635,7 @@ module.exports = {
     async duplicate (req, res) {
         try {
             const body = req.body;
+            delete body?.descriptionView;
 
             const docClone = new Trail(body);
             await docClone.save();
@@ -708,6 +714,7 @@ module.exports = {
             if (req.fields.payload) {
                 try {
                     payload = JSON.parse(req.fields.payload)
+                    delete payload?.descriptionView
                 } catch { }
             }
 
