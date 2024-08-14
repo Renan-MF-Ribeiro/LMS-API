@@ -761,29 +761,24 @@ module.exports = {
     },
 
     checkEligibilityTagsAnd (tagsUser, tagsAnd, tagsOr) {
+        // Se o user não tiver tags ou se não tiver tagsAnd e tagsOr, ele não é elegível
+        if(!tagsUser?.length || (!tagsAnd?.length && !tagsOr?.length)) return false;
+
         const eligibilityUser = tagsUser.map((tag) => tag.value.toLocaleLowerCase());
+        
+        const eligibilityTagsOr = tagsOr.map((tag) => tag.value.toLocaleLowerCase());
 
-        const eligibilitytagsAnd = eligibilityUser.some((eligibility) =>
-            tagsAnd?.some((m) => m.value.toLocaleLowerCase() === eligibility)
-        );
+        // Se o usuário tiver alguma tag que é elegível por tagsOr, ele é elegível
+        const isEligibleByTagsOr = eligibilityTagsOr.some((tag) => eligibilityUser.includes(tag));
 
-        if (eligibilitytagsAnd) {
-            const allEligibilitytagsAnd = tagsAnd?.every((eligibility) =>
-                eligibilityUser.includes(eligibility.value.toLocaleLowerCase())
-            );
+        if(isEligibleByTagsOr) return true;
 
-            if (allEligibilitytagsAnd) {
-                return true;
-            }
-        } else {
-            const eligibilityTag = eligibilityUser.some((eligibility) =>
-                tagsOr?.some((tag) => tag.value.toLocaleLowerCase() === eligibility)
-            );
-            if (eligibilityTag) {
-                return true;
-            }
-        }
-        return false;
+        const eligibilityTagsAnd = tagsAnd.map((tag) => tag.value.toLocaleLowerCase());
+        
+        // Se o usuário não tiver todas as tags que são elegíveis por tagsAnd, ele não é elegível
+        const isEligibleByTagsAnd = eligibilityTagsAnd.every((tag) => eligibilityUser.includes(tag));
+
+        return isEligibleByTagsAnd;
     },
 
     filterAlura (filters, data) {
