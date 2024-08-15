@@ -66,8 +66,12 @@ const ItemSchema = new mongoose.Schema(
         expirationDate: { type: Date, required: false },
         responsible: { type: String, required: false },
         fileName: { type: String },
+        feedback: { type: Boolean },
+        feedbackTitle: { type: String },
+        feedbackDescription: { type: String },
         archive: { type: Boolean, required: false, default: false },
         archivedAt: { type: Date, required: false, default: null },
+
     },
     {
         ...schemaOptions,
@@ -81,8 +85,8 @@ ItemSchema.index({
     description: 'text',
 });
 
-ItemSchema.pre('save', async function(next) {
-    const latestIdentifier = await Item.findOne({}, 'courseIdentifier',  { sort: { courseIdentifier: -1 }});
+ItemSchema.pre('save', async function (next) {
+    const latestIdentifier = await Item.findOne({}, 'courseIdentifier', { sort: { courseIdentifier: -1 } });
     const nextIdentifier = Number(latestIdentifier?.courseIdentifier || 0) + 1;
     this.courseIdentifier = nextIdentifier;
     next();
