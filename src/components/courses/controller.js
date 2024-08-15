@@ -16,7 +16,7 @@ const {
 const moment = require('moment-timezone');
 const { DOMAIN, AZURE_BLOB_URL } = process.env;
 
-const { azureBlob } = require('../../utils/files');
+const { azureBlob, readXLSXAttendanceList } = require('../../utils/files');
 
 const { Group, InstructorGroup } = require('../groups/model');
 
@@ -47,6 +47,7 @@ const {
     getClassByID,
     returnProgramaID,
     checkEligibility,
+    processAttendanceListImport,
 } = require('./business');
 
 const {
@@ -1780,6 +1781,47 @@ module.exports = {
                 'courses',
                 '/getCourseByQrCode'
             );
+        }
+    },
+
+    /**
+     * @param {Express.Request} req
+     * @param {Express.Response} res
+     */
+    async importAttendanceList(req, res) {
+        const file = req.files?.file;
+        const { courseId, classId } = req.params;
+
+        if (!file) {
+            return badRequest(res, req, 'Arquivo não enviado', 'Arquivo não enviado', 'courses', '/import-attendance-list');
+        }
+
+        try {
+            const { data, labels, labelMap, worksheet, workbook } = await readXLSXAttendanceList(file.path, 'Sua Carga Aqui');
+
+            if (Object.keys(labelMap).some(label => !labels.includes(label))) {
+                return badRequest(res, req, 'Arquivo inválido', 'Arquivo inválido', 'courses', '/import-attendance-list');
+            }
+
+            const { results } = await processAttendanceListImport(courseId, classId, data);
+
+            results.forEach(item => {
+                const row = worksheet.getRow(item.rowNumber);
+                const cell = row.getCell(labels.length);
+                if (item.message) cell.value = item.message;
+            });
+
+            res.set({
+                'Content-Disposition': `attachment; filename="${file.name}_results.xlsx"`,
+                'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            });
+
+            await workbook.xlsx.write(res);
+
+            res.end();
+        } catch (error) {
+            console.error(error);
+            return internalServer(res, req, error.message, error.message, 'courses', '/import-attendance-list');
         }
     },
 };

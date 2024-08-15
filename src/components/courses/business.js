@@ -2,8 +2,8 @@
 
 const { azureBlob } = require('../../utils/files');
 const { User } = require('../users/model');
-const { Group } = require('../groups/model');
-const { MaterialModel, ClassModel, ProgramModel } = require('./model');
+const { MaterialModel, ClassModel, ProgramModel, UsersWithProcessedTags, CourseModel } = require('./model');
+const moment = require('moment');
 
 const {
     formatDateWithoutHours,
@@ -256,4 +256,92 @@ module.exports = {
 
         return false; // Acesso negado
     },
+
+    /**
+     * @param {string} courseId
+     * @param {string} classId
+     * @param {Record<string, string>[]} items
+     * @returns {Promise<Record<string, string>[]>}
+     */
+    async processAttendanceListImport(courseId, classId, items) {
+        const batchSize = 100;
+        const total = items.length;
+        const results = [];
+
+        const courseInfo = await CourseModel.findById(courseId);
+        const classInfo = await ClassModel.findById(classId);
+
+        if (!courseInfo || !classInfo) {
+            throw new Error('Curso ou turma não encontrados');
+        }
+
+        for (let index = 0; index < total; index += batchSize) {
+            const batch = items.slice(index, index + batchSize);
+
+            const result = await Promise.all(
+                batch.map(async (item) => {
+                    const userWithTags = await UsersWithProcessedTags.findOne({
+                        networkLogin: String(item.networkLogin),
+                        userTags: { $in: courseInfo.tags.map(({ value }) => value) },
+                    });
+
+                    if (!userWithTags) {
+                        return {
+                            ...item,
+                            message: 'Usuário não está elegível. Nenhuma ação foi realizada.',
+                        }
+                    }
+
+                    const indexUserInClass = classInfo.users.findIndex(
+                        ({ _id }) => String(_id) === String(userWithTags._id)
+                    );
+
+                    const isPresence = ['SIM', 'S'].includes(item.presence?.toUpperCase());
+                    const presenceDate = isPresence ? moment(item.presenceAt ?? new Date()).utc().toDate() : null;
+                    const grade = Number(item.grades ?? 0);
+                    const utcNowDate = moment().utc().toDate();
+
+                    if (indexUserInClass !== -1) {
+                        await ClassModel.updateOne(
+                            { _id: classInfo._id },
+                            {
+                                $set: {
+                                    [`users.${indexUserInClass}.grades`]: grade,
+                                    [`users.${indexUserInClass}.presence`]: isPresence,
+                                    [`users.${indexUserInClass}.presenceAt`]: presenceDate,
+                                    [`users.${indexUserInClass}.origin`]: 'instructor',
+                                    [`users.${indexUserInClass}.updateAt`]: utcNowDate,
+                                }
+                            }
+                        )
+                    } else {
+                        const userInfo = await User.findById(userWithTags._id, '_id name email registration networkLogin').lean();
+
+                        await ClassModel.updateOne(
+                            { _id: classInfo._id },
+                            {
+                                $push: {
+                                    users: {
+                                        ...userInfo,
+                                        grades: grade,
+                                        presence: isPresence,
+                                        presenceAt: presenceDate,
+                                        origin: 'instructor',
+                                        updateAt: utcNowDate,
+                                        createdAt: utcNowDate,
+                                    }
+                                }
+                            }
+                        );
+                    }
+
+                    return item;
+                })
+            );
+
+            results.push(result);
+        }
+
+        return { results: results.flat(), classInfo, courseInfo };
+    }
 };

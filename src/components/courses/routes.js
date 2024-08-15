@@ -85,5 +85,11 @@ router
         '/waitlist-elegible-course',
         _controller.getWaitlistAndElegibleUsersByCourse
     )
+    .post(
+        '/:courseId/:classId/import/attendance-list',
+        isInstructor,
+        formidable(),
+        _controller.importAttendanceList
+    )
     ;
 module.exports = router;
