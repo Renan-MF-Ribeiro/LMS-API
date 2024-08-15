@@ -643,6 +643,10 @@ module.exports = {
 
         const worksheet = workbook.getWorksheet(worksheetName);
 
+        if(!worksheet) {
+            throw new Error(`Planilha "${worksheetName}" não encontrada no arquivo.`);
+        }
+
         const labelMap = {
             LOGIN: 'networkLogin',
             PRESENTE: 'presence',

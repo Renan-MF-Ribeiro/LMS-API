@@ -1790,7 +1790,7 @@ module.exports = {
      */
     async importAttendanceList(req, res) {
         const file = req.files?.file;
-        const { classId } = req.params;
+        const { courseId, classId } = req.params;
 
         if (!file) {
             return badRequest(res, req, 'Arquivo não enviado', 'Arquivo não enviado', 'courses', '/import-attendance-list');
@@ -1803,10 +1803,7 @@ module.exports = {
                 return badRequest(res, req, 'Arquivo inválido', 'Arquivo inválido', 'courses', '/import-attendance-list');
             }
 
-            const { results, classInfo } = await processAttendanceListImport(classId, data);
-
-            console.log('classInfo', classInfo);
-            console.log('results', results);
+            const { results } = await processAttendanceListImport(courseId, classId, data);
 
             results.forEach(item => {
                 const row = worksheet.getRow(item.rowNumber);
@@ -1824,7 +1821,7 @@ module.exports = {
             res.end();
         } catch (error) {
             console.error(error);
-            return internalServer(res, req, error.message, 'Erro interno no servidor', 'courses', '/import-attendance-list');
+            return internalServer(res, req, error.message, error.message, 'courses', '/import-attendance-list');
         }
     },
 };
