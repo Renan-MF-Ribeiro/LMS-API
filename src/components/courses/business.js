@@ -256,4 +256,34 @@ module.exports = {
 
         return false; // Acesso negado
     },
+
+    /**
+     * @param {string} classId
+     * @param {Record<string, string>[]} items
+     * @returns {Promise<Record<string, string>[]>}
+     */
+    async processAttendanceListImport(classId, items) {
+        const batchSize = 1;
+        const total = items.length;
+        const results = [];
+
+        const classInfo = await ClassModel.findById(classId);
+
+        for (let index = 0; index < total; index += batchSize) {
+            const batch = items.slice(index, index + batchSize);
+
+            const result = await Promise.all(
+                batch.map(async (item) => {
+                    return new Promise(async (resolve) => {
+                        await new Promise(res => setTimeout(res, 1000));
+                        resolve(item);
+                    });
+                })
+            );
+
+            results.push(result);
+        }
+
+        return { results: results.flat(), classInfo };
+    }
 };

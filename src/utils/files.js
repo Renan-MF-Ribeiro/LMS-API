@@ -631,6 +631,55 @@ module.exports = {
         return workbook;
     },
 
+    /**
+     * @param {string} file 
+     * @param {string} worksheetName
+     * @returns {Promise<{ workbook: ExcelJS.Workbook, worksheet: ExcelJS.Worksheet, data: Record<string, string>[], labels: string[] }>}
+     */
+    async readXLSXAttendanceList(file, worksheetName) {
+        const workbook = new ExcelJS.Workbook();
+
+        await workbook.xlsx.readFile(file);
+
+        const worksheet = workbook.getWorksheet(worksheetName);
+
+        const labelMap = {
+            LOGIN: 'networkLogin',
+            PRESENTE: 'presence',
+            DATA_PRESENCA: 'presenceAt',
+            NOTA: 'grades',
+        };
+
+        let labels = [];
+        const data = [];
+
+        worksheet.eachRow(
+            { includeEmpty: false },
+            (row, rowNumber) => {
+                if (rowNumber === 1) {
+                    labels = row.values;
+                    return;
+                }
+
+                data.push(
+                    row.values.reduce((acc, value, index) => {
+                        const label = labels[index];
+                        const mappedLabel = labelMap[label];
+                        const columnValue = value?.text ?? value ?? '';
+
+                        if (!label) return acc;
+
+                        acc[mappedLabel ?? label] = columnValue;
+
+                        return acc;
+                    }, { rowNumber })
+                );
+            }
+        );
+
+        return { workbook, worksheet, data, labels, labelMap };
+    },
+
     async readXLSXUsers(file, onboarding = false) {
         const getMapsResponse = await axios.get(
             `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
