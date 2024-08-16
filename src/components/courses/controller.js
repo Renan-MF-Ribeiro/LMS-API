@@ -548,21 +548,21 @@ module.exports = {
                             }
                         }
 
-                        const newUsers = JSON.parse(users).map((user) => {
-                            if (user.presence) {
-                                const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-                                user.createdAt = moment().utc().format()
-                                return ({
-                                    ...user,
-                                    ip,
-                                    presenceAt: moment().utc().format()
-                                })
-                            } else {
-                                user.presenceAt = null
-                            }
+                        const nowDate = new Date();
 
-                            return user
-                        })
+                        const newUsers = JSON.parse(users).map((user) => {
+                            const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+                            return ({
+                                ...user,
+                                ip,
+                                _id: mongoose.Types.ObjectId(user._id),
+                                presenceAt: user.presence ? nowDate : null,
+                                createdAt: nowDate,
+                                updatedAt: nowDate,
+                            })
+                        });
+
                         const createdClass = await ClassModel.create({
                             courseID,
                             users: newUsers,
@@ -584,11 +584,7 @@ module.exports = {
                             name
                         });
 
-                        const classesFromCourse = await ClassModel.find({
-                            courseID
-                        })
-
-
+                        const classesFromCourse = await ClassModel.find({ courseID });
 
                         const arrUserId = []
                         for (let user of JSON.parse(users)) {
@@ -751,21 +747,20 @@ module.exports = {
                         }
                     }
 
-                    const newUsers = JSON.parse(users).map((user) => {
-                        if (user.presence) {
-                            const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-                            user.createdAt = moment().utc().format()
-                            return ({
-                                ...user,
-                                ip,
-                                presenceAt: moment().utc().format()
-                            })
-                        } else {
-                            user.presenceAt = null
-                        }
+                    const nowDate = new Date();
 
-                        return user
-                    })
+                    const newUsers = JSON.parse(users).map((user) => {
+                        const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+                        return ({
+                            ...user,
+                            ip,
+                            _id: mongoose.Types.ObjectId(user._id),
+                            presenceAt: user.presenceAt ? new Date(user.presenceAt) : (user.presence ? nowDate : null),
+                            createdAt: user.createdAt ? new Date(user.createdAt) : nowDate,
+                            updatedAt: nowDate,
+                        })
+                    });
 
                     await ClassModel.findByIdAndUpdate(classID, {
                         courseID,
