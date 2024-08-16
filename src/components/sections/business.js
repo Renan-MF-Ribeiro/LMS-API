@@ -760,21 +760,27 @@ module.exports = {
         });
     },
 
-    checkEligibilityTagsAnd (tagsUser, tagsAnd, tagsOr) {
+    checkEligibilityTagsAnd(tagsUser, tagsAnd, tagsOr) {
         // Se o user não tiver tags ou se não tiver tagsAnd e tagsOr, ele não é elegível
-        if(!tagsUser?.length || (!tagsAnd?.length && !tagsOr?.length)) return false;
+        if (!tagsUser?.length || (!tagsAnd?.length && !tagsOr?.length)) return false;
 
-        const eligibilityUser = tagsUser.map((tag) => tag.value.toLocaleLowerCase());
-        
-        const eligibilityTagsOr = tagsOr.map((tag) => tag.value.toLocaleLowerCase());
+        function parseTagValue(tag) {
+            if (typeof tag === 'string') return tag.toLowerCase();
+            if (!tag.value) throw new Error('Tag sem valor');
+            return tag.value.toLowerCase();
+        }
+
+        const eligibilityUser = tagsUser.map((tag) => parseTagValue(tag));
+
+        const eligibilityTagsOr = tagsOr.map((tag) => parseTagValue(tag));
 
         // Se o usuário tiver alguma tag que é elegível por tagsOr, ele é elegível
         const isEligibleByTagsOr = eligibilityTagsOr.some((tag) => eligibilityUser.includes(tag));
 
-        if(isEligibleByTagsOr) return true;
+        if (isEligibleByTagsOr) return true;
 
-        const eligibilityTagsAnd = tagsAnd.map((tag) => tag.value.toLocaleLowerCase());
-        
+        const eligibilityTagsAnd = tagsAnd.map((tag) => parseTagValue(tag));
+
         // Se o usuário não tiver todas as tags que são elegíveis por tagsAnd, ele não é elegível
         const isEligibleByTagsAnd = eligibilityTagsAnd.every((tag) => eligibilityUser.includes(tag));
 

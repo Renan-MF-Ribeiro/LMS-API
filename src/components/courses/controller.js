@@ -55,6 +55,7 @@ const {
     getTrailCompletion,
     getTagsElegiblesByToken,
     getTagsElegibles,
+    checkEligibilityTagsAnd,
 } = require('../sections/business');
 const { default: axios } = require('axios');
 
@@ -1242,23 +1243,24 @@ module.exports = {
                     '/getCourseByQrCodeSelfRegistration'
                 );
 
-            const eligibility = checkEligibility(
-                tags,
-                course.courseID.mandatory,
-                course.courseID.tags
+            const eligibility = checkEligibilityTagsAnd(
+                tags ?? [],
+                course.courseID?.mandatory ?? [],
+                course.courseID?.tags ?? [],
             );
 
             if (!eligibility)
                 return badRequest(
                     res,
                     req,
-                    'O aluno não está elegivel a este treinemento',
-                    'Atenção! Você não está elegivel a este treinemento.',
+                    'O aluno não está elegível a este treinamento',
+                    'Atenção! Você não está elegível a este treinamento.',
                     'courses',
                     '/getCourseByQrCodeSelfRegistration'
                 );
 
-            const user = course.users.find((user) => user._id == _id)
+            const user = course.users.find((user) => String(user._id) === String(_id));
+
             success(res, req, {
                 title: course.courseID.title, inClass: user ? true : false, _id: course._id, registered: user?.presence
             });
@@ -1299,14 +1301,13 @@ module.exports = {
             const { body } = req;
             const user = await getUserByToken(req);
             const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-            var userID = String(user._id);
 
             const nowDate = new Date();
 
             const course = await ClassModel.findOneAndUpdate(
                 {
                     _id: { $eq: body.qrcode },
-                    'users._id': userID
+                    'users._id': mongoose.Types.ObjectId(user._id),
                 },
                 {
                     $set: {
