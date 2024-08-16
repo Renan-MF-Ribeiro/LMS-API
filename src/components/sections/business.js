@@ -760,10 +760,24 @@ module.exports = {
         });
     },
 
+    /**
+     * Verifica se o usuário é elegível conforme as tags
+     * - Se o usuário NÃO possuir tags ou se tagsAnd e tagsOr são vazias, ele não é elegível
+     * - Se o usuário possuir alguma tag dentro de tagsOr, ele é elegível
+     * - Senão, se o usuário NÃO possuir TODAS as tags dentro tagsAnd, ele não é elegível
+     * @typedef {string|{value: string}} Tag string | { value: string }
+     * @param {Tag[]} tagsUser Tags do usuário
+     * @param {Tag[]} tagsAnd  Tags que são obrigatórias (AND)
+     * @param {Tag[]} tagsOr   Tags que são opcionais (OR)
+     * @returns {boolean}
+     */
     checkEligibilityTagsAnd(tagsUser, tagsAnd, tagsOr) {
-        // Se o user não tiver tags ou se não tiver tagsAnd e tagsOr, ele não é elegível
         if (!tagsUser?.length || (!tagsAnd?.length && !tagsOr?.length)) return false;
 
+        /**
+         * @param {Tag} tag
+         * @returns {string}
+         */
         function parseTagValue(tag) {
             if (typeof tag === 'string') return tag.toLowerCase();
             if (!tag.value) throw new Error('Tag sem valor');
@@ -774,14 +788,12 @@ module.exports = {
 
         const eligibilityTagsOr = tagsOr.map((tag) => parseTagValue(tag));
 
-        // Se o usuário tiver alguma tag que é elegível por tagsOr, ele é elegível
         const isEligibleByTagsOr = eligibilityTagsOr.some((tag) => eligibilityUser.includes(tag));
 
         if (isEligibleByTagsOr) return true;
 
         const eligibilityTagsAnd = tagsAnd.map((tag) => parseTagValue(tag));
 
-        // Se o usuário não tiver todas as tags que são elegíveis por tagsAnd, ele não é elegível
         const isEligibleByTagsAnd = eligibilityTagsAnd.every((tag) => eligibilityUser.includes(tag));
 
         return isEligibleByTagsAnd;
