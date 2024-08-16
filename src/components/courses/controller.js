@@ -1301,6 +1301,8 @@ module.exports = {
             const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
             var userID = String(user._id);
 
+            const nowDate = new Date();
+
             const course = await ClassModel.findOneAndUpdate(
                 {
                     _id: { $eq: body.qrcode },
@@ -1312,7 +1314,8 @@ module.exports = {
                         'users.$.device': body.browser,
                         'users.$.browser': body.device,
                         'users.$.origin': 'QRCODE',
-                        'users.$.presenceAt': moment().utc().format(),
+                        'users.$.presenceAt': nowDate,
+                        'users.$.updatedAt': nowDate,
                         'users.$.ip ': ip,
                     },
                 },
