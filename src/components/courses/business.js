@@ -297,10 +297,10 @@ module.exports = {
                     }
 
                     const userIsEligible = checkEligibilityTagsAnd(
-                        userWithTags.userTags ?? [],
-                        courseMandatoryTags ?? [],
-                        courseOptionalTags ?? [],
-                    )
+                        userWithTags.userTags,
+                        courseMandatoryTags,
+                        courseOptionalTags,
+                    );
 
                     if (!userIsEligible) {
                         return {

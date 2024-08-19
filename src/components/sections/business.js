@@ -767,8 +767,8 @@ module.exports = {
      * - Senão, se o usuário NÃO possuir TODAS as tags dentro tagsAnd, ele não é elegível
      * @typedef {string|{value: string}} Tag string | { value: string }
      * @param {Tag[]} tagsUser Tags do usuário
-     * @param {Tag[]} tagsAnd  Tags que são obrigatórias (AND)
-     * @param {Tag[]} tagsOr   Tags que são opcionais (OR)
+     * @param {Tag[]|undefined} tagsAnd  Tags que são obrigatórias (AND)
+     * @param {Tag[]|undefined} tagsOr   Tags que são opcionais (OR)
      * @returns {boolean}
      */
     checkEligibilityTagsAnd(tagsUser, tagsAnd, tagsOr) {
@@ -786,15 +786,15 @@ module.exports = {
 
         const eligibilityUser = tagsUser.map((tag) => parseTagValue(tag));
 
-        const eligibilityTagsOr = tagsOr.map((tag) => parseTagValue(tag));
+        const eligibilityTagsOr = tagsOr?.map((tag) => parseTagValue(tag)) ?? [];
 
-        const isEligibleByTagsOr = eligibilityTagsOr.some((tag) => eligibilityUser.includes(tag));
+        const isEligibleByTagsOr = !!eligibilityTagsOr.length && eligibilityTagsOr.some((tag) => eligibilityUser.includes(tag));
 
         if (isEligibleByTagsOr) return true;
 
-        const eligibilityTagsAnd = tagsAnd.map((tag) => parseTagValue(tag));
+        const eligibilityTagsAnd = tagsAnd?.map((tag) => parseTagValue(tag)) ?? [];
 
-        const isEligibleByTagsAnd = eligibilityTagsAnd.every((tag) => eligibilityUser.includes(tag));
+        const isEligibleByTagsAnd = !!eligibilityTagsAnd.length && eligibilityTagsAnd.every((tag) => eligibilityUser.includes(tag));
 
         return isEligibleByTagsAnd;
     },
