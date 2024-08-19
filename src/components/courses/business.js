@@ -273,18 +273,36 @@ module.exports = {
         const courseInfo = await CourseModel.findById(courseId);
         const classInfo = await ClassModel.findById(classId);
 
-        const courseMandatoryTags = courseInfo.mandatory;
-        const courseOptionalTags = courseInfo.tags;
-
         if (!courseInfo || !classInfo) {
             throw new Error('Curso ou turma não encontrados');
         }
+
+        const courseMandatoryTags = courseInfo.mandatory;
+        const courseOptionalTags = courseInfo.tags;
+
+        const processedItems = [];
 
         for (let index = 0; index < total; index += batchSize) {
             const batch = items.slice(index, index + batchSize);
 
             const result = await Promise.all(
                 batch.map(async (item) => {
+                    if(!item.networkLogin) {
+                        return {
+                            ...item,
+                            message: 'Login não informado. Nenhuma ação foi realizada.',
+                        }
+                    }
+
+                    if(processedItems.includes(item.networkLogin)) {
+                        return {
+                            ...item,
+                            message: 'Login já processado. Nenhuma ação foi realizada.',
+                        }
+                    }
+
+                    processedItems.push(item.networkLogin);
+
                     const userWithTags = await UsersWithProcessedTags.findOne({
                         networkLogin: String(item.networkLogin),
                     });
@@ -327,7 +345,7 @@ module.exports = {
                                 : nowDate
                         )
                         : null;
-                    const grade = Number(item.grades ?? 0);
+                    const grade = Number(item.grades ?? 0) > 100 ? 100 : Number(item.grades ?? 0);
 
                     if (indexUserInClass !== -1) {
                         await ClassModel.updateOne(
