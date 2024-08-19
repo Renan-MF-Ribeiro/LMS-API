@@ -327,7 +327,7 @@ module.exports = {
                                 : nowDate
                         )
                         : null;
-                    const grade = Number(item.grades ?? 0);
+                    const grade = Number(item.grades ?? 0) > 100 ? 100 : Number(item.grades ?? 0);
 
                     if (indexUserInClass !== -1) {
                         await ClassModel.updateOne(
