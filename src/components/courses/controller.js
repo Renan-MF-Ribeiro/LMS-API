@@ -55,6 +55,7 @@ const {
     getTrailCompletion,
     getTagsElegiblesByToken,
     getTagsElegibles,
+    checkEligibilityTagsAnd,
 } = require('../sections/business');
 const { default: axios } = require('axios');
 
@@ -548,21 +549,21 @@ module.exports = {
                             }
                         }
 
-                        const newUsers = JSON.parse(users).map((user) => {
-                            if (user.presence) {
-                                const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-                                user.createdAt = moment().utc().format()
-                                return ({
-                                    ...user,
-                                    ip,
-                                    presenceAt: moment().utc().format()
-                                })
-                            } else {
-                                user.presenceAt = null
-                            }
+                        const nowDate = new Date();
 
-                            return user
-                        })
+                        const newUsers = JSON.parse(users).map((user) => {
+                            const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+                            return ({
+                                ...user,
+                                ip,
+                                _id: mongoose.Types.ObjectId(user._id),
+                                presenceAt: user.presence ? nowDate : null,
+                                createdAt: nowDate,
+                                updatedAt: nowDate,
+                            })
+                        });
+
                         const createdClass = await ClassModel.create({
                             courseID,
                             users: newUsers,
@@ -584,11 +585,7 @@ module.exports = {
                             name
                         });
 
-                        const classesFromCourse = await ClassModel.find({
-                            courseID
-                        })
-
-
+                        const classesFromCourse = await ClassModel.find({ courseID });
 
                         const arrUserId = []
                         for (let user of JSON.parse(users)) {
@@ -751,21 +748,20 @@ module.exports = {
                         }
                     }
 
-                    const newUsers = JSON.parse(users).map((user) => {
-                        if (user.presence) {
-                            const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-                            user.createdAt = moment().utc().format()
-                            return ({
-                                ...user,
-                                ip,
-                                presenceAt: moment().utc().format()
-                            })
-                        } else {
-                            user.presenceAt = null
-                        }
+                    const nowDate = new Date();
 
-                        return user
-                    })
+                    const newUsers = JSON.parse(users).map((user) => {
+                        const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+                        return ({
+                            ...user,
+                            ip,
+                            _id: mongoose.Types.ObjectId(user._id),
+                            presenceAt: user.presenceAt ? new Date(user.presenceAt) : (user.presence ? nowDate : null),
+                            createdAt: user.createdAt ? new Date(user.createdAt) : nowDate,
+                            updatedAt: nowDate,
+                        })
+                    });
 
                     await ClassModel.findByIdAndUpdate(classID, {
                         courseID,
@@ -1247,23 +1243,24 @@ module.exports = {
                     '/getCourseByQrCodeSelfRegistration'
                 );
 
-            const eligibility = checkEligibility(
-                tags,
-                course.courseID.mandatory,
-                course.courseID.tags
+            const eligibility = checkEligibilityTagsAnd(
+                tags ?? [],
+                course.courseID?.mandatory ?? [],
+                course.courseID?.tags ?? [],
             );
 
             if (!eligibility)
                 return badRequest(
                     res,
                     req,
-                    'O aluno não está elegivel a este treinemento',
-                    'Atenção! Você não está elegivel a este treinemento.',
+                    'O aluno não está elegível a este treinamento',
+                    'Atenção! Você não está elegível a este treinamento.',
                     'courses',
                     '/getCourseByQrCodeSelfRegistration'
                 );
 
-            const user = course.users.find((user) => user._id == _id)
+            const user = course.users.find((user) => String(user._id) === String(_id));
+
             success(res, req, {
                 title: course.courseID.title, inClass: user ? true : false, _id: course._id, registered: user?.presence
             });
@@ -1304,12 +1301,13 @@ module.exports = {
             const { body } = req;
             const user = await getUserByToken(req);
             const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-            var userID = String(user._id);
+
+            const nowDate = new Date();
 
             const course = await ClassModel.findOneAndUpdate(
                 {
                     _id: { $eq: body.qrcode },
-                    'users._id': userID
+                    'users._id': mongoose.Types.ObjectId(user._id),
                 },
                 {
                     $set: {
@@ -1317,7 +1315,8 @@ module.exports = {
                         'users.$.device': body.browser,
                         'users.$.browser': body.device,
                         'users.$.origin': 'QRCODE',
-                        'users.$.presenceAt': moment().utc().format(),
+                        'users.$.presenceAt': nowDate,
+                        'users.$.updatedAt': nowDate,
                         'users.$.ip ': ip,
                     },
                 },

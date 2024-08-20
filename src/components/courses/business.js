@@ -10,6 +10,7 @@ const {
     getDateTodayWithoutHours,
     addHours,
 } = require('../../utils/functions');
+const { checkEligibilityTagsAnd } = require('../sections/business');
 
 module.exports = {
     uploadMaterial (material, author, folder) {
@@ -267,6 +268,7 @@ module.exports = {
         const batchSize = 100;
         const total = items.length;
         const results = [];
+        const nowDate = new Date();
 
         const courseInfo = await CourseModel.findById(courseId);
         const classInfo = await ClassModel.findById(classId);
@@ -275,20 +277,53 @@ module.exports = {
             throw new Error('Curso ou turma não encontrados');
         }
 
+        const courseMandatoryTags = courseInfo.mandatory;
+        const courseOptionalTags = courseInfo.tags;
+
+        const processedItems = [];
+
         for (let index = 0; index < total; index += batchSize) {
             const batch = items.slice(index, index + batchSize);
 
             const result = await Promise.all(
                 batch.map(async (item) => {
+                    if(!item.networkLogin) {
+                        return {
+                            ...item,
+                            message: 'Login não informado. Nenhuma ação foi realizada.',
+                        }
+                    }
+
+                    if(processedItems.includes(item.networkLogin)) {
+                        return {
+                            ...item,
+                            message: 'Login já processado. Nenhuma ação foi realizada.',
+                        }
+                    }
+
+                    processedItems.push(item.networkLogin);
+
                     const userWithTags = await UsersWithProcessedTags.findOne({
                         networkLogin: String(item.networkLogin),
-                        userTags: { $in: courseInfo.tags.map(({ value }) => value) },
                     });
 
                     if (!userWithTags) {
                         return {
                             ...item,
-                            message: 'Usuário não está elegível. Nenhuma ação foi realizada.',
+                            message: 'Usuário não encontrado. Nenhuma ação foi realizada.',
+                        }
+                    }
+
+                    const userIsEligible = checkEligibilityTagsAnd(
+                        userWithTags.userTags,
+                        courseMandatoryTags,
+                        courseOptionalTags,
+                    );
+
+                    if (!userIsEligible) {
+                        return {
+                            ...item,
+                            message: 'Usuário não tem elegibilidade. Nenhuma ação foi realizada.',
                         }
                     }
 
@@ -297,9 +332,20 @@ module.exports = {
                     );
 
                     const isPresence = ['SIM', 'S'].includes(item.presence?.toUpperCase());
-                    const presenceDate = isPresence ? moment(item.presenceAt ?? new Date()).utc().toDate() : null;
-                    const grade = Number(item.grades ?? 0);
-                    const utcNowDate = moment().utc().toDate();
+                    const presenceDate = isPresence
+                        ? (
+                            item.presenceAt
+                                ? moment(item.presenceAt)
+                                    .add(3, 'hours')
+                                    .set({
+                                        hour: nowDate.getHours(),
+                                        minute: nowDate.getMinutes(),
+                                    })
+                                    .toDate()
+                                : nowDate
+                        )
+                        : null;
+                    const grade = Number(item.grades ?? 0) > 100 ? 100 : Number(item.grades ?? 0);
 
                     if (indexUserInClass !== -1) {
                         await ClassModel.updateOne(
@@ -310,7 +356,7 @@ module.exports = {
                                     [`users.${indexUserInClass}.presence`]: isPresence,
                                     [`users.${indexUserInClass}.presenceAt`]: presenceDate,
                                     [`users.${indexUserInClass}.origin`]: 'instructor',
-                                    [`users.${indexUserInClass}.updateAt`]: utcNowDate,
+                                    [`users.${indexUserInClass}.updateAt`]: nowDate,
                                 }
                             }
                         )
@@ -327,8 +373,8 @@ module.exports = {
                                         presence: isPresence,
                                         presenceAt: presenceDate,
                                         origin: 'instructor',
-                                        updateAt: utcNowDate,
-                                        createdAt: utcNowDate,
+                                        updateAt: nowDate,
+                                        createdAt: nowDate,
                                     }
                                 }
                             }
