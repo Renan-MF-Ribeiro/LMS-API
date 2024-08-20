@@ -71,6 +71,7 @@ const SCORMLessonStatus = Object.freeze({
 
 const SCORMTracking = Tracking.discriminator('SCORMTracking', new mongoose.Schema({
     lessonStatus: { type: String, enum: Object.values(SCORMLessonStatus), default: SCORMLessonStatus.NOT_ATTEMPTED },
+    interactions: { type: Array },
     suspendData: { type: String },
     score: { type: Number, min: 0, max: 100 },
 }, {
