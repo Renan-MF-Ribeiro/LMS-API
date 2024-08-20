@@ -362,6 +362,18 @@ module.exports = {
             const { trailId } = req.params;
             const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/${trailId}`;
             const { data } = await axios.get(uri, { params: req.query });
+            const usersId = data.data.map(u => u.userId)
+
+            const usersPhoto = await User.find({ _id: { $in: usersId } }).select('profilePhoto')
+            if (usersPhoto) {
+                data.data = data.data.map((comment) => {
+                    const profilePhoto = usersPhoto.find((u) => u._id == comment.userId)?.profilePhoto
+                    return {
+                        ...comment,
+                        profilePhoto
+                    }
+                })
+            }
             _messages.success(
                 res,
                 req,
