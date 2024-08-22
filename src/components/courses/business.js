@@ -4,7 +4,7 @@ const { azureBlob } = require('../../utils/files');
 const { User } = require('../users/model');
 const { MaterialModel, ClassModel, ProgramModel, UsersWithProcessedTags, CourseModel } = require('./model');
 const moment = require('moment');
-
+const mongoose = require('mongoose');
 const {
     formatDateWithoutHours,
     getDateTodayWithoutHours,
@@ -197,7 +197,11 @@ module.exports = {
             try {
                 const classes = await ClassModel.find(
                     {
-                        $or: [{ 'users.userID': userID, }, { 'users._id': userID, }]
+                        $or: [
+                            { 'users.userID': userID },
+                            { 'users._id': userID },
+                            { 'users._id': mongoose.Types.ObjectId(userID) }
+                        ]
                     },
                     [
                         'users',
@@ -205,6 +209,7 @@ module.exports = {
                         'qrcode',
                         'dateApplicationInitial',
                         'dateApplicationFinal',
+                        'name'
                     ]
                 )
                     .populate({
@@ -216,10 +221,9 @@ module.exports = {
                         match: { author: 'INSTRUTOR' },
                     })
                     .populate('instructor', ['name']);
-
                 const classesFilter = classes.filter((item) => {
                     const usersFilter = item.users.filter((user) => {
-                        if (user.presence && (user.userID === userID || user._id === userID)) {
+                        if (user.presence && (user.userID === userID || user._id?.toString() === userID)) {
                             return user;
                         }
                     });
@@ -264,7 +268,7 @@ module.exports = {
      * @param {Record<string, string>[]} items
      * @returns {Promise<Record<string, string>[]>}
      */
-    async processAttendanceListImport(courseId, classId, items) {
+    async processAttendanceListImport (courseId, classId, items) {
         const batchSize = 100;
         const total = items.length;
         const results = [];
@@ -287,14 +291,14 @@ module.exports = {
 
             const result = await Promise.all(
                 batch.map(async (item) => {
-                    if(!item.networkLogin) {
+                    if (!item.networkLogin) {
                         return {
                             ...item,
                             message: 'Login não informado. Nenhuma ação foi realizada.',
                         }
                     }
 
-                    if(processedItems.includes(item.networkLogin)) {
+                    if (processedItems.includes(item.networkLogin)) {
                         return {
                             ...item,
                             message: 'Login já processado. Nenhuma ação foi realizada.',

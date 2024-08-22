@@ -573,7 +573,7 @@ module.exports = {
 
                     classesFromCourse.forEach((e) => {
                         if (String(e.courseID._id) === String(course._id)) {
-                            const userInClass = e.users.find((user) => user._id == userId || user.userID == userId)
+                            const userInClass = e.users.find((user) => user._id?.toString() == userId || user.userID == userId)
                             let grade = 0
                             let presence = false
                             if (userInClass) {
@@ -771,14 +771,14 @@ module.exports = {
      * @param {Tag[]|undefined} tagsOr   Tags que são opcionais (OR)
      * @returns {boolean}
      */
-    checkEligibilityTagsAnd(tagsUser, tagsAnd, tagsOr) {
+    checkEligibilityTagsAnd (tagsUser, tagsAnd, tagsOr) {
         if (!tagsUser?.length || (!tagsAnd?.length && !tagsOr?.length)) return false;
 
         /**
          * @param {Tag} tag
          * @returns {string}
          */
-        function parseTagValue(tag) {
+        function parseTagValue (tag) {
             if (typeof tag === 'string') return tag.toLowerCase();
             if (!tag.value) throw new Error('Tag sem valor');
             return tag.value.toLowerCase();
