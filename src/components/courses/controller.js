@@ -1,4 +1,4 @@
-const { User, groups } = require('../users/model');
+const { User } = require('../users/model');
 const mongoose = require('mongoose');
 const config = require('../../../config.json')
 const {
@@ -18,7 +18,7 @@ const { DOMAIN, AZURE_BLOB_URL } = process.env;
 
 const { azureBlob, readXLSXAttendanceList } = require('../../utils/files');
 
-const { Group, InstructorGroup } = require('../groups/model');
+const { Group } = require('../groups/model');
 
 const { Trail } = require('../trails/model');
 
@@ -33,20 +33,14 @@ const {
     pagination,
     ordernation,
     getUserByToken,
-    formatDateWithoutHours,
-    addHours,
-    checksIfTheEndDateIsLessThanTheStartDate,
 } = require('../../utils/functions');
 
 const {
     uploadMaterial,
-    verifyValidity,
-    queryInstructorCourses,
     getStoreUSers,
     getAppliedCourses,
     getClassByID,
     returnProgramaID,
-    checkEligibility,
     processAttendanceListImport,
 } = require('./business');
 
@@ -54,7 +48,6 @@ const {
     checkItemCompleted,
     getTrailCompletion,
     getTagsElegiblesByToken,
-    getTagsElegibles,
     checkEligibilityTagsAnd,
 } = require('../sections/business');
 const { default: axios } = require('axios');
@@ -70,12 +63,6 @@ module.exports = {
             body.tags = JSON.parse(body.tags);
             body.mandatory = JSON.parse(body.mandatory);
             body.certificateDue = JSON.parse(body.certificateDue);
-            const dateInitialCourse = formatDateWithoutHours(
-                addHours(body.dateInitial)
-            );
-            const dataFinalCourse = formatDateWithoutHours(
-                addHours(body.dateFinal)
-            );
 
             let thumbPath;
             const { thumb } = req.files;
@@ -88,7 +75,7 @@ module.exports = {
                 delete body.passingScore;
             if (!body.certificateLayout || body.certificateLayout === 'null')
                 delete body.certificateLayout;
-            if (dateInitialCourse > dataFinalCourse) flagDate = false;
+            if (body.dateInitial > body.dateFinal) flagDate = false;
 
             if (flagDate) {
                 if (body.isEvaluationAvailable) {
@@ -116,10 +103,7 @@ module.exports = {
                     const programID = await returnProgramaID(body.program);
                     body.program = programID;
 
-                    body.dateInitial = formatDateWithoutHours(body.dateInitial);
-                    if (body.dateFinal) {
-                        body.dateFinal = formatDateWithoutHours(body.dateFinal);
-                    }
+
                     delete body.materials;
                     const courseCreated = await CourseModel.create(body);
 
@@ -205,10 +189,7 @@ module.exports = {
 
             const programs = await ProgramModel.find().select('title');
 
-            // courses.map((course) => {
-            //     course.dateInitial = addHours(course.dateInitial);
-            //     course.dateFinal = addHours(course.dateFinal);
-            // });
+
 
             success(res, req, {
                 data: courses,
@@ -365,7 +346,6 @@ module.exports = {
             const searchBy = req.query.searchBy;
             let arrCoursesFinal;
 
-            const user = await getUserByToken(req);
 
             const courses = await CourseModel.find(
                 searchBy
@@ -469,15 +449,8 @@ module.exports = {
             if (dateApplicationInitial || dateApplicationFinal) {
                 if (dateApplicationInitial && dateApplicationFinal === '') {
                     flagDate = true;
-                } else {
-                    const dateInitialAPP = formatDateWithoutHours(
-                        addHours(dateApplicationInitial)
-                    );
-                    const dateFinalAPP = formatDateWithoutHours(
-                        addHours(dateApplicationFinal)
-                    );
-
-                    if (dateInitialAPP > dateFinalAPP) flagDate = false;
+                } else if (dateApplicationInitial > dateApplicationFinal) {
+                    flagDate = false;
                 }
             }
 
@@ -494,7 +467,6 @@ module.exports = {
                 const materials = JSON.parse(req.fields.materials);
                 const files = req.files;
                 const arrMaterials = [];
-                const trails = [];
                 let user = await getUserByToken(req);
                 let instructorID = user.id;
                 let namesCourse = '';
@@ -506,18 +478,10 @@ module.exports = {
                 });
 
                 if (canCreateClass) {
-                    const dateInitial = formatDateWithoutHours(
-                        addHours(course.dateInitial)
-                    );
-                    const dateFinal = formatDateWithoutHours(
-                        addHours(course.dateFinal)
-                    );
-                    const applicationInitial = formatDateWithoutHours(
-                        dateApplicationInitial
-                    );
-                    const applicationFinal =
-                        formatDateWithoutHours(dateApplicationFinal);
-
+                    const dateInitial = moment(course.dateInitial).startOf('day').toDate()
+                    const dateFinal = moment(course.dateFinal).endOf('day').toDate()
+                    const applicationInitial = new Date(dateApplicationInitial);
+                    const applicationFinal = new Date(dateApplicationFinal);
                     if (
                         applicationInitial &&
                         (applicationInitial < dateInitial ||
@@ -704,18 +668,10 @@ module.exports = {
                 });
 
                 if (course.deleted === 0 && course.status === 1) {
-                    const dateInitial = formatDateWithoutHours(
-                        addHours(course.dateInitial)
-                    );
-                    const dateFinal = formatDateWithoutHours(
-                        addHours(course.dateFinal)
-                    );
-                    const applicationInitial = formatDateWithoutHours(
-                        dateApplicationInitial
-                    );
-                    const applicationFinal =
-                        formatDateWithoutHours(dateApplicationFinal);
-
+                    const dateInitial = moment(course.dateInitial).startOf('day').toDate()
+                    const dateFinal = moment(course.dateFinal).endOf('day').toDate()
+                    const applicationInitial = new Date(dateApplicationInitial);
+                    const applicationFinal = new Date(dateApplicationFinal);
                     if (
                         applicationInitial &&
                         (applicationInitial < dateInitial ||
@@ -723,7 +679,7 @@ module.exports = {
                             applicationFinal < dateInitial ||
                             applicationFinal > dateFinal)
                     ) {
-                        badRequest(
+                        return badRequest(
                             res,
                             req,
                             '',
@@ -731,7 +687,6 @@ module.exports = {
                             'courses',
                             '/createClass'
                         );
-                        return;
                     }
 
                     if (materials) {
@@ -885,8 +840,6 @@ module.exports = {
             const classUsers = await getClassByID(classID);
 
 
-            course.dateInitial = addHours(course.dateInitial);
-            course.dateFinal = addHours(course.dateFinal);
 
             success(res, req, {
                 course,
@@ -905,11 +858,11 @@ module.exports = {
         }
     },
 
-    async printAttendanceList(req, res) {
+    async printAttendanceList (req, res) {
         try {
             const { courseId, classId } = req.params;
             const onlyPresenceFlag = req.query?.onlyPresence !== undefined;
-            
+
             const course = await CourseModel.findById(courseId);
             const classUsers = await getClassByID(classId);
 
@@ -1720,9 +1673,6 @@ module.exports = {
             const foundCourse = await CourseModel.findOne({ _id: courseId })
 
             const tags = foundCourse.tags.map((e) => e.value);
-            const mandatoryTags = foundCourse.mandatory.map(
-                (e) => e.value
-            );
 
             // const usersWithMandatoryTags = await UsersWithProcessedTags.find({
             //     userTags: { $all: mandatoryTags },
@@ -1787,7 +1737,7 @@ module.exports = {
      * @param {Express.Request} req
      * @param {Express.Response} res
      */
-    async importAttendanceList(req, res) {
+    async importAttendanceList (req, res) {
         const file = req.files?.file;
         const { courseId, classId } = req.params;
 
