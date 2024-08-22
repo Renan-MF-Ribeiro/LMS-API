@@ -1196,6 +1196,25 @@ module.exports = {
                     '/getCourseByQrCodeSelfRegistration'
                 );
 
+            const applicationInitial = new Date(course.dateApplicationInitial);
+            const applicationFinal = new Date(course.dateApplicationFinal);
+            const applicationEndDay = moment(applicationFinal).endOf('day').toDate()
+            const today = new Date()
+
+            if (applicationInitial > today ||
+                applicationEndDay < today
+            ) {
+                return badRequest(
+                    res,
+                    req,
+                    'Turma indisponível.',
+                    'Turma indisponível.',
+                    'courses',
+                    '/getCourseByQrCodeSelfRegistration'
+                );
+            }
+
+
             const eligibility = checkEligibilityTagsAnd(
                 tags ?? [],
                 course.courseID?.mandatory ?? [],
@@ -1214,7 +1233,7 @@ module.exports = {
 
             const user = course.users.find((user) => String(user._id) === String(_id));
 
-            success(res, req, {
+            return success(res, req, {
                 title: course.courseID.title, inClass: user ? true : false, _id: course._id, registered: user?.presence
             });
         } catch (error) {
