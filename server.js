@@ -4,6 +4,7 @@ const { ldapClient } = require('./src/utils/auth')
 const { log } = require('./src/utils/logger')
 const app = require('./src/index')
 const port = process.env.PORT || 3000
+const HOSTNAME = process.env.HOSTNAME
 const {
     updateAverageCourses,
     updateAverageRatings,
@@ -19,33 +20,40 @@ const {
 } = require('./src/utils/cron')
 
 const server = app.listen(port, async () => {
+    if(HOSTNAME){
+        const lastIndex = HOSTNAME.lastIndexOf('-');
+        const result = HOSTNAME.substring(lastIndex + 1);
+        if (result == "0") {
+            cronNotifyResponsibleUsers()
+            updateAverageCourses()
+            updateAverageRatings()
+            sendCourseReleaseNotification()
+            sendCourseChargeNotification()
+            updateUserTemporaryTags()
+            executeCronAverageCourses()
+            deleteReprovedExamTracking()
+            cronRevokeTrail()
+            cronUpdateRecommendedTrails()
+            startUpdateTrailsViewsCron()
+        }
+    }
+    log('Host: ' + HOSTNAME)
     log('Listening on port: ' + port)
-    cronNotifyResponsibleUsers()
-    updateAverageCourses()
-    updateAverageRatings()
-    sendCourseReleaseNotification()
-    sendCourseChargeNotification()
-    updateUserTemporaryTags()
-    executeCronAverageCourses()
-    deleteReprovedExamTracking()
-    cronRevokeTrail()
-    cronUpdateRecommendedTrails()
-    startUpdateTrailsViewsCron()
 })
 
 createTerminus(server, {
-    async healthCheck () {
+    async healthCheck() {
         return Promise.resolve('👩‍⚕️✅')
     },
 
-    async onSignal () {
+    async onSignal() {
         log('starting cleanup')
         return Promise.all([
             ldapClient.unbind(),
         ])
     },
 
-    onShutdown () {
+    onShutdown() {
         log('cleanup finished, server is shutting down')
     },
 })
