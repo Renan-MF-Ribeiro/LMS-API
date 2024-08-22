@@ -1090,7 +1090,7 @@ module.exports = {
             const student = await getUserByToken(req);
             const { users } = await ClassModel.findById(classID);
             const filterUser = users.filter(
-                (user) => (user.userID === student.id || user._id === student.id) && user.presence
+                (user) => (user.userID === student.id || user._id.toString() === student.id) && user.presence
             );
             if (filterUser.length > 0) {
                 const evaluationVerify = await CourseEvaluationModel.find({
