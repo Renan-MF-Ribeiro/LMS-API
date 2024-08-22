@@ -410,7 +410,7 @@ module.exports = {
                           }),
                 });
                 for (const t of trails) {
-                    const { trail } = module.exports.processTrailTracking(t, allTrackingUser);
+                    const { trail } = module.exports.processTrailTracking(t, allTrackingUser, true);
 
                     if (trail.items.every(({ itemID }) => itemID?.completion === 1)) {
                         completedTrails.push(trail);
@@ -432,7 +432,8 @@ module.exports = {
                             thumbPath: trail.thumbPath,
                             titleURL: trail.titleURL,
                             nextItem,
-                            progress
+                            progress,
+                            notStarted: trail.notStarted
                         });
                     }
                 }
