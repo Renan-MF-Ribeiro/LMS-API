@@ -135,11 +135,11 @@ module.exports = {
 
     async rigthAnswer (req, res) {
         try {
-            const { question, idAlternative } = req.body
+            const { idQuestion, idAlternative } = req.body
 
-            const foundQuestion = await Question.findOne({ _id: question._id })
+            const foundQuestion = await Question.findOne({ _id: idQuestion })
 
-            let newData = await Question.findByIdAndUpdate(question._id, { rigthAnswer: idAlternative }, { new: true })
+            let newData = await Question.findByIdAndUpdate(idQuestion, { rigthAnswer: idAlternative }, { new: true })
 
             await Alternative.findByIdAndUpdate(foundQuestion.rigthAnswer, { correct: false })
 

@@ -410,14 +410,16 @@ module.exports = {
                           }),
                 });
                 for (const t of trails) {
-                    const { trail } = module.exports.processTrailTracking(t, allTrackingUser);
+                    const { trail } = module.exports.processTrailTracking(t, allTrackingUser, true);
 
-                    if (trail.items.every(({ itemID }) => itemID?.completion === 1)) {
+                    const trailItems = trail.items.filter((item) => item.itemID?.enabled === true);
+
+                    if (trailItems.every(({ itemID }) => itemID?.completion === 1)) {
                         completedTrails.push(trail);
                     } else {
                         let nextItem;
-                        const item = trail.items.find(({ itemID }) => !itemID?.completion);
-                        const progress = trail.items.filter(({ itemID }) => itemID?.completion === 1).length * 100 / trail.items.length
+                        const item = trailItems.find(({ itemID }) => !itemID?.completion);
+                        const progress = trailItems.filter(({ itemID }) => itemID?.completion === 1).length * 100 / trailItems.length
                         if (item) {
                             foundItem = await Item.findById(item?.itemID);
                             nextItem = {
@@ -432,7 +434,8 @@ module.exports = {
                             thumbPath: trail.thumbPath,
                             titleURL: trail.titleURL,
                             nextItem,
-                            progress
+                            progress,
+                            notStarted: trail.notStarted
                         });
                     }
                 }

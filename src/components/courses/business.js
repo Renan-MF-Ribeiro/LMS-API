@@ -2,14 +2,15 @@
 
 const { azureBlob } = require('../../utils/files');
 const { User } = require('../users/model');
-const { Group } = require('../groups/model');
-const { MaterialModel, ClassModel, ProgramModel } = require('./model');
-
+const { MaterialModel, ClassModel, ProgramModel, UsersWithProcessedTags, CourseModel } = require('./model');
+const moment = require('moment');
+const mongoose = require('mongoose');
 const {
     formatDateWithoutHours,
     getDateTodayWithoutHours,
     addHours,
 } = require('../../utils/functions');
+const { checkEligibilityTagsAnd } = require('../sections/business');
 
 module.exports = {
     uploadMaterial (material, author, folder) {
@@ -196,7 +197,11 @@ module.exports = {
             try {
                 const classes = await ClassModel.find(
                     {
-                        $or: [{ 'users.userID': userID, }, { 'users._id': userID, }]
+                        $or: [
+                            { 'users.userID': userID },
+                            { 'users._id': userID },
+                            { 'users._id': mongoose.Types.ObjectId(userID) }
+                        ]
                     },
                     [
                         'users',
@@ -204,6 +209,7 @@ module.exports = {
                         'qrcode',
                         'dateApplicationInitial',
                         'dateApplicationFinal',
+                        'name'
                     ]
                 )
                     .populate({
@@ -215,10 +221,9 @@ module.exports = {
                         match: { author: 'INSTRUTOR' },
                     })
                     .populate('instructor', ['name']);
-
                 const classesFilter = classes.filter((item) => {
                     const usersFilter = item.users.filter((user) => {
-                        if (user.presence && (user.userID === userID || user._id === userID)) {
+                        if (user.presence && (user.userID === userID || user._id?.toString() === userID)) {
                             return user;
                         }
                     });
@@ -256,4 +261,137 @@ module.exports = {
 
         return false; // Acesso negado
     },
+
+    /**
+     * @param {string} courseId
+     * @param {string} classId
+     * @param {Record<string, string>[]} items
+     * @returns {Promise<Record<string, string>[]>}
+     */
+    async processAttendanceListImport (courseId, classId, items) {
+        const batchSize = 100;
+        const total = items.length;
+        const results = [];
+        const nowDate = new Date();
+
+        const courseInfo = await CourseModel.findById(courseId);
+        const classInfo = await ClassModel.findById(classId);
+
+        if (!courseInfo || !classInfo) {
+            throw new Error('Curso ou turma não encontrados');
+        }
+
+        const courseMandatoryTags = courseInfo.mandatory;
+        const courseOptionalTags = courseInfo.tags;
+
+        const processedItems = [];
+
+        for (let index = 0; index < total; index += batchSize) {
+            const batch = items.slice(index, index + batchSize);
+
+            const result = await Promise.all(
+                batch.map(async (item) => {
+                    if (!item.networkLogin) {
+                        return {
+                            ...item,
+                            message: 'Login não informado. Nenhuma ação foi realizada.',
+                        }
+                    }
+
+                    if (processedItems.includes(item.networkLogin)) {
+                        return {
+                            ...item,
+                            message: 'Login já processado. Nenhuma ação foi realizada.',
+                        }
+                    }
+
+                    processedItems.push(item.networkLogin);
+
+                    const userWithTags = await UsersWithProcessedTags.findOne({
+                        networkLogin: String(item.networkLogin),
+                    });
+
+                    if (!userWithTags) {
+                        return {
+                            ...item,
+                            message: 'Usuário não encontrado. Nenhuma ação foi realizada.',
+                        }
+                    }
+
+                    const userIsEligible = checkEligibilityTagsAnd(
+                        userWithTags.userTags,
+                        courseMandatoryTags,
+                        courseOptionalTags,
+                    );
+
+                    if (!userIsEligible) {
+                        return {
+                            ...item,
+                            message: 'Usuário não tem elegibilidade. Nenhuma ação foi realizada.',
+                        }
+                    }
+
+                    const indexUserInClass = classInfo.users.findIndex(
+                        ({ _id }) => String(_id) === String(userWithTags._id)
+                    );
+
+                    const isPresence = ['SIM', 'S'].includes(item.presence?.toUpperCase());
+                    const presenceDate = isPresence
+                        ? (
+                            item.presenceAt
+                                ? moment(item.presenceAt)
+                                    .add(3, 'hours')
+                                    .set({
+                                        hour: nowDate.getHours(),
+                                        minute: nowDate.getMinutes(),
+                                    })
+                                    .toDate()
+                                : nowDate
+                        )
+                        : null;
+                    const grade = Number(item.grades ?? 0) > 100 ? 100 : Number(item.grades ?? 0);
+
+                    if (indexUserInClass !== -1) {
+                        await ClassModel.updateOne(
+                            { _id: classInfo._id },
+                            {
+                                $set: {
+                                    [`users.${indexUserInClass}.grades`]: grade,
+                                    [`users.${indexUserInClass}.presence`]: isPresence,
+                                    [`users.${indexUserInClass}.presenceAt`]: presenceDate,
+                                    [`users.${indexUserInClass}.origin`]: 'instructor',
+                                    [`users.${indexUserInClass}.updateAt`]: nowDate,
+                                }
+                            }
+                        )
+                    } else {
+                        const userInfo = await User.findById(userWithTags._id, '_id name email registration networkLogin').lean();
+
+                        await ClassModel.updateOne(
+                            { _id: classInfo._id },
+                            {
+                                $push: {
+                                    users: {
+                                        ...userInfo,
+                                        grades: grade,
+                                        presence: isPresence,
+                                        presenceAt: presenceDate,
+                                        origin: 'instructor',
+                                        updateAt: nowDate,
+                                        createdAt: nowDate,
+                                    }
+                                }
+                            }
+                        );
+                    }
+
+                    return item;
+                })
+            );
+
+            results.push(result);
+        }
+
+        return { results: results.flat(), classInfo, courseInfo };
+    }
 };

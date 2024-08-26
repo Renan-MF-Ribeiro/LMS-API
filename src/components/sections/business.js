@@ -573,7 +573,7 @@ module.exports = {
 
                     classesFromCourse.forEach((e) => {
                         if (String(e.courseID._id) === String(course._id)) {
-                            const userInClass = e.users.find((user) => user._id == userId || user.userID == userId)
+                            const userInClass = e.users.find((user) => user._id?.toString() == userId || user.userID == userId)
                             let grade = 0
                             let presence = false
                             if (userInClass) {
@@ -760,30 +760,43 @@ module.exports = {
         });
     },
 
+    /**
+     * Verifica se o usuário é elegível conforme as tags
+     * - Se o usuário NÃO possuir tags ou se tagsAnd e tagsOr são vazias, ele não é elegível
+     * - Se o usuário possuir alguma tag dentro de tagsOr, ele é elegível
+     * - Senão, se o usuário NÃO possuir TODAS as tags dentro tagsAnd, ele não é elegível
+     * @typedef {string|{value: string}} Tag string | { value: string }
+     * @param {Tag[]} tagsUser Tags do usuário
+     * @param {Tag[]|undefined} tagsAnd  Tags que são obrigatórias (AND)
+     * @param {Tag[]|undefined} tagsOr   Tags que são opcionais (OR)
+     * @returns {boolean}
+     */
     checkEligibilityTagsAnd (tagsUser, tagsAnd, tagsOr) {
-        const eligibilityUser = tagsUser.map((tag) => tag.value.toLocaleLowerCase());
+        if (!tagsUser?.length || (!tagsAnd?.length && !tagsOr?.length)) return false;
 
-        const eligibilitytagsAnd = eligibilityUser.some((eligibility) =>
-            tagsAnd?.some((m) => m.value.toLocaleLowerCase() === eligibility)
-        );
-
-        if (eligibilitytagsAnd) {
-            const allEligibilitytagsAnd = tagsAnd?.every((eligibility) =>
-                eligibilityUser.includes(eligibility.value.toLocaleLowerCase())
-            );
-
-            if (allEligibilitytagsAnd) {
-                return true;
-            }
-        } else {
-            const eligibilityTag = eligibilityUser.some((eligibility) =>
-                tagsOr?.some((tag) => tag.value.toLocaleLowerCase() === eligibility)
-            );
-            if (eligibilityTag) {
-                return true;
-            }
+        /**
+         * @param {Tag} tag
+         * @returns {string}
+         */
+        function parseTagValue (tag) {
+            if (typeof tag === 'string') return tag.toLowerCase();
+            if (!tag.value) throw new Error('Tag sem valor');
+            return tag.value.toLowerCase();
         }
-        return false;
+
+        const eligibilityUser = tagsUser.map((tag) => parseTagValue(tag));
+
+        const eligibilityTagsOr = tagsOr?.map((tag) => parseTagValue(tag)) ?? [];
+
+        const isEligibleByTagsOr = !!eligibilityTagsOr.length && eligibilityTagsOr.some((tag) => eligibilityUser.includes(tag));
+
+        if (isEligibleByTagsOr) return true;
+
+        const eligibilityTagsAnd = tagsAnd?.map((tag) => parseTagValue(tag)) ?? [];
+
+        const isEligibleByTagsAnd = !!eligibilityTagsAnd.length && eligibilityTagsAnd.every((tag) => eligibilityUser.includes(tag));
+
+        return isEligibleByTagsAnd;
     },
 
     filterAlura (filters, data) {

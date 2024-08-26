@@ -1,4 +1,4 @@
-const { User, groups } = require('../users/model');
+const { User } = require('../users/model');
 const mongoose = require('mongoose');
 const config = require('../../../config.json')
 const {
@@ -16,9 +16,9 @@ const {
 const moment = require('moment-timezone');
 const { DOMAIN, AZURE_BLOB_URL } = process.env;
 
-const { azureBlob } = require('../../utils/files');
+const { azureBlob, readXLSXAttendanceList } = require('../../utils/files');
 
-const { Group, InstructorGroup } = require('../groups/model');
+const { Group } = require('../groups/model');
 
 const { Trail } = require('../trails/model');
 
@@ -33,27 +33,22 @@ const {
     pagination,
     ordernation,
     getUserByToken,
-    formatDateWithoutHours,
-    addHours,
-    checksIfTheEndDateIsLessThanTheStartDate,
 } = require('../../utils/functions');
 
 const {
     uploadMaterial,
-    verifyValidity,
-    queryInstructorCourses,
     getStoreUSers,
     getAppliedCourses,
     getClassByID,
     returnProgramaID,
-    checkEligibility,
+    processAttendanceListImport,
 } = require('./business');
 
 const {
     checkItemCompleted,
     getTrailCompletion,
     getTagsElegiblesByToken,
-    getTagsElegibles,
+    checkEligibilityTagsAnd,
 } = require('../sections/business');
 const { default: axios } = require('axios');
 
@@ -193,10 +188,7 @@ module.exports = {
 
             const programs = await ProgramModel.find().select('title');
 
-            // courses.map((course) => {
-            //     course.dateInitial = addHours(course.dateInitial);
-            //     course.dateFinal = addHours(course.dateFinal);
-            // });
+
 
             success(res, req, {
                 data: courses,
@@ -353,7 +345,6 @@ module.exports = {
             const searchBy = req.query.searchBy;
             let arrCoursesFinal;
 
-            const user = await getUserByToken(req);
 
             const courses = await CourseModel.find(
                 searchBy
@@ -457,15 +448,8 @@ module.exports = {
             if (dateApplicationInitial || dateApplicationFinal) {
                 if (dateApplicationInitial && dateApplicationFinal === '') {
                     flagDate = true;
-                } else {
-                    const dateInitialAPP = formatDateWithoutHours(
-                        addHours(dateApplicationInitial)
-                    );
-                    const dateFinalAPP = formatDateWithoutHours(
-                        addHours(dateApplicationFinal)
-                    );
-
-                    if (dateInitialAPP > dateFinalAPP) flagDate = false;
+                } else if (dateApplicationInitial > dateApplicationFinal) {
+                    flagDate = false;
                 }
             }
 
@@ -482,7 +466,6 @@ module.exports = {
                 const materials = JSON.parse(req.fields.materials);
                 const files = req.files;
                 const arrMaterials = [];
-                const trails = [];
                 let user = await getUserByToken(req);
                 let instructorID = user.id;
                 let namesCourse = '';
@@ -494,18 +477,10 @@ module.exports = {
                 });
 
                 if (canCreateClass) {
-                    const dateInitial = formatDateWithoutHours(
-                        addHours(course.dateInitial)
-                    );
-                    const dateFinal = formatDateWithoutHours(
-                        addHours(course.dateFinal)
-                    );
-                    const applicationInitial = formatDateWithoutHours(
-                        dateApplicationInitial
-                    );
-                    const applicationFinal =
-                        formatDateWithoutHours(dateApplicationFinal);
-
+                    const dateInitial = moment(course.dateInitial).startOf('day').toDate()
+                    const dateFinal = moment(course.dateFinal).endOf('day').toDate()
+                    const applicationInitial = new Date(dateApplicationInitial);
+                    const applicationFinal = new Date(dateApplicationFinal);
                     if (
                         applicationInitial &&
                         (applicationInitial < dateInitial ||
@@ -537,21 +512,21 @@ module.exports = {
                             }
                         }
 
-                        const newUsers = JSON.parse(users).map((user) => {
-                            if (user.presence) {
-                                const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-                                user.createdAt = moment().utc().format()
-                                return ({
-                                    ...user,
-                                    ip,
-                                    presenceAt: moment().utc().format()
-                                })
-                            } else {
-                                user.presenceAt = null
-                            }
+                        const nowDate = new Date();
 
-                            return user
-                        })
+                        const newUsers = JSON.parse(users).map((user) => {
+                            const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+                            return ({
+                                ...user,
+                                ip,
+                                _id: mongoose.Types.ObjectId(user._id),
+                                presenceAt: user.presence ? nowDate : null,
+                                createdAt: nowDate,
+                                updatedAt: nowDate,
+                            })
+                        });
+
                         const createdClass = await ClassModel.create({
                             courseID,
                             users: newUsers,
@@ -573,11 +548,7 @@ module.exports = {
                             name
                         });
 
-                        const classesFromCourse = await ClassModel.find({
-                            courseID
-                        })
-
-
+                        const classesFromCourse = await ClassModel.find({ courseID });
 
                         const arrUserId = []
                         for (let user of JSON.parse(users)) {
@@ -696,18 +667,10 @@ module.exports = {
                 });
 
                 if (course.deleted === 0 && course.status === 1) {
-                    const dateInitial = formatDateWithoutHours(
-                        addHours(course.dateInitial)
-                    );
-                    const dateFinal = formatDateWithoutHours(
-                        addHours(course.dateFinal)
-                    );
-                    const applicationInitial = formatDateWithoutHours(
-                        dateApplicationInitial
-                    );
-                    const applicationFinal =
-                        formatDateWithoutHours(dateApplicationFinal);
-
+                    const dateInitial = moment(course.dateInitial).startOf('day').toDate()
+                    const dateFinal = moment(course.dateFinal).endOf('day').toDate()
+                    const applicationInitial = new Date(dateApplicationInitial);
+                    const applicationFinal = new Date(dateApplicationFinal);
                     if (
                         applicationInitial &&
                         (applicationInitial < dateInitial ||
@@ -715,7 +678,7 @@ module.exports = {
                             applicationFinal < dateInitial ||
                             applicationFinal > dateFinal)
                     ) {
-                        badRequest(
+                        return badRequest(
                             res,
                             req,
                             '',
@@ -723,7 +686,6 @@ module.exports = {
                             'courses',
                             '/createClass'
                         );
-                        return;
                     }
 
                     if (materials) {
@@ -740,21 +702,20 @@ module.exports = {
                         }
                     }
 
-                    const newUsers = JSON.parse(users).map((user) => {
-                        if (user.presence) {
-                            const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-                            user.createdAt = moment().utc().format()
-                            return ({
-                                ...user,
-                                ip,
-                                presenceAt: moment().utc().format()
-                            })
-                        } else {
-                            user.presenceAt = null
-                        }
+                    const nowDate = new Date();
 
-                        return user
-                    })
+                    const newUsers = JSON.parse(users).map((user) => {
+                        const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+                        return ({
+                            ...user,
+                            ip,
+                            _id: mongoose.Types.ObjectId(user._id),
+                            presenceAt: user.presenceAt ? new Date(user.presenceAt) : (user.presence ? nowDate : null),
+                            createdAt: user.createdAt ? new Date(user.createdAt) : nowDate,
+                            updatedAt: nowDate,
+                        })
+                    });
 
                     await ClassModel.findByIdAndUpdate(classID, {
                         courseID,
@@ -878,8 +839,6 @@ module.exports = {
             const classUsers = await getClassByID(classID);
 
 
-            course.dateInitial = addHours(course.dateInitial);
-            course.dateFinal = addHours(course.dateFinal);
 
             success(res, req, {
                 course,
@@ -898,11 +857,11 @@ module.exports = {
         }
     },
 
-    async printAttendanceList(req, res) {
+    async printAttendanceList (req, res) {
         try {
             const { courseId, classId } = req.params;
             const onlyPresenceFlag = req.query?.onlyPresence !== undefined;
-            
+
             const course = await CourseModel.findById(courseId);
             const classUsers = await getClassByID(classId);
 
@@ -1088,7 +1047,7 @@ module.exports = {
             const student = await getUserByToken(req);
             const { users } = await ClassModel.findById(classID);
             const filterUser = users.filter(
-                (user) => (user.userID || user._id) === student.id
+                (user) => (user.userID || user._id.toString()) === student.id
             );
             if (filterUser.length > 0) {
                 const evaluation = await CourseEvaluationModel.updateOne(
@@ -1130,7 +1089,7 @@ module.exports = {
             const student = await getUserByToken(req);
             const { users } = await ClassModel.findById(classID);
             const filterUser = users.filter(
-                (user) => (user.userID === student.id || user._id === student.id) && user.presence
+                (user) => (user.userID === student.id || user._id.toString() === student.id) && user.presence
             );
             if (filterUser.length > 0) {
                 const evaluationVerify = await CourseEvaluationModel.find({
@@ -1236,24 +1195,44 @@ module.exports = {
                     '/getCourseByQrCodeSelfRegistration'
                 );
 
-            const eligibility = checkEligibility(
-                tags,
-                course.courseID.mandatory,
-                course.courseID.tags
+            const applicationInitial = new Date(course.dateApplicationInitial);
+            const applicationFinal = new Date(course.dateApplicationFinal);
+            const applicationEndDay = moment(applicationFinal).endOf('day').toDate()
+            const today = new Date()
+
+            if (applicationInitial > today ||
+                applicationEndDay < today
+            ) {
+                return badRequest(
+                    res,
+                    req,
+                    'Turma indisponível.',
+                    'Turma indisponível.',
+                    'courses',
+                    '/getCourseByQrCodeSelfRegistration'
+                );
+            }
+
+
+            const eligibility = checkEligibilityTagsAnd(
+                tags ?? [],
+                course.courseID?.mandatory ?? [],
+                course.courseID?.tags ?? [],
             );
 
             if (!eligibility)
                 return badRequest(
                     res,
                     req,
-                    'O aluno não está elegivel a este treinemento',
-                    'Atenção! Você não está elegivel a este treinemento.',
+                    'O aluno não está elegível a este treinamento',
+                    'Atenção! Você não está elegível a este treinamento.',
                     'courses',
                     '/getCourseByQrCodeSelfRegistration'
                 );
 
-            const user = course.users.find((user) => user._id == _id)
-            success(res, req, {
+            const user = course.users.find((user) => String(user._id) === String(_id));
+
+            return success(res, req, {
                 title: course.courseID.title, inClass: user ? true : false, _id: course._id, registered: user?.presence
             });
         } catch (error) {
@@ -1293,12 +1272,13 @@ module.exports = {
             const { body } = req;
             const user = await getUserByToken(req);
             const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-            var userID = String(user._id);
+
+            const nowDate = new Date();
 
             const course = await ClassModel.findOneAndUpdate(
                 {
                     _id: { $eq: body.qrcode },
-                    'users._id': userID
+                    'users._id': mongoose.Types.ObjectId(user._id),
                 },
                 {
                     $set: {
@@ -1306,7 +1286,8 @@ module.exports = {
                         'users.$.device': body.browser,
                         'users.$.browser': body.device,
                         'users.$.origin': 'QRCODE',
-                        'users.$.presenceAt': moment().utc().format(),
+                        'users.$.presenceAt': nowDate,
+                        'users.$.updatedAt': nowDate,
                         'users.$.ip ': ip,
                     },
                 },
@@ -1710,9 +1691,6 @@ module.exports = {
             const foundCourse = await CourseModel.findOne({ _id: courseId })
 
             const tags = foundCourse.tags.map((e) => e.value);
-            const mandatoryTags = foundCourse.mandatory.map(
-                (e) => e.value
-            );
 
             // const usersWithMandatoryTags = await UsersWithProcessedTags.find({
             //     userTags: { $all: mandatoryTags },
@@ -1770,6 +1748,47 @@ module.exports = {
                 'courses',
                 '/getCourseByQrCode'
             );
+        }
+    },
+
+    /**
+     * @param {Express.Request} req
+     * @param {Express.Response} res
+     */
+    async importAttendanceList (req, res) {
+        const file = req.files?.file;
+        const { courseId, classId } = req.params;
+
+        if (!file) {
+            return badRequest(res, req, 'Arquivo não enviado', 'Arquivo não enviado', 'courses', '/import-attendance-list');
+        }
+
+        try {
+            const { data, labels, labelMap, worksheet, workbook } = await readXLSXAttendanceList(file.path, 'Sua Carga Aqui');
+
+            if (Object.keys(labelMap).some(label => !labels.includes(label))) {
+                return badRequest(res, req, 'Arquivo inválido', 'Arquivo inválido', 'courses', '/import-attendance-list');
+            }
+
+            const { results } = await processAttendanceListImport(courseId, classId, data);
+
+            results.forEach(item => {
+                const row = worksheet.getRow(item.rowNumber);
+                const cell = row.getCell(labels.length);
+                if (item.message) cell.value = item.message;
+            });
+
+            res.set({
+                'Content-Disposition': `attachment; filename="${file.name}_results.xlsx"`,
+                'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            });
+
+            await workbook.xlsx.write(res);
+
+            res.end();
+        } catch (error) {
+            console.error(error);
+            return internalServer(res, req, error.message, error.message, 'courses', '/import-attendance-list');
         }
     },
 };

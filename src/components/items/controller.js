@@ -641,7 +641,7 @@ const ItemController = {
 
                     payload.author = user._id;
 
-                    const item = await Item.findById({ _id: payload._id });
+                    let item = await Item.findById({ _id: payload._id });
                     if (item.kind == 'SoonItem' && item.kind != payload.kind) {
                         await Item.findOneAndUpdate(
                             { _id: item._id },
@@ -657,14 +657,14 @@ const ItemController = {
                         );
 
                         await ItemModel.findByIdAndUpdate(payload._id, payload);
-                        await ItemModel.findByIdAndUpdate(payload._id, {
+                        item = await ItemModel.findByIdAndUpdate(payload._id, {
                             contentPath,
-                        });
+                        }, { new: true });
                     } else {
-                        await ItemModel.findByIdAndUpdate(payload._id, payload);
+                        item = await ItemModel.findByIdAndUpdate(payload._id, payload, { new: true });
                     }
 
-                    _messages.success(res, req, 'Atualizado com sucesso');
+                    _messages.success(res, req, item);
                 } catch (error) {
                     if (error.name === 'ValidationError') {
                         const messages = {};
@@ -1123,6 +1123,7 @@ const ItemController = {
     },
 
     async updateSCORM (req, res) {
+
         if (req.method !== 'PUT') {
             return res.status(httpStatus.NOT_FOUND).send();
         }
@@ -1277,7 +1278,7 @@ const ItemController = {
                     (el) => el.name === 'resources'
                 );
 
-                await Promise.all(
+                const items = await Promise.all(
                     $items.map(($item) => {
                         const $resource = $resources.children.find(
                             (el) =>
@@ -1299,7 +1300,7 @@ const ItemController = {
                     })
                 );
 
-                res.status(httpStatus.NO_CONTENT).send();
+                return _messages.success(res, req, items);
             } catch (err) {
                 if (err) {
                     throw _errors.SCORM_UPLOAD.UNEXPECTED_IDENTIFIER;

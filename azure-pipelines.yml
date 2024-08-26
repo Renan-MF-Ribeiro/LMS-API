@@ -32,7 +32,7 @@ stages:
       - job: Build
         displayName: Build
         pool:
-          vmImage: $(vmImageName)
+          name: Default
         steps:
           - task: DownloadSecureFile@1
             displayName: "Download secure file"
