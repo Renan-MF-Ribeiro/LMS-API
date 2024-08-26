@@ -103,7 +103,6 @@ module.exports = {
                     const programID = await returnProgramaID(body.program);
                     body.program = programID;
 
-
                     delete body.materials;
                     const courseCreated = await CourseModel.create(body);
 
