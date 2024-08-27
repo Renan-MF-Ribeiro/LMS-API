@@ -205,32 +205,43 @@ module.exports = {
 
     async getSectionsElegibles(req, res) {
         try {
+            const { trailLimit: queryTrailLimit = '30', sectionId, channel: channelId, ...filter } = req.query;
+
+            const trailLimit =  queryTrailLimit ? Number(queryTrailLimit) : null;
+
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
             const classGroups = await getGroupCodesByToken(req, tags);
-            const channelId = req.query.channel;
             const newArray = [];
             let sectionArray;
+
             if (channelId) {
-                const { idSections } = await Channel.findById(channelId).select('idSections -_id');
+                let { idSections } = await Channel.findById(channelId).select('idSections -_id');
+
+                if (sectionId) {
+                    idSections = idSections.filter((section) => String(section) === String(sectionId));
+                }
+
                 const trailsInSections = await Section.find({ _id: { $in: idSections } }).select(
                     'trails -_id'
                 );
+
                 newArray.push(
                     ...trailsInSections
                         .map((e) => {
+                            if (trailLimit) return e.trails.slice(0, trailLimit);
+
                             return e.trails;
                         })
                         .flat(2)
                 );
+                
                 delete req.query.channel;
                 sectionArray = idSections;
             }
 
             let resultSections = [];
             if (tags.length > 0) {
-                const filter = req.query;
-
                 const query = {
                     enabled: true,
                     $or: [
@@ -295,9 +306,43 @@ module.exports = {
                 const arrKeepLearningSections = await keepLearningSections(trails);
                 const arrConcludedSections = await concludedSections(trails);
                 const arrFavoriteSections = await favoriteSections(trails, user._id);
-                const arrMostSeenSections = await mostSeenSections(trails)
-
+                const arrMostSeenSections = await mostSeenSections(trails);
                 const arrCoursesSections = await courseInSections(tags, user._id);
+
+                if(trailLimit) {
+                    arrSections = arrSections.map((section) => {
+                        section.trails = section.trails.slice(0, trailLimit);
+                        return section;
+                    });
+
+                    if (arrMandatorySections?.trails) {
+                        arrMandatorySections.trails = arrMandatorySections.trails.slice(0, trailLimit);
+                    }
+
+                    if (arrRecentsSections?.trails) {
+                        arrRecentsSections.trails = arrRecentsSections.trails.slice(0, trailLimit);
+                    }
+
+                    if (arrKeepLearningSections?.trails) {
+                        arrKeepLearningSections.trails = arrKeepLearningSections.trails.slice(0, trailLimit);
+                    }
+
+                    if (arrConcludedSections?.trails) {
+                        arrConcludedSections.trails = arrConcludedSections.trails.slice(0, trailLimit);
+                    }
+
+                    if (arrFavoriteSections?.trails) {
+                        arrFavoriteSections.trails = arrFavoriteSections.trails.slice(0, trailLimit);
+                    }
+
+                    if (arrMostSeenSections?.trails) {
+                        arrMostSeenSections.trails = arrMostSeenSections.trails.slice(0, trailLimit);
+                    }
+
+                    if (arrCoursesSections?.trails) {
+                        arrCoursesSections.trails = arrCoursesSections.trails.slice(0, trailLimit);
+                    }
+                }
 
                 resultSections = arrSections
                     .concat(arrMandatorySections)
