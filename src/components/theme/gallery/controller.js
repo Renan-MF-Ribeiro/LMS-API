@@ -1,4 +1,4 @@
-const { Gallery } = require('./model')
+const { MyGallery } = require('./model')
 const _messages = require('../../../utils/messages')
 const { DOMAIN, AZURE_BLOB_URL } = process.env
 const { azureBlob } = require('../../../utils/files')
@@ -7,21 +7,19 @@ const _functions = require('../../../utils/functions')
 module.exports = {
     async create (req, res) {
         try {
-            const body = JSON.parse(req.fields.body)
-            const fileArray = Object.keys(req.files).map(key => req.files[key])
+            const body = { target: req.fields.target }
+            const file = req.files.file
 
 
-            const path = fileArray.findIndex(el => el.name === body.path)
-            if (path >= 0) {
-                let pathAzure = await azureBlob(fileArray[path], 'showcase/home', false, 'lmsassetsanon')
-                body.path = pathAzure.replace(AZURE_BLOB_URL, DOMAIN)
+            if (file) {
+                let pathAzure = await azureBlob(file, 'showcase/home', false, 'lmsassetsanon')
+                body.url = pathAzure.replace(AZURE_BLOB_URL, DOMAIN)
             }
 
+            gallery = await MyGallery.create(body)
 
-            gallery = await Gallery.create(body)
 
-
-            return _messages.success(res, req, gallery)
+            return _messages.success(res, req,)
 
         } catch (error) {
             _messages.internalServer(
@@ -42,7 +40,7 @@ module.exports = {
             const { skip, limit } = _functions.pagination(req);
             const searchBy = req.query.searchBy;
 
-            const total = await Gallery.find(
+            const total = await MyGallery.find(
                 searchBy
                     ? {
                         $or: [{ title: { $regex: searchBy, $options: 'i' } }],
@@ -51,7 +49,7 @@ module.exports = {
             ).countDocuments();
 
 
-            const data = await Gallery.find(
+            const data = await MyGallery.find(
                 searchBy
                     ? {
                         $or: [{ title: { $regex: searchBy, $options: 'i' } }],
@@ -64,7 +62,7 @@ module.exports = {
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
-            _messages.success(res, req, { data, total, });
+            return _messages.success(res, req, { data, total, });
         }
         catch (error) {
             console.error(error)

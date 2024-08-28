@@ -9,15 +9,16 @@ const schemaOptions = {
 }
 
 
-const gallerySchema = new mongoose.Schema({
-    path: { type: String, required: true },
-    title: { type: String, required: true },
+const myGallerySchema = new mongoose.Schema({
+    url: { type: String, required: true },
+    target: { type: String, required: true },
+    default: { type: Boolean, required: false, default: false },
 }, {
     ...schemaOptions,
 })
 
-const Gallery = mongoose.model('gallery', gallerySchema)
+const MyGallery = mongoose.model('myGallery', myGallerySchema)
 
 module.exports = {
-    Gallery,
+    MyGallery,
 }
