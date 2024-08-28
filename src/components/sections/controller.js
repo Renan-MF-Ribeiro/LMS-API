@@ -31,7 +31,7 @@ const {
 const { TrailsUsersProgress, Trail } = require('../trails/model');
 
 module.exports = {
-    async returnSections (req, res) {
+    async returnSections(req, res) {
         try {
             const searchBy = req.query.searchBy;
             const total = await Section.find({
@@ -72,7 +72,7 @@ module.exports = {
         }
     },
 
-    async createSection (req, res) {
+    async createSection(req, res) {
         try {
             const verify = await Section.find({
                 title: { $eq: req.body.title },
@@ -114,7 +114,7 @@ module.exports = {
         }
     },
 
-    async updateSection (req, res) {
+    async updateSection(req, res) {
         try {
             const { _id } = req.body;
             const verify = await Section.find({
@@ -160,7 +160,7 @@ module.exports = {
         }
     },
 
-    async deleteSection (req, res) {
+    async deleteSection(req, res) {
         try {
             const { id } = req.params;
             const section = await Section.findById(id);
@@ -386,12 +386,28 @@ module.exports = {
             return;
         }
 
-        const trailsDb = (await populateTrails(true, {
-            _id: { $in: section.trails },
-            enabled: true,
-        }))
-            // ?.filter(trail => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative)
-            // ?.filter((trail) => checkIfTheTrackIsValid(trail))
+        const query = { enabled: true };
+
+        if (Object.values(DEFAULT_TYPES).includes(section.defaultType)) {
+            query.$or = [
+                {
+                    tags: {
+                        $in: tags,
+                    },
+                },
+                {
+                    tagsAnd: {
+                        $in: tags,
+                    },
+                },
+            ]
+        } else {
+            query._id = { $in: section.trails };
+        }
+
+        const trailsDb = (await populateTrails(true, query))
+            ?.filter(trail => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative)
+            ?.filter((trail) => checkIfTheTrackIsValid(trail))
 
         const allTrackingUser = await Tracking.find({
             userLogin: { $eq: user.networkLogin },
@@ -410,7 +426,7 @@ module.exports = {
 
             const newTrail = processedTrail.trail;
 
-            for (const tag of newTrail.tags) {
+            for (const tag of newTrail?.tags ?? []) {
                 for (const classGroup of classGroups) {
                     if (classGroup.groupCode === tag.value) {
                         trail.classGroup = findObjectInRange(
@@ -423,7 +439,7 @@ module.exports = {
 
             return newTrail;
         });
-        
+
         let responseSection;
 
         function setResponse(fnResponse) {
@@ -461,6 +477,7 @@ module.exports = {
                 responseSection = setResponse(favoriteSectionsResult);
                 break;
             case DEFAULT_TYPES.MOST_SEEN:
+                console.log('MOST_SEEN', trails)
                 const mostSeenSectionsResult = await mostSeenSections(trails);
                 responseSection = setResponse(mostSeenSectionsResult);
                 break;
@@ -614,7 +631,7 @@ module.exports = {
         }
     },
 
-    async updatePosition (req, res) {
+    async updatePosition(req, res) {
         try {
             const sections = req.body;
 
