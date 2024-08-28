@@ -1,5 +1,5 @@
 /* eslint-disable no-async-promise-executor */
-const { Section } = require('./model');
+const { Section, DEFAULT_TYPES } = require('./model');
 const { Tracking } = require('../tracking/model');
 const { Channel } = require('../channels/model');
 const _messages = require('../../utils/messages');
@@ -388,10 +388,6 @@ module.exports = {
 
         const trailsDb = (await populateTrails(true, {
             _id: { $in: section.trails },
-            $or: [
-                { tags: { $in: tags } },
-                { tagsAnd: { $in: tags } },
-            ],
             enabled: true,
         }))
             ?.filter(trail => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative)
@@ -426,9 +422,59 @@ module.exports = {
             }
 
             return newTrail;
-        })
+        });
+        
+        let responseSection;
 
-        _messages.success(res, req, { section: { ...section, trails } });
+        function setResponse(fnResponse) {
+            if (Array.isArray(fnResponse)) {
+                return fnResponse.find((e) => String(e._id) === String(section._id))
+                    ?? { ...section, trails: [] };
+            }
+
+            return { ...section, trails: fnResponse?.trails ?? [] };
+        }
+
+        switch (section.defaultType) {
+            case DEFAULT_TYPES.MANDATORY:
+                const mandatorySections = await mandatorySections(trails, tags);
+                responseSection = setResponse(mandatorySections);
+                break;
+            case DEFAULT_TYPES.RECENTS:
+                const recentSections = await recentsSections(trails);
+                responseSection = setResponse(recentSections);
+                break;
+            case DEFAULT_TYPES.KEEP_LEARNING:
+                const keepLearningSections = await keepLearningSections(trails);
+                responseSection = setResponse(keepLearningSections);
+                break;
+            case DEFAULT_TYPES.CONCLUDED:
+                const concludedSections = await concludedSections(trails);
+                responseSection = setResponse(concludedSections);
+                break;
+            case DEFAULT_TYPES.COURSES:
+                const coursesSections = await courseInSections(tags, user._id);
+                responseSection = setResponse(coursesSections);
+                break;
+            case DEFAULT_TYPES.FAVORITES:
+                const favoriteSections = await favoriteSections(trails, user._id);
+                responseSection = setResponse(favoriteSections);
+                break;
+            case DEFAULT_TYPES.MOST_SEEN:
+                const mostSeenSections = await mostSeenSections(trails);
+                responseSection = setResponse(mostSeenSections);
+                break;
+            default:
+                responseSection = { ...section, trails };
+                break;
+        }
+
+        if (!responseSection) {
+            res.status(404).json('Seção não encontrada ou inelegível');
+            return;
+        }
+
+        res.json(responseSection);
     },
 
     async getSectionsElegiblesNew(req, res) {
