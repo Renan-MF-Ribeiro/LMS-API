@@ -11,6 +11,7 @@ const schemaOptions = {
 const loginSchema = new mongoose.Schema({
     buttons: {
         login: {
+            label: { type: String },
             bgColor: { type: String },
             textColor: { type: String },
             border: { type: Number },
@@ -19,6 +20,7 @@ const loginSchema = new mongoose.Schema({
             hint: { type: String },
         },
         sso: {
+            label: { type: String },
             bgColor: { type: String },
             textColor: { type: String },
             border: { type: Number },
@@ -27,6 +29,7 @@ const loginSchema = new mongoose.Schema({
             hint: { type: String },
         },
         recoveryPassword: {
+            label: { type: String },
             bgColor: { type: String },
             textColor: { type: String },
             border: { type: Number },
@@ -35,6 +38,7 @@ const loginSchema = new mongoose.Schema({
             hint: { type: String },
         },
         singin: {
+            label: { type: String },
             bgColor: { type: String },
             textColor: { type: String },
             border: { type: Number },

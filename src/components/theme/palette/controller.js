@@ -56,11 +56,11 @@ module.exports = {
             }
             let theme
             if (body._id) {
-                if (body.enabled && body.defaultPalette) {
-                    await Theme.updateMany({}, { $set: { enabled: false, defaultPalette: false } });
-                } else if (body.defaultPalette) {
-                    await Theme.updateMany({}, { $set: { defaultPalette: false } });
-                } else if (body.enabled) {
+                if (body.enabled) {
+                    //     await Theme.updateMany({}, { $set: { enabled: false, defaultPalette: null } });
+                    // } else if (body.defaultPalette) {
+                    //     await Theme.updateMany({}, { $set: { defaultPalette: null } });
+                    // } else if (body.enabled) {
                     await Theme.updateMany({}, { $set: { enabled: false } });
                 }
 
