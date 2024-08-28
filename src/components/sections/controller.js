@@ -437,32 +437,32 @@ module.exports = {
 
         switch (section.defaultType) {
             case DEFAULT_TYPES.MANDATORY:
-                const mandatorySections = await mandatorySections(trails, tags);
-                responseSection = setResponse(mandatorySections);
+                const mandatorySectionsResult = await mandatorySections(trails, tags);
+                responseSection = setResponse(mandatorySectionsResult);
                 break;
             case DEFAULT_TYPES.RECENTS:
-                const recentSections = await recentsSections(trails);
-                responseSection = setResponse(recentSections);
+                const recentSectionsResult = await recentsSections(trails);
+                responseSection = setResponse(recentSectionsResult);
                 break;
             case DEFAULT_TYPES.KEEP_LEARNING:
-                const keepLearningSections = await keepLearningSections(trails);
-                responseSection = setResponse(keepLearningSections);
+                const keepLearningSectionsResult = await keepLearningSections(trails);
+                responseSection = setResponse(keepLearningSectionsResult);
                 break;
             case DEFAULT_TYPES.CONCLUDED:
-                const concludedSections = await concludedSections(trails);
-                responseSection = setResponse(concludedSections);
+                const concludedSectionsResult = await concludedSections(trails);
+                responseSection = setResponse(concludedSectionsResult);
                 break;
             case DEFAULT_TYPES.COURSES:
-                const coursesSections = await courseInSections(tags, user._id);
-                responseSection = setResponse(coursesSections);
+                const coursesSectionsResult = await courseInSections(tags, user._id);
+                responseSection = setResponse(coursesSectionsResult);
                 break;
             case DEFAULT_TYPES.FAVORITES:
-                const favoriteSections = await favoriteSections(trails, user._id);
-                responseSection = setResponse(favoriteSections);
+                const favoriteSectionsResult = await favoriteSections(trails, user._id);
+                responseSection = setResponse(favoriteSectionsResult);
                 break;
             case DEFAULT_TYPES.MOST_SEEN:
-                const mostSeenSections = await mostSeenSections(trails);
-                responseSection = setResponse(mostSeenSections);
+                const mostSeenSectionsResult = await mostSeenSections(trails);
+                responseSection = setResponse(mostSeenSectionsResult);
                 break;
             default:
                 responseSection = { ...section, trails };
