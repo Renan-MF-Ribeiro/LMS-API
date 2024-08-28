@@ -390,8 +390,8 @@ module.exports = {
             _id: { $in: section.trails },
             enabled: true,
         }))
-            ?.filter(trail => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative)
-            ?.filter((trail) => checkIfTheTrackIsValid(trail))
+            ?.filter(trail => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative);
+            
 
         const allTrackingUser = await Tracking.find({
             userLogin: { $eq: user.networkLogin },
