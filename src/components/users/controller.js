@@ -86,6 +86,7 @@ const inactivateIfNotInSpreadsheet =
     config.usersData.inactivateIfNotInSpreadsheet;
 const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail;
 const { EVENTS_CATEGORY } = require('../gamification/model');
+const AssessmentController = require('../assessment/controller');
 const GamificationController = require('../gamification/controller');
 const GamificationBusiness = require('../gamification/business');
 const { Group } = require('../groups/model');
@@ -416,6 +417,8 @@ module.exports = {
                     await GamificationController.dispatch(login, [
                         EVENTS_CATEGORY.LOGIN,
                     ]);
+
+                    await AssessmentController.updateUserEligibilities(req, res)
 
                     _messages.success(
                         res,
