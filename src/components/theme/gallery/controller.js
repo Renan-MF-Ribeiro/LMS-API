@@ -16,10 +16,9 @@ module.exports = {
                 body.url = pathAzure.replace(AZURE_BLOB_URL, DOMAIN)
             }
 
-            gallery = await MyGallery.create(body)
+            // gallery = await MyGallery.create(body)
 
-
-            return _messages.success(res, req,)
+            return _messages.success(res, req)
 
         } catch (error) {
             _messages.internalServer(
@@ -27,7 +26,7 @@ module.exports = {
                 req,
                 error.message,
                 'Erro interno no servidor',
-                'theme',
+                'myGallery',
                 'createOrUpdate',
             )
         }
@@ -39,23 +38,14 @@ module.exports = {
             const { sort, order } = _functions.ordernation(req);
             const { skip, limit } = _functions.pagination(req);
             const searchBy = req.query.searchBy;
+            const query = searchBy
+                ? {
+                    $or: [{ title: { $regex: searchBy, $options: 'i' } }],
+                }
+                : {}
 
-            const total = await MyGallery.find(
-                searchBy
-                    ? {
-                        $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-                    }
-                    : {}
-            ).countDocuments();
-
-
-            const data = await MyGallery.find(
-                searchBy
-                    ? {
-                        $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-                    }
-                    : {}
-            )
+            const total = await MyGallery.find(query).countDocuments();
+            const data = await MyGallery.find(query)
                 .sort({
                     [order]: sort,
                 })
@@ -73,6 +63,29 @@ module.exports = {
                 'Erro interno no servidor',
                 'Gallery',
                 'listGallery',
+            )
+        }
+    },
+
+    async setDefault (req, res) {
+        try {
+            const imageId = req.body
+            const image = await MyGallery.findById(imageId)
+
+            await MyGallery.updateMany({ target: image.target }, { $set: { default: false } });
+
+            await MyGallery.updateOne({ _id: image._id }, { $set: { default: true } });
+
+            return _messages.success(res, req, image)
+
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'myGallery',
+                'setDefault',
             )
         }
     }

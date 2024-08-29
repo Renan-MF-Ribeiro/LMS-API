@@ -5,5 +5,6 @@ const { validateTokenRoute } = require('../../../utils/middlewares');
 
 module.exports = express.Router()
     .put('/', formidable(), validateTokenRoute, _controller.create)
+    .put('/setDefault', validateTokenRoute, _controller.setDefault)
     .get('/', _controller.list)
 

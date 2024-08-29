@@ -8,11 +8,16 @@ const schemaOptions = {
     collation: { locale: 'en_US', strength: 1 },
 }
 
+const target = Object.freeze({
+    Banner: 'Banner',
+    Logo: 'Logo',
+    LogoAdmin: 'LogoAdmin',
+    LogoLogin: 'LogoLogin',
+    Background: 'Background',
+})
 
 const myGallerySchema = new mongoose.Schema({
     url: { type: String, required: true },
-    target: { type: String, required: true },
-    default: { type: Boolean, required: false, default: false },
 }, {
     ...schemaOptions,
 })
@@ -21,4 +26,5 @@ const MyGallery = mongoose.model('myGallery', myGallerySchema)
 
 module.exports = {
     MyGallery,
+    target
 }
