@@ -32,6 +32,7 @@ const TrailSchema = new mongoose.Schema(
         level: { type: String, enum: ['basic', 'intermediate', 'advanced'] },
         showcase: { type: Boolean, default: false },
         collaborative: { type: Boolean, default: false },
+        confidential: { type: Boolean, default: false },
         certificateLayout: { type: 'ObjectId' },
         author: { type: 'ObjectId', ref: 'users', required: true },
         thumbPath: { type: String, required: ifEnabledAndNotHighlighted },
