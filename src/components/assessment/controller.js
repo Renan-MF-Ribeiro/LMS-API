@@ -4,6 +4,7 @@ const { getUserByToken } = require('../../utils/functions');
 const { handleError } = require('../../utils/errors');
 const { Group } = require('../groups/model');
 const { User } = require('../users/model');
+const AssessmentBusiness = require('./business');
 
 const host = process.env.API_ASSESSMENT;
 const clientId = process.env.CLIENT_ID;
@@ -253,7 +254,7 @@ const AssessmentController = {
                 },
                 { headers }
             );
-            await module.exports.updateUserEligibilities(req, res);
+            await AssessmentBusiness.updateUserEligibilities(userId);
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -308,18 +309,6 @@ const AssessmentController = {
         } catch (error) {
             return handleError(res, req, error);
         }
-    },
-
-    async updateUserEligibilities(req, res) {
-        const { _id } = await getUserByToken(req);
-        const uri = `${host}/users/${clientId}/${_id}`;
-        const { data } = await axios.get(uri, { headers });
-        const eligibilities = data.eligibilities.flatMap((eligibility) => eligibility.tags);
-        const assessmentGroups = await Group.find({ 'tags.value': { $in: eligibilities } });
-        await User.updateOne(
-            { _id },
-            { $set: { assessmentGroups: assessmentGroups.flatMap(({ name }) => name) } }
-        );
     },
 };
 

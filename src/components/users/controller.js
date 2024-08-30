@@ -93,6 +93,7 @@ const { Group } = require('../groups/model');
 const {
     handleUserEligibilitiesGamification,
 } = require('../gamification/utils');
+const AssessmentBusiness = require('../assessment/business');
 
 module.exports = {
     async create (req, res) {
@@ -418,7 +419,8 @@ module.exports = {
                         EVENTS_CATEGORY.LOGIN,
                     ]);
 
-                    // await AssessmentController.updateUserEligibilities(req, res)
+
+                    await AssessmentBusiness.updateUserEligibilities(user._id)
 
                     _messages.success(
                         res,
