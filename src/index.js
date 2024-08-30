@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+require('express-async-errors');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -17,6 +18,8 @@ const { PUBLIC_PATH } = process.env;
 const app = express();
 const passport = require('./utils/passport');
 const config = require('../config.json');
+
+const { errorHandler } = require('./utils/errors');
 
 var corsOptions = {
     origin: [
@@ -136,7 +139,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/theme', themeRoutes)
     .use('/unsplash', validateTokenRoute, unsplashRoutes)
     .use('/dashboard', validateTokenRoute, dashboardRoutes)
-    .use('/certificates', validateTokenRoute, certificateRoutes)
+    .use('/certificates', certificateRoutes)
     .use(
         '/assessment',
         isAssessmentActive,
@@ -144,10 +147,6 @@ app.use('/items', validateTokenRoute, itemsRoutes)
         assessmentRoutes
     );
 
-app.use(function (err, req, res, next) {
-    if (err.code !== 'EBADCSRFTOKEN') return next(err);
-    res.status(403);
-    res.json('Formulário inválido');
-});
+app.use(errorHandler);
 
 module.exports = app;

@@ -868,6 +868,7 @@ const ItemController = {
             _messages.success(res, req, {
                 ...item._doc,
                 trailTitle: trail.title,
+                confidential: trail.confidential
             });
         } catch (error) {
             _messages.internalServer(

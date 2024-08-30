@@ -197,7 +197,8 @@ module.exports = {
                             innerTextBanner: trail.innerTextBanner,
                             durationHours: trail.durationHours,
                             post: trail.post,
-                            gallery: galleryEnabled
+                            gallery: galleryEnabled,
+                            confidential: trail.confidential
                         });
                     }
                 } else {
@@ -304,7 +305,8 @@ module.exports = {
                             innerTextBanner: trail.innerTextBanner,
                             durationHours: trail.durationHours,
                             post: trail.post,
-                            gallery: galleryEnabled
+                            gallery: galleryEnabled,
+                            confidential: trail.confidential
                         });
                     }
                 }
