@@ -139,7 +139,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/theme', themeRoutes)
     .use('/unsplash', validateTokenRoute, unsplashRoutes)
     .use('/dashboard', validateTokenRoute, dashboardRoutes)
-    .use('/certificates', validateTokenRoute, certificateRoutes)
+    .use('/certificates', certificateRoutes)
     .use(
         '/assessment',
         isAssessmentActive,
