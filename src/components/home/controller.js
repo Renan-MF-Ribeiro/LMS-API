@@ -407,6 +407,7 @@ const HomeController = {
             const elegibleTrails = await Trail.find({
                 tags: { $in: tags },
                 enabled: true,
+                certificate: 1,
                 startDate: { $lt: getDateTodayWithoutHours() },
                 endDate: { $gt: getDateTodayWithoutHours() },
             }).populate('items.itemID');
@@ -449,6 +450,7 @@ const HomeController = {
             const elegibleTrails = await Trail.find({
                 tags: { $in: tags },
                 enabled: true,
+                certificate: 1,
                 startDate: { $lt: getDateTodayWithoutHours() },
                 endDate: { $gt: getDateTodayWithoutHours() },
             }).populate('items.itemID');
