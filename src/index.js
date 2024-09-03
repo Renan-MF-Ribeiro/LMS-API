@@ -107,6 +107,7 @@ const assessmentRoutes = require('./components/assessment/routes');
 const themeRoutes = require('./components/theme/routes');
 const calendarRoutes = require('./components/calendar/routes');
 const certificateRoutes = require('./components/certificates/routes');
+const dimensionRoutes = require('./components/dimensions/routes');
 
 app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/tracking', validateTokenRoute, trackingRoutes)
@@ -140,6 +141,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/unsplash', validateTokenRoute, unsplashRoutes)
     .use('/dashboard', validateTokenRoute, dashboardRoutes)
     .use('/certificates', certificateRoutes)
+    .use('/dimensions', dimensionRoutes)
     .use(
         '/assessment',
         isAssessmentActive,

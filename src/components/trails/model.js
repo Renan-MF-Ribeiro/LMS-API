@@ -28,6 +28,7 @@ const TrailSchema = new mongoose.Schema(
         titleURL: { type: String, required: true, trim: true },
         description: { type: String, required: true, trim: true },
         mandatory: { type: Array, default: [] },
+        dimensions: { type: Array, default: [] },
         highlighted: { type: Boolean, default: false },
         level: { type: String, enum: ['basic', 'intermediate', 'advanced'] },
         showcase: { type: Boolean, default: false },

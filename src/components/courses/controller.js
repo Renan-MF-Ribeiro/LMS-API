@@ -60,6 +60,7 @@ module.exports = {
             const body = req.fields;
             const arrMaterials = [];
             let flagDate = true;
+            body.dimensions = JSON.parse(body.dimensions);
             body.tags = JSON.parse(body.tags);
             body.mandatory = JSON.parse(body.mandatory);
             body.certificateDue = JSON.parse(body.certificateDue);
@@ -215,6 +216,7 @@ module.exports = {
             const files = req.files;
             let flagDate = true;
             body.tags = JSON.parse(body.tags);
+            body.dimensions = JSON.parse(body.dimensions);
             body.mandatory = JSON.parse(body.mandatory);
             body.certificateDue = JSON.parse(body.certificateDue);
 
