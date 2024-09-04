@@ -563,7 +563,7 @@ module.exports = {
                     EVENTS_CATEGORY[`OPENED_FROM_${communicationCategory}`];
 
                 await GamificationController.dispatch(
-                    networkLogin,
+                    claim,
                     [eventCategory],
                     {
                         trail: {
