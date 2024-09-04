@@ -17,7 +17,8 @@ const DimensionsSchema = new mongoose.Schema({
     thumbPath: { type: String, required: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
-    categories: [{ type: CategorySchema, required: true }]
+    categories: [{ type: CategorySchema, required: true }],
+    deleted: { type: Boolean, default: false }
 }, {
     ...schemaOptions,
 });

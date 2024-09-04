@@ -38,7 +38,7 @@ module.exports = {
                 }
                 : {}
 
-
+            query['deleted'] = { $ne: true }
             const total = await Dimension.find(query).countDocuments();
 
             const data = await Dimension.find(query)
@@ -52,6 +52,26 @@ module.exports = {
                 data,
                 total,
             });
+
+        } catch (error) {
+            console.error(error)
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'dimensions',
+                'findAll'
+            );
+        }
+    },
+
+    async findAllEnabled (req, res) {
+        try {
+
+            const data = await Dimension.find({ enabled: true, deleted: { $ne: true } })
+
+            _messages.success(res, req, data);
 
         } catch (error) {
             console.error(error)
@@ -218,4 +238,26 @@ module.exports = {
             );
         }
     },
+
+    async delete (req, res) {
+        try {
+            const { _id } = req.params
+
+            // soft delete
+            await Dimension.updateOne({ _id }, { $set: { deleted: true } });
+
+            return _messages.success(res, req, 'Removido com sucesso')
+        }
+        catch (error) {
+            console.error(error)
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'theme',
+                'createOrUpdate',
+            )
+        }
+    }
 }
