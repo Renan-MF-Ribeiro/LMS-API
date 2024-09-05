@@ -34,7 +34,7 @@ module.exports = {
         try {
             const config = await ConfigLogin.findOne({})
                 .sort({ createdAt: -1 })
-                .select({ createdAt: 0, updatedAt: 0, _id: 0, __v: 0, "formLogin._id": 0, 'ssoForm._id': 0 })
+                .select({ createdAt: 0, updatedAt: 0, _id: 0, __v: 0, "formLogin._id": 0, 'ssoForm._id': 0, 'ssoForm.certifier': 0 })
                 .exec();
 
 
