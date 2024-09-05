@@ -444,11 +444,11 @@ module.exports = {
 
                     if (payload.galleryFiles) {
                         const fileArray = payload.galleryFiles.map((item) => {
-                                return {
-                                    ...item,
-                                    file: req.files[item.name]
-                                }
-                            },
+                            return {
+                                ...item,
+                                file: req.files[item.name]
+                            }
+                        },
                         )
                         const gallery = []
 
@@ -636,6 +636,9 @@ module.exports = {
         try {
             const body = req.body;
             delete body?.descriptionView;
+            if (body.collaborative) {
+                body.collaborative = false
+            }
 
             const docClone = new Trail(body);
             await docClone.save();
