@@ -42,6 +42,9 @@ module.exports = {
 
                 return _messages.success(res, req, config)
             }
+
+            res.set('x-version', 'teste');
+
             return _messages.conflict(res, req, null)
 
         }
