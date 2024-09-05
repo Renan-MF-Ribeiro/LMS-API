@@ -95,7 +95,7 @@ stages:
                   displayName: Stop current container
                 - script: sudo docker rm $(imageRepositoryStaging) || true
                   displayName: Remove current container
-                - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryStaging) -p $(stagingRunningPort):3000 $(URL)/$(imageRepositoryStaging):$(tag)
+                - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryStaging) -p $(stagingRunningPort):3000 $(containerRegistry)/$(imageRepositoryStaging):$(tag)
                   displayName: Execute new container instance
                 - script: sudo docker ps
                   displayName: Container status
@@ -119,7 +119,7 @@ stages:
                   displayName: Stop current container
                 - script: sudo docker rm $(imageRepositoryProd) || true
                   displayName: Remove current container
-                - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryProd) -p $(prodRunningPort):3000 $(URL)/$(imageRepositoryProd):$(tag)
+                - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryProd) -p $(prodRunningPort):3000 $(containerRegistry)/$(imageRepositoryProd):$(tag)
                   displayName: Execute new container instance
                 - script: sudo docker ps
                   displayName: Container status
