@@ -17,10 +17,11 @@ const DEFAULT_TYPES = Object.freeze({
     text: "text",
     image: "image",
     depositions: "depositions",
+    dynamicSection: "DynamicSection",
 })
 
 const showcaseSchema = new mongoose.Schema({
-    title: { type: String, required: true, trim: true },
+    title: { type: String, required: false, trim: true },
     type: { type: String, enum: Object.values(DEFAULT_TYPES), required: true, trim: true },
     position: { type: Number, required: true, trim: true, default: 0 },
     colorTitle: { type: String, required: false, trim: true },

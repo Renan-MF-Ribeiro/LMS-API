@@ -5,6 +5,7 @@ const loginConfigRoutes = require('./login-config/routes');
 const paletteRoutes = require('./palette/routes');
 const galleryRoutes = require('./gallery/routes');
 const featuresRoutes = require('./features/routes');
+const footerRoutes = require('./footer/routes');
 
 module.exports = express.Router()
     .use('/login', loginRoutes)
@@ -12,3 +13,4 @@ module.exports = express.Router()
     .use('/palette', paletteRoutes)
     .use('/gallery', galleryRoutes)
     .use('/features', featuresRoutes)
+    .use('/footer', footerRoutes)
