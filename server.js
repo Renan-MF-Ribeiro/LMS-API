@@ -39,6 +39,7 @@ const server = app.listen(port, async () => {
     }
     log('Host: ' + HOSTNAME)
     log('Listening on port: ' + port)
+    log('RUNNING')
 })
 
 createTerminus(server, {
