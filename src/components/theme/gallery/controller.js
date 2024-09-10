@@ -16,7 +16,7 @@ module.exports = {
                 body.url = pathAzure.replace(AZURE_BLOB_URL, DOMAIN)
             }
 
-            // gallery = await MyGallery.create(body)
+            gallery = await MyGallery.create(body)
 
             return _messages.success(res, req)
 

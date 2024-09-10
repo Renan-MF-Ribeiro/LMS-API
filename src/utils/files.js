@@ -281,9 +281,6 @@ module.exports = {
                     DOMAIN
                 );
 
-        if (file.type.includes('image')) {
-            await MyGallery.create({ url })
-        }
         return url;
     },
 
