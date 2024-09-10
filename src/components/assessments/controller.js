@@ -109,9 +109,9 @@ module.exports = {
             const { id } = req.params
             const { userId } = req.query
             const { idEvaluation, passingScore } = await Item.findOne({ _id: { $eq: id } })
-            const historicEvaluation = await HistoricEvaluation.find({ 
-                user: { $eq: userId }, 
-                idEvaluation: { $eq: idEvaluation }, 
+            const historicEvaluation = await HistoricEvaluation.find({
+                user: { $eq: userId },
+                idEvaluation: { $eq: idEvaluation },
                 item: { $eq: id },
                 $or: [
                     { expiredCompletion: { $exists: false } },
@@ -486,7 +486,7 @@ module.exports = {
             result.title = title
 
 
-            const tracking = await Tracking.findOne({ 
+            const tracking = await Tracking.findOne({
                 item: itemID,
                 userLogin: user.networkLogin,
                 $or: [
@@ -593,7 +593,7 @@ module.exports = {
                     { _id: { $eq: id } },
                     ['description', 'idCategory'],
                 )
-                .populate('alternatives', 'description')
+                .populate({ path: 'alternatives', match: { deleted: { $eq: 0 }, active: { $eq: 1 }, }, select: 'description' })
 
             const { randomQuestions } = await Category.findById(question.idCategory).select('randomQuestions')
 
