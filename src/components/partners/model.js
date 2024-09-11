@@ -10,7 +10,6 @@ const optionsSchema = {
 };
 
 const PartnerSchema = new mongoose.Schema(
-    //TODO- verificar obrigatoriedade de key/string 
     {
         title: { type: String, required: true, trim: true },
         description: { type: String, required: true, trim: true },
@@ -18,13 +17,13 @@ const PartnerSchema = new mongoose.Schema(
         keys: {
             type: [
                 {
-                    key: { type: String, required: true },
+                    key: { type: String },
                     title: { type: String, required: true },
-                    dataInicio: { type: Date, required: true },
-                    dataFim: { type: Date, required: true },
-                    defaultField: [{ key: String, value: string }],
-                    elegibilityResult: [{ key: String, value: string }],
-                    classGroupResult: [{ key: String, value: string }],
+                    inititalDate: { type: Date },
+                    endDate: { type: Date },
+                    defaultField: [{ key: { type: String }, value: { type: String } }],
+                    elegibilityResult: [{ key: { type: String }, value: { type: String } }],
+                    classGroupResult: [{ key: { type: String }, value: { type: String } }],
                 },
             ],
             required: true,
