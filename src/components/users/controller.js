@@ -1737,7 +1737,7 @@ module.exports = {
                     filters: dashboardFilters
                 });
                 const SAS = generateSASToken();
-                GamificationBusiness.createClientUser(networkLogin, groupsAD);
+                if (config.gamification.active) GamificationBusiness.createClientUser(networkLogin, groupsAD);
                 _messages.success(res, req, {
                     SAS,
                     token,
