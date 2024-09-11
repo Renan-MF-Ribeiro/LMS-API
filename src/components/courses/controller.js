@@ -442,7 +442,8 @@ module.exports = {
                 limit,
                 location,
                 costs,
-                name
+                name,
+                signup
             } = req.fields;
             let flagDate = true;
 
@@ -547,7 +548,8 @@ module.exports = {
                             limit,
                             location,
                             costs: costsArray,
-                            name
+                            name,
+                            signup
                         });
 
                         const classesFromCourse = await ClassModel.find({ courseID });
@@ -632,7 +634,8 @@ module.exports = {
                 limit,
                 location,
                 costs,
-                name
+                name,
+                signup
             } = req.fields;
             const materials = JSON.parse(req.fields.materials);
             const costsArray = JSON.parse(costs);
@@ -734,7 +737,8 @@ module.exports = {
                         limit,
                         location,
                         costs: costsArray,
-                        name
+                        name,
+                        signup
                     });
 
                     const classesFromCourse = await ClassModel.find({

@@ -94,6 +94,7 @@ const ClassSchema = new mongoose.Schema(
             required: true,
             default: false,
         },
+        signup: { type: Boolean, required: true, default: false },
         dateApplication: { type: Date, required: false },
         dateApplicationInitial: { type: Date, required: false },
         dateApplicationFinal: { type: Date, required: false },
