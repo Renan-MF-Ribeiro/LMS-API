@@ -1236,10 +1236,31 @@ module.exports = {
                     '/getCourseByQrCodeSelfRegistration'
                 );
 
-            const user = course.users.find((user) => String(user._id) === String(_id));
+            let user = course.users.find((user) => String(user._id) === String(_id));
 
+            if (!user) {
+                if (course.signup) {
+                    const student = await getUserByToken(req);
+
+                    const studentRegister = {
+                        "_id": student._id,
+                        "name": student.name,
+                        "email": student.email,
+                        "networkLogin": student.networkLogin,
+                        "registration": student.registration,
+                        "presence": false,
+                        "grades": 0
+                    }
+
+                    await ClassModel.findOneAndUpdate(
+                        { _id: course._id, },
+                        { $addToSet: { users: studentRegister } }
+                    )
+                    user = studentRegister
+                }
+            }
             return success(res, req, {
-                title: course.courseID.title, inClass: user ? true : false, _id: course._id, registered: user?.presence
+                title: course.courseID.title, inClass: !!user, _id: course._id, registered: user?.presence
             });
         } catch (error) {
             internalServer(
