@@ -1737,7 +1737,7 @@ module.exports = {
                     filters: dashboardFilters
                 });
                 const SAS = generateSASToken();
-                GamificationBusiness.createClientUser(networkLogin, groupsAD);
+                if (config.gamification.active) GamificationBusiness.createClientUser(networkLogin, groupsAD);
                 _messages.success(res, req, {
                     SAS,
                     token,
@@ -2144,10 +2144,12 @@ module.exports = {
     async deleteGroups (req, res) {
         const { tag, userId } = req.body;
 
+        const arrTags = Array.isArray(tag) ? tag : [tag];
+
         try {
             const user = await User.findByIdAndUpdate(
                 userId,
-                { $pull: { groupsAD: tag } },
+                { $pullAll: { groupsAD: arrTags } },
                 { new: true }
             );
 
