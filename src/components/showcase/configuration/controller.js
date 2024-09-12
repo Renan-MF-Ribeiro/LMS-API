@@ -45,7 +45,7 @@ module.exports = {
     async getBlocks (req, res) {
         const { partnerKey } = req.query;
         const query = { enabled: true }
-        if(partnerKey) query.partnerKey = partnerKey
+        query.partnerKey = partnerKey ? partnerKey : null || undefined
         
         try {
             const blocks = await Showcase.find(query)

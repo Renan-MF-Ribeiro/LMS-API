@@ -2,12 +2,28 @@ const _messages = require('../../utils/messages');
 const { azureBlob } = require('../../utils/files');
 const crypto = require('crypto');
 const { Partner } = require('./model');
+const { pagination, ordernation } = require('../../utils/functions');
 
 module.exports = {
-    async getParterners(req, res) {
+    async getPartners(req, res) {
+        const { skip, limit } = pagination(req);
+        const { order, sort } = ordernation(req);
+        const searchBy = req.query.searchBy;
+
+        const query = searchBy
+            ? {
+                  $or: [{ title: { $regex: searchBy, $options: 'i' } }],
+              }
+            : {};
+
         try {
-            const partners = await Partner.find();
-            const total = await Partner.find().countDocuments();
+            const total = await Partner.find(query).countDocuments();
+            const partners = await Partner.find(query)
+                .sort({
+                    [order]: sort,
+                })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit));
 
             _messages.success(res, req, {
                 data: partners,
@@ -20,14 +36,32 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'partners',
-                'getParterners'
+                'getPartners'
             );
         }
     },
     async getActivePartners(req, res) {
+        const { skip, limit } = pagination(req);
+        const { order, sort } = ordernation(req);
+        const searchBy = req.query.searchBy;
+
+        const query = searchBy
+            ? {
+                  $and: [
+                      { $or: [{ title: { $regex: searchBy, $options: 'i' } }] },
+                      { active: true },
+                  ],
+              }
+            : { active: true };
+
         try {
-            const partners = await Partner.find({ active: true });
-            const total = await Partner.find().countDocuments();
+            const total = await Partner.find(query).countDocuments();
+            const partners = await Partner.find(query)
+                .sort({
+                    [order]: sort,
+                })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit));
 
             _messages.success(res, req, {
                 data: partners,
@@ -48,6 +82,7 @@ module.exports = {
     async create(req, res) {
         const { body } = req;
         const { title, initialDate, endDate } = body;
+        const { logo } = req.files;
         const today = new Date();
 
         //Valida datas
@@ -67,10 +102,17 @@ module.exports = {
             //Verifica existência de parceiro com mesmo title em lowercase
             const formattedTitle = title.toLowerCase();
             const doesPartnerAlreadyExist = await Partner.findOne({ formattedTitle });
+            let logoPath;
 
             if (doesPartnerAlreadyExist) {
                 _messages.conflict(res, req, null, 'Já existe uma parceria com este nome');
                 return;
+            }
+
+            if (logo) {
+                logoPath = await azureBlob(logo, 'partners/logos');
+                logoPath = logoPath.replace(AZURE_BLOB_URL, DOMAIN);
+                body.logo = logoPath;
             }
 
             let dto = body.keys?.map((x) => {
@@ -80,9 +122,9 @@ module.exports = {
                 const key = hex.slice(0, 12);
                 return { ...x, key: key };
             });
-            body.keys = dto
-            
-            const partner = await Partner.create(body);
+            body.keys = dto;
+
+            //const partner = await Partner.create(body);
             _messages.success(
                 res,
                 req,
@@ -130,7 +172,6 @@ module.exports = {
                 true,
                 'UPDATE'
             );
-            
         } catch (error) {
             _messages.internalServer(
                 res,
