@@ -23,7 +23,7 @@ const PartnerSchema = new mongoose.Schema(
                     endDate: { type: Date },
                     defaultField: [{ key: { type: String }, value: { type: String } }],
                     elegibilityResult: [{ display: { type: String }, value: { type: String } }],
-                    classGroupResult: [{ classGroups: { type: array }, days: { type: number } }],
+                    classGroupResult: [{ classGroups: { type: Object }, days: { type: Number } }],
                 },
             ],
             required: true,
