@@ -60,6 +60,7 @@ module.exports = {
             const body = req.fields;
             const arrMaterials = [];
             let flagDate = true;
+            body.dimensions = JSON.parse(body.dimensions);
             body.tags = JSON.parse(body.tags);
             body.mandatory = JSON.parse(body.mandatory);
             body.certificateDue = JSON.parse(body.certificateDue);
@@ -215,6 +216,7 @@ module.exports = {
             const files = req.files;
             let flagDate = true;
             body.tags = JSON.parse(body.tags);
+            body.dimensions = JSON.parse(body.dimensions);
             body.mandatory = JSON.parse(body.mandatory);
             body.certificateDue = JSON.parse(body.certificateDue);
 
@@ -440,7 +442,8 @@ module.exports = {
                 limit,
                 location,
                 costs,
-                name
+                name,
+                signup
             } = req.fields;
             let flagDate = true;
 
@@ -545,7 +548,8 @@ module.exports = {
                             limit,
                             location,
                             costs: costsArray,
-                            name
+                            name,
+                            signup
                         });
 
                         const classesFromCourse = await ClassModel.find({ courseID });
@@ -630,7 +634,8 @@ module.exports = {
                 limit,
                 location,
                 costs,
-                name
+                name,
+                signup
             } = req.fields;
             const materials = JSON.parse(req.fields.materials);
             const costsArray = JSON.parse(costs);
@@ -732,7 +737,8 @@ module.exports = {
                         limit,
                         location,
                         costs: costsArray,
-                        name
+                        name,
+                        signup
                     });
 
                     const classesFromCourse = await ClassModel.find({
@@ -1230,10 +1236,31 @@ module.exports = {
                     '/getCourseByQrCodeSelfRegistration'
                 );
 
-            const user = course.users.find((user) => String(user._id) === String(_id));
+            let user = course.users.find((user) => String(user._id) === String(_id));
 
+            if (!user) {
+                if (course.signup) {
+                    const student = await getUserByToken(req);
+
+                    const studentRegister = {
+                        "_id": student._id,
+                        "name": student.name,
+                        "email": student.email,
+                        "networkLogin": student.networkLogin,
+                        "registration": student.registration,
+                        "presence": false,
+                        "grades": 0
+                    }
+
+                    await ClassModel.findOneAndUpdate(
+                        { _id: course._id, },
+                        { $addToSet: { users: studentRegister } }
+                    )
+                    user = studentRegister
+                }
+            }
             return success(res, req, {
-                title: course.courseID.title, inClass: user ? true : false, _id: course._id, registered: user?.presence
+                title: course.courseID.title, inClass: !!user, _id: course._id, registered: user?.presence
             });
         } catch (error) {
             internalServer(

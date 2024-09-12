@@ -65,7 +65,7 @@ const paletteSchema = new mongoose.Schema({
     nonaryPalette: ColorPaletteSchema,
     decimal: { type: String },
     decimalPalette: ColorPaletteSchema,
-    
+
     primaryContrast: { type: String, required: false },
     secondaryContrast: { type: String, required: false },
     tertiaryContrast: { type: String, required: false },
@@ -84,7 +84,7 @@ const themeSchema = new mongoose.Schema({
     logo_admin: { type: String },
     palette: paletteSchema,
     enabled: { type: Boolean, default: false, required: true },
-    defaultPalette: { type: Boolean, default: false, required: false },
+    defaultPalette: paletteSchema,
     deleted: { type: Boolean, default: false, required: false },
 }, {
     ...schemaOptions,

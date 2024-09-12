@@ -563,7 +563,7 @@ module.exports = {
                     EVENTS_CATEGORY[`OPENED_FROM_${communicationCategory}`];
 
                 await GamificationController.dispatch(
-                    networkLogin,
+                    claim,
                     [eventCategory],
                     {
                         trail: {
@@ -1737,7 +1737,7 @@ module.exports = {
                     filters: dashboardFilters
                 });
                 const SAS = generateSASToken();
-                GamificationBusiness.createClientUser(networkLogin, groupsAD);
+                if (config.gamification.active) GamificationBusiness.createClientUser(networkLogin, groupsAD);
                 _messages.success(res, req, {
                     SAS,
                     token,

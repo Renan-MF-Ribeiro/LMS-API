@@ -750,9 +750,9 @@ module.exports = {
                         },
                     ]);
 
-                    section.trails = mostSeenTrails.map(({ trail, count }) => ({ ...trail, count }))
+                    section.trails = mostSeenTrails.map(({ trail, count }) => ({ ...trail, count, confidential: trail.confidential ?? false }))
                 }
-
+                // console.log(section.trails)
                 resolve(trails.length > 0 ? section : []);
             } catch (error) {
                 reject(error);

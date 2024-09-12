@@ -314,14 +314,19 @@ module.exports = {
                 const arrMostSeenSections = await mostSeenSections(trails);
                 const arrCoursesSections = await courseInSections(tags, user._id);
 
+                function limitArray(arr) {
+                    if (trailLimit && arr?.length) return arr.slice(0, trailLimit);
+                    return arr ?? [];
+                }
+
                 resultSections = arrSections
-                    .concat(arrMandatorySections)
-                    .concat(arrRecentsSections)
-                    .concat(arrKeepLearningSections)
-                    .concat(arrConcludedSections)
-                    .concat(arrCoursesSections)
-                    .concat(arrFavoriteSections)
-                    .concat(arrMostSeenSections);
+                    .concat(limitArray(arrMandatorySections))
+                    .concat(limitArray(arrRecentsSections))
+                    .concat(limitArray(arrKeepLearningSections))
+                    .concat(limitArray(arrConcludedSections))
+                    .concat(limitArray(arrCoursesSections))
+                    .concat(limitArray(arrFavoriteSections))
+                    .concat(limitArray(arrMostSeenSections));
 
                 if (channelId) {
                     const filteredArray = resultSections.filter((obj) =>
