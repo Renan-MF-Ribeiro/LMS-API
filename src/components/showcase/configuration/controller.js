@@ -43,12 +43,8 @@ module.exports = {
     },
 
     async getBlocks (req, res) {
-        const { partnerKey } = req.query;
-        const query = { enabled: true }
-        query.partnerKey = partnerKey ? partnerKey : null || undefined
-        
         try {
-            const blocks = await Showcase.find(query)
+            const blocks = await Showcase.find({ enabled: true })
                 .sort({ position: 1 }).select('_id, type')
 
             _messages.success(res, req, blocks)
