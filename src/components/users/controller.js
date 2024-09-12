@@ -2144,10 +2144,12 @@ module.exports = {
     async deleteGroups (req, res) {
         const { tag, userId } = req.body;
 
+        const arrTags = Array.isArray(tag) ? tag : [tag];
+
         try {
             const user = await User.findByIdAndUpdate(
                 userId,
-                { $pull: { groupsAD: tag } },
+                { $pullAll: { groupsAD: arrTags } },
                 { new: true }
             );
 
