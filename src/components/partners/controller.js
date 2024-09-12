@@ -2,9 +2,11 @@ const _messages = require('../../utils/messages');
 const { azureBlob } = require('../../utils/files');
 const crypto = require('crypto');
 const { Partner } = require('./model');
+const { DOMAIN, AZURE_BLOB_URL } = process.env
+const moment = require('moment');
 
 module.exports = {
-    async getParterners(req, res) {
+    async getParterners (req, res) {
         try {
             const partners = await Partner.find();
             const total = await Partner.find().countDocuments();
@@ -24,7 +26,7 @@ module.exports = {
             );
         }
     },
-    async getActivePartners(req, res) {
+    async getActivePartners (req, res) {
         try {
             const partners = await Partner.find({ active: true });
             const total = await Partner.find().countDocuments();
@@ -45,8 +47,8 @@ module.exports = {
         }
     },
 
-    async create(req, res) {
-        const { body } = req;
+    async create (req, res) {
+        const body = JSON.parse(req.fields.payload) ?? null;;
         const { title, initialDate, endDate } = body;
         const today = new Date();
 
@@ -73,6 +75,13 @@ module.exports = {
                 return;
             }
 
+            const logo = req.files.logo
+
+            if (logo) {
+                let pathAzure = await azureBlob(logo, 'showcase/partners', false, 'lmsassetsanon')
+                body.logo = pathAzure.replace(AZURE_BLOB_URL, DOMAIN)
+            }
+
             let dto = body.keys?.map((x) => {
                 // Gerando um valor hexadecimal de 12 caracteres
                 let bytes = crypto.randomBytes(Math.ceil(12 / 2));
@@ -81,7 +90,7 @@ module.exports = {
                 return { ...x, key: key };
             });
             body.keys = dto
-            
+
             const partner = await Partner.create(body);
             _messages.success(
                 res,
@@ -96,6 +105,7 @@ module.exports = {
                 'CREATE'
             );
         } catch (error) {
+            console.error(error)
             _messages.internalServer(
                 res,
                 req,
@@ -107,9 +117,10 @@ module.exports = {
         }
     },
 
-    async update(req, res) {
+    async update (req, res) {
         const { id: _id } = req.params;
-        const { body } = req;
+        const body = JSON.parse(req.fields.payload) ?? null;;
+
         try {
             //Valida se o id recebido existe
             const doesPartnerExist = await Partner.findById(_id);
@@ -117,6 +128,13 @@ module.exports = {
                 _messages.notFound(res, req, null, 'Este partner não existe');
                 return;
             }
+            const logo = req.files.logo
+
+            if (logo) {
+                let pathAzure = await azureBlob(logo, 'showcase/partners', false, 'lmsassetsanon')
+                body.logo = pathAzure.replace(AZURE_BLOB_URL, DOMAIN)
+            }
+
             const partner = await Partner.findByIdAndUpdate(_id, body);
             _messages.success(
                 res,
@@ -130,7 +148,7 @@ module.exports = {
                 true,
                 'UPDATE'
             );
-            
+
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -143,7 +161,7 @@ module.exports = {
         }
     },
 
-    async delete(req, res) {
+    async delete (req, res) {
         const { id: _id } = req.params;
         try {
             //Valida se o id recebido existe

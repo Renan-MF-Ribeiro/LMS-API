@@ -7,7 +7,7 @@ const _functions = require('../../../utils/functions')
 module.exports = {
     async create (req, res) {
         try {
-            const body = { target: req.fields.target }
+            const body = {}
             const file = req.files.file
 
 
