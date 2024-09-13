@@ -17,6 +17,7 @@ const {
     cronRevokeTrail,
     cronUpdateRecommendedTrails,
     startUpdateTrailsViewsCron,
+    executeInactiveOldOnboardingUsers,
 } = require('./src/utils/cron')
 
 const server = app.listen(port, async () => {
@@ -35,6 +36,7 @@ const server = app.listen(port, async () => {
             cronRevokeTrail()
             cronUpdateRecommendedTrails()
             startUpdateTrailsViewsCron()
+            executeInactiveOldOnboardingUsers()
         }
     }
     log('Host: ' + HOSTNAME)

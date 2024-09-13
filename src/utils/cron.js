@@ -2,7 +2,7 @@
 /* eslint-disable no-new */
 require('dotenv').config();
 const CronJob = require('cron').CronJob;
-const { User } = require('../components/users/model');
+const { User, LastLogin } = require('../components/users/model');
 const { NewMessage } = require('../components/new-messages/model');
 const { Group } = require('../components/groups/model');
 const { populateTrails } = require('../components/trails/business');
@@ -262,6 +262,22 @@ module.exports = {
 
     executeUpdateTrailsViewsCron() {
         updateTrailsViews()
+    },
+
+    executeInactiveOldOnboardingUsers(runningFromAPI = false) {
+        if (runningFromAPI) {
+            return inactiveOldOnboardingUsers();
+        }
+
+        if (config.cron?.inactiveOldOnboardingUsers?.active) {
+            new CronJob(
+                config.cron.inactiveOldOnboardingUsers.cronExpression ?? '59 23 * * *',
+                () => { inactiveOldOnboardingUsers(); },
+                null,
+                true,
+                'America/Sao_Paulo'
+            );
+        }
     },
 };
 
@@ -1184,5 +1200,44 @@ async function updateTrailsViews() {
         }
     } catch (error) {
         console.log(error)
+    }
+}
+
+async function inactiveOldOnboardingUsers() {
+    console.log('Running inactiveOldOnboardingUsers');
+    const daysToInactive = Number(config?.cron?.inactiveOldOnboardingUsers?.daysToInactive ?? 15);
+
+    const lastLoginDate = new Date(
+        new Date().setDate(new Date().getDate() - daysToInactive)
+    );
+
+    console.log('Inactivating users that have not logged in since', lastLoginDate );
+
+    const lastLoginsWithUser = (
+        await LastLogin.find({
+            lastLogin: { $lt: lastLoginDate },
+            user: { $ne: null },
+        }).populate({
+            path: 'user',
+            select: 'status onboarding _id',
+            match: {
+                status: 'ATIVO',
+                onboarding: { $eq: true },
+            },
+        })
+    ).filter((val) => val.user !== null);
+
+    if (lastLoginsWithUser?.length) {
+        const usersToInactivate = lastLoginsWithUser.map((lastLogin) => lastLogin.user._id);
+
+        console.log('Inactive onboarding users', usersToInactivate);
+
+        await User.updateMany(
+            { _id: { $in: usersToInactivate } },
+            { $set: { status: 'INATIVO' } },
+            { multi: true }
+        );
+    } else {
+        console.log('No users to inactivate');
     }
 }

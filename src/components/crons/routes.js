@@ -13,6 +13,7 @@ const {
     executeCronRevokeTrail,
     executeRecommendedTrails,
     executeUpdateTrailsViewsCron,
+    handleInactiveOldOnboardingUsers,
 } = require('./controller')
 
 router
@@ -28,6 +29,7 @@ router
     .get('/revoke-trails', executeCronRevokeTrail)
     .get('/recommended-trails', executeRecommendedTrails)
     .get('/update-trails-views', executeUpdateTrailsViewsCron)
+    .get('/inactive-old-onboarding-users', handleInactiveOldOnboardingUsers)
 
 
 module.exports = router
