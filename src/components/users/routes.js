@@ -55,7 +55,7 @@ module.exports = express
         multiparty(),
         _controller.importUpdateStatusUsers
     )
-    .post('/signup', _controller.signup)
+    .post('/signup/:token', _controller.signup)
     .post('/activate', _controller.activateUser)
     .post('/sso', _controller.singleSignOn)
     .get(

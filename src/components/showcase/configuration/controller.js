@@ -65,7 +65,7 @@ module.exports = {
                 blocks = blocks.filter(block => !block.partners || block.partners.length === 0);
             }
 
-            console.log(blocks)
+
 
             return _messages.success(res, req, blocks)
         } catch (error) {
@@ -170,7 +170,7 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'Showcase',
-                'getBlocks',
+                'getById',
             )
         }
     },

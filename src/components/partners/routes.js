@@ -8,4 +8,5 @@ module.exports = express
     .put('/:id', formidable(), _controller.update)
     .delete('/:id', _controller.delete)
     .get('/', _controller.getParterners)
-    .get('/active', _controller.getActivePartners);
+    .get('/active', _controller.getActivePartners)
+    .get('/:token', _controller.getPartnersByToken);

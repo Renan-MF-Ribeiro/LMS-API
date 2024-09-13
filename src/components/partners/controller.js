@@ -180,4 +180,23 @@ module.exports = {
             );
         }
     },
+
+    async getPartnersByToken (req, res) {
+        try {
+            const { token } = req.params
+            const partner = await Partner.findOne({ active: true, 'keys.key': token });
+
+            _messages.success(res, req, partner);
+        } catch (error) {
+            console.error(error)
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'partners',
+                '/delete'
+            );
+        }
+    }
 };
