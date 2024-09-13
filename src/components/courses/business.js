@@ -286,6 +286,12 @@ module.exports = {
 
         const processedItems = [];
 
+        const usersNetworkLogin = items.map((item) => item.networkLogin);
+
+        const usersWithTags = await UsersWithProcessedTags.find({
+            networkLogin: { $in: usersNetworkLogin.filter(Boolean) },
+        });
+
         for (let index = 0; index < total; index += batchSize) {
             const batch = items.slice(index, index + batchSize);
 
@@ -307,9 +313,9 @@ module.exports = {
 
                     processedItems.push(item.networkLogin);
 
-                    const userWithTags = await UsersWithProcessedTags.findOne({
-                        networkLogin: String(item.networkLogin),
-                    });
+                    const userWithTags = usersWithTags.find(
+                        ({ networkLogin }) => networkLogin === item.networkLogin
+                    );
 
                     if (!userWithTags) {
                         return {
