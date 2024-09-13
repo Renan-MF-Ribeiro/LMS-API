@@ -281,11 +281,11 @@ module.exports = {
         const courseMandatoryTags = courseInfo.mandatory;
         const courseOptionalTags = courseInfo.tags;
 
-        const usersNetworkLogin = items.map((item) => item.networkLogin);
+        const usersNetworkLogin = items.map((item) => item.networkLogin).filter(Boolean);
 
         console.time('importAttendanceList - FINDING_USERS');
         const usersWithTags = await UsersWithProcessedTags.find({
-            networkLogin: { $in: usersNetworkLogin.filter(Boolean) },
+            networkLogin: { $in: usersNetworkLogin },
         });
 
         const usersWithTagsMap = new Map(
