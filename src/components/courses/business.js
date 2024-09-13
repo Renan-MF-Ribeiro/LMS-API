@@ -287,6 +287,10 @@ module.exports = {
         const usersWithTags = await UsersWithProcessedTags.find({
             networkLogin: { $in: usersNetworkLogin.filter(Boolean) },
         });
+
+        const usersWithTagsMap = new Map(
+            usersWithTags.map((user) => [user.networkLogin, user])
+        );
         console.timeEnd('importAttendanceList - FINDING_USERS');
 
         const usersWithError = [];
@@ -318,9 +322,7 @@ module.exports = {
 
             processedLogins.push(item.networkLogin);
 
-            const user = usersWithTags.find(
-                ({ networkLogin }) => networkLogin === item.networkLogin
-            );
+            const user = usersWithTagsMap.get(item.networkLogin);
 
             if (!user) {
                 usersWithError.push({
