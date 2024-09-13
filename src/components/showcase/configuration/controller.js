@@ -44,12 +44,33 @@ module.exports = {
 
     async getBlocks (req, res) {
         try {
-            const blocks = await Showcase.find({ enabled: true })
-                .sort({ position: 1 }).select('_id, type')
+            const { token } = req.params
+            let blocks = await Showcase.find({ enabled: true }).populate('partners')
+                .sort({ position: 1 }).select({ _id: 1, type: 1, partners: 1 })
 
-            _messages.success(res, req, blocks)
+
+            if (token != 'undefined') {
+                // Se houver um token, filtra os blocos que têm parceiros com a chave correspondente
+                blocks = blocks.map(block => {
+                    if (block.partners && block.partners.length > 0) {
+                        // Filtra os parceiros que possuem a chave correspondente ao token
+                        block.partners = block.partners.filter(partner =>
+                            partner.keys.some(keyObj => keyObj.key === token)
+                        );
+                    }
+                    return block;
+                });
+            } else {
+                // Se não houver token, filtra para exibir apenas blocos sem parceiros
+                blocks = blocks.filter(block => !block.partners || block.partners.length === 0);
+            }
+
+            console.log(blocks)
+
+            return _messages.success(res, req, blocks)
         } catch (error) {
-            _messages.internalServer(
+            console.error(error)
+            return _messages.internalServer(
                 res,
                 req,
                 error.message,

@@ -27,7 +27,12 @@ const showcaseSchema = new mongoose.Schema({
     colorTitle: { type: String, required: false, trim: true },
     background: { type: String, required: false, trim: true },
     enabled: { type: Boolean, required: true, trim: true, default: true },
-    partnerKey: { type: String, required: false, trim: true },
+    partners: {
+        type: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'partners',
+        }], required: false, trim: true
+    },
     cta: {
         type: {
             active: { type: Boolean, required: false, trim: true, default: false },

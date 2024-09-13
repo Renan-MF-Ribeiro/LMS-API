@@ -29,12 +29,8 @@ module.exports = {
     async getActivePartners (req, res) {
         try {
             const partners = await Partner.find({ active: true });
-            const total = await Partner.find().countDocuments();
 
-            _messages.success(res, req, {
-                data: partners,
-                total,
-            });
+            _messages.success(res, req, partners);
         } catch (error) {
             _messages.internalServer(
                 res,
