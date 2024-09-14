@@ -287,18 +287,18 @@ module.exports = {
         const usersWithTags = await UsersWithProcessedTags.find({
             networkLogin: { $in: usersNetworkLogin },
         });
-
-        const usersWithTagsMap = new Map(
-            usersWithTags.map((user) => [user.networkLogin, user])
-        );
         console.timeEnd('importAttendanceList - FINDING_USERS');
 
+        console.time('importAttendanceList - PROCESSING');
         const usersWithError = [];
         const usersToUpdate = [];
         const usersToInsert = [];
         const processedLogins = [];
+        
+        const usersWithTagsMap = new Map(
+            usersWithTags.map((user) => [user.networkLogin, user])
+        );
 
-        console.time('importAttendanceList - PROCESSING');
         for (let index = 0; index < items.length; index += 1) {
             const item = items[index];
 
