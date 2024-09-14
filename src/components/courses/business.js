@@ -293,7 +293,7 @@ module.exports = {
         const usersWithError = [];
         const usersToUpdate = [];
         const usersToInsert = [];
-        const processedLogins = [];
+        const processedLogins = new Map();
         
         const usersWithTagsMap = new Map(
             usersWithTags.map((user) => [user.networkLogin, user])
@@ -311,7 +311,7 @@ module.exports = {
                 continue;
             }
 
-            if (processedLogins.includes(item.networkLogin)) {
+            if (processedLogins.has(item.networkLogin)) {
                 usersWithError.push({
                     item,
                     message: 'Login duplicado. Nenhuma ação foi realizada.',
@@ -320,7 +320,7 @@ module.exports = {
                 continue;
             }
 
-            processedLogins.push(item.networkLogin);
+            processedLogins.set(item.networkLogin, true);
 
             const user = usersWithTagsMap.get(item.networkLogin);
 
