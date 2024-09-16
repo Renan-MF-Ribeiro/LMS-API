@@ -281,12 +281,16 @@ module.exports = {
         const courseMandatoryTags = courseInfo.mandatory;
         const courseOptionalTags = courseInfo.tags;
 
+        console.time('importAttendanceList - FINDING_USERS');
         const usersNetworkLogin = items.map((item) => item.networkLogin).filter(Boolean);
 
-        console.time('importAttendanceList - FINDING_USERS');
-        const usersWithTags = await UsersWithProcessedTags.find({
-            networkLogin: { $in: usersNetworkLogin },
-        }).lean();
+        const regexQueries = usersNetworkLogin.map(login => ({
+            networkLogin: new RegExp(`^${login}$`, 'i')
+        }));
+
+        const users = await User.find({ $or: regexQueries })
+            .select('_id networkLogin name email registration tags groupsAD onboarding')
+            .lean();
         console.timeEnd('importAttendanceList - FINDING_USERS');
 
         console.time('importAttendanceList - PROCESSING');
@@ -296,7 +300,12 @@ module.exports = {
         const processedLogins = new Map();
 
         const usersWithTagsMap = new Map(
-            usersWithTags.map((user) => [user.networkLogin, user])
+            users.map((user) => [user.networkLogin, {
+                ...user,
+                userTags: user.onboarding
+                    ? [...user.tags, ...user.groupsAD]
+                    : [...user.tags, ...user.groupsAD, 'ELEGE_geral'],
+            }])
         );
 
         for (let index = 0; index < items.length; index += 1) {
