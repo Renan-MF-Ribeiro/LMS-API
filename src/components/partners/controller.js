@@ -1,15 +1,31 @@
+const crypto = require('crypto');
+const { DOMAIN, AZURE_BLOB_URL } = process.env;
+const moment = require('moment');
 const _messages = require('../../utils/messages');
 const { azureBlob } = require('../../utils/files');
-const crypto = require('crypto');
 const { Partner } = require('./model');
-const { DOMAIN, AZURE_BLOB_URL } = process.env
-const moment = require('moment');
+const { pagination, ordernation } = require('../../utils/functions');
 
 module.exports = {
-    async getParterners (req, res) {
+    async getPartners(req, res) {
+        const { skip, limit } = pagination(req);
+        const { order, sort } = ordernation(req);
+        const searchBy = req.query.searchBy;
+
+        const query = searchBy
+            ? {
+                  $or: [{ title: { $regex: searchBy, $options: 'i' } }],
+              }
+            : {};
+
         try {
-            const partners = await Partner.find();
-            const total = await Partner.find().countDocuments();
+            const total = await Partner.find(query).countDocuments();
+            const partners = await Partner.find(query)
+                .sort({
+                    [order]: sort,
+                })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit));
 
             _messages.success(res, req, {
                 data: partners,
@@ -22,11 +38,11 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'partners',
-                'getParterners'
+                'getPartners'
             );
         }
     },
-    async getActivePartners (req, res) {
+    async getActivePartners(req, res) {
         try {
             const partners = await Partner.find({ active: true });
 
@@ -43,8 +59,8 @@ module.exports = {
         }
     },
 
-    async create (req, res) {
-        const body = JSON.parse(req.fields.payload) ?? null;;
+    async create(req, res) {
+        const body = JSON.parse(req.fields.payload) ?? null;
         const { title, initialDate, endDate } = body;
         const today = new Date();
 
@@ -71,11 +87,11 @@ module.exports = {
                 return;
             }
 
-            const logo = req.files.logo
+            const logo = req.files?.logo;
 
             if (logo) {
-                let pathAzure = await azureBlob(logo, 'showcase/partners', false, 'lmsassetsanon')
-                body.logo = pathAzure.replace(AZURE_BLOB_URL, DOMAIN)
+                let pathAzure = await azureBlob(logo, 'showcase/partners', false, 'lmsassetsanon');
+                body.logo = pathAzure.replace(AZURE_BLOB_URL, DOMAIN);
             }
 
             let dto = body.keys?.map((x) => {
@@ -85,7 +101,7 @@ module.exports = {
                 const key = hex.slice(0, 12);
                 return { ...x, key: key };
             });
-            body.keys = dto
+            body.keys = dto;
 
             const partner = await Partner.create(body);
             _messages.success(
@@ -101,7 +117,7 @@ module.exports = {
                 'CREATE'
             );
         } catch (error) {
-            console.error(error)
+            console.error(error);
             _messages.internalServer(
                 res,
                 req,
@@ -113,9 +129,9 @@ module.exports = {
         }
     },
 
-    async update (req, res) {
+    async update(req, res) {
         const { id: _id } = req.params;
-        const body = JSON.parse(req.fields.payload) ?? null;;
+        const body = JSON.parse(req.fields.payload) ?? null;
 
         try {
             //Valida se o id recebido existe
@@ -124,11 +140,11 @@ module.exports = {
                 _messages.notFound(res, req, null, 'Este partner não existe');
                 return;
             }
-            const logo = req.files.logo
+            const logo = req.files?.logo;
 
             if (logo) {
-                let pathAzure = await azureBlob(logo, 'showcase/partners', false, 'lmsassetsanon')
-                body.logo = pathAzure.replace(AZURE_BLOB_URL, DOMAIN)
+                let pathAzure = await azureBlob(logo, 'showcase/partners', false, 'lmsassetsanon');
+                body.logo = pathAzure.replace(AZURE_BLOB_URL, DOMAIN);
             }
 
             const partner = await Partner.findByIdAndUpdate(_id, body);
@@ -144,7 +160,6 @@ module.exports = {
                 true,
                 'UPDATE'
             );
-
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -157,7 +172,7 @@ module.exports = {
         }
     },
 
-    async delete (req, res) {
+    async delete(req, res) {
         const { id: _id } = req.params;
         try {
             //Valida se o id recebido existe
@@ -181,14 +196,14 @@ module.exports = {
         }
     },
 
-    async getPartnersByToken (req, res) {
+    async getPartnersByToken(req, res) {
         try {
-            const { token } = req.params
+            const { token } = req.params;
             const partner = await Partner.findOne({ active: true, 'keys.key': token });
 
             _messages.success(res, req, partner);
         } catch (error) {
-            console.error(error)
+            console.error(error);
             _messages.internalServer(
                 res,
                 req,
@@ -198,5 +213,5 @@ module.exports = {
                 '/delete'
             );
         }
-    }
+    },
 };
