@@ -300,12 +300,15 @@ module.exports = {
         const processedLogins = new Map();
 
         const usersWithTagsMap = new Map(
-            users.map((user) => [user.networkLogin, {
-                ...user,
-                userTags: user.onboarding
-                    ? [...user.tags, ...user.groupsAD]
-                    : [...user.tags, ...user.groupsAD, 'ELEGE_geral'],
-            }])
+            users.map((user) => [
+                String(user.networkLogin).toUpperCase(),
+                {
+                    ...user,
+                    userTags: user.onboarding
+                        ? [...user.tags, ...user.groupsAD]
+                        : [...user.tags, ...user.groupsAD, 'ELEGE_geral'],
+                }
+            ])
         );
 
         for (let index = 0; index < items.length; index += 1) {
@@ -320,7 +323,9 @@ module.exports = {
                 continue;
             }
 
-            if (processedLogins.has(item.networkLogin)) {
+            const userMapKey = String(item.networkLogin).toUpperCase();
+
+            if (processedLogins.has(userMapKey)) {
                 usersWithError.push({
                     item,
                     message: 'Login duplicado. Nenhuma ação foi realizada.',
@@ -329,9 +334,9 @@ module.exports = {
                 continue;
             }
 
-            processedLogins.set(item.networkLogin, true);
+            processedLogins.set(userMapKey, true);
 
-            const user = usersWithTagsMap.get(item.networkLogin);
+            const user = usersWithTagsMap.get(userMapKey);
 
             if (!user) {
                 usersWithError.push({
