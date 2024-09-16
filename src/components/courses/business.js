@@ -268,10 +268,7 @@ module.exports = {
      * @param {Record<string, string>[]} items
      * @returns {Promise<Record<string, string>[]>}
      */
-    async processAttendanceListImport (courseId, classId, items) {
-        const batchSize = 100;
-        const total = items.length;
-        const results = [];
+    async processAttendanceListImport(courseId, classId, items) {
         const nowDate = new Date();
 
         const courseInfo = await CourseModel.findById(courseId);
@@ -284,114 +281,176 @@ module.exports = {
         const courseMandatoryTags = courseInfo.mandatory;
         const courseOptionalTags = courseInfo.tags;
 
-        const processedItems = [];
+        console.time('importAttendanceList - FINDING_USERS');
+        const usersNetworkLogin = items.map((item) => item.networkLogin).filter(Boolean);
 
-        for (let index = 0; index < total; index += batchSize) {
-            const batch = items.slice(index, index + batchSize);
+        const regexQueries = usersNetworkLogin.map(login => ({
+            networkLogin: new RegExp(`^${login}$`, 'i')
+        }));
 
-            const result = await Promise.all(
-                batch.map(async (item) => {
-                    if (!item.networkLogin) {
-                        return {
-                            ...item,
-                            message: 'Login não informado. Nenhuma ação foi realizada.',
-                        }
-                    }
+        const users = await User.find({ $or: regexQueries })
+            .select('_id networkLogin name email registration tags groupsAD onboarding')
+            .lean();
+        console.timeEnd('importAttendanceList - FINDING_USERS');
 
-                    if (processedItems.includes(item.networkLogin)) {
-                        return {
-                            ...item,
-                            message: 'Login já processado. Nenhuma ação foi realizada.',
-                        }
-                    }
+        console.time('importAttendanceList - PROCESSING');
+        const usersWithError = [];
+        const usersToUpdate = [];
+        const usersToInsert = [];
+        const processedLogins = new Map();
 
-                    processedItems.push(item.networkLogin);
+        const usersWithTagsMap = new Map(
+            users.map((user) => [
+                String(user.networkLogin).toUpperCase(),
+                {
+                    ...user,
+                    userTags: user.onboarding
+                        ? [...user.tags, ...user.groupsAD]
+                        : [...user.tags, ...user.groupsAD, 'ELEGE_geral'],
+                }
+            ])
+        );
 
-                    const userWithTags = await UsersWithProcessedTags.findOne({
-                        networkLogin: String(item.networkLogin),
-                    });
+        for (let index = 0; index < items.length; index += 1) {
+            const item = items[index];
 
-                    if (!userWithTags) {
-                        return {
-                            ...item,
-                            message: 'Usuário não encontrado. Nenhuma ação foi realizada.',
-                        }
-                    }
+            if (!item.networkLogin) {
+                usersWithError.push({
+                    item,
+                    message: 'Login não informado. Nenhuma ação foi realizada.',
+                });
 
-                    const userIsEligible = checkEligibilityTagsAnd(
-                        userWithTags.userTags,
-                        courseMandatoryTags,
-                        courseOptionalTags,
-                    );
+                continue;
+            }
 
-                    if (!userIsEligible) {
-                        return {
-                            ...item,
-                            message: 'Usuário não tem elegibilidade. Nenhuma ação foi realizada.',
-                        }
-                    }
+            const userMapKey = String(item.networkLogin).toUpperCase();
 
-                    const indexUserInClass = classInfo.users.findIndex(
-                        ({ _id }) => String(_id) === String(userWithTags._id)
-                    );
+            if (processedLogins.has(userMapKey)) {
+                usersWithError.push({
+                    item,
+                    message: 'Login duplicado. Nenhuma ação foi realizada.',
+                });
 
-                    const isPresence = ['SIM', 'S'].includes(item.presence?.toUpperCase());
-                    const presenceDate = isPresence
-                        ? (
-                            item.presenceAt
-                                ? moment(item.presenceAt)
-                                    .add(3, 'hours')
-                                    .set({
-                                        hour: nowDate.getHours(),
-                                        minute: nowDate.getMinutes(),
-                                    })
-                                    .toDate()
-                                : nowDate
-                        )
-                        : null;
-                    const grade = Number(item.grades ?? 0) > 100 ? 100 : Number(item.grades ?? 0);
+                continue;
+            }
 
-                    if (indexUserInClass !== -1) {
-                        await ClassModel.updateOne(
-                            { _id: classInfo._id },
-                            {
-                                $set: {
-                                    [`users.${indexUserInClass}.grades`]: grade,
-                                    [`users.${indexUserInClass}.presence`]: isPresence,
-                                    [`users.${indexUserInClass}.presenceAt`]: presenceDate,
-                                    [`users.${indexUserInClass}.origin`]: 'instructor',
-                                    [`users.${indexUserInClass}.updateAt`]: nowDate,
-                                }
-                            }
-                        )
-                    } else {
-                        const userInfo = await User.findById(userWithTags._id, '_id name email registration networkLogin').lean();
+            processedLogins.set(userMapKey, true);
 
-                        await ClassModel.updateOne(
-                            { _id: classInfo._id },
-                            {
-                                $push: {
-                                    users: {
-                                        ...userInfo,
-                                        grades: grade,
-                                        presence: isPresence,
-                                        presenceAt: presenceDate,
-                                        origin: 'instructor',
-                                        updateAt: nowDate,
-                                        createdAt: nowDate,
-                                    }
-                                }
-                            }
-                        );
-                    }
+            const user = usersWithTagsMap.get(userMapKey);
 
-                    return item;
-                })
+            if (!user) {
+                usersWithError.push({
+                    item,
+                    message: 'Usuário não encontrado. Nenhuma ação foi realizada.',
+                });
+
+                continue;
+            }
+
+            const userIsEligible = checkEligibilityTagsAnd(
+                user.userTags,
+                courseMandatoryTags,
+                courseOptionalTags,
             );
 
-            results.push(result);
-        }
+            if (!userIsEligible) {
+                usersWithError.push({
+                    item,
+                    message: 'Usuário não tem elegibilidade. Nenhuma ação foi realizada.',
+                });
 
-        return { results: results.flat(), classInfo, courseInfo };
+                continue;
+            }
+
+            const indexUserInClass = classInfo.users.findIndex(
+                ({ _id }) => String(_id) === String(user._id)
+            );
+
+            const isPresence = ['SIM', 'S'].includes(item.presence?.toUpperCase());
+            const presenceDate = isPresence
+                ? (
+                    item.presenceAt
+                        ? moment(item.presenceAt)
+                            .add(3, 'hours')
+                            .set({
+                                hour: nowDate.getHours(),
+                                minute: nowDate.getMinutes(),
+                            })
+                            .toDate()
+                        : nowDate
+                )
+                : null;
+            const grade = Number(item.grades ?? 0) > 100 ? 100 : Number(item.grades ?? 0);
+
+            const commonData = {
+                grades: grade,
+                presence: isPresence,
+                presenceAt: presenceDate,
+                origin: 'instructor',
+                updateAt: nowDate,
+            }
+
+            // If user is in class, update user data
+            if (indexUserInClass !== -1) {
+                usersToUpdate.push({
+                    item,
+                    index: indexUserInClass,
+                    info: {
+                        ...user,
+                        ...commonData,
+                        createdAt: nowDate,
+                    }
+                })
+            }
+            // If user is not in class, insert user data
+            else {
+                usersToInsert.push({
+                    item,
+                    info: {
+                        ...user,
+                        ...commonData,
+                        createdAt: nowDate,
+                    }
+                });
+            }
+        }
+        console.timeEnd('importAttendanceList - PROCESSING');
+
+        console.time('importAttendanceList - UPDATING');
+        if (usersToUpdate.length > 0) {
+            await ClassModel.updateOne(
+                { _id: classInfo._id },
+                {
+                    $set: usersToUpdate.reduce((acc, { index, info }) => {
+                        acc[`users.${index}`] = info;
+                        return acc;
+                    }, {})
+                }
+            );
+        }
+        console.timeEnd('importAttendanceList - UPDATING');
+
+        console.time('importAttendanceList - INSERTING');
+        if (usersToInsert.length > 0) {
+            await ClassModel.updateOne(
+                { _id: classInfo._id },
+                {
+                    $push: {
+                        users: {
+                            $each: usersToInsert.map(({ info }) => info)
+                        }
+                    }
+                }
+            );
+        }
+        console.timeEnd('importAttendanceList - INSERTING');
+
+        const results = [
+            ...usersWithError.map(({ item, message }) => ({ ...item, message })),
+            ...usersToUpdate.map(({ item }) => item),
+            ...usersToInsert.map(({ item }) => item),
+        ];
+
+        return { results, classInfo, courseInfo };
     }
 };

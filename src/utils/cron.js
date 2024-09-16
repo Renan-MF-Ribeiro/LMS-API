@@ -65,7 +65,7 @@ const inactivateIfNotInSpreadsheet =
     config.usersData.inactivateIfNotInSpreadsheet;
 
 module.exports = {
-    cronNotifyResponsibleUsers() {
+    cronNotifyResponsibleUsers () {
         if (config.cron.notifyResponsibleUsers.active) {
             new CronJob(
                 '00 00 * * * *',
@@ -79,7 +79,7 @@ module.exports = {
         }
     },
 
-    updateAverageCourses() {
+    updateAverageCourses () {
         if (config.cron.average.active) {
             new CronJob(
                 '*/30 * * * * ',
@@ -93,7 +93,7 @@ module.exports = {
         }
     },
 
-    updateAverageRatings() {
+    updateAverageRatings () {
         if (config.cron.average.active) {
             new CronJob(
                 '*/60 * * * * ',
@@ -107,7 +107,7 @@ module.exports = {
         }
     },
 
-    sendCourseReleaseNotification() {
+    sendCourseReleaseNotification () {
         if (config.cron.courseRelease.active) {
             new CronJob(
                 '00 07 * * * ',
@@ -121,7 +121,7 @@ module.exports = {
         }
     },
 
-    sendCourseChargeNotification() {
+    sendCourseChargeNotification () {
         if (config.cron.courseCharge.active) {
             new CronJob(
                 '00 08 * * * ',
@@ -134,7 +134,7 @@ module.exports = {
             );
         }
     },
-    deleteReprovedExamTracking() {
+    deleteReprovedExamTracking () {
         if (config.cron.deleteReprovedExamTracking.active) {
             new CronJob(
                 '00 00 * * * ',
@@ -148,7 +148,7 @@ module.exports = {
         }
     },
 
-    cronUpdateRecommendedTrails() {
+    cronUpdateRecommendedTrails () {
         if (config.cron.recommendedTrails.active) {
             new CronJob(
                 '00 00 * * * ',
@@ -162,7 +162,7 @@ module.exports = {
         }
     },
 
-    updateUserTemporaryTags() {
+    updateUserTemporaryTags () {
         new CronJob(
             '00 00 * * * ',
             () => {
@@ -173,7 +173,7 @@ module.exports = {
             'America/Sao_Paulo'
         );
     },
-    getUsersLoadCron() {
+    getUsersLoadCron () {
         if (config.cron.userFTP.active) {
             new CronJob(
                 '00 19 * * * ',
@@ -186,7 +186,7 @@ module.exports = {
             );
         }
     },
-    degreedCharge() {
+    degreedCharge () {
         if (config.cron.degreed.active) {
             new CronJob(
                 '0 2 * * * ',
@@ -200,7 +200,7 @@ module.exports = {
         }
     },
 
-    cronRevokeTrail() {
+    cronRevokeTrail () {
         if (config.cron.revokeTrail.active) {
             new CronJob(
                 '00 03 * * * ',
@@ -214,7 +214,7 @@ module.exports = {
         }
     },
 
-    startUpdateTrailsViewsCron() {
+    startUpdateTrailsViewsCron () {
         new CronJob(
             '0 */1 * * *',
             () => {
@@ -226,7 +226,7 @@ module.exports = {
         )
     },
 
-    executeCronAverageCourses() {
+    executeCronAverageCourses () {
         // userTemporaryTagsCron()
         // averageCourses()
         // averageRating()
@@ -237,34 +237,34 @@ module.exports = {
         // cronDegreedCharge()
     },
 
-    executeRevokeTrail() {
+    executeRevokeTrail () {
         revokeTrail();
     },
 
-    executeRecommendedTrails() {
+    executeRecommendedTrails () {
         recommendedTrailsCron();
     },
 
-    executeCourseReleaseNotification() {
+    executeCourseReleaseNotification () {
         courseReleaseCron();
     },
 
-    executeCourseChargeNotification() {
+    executeCourseChargeNotification () {
         courseChargeCron();
     },
-    executeCronUsers() {
+    executeCronUsers () {
         getUsersLoad();
     },
 
-    executeExamDeleteTrackingCron() {
+    executeExamDeleteTrackingCron () {
         examTrackingDeleteCron();
     },
 
-    executeUpdateTrailsViewsCron() {
+    executeUpdateTrailsViewsCron () {
         updateTrailsViews()
     },
 
-    executeInactiveOldOnboardingUsers(runningFromAPI = false) {
+    executeInactiveOldOnboardingUsers (runningFromAPI = false) {
         if (runningFromAPI) {
             return inactiveOldOnboardingUsers();
         }
@@ -281,7 +281,7 @@ module.exports = {
     },
 };
 
-async function recommendedTrailsCron() {
+async function recommendedTrailsCron () {
     try {
         const completedTrackingsFromTheLastWeek = await Tracking.find({
             completionAt: { $ne: null },
@@ -305,7 +305,7 @@ async function recommendedTrailsCron() {
     }
 }
 
-async function averageRating() {
+async function averageRating () {
     try {
         const limit = 1000;
         let skip = 0;
@@ -341,7 +341,7 @@ async function averageRating() {
     }
 }
 
-function ratingCron(grouping, usersLastLogin) {
+function ratingCron (grouping, usersLastLogin) {
     return new Promise(async (resolve, reject) => {
         try {
             for (const g of grouping) {
@@ -392,7 +392,7 @@ function ratingCron(grouping, usersLastLogin) {
     });
 }
 
-async function averageCourses() {
+async function averageCourses () {
     try {
         const users = await User.find({ status: 'ATIVO' });
 
@@ -417,7 +417,7 @@ async function averageCourses() {
     }
 }
 
-function getGroupSet(allUsers, group) {
+function getGroupSet (allUsers, group) {
     const data = [];
     const grouping = [];
     for (const user of allUsers) {
@@ -431,7 +431,7 @@ function getGroupSet(allUsers, group) {
     return grouping;
 }
 
-function groupCron(usersLastLogin, grouping) {
+function groupCron (usersLastLogin, grouping) {
     return new Promise(async (resolve, reject) => {
         try {
             for (const g of grouping) {
@@ -485,7 +485,7 @@ function groupCron(usersLastLogin, grouping) {
     });
 }
 
-function numberOfCompleteAndEligibleCourses(user) {
+function numberOfCompleteAndEligibleCourses (user) {
     return new Promise(async (resolve, reject) => {
         try {
             const tags = await getTagsElegibles(user);
@@ -528,7 +528,7 @@ function numberOfCompleteAndEligibleCourses(user) {
     });
 }
 
-function storageLog(message, dataNew = [], dataOld = [], cronType) {
+function storageLog (message, dataNew = [], dataOld = [], cronType) {
     Log.create({
         user: null,
         type: 'CREATE',
@@ -543,7 +543,8 @@ function storageLog(message, dataNew = [], dataOld = [], cronType) {
     });
 }
 
-async function getUsersLoad() {
+async function getUsersLoad () {
+
     try {
         const usersLoad = await getAzureFile();
         if (usersLoad) {
@@ -639,20 +640,25 @@ async function getUsersLoad() {
                 }
             }
             console.log('Novos usuários criados');
-
+            storageLog(
+                `Carga de ${users.length} usuários`,
+                '',
+                '',
+                'DAILY_CHARGE'
+            );
             if (config.userLoadCsv.active) {
                 users = await moveUserLoadToProcessed(usersLoad.readableStream);
             } else {
                 users = await moveUserLoadToProcessed(usersLoad.buffer);
             }
-           
+
         }
     } catch (error) {
         console.log(error);
     }
 }
 
-async function courseReleaseCron() {
+async function courseReleaseCron () {
     try {
         const startOfDay = new Date(
             new Date().setUTCHours(0, 0, 0, 0)
@@ -726,7 +732,7 @@ async function courseReleaseCron() {
     }
 }
 
-async function courseChargeCron() {
+async function courseChargeCron () {
     try {
         const today = new Date().getTime();
         const oneDay = 1000 * 60 * 60 * 24;
@@ -796,7 +802,7 @@ async function courseChargeCron() {
     }
 }
 
-async function examTrackingDeleteCron() {
+async function examTrackingDeleteCron () {
     try {
         const today = new Date();
         const users = await User.find({ status: 'ATIVO' });
@@ -838,7 +844,7 @@ async function examTrackingDeleteCron() {
     }
 }
 
-function createReleaseCampaign(trail) {
+function createReleaseCampaign (trail) {
     const title = `Conheça a nova trilha ${trail.title}`;
     const text = `A trilha ${trail.title} acabou de ser lançada, clique para visualizar!`;
     const communication = ['notification'];
@@ -859,7 +865,7 @@ function createReleaseCampaign(trail) {
     };
 }
 
-function createChargeCampaign(trail) {
+function createChargeCampaign (trail) {
     const title = `Ei, faltam 5 dias para você concluir a trilha ${trail.title}!`;
     const text = `Você ainda não completou a trilha ${trail.title}! O prazo para a conclusão é até o dia ${trail.expirationDate}. Por favor, clique para visualizar!`;
     const communication = ['notification'];
@@ -880,7 +886,7 @@ function createChargeCampaign(trail) {
     };
 }
 
-function createExamTrackingCampaign(item) {
+function createExamTrackingCampaign (item) {
     const title = `O resultado da avaliação ${item} foi renovado.`;
     const text =
         'O resultado da avaliação mencionada foi renovado, agora você pode refazer a prova para tentar obter uma aprovação!';
@@ -891,7 +897,7 @@ function createExamTrackingCampaign(item) {
     return { title, text, communication, category, mode, target };
 }
 
-async function userTemporaryTagsCron() {
+async function userTemporaryTagsCron () {
     try {
         const users = await User.find({ status: 'ATIVO' });
         for (const user of users) {
@@ -914,7 +920,7 @@ async function userTemporaryTagsCron() {
     }
 }
 
-async function cronDegreedCharge(hours) {
+async function cronDegreedCharge (hours) {
     var intHours = hours ? parseInt(hours) : 24;
     try {
         const workbook = new ExcelJS.Workbook();
@@ -1048,7 +1054,7 @@ async function cronDegreedCharge(hours) {
     }
 }
 
-async function revokeTrail() {
+async function revokeTrail () {
     const trailsToBeRevoked = await populateTrails(true, {
         'certificateDue.type': { $in: ['fixed', 'availability'] },
     });
@@ -1110,8 +1116,8 @@ async function revokeTrail() {
                     const startDate = new Date(lastCompletionAt);
                     const expirationDate = !isFixed
                         ? moment(startDate)
-                              .add(trail.certificateDue.value, 'days')
-                              .toDate()
+                            .add(trail.certificateDue.value, 'days')
+                            .toDate()
                         : new Date(trail.certificateDue.value);
 
                     return {
@@ -1168,7 +1174,7 @@ async function revokeTrail() {
     }
 }
 
-async function updateTrailsViews() {
+async function updateTrailsViews () {
     try {
         console.log('start cron todayMostSeen')
         const todayMostSeen = await TodayMostSeenTrails.find()
@@ -1203,7 +1209,7 @@ async function updateTrailsViews() {
     }
 }
 
-async function inactiveOldOnboardingUsers() {
+async function inactiveOldOnboardingUsers () {
     console.log('Running inactiveOldOnboardingUsers');
     const daysToInactive = Number(config?.cron?.inactiveOldOnboardingUsers?.daysToInactive ?? 15);
 
@@ -1211,7 +1217,7 @@ async function inactiveOldOnboardingUsers() {
         new Date().setDate(new Date().getDate() - daysToInactive)
     );
 
-    console.log('Inactivating users that have not logged in since', lastLoginDate );
+    console.log('Inactivating users that have not logged in since', lastLoginDate);
 
     const lastLoginsWithUser = (
         await LastLogin.find({
