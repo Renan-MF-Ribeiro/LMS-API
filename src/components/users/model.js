@@ -111,6 +111,7 @@ const userSchema = new mongoose.Schema(
         assessmentGroups: { type: Array, default: [] },
         civilName: { type: String , trim: true },
         socialName: { type: String , trim: true },
+        welcomeVideoWatched: { type: Boolean, default: false }
     },
     {
         ...optionsSchema,

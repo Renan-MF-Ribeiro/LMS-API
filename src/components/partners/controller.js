@@ -43,6 +43,19 @@ module.exports = {
         }
     },
     async getActivePartners(req, res) {
+        const { skip, limit } = pagination(req);
+        const { order, sort } = ordernation(req);
+        const searchBy = req.query.searchBy;
+
+        const query = searchBy
+            ? {
+                  $and: [
+                      { $or: [{ title: { $regex: searchBy, $options: 'i' } }] },
+                      { active: true },
+                  ],
+              }
+            : { active: true };
+
         try {
             const partners = await Partner.find({ active: true });
 
@@ -62,6 +75,7 @@ module.exports = {
     async create(req, res) {
         const body = JSON.parse(req.fields.payload) ?? null;
         const { title, initialDate, endDate } = body;
+        const { logo } = req.files ?? '';
         const today = new Date();
 
         //Valida datas
@@ -81,6 +95,7 @@ module.exports = {
             //Verifica existência de parceiro com mesmo title em lowercase
             const formattedTitle = title.toLowerCase();
             const doesPartnerAlreadyExist = await Partner.findOne({ formattedTitle });
+            let logoPath;
 
             if (doesPartnerAlreadyExist) {
                 _messages.conflict(res, req, null, 'Já existe uma parceria com este nome');

@@ -12,6 +12,7 @@ const {
     executeRevokeTrail,
     executeRecommendedTrails,
     executeUpdateTrailsViewsCron,
+    executeInactiveOldOnboardingUsers,
 } = require('../../utils/cron');
 
 module.exports = {
@@ -149,6 +150,20 @@ module.exports = {
         } else {
             res.status(500).json('FUNCIONALIDADE INATIVA');
         }
+    },
+
+    async handleInactiveOldOnboardingUsers(req, res) {
+        if (!config.cron?.inactiveOldOnboardingUsers?.active) {
+            return res.status(400).json({
+                message: 'FUNCIONALIDADE INATIVA',
+            });
+        }
+
+        await executeInactiveOldOnboardingUsers(true);
+
+        res.status(200).json({
+            message: 'CRON INICIADO COM SUCESSO',
+        });
     },
 };
 

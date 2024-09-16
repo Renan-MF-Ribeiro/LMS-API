@@ -43,6 +43,10 @@ module.exports = {
     },
 
     async getBlocks (req, res) {
+        const { partnerKey } = req.query;
+        const query = { enabled: true }
+        query.partnerKey = partnerKey ? partnerKey : null || undefined
+        
         try {
             const { token } = req.params
             let blocks = await Showcase.find({ enabled: true }).populate('partners')

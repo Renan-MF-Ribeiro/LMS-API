@@ -314,9 +314,24 @@ module.exports = {
                 const arrMostSeenSections = await mostSeenSections(trails);
                 const arrCoursesSections = await courseInSections(tags, user._id);
 
-                function limitArray(arr) {
-                    if (trailLimit && arr?.length) return arr.slice(0, trailLimit);
-                    return arr ?? [];
+                function limitArray(section) {
+                    if (!section) return [];
+
+                    if(!trailLimit) return section;
+
+                    if (Array.isArray(section) && section.length > 0) {
+                        return section.map((section) => {
+                            return {
+                                ...section,
+                                trails: section.trails?.slice(0, trailLimit) ?? []
+                            };
+                        })
+                    }
+
+                    return {
+                        ...section,
+                        trails: section.trails?.slice(0, trailLimit) ?? []
+                    };
                 }
 
                 resultSections = arrSections

@@ -94,6 +94,7 @@ const {
     handleUserEligibilitiesGamification,
 } = require('../gamification/utils');
 const AssessmentBusiness = require('../assessment/business');
+const { Features } = require('../theme/features/model')
 
 module.exports = {
     async create (req, res) {
@@ -375,11 +376,22 @@ module.exports = {
                             user.webPushAuthorization.length - 1
                         ] : null;
 
+
+                    // VERIFY FEATURE WELCOME AND UPDATE
+                    const hasWelcomeComponentFeature = await Features.exists({ welcomeComponent: true })
+                    if (hasWelcomeComponentFeature && user?.welcomeVideoWatched === false) {
+                        await User.updateOne(
+                            { _id: user._id },
+                            { $set: { welcomeVideoWatched: true } }
+                        );
+                    }
+                    
                     const token = generateToken({
                         ref: user._id,
                         profiles: profilesIDS.result,
                         numbers: profilesIDS.numbers,
                         groups: groupsIDS,
+                        welcomeVideoWatched: !hasWelcomeComponentFeature ? undefined : user?.welcomeVideoWatched
                     });
 
                     const token_analytics = generateTokenAnalytics({
@@ -419,7 +431,6 @@ module.exports = {
                         EVENTS_CATEGORY.LOGIN,
                     ]);
 
-
                     await AssessmentBusiness.updateUserEligibilities(user._id)
 
                     _messages.success(
@@ -441,7 +452,7 @@ module.exports = {
                             networkLogin: user.networkLogin,
                             userId: user._id,
                             authwebPush: authwebPush?.keys.auth,
-                            email: user.email
+                            email: user.email,
                         },
                         'Sucesso ao logar',
                         'users',
@@ -634,11 +645,21 @@ module.exports = {
                     );
                     const groupsIDS = await returnIdGroupUser(namesGroups);
 
+                    // VERIFY FEATURE WELCOME AND UPDATE
+                    const hasWelcomeComponentFeature = await Features.exists({ welcomeComponent: true })
+                    if (hasWelcomeComponentFeature && user?.welcomeVideoWatched === false) {
+                        await User.updateOne(
+                            { _id: user._id },
+                            { $set: { welcomeVideoWatched: true } }
+                        );
+                    }
+
                     const token = generateSSOToken({
                         ref: user._id,
                         profiles: profilesIDS.result,
                         numbers: profilesIDS.numbers,
                         groups: groupsIDS,
+                        welcomeVideoWatched: !hasWelcomeComponentFeature ? undefined : user?.welcomeVideoWatched
                     });
 
                     const token_mfa = generateMfaToken({
@@ -1737,7 +1758,7 @@ module.exports = {
                     filters: dashboardFilters
                 });
                 const SAS = generateSASToken();
-                GamificationBusiness.createClientUser(networkLogin, groupsAD);
+                if (config.gamification.active) GamificationBusiness.createClientUser(networkLogin, groupsAD);
                 _messages.success(res, req, {
                     SAS,
                     token,
@@ -2144,10 +2165,12 @@ module.exports = {
     async deleteGroups (req, res) {
         const { tag, userId } = req.body;
 
+        const arrTags = Array.isArray(tag) ? tag : [tag];
+
         try {
             const user = await User.findByIdAndUpdate(
                 userId,
-                { $pull: { groupsAD: tag } },
+                { $pullAll: { groupsAD: arrTags } },
                 { new: true }
             );
 

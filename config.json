@@ -29,6 +29,11 @@
         },
         "recommendedTrails": {
             "active": true
+        },
+        "inactiveOldOnboardingUsers": {
+            "active": true,
+            "daysToInactive": 15,
+            "cronExpression": "59 23 * * *"
         }
     },
     "usersData": {
