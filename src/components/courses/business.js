@@ -395,7 +395,11 @@ module.exports = {
                 usersToUpdate.push({
                     item,
                     index: indexUserInClass,
-                    info: commonData
+                    info: {
+                        ...user,
+                        ...commonData,
+                        createdAt: nowDate,
+                    }
                 })
             }
             // If user is not in class, insert user data
