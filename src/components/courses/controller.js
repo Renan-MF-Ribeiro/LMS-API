@@ -1791,7 +1791,9 @@ module.exports = {
         }
 
         try {
+            console.time('importAttendanceList - READING FILE');
             const { data, labels, labelMap, worksheet, workbook } = await readXLSXAttendanceList(file.path, 'Sua Carga Aqui');
+            console.timeEnd('importAttendanceList - READING FILE');
 
             if (Object.keys(labelMap).some(label => !labels.includes(label))) {
                 return badRequest(res, req, 'Arquivo inválido', 'Arquivo inválido', 'courses', '/import-attendance-list');
