@@ -31,7 +31,7 @@ const {
 const { TrailsUsersProgress, Trail } = require('../trails/model');
 
 module.exports = {
-    async returnSections(req, res) {
+    async returnSections (req, res) {
         try {
             const searchBy = req.query.searchBy;
             const total = await Section.find({
@@ -72,7 +72,7 @@ module.exports = {
         }
     },
 
-    async createSection(req, res) {
+    async createSection (req, res) {
         try {
             const verify = await Section.find({
                 title: { $eq: req.body.title },
@@ -114,7 +114,7 @@ module.exports = {
         }
     },
 
-    async updateSection(req, res) {
+    async updateSection (req, res) {
         try {
             const { _id } = req.body;
             const verify = await Section.find({
@@ -160,7 +160,7 @@ module.exports = {
         }
     },
 
-    async deleteSection(req, res) {
+    async deleteSection (req, res) {
         try {
             const { id } = req.params;
             const section = await Section.findById(id);
@@ -203,7 +203,7 @@ module.exports = {
         }
     },
 
-    async getSectionsElegibles(req, res) {
+    async getSectionsElegibles (req, res) {
         try {
             const { trailLimit: queryTrailLimit = '25', channel: channelId, ...filter } = req.query;
 
@@ -314,10 +314,10 @@ module.exports = {
                 const arrMostSeenSections = await mostSeenSections(trails);
                 const arrCoursesSections = await courseInSections(tags, user._id);
 
-                function limitArray(section) {
+                function limitArray (section) {
                     if (!section) return [];
 
-                    if(!trailLimit) return section;
+                    if (!trailLimit) return section;
 
                     if (Array.isArray(section) && section.length > 0) {
                         return section.map((section) => {
@@ -392,7 +392,7 @@ module.exports = {
         }
     },
 
-    async getSectionDetail(req, res) {
+    async getSectionDetail (req, res) {
         const sectionId = req.params.id;
 
         const user = await getUserByToken(req);
@@ -462,7 +462,7 @@ module.exports = {
 
         let responseSection;
 
-        function setResponse(fnResponse) {
+        function setResponse (fnResponse) {
             if (Array.isArray(fnResponse)) {
                 return fnResponse.find((e) => String(e._id) === String(section._id))
                     ?? { ...section, trails: [] };
@@ -514,7 +514,47 @@ module.exports = {
         res.json(responseSection);
     },
 
-    async getSectionsElegiblesNew(req, res) {
+    async getSectionsFormation (req, res) {
+        try {
+            const searchBy = req.query.searchBy;
+            const query = searchBy
+                ? {
+                    $or: [{ title: { $regex: searchBy, $options: 'i' } }],
+                    deleted: { $eq: 0 },
+                    formation: { $eq: 1 },
+                }
+                : {
+                    deleted: { $eq: 0 },
+                    formation: { $eq: 1 },
+                }
+
+            const populateTrails = {
+                path: 'trails',
+                model: 'Trail',
+                select: ['_id', 'title',],
+            };
+
+            const sections = await Section
+                .find(query)
+                .sort({ position: 'asc' })
+                .select({ _id: 1, title: 1, trails: 1 })
+                .populate(populateTrails);
+
+            _messages.success(res, req, sections);
+        } catch (error) {
+            console.error(error);
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'sections',
+                '/formation'
+            );
+        }
+    },
+
+    async getSectionsElegiblesNew (req, res) {
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
@@ -651,7 +691,7 @@ module.exports = {
         }
     },
 
-    async updatePosition(req, res) {
+    async updatePosition (req, res) {
         try {
             const sections = req.body;
 
