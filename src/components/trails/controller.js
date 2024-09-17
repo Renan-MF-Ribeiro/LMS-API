@@ -951,7 +951,7 @@ module.exports = {
                     const foundUser = await getUserByToken(req);
 
                     Log.create({
-                        dataOld: oldData,
+                        dataOld: payload,
                         dataNew: newData,
                         user: foundUser._id,
                         type: 'TRAIL',
