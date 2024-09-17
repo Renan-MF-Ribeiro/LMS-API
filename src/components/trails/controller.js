@@ -947,6 +947,21 @@ module.exports = {
                         _id: { $eq: payload._id },
                     })
 
+                    //criar log aqui old data new data
+                    const foundUser = await getUserByToken(req);
+
+                    Log.create({
+                        dataOld: oldData,
+                        dataNew: newData,
+                        user: foundUser.networkLogin,
+                        type: 'TRAIL',
+                        message: 'Atualização de dados',
+                        component: 'TRAIL UPDATE',
+                        ip: req.ip,
+                        login: null,
+                        groups: null,
+                    })
+
                     _messages.success(
                         res,
                         req,
