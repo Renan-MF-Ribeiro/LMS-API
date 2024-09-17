@@ -869,6 +869,29 @@ module.exports = {
 
         return data;
     },
+
+    getTrainingDataFromBody(body) {
+        const { isTraining = false, certificateLayout, certificateDue } = body;
+
+        if (!isTraining) return { isTraining, certificateLayout: null, certificateDue: null };
+
+        let certificateDueObj = null;
+
+        if (certificateDue) {
+            const { type, value } = certificateDue;
+
+            certificateDueObj = {
+                type,
+                value: type === 'availability' ? Number(value) : new Date(value),
+            };
+        }
+
+        return {
+            isTraining,
+            certificateLayout: certificateLayout ?? null,
+            certificateDue: certificateDueObj,
+        };
+    }
 };
 
 function isNecessary (trail, tags) {

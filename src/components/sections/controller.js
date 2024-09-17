@@ -18,7 +18,8 @@ const {
     mostSeenSections,
     getGroupCodesByToken,
     checkEligibilityTagsAnd,
-    courseInSections
+    courseInSections,
+    getTrainingDataFromBody
 } = require('./business');
 
 const { getStudentCourses } = require('../home/business');
@@ -79,7 +80,13 @@ module.exports = {
             });
             if (verify.length === 0) {
                 const position = await Section.find({ deleted: 0 }).count();
-                const section = await Section.create({ ...req.body, position });
+
+                const section = await Section.create({
+                    ...req.body,
+                    position,
+                    ...getTrainingDataFromBody(req.body)
+                });
+
                 _messages.success(
                     res,
                     req,
@@ -122,7 +129,11 @@ module.exports = {
                 _id: { $ne: _id },
             });
             if (verify.length === 0) {
-                const oldData = await Section.findByIdAndUpdate(_id, req.body);
+                const oldData = await Section.findByIdAndUpdate(_id, {
+                    ...req.body,
+                    ...getTrainingDataFromBody(req.body)
+                });
+
                 const newData = await Section.find({ _id: { $eq: _id } });
 
                 _messages.success(
