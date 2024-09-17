@@ -953,7 +953,7 @@ module.exports = {
                     Log.create({
                         dataOld: oldData,
                         dataNew: newData,
-                        user: foundUser.networkLogin,
+                        user: foundUser._id,
                         type: 'TRAIL',
                         message: 'Atualização de dados',
                         component: 'TRAIL UPDATE',
