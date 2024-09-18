@@ -168,8 +168,8 @@ const TrackingController = {
                 }
             }
 
-            let totalTime = tracking ? tracking.totalTime : 0;
-            totalTime += req.body.sessionTime ? req.body.sessionTime : 0;
+            const totalTime =
+                Number(tracking?.totalTime || 0) + Number(req.body?.sessionTime || 0);
 
             if (registerCompletationAt) {
                 // req.body.completionAt = new Date();
