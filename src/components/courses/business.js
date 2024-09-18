@@ -284,12 +284,12 @@ module.exports = {
         console.time('importAttendanceList - FINDING_USERS');
         const usersNetworkLogin = items.map((item) => item.networkLogin).filter(Boolean);
 
-        const regexQueries = usersNetworkLogin.map(login => ({
-            networkLogin: new RegExp(`^${login}$`, 'i')
+        const regexQueries = usersNetworkLogin.map((login) => ({
+            networkLogin: new RegExp(`^${login}$`, 'i'),
         }));
 
         const users = await User.find({ $or: regexQueries })
-            .select('_id networkLogin name email registration tags groupsAD onboarding')
+            .select('userID networkLogin name email registration tags groupsAD onboarding')
             .lean();
         console.timeEnd('importAttendanceList - FINDING_USERS');
 
@@ -307,7 +307,7 @@ module.exports = {
                     userTags: user.onboarding
                         ? [...user.tags, ...user.groupsAD]
                         : [...user.tags, ...user.groupsAD, 'ELEGE_geral'],
-                }
+                },
             ])
         );
 
@@ -350,7 +350,7 @@ module.exports = {
             const userIsEligible = checkEligibilityTagsAnd(
                 user.userTags,
                 courseMandatoryTags,
-                courseOptionalTags,
+                courseOptionalTags
             );
 
             if (!userIsEligible) {
@@ -363,22 +363,20 @@ module.exports = {
             }
 
             const indexUserInClass = classInfo.users.findIndex(
-                ({ _id }) => String(_id) === String(user._id)
+                ({ userID }) => String(_id) === String(user.userID)
             );
 
             const isPresence = ['SIM', 'S'].includes(item.presence?.toUpperCase());
             const presenceDate = isPresence
-                ? (
-                    item.presenceAt
-                        ? moment(item.presenceAt)
-                            .add(3, 'hours')
-                            .set({
-                                hour: nowDate.getHours(),
-                                minute: nowDate.getMinutes(),
-                            })
-                            .toDate()
-                        : nowDate
-                )
+                ? item.presenceAt
+                    ? moment(item.presenceAt)
+                          .add(3, 'hours')
+                          .set({
+                              hour: nowDate.getHours(),
+                              minute: nowDate.getMinutes(),
+                          })
+                          .toDate()
+                    : nowDate
                 : null;
             const grade = Number(item.grades ?? 0) > 100 ? 100 : Number(item.grades ?? 0);
 
@@ -388,7 +386,7 @@ module.exports = {
                 presenceAt: presenceDate,
                 origin: 'instructor',
                 updateAt: nowDate,
-            }
+            };
 
             // If user is in class, update user data
             if (indexUserInClass !== -1) {
@@ -398,9 +396,10 @@ module.exports = {
                     info: {
                         ...user,
                         ...commonData,
+                        userID: user._id,
                         createdAt: nowDate,
-                    }
-                })
+                    },
+                });
             }
             // If user is not in class, insert user data
             else {
@@ -409,8 +408,9 @@ module.exports = {
                     info: {
                         ...user,
                         ...commonData,
+                        userID: user._id,
                         createdAt: nowDate,
-                    }
+                    },
                 });
             }
         }
@@ -424,7 +424,7 @@ module.exports = {
                     $set: usersToUpdate.reduce((acc, { index, info }) => {
                         acc[`users.${index}`] = info;
                         return acc;
-                    }, {})
+                    }, {}),
                 }
             );
         }
@@ -437,9 +437,9 @@ module.exports = {
                 {
                     $push: {
                         users: {
-                            $each: usersToInsert.map(({ info }) => info)
-                        }
-                    }
+                            $each: usersToInsert.map(({ info }) => info),
+                        },
+                    },
                 }
             );
         }
@@ -452,5 +452,5 @@ module.exports = {
         ];
 
         return { results, classInfo, courseInfo };
-    }
+    },
 };
