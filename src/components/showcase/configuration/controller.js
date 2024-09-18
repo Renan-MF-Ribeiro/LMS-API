@@ -46,26 +46,25 @@ module.exports = {
         const { partnerKey } = req.query;
         const query = { enabled: true }
         query.partnerKey = partnerKey ? partnerKey : null || undefined
-        
+
         try {
-            const { token } = req.params
+            const { token } = req.query
             let blocks = await Showcase.find({ enabled: true }).populate('partners')
                 .sort({ position: 1 }).select({ _id: 1, type: 1, partners: 1 })
 
 
             if (token != 'undefined') {
-                // Se houver um token, filtra os blocos que têm parceiros com a chave correspondente
+
                 blocks = blocks.map(block => {
                     if (block.partners && block.partners.length > 0) {
-                        // Filtra os parceiros que possuem a chave correspondente ao token
-                        block.partners = block.partners.filter(partner =>
+                        const hasToken = block.partners.some(partner =>
                             partner.keys.some(keyObj => keyObj.key === token)
                         );
+                        return hasToken ? block : null
                     }
                     return block;
-                });
+                }).filter((block) => block);
             } else {
-                // Se não houver token, filtra para exibir apenas blocos sem parceiros
                 blocks = blocks.filter(block => !block.partners || block.partners.length === 0);
             }
 

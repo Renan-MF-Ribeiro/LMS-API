@@ -7,15 +7,15 @@ const { Partner } = require('./model');
 const { pagination, ordernation } = require('../../utils/functions');
 
 module.exports = {
-    async getPartners(req, res) {
+    async getPartners (req, res) {
         const { skip, limit } = pagination(req);
         const { order, sort } = ordernation(req);
         const searchBy = req.query.searchBy;
 
         const query = searchBy
             ? {
-                  $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-              }
+                $or: [{ title: { $regex: searchBy, $options: 'i' } }],
+            }
             : {};
 
         try {
@@ -42,18 +42,18 @@ module.exports = {
             );
         }
     },
-    async getActivePartners(req, res) {
+    async getActivePartners (req, res) {
         const { skip, limit } = pagination(req);
         const { order, sort } = ordernation(req);
         const searchBy = req.query.searchBy;
 
         const query = searchBy
             ? {
-                  $and: [
-                      { $or: [{ title: { $regex: searchBy, $options: 'i' } }] },
-                      { active: true },
-                  ],
-              }
+                $and: [
+                    { $or: [{ title: { $regex: searchBy, $options: 'i' } }] },
+                    { active: true },
+                ],
+            }
             : { active: true };
 
         try {
@@ -72,7 +72,7 @@ module.exports = {
         }
     },
 
-    async create(req, res) {
+    async create (req, res) {
         const body = JSON.parse(req.fields.payload) ?? null;
         const { title, initialDate, endDate } = body;
         const { logo } = req.files ?? '';
@@ -109,14 +109,14 @@ module.exports = {
                 body.logo = pathAzure.replace(AZURE_BLOB_URL, DOMAIN);
             }
 
-            let dto = body.keys?.map((x) => {
-                // Gerando um valor hexadecimal de 12 caracteres
-                let bytes = crypto.randomBytes(Math.ceil(12 / 2));
-                let hex = bytes.toString('hex').toUpperCase();
-                const key = hex.slice(0, 12);
-                return { ...x, key: key };
-            });
-            body.keys = dto;
+            // let dto = body.keys?.map((x) => {
+            //     // Gerando um valor hexadecimal de 12 caracteres
+            //     let bytes = crypto.randomBytes(Math.ceil(12 / 2));
+            //     let hex = bytes.toString('hex').toUpperCase();
+            //     const key = hex.slice(0, 12);
+            //     return { ...x, key: key };
+            // });
+            // body.keys = dto;
 
             const partner = await Partner.create(body);
             _messages.success(
@@ -144,7 +144,7 @@ module.exports = {
         }
     },
 
-    async update(req, res) {
+    async update (req, res) {
         const { id: _id } = req.params;
         const body = JSON.parse(req.fields.payload) ?? null;
 
@@ -187,7 +187,7 @@ module.exports = {
         }
     },
 
-    async delete(req, res) {
+    async delete (req, res) {
         const { id: _id } = req.params;
         try {
             //Valida se o id recebido existe
@@ -211,7 +211,7 @@ module.exports = {
         }
     },
 
-    async getPartnersByToken(req, res) {
+    async getPartnersByToken (req, res) {
         try {
             const { token } = req.params;
             const partner = await Partner.findOne({ active: true, 'keys.key': token });
