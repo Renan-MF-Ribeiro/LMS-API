@@ -363,7 +363,7 @@ module.exports = {
             }
 
             const indexUserInClass = classInfo.users.findIndex(
-                ({ userID }) => String(_id) === String(user.userID)
+                ({ _id }) => String(_id) === String(user._id)
             );
 
             const isPresence = ['SIM', 'S'].includes(item.presence?.toUpperCase());
