@@ -46,9 +46,6 @@ async function listTrainingSectionDetails(req, res) {
 async function generateTrainingSectionCertificate(req, res) {
     const sectionId = req.params.sectionId;
 
-    const user = await getUserByToken(req);
-    const tags = await getTagsElegiblesByToken(req);
-
     const section = await Section
         .findOne({
             _id: sectionId,
@@ -62,11 +59,18 @@ async function generateTrainingSectionCertificate(req, res) {
         throw new ApiError('Seção de treinamento não encontrada', 404, undefined, { skipDbLog: true });
     }
 
+    const user = await getUserByToken(req);
+    const tags = await getTagsElegiblesByToken(req);
+
     const trailsDb = (await populateTrails(true, { enabled: true, _id: { $in: section.trails } }))
         ?.filter(trail => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative)
         ?.filter((trail) => checkIfTheTrackIsValid(trail));
 
-    const allItemsId = trailsDb.map(trail => trail.items.map(item => item.itemID._id)).flat();
+    const allItemsId = Array.from(
+        new Set(
+            trailsDb.map(trail => trail.items.map(item => item.itemID._id)).flat()
+        )
+    );
 
     const allTrackingUser = await Tracking.find({
         userLogin: user.networkLogin,

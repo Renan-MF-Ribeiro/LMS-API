@@ -7,6 +7,6 @@ const router = Router();
 router
     .get('/sections', isAccountant, listTrainingSections)
     .get('/sections/:sectionId', isAccountant, listTrainingSectionDetails)
-    .post('/sections/:sectionId/certificate', validateTokenRoute, generateTrainingSectionCertificate);
+    .get('/sections/:sectionId/certificate', validateTokenRoute, generateTrainingSectionCertificate);
 
 module.exports = router;
