@@ -527,178 +527,192 @@ const ItemController = {
             const user = await getUserByToken(req);
 
             const verify = await Item.find({
-                title: { $eq: payload.title },
-                _id: { $ne: payload._id },
+                $or: [{
+                    title: { $eq: payload.title },
+                    _id: { $ne: payload._id },
+                }, {
+                    _id: { $ne: payload._id },
+                    titleURL: { $eq: payload.titleURL }
+                }]
             });
-            if (verify.length === 0) {
-                const ItemModel =
-                    ITEM_KINDS[req.body.kind || payload.kind] || Item;
-                try {
-                    const content = req.files.content;
-                    const thumb = req.files.thumb;
-                    const banner = req.files.banner;
+            let titleURLDuplicate = false
+            if (verify.length > 0) {
+                const titleDuplicate = verify.some((item) => item.title === payload.title)
+                titleURLDuplicate = verify.some((item) => item.titleURL === payload.titleURL)
+                if (titleDuplicate) {
+                    return _messages.badRequest(
+                        res,
+                        req,
+                        'Já existe um item com esse título!',
+                        'Já existe um item com esse título!',
+                        'items',
+                        'update'
+                    );
+                }
+            }
+            if (titleURLDuplicate) {
+                payload.titleURL = `${payload.titleURL}-2`
+            }
 
-                    let thumbPath;
-                    let thumbPath2;
-                    let contentPath;
-                    let bannerPath;
+            const ItemModel =
+                ITEM_KINDS[req.body.kind || payload.kind] || Item;
+            try {
+                const content = req.files.content;
+                const thumb = req.files.thumb;
+                const banner = req.files.banner;
 
-                    if (thumb) {
-                        thumbPath = await azureBlob(thumb, 'items/thumbs');
-                    }
+                let thumbPath;
+                let thumbPath2;
+                let contentPath;
+                let bannerPath;
 
-                    if (banner) {
-                        bannerPath = await azureBlob(banner, 'items/banners');
-                    }
+                if (thumb) {
+                    thumbPath = await azureBlob(thumb, 'items/thumbs');
+                }
 
-                    if (payload.kind !== 'MediaItem') {
-                        if (content) {
-                            payload.fileName = content.name;
-                            contentPath = await azureBlob(
-                                content,
-                                'items/content'
-                            );
-                            contentPath =
-                                process.env.NODE_ENV === 'local'
-                                    ? contentPath
-                                    : contentPath.replace(
-                                        AZURE_BLOB_URL,
-                                        DOMAIN
-                                    );
-                        }
-                    }
+                if (banner) {
+                    bannerPath = await azureBlob(banner, 'items/banners');
+                }
 
-                    if (
-                        !contentPath &&
-                        payload.content &&
-                        ItemModel === MediaItem
-                    ) {
-                        contentPath = payload.content;
-                        delete payload.content;
-                    }
-
-                    if (payload.kind === 'MediaItem') {
-                        if (content) {
-                            payload.enabled = true;
-                            const item = await Item.findOne({
-                                _id: payload._id,
-                            });
-                            const vimeoId = item.vimeoId;
-                            payload.contentPath = String(
-                                new Date().toISOString()
-                            );
-                            if (payload.vimeoId) {
-                                vimeoFilePathUpdate(
-                                    content,
-                                    payload,
-                                    user,
-                                    vimeoId
+                if (payload.kind !== 'MediaItem') {
+                    if (content) {
+                        payload.fileName = content.name;
+                        contentPath = await azureBlob(
+                            content,
+                            'items/content'
+                        );
+                        contentPath =
+                            process.env.NODE_ENV === 'local'
+                                ? contentPath
+                                : contentPath.replace(
+                                    AZURE_BLOB_URL,
+                                    DOMAIN
                                 );
-                            } else {
-                                vimeoFilePathCreate(content, payload, user);
-                            }
-                        }
-                    }
-
-                    payload = {
-                        ...(thumbPath ? { thumbPath: thumbPath } : {}),
-                        ...(contentPath ? { contentPath: contentPath } : {}),
-                        ...(bannerPath ? { bannerPath: bannerPath } : {}),
-                        ...payload,
-                    };
-
-                    if (payload.kind === 'FormItem') {
-                        for (let i = 0; i < payload?.statements.length; i++) {
-                            const statement = payload?.statements[i];
-                            payload.statements[i] = {
-                                _id:
-                                    statement?._id ||
-                                    new mongoose.Types.ObjectId(),
-                                title: statement.title,
-                                type: statement.type,
-                                ...(statement?.alternatives && {
-                                    alternatives: statement.alternatives.map(
-                                        ({ _id, alternative }) => ({
-                                            _id:
-                                                _id ||
-                                                new mongoose.Types.ObjectId(),
-                                            alternative,
-                                        })
-                                    ),
-                                }),
-                                ...(statement?.numberCharacters && {
-                                    numberCharacters:
-                                        statement?.numberCharacters,
-                                }),
-                            };
-                        }
-                    }
-
-                    delete payload.content;
-                    delete payload.thumb;
-                    delete payload.banner;
-                    delete payload.sectionId;
-
-                    payload.author = user._id;
-
-                    let item = await Item.findById({ _id: payload._id });
-                    if (item.kind == 'SoonItem' && item.kind != payload.kind) {
-                        await Item.findOneAndUpdate(
-                            { _id: item._id },
-                            {
-                                kind: payload.kind,
-                            }
-                        );
-                    }
-
-                    if (payload.kind === 'SCORMItem' && content) {
-                        const { contentPath } = await ItemModel.findById(
-                            payload._id
-                        );
-
-                        await ItemModel.findByIdAndUpdate(payload._id, payload);
-                        item = await ItemModel.findByIdAndUpdate(payload._id, {
-                            contentPath,
-                        }, { new: true });
-                    } else {
-                        item = await ItemModel.findByIdAndUpdate(payload._id, payload, { new: true });
-                    }
-
-                    _messages.success(res, req, item);
-                } catch (error) {
-                    if (error.name === 'ValidationError') {
-                        const messages = {};
-                        for (const k in error.errors)
-                            messages[k] = error.errors[k].message;
-                        _messages.badRequest(
-                            res,
-                            req,
-                            error,
-                            { name: error.name, messages },
-                            'items',
-                            'update'
-                        );
-                    } else {
-                        _messages.internalServer(
-                            res,
-                            req,
-                            error.message,
-                            'Erro interno no servidor',
-                            'items',
-                            'update'
-                        );
                     }
                 }
-            } else {
-                _messages.badRequest(
-                    res,
-                    req,
-                    'Já existe um item com esse título!',
-                    'Já existe um item com esse título!',
-                    'items',
-                    'update'
-                );
+
+                if (
+                    !contentPath &&
+                    payload.content &&
+                    ItemModel === MediaItem
+                ) {
+                    contentPath = payload.content;
+                    delete payload.content;
+                }
+
+                if (payload.kind === 'MediaItem') {
+                    if (content) {
+                        payload.enabled = true;
+                        const item = await Item.findOne({
+                            _id: payload._id,
+                        });
+                        const vimeoId = item.vimeoId;
+                        payload.contentPath = String(
+                            new Date().toISOString()
+                        );
+                        if (payload.vimeoId) {
+                            vimeoFilePathUpdate(
+                                content,
+                                payload,
+                                user,
+                                vimeoId
+                            );
+                        } else {
+                            vimeoFilePathCreate(content, payload, user);
+                        }
+                    }
+                }
+
+                payload = {
+                    ...(thumbPath ? { thumbPath: thumbPath } : {}),
+                    ...(contentPath ? { contentPath: contentPath } : {}),
+                    ...(bannerPath ? { bannerPath: bannerPath } : {}),
+                    ...payload,
+                };
+
+                if (payload.kind === 'FormItem') {
+                    for (let i = 0; i < payload?.statements.length; i++) {
+                        const statement = payload?.statements[i];
+                        payload.statements[i] = {
+                            _id:
+                                statement?._id ||
+                                new mongoose.Types.ObjectId(),
+                            title: statement.title,
+                            type: statement.type,
+                            ...(statement?.alternatives && {
+                                alternatives: statement.alternatives.map(
+                                    ({ _id, alternative }) => ({
+                                        _id:
+                                            _id ||
+                                            new mongoose.Types.ObjectId(),
+                                        alternative,
+                                    })
+                                ),
+                            }),
+                            ...(statement?.numberCharacters && {
+                                numberCharacters:
+                                    statement?.numberCharacters,
+                            }),
+                        };
+                    }
+                }
+
+                delete payload.content;
+                delete payload.thumb;
+                delete payload.banner;
+                delete payload.sectionId;
+
+                payload.author = user._id;
+
+                let item = await Item.findById({ _id: payload._id });
+                if (item.kind == 'SoonItem' && item.kind != payload.kind) {
+                    await Item.findOneAndUpdate(
+                        { _id: item._id },
+                        {
+                            kind: payload.kind,
+                        }
+                    );
+                }
+
+                if (payload.kind === 'SCORMItem' && content) {
+                    const { contentPath } = await ItemModel.findById(
+                        payload._id
+                    );
+
+                    await ItemModel.findByIdAndUpdate(payload._id, payload);
+                    item = await ItemModel.findByIdAndUpdate(payload._id, {
+                        contentPath,
+                    }, { new: true });
+                } else {
+                    item = await ItemModel.findByIdAndUpdate(payload._id, payload, { new: true });
+                }
+
+                _messages.success(res, req, item);
+            } catch (error) {
+                if (error.name === 'ValidationError') {
+                    const messages = {};
+                    for (const k in error.errors)
+                        messages[k] = error.errors[k].message;
+                    _messages.badRequest(
+                        res,
+                        req,
+                        error,
+                        { name: error.name, messages },
+                        'items',
+                        'update'
+                    );
+                } else {
+                    _messages.internalServer(
+                        res,
+                        req,
+                        error.message,
+                        'Erro interno no servidor',
+                        'items',
+                        'update'
+                    );
+                }
             }
+
         }
     },
 
