@@ -39,6 +39,8 @@ const {
     getTagsElegiblesByToken,
 } = require('../sections/business');
 
+const { updateCertificateExpirationDate } = require('../certificates/business');
+
 const ObjectId = require("mongoose").Types.ObjectId;
 
 module.exports = {
@@ -947,6 +949,8 @@ module.exports = {
                         _id: { $eq: payload._id },
                     })
 
+                    await updateCertificateExpirationDate(req)
+
                     _messages.success(
                         res,
                         req,
@@ -955,7 +959,7 @@ module.exports = {
                         'trails',
                         'update',
                         newData,
-                        oldData,
+                        payload,
                         true,
                         'UPDATE',
                     )
