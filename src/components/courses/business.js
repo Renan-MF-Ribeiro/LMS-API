@@ -289,7 +289,7 @@ module.exports = {
         }));
 
         const users = await User.find({ $or: regexQueries })
-            .select('userID networkLogin name email registration tags groupsAD onboarding')
+            .select('_id networkLogin name email registration tags groupsAD onboarding')
             .lean();
         console.timeEnd('importAttendanceList - FINDING_USERS');
 
