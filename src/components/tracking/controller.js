@@ -42,6 +42,7 @@ const { EVENTS_CATEGORY } = require('../gamification/model');
 
 const { createCompleteTracking } = require('./business')
 
+const _functions = require('../../utils/functions');
 
 const TRACKING_KINDS = Object.freeze({
     DocumentTracking: DocumentTracking,
@@ -285,14 +286,28 @@ const TrackingController = {
 
             res.status(httpStatus.NO_CONTENT).send();
         } catch (error) {
-            _messages.internalServer(
-                res,
+            // _messages.internalServer(
+            //     res,
+            //     req,
+            //     error.message,
+            //     'Erro interno no servidor',
+            //     'tracking',
+            //     'createOrUpdate'
+            // );
+
+            console.log('ERROR - tracking createOrUpdate', error, req.body);
+
+            await _functions.recordLog(
                 req,
+                'ERROR',
                 error.message,
-                'Erro interno no servidor',
                 'tracking',
-                'createOrUpdate'
+                'createOrUpdate',
+                null,
+                req.body,
             );
+
+            res.status(httpStatus.INTERNAL_SERVER_ERROR).send('Erro interno no servidor')
         }
     },
 
