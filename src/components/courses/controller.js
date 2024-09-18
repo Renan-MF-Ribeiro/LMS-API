@@ -715,7 +715,7 @@ module.exports = {
                         return ({
                             ...user,
                             ip,
-                            _id: mongoose.Types.ObjectId(user._id),
+                            userID: user._id,
                             presenceAt: user.presenceAt ? new Date(user.presenceAt) : (user.presence ? nowDate : null),
                             createdAt: user.createdAt ? new Date(user.createdAt) : nowDate,
                             updatedAt: nowDate,

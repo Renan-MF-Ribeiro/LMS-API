@@ -1,6 +1,8 @@
+const crypto = require('crypto');
+const { DOMAIN, AZURE_BLOB_URL } = process.env;
+const moment = require('moment');
 const _messages = require('../../utils/messages');
 const { azureBlob } = require('../../utils/files');
-const crypto = require('crypto');
 const { Partner } = require('./model');
 const { pagination, ordernation } = require('../../utils/functions');
 
@@ -40,26 +42,6 @@ module.exports = {
             );
         }
     },
-    async getTokenInfo(req, res) {
-        const { token: key } = req.params;
-
-        try {
-            const partner = await Partner.findOne({ 'keys.key': key }, 'logo description title');
-
-            _messages.success(res, req, {
-                data: partner
-            });
-        } catch (error) {
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'partners',
-                'getTokenInfo'
-            );
-        }
-    },
     async getActivePartners(req, res) {
         const { skip, limit } = pagination(req);
         const { order, sort } = ordernation(req);
@@ -75,18 +57,9 @@ module.exports = {
             : { active: true };
 
         try {
-            const total = await Partner.find(query).countDocuments();
-            const partners = await Partner.find(query)
-                .sort({
-                    [order]: sort,
-                })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit));
+            const partners = await Partner.find({ active: true });
 
-            _messages.success(res, req, {
-                data: partners,
-                total,
-            });
+            _messages.success(res, req, partners);
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -100,7 +73,7 @@ module.exports = {
     },
 
     async create(req, res) {
-        const { body } = req;
+        const body = JSON.parse(req.fields.payload) ?? null;
         const { title, initialDate, endDate } = body;
         const { logo } = req.files ?? '';
         const today = new Date();
@@ -129,10 +102,11 @@ module.exports = {
                 return;
             }
 
+            const logo = req.files?.logo;
+
             if (logo) {
-                logoPath = await azureBlob(logo, 'partners/logos');
-                logoPath = logoPath.replace(AZURE_BLOB_URL, DOMAIN);
-                body.logo = logoPath;
+                let pathAzure = await azureBlob(logo, 'showcase/partners', false, 'lmsassetsanon');
+                body.logo = pathAzure.replace(AZURE_BLOB_URL, DOMAIN);
             }
 
             let dto = body.keys?.map((x) => {
@@ -158,6 +132,7 @@ module.exports = {
                 'CREATE'
             );
         } catch (error) {
+            console.error(error);
             _messages.internalServer(
                 res,
                 req,
@@ -171,7 +146,8 @@ module.exports = {
 
     async update(req, res) {
         const { id: _id } = req.params;
-        const { body } = req;
+        const body = JSON.parse(req.fields.payload) ?? null;
+
         try {
             //Valida se o id recebido existe
             const doesPartnerExist = await Partner.findById(_id);
@@ -179,6 +155,13 @@ module.exports = {
                 _messages.notFound(res, req, null, 'Este partner não existe');
                 return;
             }
+            const logo = req.files?.logo;
+
+            if (logo) {
+                let pathAzure = await azureBlob(logo, 'showcase/partners', false, 'lmsassetsanon');
+                body.logo = pathAzure.replace(AZURE_BLOB_URL, DOMAIN);
+            }
+
             const partner = await Partner.findByIdAndUpdate(_id, body);
             _messages.success(
                 res,
@@ -217,6 +200,25 @@ module.exports = {
             await Partner.findByIdAndDelete(_id);
             _messages.success(res, req, 'Deletado com sucesso!');
         } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'partners',
+                '/delete'
+            );
+        }
+    },
+
+    async getPartnersByToken(req, res) {
+        try {
+            const { token } = req.params;
+            const partner = await Partner.findOne({ active: true, 'keys.key': token });
+
+            _messages.success(res, req, partner);
+        } catch (error) {
+            console.error(error);
             _messages.internalServer(
                 res,
                 req,
