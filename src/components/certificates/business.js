@@ -22,4 +22,32 @@ const prepareFormData = (req) => {
     return form;
 }
 
-module.exports = { certificateClient, getHeaders, prepareFormData };
+const updateCertificateExpirationDate = async (req) => {
+    if (req.fields.payload) {
+        try {
+            payload = JSON.parse(req.fields.payload)
+        } catch { }
+    }
+
+    try {
+        await certificateClient.patch(
+            `/certificates/update-expiration-date/${process.env.CLIENT_ID}`,
+            {
+                trailId: payload._id,
+                expirationType: payload.expirationType,
+            },
+            {
+                headers: getHeaders(req),
+            }
+        );
+    } catch (error) {
+        console.log({ error });
+    }
+};
+
+module.exports = { 
+    certificateClient,
+    getHeaders,
+    prepareFormData,
+    updateCertificateExpirationDate
+};
