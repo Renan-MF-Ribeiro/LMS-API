@@ -19,12 +19,31 @@ const PartnerSchema = new mongoose.Schema(
                 {
                     key: { type: String },
                     title: { type: String, required: true },
-                    inititalDate: { type: Date },
+                    initialDate: { type: Date },
                     endDate: { type: Date },
-                    defaultField: [{ key: { type: String }, value: { type: String } }],
-                    elegibilityResult: [{ display: { type: String }, value: { type: String } }],
-                    classGroupResult: {type:{classGroups:[{ type: mongoose.Schema.Types.ObjectId, ref: 'class_groups', required: true }],days:{ type: Number }}} 
-                },
+                    defaultField: [
+                        {
+                            key: { type: String },
+                            value: { type: String }
+                        }
+                    ],
+                    elegibilityResult: [
+                        {
+                            display: { type: String },
+                            value: { type: String }
+                        }
+                    ],
+                    classGroupResult: {
+                        classGroups: [
+                            {
+                                type: mongoose.Schema.Types.ObjectId,
+                                ref: 'class_groups',
+                                required: true
+                            }
+                        ],
+                        days: { type: Number }
+                    }
+                }
             ],
             required: true,
             default: [],

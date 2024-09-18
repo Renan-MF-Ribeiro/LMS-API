@@ -6,7 +6,7 @@ const {
 
 module.exports = express.Router()
     .get('/', validateTokenRoute, _controller.getList)
-    .get('/blocks', _controller.getBlocks)
+    .get('/blocks/:token', _controller.getBlocks)
     .get('/:id', _controller.getById)
     .post('/update-position', validateTokenRoute, _controller.orderChange)
     .put('/', validateTokenRoute, _controller.update)
