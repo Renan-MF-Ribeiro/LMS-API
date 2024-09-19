@@ -20,5 +20,9 @@ router
     .post('/rankings', isAdmin, _controller.createClientRankings)
     .put('/rankings/:_id', isAdmin, _controller.updateClientRankings)
     .delete('/rankings/:_id', isAdmin, _controller.deleteClientRankings)
+    .get('/rewards', isAdmin, _controller.getClientRewards)
+    .post('/rewards', isAdmin, formidable(), _controller.createClientRewards)
+    .put('/rewards/:_id', isAdmin, formidable(), _controller.updateClientRewards)
+    .delete('/rewards/:_id', isAdmin, _controller.deleteClientRewards)
 
     module.exports = router;
