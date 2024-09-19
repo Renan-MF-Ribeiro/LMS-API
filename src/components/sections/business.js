@@ -18,7 +18,7 @@ const { TrailViews } = require('../trails/trail-views.model');
 
 module.exports = {
     checkIfTheTrackIsValid (trail) {
-        const today = moment.utc();
+        const today = moment.utc(true);
 
         if (trail.classGroup) {
             const startGroup = moment.utc(trail.classGroup.startDate);
@@ -32,9 +32,9 @@ module.exports = {
             const startDate = moment.utc(trail.startDate);
             const endDate = moment.utc(trail.endDate);
             console.log("NOME DA TRILHA", trail.title)
-            console.log("DATA INICIO", startDate.utc())
-            console.log("DATA FIM", endDate.utc())
-            console.log("HOJE", today.utc())
+            console.log("DATA INICIO", startDate)
+            console.log("DATA FIM", endDate)
+            console.log("HOJE", today)
             console.log(startDate.isSameOrBefore(today) && endDate.isSameOrAfter(today))
             console.log("\n")
             if (!(startDate.isSameOrBefore(today) && endDate.isSameOrAfter(today))) {
