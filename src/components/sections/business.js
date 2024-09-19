@@ -18,21 +18,21 @@ const { TrailViews } = require('../trails/trail-views.model');
 
 module.exports = {
     checkIfTheTrackIsValid (trail) {
-        const today = getDateTodayWithoutHours();
+        const today = moment.utc();
 
         if (trail.classGroup) {
-            const startGroup = formatDateWithoutHours(trail.classGroup.startDate);
+            const startGroup = moment.utc(trail.classGroup.startDate);
 
-            if (!(startGroup <= today)) {
+            if (startGroup.isAfter(today)) {
                 return false;
             }
         }
 
         if (trail.startDate && trail.endDate) {
-            const startDate = formatDateWithoutHours(trail.startDate);
-            const endDate = formatDateWithoutHours(trail.endDate);
+            const startDate = moment.utc(trail.startDate);
+            const endDate = moment.utc(trail.endDate);
 
-            if (!(startDate <= today && endDate >= today)) {
+            if (!(startDate.isSameOrBefore(today) && endDate.isSameOrAfter(today))) {
                 return false;
             }
         }
