@@ -34,6 +34,7 @@ module.exports = {
             console.log("NOME DA TRILHA", trail.title)
             console.log("DATA INICIO", startDate)
             console.log("DATA FIM", endDate)
+            console.log("HOJE", today)
             console.log(startDate.isSameOrBefore(today) && endDate.isSameOrAfter(today))
             console.log("\n")
             if (!(startDate.isSameOrBefore(today) && endDate.isSameOrAfter(today))) {
