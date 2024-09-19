@@ -19,7 +19,8 @@ const {
     getGroupCodesByToken,
     checkEligibilityTagsAnd,
     courseInSections,
-    getTrainingDataFromBody
+    getTrainingDataFromBody,
+    setAssessmentHistoricOnSections
 } = require('./business');
 
 const { getStudentCourses } = require('../home/business');
@@ -389,6 +390,12 @@ module.exports = {
                 }
             }
 
+            const hasSomeTrainingSection = resultSections.some(section => section.isTraining);
+
+            if (hasSomeTrainingSection) {
+                await setAssessmentHistoricOnSections(user._id, resultSections);
+            }
+
             _messages.success(res, req, resultSections);
         } catch (error) {
             console.log(error);
@@ -520,6 +527,10 @@ module.exports = {
         if (!responseSection) {
             res.status(404).json('Seção não encontrada ou inelegível');
             return;
+        }
+
+        if (responseSection.isTraining) {
+            await setAssessmentHistoricOnSections(user._id, [responseSection]);
         }
 
         res.json(responseSection);
