@@ -18,7 +18,9 @@ const {
     mostSeenSections,
     getGroupCodesByToken,
     checkEligibilityTagsAnd,
-    courseInSections
+    courseInSections,
+    getTrainingDataFromBody,
+    setAssessmentHistoricOnSections
 } = require('./business');
 
 const { getStudentCourses } = require('../home/business');
@@ -79,7 +81,13 @@ module.exports = {
             });
             if (verify.length === 0) {
                 const position = await Section.find({ deleted: 0 }).count();
-                const section = await Section.create({ ...req.body, position });
+
+                const section = await Section.create({
+                    ...req.body,
+                    position,
+                    ...getTrainingDataFromBody(req.body)
+                });
+
                 _messages.success(
                     res,
                     req,
@@ -122,7 +130,11 @@ module.exports = {
                 _id: { $ne: _id },
             });
             if (verify.length === 0) {
-                const oldData = await Section.findByIdAndUpdate(_id, req.body);
+                const oldData = await Section.findByIdAndUpdate(_id, {
+                    ...req.body,
+                    ...getTrainingDataFromBody(req.body)
+                });
+
                 const newData = await Section.find({ _id: { $eq: _id } });
 
                 _messages.success(
@@ -378,6 +390,12 @@ module.exports = {
                 }
             }
 
+            const hasSomeTrainingSection = resultSections.some(section => section.isTraining);
+
+            if (hasSomeTrainingSection) {
+                await setAssessmentHistoricOnSections(user._id, resultSections);
+            }
+
             _messages.success(res, req, resultSections);
         } catch (error) {
             console.log(error);
@@ -509,6 +527,10 @@ module.exports = {
         if (!responseSection) {
             res.status(404).json('Seção não encontrada ou inelegível');
             return;
+        }
+
+        if (responseSection.isTraining) {
+            await setAssessmentHistoricOnSections(user._id, [responseSection]);
         }
 
         res.json(responseSection);

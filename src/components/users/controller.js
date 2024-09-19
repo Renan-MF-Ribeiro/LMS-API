@@ -377,14 +377,8 @@ module.exports = {
                         ] : null;
 
 
-                    // VERIFY FEATURE WELCOME AND UPDATE
+                    // VERIFY FEATURE WELCOME
                     const hasWelcomeComponentFeature = await Features.exists({ welcomeComponent: true })
-                    if (hasWelcomeComponentFeature && user?.welcomeVideoWatched === false) {
-                        await User.updateOne(
-                            { _id: user._id },
-                            { $set: { welcomeVideoWatched: true } }
-                        );
-                    }
                     
                     const token = generateToken({
                         ref: user._id,
@@ -645,14 +639,8 @@ module.exports = {
                     );
                     const groupsIDS = await returnIdGroupUser(namesGroups);
 
-                    // VERIFY FEATURE WELCOME AND UPDATE
+                    // VERIFY FEATURE WELCOME
                     const hasWelcomeComponentFeature = await Features.exists({ welcomeComponent: true })
-                    if (hasWelcomeComponentFeature && user?.welcomeVideoWatched === false) {
-                        await User.updateOne(
-                            { _id: user._id },
-                            { $set: { welcomeVideoWatched: true } }
-                        );
-                    }
 
                     const token = generateSSOToken({
                         ref: user._id,
@@ -758,7 +746,7 @@ module.exports = {
     async acceptTerms (req, res) {
         try {
             const { _id } = await getUserByToken(req);
-            await User.findByIdAndUpdate(_id, { acceptTerms: true });
+            await User.findByIdAndUpdate(_id, { $set: { acceptTerms: true, welcomeVideoWatched: true } });
             _messages.success(
                 res,
                 req,

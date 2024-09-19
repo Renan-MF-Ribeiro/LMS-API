@@ -109,7 +109,7 @@ const calendarRoutes = require('./components/calendar/routes');
 const certificateRoutes = require('./components/certificates/routes');
 const dimensionRoutes = require('./components/dimensions/routes');
 const partnerRoutes = require('./components/partners/routes');
-
+const trainingRouter = require('./components/training/routes');
 
 app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/tracking', validateTokenRoute, trackingRoutes)
@@ -145,6 +145,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/certificates', certificateRoutes)
     .use('/dimensions', dimensionRoutes)
     .use('/partners', partnerRoutes)
+    .use('/training', trainingRouter)
     .use(
         '/assessment',
         isAssessmentActive,
