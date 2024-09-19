@@ -31,6 +31,10 @@ module.exports = {
         if (trail.startDate && trail.endDate) {
             const startDate = moment.utc(trail.startDate);
             const endDate = moment.utc(trail.endDate);
+            console.log("trailstartDate", trail.startDate)
+            console.log("traildendDate", trail.endDate)
+            console.log("startDate", startDate)
+            console.log("endDate", endDate)
 
             if (!(startDate.isSameOrBefore(today) && endDate.isSameOrAfter(today))) {
                 return false;
