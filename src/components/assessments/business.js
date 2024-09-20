@@ -6,23 +6,8 @@ const { Alternative } = require('./alternatives/model')
 const { HistoricEvaluation, Evaluation } = require('./model')
 const { returnSliceDataRandom } = require('../../utils/functions')
 const { Category } = require('./categories/model')
-const { default: axios } = require('axios')
-
-const assessmentApiClient = axios.create({
-    baseURL: process.env.API_ASSESSMENT,
-    headers: { 'x-client-key': process.env.API_KEY_ASSESSMENT }
-});
 
 module.exports = {
-    async returnHistoricTraining(userId) {
-        const clientId = process.env.CLIENT_ID;
-
-        return await assessmentApiClient.get(
-            `/historics/training/${clientId}/${userId}`,
-            { validateStatus: false }
-        );
-    },
-
     returnFileCategories (dados, positionCategory) {
         const categories = []
 

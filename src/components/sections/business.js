@@ -15,7 +15,7 @@ const { Section, DEFAULT_TYPES } = require('./model');
 const { default: axios } = require('axios');
 const moment = require('moment');
 const { TrailViews } = require('../trails/trail-views.model');
-const { returnHistoricTraining } = require('../assessments/business');
+const { listTrainingSectionsStatus } = require('../assessment/business');
 
 module.exports = {
     checkIfTheTrackIsValid (trail) {
@@ -895,9 +895,10 @@ module.exports = {
     },
     
     async setAssessmentHistoricOnSections(userId, sections) {
-        const { data: dataAssessmentHistoric } = await returnHistoricTraining(userId);
+        console.log('userId', userId);
+        const dataAssessmentHistoric = await listTrainingSectionsStatus(userId);
 
-        if (dataAssessmentHistoric.error) return sections;
+        console.log('dataAssessmentHistoric', dataAssessmentHistoric);
 
         sections.forEach(section => {
             if (!section.isTraining) return;
