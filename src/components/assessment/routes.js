@@ -30,5 +30,7 @@ router
         '/user-matrix-details/:matrixId/:periodId',
         _controller.getUserMatrixDetails
     )
+    .get('/historics/training/:userId/status', _controller.listTrainingSectionsStatus)
+    .get('/historics/training/:userId', _controller.listTrainingSection)
 
 module.exports = router;

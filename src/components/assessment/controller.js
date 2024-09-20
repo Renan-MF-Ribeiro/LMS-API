@@ -310,6 +310,26 @@ const AssessmentController = {
             return handleError(res, req, error);
         }
     },
+
+    async listTrainingSectionsStatus(req, res) {
+        try {
+            const data = await AssessmentBusiness.listTrainingSectionsStatus(_id)
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
+
+    async listTrainingSection(req, res) {
+        try {
+            const data = await AssessmentBusiness.listTrainingSection(_id)
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    }
 };
 
 async function handlePillarTags(eligibilities) {
