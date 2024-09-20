@@ -9,4 +9,4 @@ module.exports = express
     .delete('/:id', _controller.delete)
     .get('/', _controller.getPartners)
     .get('/active', _controller.getActivePartners)
-    .get('/:token', _controller.getPartnersByToken);
+    .get('/token', _controller.getPartnersByToken);

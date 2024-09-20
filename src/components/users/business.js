@@ -19,7 +19,7 @@ const { Log } = require('../logs/model');
 const bcrypt = require('bcryptjs');
 const axios = require('axios');
 const _functions = require('../../utils/functions');
-const { Group } = require('../groups/model');
+const { Group, ClassGroup } = require('../groups/model');
 const { CLIENT_ID } = process.env;
 const kafka = require('../../utils/kafka');
 const { Trail } = require('../trails/model');
@@ -749,4 +749,43 @@ module.exports = {
         const category = 'notify';
         return { title, text, communication, category, mode, ...emailTemplate };
     },
+
+    async createClassGroup (user, groupCode, DATA_INICIO, DATA_FIM) {
+        let classGroup;
+
+        const foundClass = await ClassGroup.findOne({
+            groupCode: groupCode,
+        });
+
+        if (foundClass) {
+            classGroup = foundClass;
+        } else {
+            classGroup = await ClassGroup.create({
+                groupCode: groupCode,
+                startDate: null,
+                limitDate: null,
+                classId: Math.floor(
+                    Math.random() *
+                    (100000000 - 1000000 + 1) +
+                    1000000
+                ),
+                status: 2,
+            });
+        }
+
+        const { startDate, limitDate } =
+            _functions.getDates(
+                DATA_INICIO,
+                DATA_FIM
+            );
+
+        classGroup.startDate = startDate;
+        classGroup.limitDate = limitDate;
+
+        await user.update({
+            $addToSet: {
+                classGroups: classGroup,
+            },
+        });
+    }
 };
