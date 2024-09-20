@@ -111,6 +111,7 @@ module.exports = {
                 );
             }
         } catch (error) {
+            console.error(error)
             _messages.internalServer(
                 res,
                 req,

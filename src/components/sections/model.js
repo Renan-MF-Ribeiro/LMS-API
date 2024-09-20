@@ -31,8 +31,8 @@ const certificateDueSchema = new mongoose.Schema(
     {
         type: {
             type: String,
-            enum: ['fixed', 'availability'],
-            required: true,
+            enum: ['fixed', 'availability', ''],
+            required: false,
         },
         value: { type: mongoose.Schema.Types.Mixed, required: true }, // Number or Date
     },
@@ -51,8 +51,6 @@ const SectionSchema = new mongoose.Schema(
         active: { type: Number, default: 1 },
         formation: { type: Number, default: 0 },
         certificate: { type: Number, default: 0 },
-        certificateLayout: { type: 'ObjectId' },
-        certificateDue: { type: Object, default: null },
         trails: { type: [{ type: 'ObjectId', ref: 'trails' }] },
         position: { type: Number, default: 0 },
         ordination: { type: Number, required: false }, // 0 - DATA / 1 - ORDEM ALFABÉTICA
