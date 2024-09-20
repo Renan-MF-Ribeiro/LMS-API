@@ -49,6 +49,10 @@ const SectionSchema = new mongoose.Schema(
         order: { type: Number, default: 0 },
         deleted: { type: Number, default: 0 },
         active: { type: Number, default: 1 },
+        formation: { type: Number, default: 0 },
+        certificate: { type: Number, default: 0 },
+        certificateLayout: { type: 'ObjectId' },
+        certificateDue: { type: Object, default: null },
         trails: { type: [{ type: 'ObjectId', ref: 'trails' }] },
         position: { type: Number, default: 0 },
         ordination: { type: Number, required: false }, // 0 - DATA / 1 - ORDEM ALFABÉTICA
@@ -61,9 +65,9 @@ const SectionSchema = new mongoose.Schema(
             required: false,
         },
         cardType: {
-            type: Number, 
-            enum: Object.values(CARD_TYPE), 
-            required: false, 
+            type: Number,
+            enum: Object.values(CARD_TYPE),
+            required: false,
             trim: true
         }
     },
