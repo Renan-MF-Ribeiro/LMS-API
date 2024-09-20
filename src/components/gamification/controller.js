@@ -258,16 +258,17 @@ const GamificationController = {
             try {
                 const data = await GamificationBusiness.getClientRewards();
                 for(let reward of data.data) {
+                    const newTrails = []
                    for(let trail of reward.trails) {
                     const trailFind = await Trail.findById(trail)
-                    reward.trails = {
+                    newTrails.push({
                         thumbPath: trailFind.thumbPath,
                         title: trailFind.title,
                         _id: trailFind._id
+                    })
                     }
-                   }
+                    reward.trails = newTrails
                 }
-                console.log(data.data[0].trails)
                 return _messages.success(res, req, data);
             } catch (error) {
                 return _messages.badRequest(res, req, error);
