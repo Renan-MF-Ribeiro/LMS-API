@@ -310,6 +310,22 @@ const AssessmentController = {
             return handleError(res, req, error);
         }
     },
+
+    async getHistoricBySection(req, res) {
+        try {
+            const sectionId = req.params.sectionId;
+            
+            const { _id } = await getUserByToken(req);
+            
+            const uri = `${host}/historics/${clientId}/${_id.toString()}/section/${sectionId}`;
+            
+            const { data } = await axios.get(uri, { headers });
+            
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
 };
 
 async function handlePillarTags(eligibilities) {

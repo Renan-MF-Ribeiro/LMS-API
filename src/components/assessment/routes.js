@@ -21,6 +21,7 @@ router
         _controller.updateMatrixPeriod
     )
     .post('/historics/review', _controller.review)
+    .post('/historics/section/:sectionId', _controller.getHistoricBySection)
     .get('/historics/interests', _controller.interests)
     .get('/historics/questions/:cycleId/:periodId', _controller.historicCycleQuestions)
     .get('/historics/:cycleId/:periodId', _controller.getHistoric)
