@@ -11,6 +11,7 @@ router
     .get('/event-users', _controller.getExtractByClient)
     .get('/event-users/:networkLogin', _controller.getExtractByUser)
     .get('/ranking-users/:networkLogin', _controller.listRankingByUser)
+    .get('/rewards-users/:networkLogin', _controller.listRewardsByUser)
     .get('/users/:networkLogin', _controller.getClientUser)
     // Admin routes
     .put('/clients', isAdmin, _controller.updateClient)

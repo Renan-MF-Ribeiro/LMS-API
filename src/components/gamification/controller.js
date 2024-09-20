@@ -124,6 +124,19 @@ const GamificationController = {
         }
     },
 
+    async listRewardsByUser(req, res) {
+        if (config.gamification.active) {
+            try {
+                const { networkLogin } = req.params;
+                const data = await GamificationBusiness.listRewardsByUser(networkLogin)
+
+                return _messages.success(res, req, data);
+            } catch (error) {
+                return _messages.badRequest(res, req, error);
+            }
+        }
+    },
+
     async createClientUser(req, res) {
         if (config.gamification.active) {
             try {
@@ -243,17 +256,18 @@ const GamificationController = {
     async getClientRewards(req, res) {
         if (config.gamification.active) {
             try {
-                const { data } = await GamificationBusiness.getClientRewards();
-                for(let reward of data) {
+                const data = await GamificationBusiness.getClientRewards();
+                for(let reward of data.data) {
                    for(let trail of reward.trails) {
                     const trailFind = await Trail.findById(trail)
-                    trail = {
+                    reward.trails = {
                         thumbPath: trailFind.thumbPath,
                         title: trailFind.title,
                         _id: trailFind._id
                     }
                    }
                 }
+                console.log(data.data[0].trails)
                 return _messages.success(res, req, data);
             } catch (error) {
                 return _messages.badRequest(res, req, error);
