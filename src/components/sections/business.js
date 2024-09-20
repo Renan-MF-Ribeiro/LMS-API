@@ -895,10 +895,7 @@ module.exports = {
     },
     
     async setAssessmentHistoricOnSections(userId, sections) {
-        console.log('userId', userId);
         const dataAssessmentHistoric = await listTrainingSectionsStatus(userId);
-
-        console.log('dataAssessmentHistoric', dataAssessmentHistoric);
 
         sections.forEach(section => {
             if (!section.isTraining) return;

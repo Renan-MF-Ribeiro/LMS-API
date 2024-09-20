@@ -213,21 +213,25 @@ async function listTrainingTrackings(req, res) {
 
     const processedSections = sections.map((section) => {
         const trainingSectionStatus = trainingSectionsStatus.find((trainingSectionStatus) => {
-            section._id.equals(trainingSectionStatus.trainingSectionId);
+            return section._id.equals(trainingSectionStatus.trainingSectionId);
         });
+
         const processedSectionTrails = section.trails.map((trail) => {
             return processedTrails.find((processedTrail) => {
                 return processedTrail._id.equals(trail._id);
             });
         });
 
-        const isBlocked = !!trainingSectionStatus?.isBlocked
-        const optionalTrailsId = trainingSectionStatus?.optionalTrailsId || []
+        const isBlocked = !!trainingSectionStatus?.isBlocked;
+        const optionalTrailsId = trainingSectionStatus?.optionalTrailsId ?? [];
 
-        const isCompleted = processedSectionTrails.every((trail) => trail.completion === 1)
+        const isCompleted = processedSectionTrails
+            .filter((trail) => !optionalTrailsId.includes(trail))
+            .every((trail) => trail.completion === 1)
 
         return {
             title: section.title,
+            description: section.description,
             isBlocked,
             optionalTrailsId,
             completion: !isCompleted ? 0 : 1,

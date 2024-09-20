@@ -27,7 +27,7 @@ const AssessmentBusiness = {
         return data;
     },
 
-    async listTrainingSection(userId) {
+    async listTrainingSections(userId) {
         const uri = `${host}/historics/training/${clientId}/${userId}`;
         const { data } = await axios.get(uri, { headers });
 
