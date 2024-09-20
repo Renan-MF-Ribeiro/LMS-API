@@ -265,7 +265,6 @@ module.exports = {
                     )
                 );
             } else {
-                console.log('aqui chegou else');
                 await createClassGroup(newUser, groupCode, DATA_INICIO, DATA_FIM);
             }
 
