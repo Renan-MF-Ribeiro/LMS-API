@@ -1,6 +1,8 @@
 const ApiError = require("../../errors/ApiError");
 const { getUserByToken, processTrailTracking } = require("../../utils/functions");
+const AssessmentBusiness = require("../assessment/business");
 const { certificateClient, getHeaders } = require("../certificates/business");
+const { Group } = require("../groups/model");
 const { checkEligibilityTagsAnd, checkIfTheTrackIsValid, getTagsElegiblesByToken } = require("../sections/business");
 const { Section } = require("../sections/model");
 const { Tracking } = require("../tracking/model");
@@ -175,8 +177,69 @@ async function generateTrainingSectionCertificate(req, res) {
     res.send(file);
 }
 
+async function listTrainingTrackings(req, res) {
+    const user = await getUserByToken(req);
+    const eligibilities = user.groupsAD.filter((group) => group.startsWith('ELEGE_'));
+
+    const groups = await Group.find({ name: { $in: eligibilities } });
+    const trails = await Trail.find({
+        'tags.value': {
+            $in: groups.flatMap((group) => group.tags.map((tag) => tag?.value || tag?.display)),
+        },
+    });
+
+    const sections = await Section.find({
+        isTraining: true,
+        active: true,
+        trails: { $in: trails.map((trail) => trail._id) },
+    })
+        .select('_id title description trails')
+        .populate(Trail.name, '_id tags')
+        .lean();
+
+    const trackings = await Tracking.find({
+        userLogin: user.networkLogin,
+        item: {
+            $in: trails.flatMap((trail) => trail.items.flatMap((item) => item.itemID)),
+        },
+    });
+
+    const processedTrails = [];
+    for (const trail of trails) {
+        processedTrails.push(processTrailTracking(trail, trackings).trail);
+    }
+
+    const trainingSectionsStatus = await AssessmentBusiness.listTrainingSectionsStatus(user._id);
+
+    const processedSections = sections.map((section) => {
+        const trainingSectionStatus = trainingSectionsStatus.find((trainingSectionStatus) => {
+            section._id.equals(trainingSectionStatus.trainingSectionId);
+        });
+        const processedSectionTrails = section.trails.map((trail) => {
+            return processedTrails.find((processedTrail) => {
+                return processedTrail._id.equals(trail._id);
+            });
+        });
+
+        const isBlocked = !!trainingSectionStatus?.isBlocked
+        const optionalTrailsId = trainingSectionStatus?.optionalTrailsId || []
+
+        const isCompleted = processedSectionTrails.every((trail) => trail.completion === 1)
+
+        return {
+            title: section.title,
+            isBlocked,
+            optionalTrailsId,
+            completion: !isCompleted ? 0 : 1,
+        };
+    });
+
+    res.send(processedSections);
+}
+
 module.exports = {
     listTrainingSections,
     listTrainingSectionDetails,
-    generateTrainingSectionCertificate
+    generateTrainingSectionCertificate,
+    listTrainingTrackings
 };
