@@ -247,7 +247,6 @@ const GamificationController = {
                 for(let reward of data) {
                    for(let trail of reward.trails) {
                     const trailFind = await Trail.findById(trail)
-                    console.log(trailFind)
                     trail = {
                         thumbPath: trailFind.thumbPath,
                         title: trailFind.title,
