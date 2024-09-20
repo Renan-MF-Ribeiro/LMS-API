@@ -833,11 +833,11 @@ const ItemController = {
             const queryItem = findItemValue.match(/^[0-9a-fA-F]{24}$/)
                 ? {
                     $or: [
-                        { _id: findItemValue },
+                        { _id: findItemValue, archive: { $eq: false } },
                         { titleURL: findItemValue },
                     ],
                 }
-                : { titleURL: findItemValue };
+                : { titleURL: findItemValue, archive: { $eq: false } };
 
             const queryTrail = findITrailValue.match(/^[0-9a-fA-F]{24}$/)
                 ? {
@@ -864,7 +864,7 @@ const ItemController = {
 
             const item = await Item.findOne(queryItem);
 
-            const isEnabled = item.deleted == 0 && item.enabled;
+            const isEnabled = item.deleted == 0 && item.enabled && !item.archive
             if (!isEnabled) {
                 _messages.success(res, req, {
                     error: true,

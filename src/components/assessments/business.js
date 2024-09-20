@@ -8,7 +8,6 @@ const { returnSliceDataRandom } = require('../../utils/functions')
 const { Category } = require('./categories/model')
 
 module.exports = {
-
     returnFileCategories (dados, positionCategory) {
         const categories = []
 

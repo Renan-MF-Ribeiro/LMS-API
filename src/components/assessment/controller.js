@@ -11,7 +11,7 @@ const clientId = process.env.CLIENT_ID;
 const headers = { 'x-client-key': process.env.API_KEY_ASSESSMENT };
 
 const AssessmentController = {
-    async listPillars(req, res) {
+    async listPillars (req, res) {
         try {
             const searchParams = new URLSearchParams(req.query);
             const uri = `${host}/pillars/${clientId}?${searchParams}`;
@@ -23,7 +23,7 @@ const AssessmentController = {
         }
     },
 
-    async createPillar(req, res) {
+    async createPillar (req, res) {
         try {
             const uri = `${host}/pillars/${clientId}`;
             const { data } = await axios.post(uri, req.body, { headers });
@@ -35,7 +35,7 @@ const AssessmentController = {
         }
     },
 
-    async updatePillar(req, res) {
+    async updatePillar (req, res) {
         try {
             const uri = `${host}/pillars/${clientId}`;
             const { data } = await axios.put(uri, req.body, { headers });
@@ -47,7 +47,7 @@ const AssessmentController = {
         }
     },
 
-    async getPillar(req, res) {
+    async getPillar (req, res) {
         try {
             const { pillarId } = req.params;
             const uri = `${host}/pillars/${clientId}/${pillarId}`;
@@ -59,7 +59,7 @@ const AssessmentController = {
         }
     },
 
-    async deletePillar(req, res) {
+    async deletePillar (req, res) {
         try {
             const { pillarId } = req.params;
             const uri = `${host}/pillars/${clientId}/${pillarId}`;
@@ -71,7 +71,7 @@ const AssessmentController = {
         }
     },
 
-    async listCycles(req, res) {
+    async listCycles (req, res) {
         try {
             const searchParams = new URLSearchParams(req.query);
             const uri = `${host}/cycles/${clientId}?${searchParams}`;
@@ -83,7 +83,7 @@ const AssessmentController = {
         }
     },
 
-    async listCyclesAndPillars(req, res) {
+    async listCyclesAndPillars (req, res) {
         try {
             const uri = `${host}/cycles/cycles-and-pillars/${clientId}`;
             const { data } = await axios.get(uri, { headers });
@@ -94,7 +94,7 @@ const AssessmentController = {
         }
     },
 
-    async createCycle(req, res) {
+    async createCycle (req, res) {
         try {
             const uri = `${host}/cycles/${clientId}`;
             const { data } = await axios.post(uri, req.body, { headers });
@@ -105,7 +105,7 @@ const AssessmentController = {
         }
     },
 
-    async updateCycle(req, res) {
+    async updateCycle (req, res) {
         try {
             const uri = `${host}/cycles/${clientId}`;
             const { data } = await axios.put(uri, req.body, { headers });
@@ -116,7 +116,7 @@ const AssessmentController = {
         }
     },
 
-    async deleteCycle(req, res) {
+    async deleteCycle (req, res) {
         try {
             const { cycleId } = req.params;
             const uri = `${host}/cycles/${clientId}/${cycleId}`;
@@ -128,7 +128,7 @@ const AssessmentController = {
         }
     },
 
-    async listClientMatrices(req, res) {
+    async listClientMatrices (req, res) {
         try {
             const searchBy = req.query.searchBy;
             const { pageSize, pageIndex } = req.query;
@@ -148,7 +148,7 @@ const AssessmentController = {
         }
     },
 
-    async createMatrix(req, res) {
+    async createMatrix (req, res) {
         try {
             const uri = `${host}/matrix`;
 
@@ -160,7 +160,7 @@ const AssessmentController = {
         }
     },
 
-    async updateMatrixPeriod(req, res) {
+    async updateMatrixPeriod (req, res) {
         try {
             const { matrixId, periodId } = req.params;
             const uri = `${host}/matrix/update-period/${matrixId}/${periodId}`;
@@ -180,7 +180,7 @@ const AssessmentController = {
         }
     },
 
-    async softDeleteMatrix(req, res) {
+    async softDeleteMatrix (req, res) {
         try {
             const { id } = req.params;
 
@@ -194,7 +194,7 @@ const AssessmentController = {
         }
     },
 
-    async getHistoric(req, res) {
+    async getHistoric (req, res) {
         try {
             const { cycleId, periodId } = req.params;
             const { _id } = await getUserByToken(req);
@@ -208,7 +208,7 @@ const AssessmentController = {
         }
     },
 
-    async getHistoricDetails(req, res) {
+    async getHistoricDetails (req, res) {
         try {
             const { cycleId, periodId } = req.params;
             const { _id } = await getUserByToken(req);
@@ -222,7 +222,7 @@ const AssessmentController = {
         }
     },
 
-    async getUserMatrixDetails(req, res) {
+    async getUserMatrixDetails (req, res) {
         try {
             const { matrixId, periodId } = req.params;
             const { _id } = await getUserByToken(req);
@@ -237,7 +237,7 @@ const AssessmentController = {
         }
     },
 
-    async review(req, res) {
+    async review (req, res) {
         try {
             const { _id: userId } = await getUserByToken(req);
 
@@ -262,7 +262,7 @@ const AssessmentController = {
         }
     },
 
-    async getCyclesAndPeriods(req, res) {
+    async getCyclesAndPeriods (req, res) {
         try {
             const { _id: userId } = await getUserByToken(req);
 
@@ -275,7 +275,7 @@ const AssessmentController = {
         }
     },
 
-    async interests(req, res) {
+    async interests (req, res) {
         try {
             const { _id, groupsAD } = await getUserByToken(req);
             const groups = await Group.find({
@@ -298,7 +298,7 @@ const AssessmentController = {
         }
     },
 
-    async historicCycleQuestions(req, res) {
+    async historicCycleQuestions (req, res) {
         try {
             const { _id } = await getUserByToken(req);
             const { cycleId, periodId } = req.params;
@@ -310,9 +310,57 @@ const AssessmentController = {
             return handleError(res, req, error);
         }
     },
+
+    async getHistoricBySection(req, res) {
+        try {
+            const sectionId = req.params.sectionId;
+            
+            const { _id } = await getUserByToken(req);
+            
+            const uri = `${host}/historics/${clientId}/${_id.toString()}/section/${sectionId}`;
+            
+            const { data } = await axios.get(uri, { headers });
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
+            
+    async cycleBySection (req, res) {
+        try {
+
+            const { trainingSectionId } = req.query;
+            const uri = `${host}/cycles/trainingSection/${trainingSectionId}`;
+            const { data } = await axios.get(uri, { headers });
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
+
+    async listTrainingSectionsStatus(req, res) {
+        try {
+            const data = await AssessmentBusiness.listTrainingSectionsStatus(_id)
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
+
+    async listTrainingSection(req, res) {
+        try {
+            const data = await AssessmentBusiness.listTrainingSection(_id)
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    }
 };
 
-async function handlePillarTags(eligibilities) {
+async function handlePillarTags (eligibilities) {
     if (!eligibilities) return;
 
     const tags = eligibilities.flatMap(({ tags }) => tags);

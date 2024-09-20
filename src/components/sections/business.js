@@ -15,6 +15,7 @@ const { Section, DEFAULT_TYPES } = require('./model');
 const { default: axios } = require('axios');
 const moment = require('moment');
 const { TrailViews } = require('../trails/trail-views.model');
+const { listTrainingSectionsStatus } = require('../assessment/business');
 
 module.exports = {
     checkIfTheTrackIsValid (trail) {
@@ -869,6 +870,55 @@ module.exports = {
 
         return data;
     },
+
+    getTrainingDataFromBody(body) {
+        const { isTraining = false, certificateLayout, certificateDue } = body;
+
+        if (!isTraining) return { isTraining, certificateLayout: null, certificateDue: null };
+
+        let certificateDueObj = null;
+
+        if (certificateDue) {
+            const { type, value } = certificateDue;
+
+            certificateDueObj = {
+                type,
+                value: type === 'availability' ? Number(value) : new Date(value),
+            };
+        }
+
+        return {
+            isTraining,
+            certificateLayout: certificateLayout ?? null,
+            certificateDue: certificateDueObj,
+        };
+    },
+    
+    async setAssessmentHistoricOnSections(userId, sections) {
+        const dataAssessmentHistoric = await listTrainingSectionsStatus(userId);
+
+        sections.forEach(section => {
+            if (!section.isTraining) return;
+
+            const trainingSectionInfo = dataAssessmentHistoric.find(info => String(info.trainingSectionId) === String(section._id))
+
+            if (trainingSectionInfo) {
+                const optionalTrails = trainingSectionInfo.optionalTrailsId ?? [];
+                const isBlocked = trainingSectionInfo.isBlocked ?? false;
+
+                section.isBlocked = isBlocked;
+                section.optionalTrails = optionalTrails;
+
+                section.trails?.forEach(trail => {
+                    if (optionalTrails.includes(String(trail._id))) {
+                        trail.isOptional = true;
+                    }
+                })
+            }
+        });
+
+        return sections;
+    }
 };
 
 function isNecessary (trail, tags) {

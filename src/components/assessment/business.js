@@ -19,6 +19,20 @@ const AssessmentBusiness = {
             );
         } catch {}
     },
+
+    async listTrainingSectionsStatus(userId) {
+        const uri = `${host}/historics/training/${clientId}/${userId}/status`;
+        const { data } = await axios.get(uri, { headers });
+
+        return data;
+    },
+
+    async listTrainingSections(userId) {
+        const uri = `${host}/historics/training/${clientId}/${userId}`;
+        const { data } = await axios.get(uri, { headers });
+
+        return data;
+    }
 };
 
 module.exports = AssessmentBusiness;

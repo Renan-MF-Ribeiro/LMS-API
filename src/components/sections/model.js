@@ -27,6 +27,18 @@ const CARD_TYPE = Object.freeze({
     topTenSlimCard: 4,
 });
 
+const certificateDueSchema = new mongoose.Schema(
+    {
+        type: {
+            type: String,
+            enum: ['fixed', 'availability'],
+            required: true,
+        },
+        value: { type: mongoose.Schema.Types.Mixed, required: true }, // Number or Date
+    },
+    { _id: false }
+);
+
 const SectionSchema = new mongoose.Schema(
     {
         title: { type: String, required: true, trim: true },
@@ -37,18 +49,25 @@ const SectionSchema = new mongoose.Schema(
         order: { type: Number, default: 0 },
         deleted: { type: Number, default: 0 },
         active: { type: Number, default: 1 },
+        formation: { type: Number, default: 0 },
+        certificate: { type: Number, default: 0 },
+        certificateLayout: { type: 'ObjectId' },
+        certificateDue: { type: Object, default: null },
         trails: { type: [{ type: 'ObjectId', ref: 'trails' }] },
         position: { type: Number, default: 0 },
         ordination: { type: Number, required: false }, // 0 - DATA / 1 - ORDEM ALFABÉTICA
+        isTraining: { type: Boolean, required: false },
+        certificateLayout: { type: 'ObjectId', required: false },
+        certificateDue: { type: certificateDueSchema, required: false },
         defaultType: {
             type: String,
             enum: Object.values(DEFAULT_TYPES),
             required: false,
         },
         cardType: {
-            type: Number, 
-            enum: Object.values(CARD_TYPE), 
-            required: false, 
+            type: Number,
+            enum: Object.values(CARD_TYPE),
+            required: false,
             trim: true
         }
     },
