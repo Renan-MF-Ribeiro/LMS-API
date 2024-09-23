@@ -921,6 +921,9 @@ module.exports = {
                 section.hasCertificate = !isBlocked && !!(isCompleted && section.certificateLayout);
                 section.optionalTrails = optionalTrails;
             }
+            else {
+                section.hasAssessment = false
+            }
         });
 
         return sections;
