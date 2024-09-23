@@ -337,12 +337,14 @@ const returnBodyCreate = async (req) => {
 
 const returnBodyUpdate = async (req) => {
     let body = JSON.parse(req.fields.payload);
-    let fileArray = Object.keys(req.files).map((key) => req.files[key]);
+    let fileArray = Object.keys(req.files).map((key) => {
+        return { key: key, ...req.files[key]}
+    });
     if (fileArray) {
         for (const file of fileArray) {
             let path = await azureBlob(file, 'gamification/badges')
-            console.log(file)
-            const index = body.badges.findIndex((el) => el._id == file.name)
+            console.log("\n\n",file,"\n\n")
+            const index = body.badges.findIndex((el) => el._id == file.key)
             body.badges[index].path = path
         }
     }
