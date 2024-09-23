@@ -262,12 +262,12 @@ module.exports = {
 
             if (token) {
                 const DATA_INICIO = today.startOf('day');
-                const DATA_FIM = today.startOf('day').add(partnerDays, 'days');
-
+                const DATA_FIM = moment().add(partnerDays, 'days');
                 await Promise.all(
-                    classGroupsIDs.map((groupId) =>
-                        createClassGroup(newUser, groupId, DATA_INICIO, DATA_FIM)
-                    )
+                    classGroupsIDs.map((groupId) => {
+                        
+                        createClassGroup(newUser, groupId, DATA_INICIO, DATA_FIM);
+                    })
                 );
             } else {
                 await createClassGroup(newUser, null, DATA_INICIO, DATA_FIM);
