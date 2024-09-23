@@ -343,7 +343,10 @@ const returnBodyUpdate = async (req) => {
     if (fileArray) {
         for (const i of fileArray) {
             let path = await azureBlob(i.file, 'gamification/badges')
+            console.log("PATH", path)
+            console.log("\nKEY", i.key)
             const index = body.badges.findIndex((el) => el._id == i.key)
+            console.log("\nINDEX", index)
             body.badges[index].path = path
         }
     }
