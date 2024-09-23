@@ -916,6 +916,7 @@ module.exports = {
                     ?.filter(trail => !trail.isOptional)
                     .every(trail => trail.completion === 1);
 
+                section.hasAssessment = true
                 section.isBlocked = isBlocked;
                 section.isCompleted = !isBlocked && isCompleted;
                 section.hasCertificate = !isBlocked && !!(isCompleted && section.certificateLayout);
