@@ -1,10 +1,11 @@
+const moment = require('moment');
 const _messages = require('../../../utils/messages');
 const _functions = require('../../../utils/functions');
 const { Showcase } = require('./model');
 const { Tracking } = require('../../tracking/model');
 const { Trail } = require('../../trails/model');
 const { TrailViews } = require('../../trails/trail-views.model');
-const moment = require('moment');
+
 
 module.exports = {
     async getList(req, res) {
@@ -44,6 +45,7 @@ module.exports = {
 
     async getBlocks(req, res) {
         const { token } = req.query;
+        const today = moment();
 
         try {
             const blocks = await Showcase.find({ enabled: true })
@@ -60,7 +62,7 @@ module.exports = {
                 .map((block) => {
                     if (block.partners && block.partners.length > 0) {
                         const hasToken = block.partners.some((partner) =>
-                            partner.keys.some((keyObj) => keyObj.key === token)
+                            partner.keys.some((keyObj) => keyObj.key === token && keyObj.endDate > today)
                         );
                         return hasToken ? block : null;
                     }
