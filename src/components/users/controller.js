@@ -563,7 +563,7 @@ module.exports = {
         const { ssoForm } = await getLoginConfig();
 
         const { token } = req.body;
-        const secret = process.env.JWT_SECRET;
+        const secret = process.env.PROJECT_SECRET_KEY;
         try {
             const data = jwt.verify(token, secret);
             const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data[ssoForm.claim];
