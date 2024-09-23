@@ -84,7 +84,7 @@ const GamificationBusiness = {
     },
 
     async listRewardsByUser(networkLogin) {
-        const uri = `${host}/rewards-users/${clientId}/${networkLogin}`;
+        const uri = `${host}/user-rewards/${networkLogin}/${clientId}`;
         const { data } = await axios.get(uri, { headers });
 
         return data;
