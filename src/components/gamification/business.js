@@ -83,9 +83,8 @@ const GamificationBusiness = {
         return data;
     },
 
-    async listRewardsByUser(networkLogin, query) {
-        const searchParams = new URLSearchParams(query);
-        const uri = `${host}/rewards-users/${clientId}/${networkLogin}?${searchParams}`;
+    async listRewardsByUser(networkLogin) {
+        const uri = `${host}/rewards-users/${clientId}/${networkLogin}`;
         const { data } = await axios.get(uri, { headers });
 
         return data;
