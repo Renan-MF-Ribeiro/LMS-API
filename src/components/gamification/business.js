@@ -152,6 +152,7 @@ const GamificationBusiness = {
 
     async updateClientRewards(_id, body) {
         const uri = `${host}/rewards/${clientId}/${_id}`;
+        console.log(body)
         const { data } = await axios.put(uri, body, { headers });
 
         return data;
