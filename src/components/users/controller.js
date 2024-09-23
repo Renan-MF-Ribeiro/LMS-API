@@ -193,7 +193,7 @@ module.exports = {
                     res,
                     req,
                     'Usuário já cadastrado',
-                    'Já existe um usuário cadastrado para este usuário',
+                    'Já existe um usuário cadastrado',
                     'users',
                     'signup'
                 );
