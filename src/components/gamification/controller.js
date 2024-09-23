@@ -298,7 +298,7 @@ const GamificationController = {
         if (config.gamification.active) {
             try {
                 const { _id } = req.params;
-                const body = returnBodyUpdate(req);
+                const body = await returnBodyUpdate(req);
                 const data = await GamificationBusiness.updateClientRewards(_id, body);
                 return _messages.success(res, req, data);
             } catch (error) {
