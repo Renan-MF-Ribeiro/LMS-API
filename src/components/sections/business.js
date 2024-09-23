@@ -906,14 +906,20 @@ module.exports = {
                 const optionalTrails = trainingSectionInfo.optionalTrailsId ?? [];
                 const isBlocked = trainingSectionInfo.isBlocked ?? false;
 
-                section.isBlocked = isBlocked;
-                section.optionalTrails = optionalTrails;
-
                 section.trails?.forEach(trail => {
                     if (optionalTrails.includes(String(trail._id))) {
                         trail.isOptional = true;
                     }
-                })
+                });
+
+                const isCompleted = section.trails
+                    ?.filter(trail => !trail.isOptional)
+                    .every(trail => trail.completion === 1);
+
+                section.isBlocked = isBlocked;
+                section.isCompleted = !isBlocked && isCompleted;
+                section.hasCertificate = !isBlocked && !!(isCompleted && section.certificateLayout);
+                section.optionalTrails = optionalTrails;
             }
         });
 
