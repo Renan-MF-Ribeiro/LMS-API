@@ -781,6 +781,7 @@ module.exports = {
 
         classGroup.startDate = startDate;
         classGroup.limitDate = limitDate;
+        classGroup.updatedAt = moment(new Date());
 
         await user.update({
             $addToSet: {
