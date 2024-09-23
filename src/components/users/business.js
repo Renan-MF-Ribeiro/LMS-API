@@ -780,6 +780,7 @@ module.exports = {
                 DATA_FIM
             );
 
+        delete classGroup.createdAt;
         classGroup.startDate = startDate;
         classGroup.limitDate = limitDate;
         classGroup.updatedAt = moment(new Date());
