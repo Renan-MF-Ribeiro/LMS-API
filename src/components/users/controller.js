@@ -187,8 +187,8 @@ module.exports = {
 
         try {
             // Validação de usuário já criado
-            const userExists = await User.exists({ email });
-            if (userExists) {
+            const userExists = await User.exists({ networkLogin });
+            if (userExists.length > 0) {
                 _messages.badRequest(
                     res,
                     req,
