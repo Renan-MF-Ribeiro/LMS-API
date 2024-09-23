@@ -338,16 +338,15 @@ const returnBodyCreate = async (req) => {
 const returnBodyUpdate = async (req) => {
     let body = JSON.parse(req.fields.payload);
     let fileArray = Object.keys(req.files).map((key) => {
-        return { key: key, file: req.files[key]}
+        return { key: key, file: req.files[key] }
     });
-    if (fileArray) {
-        for (const i of fileArray) {
-            let path = await azureBlob(i.file, 'gamification/badges')
-            const index = body.badges.findIndex((el) => el._id == i.key)
-            body.badges[index].path = path
-        }
+    if (fileArray.length > 0) {
+        await Promise.all(fileArray.map(async (i) => {
+            let path = await azureBlob(i.file, 'gamification/badges');
+            const index = body.badges.findIndex((el) => el._id == i.key);
+            body.badges[index].path = path;
+        }));
     }
-    console.log(body)
     return body;
 }
 
