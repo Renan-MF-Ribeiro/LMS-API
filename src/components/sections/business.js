@@ -918,8 +918,8 @@ module.exports = {
 
                 section.hasAssessment = true
                 section.isBlocked = isBlocked;
-                section.isCompleted = !isBlocked && isCompleted;
-                section.hasCertificate = !isBlocked && !!(isCompleted && section.certificateLayout);
+                section.isCompleted = isCompleted;
+                section.hasCertificate = !!section.certificateLayout;
                 section.optionalTrails = optionalTrails;
             }
             else {
