@@ -1,6 +1,7 @@
 /* eslint-disable handle-callback-err */
 /* eslint-disable no-async-promise-executor */
 const { Block, User, LastLogin } = require('./model');
+const moment = require('moment');
 const {
     formatDate,
     getDateToday,
@@ -781,6 +782,7 @@ module.exports = {
 
         classGroup.startDate = startDate;
         classGroup.limitDate = limitDate;
+        classGroup.updatedAt = moment(new Date());
 
         await user.update({
             $addToSet: {

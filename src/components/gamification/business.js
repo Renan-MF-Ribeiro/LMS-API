@@ -84,7 +84,7 @@ const GamificationBusiness = {
     },
 
     async listRewardsByUser(networkLogin) {
-        const uri = `${host}/user-rewards/${networkLogin}/${clientId}`;
+        const uri = `${host}/rewards/user/${networkLogin}/${clientId}`;
         const { data } = await axios.get(uri, { headers });
 
         return data;
@@ -152,6 +152,7 @@ const GamificationBusiness = {
 
     async updateClientRewards(_id, body) {
         const uri = `${host}/rewards/${clientId}/${_id}`;
+        console.log(body)
         const { data } = await axios.put(uri, body, { headers });
 
         return data;

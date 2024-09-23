@@ -104,7 +104,7 @@ module.exports = {
                 $or: [{ registration }, { cpf }],
             });
 
-            if (userFound) {
+            if (userFound.length > 0) {
                 return _messages.forbidden(
                     res,
                     req,
@@ -177,7 +177,8 @@ module.exports = {
     async signup(req, res) {
         const { token } = req.query;
         const { email, password, ...data } = req.body;
-        const networkLogin = email
+        const networkLogin = email;
+        const today = moment(new Date());
         // Seta elegibilidades padrões
         let groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO'];
         let defaultFields;
@@ -186,13 +187,13 @@ module.exports = {
 
         try {
             // Validação de usuário já criado
-            const userExists = await User.exists({ email });
+            const userExists = await User.findOne({ networkLogin });
             if (userExists) {
                 _messages.badRequest(
                     res,
                     req,
                     'Usuário já cadastrado',
-                    'Já existe um usuário cadastrado para este usuário',
+                    'Já existe um usuário cadastrado',
                     'users',
                     'signup'
                 );
@@ -211,9 +212,21 @@ module.exports = {
                 // Busca de qual partner o usuário veio
                 const partner = await Partner.findOne(
                     { active: true, 'keys.key': token },
-                    'keys.elegibilityResult keys.defaultField keys.classGroupResult keys.key'
+                    'keys.elegibilityResult keys.defaultField keys.classGroupResult keys.key keys.endDate'
                 );
                 const selectedKey = partner.keys.find((key) => key.key === token);
+
+                if (selectedKey.endDate < today) {
+                    _messages.unauthorized(
+                        res,
+                        req,
+                        new Error('DataInvalida'),
+                        'O token do parceiro está expirado.',
+                        'users',
+                        'signup'
+                    );
+                    return;
+                }
 
                 // Concatena todas as elegibilidades padrões e "do seu partner"
                 const elegibiliytValues = selectedKey.elegibilityResult
@@ -247,25 +260,17 @@ module.exports = {
 
             const newUser = await User.create(userData);
 
-            const isNotTrial = !!userData.university;
-            const groupCode = isNotTrial
-                ? `ELEGE_TURMA_${userData.university}`
-                : 'ELEGE_TURMA_TRIAL';
-            const DATA_INICIO = moment(new Date()).startOf('day');
-            const DATA_FIM = token
-                ? DATA_INICIO.add(partnerDays, 'days')
-                : moment(new Date())
-                      .add(isNotTrial ? 60 : 15, 'days')
-                      .endOf('day');
-
             if (token) {
+                const DATA_INICIO = today.startOf('day');
+                const DATA_FIM = today.startOf('day').add(partnerDays, 'days');
+
                 await Promise.all(
                     classGroupsIDs.map((groupId) =>
                         createClassGroup(newUser, groupId, DATA_INICIO, DATA_FIM)
                     )
                 );
             } else {
-                await createClassGroup(newUser, groupCode, DATA_INICIO, DATA_FIM);
+                await createClassGroup(newUser, null, DATA_INICIO, DATA_FIM);
             }
 
             if (newUser && sendSignUpActivationEmail) {
@@ -558,7 +563,7 @@ module.exports = {
         const { ssoForm } = await getLoginConfig();
 
         const { token } = req.body;
-        const secret = process.env.JWT_SECRET;
+        const secret = process.env.PROJECT_SECRET_KEY;
         try {
             const data = jwt.verify(token, secret);
             const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data[ssoForm.claim];
