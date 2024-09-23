@@ -104,7 +104,7 @@ module.exports = {
                 $or: [{ registration }, { cpf }],
             });
 
-            if (userFound) {
+            if (userFound.length > 0) {
                 return _messages.forbidden(
                     res,
                     req,
