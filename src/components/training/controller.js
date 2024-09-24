@@ -1,9 +1,8 @@
 const ApiError = require("../../errors/ApiError");
 const { getUserByToken, processTrailTracking } = require("../../utils/functions");
-const AssessmentBusiness = require("../assessment/business");
 const { certificateClient, getHeaders } = require("../certificates/business");
 const { Group } = require("../groups/model");
-const { checkEligibilityTagsAnd, checkIfTheTrackIsValid, getTagsElegiblesByToken } = require("../sections/business");
+const { checkEligibilityTagsAnd, checkIfTheTrackIsValid, getTagsElegiblesByToken, setAssessmentHistoricOnSections } = require("../sections/business");
 const { Section } = require("../sections/model");
 const { Tracking } = require("../tracking/model");
 const { populateTrails } = require("../trails/business");
@@ -178,67 +177,54 @@ async function generateTrainingSectionCertificate(req, res) {
 }
 
 async function listTrainingTrackings(req, res) {
-    const user = await getUserByToken(req);
-    const eligibilities = user.groupsAD.filter((group) => group.startsWith('ELEGE_'));
-
-    const groups = await Group.find({ name: { $in: eligibilities } });
-    const trails = await Trail.find({
-        'tags.value': {
-            $in: groups.flatMap((group) => group.tags.map((tag) => tag?.value || tag?.display)),
-        },
-    });
-
-    const sections = await Section.find({
-        isTraining: true,
-        active: true,
-        trails: { $in: trails.map((trail) => trail._id) },
-    })
-        .select('_id title description trails')
-        .populate(Trail.name, '_id tags')
+    const sections = await Section
+        .find({
+            isTraining: true,
+            active: true
+        })
+        .select('_id title description certificateLayout certificateDue trails isTraining')
         .lean();
 
-    const trackings = await Tracking.find({
+    const user = await getUserByToken(req);
+    const tags = await getTagsElegiblesByToken(req);
+
+    const trailsId = Array.from(new Set(sections.map(section => section.trails).flat()));
+
+    const trailsDb = (await populateTrails(true, { enabled: true, _id: { $in: trailsId } }))
+        ?.filter(trail => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative)
+        ?.filter((trail) => checkIfTheTrackIsValid(trail));
+
+    const allItemsId = Array.from(
+        new Set(
+            trailsDb.map(trail => trail.items.map(item => item.itemID._id)).flat()
+        )
+    );
+
+    const allTrackingUser = await Tracking.find({
         userLogin: user.networkLogin,
-        item: {
-            $in: trails.flatMap((trail) => trail.items.flatMap((item) => item.itemID)),
-        },
+        item: { $in: allItemsId },
+        $or: [
+            { expiredCompletion: { $exists: false } },
+            { expiredCompletion: { $eq: null } },
+        ],
     });
 
-    const processedTrails = [];
-    for (const trail of trails) {
-        processedTrails.push(processTrailTracking(trail, trackings).trail);
-    }
-
-    const trainingSectionsStatus = await AssessmentBusiness.listTrainingSectionsStatus(user._id);
-
-    const processedSections = sections.map((section) => {
-        const trainingSectionStatus = trainingSectionsStatus.find((trainingSectionStatus) => {
-            return section._id.equals(trainingSectionStatus.trainingSectionId);
-        });
-
-        const processedSectionTrails = section.trails.map((trail) => {
-            return processedTrails.find((processedTrail) => {
-                return processedTrail._id.equals(trail._id);
-            });
-        });
-
-        const isBlocked = !!trainingSectionStatus?.isBlocked;
-        const optionalTrailsId = trainingSectionStatus?.optionalTrailsId ?? [];
-
-        const isCompleted = processedSectionTrails
-            .filter((trail) => !optionalTrailsId.includes(trail))
-            .every((trail) => trail.completion === 1)
-
-        return {
-            title: section.title,
-            description: section.description,
-            isBlocked,
-            optionalTrailsId,
-            completion: !isCompleted ? 0 : 1,
-        };
+    const allTrails = trailsDb.map((trail) => {
+        const processedTrail = processTrailTracking(trail, allTrackingUser);
+        return processedTrail.trail;
     });
 
-    res.send(processedSections);
+    const mapSections = sections.map(section => {
+        const sectionTrails = allTrails.filter(trail => {
+            return sections.find(section => section.trails.map(t => String(t)).includes(String(trail._id)));
+        });
+
+        return { ...section, trails: sectionTrails }
+    });
+
+    await setAssessmentHistoricOnSections(user._id, mapSections);
+
+    res.json(mapSections);
 }
 
 module.exports = {
