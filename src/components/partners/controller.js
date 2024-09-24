@@ -197,10 +197,9 @@ module.exports = {
     },
 
     async getPartnersByToken(req, res) {
+        const today = moment();
+        const { token } = req.query;
         try {
-            const today = moment();
-            const { token } = req.query;
-            
             if (!token) {
                 _messages.badRequest(
                     res,
