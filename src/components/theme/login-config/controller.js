@@ -32,9 +32,33 @@ module.exports = {
 
     async getConfigLogin (req, res) {
         try {
+            const { configuration } = req.query;
+            const isConfigurationEnabled = configuration === 'true';
+
+            let fieldsToSelect = {
+                createdAt: 0,
+                updatedAt: 0,
+                _id: 0,
+                __v: 0,
+                "formLogin._id": 0,
+                "ssoForm._id": 0,
+            };
+
+            if (!isConfigurationEnabled) {
+                fieldsToSelect = {
+                    ...fieldsToSelect,
+                    "ssoForm.certifier": 0,
+                    "ssoForm.callback_url": 0,
+                    "ssoForm.entrypoint": 0,
+                    "ssoForm.claim": 0,
+                    "ssoForm.claimKey": 0,
+                    "ssoForm.issuer": 0
+                };
+            }
+
             const config = await ConfigLogin.findOne({})
                 .sort({ createdAt: -1 })
-                .select({ createdAt: 0, updatedAt: 0, _id: 0, __v: 0, "formLogin._id": 0, 'ssoForm._id': 0, 'ssoForm.certifier': 0 })
+                .select(fieldsToSelect)
                 .exec();
 
 
