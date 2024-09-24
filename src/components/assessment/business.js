@@ -19,6 +19,12 @@ const AssessmentBusiness = {
             );
         } catch {}
     },
+    async createUser(userId) {
+        const uri = `${host}/users/${clientId}`;
+            const { data } = await axios.post(uri, { userId }, { headers });
+            
+            return data
+    },
 
     async listTrainingSectionsStatus(userId) {
         const uri = `${host}/historics/training/${clientId}/${userId}/status`;
@@ -32,7 +38,7 @@ const AssessmentBusiness = {
         const { data } = await axios.get(uri, { headers });
 
         return data;
-    }
+    },
 };
 
 module.exports = AssessmentBusiness;

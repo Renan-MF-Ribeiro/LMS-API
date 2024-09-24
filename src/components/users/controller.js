@@ -446,7 +446,11 @@ module.exports = {
                     // GAMIFICATION DISPATCH
                     await GamificationController.dispatch(login, [EVENTS_CATEGORY.LOGIN]);
 
-                    await AssessmentBusiness.updateUserEligibilities(user._id);
+                    if(config.assessment.active){
+                        await AssessmentBusiness.createUser(user._id)
+                        await AssessmentBusiness.updateUserEligibilities(user._id);
+                    }
+                    
 
                     _messages.success(
                         res,
@@ -683,6 +687,9 @@ module.exports = {
                     var tk = tokenEncript.toString();
                     key = cryptoJS.AES.encrypt(key, '25KP76yNnhiGH9bSj').toString();
 
+                    if(config.assessment.active){
+                        await AssessmentBusiness.createUser(user._id)
+                    }
                     _messages.success(
                         res,
                         req,

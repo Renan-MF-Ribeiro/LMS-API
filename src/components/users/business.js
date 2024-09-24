@@ -699,16 +699,7 @@ module.exports = {
     },
 
     async createClassGroup(user, groupCode, DATA_INICIO, DATA_FIM) {
-        let classGroup =
-            (await ClassGroup.findOne({ _id: groupCode })) ||
-            (await ClassGroup.create({
-                groupCode: 'nomeTurma',
-                classId: groupCode,
-                startDate: null,
-                limitDate: null,
-                classId: Math.floor(Math.random() * (100000000 - 1000000 + 1) + 1000000),
-                status: 2,
-            }));
+        let classGroup = await ClassGroup.findOne({ _id: groupCode });
 
         const { startDate, limitDate } = _functions.getDates(DATA_INICIO, DATA_FIM);
 
