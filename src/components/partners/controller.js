@@ -213,10 +213,10 @@ module.exports = {
             }
             const partner = await Partner.findOne({ active: true, 'keys.key': token });
             if (!partner) {
-                _messages.badRequest(
+                _messages.unauthorized(
                     res,
                     req,
-                    'Este token não está atrelado a nenhum parceiro',
+                    new Error('Este token não está atrelado a nenhum parceiro'),
                     'Este token não está atrelado a nenhum parceiro',
                     'partners',
                     'getPartnersByToken'
