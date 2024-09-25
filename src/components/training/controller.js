@@ -133,11 +133,10 @@ async function generateTrainingSectionCertificate(req, res) {
     }
 
     const body = {
-        sectionId: section._id,
         clientId: Number(process.env.CLIENT_ID),
         userId: user.networkLogin,
         userName: user.name,
-        sectionId: section.id,
+        sectionId: section._id,
         sectionName: section.title,
         sectionDescription: section.description,
         layoutId: section.certificateLayout,
