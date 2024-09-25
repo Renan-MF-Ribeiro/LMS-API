@@ -88,10 +88,9 @@ async function generateTrainingSectionCertificate(req, res) {
     }).filter(trail => trail.completion === 1);
 
     const items = completedTrails.map(trail => {
-        const trailTime = trail.durationHours;
-
-        const hours = Math.floor(trailTime);
-        const minutes = Math.round((trailTime - hours) * 60);
+        const totalMinutes = Math.round(trail.durationHours);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
 
         const trailTimeStr = `${hours > 0 ? `${hours}h` : ''} ${minutes > 0 ? `${minutes}m` : ''}`.trim();
 
@@ -101,10 +100,11 @@ async function generateTrainingSectionCertificate(req, res) {
         }
     })
 
-    const courseLoad = completedTrails.reduce((acc, trail) => acc + trail.durationHours, 0); // carga horária
-
-    const courseLoadHours = Math.floor(courseLoad);
-    const courseLoadMinutes = Math.round((courseLoad - courseLoadHours) * 60);
+    const courseLoadTotalMinutes = Math.round(
+        completedTrails.reduce((acc, trail) => acc + trail.durationHours, 0)
+    );
+    const courseLoadHours = Math.floor(courseLoadTotalMinutes / 60);
+    const courseLoadMinutes = courseLoadTotalMinutes % 60;
     const courseLoadStr = `${courseLoadHours > 0 ? `${courseLoadHours}h` : ''} ${courseLoadMinutes > 0 ? `${courseLoadMinutes}m` : ''}`.trim();
 
     const completionDate = completedTrails.reduce((acc, trail) => {
