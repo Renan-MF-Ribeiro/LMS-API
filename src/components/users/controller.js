@@ -176,8 +176,7 @@ module.exports = {
     },
     async signup(req, res) {
         const { token } = req.query;
-        const { email, password, ...data } = req.body;
-        const networkLogin = email;
+        const { email:networkLogin, password, ...data } = req.body;
         const today = moment(new Date());
         // Seta elegibilidades padrões
         let groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO'];
@@ -214,7 +213,7 @@ module.exports = {
                     { active: true, 'keys.key': token },
                     'keys.elegibilityResult keys.defaultField keys.classGroupResult keys.key keys.endDate'
                 );
-                const selectedKey = partner.keys.find((key) => key.key === token);
+                const selectedKey = partner.keys?.find((key) => key?.key === token);
 
                 if (selectedKey.endDate < today) {
                     _messages.unauthorized(
@@ -235,22 +234,23 @@ module.exports = {
                 groupsAD = [...groupsAD, ...elegibiliytValues];
 
                 // Junta e formata todas as partner default fields pra 'key:value'
-                defaultFields = selectedKey.defaultField.reduce((acc, key) => {
+                defaultFields = selectedKey.defaultField?.reduce((acc, key) => {
                     if (key?.key && key?.value) {
                         acc[key.key] = key.value;
                     }
                     return acc;
                 }, {});
 
-                partnerDays = selectedKey.classGroupResult.days;
+                partnerDays = selectedKey.classGroupResult?.days;
+                // Gera array de objetos referentes a "_id" de classGroups
                 classGroupsIDs = selectedKey.classGroupResult?.classGroups?.map((x) => x);
             }
 
             const userData = {
-                networkLogin: email,
+                networkLogin,
                 password: hashPassword,
                 passwordValid: true,
-                clientUserKey: CLIENT_ID + '@@' + email,
+                clientUserKey: CLIENT_ID + '@@' + networkLogin,
                 status: sendSignUpActivationEmail ? 'INATIVO' : 'ATIVO',
                 name: data.socialName ? data.socialName : data.civilName,
                 ...data,
@@ -269,8 +269,6 @@ module.exports = {
                         createClassGroup(newUser, groupId, DATA_INICIO, DATA_FIM);
                     })
                 );
-            } else {
-                await createClassGroup(newUser, null, DATA_INICIO, DATA_FIM);
             }
 
             if (newUser && sendSignUpActivationEmail) {
@@ -448,7 +446,10 @@ module.exports = {
                     // GAMIFICATION DISPATCH
                     await GamificationController.dispatch(login, [EVENTS_CATEGORY.LOGIN]);
 
-                    await AssessmentBusiness.updateUserEligibilities(user._id);
+                    if(config.assessment.active){
+                        await AssessmentBusiness.updateUserEligibilities(user._id);
+                    }
+                    
 
                     _messages.success(
                         res,
@@ -685,6 +686,9 @@ module.exports = {
                     var tk = tokenEncript.toString();
                     key = cryptoJS.AES.encrypt(key, '25KP76yNnhiGH9bSj').toString();
 
+                    if(config.assessment.active){
+                        await AssessmentBusiness.createUser(user._id)
+                    }
                     _messages.success(
                         res,
                         req,

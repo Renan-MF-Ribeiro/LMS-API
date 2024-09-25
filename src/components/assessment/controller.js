@@ -227,7 +227,7 @@ const AssessmentController = {
             const { matrixId, periodId } = req.params;
             const { _id } = await getUserByToken(req);
 
-            const uri = `${host}/historics/user-matrix-details/${_id.toString()}/${matrixId}/${periodId}`;
+            const uri = `${host}/historics/user-matrix-details/${clientId}/${_id.toString()}/${matrixId}/${periodId}`;
 
             const { data } = await axios.get(uri, { headers });
 
