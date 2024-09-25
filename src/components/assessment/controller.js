@@ -5,6 +5,7 @@ const { handleError } = require('../../utils/errors');
 const { Group } = require('../groups/model');
 const { User } = require('../users/model');
 const AssessmentBusiness = require('./business');
+const { getTagsElegiblesByToken, getGroupCodesByToken } = require('../sections/business');
 
 const host = process.env.API_ASSESSMENT;
 const clientId = process.env.CLIENT_ID;
@@ -227,7 +228,7 @@ const AssessmentController = {
             const { matrixId, periodId } = req.params;
             const { _id } = await getUserByToken(req);
 
-            const uri = `${host}/historics/user-matrix-details/${_id.toString()}/${matrixId}/${periodId}`;
+            const uri = `${host}/historics/user-matrix-details/${clientId}/${_id.toString()}/${matrixId}/${periodId}`;
 
             const { data } = await axios.get(uri, { headers });
 
@@ -340,8 +341,14 @@ const AssessmentController = {
     },
 
     async listTrainingSectionsStatus(req, res) {
+        const user = await getUserByToken(req);
+        const tags = await getTagsElegiblesByToken(req);
+        const classGroups = await getGroupCodesByToken(req, tags);
+
+        const userTags = [...tags, ...classGroups].map(tag => tag.value ?? tag.display ?? tag);
+
         try {
-            const data = await AssessmentBusiness.listTrainingSectionsStatus(_id)
+            const data = await AssessmentBusiness.listTrainingSectionsStatus(user._id, userTags)
 
             return _messages.success(res, req, data);
         } catch (error) {

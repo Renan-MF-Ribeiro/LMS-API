@@ -197,10 +197,9 @@ module.exports = {
     },
 
     async getPartnersByToken(req, res) {
+        const today = moment();
+        const { token } = req.query;
         try {
-            const today = moment();
-            const { token } = req.query;
-            
             if (!token) {
                 _messages.badRequest(
                     res,
@@ -213,6 +212,17 @@ module.exports = {
                 return;
             }
             const partner = await Partner.findOne({ active: true, 'keys.key': token });
+            if (!partner) {
+                _messages.unauthorized(
+                    res,
+                    req,
+                    new Error('Este token não está atrelado a nenhum parceiro'),
+                    'Este token não está atrelado a nenhum parceiro',
+                    'partners',
+                    'getPartnersByToken'
+                );
+                return;
+            }
             const selectedKey = partner.keys.find((key) => key.key === token);
 
             if (selectedKey.endDate < today) {

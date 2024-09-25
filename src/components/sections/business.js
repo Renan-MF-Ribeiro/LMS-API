@@ -9,7 +9,7 @@ const {
     isSCORMCompleted,
 } = require('../../utils/functions');
 const { Group } = require('../groups/model');
-const { CourseModel, WaitListModel, ClassModel } = require('../courses/model');
+const { CourseModel, WaitListModel, ClassModel, UsersWithProcessedTags } = require('../courses/model');
 const { Tracking } = require('../tracking/model');
 const { Section, DEFAULT_TYPES } = require('./model');
 const { default: axios } = require('axios');
@@ -895,7 +895,8 @@ module.exports = {
     },
     
     async setAssessmentHistoricOnSections(userId, sections) {
-        const dataAssessmentHistoric = await listTrainingSectionsStatus(userId);
+        const userWithTags = await UsersWithProcessedTags.findById(userId);
+        const dataAssessmentHistoric = await listTrainingSectionsStatus(userId, userWithTags.userTags);
 
         sections.forEach(section => {
             if (!section.isTraining) return;
@@ -923,7 +924,12 @@ module.exports = {
                 section.optionalTrails = optionalTrails;
             }
             else {
-                section.hasAssessment = false
+                const isCompleted = section.trails?.every(trail => trail.completion === 1);
+
+                section.hasAssessment = false;
+                section.isBlocked = false;
+                section.isCompleted = isCompleted;
+                section.hasCertificate = !!section.certificateLayout;
             }
         });
 
