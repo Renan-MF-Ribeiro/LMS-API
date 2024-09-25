@@ -61,6 +61,7 @@ const {
     formatNumberCpf,
     removeAccents,
     deepGet,
+    formatDateWithoutHoursBrasilian,
 } = require('../../utils/functions');
 
 const {
@@ -257,14 +258,18 @@ module.exports = {
                 classGroupsIDs = selectedKey.classGroupResult?.classGroups?.map((x) => x);
             }
 
+            const formatedDate = formatDateWithoutHoursBrasilian(data.birthDate);
+            console.log(formatedDate)
             const userData = {
                 networkLogin,
+                email: networkLogin,
                 password: hashPassword,
                 passwordValid: true,
                 clientUserKey: CLIENT_ID + '@@' + networkLogin,
                 status: sendSignUpActivationEmail ? 'INATIVO' : 'ATIVO',
                 name: data.socialName ? data.socialName : data.civilName,
                 ...data,
+                birthDate: formatedDate,
                 groupsAD,
                 ...defaultFields,
             };
