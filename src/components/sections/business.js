@@ -923,7 +923,12 @@ module.exports = {
                 section.optionalTrails = optionalTrails;
             }
             else {
-                section.hasAssessment = false
+                const isCompleted = section.trails?.every(trail => trail.completion === 1);
+
+                section.hasAssessment = false;
+                section.isBlocked = false;
+                section.isCompleted = isCompleted;
+                section.hasCertificate = !!section.certificateLayout;
             }
         });
 
