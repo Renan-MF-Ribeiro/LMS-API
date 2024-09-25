@@ -1,12 +1,11 @@
+const { Types } = require("mongoose");
 const ApiError = require("../../errors/ApiError");
-const { getUserByToken, processTrailTracking } = require("../../utils/functions");
+const { getUserByToken } = require("../../utils/functions");
 const { certificateClient, getHeaders } = require("../certificates/business");
-const { Group } = require("../groups/model");
-const { checkEligibilityTagsAnd, checkIfTheTrackIsValid, getTagsElegiblesByToken, setAssessmentHistoricOnSections } = require("../sections/business");
+const { setAssessmentHistoricOnSections } = require("../sections/business");
 const { Section } = require("../sections/model");
-const { Tracking } = require("../tracking/model");
-const { populateTrails } = require("../trails/business");
 const { Trail } = require("../trails/model");
+const { getEligibilityInfoByUserId } = require("../../utils/user");
 
 async function listTrainingSections(req, res) {
     const sections = await Section
@@ -47,45 +46,29 @@ async function listTrainingSectionDetails(req, res) {
 async function generateTrainingSectionCertificate(req, res) {
     const sectionId = req.params.sectionId;
 
-    const section = await Section
-        .findOne({
-            _id: sectionId,
-            isTraining: true,
-            active: true
-        })
-        .select('_id title description certificateLayout certificateDue trails')
-        .lean();
+    const user = await getUserByToken(req);
+
+    const { sections, trails } = await getEligibilityInfoByUserId(
+        user._id,
+        {
+            sections: {
+                limit: 1,
+                filter: {
+                    _id: new Types.ObjectId(sectionId),
+                    isTraining: true,
+                    active: true
+                }
+            }
+        },
+    );
+
+    const section = sections[0];
 
     if (!section) {
         throw new ApiError('Seção de treinamento não encontrada', 404, undefined, { skipDbLog: true });
     }
 
-    const user = await getUserByToken(req);
-    const tags = await getTagsElegiblesByToken(req);
-
-    const trailsDb = (await populateTrails(true, { enabled: true, _id: { $in: section.trails } }))
-        ?.filter(trail => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative)
-        ?.filter((trail) => checkIfTheTrackIsValid(trail));
-
-    const allItemsId = Array.from(
-        new Set(
-            trailsDb.map(trail => trail.items.map(item => item.itemID._id)).flat()
-        )
-    );
-
-    const allTrackingUser = await Tracking.find({
-        userLogin: user.networkLogin,
-        item: { $in: allItemsId },
-        $or: [
-            { expiredCompletion: { $exists: false } },
-            { expiredCompletion: { $eq: null } },
-        ],
-    });
-
-    const completedTrails = trailsDb.map((trail) => {
-        const processedTrail = processTrailTracking(trail, allTrackingUser);
-        return processedTrail.trail;
-    }).filter(trail => trail.completion === 1);
+    const completedTrails = trails.filter(trail => trail.completion === 1);
 
     const items = completedTrails.map(trail => {
         const totalMinutes = Math.round(trail.durationHours);
@@ -177,54 +160,23 @@ async function generateTrainingSectionCertificate(req, res) {
 }
 
 async function listTrainingTrackings(req, res) {
-    const sections = await Section
-        .find({
-            isTraining: true,
-            active: true
-        })
-        .select('_id title description certificateLayout certificateDue trails isTraining')
-        .lean();
-
     const user = await getUserByToken(req);
-    const tags = await getTagsElegiblesByToken(req);
 
-    const trailsId = Array.from(new Set(sections.map(section => section.trails).flat()));
-
-    const trailsDb = (await populateTrails(true, { enabled: true, _id: { $in: trailsId } }))
-        ?.filter(trail => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative)
-        ?.filter((trail) => checkIfTheTrackIsValid(trail));
-
-    const allItemsId = Array.from(
-        new Set(
-            trailsDb.map(trail => trail.items.map(item => item.itemID._id)).flat()
-        )
+    const { sections } = await getEligibilityInfoByUserId(
+        user._id,
+        {
+            sections: {
+                filter: {
+                    isTraining: true,
+                    active: true
+                }
+            }
+        }
     );
 
-    const allTrackingUser = await Tracking.find({
-        userLogin: user.networkLogin,
-        item: { $in: allItemsId },
-        $or: [
-            { expiredCompletion: { $exists: false } },
-            { expiredCompletion: { $eq: null } },
-        ],
-    });
+    await setAssessmentHistoricOnSections(user._id, sections);
 
-    const allTrails = trailsDb.map((trail) => {
-        const processedTrail = processTrailTracking(trail, allTrackingUser);
-        return processedTrail.trail;
-    });
-
-    const mapSections = sections.map(section => {
-        const sectionTrails = allTrails.filter(trail => {
-            return sections.find(section => section.trails.map(t => String(t)).includes(String(trail._id)));
-        });
-
-        return { ...section, trails: sectionTrails }
-    });
-
-    await setAssessmentHistoricOnSections(user._id, mapSections);
-
-    res.json(mapSections);
+    res.json(sections);
 }
 
 module.exports = {
