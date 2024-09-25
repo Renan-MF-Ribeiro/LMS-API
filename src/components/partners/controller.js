@@ -212,6 +212,17 @@ module.exports = {
                 return;
             }
             const partner = await Partner.findOne({ active: true, 'keys.key': token });
+            if (!partner) {
+                _messages.badRequest(
+                    res,
+                    req,
+                    'Este token não está atrelado a nenhum parceiro',
+                    'Este token não está atrelado a nenhum parceiro',
+                    'partners',
+                    'getPartnersByToken'
+                );
+                return;
+            }
             const selectedKey = partner.keys.find((key) => key.key === token);
 
             if (selectedKey.endDate < today) {

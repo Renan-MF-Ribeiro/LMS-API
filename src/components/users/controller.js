@@ -213,7 +213,7 @@ module.exports = {
                     { active: true, 'keys.key': token },
                     'keys.elegibilityResult keys.defaultField keys.classGroupResult keys.key keys.endDate'
                 );
-                const selectedKey = partner.keys.find((key) => key.key === token);
+                const selectedKey = partner.keys?.find((key) => key?.key === token);
 
                 if (selectedKey.endDate < today) {
                     _messages.unauthorized(
@@ -447,7 +447,6 @@ module.exports = {
                     await GamificationController.dispatch(login, [EVENTS_CATEGORY.LOGIN]);
 
                     if(config.assessment.active){
-                        await AssessmentBusiness.createUser(user._id)
                         await AssessmentBusiness.updateUserEligibilities(user._id);
                     }
                     
