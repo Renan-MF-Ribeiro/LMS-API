@@ -537,14 +537,22 @@ module.exports = {
 
                     const trail = await Trail.create(payload);
 
-                    payload.items.forEach((item) => {
+                    const createItemIfAlura = async (item) => {
+                        if (item.itemID.kind === 'AluraItem') {
+                            await Item.create(item.itemID);
+                        }
+                    }
+
+                    await Promise.all(payload.items.map(async (item) => {
+                        await createItemIfAlura(item);
+
                         items.push({
                             ...item,
                             urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}/${item.itemID._id}`,
                             urlTrail: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}`,
                             itemID: item.itemID._id,
                         })
-                    })
+                    }));
 
                     trail.items = items
 
