@@ -9,12 +9,13 @@ const {
     isSCORMCompleted,
 } = require('../../utils/functions');
 const { Group } = require('../groups/model');
-const { CourseModel, WaitListModel, ClassModel } = require('../courses/model');
+const { CourseModel, WaitListModel, ClassModel, UsersWithProcessedTags } = require('../courses/model');
 const { Tracking } = require('../tracking/model');
 const { Section, DEFAULT_TYPES } = require('./model');
 const { default: axios } = require('axios');
 const moment = require('moment');
 const { TrailViews } = require('../trails/trail-views.model');
+const { listTrainingSectionsStatus } = require('../assessment/business');
 
 module.exports = {
     checkIfTheTrackIsValid (trail) {
@@ -869,6 +870,71 @@ module.exports = {
 
         return data;
     },
+
+    getTrainingDataFromBody(body) {
+        const { isTraining = false, certificateLayout, certificateDue } = body;
+
+        if (!isTraining) return { isTraining, certificateLayout: null, certificateDue: null };
+
+        let certificateDueObj = null;
+
+        if (certificateDue) {
+            const { type, value } = certificateDue;
+
+            certificateDueObj = {
+                type,
+                value: type === 'availability' ? Number(value) : new Date(value),
+            };
+        }
+
+        return {
+            isTraining,
+            certificateLayout: certificateLayout ?? null,
+            certificateDue: certificateDueObj,
+        };
+    },
+    
+    async setAssessmentHistoricOnSections(userId, sections) {
+        const userWithTags = await UsersWithProcessedTags.findById(userId);
+        const dataAssessmentHistoric = await listTrainingSectionsStatus(userId, userWithTags.userTags);
+
+        sections.forEach(section => {
+            if (!section.isTraining) return;
+
+            const trainingSectionInfo = dataAssessmentHistoric.find(info => String(info.trainingSectionId) === String(section._id))
+
+            if (trainingSectionInfo) {
+                const optionalTrails = trainingSectionInfo.optionalTrailsId ?? [];
+                const isBlocked = trainingSectionInfo.isBlocked ?? false;
+
+                section.trails?.forEach(trail => {
+                    if (optionalTrails.includes(String(trail._id))) {
+                        trail.isOptional = true;
+                    }
+                });
+
+                const isCompleted = section.trails
+                    ?.filter(trail => !trail.isOptional)
+                    .every(trail => trail.completion === 1);
+
+                section.hasAssessment = true
+                section.isBlocked = isBlocked;
+                section.isCompleted = isCompleted;
+                section.hasCertificate = !!section.certificateLayout;
+                section.optionalTrails = optionalTrails;
+            }
+            else {
+                const isCompleted = section.trails?.every(trail => trail.completion === 1);
+
+                section.hasAssessment = false;
+                section.isBlocked = false;
+                section.isCompleted = isCompleted;
+                section.hasCertificate = !!section.certificateLayout;
+            }
+        });
+
+        return sections;
+    }
 };
 
 function isNecessary (trail, tags) {

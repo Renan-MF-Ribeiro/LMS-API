@@ -83,6 +83,14 @@ const GamificationBusiness = {
         return data;
     },
 
+    async listRewardsByUser(networkLogin) {
+        const uri = `${host}/rewards/user/${networkLogin}/${clientId}`;
+        const { data } = await axios.get(uri, { headers });
+
+        return data;
+    },
+
+
     async listRankingByUser(networkLogin) {
         const uri = `${host}/ranking-users/${clientId}/${networkLogin}`;
         const { data } = await axios.get(uri, { headers });
@@ -122,6 +130,36 @@ const GamificationBusiness = {
 
     async deleteClientRankings(_id) {
         const uri = `${host}/rankings/${clientId}/${_id}`;
+        const { data } = await axios.delete(uri, { headers });
+
+        return data;
+    },
+
+    async getClientRewards() {
+        const uri = `${host}/rewards/${clientId}`;
+        console.log(uri)
+        const { data } = await axios.get(uri, { headers });
+
+        return data;
+    },
+
+    async createClientRewards(body) {
+        const uri = `${host}/rewards/${clientId}`;
+        const { data } = await axios.post(uri, body, { headers });
+
+        return data;
+    },
+
+    async updateClientRewards(_id, body) {
+        const uri = `${host}/rewards/${clientId}/${_id}`;
+        console.log(body)
+        const { data } = await axios.put(uri, body, { headers });
+
+        return data;
+    },
+
+    async deleteClientRewards(_id) {
+        const uri = `${host}/rewards/${clientId}/${_id}`;
         const { data } = await axios.delete(uri, { headers });
 
         return data;

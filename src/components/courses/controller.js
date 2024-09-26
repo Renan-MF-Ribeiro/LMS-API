@@ -517,13 +517,13 @@ module.exports = {
 
                         const nowDate = new Date();
 
+                        const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+                        
                         const newUsers = JSON.parse(users).map((user) => {
-                            const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-
                             return ({
                                 ...user,
                                 ip,
-                                _id: mongoose.Types.ObjectId(user._id),
+                                userID: mongoose.Types.ObjectId(user._id ?? user.userID),
                                 presenceAt: user.presence ? nowDate : null,
                                 createdAt: nowDate,
                                 updatedAt: nowDate,
@@ -606,7 +606,7 @@ module.exports = {
                 }
             }
         } catch (error) {
-            console.log(error)
+            console.log('createClass error', error);
             internalServer(
                 res,
                 req,
@@ -708,23 +708,57 @@ module.exports = {
                     }
 
                     const nowDate = new Date();
+                    const usersArr = JSON.parse(users);
+                    const changedUsers = [];
+                    const addedUsers = [];
 
-                    const newUsers = JSON.parse(users).map((user) => {
-                        const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+                    const oldUsers = (await ClassModel.findById(classID).select('users'))?.users ?? [];
 
-                        return ({
-                            ...user,
-                            ip,
-                            _id: mongoose.Types.ObjectId(user._id),
-                            presenceAt: user.presenceAt ? new Date(user.presenceAt) : (user.presence ? nowDate : null),
-                            createdAt: user.createdAt ? new Date(user.createdAt) : nowDate,
-                            updatedAt: nowDate,
-                        })
-                    });
+                    for (let user of usersArr) {
+                        const oldUserIndex = oldUsers?.findIndex(
+                            u => String(u._id) === String(user._id) || String(u.userID) === String(user._id)
+                        ) ?? -1;
+                        const oldUser = oldUserIndex >= 0 && oldUsers[oldUserIndex];
 
+                        const presenceAt = user.presence ? (
+                            user.presenceAt ? new Date(user.presenceAt) : nowDate
+                        ) : null;
+
+                        const userId = user._id ?? user.userID;
+
+                        if (oldUser) {
+                            const presenceChanged = Boolean(oldUser.presence) !== Boolean(user.presence);
+                            const gradesChanged = Number(oldUser.grades) !== Number(user.grades);
+
+                            if (presenceChanged || gradesChanged) {
+                                changedUsers.push({
+                                    index: oldUserIndex,
+                                    user: {
+                                        ...user,
+                                        userID: mongoose.Types.ObjectId(userId),
+                                        presenceAt,
+                                        updatedAt: nowDate,
+                                    },
+                                });
+                            }
+                        } else {
+                            addedUsers.push({
+                                ...user,
+                                userID: mongoose.Types.ObjectId(userId),
+                                presenceAt,
+                                createdAt: nowDate,
+                                updatedAt: nowDate,
+                            });
+                        }
+                    }
+
+                    const removedUsers = oldUsers.filter(
+                        oldUser => !usersArr.some(user => String(user._id) === String(oldUser._id) || String(user._id) === String(oldUser.userID))
+                    );
+
+                    // Atualiza classe e usuários
                     await ClassModel.findByIdAndUpdate(classID, {
                         courseID,
-                        users: newUsers,
                         instructor: instructorID,
                         requester,
                         minister,
@@ -738,47 +772,53 @@ module.exports = {
                         location,
                         costs: costsArray,
                         name,
-                        signup
+                        signup,
+                        // Atualiza usuários
+                        $set: changedUsers.reduce((acc, { index, user }) => {
+                            acc[`users.${index}`] = user;
+                            return acc;
+                        }, {}),
                     });
 
-                    const classesFromCourse = await ClassModel.find({
-                        courseID
-                    })
-                    const arrUserId = []
-                    for (let user of JSON.parse(users)) {
-                        arrUserId.push(user._id)
-                        const removalPromises = classesFromCourse.map(classFromCourse => {
-                            const inClass = classFromCourse.users.some((u) => u._id == user._id || u.userID == user._id)
-
-                            if (classFromCourse._id.equals(classID) || !inClass) {
-                                return Promise.resolve();
-                            }
-
-                            return ClassModel.findOneAndUpdate(
-                                { _id: classFromCourse._id },
-                                { $pull: { users: { _id: user._id, presence: false } } }
-                            );
+                    // Adiciona usuários
+                    if (addedUsers.length) {
+                        await ClassModel.findByIdAndUpdate(classID, {
+                            $push: { users: { $each: addedUsers } },
                         });
 
-                        await Promise.all(removalPromises);
+                        // Dispara notificações para usuários adicionados
+                        const arrUserId = addedUsers.map(user => user._id);
+
+                        const message = {
+                            category: 'notify',
+                            communication: ['notification', 'email'],
+                            mode: 'manual',
+                            target: {
+                                type: 'users',
+                                value: {
+                                    users: arrUserId,
+                                },
+                            },
+                            text: `Você está na turma presencial ${name}!\n`,
+                            textHtml: `<p>Você está na turma presencial ${name}!<p>`,
+                            thumbnail: config.messenger.emailTemplate.thumbnail,
+                            title: `Treinamentos Presenciais: ${name}`,
+                        }
+
+                        await createMessagesFromBackend(message)
                     }
 
-                    const message = {
-                        category: 'notify',
-                        communication: ['notification', 'email'],
-                        mode: 'manual',
-                        target: {
-                            type: 'users',
-                            value: {
-                                users: arrUserId,
-                            },
-                        },
-                        text: `Você está na turma presencial ${name}!\n`,
-                        textHtml: `<p>Você está na turma presencial ${name}!<p>`,
-                        thumbnail: config.messenger.emailTemplate.thumbnail,
-                        title: `Treinamentos Presenciais: ${name}`,
+                    // Remove somente usuários que não estão presentes
+                    if (removedUsers.length) {
+                        await ClassModel.findByIdAndUpdate(classID, {
+                            $pull: {
+                                users: {
+                                    _id: { $in: removedUsers.map(u => u._id) },
+                                    presence: false
+                                }
+                            }
+                        });
                     }
-                    await createMessagesFromBackend(message)
 
                     success(res, req, 'Atualizado com sucesso!');
                 } else {
@@ -788,18 +828,19 @@ module.exports = {
                         'O curso não pode ser atualizado, porque está inativado!',
                         'O curso não pode ser atualizado, porque está inativado!',
                         'courses',
-                        '/createClass'
+                        '/updateClass'
                     );
                 }
             }
         } catch (error) {
+            console.log('updateClass error', error);
             internalServer(
                 res,
                 req,
                 error.message,
                 'Erro interno no servidor',
                 'courses',
-                '/createClass'
+                '/updateClass'
             );
         }
     },
@@ -1791,7 +1832,9 @@ module.exports = {
         }
 
         try {
+            console.time('importAttendanceList - READING FILE');
             const { data, labels, labelMap, worksheet, workbook } = await readXLSXAttendanceList(file.path, 'Sua Carga Aqui');
+            console.timeEnd('importAttendanceList - READING FILE');
 
             if (Object.keys(labelMap).some(label => !labels.includes(label))) {
                 return badRequest(res, req, 'Arquivo inválido', 'Arquivo inválido', 'courses', '/import-attendance-list');

@@ -42,6 +42,7 @@ const featuresSchema = new mongoose.Schema({
     assessement: { type: Boolean, required: true, default: false },
     calendar: { type: Boolean, required: true, default: false },
     onboarding: { type: Boolean, required: true, default: false },
+    partners: { type: Boolean, required: true, default: false },
 }, {
     ...schemaOptions,
 })

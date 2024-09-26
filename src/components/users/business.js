@@ -1,6 +1,7 @@
 /* eslint-disable handle-callback-err */
 /* eslint-disable no-async-promise-executor */
 const { Block, User, LastLogin } = require('./model');
+const moment = require('moment');
 const {
     formatDate,
     getDateToday,
@@ -8,18 +9,14 @@ const {
     pagination,
     ordernation,
 } = require('../../utils/functions');
-const {
-    ldapClient,
-    returnIdProfileUser,
-    returnIdGroupUser,
-} = require('../../utils/auth');
+const { ldapClient, returnIdProfileUser, returnIdGroupUser } = require('../../utils/auth');
 const { DashConfig } = require('../dashboard/model');
 
 const { Log } = require('../logs/model');
 const bcrypt = require('bcryptjs');
 const axios = require('axios');
 const _functions = require('../../utils/functions');
-const { Group } = require('../groups/model');
+const { Group, ClassGroup } = require('../groups/model');
 const { CLIENT_ID } = process.env;
 const kafka = require('../../utils/kafka');
 const { Trail } = require('../trails/model');
@@ -31,9 +28,9 @@ require('dotenv').config();
 
 module.exports = {
     async getLoginConfig() {
-        return await ConfigLogin.findOne().sort({ createdAt: -1 })
+        return await ConfigLogin.findOne().sort({ createdAt: -1 });
     },
-    
+
     async findUsers(req, { onboarding }) {
         const { skip, limit } = pagination(req);
         const { order, sort } = ordernation(req);
@@ -141,11 +138,7 @@ module.exports = {
             try {
                 const lastTimeBlock = formatDate(dateTimeBlock);
                 const dateCurrent = getDateToday();
-                const resultDiff = calculateDiffDate(
-                    dateCurrent,
-                    lastTimeBlock,
-                    'minutes'
-                );
+                const resultDiff = calculateDiffDate(dateCurrent, lastTimeBlock, 'minutes');
 
                 resolve(resultDiff);
             } catch (error) {
@@ -169,53 +162,44 @@ module.exports = {
                     attributes: ['memberOf'],
                 };
 
-                await ldapClient.search(
-                    'DC=brasil, DC=latam, DC=cea',
-                    opts,
-                    function (err, res) {
-                        res.on('searchEntry', async function (entry) {
-                            const ldapUser = entry.object;
-                            const groups = ldapUser.memberOf;
-                            const namesProfiles = [];
-                            const namesGroups = [];
+                await ldapClient.search('DC=brasil, DC=latam, DC=cea', opts, function (err, res) {
+                    res.on('searchEntry', async function (entry) {
+                        const ldapUser = entry.object;
+                        const groups = ldapUser.memberOf;
+                        const namesProfiles = [];
+                        const namesGroups = [];
 
-                            for (const p in groups) {
-                                const groupsSplit = groups[p].split(',');
-                                const cnSplit = groupsSplit[0].split('=')[1];
+                        for (const p in groups) {
+                            const groupsSplit = groups[p].split(',');
+                            const cnSplit = groupsSplit[0].split('=')[1];
 
-                                if (cnSplit.indexOf('GL_ACADMODA_PF') >= 0)
-                                    namesProfiles.push(cnSplit);
+                            if (cnSplit.indexOf('GL_ACADMODA_PF') >= 0) namesProfiles.push(cnSplit);
 
-                                if (
-                                    cnSplit.indexOf('GL_ACADMODA_LJ') >= 0 ||
-                                    cnSplit.indexOf('GL_ACADMODA_EC') >= 0 ||
-                                    cnSplit.indexOf('GL_APP') >= 0
-                                )
-                                    namesGroups.push(cnSplit);
-                            }
+                            if (
+                                cnSplit.indexOf('GL_ACADMODA_LJ') >= 0 ||
+                                cnSplit.indexOf('GL_ACADMODA_EC') >= 0 ||
+                                cnSplit.indexOf('GL_APP') >= 0
+                            )
+                                namesGroups.push(cnSplit);
+                        }
 
-                            const profilesIDS = await returnIdProfileUser(
-                                namesProfiles
-                            );
-                            const groupsIDS = await returnIdGroupUser(
-                                namesGroups
-                            );
+                        const profilesIDS = await returnIdProfileUser(namesProfiles);
+                        const groupsIDS = await returnIdGroupUser(namesGroups);
 
-                            resolve({
-                                token: {
-                                    profiles: profilesIDS.result,
-                                    numbers: profilesIDS.numbers,
-                                    groups: groupsIDS,
-                                },
-                                names: namesProfiles.concat(namesGroups),
-                            });
+                        resolve({
+                            token: {
+                                profiles: profilesIDS.result,
+                                numbers: profilesIDS.numbers,
+                                groups: groupsIDS,
+                            },
+                            names: namesProfiles.concat(namesGroups),
                         });
+                    });
 
-                        res.on('error', function (err) {
-                            reject(err);
-                        });
-                    }
-                );
+                    res.on('error', function (err) {
+                        reject(err);
+                    });
+                });
             } catch (error) {
                 reject(error);
             }
@@ -229,9 +213,7 @@ module.exports = {
                 const userFirstLogin = userLastLogin[0].createdAt;
                 const today = new Date();
                 const firstLogin = new Date(userFirstLogin);
-                let daysSinceFirstLogin = Math.floor(
-                    (firstLogin - today) / (24 * 3600 * 1000)
-                );
+                let daysSinceFirstLogin = Math.floor((firstLogin - today) / (24 * 3600 * 1000));
                 daysSinceFirstLogin *= -1;
                 resolve(daysSinceFirstLogin);
             } catch (error) {
@@ -256,10 +238,7 @@ module.exports = {
             try {
                 const user = await LastLogin.findOne({ user: userID });
                 if (user) {
-                    await LastLogin.updateOne(
-                        { user: userID },
-                        { lastLogin: getDateToday() }
-                    );
+                    await LastLogin.updateOne({ user: userID }, { lastLogin: getDateToday() });
                 } else {
                     await LastLogin.create({
                         user: userID,
@@ -279,11 +258,7 @@ module.exports = {
                 const arrUsers = [];
                 const users = await LastLogin.find().populate('users');
                 for (const user of users) {
-                    const diff = calculateDiffDate(
-                        getDateToday(),
-                        user.lastLogin,
-                        'minutes'
-                    );
+                    const diff = calculateDiffDate(getDateToday(), user.lastLogin, 'minutes');
                     if (diff <= 35) arrUsers.push(user);
                 }
                 resolve(arrUsers);
@@ -304,38 +279,34 @@ module.exports = {
 
             let response = null;
 
-            await ldapClient.search(
-                'DC=brasil, DC=latam, DC=cea',
-                opts,
-                function (err, res) {
-                    res.on('searchEntry', function (entry) {
-                        entry = entry.object;
-                        response = entry;
-                        resolve(response);
-                    });
+            await ldapClient.search('DC=brasil, DC=latam, DC=cea', opts, function (err, res) {
+                res.on('searchEntry', function (entry) {
+                    entry = entry.object;
+                    response = entry;
+                    resolve(response);
+                });
 
-                    res.on('error', function (err) {
-                        reject(err);
+                res.on('error', function (err) {
+                    reject(err);
 
-                        Log.create({
-                            user: null,
-                            type: 'CREATE',
-                            message: `ROTINA AD - ${name} - ${err.message}`,
-                            component: 'CRON_GROUP',
-                            dataNew: [],
-                            dataOld: [],
-                            route: null,
-                            ip: null,
-                            login: null,
-                            groups: [],
-                        });
+                    Log.create({
+                        user: null,
+                        type: 'CREATE',
+                        message: `ROTINA AD - ${name} - ${err.message}`,
+                        component: 'CRON_GROUP',
+                        dataNew: [],
+                        dataOld: [],
+                        route: null,
+                        ip: null,
+                        login: null,
+                        groups: [],
                     });
+                });
 
-                    res.on('end', function (result) {
-                        resolve(response);
-                    });
-                }
-            );
+                res.on('end', function (result) {
+                    resolve(response);
+                });
+            });
         });
     },
 
@@ -376,34 +347,46 @@ module.exports = {
             { description: 'NEGOCIO', value: 'business' },
             { description: 'OPCIONAL_ELEGIBILIDADE1', value: 'optionalEligibility1' },
             { description: 'OPCIONAL_ELEGIBILIDADE2', value: 'optionalEligibility2' },
-            { description: 'OPCIONAL_ELEGIBILIDADE3', value: 'optionalEligibility3' }
-        ]
-        const dashboardFilters = []
+            { description: 'OPCIONAL_ELEGIBILIDADE3', value: 'optionalEligibility3' },
+        ];
+        const dashboardFilters = [];
         const dashConfig = await DashConfig.find();
         try {
             if (dashConfig) {
                 let dashFilters = dashConfig.map((x) => {
-                    return x.fields
-                })
-                dashFilters = dashFilters.flat(2)
+                    return x.fields;
+                });
+                dashFilters = dashFilters.flat(2);
                 for (let filter of dashFilters) {
                     for (const map of userMap) {
-                        filter.userField = map.description == filter.userField ? map.value : filter.userField
-                        filter.dashFilter = map.description == filter.dashFilter ? map.value : filter.dashFilter
+                        filter.userField =
+                            map.description == filter.userField ? map.value : filter.userField;
+                        filter.dashFilter =
+                            map.description == filter.dashFilter ? map.value : filter.dashFilter;
                     }
-    
-                    const userHasValidFieldValue = user[filter.userField] == filter.fieldValue && (user[filter.dashFilter] != undefined && user[filter.dashFilter] != "undefined" && user[filter.dashFilter] != null && user[filter.dashFilter] != "null" && user[filter.dashFilter] != "")
+
+                    const userHasValidFieldValue =
+                        user[filter.userField] == filter.fieldValue &&
+                        user[filter.dashFilter] != undefined &&
+                        user[filter.dashFilter] != 'undefined' &&
+                        user[filter.dashFilter] != null &&
+                        user[filter.dashFilter] != 'null' &&
+                        user[filter.dashFilter] != '';
                     if (userHasValidFieldValue) {
                         if (dashboardFilters.length == 0) {
-                            dashboardFilters.push({ field: filter.dashFilter, value: user[filter.dashFilter], pages: filter.pages })
+                            dashboardFilters.push({
+                                field: filter.dashFilter,
+                                value: user[filter.dashFilter],
+                                pages: filter.pages,
+                            });
                         }
                     }
                 }
                 return dashboardFilters;
             }
         } catch (error) {
-            console.log(error)
-            return error
+            console.log(error);
+            return error;
         }
     },
 
@@ -412,34 +395,26 @@ module.exports = {
         const initialPasswordKey = '1234';
         data.password = [
             {
-                hash: bcrypt.hashSync(
-                    data?.password ?? initialPasswordKey,
-                    salt
-                ),
+                hash: bcrypt.hashSync(data?.password ?? initialPasswordKey, salt),
                 valid: true,
                 createdAt: new Date(Date.now()),
             },
         ];
 
         data.clientUserKey = CLIENT_ID + '@@' + data.networkLogin;
-        data.birthDate = _functions.formatDateWithoutHoursBrasilian(
-            data.birthDate
-        );
-        data.admission = _functions.formatDateWithoutHoursBrasilian(
-            data.admission
-        );
+        data.birthDate = _functions.formatDateWithoutHoursBrasilian(data.birthDate);
+        data.admission = _functions.formatDateWithoutHoursBrasilian(data.admission);
         data.createDate = _functions.formatDateWithoutHoursBrasilian(
             data?.createDate ?? new Date()
         );
         data.enabled = true;
 
-        const groupsAD = onboarding === true ? ['PERFIL_Aluno', 'ELEGE_ONBOARDING'] : ['PERFIL_Aluno', 'ELEGE_CURSO'] 
+        const groupsAD =
+            onboarding === true
+                ? ['PERFIL_Aluno', 'ELEGE_ONBOARDING']
+                : ['PERFIL_Aluno', 'ELEGE_CURSO'];
 
-        if (
-            elegibilityFields &&
-            elegibilityFields.length > 0 &&
-            onboarding == false
-        ) {
+        if (elegibilityFields && elegibilityFields.length > 0 && onboarding == false) {
             for (const field of elegibilityFields) {
                 if (data[field]) {
                     console.log({
@@ -451,9 +426,7 @@ module.exports = {
                     if (fieldType === 'object') continue;
 
                     const value =
-                        fieldType !== 'string'
-                            ? data[field]
-                            : _functions.clearString(data[field]);
+                        fieldType !== 'string' ? data[field] : _functions.clearString(data[field]);
 
                     groupsAD.push(`ELEGE_${value}`);
                 }
@@ -465,16 +438,11 @@ module.exports = {
             }
         }
 
-        const optionals = [
-            'optionalEligibility1',
-            'optionalEligibility2',
-            'optionalEligibility3',
-        ];
+        const optionals = ['optionalEligibility1', 'optionalEligibility2', 'optionalEligibility3'];
 
         optionals.forEach(
             (optional) =>
-                !!data[optional] &&
-                groupsAD.push(`ELEGE_${_functions.clearString(data[optional])}`)
+                !!data[optional] && groupsAD.push(`ELEGE_${_functions.clearString(data[optional])}`)
         );
 
         groupsAD.forEach(async (groupName) => {
@@ -487,9 +455,7 @@ module.exports = {
             }
         });
 
-        const roles = data.roles
-            ? data.roles.split(',').map((item) => item.trim())
-            : [];
+        const roles = data.roles ? data.roles.split(',').map((item) => item.trim()) : [];
 
         if (roles.includes('Admin')) {
             groupsAD.push('PERFIL_Admin');
@@ -539,9 +505,7 @@ module.exports = {
                     result,
                     fieldsForElegibility
                 );
-                const account = await module.exports.processUserAccount(
-                    processedUser
-                );
+                const account = await module.exports.processUserAccount(processedUser);
 
                 usersToSend.push(account);
                 if (processedUser.createdAt === processedUser.updatedAt) {
@@ -552,13 +516,8 @@ module.exports = {
             }
         }
 
-        if (
-            config.messenger.sendUsersToMicrosservice &&
-            usersToSend.length > 0
-        ) {
-            const filterUsersToSend = usersToSend.filter(
-                (u) => u.status === 'ATIVO'
-            );
+        if (config.messenger.sendUsersToMicrosservice && usersToSend.length > 0) {
+            const filterUsersToSend = usersToSend.filter((u) => u.status === 'ATIVO');
             for (let i = 0; i < filterUsersToSend.length; i += 500) {
                 await sendAccountsToKafka(filterUsersToSend.slice(i, i + 500));
             }
@@ -566,10 +525,7 @@ module.exports = {
             if (config.messenger.sendWelcomeCampaign) {
                 const campaign = createWelcomeCampaign();
                 for (let i = 0; i < newUsers.length; i += 500) {
-                    await sendMessageToKafka(
-                        campaign,
-                        newUsers.slice(i, i + 500)
-                    );
+                    await sendMessageToKafka(campaign, newUsers.slice(i, i + 500));
                     await Message.create(campaign);
                 }
             }
@@ -640,9 +596,7 @@ module.exports = {
             }
             groups = groups.map((group) => group.name);
 
-            const users = await User.find({ groupsAD: { $in: groups } }, [
-                'networkLogin',
-            ]);
+            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin']);
 
             const usersToReturn = [];
             if (category === 'charge') {
@@ -658,7 +612,7 @@ module.exports = {
                         $or: [
                             { expiredCompletion: { $exists: false } },
                             { expiredCompletion: { $eq: null } },
-                        ]
+                        ],
                     });
                     for (const tracking of allTrackingUser) {
                         if (tracking.completionAt !== null) {
@@ -683,9 +637,7 @@ module.exports = {
 
     async getUsersByGroups(groups) {
         try {
-            const users = await User.find({ groupsAD: { $in: groups } }, [
-                'networkLogin',
-            ]);
+            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin']);
             return users;
         } catch (error) {
             return error;
@@ -702,9 +654,7 @@ module.exports = {
             }
             groups = groups.map((group) => group.name);
 
-            const users = await User.find({ groupsAD: { $in: groups } }, [
-                'networkLogin',
-            ]);
+            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin']);
 
             return users;
         } catch (error) {
@@ -714,9 +664,7 @@ module.exports = {
 
     async getUsersByIds(ids) {
         try {
-            const users = await User.find({ _id: { $in: ids } }, [
-                'networkLogin',
-            ]);
+            const users = await User.find({ _id: { $in: ids } }, ['networkLogin']);
 
             return users;
         } catch (error) {
@@ -748,5 +696,21 @@ module.exports = {
         const mode = 'automatic';
         const category = 'notify';
         return { title, text, communication, category, mode, ...emailTemplate };
+    },
+
+    async createClassGroup(user, groupCode, DATA_INICIO, DATA_FIM) {
+        let classGroup = await ClassGroup.findOne({ _id: groupCode });
+
+        const { startDate, limitDate } = _functions.getDates(DATA_INICIO, DATA_FIM);
+
+        classGroup.startDate = startDate;
+        classGroup.limitDate = limitDate;
+        classGroup.updatedAt = moment(new Date());
+
+        await user.update({
+            $addToSet: {
+                classGroups: classGroup,
+            },
+        });
     },
 };

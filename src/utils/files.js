@@ -27,7 +27,7 @@ const {
 } = require('../../src/components/new-messages/business');
 const { Readable } = require('stream');
 const configJson = require('../../config.json');
-const { MyGallery } = require('../components/theme/gallery/model')
+const { Log } = require('../components/logs/model');
 const bucket = process.env.BUCKET;
 aws.config = {
     accessKeyId: process.env.ACCESSKEY,
@@ -312,6 +312,18 @@ module.exports = {
             console.log(
                 'Carga de usuários não encontrada no compartilhamento de arquivos'
             );
+            Log.create({
+                user: null,
+                type: 'CREATE',
+                message: 'Carga de usuários não encontrada no compartilhamento de arquivos',
+                component: `CRON_DAILY_CHARGE`,
+                dataNew: [],
+                dataOld: [],
+                route: null,
+                ip: null,
+                login: null,
+                groups: [],
+            });
             return null;
         }
         // return await streamToBuffer(downloadFileResponse.readableStreamBody)
