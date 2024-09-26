@@ -941,13 +941,14 @@ module.exports = {
 
                     payload.items = items
 
-                    const oldData = await Trail.updateOne(
+                    const oldData = await Trail.findOneAndUpdate(
                         { _id: { $eq: payload._id } },
                         payload,
                     )
                     const newData = await Trail.findOne({
                         _id: { $eq: payload._id },
                     })
+
 
                     await updateCertificateExpirationDate(req)
 
@@ -959,7 +960,7 @@ module.exports = {
                         'trails',
                         'update',
                         newData,
-                        payload,
+                        oldData,
                         true,
                         'UPDATE',
                     )
