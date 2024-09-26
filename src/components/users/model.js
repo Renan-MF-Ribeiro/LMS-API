@@ -32,6 +32,19 @@ const optionsSchema = {
     collation: { locale: 'en_US', strength: 1 },
 };
 
+const assessmentGroupSchema = new mongoose.Schema(
+    {
+        pillarId: { type: String, required: true },
+        cycleId: { type: String, required: true },
+        periodId: { type: String, required: true },
+        tags: { type: [String], default: [] },
+    },
+    {
+        _id: false,
+        timestamps: true,
+    }
+);
+
 const userSchema = new mongoose.Schema(
     {
         networkLogin: { type: String, trim: true, required: true },
@@ -109,7 +122,7 @@ const userSchema = new mongoose.Schema(
         task: { type: String, trim: true },
         webPushAuthorization: { type: Array, required: false, default: [] },
         onboarding: { type: Boolean, default: false },
-        assessmentGroups: { type: Array, default: [] },
+        assessmentGroups:{ type: [{ type: assessmentGroupSchema }], required: false, default: []},
         civilName: { type: String, trim: true },
         socialName: { type: String, trim: true },
         welcomeVideoWatched: { type: Boolean, default: false },
