@@ -1,6 +1,64 @@
+const { Types } = require('mongoose');
+const { getUserByToken } = require('../../utils/functions');
 const _messages = require('../../utils/messages');
+const { checkEligibilityTagsAnd, checkIfTheTrackIsValid } = require('../sections/business');
+const { populateTrails } = require('../trails/business');
 const { Trail } = require('../trails/model');
 const { certificateClient, getHeaders, prepareFormData } = require('./business');
+const { UsersWithProcessedTags } = require('../courses/model');
+
+async function getItemInitialDate(userId, trailId) {
+    const userWithTags = await UsersWithProcessedTags.findById(userId).lean();
+
+    const populatedTrails = await populateTrails(
+        true,
+        {
+            enabled: true,
+            _id: new Types.ObjectId(trailId),
+        },
+        {},
+        {},
+        {},
+        0, // skip
+        1 // limit
+    );
+
+    const trail = populatedTrails
+        ?.filter(trail => checkEligibilityTagsAnd(userWithTags.userTags, trail.tagsAnd, trail.tags) && !trail.collaborative)
+        ?.filter((trail) => checkIfTheTrackIsValid(trail))?.[0] ?? null;
+
+    
+}
+
+async function getInitialDate(req) {
+    const { layoutId, trailId } = req.body;
+    
+    const user = await getUserByToken(req);
+
+    const { data } = await certificateClient.get(
+        `/layouts/find-one/${layoutId}`,
+        { headers: getHeaders(req), validateStatus: false }
+    );
+
+    if(!data?.modelOptions?.initialDate) {
+        return null;
+    }
+
+    const initialDateType = data.modelOptions.initialDateType ?? 'trail';
+
+    let initialDate = null;
+
+    switch (initialDateType) {
+        case 'item':
+            initialDate = await getInitialDateByTrail(user, trailId);
+            break;
+        default:
+            const trail = await Trail.findById(trailId).lean();
+            initialDate = trail.startDate ?? null;
+    }
+
+    return initialDate;
+}
 
 module.exports = {
     async getCertificates (req, res) {
@@ -73,11 +131,13 @@ module.exports = {
     },
     async createCertificate (req, res) {
         try {
-            const { userName, trailName, itemName } = req.body;
+            const { userName, trailName, itemName, layoutId } = req.body;
+
+            const initialDate = layoutId ? await getInitialDate(req) : null;
 
             const { data } = await certificateClient.post(
                 '/certificates',
-                req.body,
+                { ...req.body, initialDate },
                 { headers: getHeaders(req), responseType: 'arraybuffer' }
             );
 
