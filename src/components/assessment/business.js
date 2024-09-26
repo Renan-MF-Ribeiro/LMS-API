@@ -19,12 +19,6 @@ const AssessmentBusiness = {
             );
         } catch {}
     },
-    async createUser(userId) {
-        const uri = `${host}/users/${clientId}`;
-            const { data } = await axios.post(uri, { userId }, { headers });
-            
-            return data
-    },
 
     async listTrainingSectionsStatus(userId, eligibilityTags = []) {
         const uri = `${host}/historics/training/${clientId}/${userId}/status`;
