@@ -40,6 +40,7 @@ const {
 } = require('../sections/business');
 
 const { updateCertificateExpirationDate } = require('../certificates/business');
+const { createItemIfAlura } = require('../items/business');
 
 const ObjectId = require("mongoose").Types.ObjectId;
 
@@ -534,25 +535,28 @@ module.exports = {
                         }
                     }
                     const items = []
+                    const OldItems = payload.items
 
+                    delete payload.items
                     const trail = await Trail.create(payload);
 
-                    const createItemIfAlura = async (item) => {
-                        if (item.itemID.kind === 'AluraItem') {
-                            await Item.create(item.itemID);
-                        }
-                    }
 
-                    await Promise.all(payload.items.map(async (item) => {
-                        await createItemIfAlura(item);
+
+                    for (const item of OldItems) {
+                        if (item.itemID.kind === 'AluraItem') {
+                            const { _id } = await getUserByToken(req);
+                            let { itemAluraCreated, separators: updatedSeparators } = await createItemIfAlura(item, trail.separators, _id);
+                            item.itemID = itemAluraCreated;
+                            trail.separators = updatedSeparators;
+                        }
 
                         items.push({
                             ...item,
                             urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}/${item.itemID._id}`,
                             urlTrail: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}`,
                             itemID: item.itemID._id,
-                        })
-                    }));
+                        });
+                    }
 
                     trail.items = items
 
@@ -938,14 +942,21 @@ module.exports = {
 
                     const items = []
 
-                    payload.items?.forEach((item) => {
+                    for (const item of payload.items) {
+                        if (item.itemID.kind === 'AluraItem') {
+                            const user = await getUserByToken(req);
+                            let { itemAluraCreated, separators: updatedSeparators } = await createItemIfAlura(item, payload.separators, user._id);
+                            item.itemID = itemAluraCreated;
+                            trail.separators = updatedSeparators;
+                        }
+
                         items.push({
                             ...item,
                             urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}/${item.itemID._id}`,
                             urlTrail: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}`,
                             itemID: item.itemID._id,
-                        })
-                    })
+                        });
+                    }
 
                     payload.items = items
 

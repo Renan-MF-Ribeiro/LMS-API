@@ -121,7 +121,7 @@ const AluraController = {
                 limit,
                 sortBy: sort,
                 order,
-                search: searchBy
+                search: searchBy ?? ''
             });
 
             const uri = `${host}/courses/items/${clientId}?${queryParams}`;

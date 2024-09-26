@@ -833,11 +833,11 @@ const ItemController = {
             const queryItem = findItemValue.match(/^[0-9a-fA-F]{24}$/)
                 ? {
                     $or: [
-                        { _id: findItemValue, archive: { $eq: false } },
+                        { _id: findItemValue, archive: { $ne: true } },
                         { titleURL: findItemValue },
                     ],
                 }
-                : { titleURL: findItemValue, archive: { $eq: false } };
+                : { titleURL: findItemValue, archive: { $ne: true } };
 
             const queryTrail = findITrailValue.match(/^[0-9a-fA-F]{24}$/)
                 ? {
@@ -888,7 +888,7 @@ const ItemController = {
                 });
                 return;
             }
-
+            console.log(item)
             _messages.success(res, req, {
                 ...item._doc,
                 trailTitle: trail.title,
@@ -1385,7 +1385,7 @@ const ItemController = {
                 }
 
             query['archive'] = archive ? { $eq: archive === 'true' } : { $ne: true };
-            query['kind'] = { $ne: 'PostItem' };
+            query['kind'] = { $nin: ['PostItem', 'AluraItem'] };;
             let total = await Item.find(query).count();
 
             let itens = await Item.find(query)
