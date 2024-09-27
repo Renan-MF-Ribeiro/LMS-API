@@ -833,11 +833,11 @@ const ItemController = {
             const queryItem = findItemValue.match(/^[0-9a-fA-F]{24}$/)
                 ? {
                     $or: [
-                        { _id: findItemValue, archive: { $eq: false } },
+                        { _id: findItemValue, archive: { $ne: true } },
                         { titleURL: findItemValue },
                     ],
                 }
-                : { titleURL: findItemValue, archive: { $eq: false } };
+                : { titleURL: findItemValue, archive: { $ne: true } };
 
             const queryTrail = findITrailValue.match(/^[0-9a-fA-F]{24}$/)
                 ? {
