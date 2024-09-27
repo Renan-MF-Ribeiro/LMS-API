@@ -105,7 +105,7 @@ module.exports = {
                 $or: [{ registration }, { cpf }],
             });
 
-            if (userFound.length > 0) {
+            if (userFound) {
                 return _messages.forbidden(
                     res,
                     req,
@@ -136,6 +136,7 @@ module.exports = {
 
             return _messages.success(res, req, created);
         } catch (error) {
+            console.log({ error })
             let validationErrorKeys;
             let validationError;
 
@@ -462,7 +463,7 @@ module.exports = {
                     await GamificationController.dispatch(login, [EVENTS_CATEGORY.LOGIN]);
 
                     if (config.assessment.active) {
-                        await AssessmentBusiness.updateUserEligibilities(user._id);
+                        // await AssessmentBusiness.updateUserEligibilities(user._id);
                     }
 
                     _messages.success(
@@ -700,9 +701,6 @@ module.exports = {
                     var tk = tokenEncript.toString();
                     key = cryptoJS.AES.encrypt(key, '25KP76yNnhiGH9bSj').toString();
 
-                    if (config.assessment.active) {
-                        await AssessmentBusiness.createUser(user._id);
-                    }
                     _messages.success(
                         res,
                         req,
