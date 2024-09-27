@@ -1,67 +1,9 @@
-const { Types } = require('mongoose');
-const { getUserByToken } = require('../../utils/functions');
 const _messages = require('../../utils/messages');
-const { checkEligibilityTagsAnd, checkIfTheTrackIsValid } = require('../sections/business');
-const { populateTrails } = require('../trails/business');
 const { Trail } = require('../trails/model');
-const { certificateClient, getHeaders, prepareFormData } = require('./business');
-const { UsersWithProcessedTags } = require('../courses/model');
-
-async function getItemInitialDate(userId, trailId) {
-    const userWithTags = await UsersWithProcessedTags.findById(userId).lean();
-
-    const populatedTrails = await populateTrails(
-        true,
-        {
-            enabled: true,
-            _id: new Types.ObjectId(trailId),
-        },
-        {},
-        {},
-        {},
-        0, // skip
-        1 // limit
-    );
-
-    const trail = populatedTrails
-        ?.filter(trail => checkEligibilityTagsAnd(userWithTags.userTags, trail.tagsAnd, trail.tags) && !trail.collaborative)
-        ?.filter((trail) => checkIfTheTrackIsValid(trail))?.[0] ?? null;
-
-    
-}
-
-async function getInitialDate(req) {
-    const { layoutId, trailId } = req.body;
-    
-    const user = await getUserByToken(req);
-
-    const { data } = await certificateClient.get(
-        `/layouts/find-one/${layoutId}`,
-        { headers: getHeaders(req), validateStatus: false }
-    );
-
-    if(!data?.modelOptions?.initialDate) {
-        return null;
-    }
-
-    const initialDateType = data.modelOptions.initialDateType ?? 'trail';
-
-    let initialDate = null;
-
-    switch (initialDateType) {
-        case 'item':
-            initialDate = await getInitialDateByTrail(user, trailId);
-            break;
-        default:
-            const trail = await Trail.findById(trailId).lean();
-            initialDate = trail.startDate ?? null;
-    }
-
-    return initialDate;
-}
+const { certificateClient, getHeaders, prepareFormData, getInitialDate } = require('./business');
 
 module.exports = {
-    async getCertificates (req, res) {
+    async getCertificates(req, res) {
         try {
             const clientId = req.params.clientId;
 
@@ -75,7 +17,7 @@ module.exports = {
             _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'getCertificates');
         }
     },
-    async getCertificate (req, res) {
+    async getCertificate(req, res) {
         try {
             const { data } = await certificateClient.get(
                 '/certificates/find',
@@ -87,7 +29,7 @@ module.exports = {
             _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'getCertificate');
         }
     },
-    async getCertificateOpen (req, res) {
+    async getCertificateOpen(req, res) {
         try {
             console.log(req)
             const { data } = await certificateClient.get(
@@ -99,7 +41,7 @@ module.exports = {
             _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'getCertificateOpen');
         }
     },
-    async downloadCertificate (req, res) {
+    async downloadCertificate(req, res) {
         try {
             const { data } = await certificateClient.get(
                 `/certificates/file`,
@@ -114,7 +56,7 @@ module.exports = {
             _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'downloadCertificate');
         }
     },
-    async previewCertificate (req, res) {
+    async previewCertificate(req, res) {
         try {
             const { data } = await certificateClient.get(
                 `/certificates/preview`,
@@ -129,11 +71,13 @@ module.exports = {
             _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'previewCertificate');
         }
     },
-    async createCertificate (req, res) {
+    async createCertificate(req, res) {
         try {
-            const { userName, trailName, itemName, layoutId } = req.body;
+            const { userName, trailName, itemName, layoutId, trailId } = req.body;
 
-            const initialDate = layoutId ? await getInitialDate(req) : null;
+            const initialDate = (layoutId && trailId)
+                ? await getInitialDate(req)
+                : null;
 
             const { data } = await certificateClient.post(
                 '/certificates',
@@ -150,7 +94,7 @@ module.exports = {
             _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'createCertificate');
         }
     },
-    async deleteCertificate (req, res) {
+    async deleteCertificate(req, res) {
         try {
             const certificateId = req.params.id;
 
@@ -164,7 +108,7 @@ module.exports = {
             _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'deleteCertificate');
         }
     },
-    async updateLayout (req, res) {
+    async updateLayout(req, res) {
         try {
             const form = prepareFormData(req);
 
@@ -180,7 +124,7 @@ module.exports = {
             _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'updateLayout');
         }
     },
-    async updateStatus (req, res) {
+    async updateStatus(req, res) {
         if (!req.body?.id) {
             return _messages.badRequest(res, req, 'Operação inválida', 'Informe o id do layout', 'certifier', 'updateLayout');
         }
@@ -201,7 +145,7 @@ module.exports = {
             _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'updateLayout');
         }
     },
-    async createLayout (req, res) {
+    async createLayout(req, res) {
         try {
             const form = prepareFormData(req);
 
@@ -216,7 +160,7 @@ module.exports = {
             _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'createLayout');
         }
     },
-    async getLayout (req, res) {
+    async getLayout(req, res) {
         try {
             const layoutId = req.params.id;
 
@@ -230,7 +174,7 @@ module.exports = {
             _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'getLayout');
         }
     },
-    async getLayouts (req, res) {
+    async getLayouts(req, res) {
         try {
             const clientId = req.params.clientId;
 
@@ -244,7 +188,7 @@ module.exports = {
             _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'getLayouts');
         }
     },
-    async deleteLayout (req, res) {
+    async deleteLayout(req, res) {
         try {
             const layoutId = req.params.id;
 
