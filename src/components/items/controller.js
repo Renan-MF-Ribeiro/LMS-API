@@ -888,7 +888,6 @@ const ItemController = {
                 });
                 return;
             }
-            console.log(item)
             _messages.success(res, req, {
                 ...item._doc,
                 trailTitle: trail.title,

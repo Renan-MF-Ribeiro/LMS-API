@@ -2,6 +2,7 @@ const axios = require('axios');
 const _messages = require('../../utils/messages');
 const { pagination, ordernation, getUserByToken } = require('../../utils/functions');
 const { handleError } = require('../../utils/errors');
+const { updateOneUserProgressTracking } = require('./business');
 
 
 const host = process.env.API_ALURA;
@@ -131,7 +132,27 @@ const AluraController = {
         } catch (error) {
             return handleError(res, req, error);
         }
-    }
+    },
+
+    async updateProgress (req, res) {
+        try {
+            const { email, networkLogin } = await getUserByToken(req)
+            const { courseId, itemId } = req.query;
+            const date = new Date().toISOString();
+
+            const uri = `${host}/trackings/sync/${clientId}/${email}/${courseId}`;
+            const { data } = await axios.get(uri, {
+                headers,
+                params: { date }
+            });
+            console.log(data)
+            const trackingUpdated = await updateOneUserProgressTracking(data, itemId, networkLogin);
+            return _messages.success(res, req, trackingUpdated);
+        } catch (error) {
+            return handleError(res, req, error);
+        }
+    },
+
 };
 
 module.exports = AluraController;

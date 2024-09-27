@@ -12,6 +12,7 @@ router
     .get('/courses/trails/:trailId', isAluraActive, _controller.getByTrails)
     .get('/courses/launch/:itemId', isAluraActive, _controller.launch)
     .get('/courses/search', isAluraActive, _controller.search)
-    .get('/courses/list', isAluraActive, _controller.listAllItems);
+    .get('/courses/list', isAluraActive, _controller.listAllItems)
+    .get('/tracking/update-progress', isAluraActive, _controller.updateProgress);
 
 module.exports = router;
