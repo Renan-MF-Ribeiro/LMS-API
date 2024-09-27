@@ -146,6 +146,7 @@ const AluraController = {
                 params: { date }
             });
             console.log(data)
+            if (!data) return _messages.success(res, req, null);
             const trackingUpdated = await updateOneUserProgressTracking(data, itemId, networkLogin);
             return _messages.success(res, req, trackingUpdated);
         } catch (error) {
