@@ -11,6 +11,7 @@ const { Trail } = require('./model');
 const { Item, PostItem } = require('../items/model');
 const { populateTrails } = require('../trails/business');
 const { Tracking } = require('../tracking/model');
+const { updateProgressAluraItem } = require('../tracking/business');
 const {
     pagination,
     ordernation,
@@ -559,7 +560,7 @@ module.exports = {
                     }
 
                     trail.items = items
-
+                    updateProgressAluraItem(OldItems)
                     const newData = await Trail.updateOne(
                         { _id: { $eq: trail._id } },
                         trail,
@@ -958,8 +959,8 @@ module.exports = {
                         });
                     }
 
+                    updateProgressAluraItem(payload.items)
                     payload.items = items
-
                     const oldData = await Trail.updateOne(
                         { _id: { $eq: payload._id } },
                         payload,
