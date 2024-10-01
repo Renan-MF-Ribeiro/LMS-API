@@ -198,7 +198,9 @@ module.exports = {
                             durationHours: trail.durationHours,
                             post: trail.post,
                             gallery: galleryEnabled,
-                            confidential: trail.confidential
+                            confidential: trail.confidential,
+                            updatedAt: trail.updatedAt,
+                            createdAt: trail.createdAt
                         });
                     }
                 } else {
@@ -306,7 +308,9 @@ module.exports = {
                             durationHours: trail.durationHours,
                             post: trail.post,
                             gallery: galleryEnabled,
-                            confidential: trail.confidential
+                            confidential: trail.confidential,
+                            updatedAt: trail.updatedAt,
+                            createdAt: trail.createdAt
                         });
                     }
                 }
