@@ -225,7 +225,7 @@ module.exports = {
             }
             const selectedKey = partner.keys.find((key) => key.key === token);
 
-            if (selectedKey.endDate < today) {
+            if (selectedKey.endDate < today || selectedKey.initialDate > today) {
                 _messages.unauthorized(
                     res,
                     req,
