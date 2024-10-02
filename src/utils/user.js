@@ -10,6 +10,7 @@ async function getEligibilityInfoByUserId(
     userId,
     options = {
         sections: { skip: null, limit: null, filter: {} },
+        trails: { filter: {} },
     }
 ) {
     const sections = await Section
@@ -29,7 +30,8 @@ async function getEligibilityInfoByUserId(
         true,
         {
             enabled: true,
-            _id: { $in: trailsId }
+            _id: { $in: trailsId },
+            ...(options?.trails?.filter ?? {})
         }
     );
 
