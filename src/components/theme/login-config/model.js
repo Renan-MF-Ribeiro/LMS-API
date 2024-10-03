@@ -32,7 +32,9 @@ const formLoginSchema = new Schema({
     recoverPasswordEmptyMail: { type: Number, },
     primary: fieldSchema,
     secondary: fieldSchema,
-    enabled: { type: Number, default: 1 }
+    enabled: { type: Number, default: 1 },
+    idle: { type: Boolean, default: false },
+    idleTime: { type: Number, default: 60 },
 });
 
 // Define the main schema that includes all the forms

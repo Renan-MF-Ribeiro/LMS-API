@@ -395,7 +395,6 @@ module.exports = {
                             : function (a, b) {
                                 return a.title.localeCompare(b.title);
                             };
-
                     for (const trail of trails) {
                         const flag = calculateDiffDateTrail(trail);
                         if (flag) {
@@ -432,7 +431,7 @@ module.exports = {
                             };
 
                     for (const trail of trails) {
-                        if (trail.completion === 0) {
+                        if (trail.completion === 0 || !trail.completion) {
                             section.trails.push(trail);
                         }
                     }
@@ -871,7 +870,7 @@ module.exports = {
         return data;
     },
 
-    getTrainingDataFromBody(body) {
+    getTrainingDataFromBody (body) {
         const { isTraining = false, certificateLayout, certificateDue } = body;
 
         if (!isTraining) return { isTraining, certificateLayout: null, certificateDue: null };
@@ -893,8 +892,8 @@ module.exports = {
             certificateDue: certificateDueObj,
         };
     },
-    
-    async setAssessmentHistoricOnSections(userId, sections) {
+
+    async setAssessmentHistoricOnSections (userId, sections) {
         const userWithTags = await UsersWithProcessedTags.findById(userId);
         const dataAssessmentHistoric = await listTrainingSectionsStatus(userId, userWithTags.userTags);
 

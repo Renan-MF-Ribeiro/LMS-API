@@ -62,8 +62,6 @@ async function generateTrainingSectionCertificate(req, res) {
         },
     );
 
-    console.log('sections', JSON.stringify(sections, null, 2));
-
     const section = sections[0];
 
     if (!section) {

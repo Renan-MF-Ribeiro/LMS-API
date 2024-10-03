@@ -709,7 +709,7 @@ module.exports = {
                             tk,
                             key,
                             accept: user.acceptTerms,
-                            passwordValid: user.passwordValid,
+                            passwordValid: true,
                             numbers: profilesIDS.numbers,
                             name: user.name,
                             profilePhoto: user.profilePhoto,
@@ -1235,7 +1235,7 @@ module.exports = {
 
             for (const result of results) {
                 const existingUser = await User.findOne({
-                    networkLogin: result.networkLogin,
+                    networkLogin: result.cpf,
                 });
                 const processedUser = processUsersLoad(result, fieldsForElegibility, onboarding);
                 const account = await processUserAccount(processedUser);

@@ -12,6 +12,7 @@ const { User } = require('../users/model');
 const { UsersWithProcessedTags } = require('../courses/model')
 const config = require('../../../config.json');
 const { getTagsElegiblesByToken } = require('../sections/business');
+const { ConfigModel } = require('../config/model');
 
 
 
@@ -41,10 +42,12 @@ module.exports = {
                 );
             }
 
+            const fields = (await ConfigModel.findOne({ type: 'social-fields' }))?.value ?? [];
+
             _messages.success(
                 res,
                 req,
-                { ...data, blockedTrails: blockedTrailsWithName },
+                { ...data, blockedTrails: blockedTrailsWithName, fields },
                 'configurações encontradas',
                 'social',
                 'getConfig'
@@ -131,6 +134,15 @@ module.exports = {
 
             try {
                 const { data } = await axios.put(uri, body);
+
+                if (reqBody.fields) {
+                    await ConfigModel.findOneAndUpdate(
+                        { type: 'social-fields' },
+                        { value: reqBody.fields },
+                        { upsert: true, new: true }
+                    );
+                }
+
                 return _messages.success(
                     res,
                     req,
@@ -357,27 +369,112 @@ module.exports = {
         }
     },
 
-    async getCommentsByTrailId (req, res) {
+    async getCommentsByTrailId(req, res) {
         try {
             const { trailId } = req.params;
-            const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/${trailId}`;
-            const { data } = await axios.get(uri, { params: req.query });
-            const usersId = data.data.map(u => u.userId)
 
-            const usersPhoto = await User.find({ _id: { $in: usersId } }).select('profilePhoto')
-            if (usersPhoto) {
-                data.data = data.data.map((comment) => {
-                    const profilePhoto = usersPhoto.find((u) => u._id == comment.userId)?.profilePhoto
-                    return {
-                        ...comment,
-                        profilePhoto
-                    }
-                })
+            const uri = `${process.env.API_SOCIAL}/comments/${process.env.CLIENT_ID}/${trailId}`;
+
+            const { pageSize = 5, pageIndex = 0, ...query } = req.query;
+
+            const setUsersProfilePhoto = async (commentsArr) => {
+                const usersId = commentsArr.map((comment) => comment.userId);
+
+                const usersPhoto = await User.find({ _id: { $in: usersId } }).select('profilePhoto');
+
+                if (usersPhoto.length) {
+                    commentsArr.forEach((comment) => {
+                        const profilePhoto = usersPhoto.find((u) => String(u._id) === String(comment.userId))?.profilePhoto ?? null;
+                        comment.profilePhoto = profilePhoto;
+                    });
+                }
             }
+
+            // GET CONFIG
+            const config = (await ConfigModel.findOne({ type: 'social-fields' }))?.value ?? [];
+
+            if (!config?.length) {
+                const { data: response } = await axios.get(uri, { params: req.query });
+
+                const commentsToResponse = response.data ?? [];
+
+                await setUsersProfilePhoto(commentsToResponse);
+
+                _messages.success(
+                    res,
+                    req,
+                    {
+                        data: commentsToResponse,
+                        total: response.total,
+                        pageIndex: Number(pageIndex),
+                        isFinished: Number(pageSize) * (Number(pageIndex) + 1) >= response.total
+                    },
+                    'ok',
+                    'social',
+                    'getCommentsByTrailId'
+                );
+
+                return;
+            }
+
+            const fetchComments = async (query) => await axios.get(uri, { params: query }, { validateStatus: false })
+
+            const userInfo = await _functions.getUserByToken(req);
+
+            const filter = config.reduce((acc, current) => {
+                if (!userInfo[current]) return acc;
+
+                acc[current] = userInfo[current]
+
+                return acc;
+            }, {})
+
+            // GET USERS
+            const dbUsersInSameConditions = await User.find(filter).select('_id');
+
+            const commentsToResponse = [];
+
+            const usersToFilter = dbUsersInSameConditions.map(user => String(user._id));
+
+            const filterCommentsByUserId =
+                (commentsArr) => commentsArr.filter((comment) => usersToFilter.includes(String(comment.userId)));
+
+            let isFinishedFromSocialApi = false;
+            let internalIsFinished = false;
+            let currentPage = Number(pageIndex);
+
+            while (!internalIsFinished && !isFinishedFromSocialApi) {
+                console.log('query', { pageSize, pageIndex: currentPage, ...query });
+                const { data: response } = await fetchComments({ pageSize, pageIndex: currentPage, ...query });
+
+                const responseData = response.data ?? [];
+
+                const filteredComments = filterCommentsByUserId(responseData);
+
+                commentsToResponse.push(...filteredComments);
+
+                console.log('é maior', commentsToResponse.length, commentsToResponse.length >= Number(pageSize));
+                console.log('RESPONSE TEM LENGTH', !responseData?.length);
+
+                if (!responseData?.length ?? responseData.length < Number(pageSize)) {
+                    isFinishedFromSocialApi = true;
+                }
+                 
+                if (commentsToResponse.length >= Number(pageSize)) {
+                    internalIsFinished = true;
+                }
+                
+                if (!internalIsFinished && !isFinishedFromSocialApi) {
+                    currentPage += 1;
+                }
+            }
+
+            await setUsersProfilePhoto(commentsToResponse);
+
             _messages.success(
                 res,
                 req,
-                data,
+                { data: commentsToResponse, total: commentsToResponse?.length ? 100 : 0, pageIndex: currentPage, isFinished: isFinishedFromSocialApi },
                 'ok',
                 'social',
                 'getCommentsByTrailId'

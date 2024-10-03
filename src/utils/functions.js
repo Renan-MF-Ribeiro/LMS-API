@@ -26,6 +26,10 @@ module.exports = {
             momentz().format('YYYY')
         );
     },
+    
+    sanitizeCpf (value) {
+        return module.exports.formatNumberCpf(String(value).replace(/\D/g, ''));
+    },
 
     formatDate (date) {
         return momentz(date).format('YYYY-MM-DD HH:mm:ss');
