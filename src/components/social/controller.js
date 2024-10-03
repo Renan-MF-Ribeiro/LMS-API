@@ -403,7 +403,12 @@ module.exports = {
                 _messages.success(
                     res,
                     req,
-                    { data: commentsToResponse, total: response.total, pageIndex: Number(pageIndex) },
+                    {
+                        data: commentsToResponse,
+                        total: response.total,
+                        pageIndex: Number(pageIndex),
+                        isFinished: Number(pageSize) * (Number(pageIndex) + 1) >= response.total
+                    },
                     'ok',
                     'social',
                     'getCommentsByTrailId'
@@ -434,11 +439,12 @@ module.exports = {
             const filterCommentsByUserId =
                 (commentsArr) => commentsArr.filter((comment) => usersToFilter.includes(String(comment.userId)));
 
-            let isFinished = false;
+            let isFinishedFromSocialApi = false;
+            let internalIsFinished = false;
             let currentPage = Number(pageIndex);
 
-            while (!isFinished) {
-                // console.log('query', { pageSize, pageIndex: currentPage, ...query });
+            while (!internalIsFinished && !isFinishedFromSocialApi) {
+                console.log('query', { pageSize, pageIndex: currentPage, ...query });
                 const { data: response } = await fetchComments({ pageSize, pageIndex: currentPage, ...query });
 
                 const responseData = response.data ?? [];
@@ -447,11 +453,18 @@ module.exports = {
 
                 commentsToResponse.push(...filteredComments);
 
-                // console.log('LENGTH', commentsToResponse.length);
+                console.log('é maior', commentsToResponse.length, commentsToResponse.length >= Number(pageSize));
+                console.log('RESPONSE TEM LENGTH', !responseData?.length);
 
-                if (commentsToResponse.length >= Number(pageSize) || responseData < Number(pageSize)) {
-                    isFinished = true;
-                } else {
+                if (!responseData?.length ?? responseData.length < Number(pageSize)) {
+                    isFinishedFromSocialApi = true;
+                }
+                 
+                if (commentsToResponse.length >= Number(pageSize)) {
+                    internalIsFinished = true;
+                }
+                
+                if (!internalIsFinished && !isFinishedFromSocialApi) {
                     currentPage += 1;
                 }
             }
@@ -461,7 +474,7 @@ module.exports = {
             _messages.success(
                 res,
                 req,
-                { data: commentsToResponse, total: commentsToResponse?.length ? 100 : 0, pageIndex: currentPage },
+                { data: commentsToResponse, total: commentsToResponse?.length ? 100 : 0, pageIndex: currentPage, isFinished: isFinishedFromSocialApi },
                 'ok',
                 'social',
                 'getCommentsByTrailId'
