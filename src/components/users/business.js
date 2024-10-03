@@ -8,6 +8,7 @@ const {
     calculateDiffDate,
     pagination,
     ordernation,
+    sanitizeCpf
 } = require('../../utils/functions');
 const { ldapClient, returnIdProfileUser, returnIdGroupUser } = require('../../utils/auth');
 const { DashConfig } = require('../dashboard/model');
