@@ -709,7 +709,7 @@ module.exports = {
                             tk,
                             key,
                             accept: user.acceptTerms,
-                            passwordValid: user.passwordValid,
+                            passwordValid: true,
                             numbers: profilesIDS.numbers,
                             name: user.name,
                             profilePhoto: user.profilePhoto,
