@@ -392,10 +392,14 @@ module.exports = {
 
     processUsersLoad(data, elegibilityFields = [], onboarding = false) {
         const salt = bcrypt.genSaltSync(10);
-        const initialPasswordKey = '1234';
+        const firstName = String(data.name.split(" ")[0]).trim().toLowerCase();
+        const firstThreeCpf = sanitizeCpf(data.cpf).slice(0, 3);
+        const initialPassword = !onboarding
+            ? "1234"
+            : `${firstName}${firstThreeCpf}`;
         data.password = [
             {
-                hash: bcrypt.hashSync(data?.password ?? initialPasswordKey, salt),
+                hash: bcrypt.hashSync(data?.password ?? initialPassword, salt),
                 valid: true,
                 createdAt: new Date(Date.now()),
             },
