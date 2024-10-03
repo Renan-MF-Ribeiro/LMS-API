@@ -178,7 +178,7 @@ module.exports = {
     },
     async signup(req, res) {
         const { token } = req.query;
-        const { email: networkLogin, password, ...data } = req.body;
+        const { cpf: networkLogin, password, ...data } = req.body;
         const today = moment(new Date());
         // Seta elegibilidades padrões
         let groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO'];
