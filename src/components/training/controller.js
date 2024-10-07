@@ -48,7 +48,7 @@ async function generateTrainingSectionCertificate(req, res) {
 
     const user = await getUserByToken(req);
 
-    const { sections, trails } = await getEligibilityInfoByUserId(
+    const { sections, trails, trackings } = await getEligibilityInfoByUserId(
         user._id,
         {
             sections: {
@@ -130,6 +130,46 @@ async function generateTrainingSectionCertificate(req, res) {
         }
     }
 
+    let initialDate = null;
+
+    if (section.certificateLayout) {
+        const { data: dataLayout } = await certificateClient.get(
+            `/layouts/find-one/${section.certificateLayout}`,
+            { headers: getHeaders(req), validateStatus: false }
+        );
+
+        if (dataLayout?.modelOptions?.initialDate) {
+            const initialDateType = dataLayout.modelOptions.initialDateType ?? 'trail';
+
+            if (initialDateType === 'item') {
+                // find the first item tracking date
+                const firstItemTracking = trackings.reduce((current, tracking) => {
+                    if (!current) return tracking;
+
+                    if (tracking.createdAt < current.createdAt) {
+                        return tracking;
+                    }
+
+                    return current;
+                }, null);
+
+                initialDate = firstItemTracking?.createdAt ?? null;
+            } else {
+                const firstTrail = trails.reduce((current, trail) => {
+                    if (!current) return trail;
+
+                    if (trail.startDate < current.startDate) {
+                        return trail;
+                    }
+
+                    return current;
+                }, null);
+
+                initialDate = firstTrail?.startDate ?? null;
+            }
+        }
+    }
+
     const body = {
         clientId: Number(process.env.CLIENT_ID),
         userId: user.networkLogin,
@@ -143,6 +183,7 @@ async function generateTrainingSectionCertificate(req, res) {
         completionDate,
         courseLoad: courseLoadStr,
         workload: null,
+        initialDate,
         items,
     }
 
