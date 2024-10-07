@@ -422,12 +422,9 @@ module.exports = {
             const userInfo = await _functions.getUserByToken(req);
 
             const filter = config.reduce((acc, current) => {
-                if (!userInfo[current]) return acc;
-
-                acc[current] = userInfo[current]
-
+                acc[current] = userInfo[current] ?? null
                 return acc;
-            }, {})
+            }, {});
 
             // GET USERS
             const dbUsersInSameConditions = await User.find(filter).select('_id');
