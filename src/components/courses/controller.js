@@ -1356,7 +1356,7 @@ module.exports = {
                         'users.$.origin': 'QRCODE',
                         'users.$.presenceAt': nowDate,
                         'users.$.updatedAt': nowDate,
-                        'users.$.ip ': ip,
+                        'users.$.ip': ip,
                     },
                 },
                 { new: true }
