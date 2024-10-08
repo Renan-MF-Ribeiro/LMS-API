@@ -1135,7 +1135,10 @@ module.exports = {
 
             for (const result of results) {
                 const existingUser = await User.findOne({
-                    networkLogin: result.networkLogin,
+                    $or: [
+                        { networkLogin: result.networkLogin },
+                        { networkLogin: result.cpf }
+                    ]
                 });
 
                 const processedUser = processUsersLoad(result, fieldsForElegibility);
