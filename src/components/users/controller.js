@@ -1334,7 +1334,7 @@ module.exports = {
                               {
                                 cpf: { $regex: searchBy, $options: 'i' },
                                 onboarding: { $ne: true },
-                            },
+                             },
                           ],
                       }
                     : { onboarding: { $ne: true } }
@@ -1364,6 +1364,10 @@ module.exports = {
                                   email: { $regex: searchBy, $options: 'i' },
                                   onboarding: { $ne: true },
                               },
+                              {
+                                cpf: { $regex: searchBy, $options: 'i' },
+                                onboarding: { $ne: true },
+                             },
                           ],
                       }
                     : { onboarding: { $ne: true } }
