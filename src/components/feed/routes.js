@@ -1,6 +1,10 @@
 const express = require('express');
-const _controller = require('./controller');
 
+const groupRoutes = require('./groups/routes')
+const postRoutes = require('./posts/routes')
+const solicitationRoutes = require('./solicitations/routes')
 module.exports = express
     .Router()
-    .get('/groups', _controller.getAllGroups);
+    .use('/groups', groupRoutes)
+    .use('/solicitations', solicitationRoutes)
+    .use('/posts', postRoutes)
