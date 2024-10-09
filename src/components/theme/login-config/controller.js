@@ -39,6 +39,12 @@ module.exports = {
 
 
             if (config) {
+                if (!config.formLogin.hasOwnProperty('idle')) {
+                    config.formLogin.idle = false;
+                }
+                if (!config.formLogin.hasOwnProperty('idleTime')) {
+                    config.formLogin.idleTime = 60;
+                }
 
                 return _messages.success(res, req, config)
             }

@@ -413,6 +413,7 @@ module.exports = {
             data?.createDate ?? new Date()
         );
         data.enabled = true;
+        data.onboarding = onboarding;
 
         const groupsAD =
             onboarding === true
