@@ -110,6 +110,7 @@ const certificateRoutes = require('./components/certificates/routes');
 const dimensionRoutes = require('./components/dimensions/routes');
 const partnerRoutes = require('./components/partners/routes');
 const trainingRouter = require('./components/training/routes');
+const feedRoutes = require('./components/feed/routes');
 
 app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/tracking', validateTokenRoute, trackingRoutes)
@@ -146,6 +147,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/dimensions', dimensionRoutes)
     .use('/partners', partnerRoutes)
     .use('/training', trainingRouter)
+    .use('/feed', feedRoutes)
     .use(
         '/assessment',
         isAssessmentActive,
