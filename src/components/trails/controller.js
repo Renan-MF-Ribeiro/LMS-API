@@ -380,9 +380,30 @@ module.exports = {
                 );
             } else {
                 const verify = await Trail.find({
-                    title: { $eq: payload.title },
+                    $or: [{
+                        title: { $eq: payload.title },
+                        _id: { $ne: payload._id },
+                    }, {
+                        _id: { $ne: payload._id },
+                        titleURL: { $regex: payload.titleURL, $options: 'i' }
+                    }]
                 });
+                if (verify.length > 0) {
+                    const titleDuplicate = verify.some((trail) => trail.title === payload.title)
+                    const titleURLDuplicate = verify.some((trail) => trail.titleURL === payload.titleURL)
+                    if (titleURLDuplicate) payload.titleURL = `${payload.titleURL}-${verify.length}`
 
+                    if (titleDuplicate) {
+                        return _messages.badRequest(
+                            res,
+                            req,
+                            'Já existe uma trilha com esse título!',
+                            'Já existe uma trilha com esse título!',
+                            'trilhas',
+                            'create'
+                        );
+                    }
+                }
                 if (verify.length === 0) {
                     let thumbPath;
                     let bannerPath;
@@ -742,9 +763,31 @@ module.exports = {
                 )
             } else {
                 const verify = await Trail.find({
-                    title: { $eq: payload.title },
-                    _id: { $ne: _id },
+                    $or: [{
+                        title: { $eq: payload.title },
+                        _id: { $ne: payload._id },
+                    }, {
+                        _id: { $ne: payload._id },
+                        titleURL: { $regex: payload.titleURL, $options: 'i' }
+                    }]
                 })
+
+                if (verify.length > 0) {
+                    const titleDuplicate = verify.some((trail) => trail.title === payload.title)
+                    const titleURLDuplicate = verify.some((trail) => trail.titleURL === payload.titleURL)
+                    if (titleURLDuplicate) payload.titleURL = `${payload.titleURL}-${verify.length}`
+
+                    if (titleDuplicate) {
+                        return _messages.badRequest(
+                            res,
+                            req,
+                            'Já existe uma trilha com esse título!',
+                            'Já existe uma trilha com esse título!',
+                            'trails',
+                            'update'
+                        );
+                    }
+                }
                 if (verify.length === 0) {
                     if (thumb) {
                         thumbPath = await azureBlob(thumb, 'trails/thumbs')
@@ -1194,24 +1237,23 @@ module.exports = {
                     total,
                 });
             } else {
+                const escapedSearchBy = searchBy ? searchBy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
                 let query = searchBy
                     ? {
                         $or: [
                             {
                                 description: {
-                                    $regex: searchBy,
+                                    $regex: escapedSearchBy,
                                     $options: 'i',
                                 }
                             },
-
                             {
                                 title: {
-                                    $regex: searchBy,
+                                    $regex: escapedSearchBy,
                                     $options: 'i',
                                 },
                             },
                         ],
-
                     }
                     : {}
                 query['archive'] = archive ? { $eq: archive === 'true' } : { $ne: true };
@@ -1252,6 +1294,8 @@ module.exports = {
             );
         }
     },
+
+
 
 
     async returnItemsByTrail (req, res) {

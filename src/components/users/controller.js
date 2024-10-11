@@ -1135,7 +1135,10 @@ module.exports = {
 
             for (const result of results) {
                 const existingUser = await User.findOne({
-                    networkLogin: result.networkLogin,
+                    $or: [
+                        { networkLogin: result.networkLogin },
+                        { networkLogin: result.cpf }
+                    ]
                 });
 
                 const processedUser = processUsersLoad(result, fieldsForElegibility);
@@ -1328,6 +1331,10 @@ module.exports = {
                                   email: { $regex: searchBy, $options: 'i' },
                                   onboarding: { $ne: true },
                               },
+                              {
+                                cpf: { $regex: searchBy, $options: 'i' },
+                                onboarding: { $ne: true },
+                             },
                           ],
                       }
                     : { onboarding: { $ne: true } }
@@ -1357,6 +1364,10 @@ module.exports = {
                                   email: { $regex: searchBy, $options: 'i' },
                                   onboarding: { $ne: true },
                               },
+                              {
+                                cpf: { $regex: searchBy, $options: 'i' },
+                                onboarding: { $ne: true },
+                             },
                           ],
                       }
                     : { onboarding: { $ne: true } }
