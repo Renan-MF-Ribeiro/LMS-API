@@ -1,11 +1,12 @@
-const axios = require('axios');
 const _messages = require('../../utils/messages');
+const { socialApi } = require('../social/http-adapter');
 
 module.exports = {
     async getAllGroups(req, res) {
         try {
-            const uri = `${process.env.API_SOCIAL}/group/${process.env.CLIENT_ID}`;
-            const response = await axios.get(uri);
+            const uri = 'groups';
+            const response = await socialApi.get(uri);
+
             return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
@@ -19,10 +20,10 @@ module.exports = {
         }
     },
     async getGroupsManagedByUser(req, res) {
-        const { userId } = req.params;
         try {
-            const uri = `${process.env.API_SOCIAL}/group/managed/${userId}`;
-            const response = await axios.get(uri);
+            const uri = 'groups/managed';
+            const response = await socialApi.get(uri);
+            
             return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
@@ -38,8 +39,9 @@ module.exports = {
     async getGroupMembers(req, res) {
         const { userId } = req.params;
         try {
-            const uri = `${process.env.API_SOCIAL}/group/managed/${userId}`;
-            const response = await axios.get(uri);
+            const uri = `groups/managed/${userId}`;
+            const response = await socialApi.get(uri);
+
             return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
@@ -53,10 +55,11 @@ module.exports = {
         }
     },
     async addMemberToGroups(req, res) {
-        const { groupId, userId } = req.params;
+        const { groupId } = req.params;
         try {
-            const uri = `${process.env.API_SOCIAL}/group/members/${groupId}/${userId}`;
-            const response = await axios.put(uri);
+            const uri = `groups/members/${groupId}`;
+            const response = await socialApi.put(uri);
+
             return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
@@ -72,8 +75,9 @@ module.exports = {
     async createSolicitation(req, res) {
         const solicitationBody = req.body;
         try {
-            const uri = `${process.env.API_SOCIAL}/solicitation`;
-            const response = await axios.post(uri, solicitationBody);
+            const uri = 'solicitation';
+            const response = await socialApi.post(uri, solicitationBody);
+            
             return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
@@ -89,8 +93,9 @@ module.exports = {
     async acceptSolicitation(req, res) {
         const { solicitationId } = req.params;
         try {
-            const uri = `${process.env.API_SOCIAL}/solicitation/accept/${solicitationId}`;
-            const response = await axios.post(uri);
+            const uri = `solicitation/accept/${solicitationId}`;
+            const response = await socialApi.post(uri);
+
             return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
@@ -106,8 +111,9 @@ module.exports = {
     async declineSolicitation(req, res) {
         const { solicitationId } = req.params;
         try {
-            const uri = `${process.env.API_SOCIAL}/solicitation/decline/${solicitationId}`;
-            const response = await axios.post(uri);
+            const uri = `solicitation/decline/${solicitationId}`;
+            const response = await socialApi.post(uri);
+
             return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
@@ -123,8 +129,9 @@ module.exports = {
     async getGroupSolicitations(req, res) {
         const { groupId } = req.params;
         try {
-            const uri = `${process.env.API_SOCIAL}/solicitation//${groupId}`;
-            const response = await axios.get(uri);
+            const uri = `solicitation/${groupId}`;
+            const response = await socialApi.get(uri);
+
             return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
@@ -138,10 +145,11 @@ module.exports = {
         }
     },
     async addMemberToGroup(req, res) {
-        const { groupId, userId } = req.params;
+        const { groupId } = req.params;
         try {
-            const uri = `${process.env.API_SOCIAL}/group/members/${groupId}/${userId}`;
-            const response = await axios.get(uri);
+            const uri = `groups/members/${groupId}`;
+            const response = await socialApi.get(uri);
+
             return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
@@ -155,10 +163,11 @@ module.exports = {
         }
     },
     async addMemberToGroup(req, res) {
-        const { groupId, userId } = req.params;
+        const { groupId } = req.params;
         try {
-            const uri = `${process.env.API_SOCIAL}/group/members/${groupId}/${userId}`;
-            const response = await axios.get(uri);
+            const uri = `groups/members/${groupId}`;
+            const response = await socialApi.get(uri);
+            
             return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
