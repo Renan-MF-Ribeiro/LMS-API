@@ -68,6 +68,7 @@ module.exports = {
 
             channels = await Promise.all(channels.map(async (channel) => {
                 if (channel.type === 'alura') return channel
+                if (channel.type === 'feed') return channel
 
                 if (config.collaboration.active && channel.type === 'collaboration') return channel
 
