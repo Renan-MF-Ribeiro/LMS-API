@@ -111,6 +111,9 @@ const dimensionRoutes = require('./components/dimensions/routes');
 const partnerRoutes = require('./components/partners/routes');
 const trainingRouter = require('./components/training/routes');
 const feedRoutes = require('./components/feed/routes');
+const { socialApiMiddleware } = require('./components/social/http-adapter');
+
+app.use(socialApiMiddleware)
 
 app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/tracking', validateTokenRoute, trackingRoutes)
