@@ -1094,8 +1094,8 @@ module.exports = {
             const student = await getUserByToken(req);
             const { users } = await ClassModel.findById(classID);
             const filterUser = users.filter(
-                (user) => (user.userID || user._id.toString()) === student.id
-            );
+                (user) => user.userID === student.id || user._id.toString() === student.id
+            );      
             if (filterUser.length > 0) {
                 const evaluation = await CourseEvaluationModel.updateOne(
                     { classID: classID, studentID: student.id },
