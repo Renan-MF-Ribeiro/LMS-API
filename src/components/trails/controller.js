@@ -385,7 +385,7 @@ module.exports = {
                         _id: { $ne: payload._id },
                     }, {
                         _id: { $ne: payload._id },
-                        titleURL: { $regex: payload.titleURL, $options: 'i' }
+                        titleURL: { $eq: payload.titleURL }
                     }]
                 });
                 if (verify.length > 0) {
@@ -1008,7 +1008,6 @@ module.exports = {
                         'UPDATE',
                     )
                 } else {
-                    console.log("!")
                     _messages.badRequest(
                         res,
                         req,
