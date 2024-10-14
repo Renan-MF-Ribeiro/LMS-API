@@ -385,7 +385,7 @@ module.exports = {
                         _id: { $ne: payload._id },
                     }, {
                         _id: { $ne: payload._id },
-                        titleURL: { $regex: payload.titleURL, options: 'i' }
+                        titleURL: { $regex: payload.titleURL, $options: 'i' }
                     }]
                 });
                 if (verify.length > 0) {
@@ -757,7 +757,7 @@ module.exports = {
                         _id: { $ne: payload._id },
                     }, {
                         _id: { $ne: payload._id },
-                        titleURL: { $regex: payload.titleURL, options: 'i' }
+                        titleURL: { $regex: payload.titleURL, $options: 'i' }
                     }]
                 })
 

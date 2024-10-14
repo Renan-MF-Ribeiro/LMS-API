@@ -34,7 +34,6 @@ module.exports = {
 
     badRequest: async (res, req, err, data, component = null, rota = null) => {
         info(component, rota, 'badRequest', err)
-        console.log("!!")
         await _functions.recordLog(req, 'BAD REQUEST', err, component, rota)
         res.status(httpStatus.BAD_REQUEST).json(data)
     },
