@@ -543,10 +543,18 @@ function storageLog (message, dataNew = [], dataOld = [], cronType) {
     });
 }
 
+function hideCPFNumbers(cpf) {
+    if(!cpf) return cpf;
+    
+    return String(cpf).substring(0, 3) + 'XXXXXXXX';
+}
+
 async function getUsersLoad() {
     const env = process.env.NODE_ENV;
 
-    const directory = env === 'production' ? 'producao' : 'homologacao';
+    const isProduction = env === 'production';
+
+    const directory = isProduction ? 'producao' : 'homologacao';
 
     try {
         // Lista arquivos no container sftp
@@ -614,12 +622,16 @@ async function getUsersLoad() {
                         _id: existingUser._id,
                         processedUser: {
                             ...processedUser,
+                            cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
                             groupsAD: [...new Set(groupsAD)],
                         },
                     });
                 } else {
                     usersToSend.push(account);
-                    newUsers.push(processedUser);
+                    newUsers.push({
+                        ...processedUser,
+                        cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
+                    });
                 }
             }
 
@@ -669,9 +681,11 @@ async function getUsersLoad() {
 
             switch (config.usersData.postProcessingAction) {
                 case "move":
+                    console.log('Moving file to "processados" folder');
                     await moveAzureFile('sftp', `${directory}/${fileName}`, `${directory}/processados/${fileName}`);
                     break;
                 case "delete":
+                    console.log('Deleting file');
                     await deleteAzureFile('sftp', `${directory}/${fileName}`);
                     break;
 
