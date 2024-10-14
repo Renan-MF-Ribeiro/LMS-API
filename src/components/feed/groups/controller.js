@@ -1,13 +1,14 @@
 const axios = require('axios');
 const _messages = require('../../../utils/messages');
 
-module.exports = {
+const GroupController = {
     async getAllGroups(req, res) {
         const { status } = req.query;
+        const headers = { Authorization: req.headers.authorization };
         try {
-            const query = status ? `?status=${status.toUpperCase()}` : ""
-            const uri = `${process.env.API_SOCIAL}/group/${process.env.CLIENT_ID}${query}`;
-            const { data } = await axios.get(uri);
+            const query = status ? `?status=${status.toUpperCase()}` : '';
+            const uri = `${process.env.API_SOCIAL}/groups${query}`;
+            const { data } = await axios.get(uri, { headers });
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -20,28 +21,12 @@ module.exports = {
             );
         }
     },
-    async getGroupsManagedByUser(req, res) {
+    async findUsersGroup(req, res) {
         const { userId } = req.params;
+        const headers = { Authorization: req.headers.authorization };
         try {
-            const uri = `${process.env.API_SOCIAL}/group/managed/${userId}`;
-            const { data } = await axios.get(uri);
-            return _messages.success(res, req, data);
-        } catch (error) {
-            return _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'feed',
-                'getGroupsManagedByUser'
-            );
-        }
-    },
-    async findGroupsUserIsAMember(req, res) {
-        const { userId } = req.params;
-        try {
-            const uri = `${process.env.API_SOCIAL}/group/ismember/${userId}`;
-            const { data } = await axios.get(uri);
+            const uri = `${process.env.API_SOCIAL}/groups/user/${userId}`;
+            const { data } = await axios.get(uri, { headers });
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -56,9 +41,10 @@ module.exports = {
     },
     async getGroupById(req, res) {
         const { groupId } = req.params;
+        const headers = { Authorization: req.headers.authorization };
         try {
-            const uri = `${process.env.API_SOCIAL}/group/info/${groupId}`;
-            const { data } = await axios.get(uri);
+            const uri = `${process.env.API_SOCIAL}/groups/info/${groupId}`;
+            const { data } = await axios.get(uri, { headers });
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -71,28 +57,12 @@ module.exports = {
             );
         }
     },
-    async addMemberToGroups(req, res) {
-        const { groupId, userId } = req.params;
-        try {
-            const uri = `${process.env.API_SOCIAL}/group/members/${groupId}/${userId}`;
-            const { data } = await axios.post(uri);
-            return _messages.success(res, req, data);
-        } catch (error) {
-            return _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'feed',
-                'addMemberToGroups'
-            );
-        }
-    },
     async createGroup(req, res) {
         const groupBody = req.body;
+        const headers = { Authorization: req.headers.authorization };
         try {
-            const uri = `${process.env.API_SOCIAL}/group/`;
-            const { data } = await axios.post(uri, groupBody);
+            const uri = `${process.env.API_SOCIAL}/groups/`;
+            const { data } = await axios.post(uri, groupBody, { headers });
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -108,10 +78,11 @@ module.exports = {
     async updateGroup(req, res) {
         const groupBody = req.body;
         const { groupId } = req.params;
+        const headers = { Authorization: req.headers.authorization };
 
         try {
-            const uri = `${process.env.API_SOCIAL}/group/${groupId}`;
-            const { data } = await axios.put(uri, groupBody);
+            const uri = `${process.env.API_SOCIAL}/groups/${groupId}`;
+            const { data } = await axios.put(uri, groupBody, { headers });
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -126,9 +97,11 @@ module.exports = {
     },
     async deleteUserFromGroup(req, res) {
         const { groupId, userId } = req.params;
+        const headers = { Authorization: req.headers.authorization };
+
         try {
-            const uri = `${process.env.API_SOCIAL}/group/${groupId}/${userId}`;
-            const { data } = await axios.delete(uri);
+            const uri = `${process.env.API_SOCIAL}/groups/${groupId}/${userId}`;
+            const { data } = await axios.delete(uri, { headers });
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -143,9 +116,11 @@ module.exports = {
     },
     async deleteGroup(req, res) {
         const { groupId } = req.params;
+        const headers = { Authorization: req.headers.authorization };
+
         try {
-            const uri = `${process.env.API_SOCIAL}/group/${groupId}`;
-            const { data } = await axios.delete(uri);
+            const uri = `${process.env.API_SOCIAL}/groups/${groupId}`;
+            const { data } = await axios.delete(uri, { headers });
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -159,3 +134,5 @@ module.exports = {
         }
     },
 };
+
+module.exports = GroupController;
