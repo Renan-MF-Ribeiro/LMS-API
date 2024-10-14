@@ -1285,6 +1285,7 @@ module.exports = {
 
                     const studentRegister = {
                         "_id": student._id,
+                        "userID": student._id,
                         "name": student.name,
                         "email": student.email,
                         "networkLogin": student.networkLogin,

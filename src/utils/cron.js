@@ -41,10 +41,12 @@ const {
 } = require('../components/users/business');
 
 const {
-    getAzureFile,
+    listAzureFilesInContainer,
+    getAzureFileByPath,
+    moveAzureFile,
     readXLSXUsersBuffer,
     readCSVUsersBuffer,
-    moveUserLoadToProcessed,
+    deleteAzureFile,
 } = require('../utils/files');
 const { sendMessageToKafka } = require('../components/new-messages/business');
 const ExcelJS = require('exceljs');
@@ -61,8 +63,6 @@ const { Section } = require('../components/sections/model');
 const emailTemplate = config.messenger.emailTemplate;
 const groupingA = config.cron.average.groupA;
 const groupingB = config.cron.average.groupB;
-const inactivateIfNotInSpreadsheet =
-    config.usersData.inactivateIfNotInSpreadsheet;
 
 module.exports = {
     cronNotifyResponsibleUsers () {
@@ -543,24 +543,45 @@ function storageLog (message, dataNew = [], dataOld = [], cronType) {
     });
 }
 
-async function getUsersLoad () {
+function hideCPFNumbers(cpf) {
+    if(!cpf) return cpf;
+    
+    return String(cpf).substring(0, 3) + 'XXXXXXXX';
+}
+
+async function getUsersLoad() {
+    const env = process.env.NODE_ENV;
+
+    const isProduction = env === 'production';
+
+    const directory = isProduction ? 'producao' : 'homologacao';
 
     try {
-        const usersLoad = await getAzureFile();
-        if (usersLoad) {
-            let users
+        // Lista arquivos no container sftp
+        const files = (await listAzureFilesInContainer('sftp', directory))
+            .filter(fileName => fileName.endsWith('.csv') || fileName.endsWith('.xlsx'));
 
-            if (config.userLoadCsv.active) {
-                users = await readCSVUsersBuffer(usersLoad.readableStream);
-            } else {
-                users = await readXLSXUsersBuffer(usersLoad.buffer);
-            }
+        // Se não houver arquivos, encerra a exec
+        if (files.length === 0) {
+            return;
+        }
+
+        // Processa cada arquivo
+        for await (const fileName of files) {
+            console.log(`Processando arquivo ${fileName}...`);
+
+            const file = await getAzureFileByPath('sftp', `${directory}/${fileName}`);
+            const fileExtension = fileName.split('.').pop();
+
+            const users = fileExtension === 'csv'
+                ? await readCSVUsersBuffer(file.readableStream)
+                : await readXLSXUsersBuffer(file.buffer);
 
             const newUsers = [];
             const existingUsers = [];
             const usersToSend = [];
 
-            const elegibilityResponse = await axios.get(
+            const eligibilityResponse = await axios.get(
                 `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
                 {
                     headers: {
@@ -568,20 +589,23 @@ async function getUsersLoad () {
                     },
                 }
             );
-            const fieldsForElegibility = elegibilityResponse.data.fields;
+
+            const fieldsForEligibility = eligibilityResponse.data.fields;
 
             console.log(
                 `Iniciando Processamento de ${users.length} usuários...`
             );
-            for (const user of users) {
+
+            for await (const user of users) {
                 const existingUser = await User.findOne({
                     networkLogin: user.networkLogin,
                 });
 
                 const processedUser = processUsersLoad(
                     user,
-                    fieldsForElegibility
+                    fieldsForEligibility
                 );
+
                 const account = await processUserAccount(processedUser);
 
                 processedUser.password = existingUser
@@ -593,16 +617,21 @@ async function getUsersLoad () {
                         ...processedUser.groupsAD,
                         ...existingUser.groupsAD,
                     ];
+
                     existingUsers.push({
                         _id: existingUser._id,
                         processedUser: {
                             ...processedUser,
+                            cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
                             groupsAD: [...new Set(groupsAD)],
                         },
                     });
                 } else {
                     usersToSend.push(account);
-                    newUsers.push(processedUser);
+                    newUsers.push({
+                        ...processedUser,
+                        cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
+                    });
                 }
             }
 
@@ -611,25 +640,24 @@ async function getUsersLoad () {
             );
 
             const data_start = new Date();
+
             for (const user of existingUsers) {
-                await User.findByIdAndUpdate(user._id, {
-                    ...user.processedUser,
-                });
+                await User.findByIdAndUpdate(user._id, user.processedUser);
             }
 
-            if (inactivateIfNotInSpreadsheet) {
+            if (config.usersData.inactivateIfNotInSpreadsheet) {
                 await User.updateMany(
-                    {
-                        updatedAt: { $lt: data_start },
-                    },
+                    { updatedAt: { $lt: data_start } },
                     { $set: { status: 'INATIVO' } },
                     { multi: true }
                 );
             }
+
             if (newUsers.length > 0) {
                 console.log(
                     `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
                 );
+
                 await User.insertMany(newUsers);
 
                 if (config.messenger.sendUsersToMicrosservice) {
@@ -639,19 +667,32 @@ async function getUsersLoad () {
                     await NewMessage.create(campaign);
                 }
             }
+
             console.log('Novos usuários criados');
+
             storageLog(
                 `Carga de ${users.length} usuários`,
                 '',
                 '',
                 'DAILY_CHARGE'
             );
-            if (config.userLoadCsv.active) {
-                users = await moveUserLoadToProcessed(usersLoad.readableStream);
-            } else {
-                users = await moveUserLoadToProcessed(usersLoad.buffer);
-            }
 
+            console.log('Post processing action:', config.usersData.postProcessingAction ?? 'none');
+
+            switch (config.usersData.postProcessingAction) {
+                case "move":
+                    console.log('Moving file to "processados" folder');
+                    await moveAzureFile('sftp', `${directory}/${fileName}`, `${directory}/processados/${fileName}`);
+                    break;
+                case "delete":
+                    console.log('Deleting file');
+                    await deleteAzureFile('sftp', `${directory}/${fileName}`);
+                    break;
+
+                default:
+                    console.log('No post processing action');
+                    break;
+            }
         }
     } catch (error) {
         console.log(error);

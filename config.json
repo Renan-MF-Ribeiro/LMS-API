@@ -37,6 +37,7 @@
         }
     },
     "usersData": {
+        "postProcessingAction": "delete",
         "inactivateIfNotInSpreadsheet": false,
         "sendSignUpActivationEmail": false,
         "daysSinceLastFeedback": 180
