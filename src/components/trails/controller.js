@@ -768,7 +768,7 @@ module.exports = {
                         _id: { $ne: payload._id },
                     }, {
                         _id: { $ne: payload._id },
-                        titleURL: { $regex: payload.titleURL, $options: 'i' }
+                        titleURL: { $eq: payload.titleURL }
                     }]
                 })
 
@@ -776,7 +776,6 @@ module.exports = {
                     const titleDuplicate = verify.some((trail) => trail.title === payload.title)
                     const titleURLDuplicate = verify.some((trail) => trail.titleURL === payload.titleURL)
                     if (titleURLDuplicate) payload.titleURL = `${payload.titleURL}-${verify.length}`
-
                     if (titleDuplicate) {
                         return _messages.badRequest(
                             res,
@@ -788,6 +787,7 @@ module.exports = {
                         );
                     }
                 }
+                console.log(verify)
                 if (verify.length === 0) {
                     if (thumb) {
                         thumbPath = await azureBlob(thumb, 'trails/thumbs')
@@ -1008,6 +1008,7 @@ module.exports = {
                         'UPDATE',
                     )
                 } else {
+                    console.log("!")
                     _messages.badRequest(
                         res,
                         req,
