@@ -44,7 +44,7 @@ const { updateCertificateExpirationDate } = require('../certificates/business');
 const ObjectId = require("mongoose").Types.ObjectId;
 
 module.exports = {
-    async getCollaborative (req, res) {
+    async getCollaborative(req, res) {
         try {
             const queryParams = req.query;
 
@@ -74,7 +74,7 @@ module.exports = {
         }
     },
 
-    async getCollaborativeChannel (req, res) {
+    async getCollaborativeChannel(req, res) {
         try {
             const user = await getUserByToken(req);
             const { skip, limit } = pagination(req);
@@ -153,7 +153,7 @@ module.exports = {
         }
     },
 
-    async create (req, res) {
+    async create(req, res) {
         try {
 
             const payload = req.body
@@ -252,7 +252,7 @@ module.exports = {
         }
     },
 
-    async findById (req, res) {
+    async findById(req, res) {
         try {
             const _id = req.params.trailId;
             const trail = await Trail.findOne({ _id }, '-innerText');
@@ -269,7 +269,7 @@ module.exports = {
         }
     },
 
-    async findByIdWithTrackingAndInnerText (req, res) {
+    async findByIdWithTrackingAndInnerText(req, res) {
         try {
             const findValue = req.params.trailId;
             const user = await getUserByToken(req);
@@ -351,7 +351,7 @@ module.exports = {
         }
     },
 
-    async multiUploadCreate (req, res) {
+    async multiUploadCreate(req, res) {
 
         try {
             const { thumb, banner, background } = req.files;
@@ -385,7 +385,7 @@ module.exports = {
                         _id: { $ne: payload._id },
                     }, {
                         _id: { $ne: payload._id },
-                        titleURL: { $eq: payload.titleURL }
+                        titleURL: { $regex: payload.titleURL, options: 'i' }
                     }]
                 });
                 if (verify.length > 0) {
@@ -404,201 +404,190 @@ module.exports = {
                         );
                     }
                 }
-                if (verify.length === 0) {
-                    let thumbPath;
-                    let bannerPath;
-                    let backgroundPath;
-                    if (thumb) {
-                        thumbPath = await azureBlob(thumb, 'trails/thumbs');
-                        if (process.env.NODE_ENV !== 'local') {
-                            thumbPath = thumbPath.replace(
-                                AZURE_BLOB_URL,
-                                DOMAIN
-                            );
-                        }
-                    }
-                    if (banner) {
-                        bannerPath = await azureBlob(banner, 'trails/banners');
-                    }
-
-                    if (innerTextBanner) {
-                        innerTextBanner = await azureBlob(innerTextBanner, 'trails/banners')
-                    } else {
-                        innerTextBanner = payload.innerTextBanner
-                    }
-
-                    if (background) {
-                        backgroundPath = await azureBlob(
-                            background,
-                            'trails/backgrounds'
+                let thumbPath;
+                let bannerPath;
+                let backgroundPath;
+                if (thumb) {
+                    thumbPath = await azureBlob(thumb, 'trails/thumbs');
+                    if (process.env.NODE_ENV !== 'local') {
+                        thumbPath = thumbPath.replace(
+                            AZURE_BLOB_URL,
+                            DOMAIN
                         );
-                        if (process.env.NODE_ENV !== 'local') {
-                            backgroundPath = backgroundPath.replace(
-                                AZURE_BLOB_URL,
-                                DOMAIN
-                            );
-                        }
                     }
+                }
+                if (banner) {
+                    bannerPath = await azureBlob(banner, 'trails/banners');
+                }
 
-                    if (payload.supportFileMaterial) {
-                        const fileArray = payload.supportFileMaterial.map(
-                            key => req.files[key],
-                        )
-                        const supportMaterial = []
+                if (innerTextBanner) {
+                    innerTextBanner = await azureBlob(innerTextBanner, 'trails/banners')
+                } else {
+                    innerTextBanner = payload.innerTextBanner
+                }
 
-                        for (const file of fileArray) {
-                            let path = await azureBlob(file, 'trails/material')
-                            path = path.replace(AZURE_BLOB_URL, DOMAIN)
-                            const material = {
-                                _id: new mongoose.Types.ObjectId(),
-                                url: path,
-                                name: file.name,
-                                size: file.size,
-                                deleted: false,
-                            }
-                            supportMaterial.push(material)
-                        }
-                        payload.supportMaterial = [
-                            ...payload.supportMaterial,
-                            ...supportMaterial,
-                        ]
-                        delete payload.supportFileMaterial
+                if (background) {
+                    backgroundPath = await azureBlob(
+                        background,
+                        'trails/backgrounds'
+                    );
+                    if (process.env.NODE_ENV !== 'local') {
+                        backgroundPath = backgroundPath.replace(
+                            AZURE_BLOB_URL,
+                            DOMAIN
+                        );
                     }
+                }
 
-                    if (payload.galleryFiles) {
-                        const fileArray = payload.galleryFiles.map((item) => {
-                            return {
-                                ...item,
-                                file: req.files[item.name]
-                            }
-                        },
-                        )
-                        const gallery = []
+                if (payload.supportFileMaterial) {
+                    const fileArray = payload.supportFileMaterial.map(
+                        key => req.files[key],
+                    )
+                    const supportMaterial = []
 
-                        for (const image of fileArray) {
-                            const file = image.file
-                            let path = await azureBlob(file, 'trails/gallery')
-                            path = path.replace(AZURE_BLOB_URL, DOMAIN)
-                            const material = {
-                                _id: new mongoose.Types.ObjectId(),
-                                url: path,
-                                name: file.name,
-                                size: file.size,
-                                deleted: false,
-                                title: image.title,
-                                description: image.description
-                            }
-                            gallery.push(material)
+                    for (const file of fileArray) {
+                        let path = await azureBlob(file, 'trails/material')
+                        path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                        const material = {
+                            _id: new mongoose.Types.ObjectId(),
+                            url: path,
+                            name: file.name,
+                            size: file.size,
+                            deleted: false,
                         }
-                        payload.gallery = [
-                            ...payload.gallery,
-                            ...gallery,
-                        ]
-                        delete payload.galleryFiles
+                        supportMaterial.push(material)
                     }
+                    payload.supportMaterial = [
+                        ...payload.supportMaterial,
+                        ...supportMaterial,
+                    ]
+                    delete payload.supportFileMaterial
+                }
 
-                    payload = {
-                        ...payload,
-                        enabled: true,
-                        thumbPath: thumbPath,
-                        bannerPath: bannerPath,
-                        backgroundPath,
-                        innerTextBanner
-                    };
+                if (payload.galleryFiles) {
+                    const fileArray = payload.galleryFiles.map((item) => {
+                        return {
+                            ...item,
+                            file: req.files[item.name]
+                        }
+                    },
+                    )
+                    const gallery = []
 
-                    if (payload.post) {
-                        const hasPostItem = payload.items.some((item) => item.itemID.kind === 'PostItem')
-                        if (hasPostItem) {
-                            const itemPostIndex = payload.items.findIndex((item) => item.itemID.kind === 'PostItem')
-                            const item = payload.items[itemPostIndex]
-                            if (item.itemID.title !== payload.title) {
-                                const updatedItem = {
-                                    ...item.itemID,
-                                    title: payload.title,
-                                    description: payload.description,
-                                    enabled: true,
-                                    thumbPath: payload.thumbPath,
-                                    titleURL: payload.titleURL,
-                                };
-                                const { _doc } = await PostItem.findOneAndUpdate({ _id: item.itemID._id }, updatedItem, { new: true })
-                                payload.items[itemPostIndex].itemID = _doc
-                            }
-                        } else {
-                            const user = await getUserByToken(req);
-                            const item = {
+                    for (const image of fileArray) {
+                        const file = image.file
+                        let path = await azureBlob(file, 'trails/gallery')
+                        path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                        const material = {
+                            _id: new mongoose.Types.ObjectId(),
+                            url: path,
+                            name: file.name,
+                            size: file.size,
+                            deleted: false,
+                            title: image.title,
+                            description: image.description
+                        }
+                        gallery.push(material)
+                    }
+                    payload.gallery = [
+                        ...payload.gallery,
+                        ...gallery,
+                    ]
+                    delete payload.galleryFiles
+                }
+
+                payload = {
+                    ...payload,
+                    enabled: true,
+                    thumbPath: thumbPath,
+                    bannerPath: bannerPath,
+                    backgroundPath,
+                    innerTextBanner
+                };
+
+                if (payload.post) {
+                    const hasPostItem = payload.items.some((item) => item.itemID.kind === 'PostItem')
+                    if (hasPostItem) {
+                        const itemPostIndex = payload.items.findIndex((item) => item.itemID.kind === 'PostItem')
+                        const item = payload.items[itemPostIndex]
+                        if (item.itemID.title !== payload.title) {
+                            const updatedItem = {
+                                ...item.itemID,
                                 title: payload.title,
                                 description: payload.description,
                                 enabled: true,
                                 thumbPath: payload.thumbPath,
                                 titleURL: payload.titleURL,
-                                author: user._id,
-                                kind: 'PostItem'
-                            }
-                            const postItem = await PostItem.create(item);
-                            if (payload.items.length) {
-                                payload.items.push({
-                                    "mandatory": false,
-                                    "chief": false,
-                                    "optional": false,
-                                    "afterSeparator": "empty",
-                                    "itemID": postItem
-                                })
-                            } else {
-                                payload.items = [{
-                                    "mandatory": false,
-                                    "chief": false,
-                                    "optional": false,
-                                    "afterSeparator": "empty",
-                                    "itemID": postItem
-                                }]
-                            }
+                            };
+                            const { _doc } = await PostItem.findOneAndUpdate({ _id: item.itemID._id }, updatedItem, { new: true })
+                            payload.items[itemPostIndex].itemID = _doc
+                        }
+                    } else {
+                        const user = await getUserByToken(req);
+                        const item = {
+                            title: payload.title,
+                            description: payload.description,
+                            enabled: true,
+                            thumbPath: payload.thumbPath,
+                            titleURL: payload.titleURL,
+                            author: user._id,
+                            kind: 'PostItem'
+                        }
+                        const postItem = await PostItem.create(item);
+                        if (payload.items.length) {
+                            payload.items.push({
+                                "mandatory": false,
+                                "chief": false,
+                                "optional": false,
+                                "afterSeparator": "empty",
+                                "itemID": postItem
+                            })
+                        } else {
+                            payload.items = [{
+                                "mandatory": false,
+                                "chief": false,
+                                "optional": false,
+                                "afterSeparator": "empty",
+                                "itemID": postItem
+                            }]
                         }
                     }
-                    const items = []
-
-                    const trail = await Trail.create(payload);
-
-                    payload.items.forEach((item) => {
-                        items.push({
-                            ...item,
-                            urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}/${item.itemID._id}`,
-                            urlTrail: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}`,
-                            itemID: item.itemID._id,
-                        })
-                    })
-
-                    trail.items = items
-
-                    const newData = await Trail.updateOne(
-                        { _id: { $eq: trail._id } },
-                        trail,
-                        { new: true }
-                    );
-                    // const newData = await Trail.find({ _id: { $eq: trail._id } });
-
-                    _messages.success(
-                        res,
-                        req,
-                        trail,
-                        'Atualização de dados',
-                        'trails',
-                        'multiUploadCreate',
-                        newData,
-                        [],
-                        true,
-                        'UPDATE'
-                    );
-                } else {
-                    _messages.badRequest(
-                        res,
-                        req,
-                        'Já existe um trilha cadastrada com esse título',
-                        'Já existe um trilha cadastrada com esse título',
-                        'trails',
-                        'multiUploadCreate',
-                        '5d9f22722cefc7329473e5c5'
-                    );
                 }
+                const items = []
+
+                const trail = await Trail.create(payload);
+
+                payload.items.forEach((item) => {
+                    items.push({
+                        ...item,
+                        urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}/${item.itemID._id}`,
+                        urlTrail: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}`,
+                        itemID: item.itemID._id,
+                    })
+                })
+
+                trail.items = items
+
+                const newData = await Trail.updateOne(
+                    { _id: { $eq: trail._id } },
+                    trail,
+                    { new: true }
+                );
+                // const newData = await Trail.find({ _id: { $eq: trail._id } });
+
+                _messages.success(
+                    res,
+                    req,
+                    trail,
+                    'Atualização de dados',
+                    'trails',
+                    'multiUploadCreate',
+                    newData,
+                    [],
+                    true,
+                    'UPDATE'
+                );
+
             }
         } catch (error) {
             console.log(error)
@@ -613,7 +602,7 @@ module.exports = {
         }
     },
 
-    async changeStatus (req, res) {
+    async changeStatus(req, res) {
         try {
             const { _id, enabled } = req.body;
 
@@ -655,7 +644,7 @@ module.exports = {
         }
     },
 
-    async duplicate (req, res) {
+    async duplicate(req, res) {
         try {
             const body = req.body;
             delete body?.descriptionView;
@@ -685,7 +674,7 @@ module.exports = {
         }
     },
 
-    async changeShowcase (req, res) {
+    async changeShowcase(req, res) {
         try {
             const { _id, showcase } = req.body;
 
@@ -727,7 +716,7 @@ module.exports = {
         }
     },
 
-    async update (req, res) {
+    async update(req, res) {
         try {
             let { thumb, banner, background, innerTextBanner } = req.files
             const { _id } = JSON.parse(req.fields.payload)
@@ -768,7 +757,7 @@ module.exports = {
                         _id: { $ne: payload._id },
                     }, {
                         _id: { $ne: payload._id },
-                        titleURL: { $eq: payload.titleURL }
+                        titleURL: { $regex: payload.titleURL, options: 'i' }
                     }]
                 })
 
@@ -787,237 +776,225 @@ module.exports = {
                         );
                     }
                 }
-                console.log(verify)
-                if (verify.length === 0) {
-                    if (thumb) {
-                        thumbPath = await azureBlob(thumb, 'trails/thumbs')
-                        if (process.env.NODE_ENV !== 'local') {
-                            thumbPath = thumbPath.replace(
-                                AZURE_BLOB_URL,
-                                DOMAIN,
-                            )
-                        }
-                    }
-                    if (banner) {
-                        bannerPath = await azureBlob(banner, 'trails/banners')
-                    }
-
-                    if (innerTextBanner) {
-                        innerTextBanner = await azureBlob(innerTextBanner, 'trails/banners')
-                    } else {
-                        innerTextBanner = payload.innerTextBanner
-                    }
-
-                    if (background) {
-                        backgroundPath = await azureBlob(
-                            background,
-                            'trails/backgrounds',
+                if (thumb) {
+                    thumbPath = await azureBlob(thumb, 'trails/thumbs')
+                    if (process.env.NODE_ENV !== 'local') {
+                        thumbPath = thumbPath.replace(
+                            AZURE_BLOB_URL,
+                            DOMAIN,
                         )
-                        if (process.env.NODE_ENV !== 'local') {
-                            backgroundPath = backgroundPath.replace(
-                                AZURE_BLOB_URL,
-                                DOMAIN,
-                            )
-                        }
-                    } else {
-                        backgroundPath = payload.backgroundPath
-                            ? payload.backgroundPath
-                            : null
                     }
+                }
+                if (banner) {
+                    bannerPath = await azureBlob(banner, 'trails/banners')
+                }
 
-                    delete payload.thumb
-                    delete payload.banner
+                if (innerTextBanner) {
+                    innerTextBanner = await azureBlob(innerTextBanner, 'trails/banners')
+                } else {
+                    innerTextBanner = payload.innerTextBanner
+                }
 
-                    if (payload.separators) {
-                        for (separator of payload.separators) {
-                            if (!ObjectId.isValid(separator._id)) {
-                                const oldId = separator._id
-                                const newId = new mongoose.Types.ObjectId()
-                                payload.items = payload.items.map(item => {
-                                    if (item.afterSeparator == oldId) {
-                                        item.afterSeparator = newId
-                                    }
-                                    return item
-                                })
-                                separator._id = newId
-                            }
-                        }
-                    }
-
-                    if (payload.supportFileMaterial) {
-                        const fileArray = payload.supportFileMaterial.map(
-                            key => req.files[key],
+                if (background) {
+                    backgroundPath = await azureBlob(
+                        background,
+                        'trails/backgrounds',
+                    )
+                    if (process.env.NODE_ENV !== 'local') {
+                        backgroundPath = backgroundPath.replace(
+                            AZURE_BLOB_URL,
+                            DOMAIN,
                         )
-                        const supportMaterial = []
+                    }
+                } else {
+                    backgroundPath = payload.backgroundPath
+                        ? payload.backgroundPath
+                        : null
+                }
 
-                        for (const file of fileArray) {
-                            let path = await azureBlob(file, 'trails/material')
-                            path = path.replace(AZURE_BLOB_URL, DOMAIN)
-                            const material = {
-                                _id: new mongoose.Types.ObjectId(),
-                                url: path,
-                                name: file.name,
-                                size: file.size,
-                                deleted: false,
-                            }
-                            supportMaterial.push(material)
+                delete payload.thumb
+                delete payload.banner
+
+                if (payload.separators) {
+                    for (separator of payload.separators) {
+                        if (!ObjectId.isValid(separator._id)) {
+                            const oldId = separator._id
+                            const newId = new mongoose.Types.ObjectId()
+                            payload.items = payload.items.map(item => {
+                                if (item.afterSeparator == oldId) {
+                                    item.afterSeparator = newId
+                                }
+                                return item
+                            })
+                            separator._id = newId
                         }
-                        payload.supportMaterial = [
-                            ...payload.supportMaterial,
-                            ...supportMaterial,
-                        ]
-                        delete payload.supportFileMaterial
                     }
+                }
 
-                    if (payload.galleryFiles) {
-                        const fileArray = payload.galleryFiles.map(
-                            file => ({ ...file, file: req.files[file.name] }),
-                        )
-                        const gallery = []
+                if (payload.supportFileMaterial) {
+                    const fileArray = payload.supportFileMaterial.map(
+                        key => req.files[key],
+                    )
+                    const supportMaterial = []
 
-                        for (const image of fileArray) {
-                            const file = image.file
-                            let path = await azureBlob(file, 'trails/gallery')
-                            path = path.replace(AZURE_BLOB_URL, DOMAIN)
-                            const material = {
-                                _id: new mongoose.Types.ObjectId(),
-                                url: path,
-                                name: file.name,
-                                size: file.size,
-                                deleted: false,
-                                title: image.title,
-                                description: image.description
-                            }
-                            gallery.push(material)
+                    for (const file of fileArray) {
+                        let path = await azureBlob(file, 'trails/material')
+                        path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                        const material = {
+                            _id: new mongoose.Types.ObjectId(),
+                            url: path,
+                            name: file.name,
+                            size: file.size,
+                            deleted: false,
                         }
+                        supportMaterial.push(material)
+                    }
+                    payload.supportMaterial = [
+                        ...payload.supportMaterial,
+                        ...supportMaterial,
+                    ]
+                    delete payload.supportFileMaterial
+                }
 
-                        payload.gallery = [
-                            ...payload.gallery,
-                            ...gallery,
-                        ]
-                        delete payload.galleryFiles
+                if (payload.galleryFiles) {
+                    const fileArray = payload.galleryFiles.map(
+                        file => ({ ...file, file: req.files[file.name] }),
+                    )
+                    const gallery = []
+
+                    for (const image of fileArray) {
+                        const file = image.file
+                        let path = await azureBlob(file, 'trails/gallery')
+                        path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                        const material = {
+                            _id: new mongoose.Types.ObjectId(),
+                            url: path,
+                            name: file.name,
+                            size: file.size,
+                            deleted: false,
+                            title: image.title,
+                            description: image.description
+                        }
+                        gallery.push(material)
                     }
 
-                    payload = {
-                        ...payload,
-                        thumbPath,
-                        bannerPath,
-                        backgroundPath,
-                        innerTextBanner
-                    }
+                    payload.gallery = [
+                        ...payload.gallery,
+                        ...gallery,
+                    ]
+                    delete payload.galleryFiles
+                }
 
-                    const [trail] = await Trail.find({
-                        _id: { $eq: payload._id },
+                payload = {
+                    ...payload,
+                    thumbPath,
+                    bannerPath,
+                    backgroundPath,
+                    innerTextBanner
+                }
+
+                const [trail] = await Trail.find({
+                    _id: { $eq: payload._id },
+                })
+
+                if (payload.mandatory?.length == 0) {
+                    // Setar todos os mandatory de itens como false.
+                    trail.items.forEach(item => {
+                        item.mandatory = false
                     })
 
-                    if (payload.mandatory?.length == 0) {
-                        // Setar todos os mandatory de itens como false.
-                        trail.items.forEach(item => {
-                            item.mandatory = false
-                        })
+                    payload.items.forEach(item => {
+                        item.mandatory = false
+                    })
+                }
 
-                        payload.items.forEach(item => {
-                            item.mandatory = false
-                        })
-                    }
-
-                    if (payload.post) {
-                        const hasPostItem = payload.items.some((item) => item.itemID.kind === 'PostItem')
-                        if (hasPostItem) {
-                            const itemPostIndex = payload.items.findIndex((item) => item.itemID.kind === 'PostItem')
-                            const item = payload.items[itemPostIndex]
-                            if (item.itemID.title !== payload.title) {
-                                const updatedItem = {
-                                    ...item.itemID,
-                                    title: payload.title,
-                                    description: payload.description,
-                                    enabled: true,
-                                    thumbPath: payload.thumbPath,
-                                    titleURL: payload.titleURL,
-                                };
-                                const { _doc } = await PostItem.findOneAndUpdate({ _id: item.itemID._id }, updatedItem, { new: true })
-                                payload.items[itemPostIndex].itemID = _doc
-                            }
-                        } else {
-                            const user = await getUserByToken(req);
-                            const item = {
+                if (payload.post) {
+                    const hasPostItem = payload.items.some((item) => item.itemID.kind === 'PostItem')
+                    if (hasPostItem) {
+                        const itemPostIndex = payload.items.findIndex((item) => item.itemID.kind === 'PostItem')
+                        const item = payload.items[itemPostIndex]
+                        if (item.itemID.title !== payload.title) {
+                            const updatedItem = {
+                                ...item.itemID,
                                 title: payload.title,
                                 description: payload.description,
                                 enabled: true,
                                 thumbPath: payload.thumbPath,
                                 titleURL: payload.titleURL,
-                                author: user._id,
-                                kind: 'PostItem'
-                            }
-                            const postItem = await PostItem.create(item);
-                            if (payload.items.length) {
-                                payload.items.push({
-                                    "mandatory": false,
-                                    "chief": false,
-                                    "optional": false,
-                                    "afterSeparator": "empty",
-                                    "itemID": postItem
-                                })
-                            } else {
-                                payload.items = [{
-                                    "mandatory": false,
-                                    "chief": false,
-                                    "optional": false,
-                                    "afterSeparator": "empty",
-                                    "itemID": postItem
-                                }]
-                            }
+                            };
+                            const { _doc } = await PostItem.findOneAndUpdate({ _id: item.itemID._id }, updatedItem, { new: true })
+                            payload.items[itemPostIndex].itemID = _doc
+                        }
+                    } else {
+                        const user = await getUserByToken(req);
+                        const item = {
+                            title: payload.title,
+                            description: payload.description,
+                            enabled: true,
+                            thumbPath: payload.thumbPath,
+                            titleURL: payload.titleURL,
+                            author: user._id,
+                            kind: 'PostItem'
+                        }
+                        const postItem = await PostItem.create(item);
+                        if (payload.items.length) {
+                            payload.items.push({
+                                "mandatory": false,
+                                "chief": false,
+                                "optional": false,
+                                "afterSeparator": "empty",
+                                "itemID": postItem
+                            })
+                        } else {
+                            payload.items = [{
+                                "mandatory": false,
+                                "chief": false,
+                                "optional": false,
+                                "afterSeparator": "empty",
+                                "itemID": postItem
+                            }]
                         }
                     }
-
-
-                    const items = []
-
-                    payload.items?.forEach((item) => {
-                        items.push({
-                            ...item,
-                            urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}/${item.itemID._id}`,
-                            urlTrail: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}`,
-                            itemID: item.itemID._id,
-                        })
-                    })
-
-                    payload.items = items
-
-                    const oldData = await Trail.findOneAndUpdate(
-                        { _id: { $eq: payload._id } },
-                        payload,
-                    )
-                    const newData = await Trail.findOne({
-                        _id: { $eq: payload._id },
-                    })
-
-
-                    await updateCertificateExpirationDate(req)
-
-                    _messages.success(
-                        res,
-                        req,
-                        newData,
-                        'Atualização de dados',
-                        'trails',
-                        'update',
-                        newData,
-                        oldData,
-                        true,
-                        'UPDATE',
-                    )
-                } else {
-                    _messages.badRequest(
-                        res,
-                        req,
-                        'Já existe um trilha cadastrada com esse título',
-                        'Já existe um trilha cadastrada com esse título',
-                        'trails',
-                        'update',
-                        '5d9f22722cefc7329473e5c5',
-                    )
                 }
+
+
+                const items = []
+
+                payload.items?.forEach((item) => {
+                    items.push({
+                        ...item,
+                        urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}/${item.itemID._id}`,
+                        urlTrail: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}`,
+                        itemID: item.itemID._id,
+                    })
+                })
+
+                payload.items = items
+
+                const oldData = await Trail.findOneAndUpdate(
+                    { _id: { $eq: payload._id } },
+                    payload,
+                )
+                const newData = await Trail.findOne({
+                    _id: { $eq: payload._id },
+                })
+
+
+                await updateCertificateExpirationDate(req)
+
+                _messages.success(
+                    res,
+                    req,
+                    newData,
+                    'Atualização de dados',
+                    'trails',
+                    'update',
+                    newData,
+                    oldData,
+                    true,
+                    'UPDATE',
+                )
+
             }
         } catch (error) {
             console.log(error)
@@ -1032,7 +1009,7 @@ module.exports = {
         }
     },
 
-    async linkItems (req, res) {
+    async linkItems(req, res) {
         try {
             let exist = false;
             const { idItem, idTrail } = req.body;
@@ -1096,7 +1073,7 @@ module.exports = {
         }
     },
 
-    async linkSeparators (req, res) {
+    async linkSeparators(req, res) {
         try {
             const { idTrail, separator } = req.body;
             const { separators } = await Trail.findOne({
@@ -1135,7 +1112,7 @@ module.exports = {
         }
     },
 
-    async updateSeparators (req, res) {
+    async updateSeparators(req, res) {
         try {
             let exist = false;
             const { idTrail, separator } = req.body;
@@ -1178,7 +1155,7 @@ module.exports = {
         }
     },
 
-    async unlinkSeparators (req, res) {
+    async unlinkSeparators(req, res) {
         try {
             let exist = false;
             const { idTrail, separator } = req.body;
@@ -1220,7 +1197,7 @@ module.exports = {
         }
     },
 
-    async findAll (req, res) {
+    async findAll(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1298,7 +1275,7 @@ module.exports = {
 
 
 
-    async returnItemsByTrail (req, res) {
+    async returnItemsByTrail(req, res) {
         try {
             const { skip, limit } = pagination(req)
             const { order, sort } = ordernation(req)
@@ -1382,7 +1359,7 @@ module.exports = {
         }
     },
 
-    async returnItemsByTrailMenu (req, res) {
+    async returnItemsByTrailMenu(req, res) {
         try {
             const { id } = req.params;
             const user = await getUserByToken(req);
@@ -1447,7 +1424,7 @@ module.exports = {
         }
     },
 
-    async unlinkItems (req, res) {
+    async unlinkItems(req, res) {
         try {
             const { idItem, idTrail } = req.body;
             const { items } = await Trail.findOne(
@@ -1496,7 +1473,7 @@ module.exports = {
         }
     },
 
-    async changeItemOrderFromTrail (req, res) {
+    async changeItemOrderFromTrail(req, res) {
         try {
             const { idTrail, order } = req.body;
 
@@ -1578,7 +1555,7 @@ module.exports = {
         }
     },
 
-    async returnBannersElegibles_new (req, res) {
+    async returnBannersElegibles_new(req, res) {
         // # Nova versão para retornar banner, para melhorar a performance
         try {
             var dtInicio = new Date();
@@ -1657,7 +1634,7 @@ module.exports = {
         }
     },
 
-    async returnBannersElegibles (req, res) {
+    async returnBannersElegibles(req, res) {
         try {
             var dtInicio = new Date();
 
@@ -1718,7 +1695,7 @@ module.exports = {
         }
     },
 
-    async returnTrailsByIDS (req, res) {
+    async returnTrailsByIDS(req, res) {
         try {
             const { trailsIDS } = req.body;
             const arrTrails = [];
@@ -1741,7 +1718,7 @@ module.exports = {
         }
     },
 
-    async returnLinkTrailByItem (idItem) {
+    async returnLinkTrailByItem(idItem) {
         return new Promise(async (resolve, reject) => {
             try {
                 const trails = await Trail.find({ 'items.itemID': idItem });
@@ -1761,7 +1738,7 @@ module.exports = {
         });
     },
 
-    async mandatory (req, res) {
+    async mandatory(req, res) {
         try {
             const { idTrail, idItem, mandatory } = req.body;
             const trail = await Trail.findById(idTrail);
@@ -1800,7 +1777,7 @@ module.exports = {
         }
     },
 
-    async xapi (req, res) {
+    async xapi(req, res) {
         try {
             const trails = await Trail.find();
 
@@ -1844,7 +1821,7 @@ module.exports = {
      * @param {*} req Request
      * @param {*} res Response
      */
-    async getCourseInformation (req, res) {
+    async getCourseInformation(req, res) {
         try {
             const findValueTrail = req.params.trailId;
             const itemId = req.params.itemId;
@@ -1885,7 +1862,7 @@ module.exports = {
         }
     },
 
-    async returnTrailsByUser (req, res) {
+    async returnTrailsByUser(req, res) {
         try {
             const { userId } = req.query;
             const trails = await populateTrails(true, {
@@ -1902,7 +1879,7 @@ module.exports = {
         }
     },
 
-    async updateModeration (req, res) {
+    async updateModeration(req, res) {
         try {
             const { moderation, tags, trailId } = req.body;
 
@@ -1940,7 +1917,7 @@ module.exports = {
         }
     },
 
-    async saveComplaint (req, res) {
+    async saveComplaint(req, res) {
         try {
             const { reason, trailId } = req.body;
 
@@ -1968,7 +1945,7 @@ module.exports = {
         }
     },
 
-    async uploadMaterial (req, res) {
+    async uploadMaterial(req, res) {
         try {
             let trailId = req.fields.trailId;
             let fileArray = Object.keys(req.files).map((key) => req.files[key]);
@@ -2003,7 +1980,7 @@ module.exports = {
         }
     },
 
-    async listMaterial (req, res) {
+    async listMaterial(req, res) {
         try {
             let trailId = req.params.id;
             const trail = await Trail.findById(trailId);
@@ -2023,7 +2000,7 @@ module.exports = {
         }
     },
 
-    async listGallery (req, res) {
+    async listGallery(req, res) {
         try {
             let trailId = req.params.id;
             const trail = await Trail.findById(trailId);
@@ -2043,7 +2020,7 @@ module.exports = {
         }
     },
 
-    async downloadMaterial (req, res) {
+    async downloadMaterial(req, res) {
         try {
             let trailId = req.body.trailId;
             let materialId = req.body.materialId;
@@ -2080,7 +2057,7 @@ module.exports = {
         }
     },
 
-    async deleteMaterial (req, res) {
+    async deleteMaterial(req, res) {
         try {
             let trailId = req.body.trailId;
             let materialId = mongoose.Types.ObjectId(req.body.materialId);
@@ -2108,7 +2085,7 @@ module.exports = {
     },
 };
 
-function processTrailAndItems (trail) {
+function processTrailAndItems(trail) {
     let duration = 0;
     for (const item of trail.items) {
         duration += item.itemID.durationHours;
@@ -2128,7 +2105,7 @@ function processTrailAndItems (trail) {
     return trail;
 }
 
-function prepareObject (trail) {
+function prepareObject(trail) {
     return {
         _id: trail._id,
         title: trail.title,
@@ -2145,7 +2122,7 @@ function prepareObject (trail) {
     };
 }
 
-function createModerationAlert (trail, verb) {
+function createModerationAlert(trail, verb) {
     const title = `O conteúdo ${trail.title} foi ${verb}!`;
     const text = `Seu conteúdo ${trail.title} acabou de ser ${verb} por um moderador!`;
     const texthtml = `<p>Seu conteúdo ${trail.title} acabou de ser ${verb} por um moderador!</p>`;
@@ -2159,7 +2136,7 @@ function createModerationAlert (trail, verb) {
     return { title, text, communication, category, target, mode, texthtml };
 }
 
-async function createMessagesFromBackend (body) {
+async function createMessagesFromBackend(body) {
     try {
         const campaign = body;
         const target = campaign.target;
