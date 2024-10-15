@@ -482,13 +482,14 @@ const TrackingController = {
 
                 const completed = completedTrails.length == allItems
                 if (trail.certificate === 1 && completed) {
+                    const userFind = await User.findOne({ networkLogin: userLogin });
                     certificate = {
                         clientId: process.env.CLIENT_ID,
                         completionDate: trail.completionAt,
                         courseLoad: trail.items.reduce((accumulator, currentValue) => {
                             return accumulator + (currentValue.durationHours || 0);
                         }, 0),
-                        userName: '',
+                        userName: userFind.name,
                         userId: userLogin,
                         expirationDate: trail.expirationDate,
                         certificateDue: trail.certificateDue,
