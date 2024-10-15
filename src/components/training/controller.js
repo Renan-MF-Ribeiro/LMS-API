@@ -12,7 +12,6 @@ async function listTrainingSections(req, res) {
         .find({
             isTraining: true,
             active: true,
-            deleted: 0
         })
         .select('_id title description')
         .lean();
@@ -210,7 +209,8 @@ async function listTrainingTrackings(req, res) {
             sections: {
                 filter: {
                     isTraining: true,
-                    active: true
+                    active: true,
+                    deleted: 0
                 }
             }
         }
