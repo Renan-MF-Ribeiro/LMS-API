@@ -51,6 +51,7 @@ const TrailSchema = new mongoose.Schema(
                     _id: { type: String },
                     kind: { type: String, required: true },
                     title: { type: String, required: true },
+                    positionInProcess: { type: Number, required: false, default: null },
                     items: {
                         type: [{ type: 'ObjectId', ref: 'Item' }],
                         default: [],
@@ -118,7 +119,8 @@ const TrailSchema = new mongoose.Schema(
         archivedAt: { type: Date, required: false, default: null },
         post: { type: Boolean, required: false, default: false },
         trailIdentifier: { type: Number, trim: true, unique: true },
-        trailCategory: { type: String, trim: true, required: false }
+        trailCategory: { type: String, trim: true, required: false },
+        positionInProcess: { type: Number, required: false, default: null },
     },
     {
         strict: 'throw',
