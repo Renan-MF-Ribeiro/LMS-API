@@ -423,11 +423,6 @@ module.exports = {
         if (elegibilityFields && elegibilityFields.length > 0 && onboarding == false) {
             for (const field of elegibilityFields) {
                 if (data[field]) {
-                    console.log({
-                        field,
-                        datafield: data[field],
-                        type: typeof data[field],
-                    });
                     const fieldType = typeof data[field];
                     if (fieldType === 'object') continue;
 

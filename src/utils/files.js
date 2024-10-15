@@ -914,4 +914,72 @@ module.exports = {
             });
         });
     },
+
+    async listAzureFilesInContainer(containerName, directory) {
+        const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STRINGCONN);
+        const containerClient = blobServiceClient.getContainerClient(containerName);
+        const files = [];
+
+        const parsedDirectory = directory ? (directory.endsWith('/') ? directory : `${directory}/`) : '';
+
+        const blobsList = containerClient.listBlobsByHierarchy('/', {
+            prefix: parsedDirectory
+        });
+
+        for await (const blob of blobsList) {
+            if (blob.kind === 'prefix') continue;
+
+            files.push(blob.name.replace(parsedDirectory, ''));
+        }
+
+        return files;
+    },
+
+    async getAzureFileByPath(containerName, filePath) {
+        const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STRINGCONN);
+
+        const containerClient = blobServiceClient.getContainerClient(containerName);
+
+        const blockBlobClient = containerClient.getBlockBlobClient(filePath);
+
+        const downloadBlobResponse = await blockBlobClient.downloadToBuffer();
+
+        const decodedFile = iconv.decode(
+            downloadBlobResponse,
+            'iso88591'
+        );
+
+        const decodedReadStream = bufferToStream(decodedFile);
+
+        return {
+            readableStream: decodedReadStream,
+            buffer: downloadBlobResponse,
+        };
+    },
+
+    async moveAzureFile(containerName, sourcePath, destinationPath) {
+        const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STRINGCONN);
+
+        const containerClient = blobServiceClient.getContainerClient(containerName);
+
+        const sourceBlockBlobClient = containerClient.getBlockBlobClient(sourcePath);
+
+        const destinationBlockBlobClient = containerClient.getBlockBlobClient(destinationPath);
+
+        await destinationBlockBlobClient.beginCopyFromURL(sourceBlockBlobClient.url);
+
+        await sourceBlockBlobClient.delete();
+
+        return destinationBlockBlobClient.url;
+    },
+
+    async deleteAzureFile(containerName, filePath) {
+        const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STRINGCONN);
+
+        const containerClient = blobServiceClient.getContainerClient(containerName);
+
+        const blockBlobClient = containerClient.getBlockBlobClient(filePath);
+
+        await blockBlobClient.delete();
+    }
 };

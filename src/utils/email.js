@@ -2,8 +2,8 @@
 'use strict'
 const config = require('../../config.json')
 const sgMail = require('@sendgrid/mail')
-const { sendMfaToKafka } = require('../components/new-messages/business')
-const { processTargetUsers } = require('../components/messages/business')
+const { sendMfaToKafka, sendMessageToKafka } = require('../components/new-messages/business')
+const { processTargetUsers } = require('../components/new-messages/business')
 sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
 module.exports = {
@@ -78,14 +78,25 @@ module.exports = {
                                     ${message}
                                 </body>
                               </html>`
-                await sgMail.send({
-                    from: 'Happlearning <noreply@happmobi.com.br>',
-                    to: strTo,
-                    subject: 'Nova senha',
-                    text: 'Nova senha',
-                    category: `${process.env.CLIENT_ID}`,
-                    html,
-                })
+                              
+                const body = {
+                    category: "notify",
+                    communication: ["email"],
+                    userEmail: strTo,
+                    userDevice: null,
+                    mode: "manual",
+                    target: {
+                        type: "users",
+                        value: {
+                            users: [`${userData._id}`],
+                        },
+                    },
+                    text: message,
+                    texthtml: html,
+                    title: `Nova senha`
+                };
+
+                createMessagesFromBackend(body)
 
                 resolve()
             } catch (error) {
@@ -431,5 +442,23 @@ async function sendMfaFromBackend(body) {
         await sendMfaToKafka(campaign, targetUsers)
     } catch (error) {
         console.log(error)
+    }
+}
+
+async function createMessagesFromBackend (body) {
+    try {
+        const campaign = body;
+        const target = campaign.target;
+        let targetUsers = [];
+
+        if (!target.value.user) {
+            targetUsers = await processTargetUsers(target, campaign.category);
+        } else {
+            targetUsers.push({ ...target.value.user });
+        }
+
+        await sendMessageToKafka(campaign, targetUsers);
+    } catch (error) {
+        console.log(error);
     }
 }

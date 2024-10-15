@@ -285,7 +285,6 @@ module.exports = {
                 }
 
                 let trails = await populateTrails(true, query);
-                console.log('Total de trilhas:', trails.length);
 
                 trails = trails.filter((trail) => checkIfTheTrackIsValid(trail));
 

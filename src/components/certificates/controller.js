@@ -91,6 +91,7 @@ module.exports = {
             res.setHeader('Content-Disposition', `attachment; filename="certificado-${userName}-${trailName || itemName}.pdf"`);
             res.send(file);
         } catch (error) {
+            console.log(error)
             _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'createCertificate');
         }
     },
