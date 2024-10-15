@@ -11,7 +11,8 @@ async function listTrainingSections(req, res) {
     const sections = await Section
         .find({
             isTraining: true,
-            active: true
+            active: true,
+            deleted: 0
         })
         .select('_id title description')
         .lean();
