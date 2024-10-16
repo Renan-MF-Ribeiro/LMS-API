@@ -58,7 +58,7 @@ const GroupController = {
         const groupBody = req.body;
         try {
             const uri = `/groups/`;
-            const { data } = await socialApi.get(uri, groupBody);
+            const { data } = await socialApi.post(uri, groupBody);
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
