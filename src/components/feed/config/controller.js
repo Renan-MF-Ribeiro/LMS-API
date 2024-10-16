@@ -4,9 +4,10 @@ const _messages = require('../../../utils/messages');
 module.exports = {
     async createOrUpdateConfig(req, res) {
         const configBody = req.body;
+        const headers = { Authorization: req.headers.authorization };
         try {
             const uri = `${process.env.API_SOCIAL}/config`;
-            const { data } = await axios.post(uri, configBody);
+            const { data } = await axios.post(uri, configBody, { headers });
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -20,10 +21,10 @@ module.exports = {
         }
     },
     async getClientFeedConfig(req, res) {
-        
+        const headers = { Authorization: req.headers.authorization };
         try {
             const uri = `${process.env.API_SOCIAL}/config/${process.env.CLIENT_ID}`;
-            const { data } = await axios.get(uri);
+            const { data } = await axios.get(uri, { headers });
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
