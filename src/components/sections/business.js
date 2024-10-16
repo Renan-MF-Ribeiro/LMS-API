@@ -870,10 +870,10 @@ module.exports = {
         return data;
     },
 
-    getTrainingDataFromBody (body) {
-        const { isTraining = false, certificateLayout, certificateDue } = body;
+    getTrainingDataFromBody(body) {
+        const { isTraining = false, certificateLayout, certificateDue, completedTrailsType = 'optional' } = body;
 
-        if (!isTraining) return { isTraining, certificateLayout: null, certificateDue: null };
+        if (!isTraining) return { isTraining, certificateLayout: null, certificateDue: null, completedTrailsType: null };
 
         let certificateDueObj = null;
 
@@ -890,10 +890,11 @@ module.exports = {
             isTraining,
             certificateLayout: certificateLayout ?? null,
             certificateDue: certificateDueObj,
+            completedTrailsType,
         };
     },
 
-    async setAssessmentHistoricOnSections (userId, sections) {
+    async setAssessmentHistoricOnSections(userId, sections) {
         const userWithTags = await UsersWithProcessedTags.findById(userId);
         const dataAssessmentHistoric = await listTrainingSectionsStatus(userId, userWithTags.userTags);
 
@@ -929,6 +930,12 @@ module.exports = {
                 section.isBlocked = false;
                 section.isCompleted = isCompleted;
                 section.hasCertificate = !!section.certificateLayout;
+            }
+
+            const completedTrailsType = section.completedTrailsType ?? 'optional';
+
+            if (completedTrailsType === 'hidden') {
+                section.trails = section.trails.filter(trail => !trail.isOptional);
             }
         });
 

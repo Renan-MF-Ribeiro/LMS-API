@@ -57,6 +57,7 @@ const SectionSchema = new mongoose.Schema(
         isTraining: { type: Boolean, required: false },
         certificateLayout: { type: 'ObjectId', required: false },
         certificateDue: { type: certificateDueSchema, required: false },
+        completedTrailsType: { type: String, required: false, default: null }, // optional | hidden
         defaultType: {
             type: String,
             enum: Object.values(DEFAULT_TYPES),
