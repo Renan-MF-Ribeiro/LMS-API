@@ -3,10 +3,9 @@ const { socialApi } = require('../../social/http-adapter');
 
 module.exports = {
     async create(req, res) {
-        const headers = { Authorization: req.headers.authorization };
         try {
             const uri = 'posts';
-            const { data } = await socialApi.post(uri, req.body, { headers });
+            const { data } = await socialApi.post(uri, req.body);
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -22,11 +21,10 @@ module.exports = {
     },
 
     async findAllByGroup(req, res) {
-        const headers = { Authorization: req.headers.authorization };
         try {
             const { groupId } = req.params;
             const uri = `posts/groups/${groupId}`;
-            const { data } = await socialApi.get(uri, { headers });
+            const { data } = await socialApi.get(uri);
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -42,10 +40,9 @@ module.exports = {
     },
 
     async findAllPublic(req, res) {
-        const headers = { Authorization: req.headers.authorization };
         try {
             const uri = 'posts/public';
-            const { data } = await socialApi.get(uri, { headers });
+            const { data } = await socialApi.get(uri);
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -61,10 +58,9 @@ module.exports = {
     },
 
     async getFeed(req, res) {
-        const headers = { Authorization: req.headers.authorization };
         try {
             const uri = 'posts/feed';
-            const { data } = await socialApi.get(uri, { headers });
+            const { data } = await socialApi.get(uri);
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -80,10 +76,9 @@ module.exports = {
     },
 
     async findMyPosts(req, res) {
-        const headers = { Authorization: req.headers.authorization };
         try {
             const uri = 'posts/me';
-            const { data } = await socialApi.get(uri, { headers });
+            const { data } = await socialApi.get(uri);
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -99,11 +94,10 @@ module.exports = {
     },
 
     async findUserPosts(req, res) {
-        const headers = { Authorization: req.headers.authorization };
         try {
             const { userId } = req.params;
             const uri = `posts/${userId}`;
-            const { data } = await socialApi.get(uri, { headers });
+            const { data } = await socialApi.get(uri);
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -119,10 +113,9 @@ module.exports = {
     },
 
     async comment(req, res) {
-        const headers = { Authorization: req.headers.authorization };
         try {
             const uri = 'posts/comments';
-            const { data } = await socialApi.put(uri, req.body, { headers });
+            const { data } = await socialApi.put(uri, req.body);
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -138,10 +131,9 @@ module.exports = {
     },
 
     async like(req, res) {
-        const headers = { Authorization: req.headers.authorization };
         try {
             const uri = 'posts/likes';
-            const { data } = await socialApi.put(uri, req.body, { headers });
+            const { data } = await socialApi.put(uri, req.body);
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -157,10 +149,9 @@ module.exports = {
     },
 
     async share(req, res) {
-        const headers = { Authorization: req.headers.authorization };
         try {
             const uri = 'posts/shares';
-            const { data } = await socialApi.post(uri, req.body, { headers });
+            const { data } = await socialApi.post(uri, req.body);
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -176,11 +167,10 @@ module.exports = {
     },
 
     async delete(req, res) {
-        const headers = { Authorization: req.headers.authorization };
         try {
             const { postId } = req.params;
             const uri = `posts/${postId}`;
-            const { data } = await socialApi.delete(uri, { headers });
+            const { data } = await socialApi.delete(uri);
 
             return _messages.success(res, req, data);
         } catch (error) {

@@ -1,12 +1,12 @@
-const axios = require('axios');
 const _messages = require('../../../utils/messages');
+const { socialApi } = require('../../social/http-adapter');
 
 module.exports = {
     async createSolicitation(req, res) {
         const solicitationBody = req.body;
         try {
-            const uri = `${process.env.API_SOCIAL}/solicitations`;
-            const { data } = await axios.post(uri, solicitationBody);
+            const uri = `solicitations`;
+            const { data } = await socialApi.post(uri, solicitationBody);
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -22,8 +22,8 @@ module.exports = {
     async acceptUserSolicitation(req, res) {
         const { solicitationId } = req.params;
         try {
-            const uri = `${process.env.API_SOCIAL}/solicitations/user/accept/${solicitationId}`;
-            const { data } = await axios.post(uri);
+            const uri = `solicitations/user/accept/${solicitationId}`;
+            const { data } = await socialApi.post(uri);
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -39,8 +39,8 @@ module.exports = {
     async declineUserSolicitation(req, res) {
         const { solicitationId } = req.params;
         try {
-            const uri = `${process.env.API_SOCIAL}/solicitations/user/decline/${solicitationId}`;
-            const { data } = await axios.post(uri);
+            const uri = `solicitations/user/decline/${solicitationId}`;
+            const { data } = await socialApi.post(uri);
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -57,8 +57,8 @@ module.exports = {
         const { groupId } = req.params;
         console.log(groupId)
         try {
-            const uri = `${process.env.API_SOCIAL}/solicitations/group/accept/${groupId}`;
-            const { data } = await axios.post(uri);
+            const uri = `/solicitations/group/accept/${groupId}`;
+            const { data } = await socialApi.post(uri);
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -74,8 +74,8 @@ module.exports = {
     async declineGroupSolicitation(req, res) {
         const { groupId } = req.params;
         try {
-            const uri = `${process.env.API_SOCIAL}/solicitations/group/decline/${groupId}`;
-            const { data } = await axios.post(uri);
+            const uri = `solicitations/group/decline/${groupId}`;
+            const { data } = await socialApi.post(uri);
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -91,8 +91,8 @@ module.exports = {
     async getGroupSolicitations(req, res) {
         const { groupId } = req.params;
         try {
-            const uri = `${process.env.API_SOCIAL}/solicitations/${groupId}`;
-            const { data } = await axios.get(uri);
+            const uri = `solicitations/${groupId}`;
+            const { data } = await socialApi.get(uri);
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(

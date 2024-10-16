@@ -1,13 +1,12 @@
-const axios = require('axios');
 const _messages = require('../../../utils/messages');
+const { socialApi } = require('../../social/http-adapter');
 
 module.exports = {
     async createOrUpdateConfig(req, res) {
         const configBody = req.body;
-        const headers = { Authorization: req.headers.authorization };
         try {
-            const uri = `${process.env.API_SOCIAL}/config`;
-            const { data } = await axios.post(uri, configBody, { headers });
+            const uri = `config`;
+            const { data } = await socialApi.post(uri, configBody);
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -21,10 +20,9 @@ module.exports = {
         }
     },
     async getClientFeedConfig(req, res) {
-        const headers = { Authorization: req.headers.authorization };
         try {
-            const uri = `${process.env.API_SOCIAL}/config/${process.env.CLIENT_ID}`;
-            const { data } = await axios.get(uri, { headers });
+            const uri = `config/${process.env.CLIENT_ID}`;
+            const { data } = await socialApi.get(uri);
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(

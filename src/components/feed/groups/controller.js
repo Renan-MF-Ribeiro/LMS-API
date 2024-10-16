@@ -1,15 +1,13 @@
-const axios = require('axios');
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
 
 const GroupController = {
     async getAllGroups(req, res) {
         const { status } = req.query;
-        const headers = { Authorization: req.headers.authorization };
         try {
             const query = status ? `?status=${status.toUpperCase()}` : '';
             const uri = `groups${query}`;
-            const { data } = await socialApi.get(uri, { headers });
+            const { data } = await socialApi.get(uri);
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -24,10 +22,9 @@ const GroupController = {
     },
     async findUsersGroup(req, res) {
         const { userId } = req.params;
-        const headers = { Authorization: req.headers.authorization };
         try {
             const uri = `/groups/user/${userId}`;
-            const { data } = await socialApi.get(uri, { headers });
+            const { data } = await socialApi.get(uri);
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -42,10 +39,9 @@ const GroupController = {
     },
     async getGroupById(req, res) {
         const { groupId } = req.params;
-        const headers = { Authorization: req.headers.authorization };
         try {
             const uri = `/groups/info/${groupId}`;
-            const { data } = await socialApi.get(uri, { headers });
+            const { data } = await socialApi.get(uri);
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -60,10 +56,9 @@ const GroupController = {
     },
     async createGroup(req, res) {
         const groupBody = req.body;
-        const headers = { Authorization: req.headers.authorization };
         try {
             const uri = `/groups/`;
-            const { data } = await socialApi.get(uri, groupBody, { headers });
+            const { data } = await socialApi.get(uri, groupBody);
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -79,11 +74,10 @@ const GroupController = {
     async updateGroup(req, res) {
         const groupBody = req.body;
         const { groupId } = req.params;
-        const headers = { Authorization: req.headers.authorization };
 
         try {
             const uri = `/groups/${groupId}`;
-            const { data } = await socialApi.put(uri, groupBody, { headers });
+            const { data } = await socialApi.put(uri, groupBody);
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -98,11 +92,10 @@ const GroupController = {
     },
     async deleteUserFromGroup(req, res) {
         const { groupId, userId } = req.params;
-        const headers = { Authorization: req.headers.authorization };
 
         try {
             const uri = `/groups/${groupId}/${userId}`;
-            const { data } = await socialApi.delete(uri, { headers });
+            const { data } = await socialApi.delete(uri);
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -117,11 +110,10 @@ const GroupController = {
     },
     async deleteGroup(req, res) {
         const { groupId } = req.params;
-        const headers = { Authorization: req.headers.authorization };
 
         try {
             const uri = `/groups/${groupId}`;
-            const { data } = await socialApi.delete(uri, { headers });
+            const { data } = await socialApi.delete(uri);
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
