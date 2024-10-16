@@ -1725,7 +1725,7 @@ module.exports = {
                 profilePhoto,
                 networkLogin,
                 ...user
-            } = await User.findById(body._id);
+            } = await User.findById(body._id).lean();
 
             const namesProfiles = [];
             const namesGroups = [];
