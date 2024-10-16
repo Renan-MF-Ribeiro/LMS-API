@@ -1,5 +1,6 @@
 const axios = require('axios');
 const _messages = require('../../../utils/messages');
+const { socialApi } = require('../../social/http-adapter');
 
 const GroupController = {
     async getAllGroups(req, res) {
@@ -7,8 +8,8 @@ const GroupController = {
         const headers = { Authorization: req.headers.authorization };
         try {
             const query = status ? `?status=${status.toUpperCase()}` : '';
-            const uri = `${process.env.API_SOCIAL}/groups${query}`;
-            const { data } = await axios.get(uri, { headers });
+            const uri = `groups${query}`;
+            const { data } = await socialApi.get(uri, { headers });
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -25,8 +26,8 @@ const GroupController = {
         const { userId } = req.params;
         const headers = { Authorization: req.headers.authorization };
         try {
-            const uri = `${process.env.API_SOCIAL}/groups/user/${userId}`;
-            const { data } = await axios.get(uri, { headers });
+            const uri = `/groups/user/${userId}`;
+            const { data } = await socialApi.get(uri, { headers });
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -35,7 +36,7 @@ const GroupController = {
                 error.message,
                 'Erro interno no servidor',
                 'feed',
-                'getGroupsManagedByUser'
+                'findUsersGroup'
             );
         }
     },
@@ -43,8 +44,8 @@ const GroupController = {
         const { groupId } = req.params;
         const headers = { Authorization: req.headers.authorization };
         try {
-            const uri = `${process.env.API_SOCIAL}/groups/info/${groupId}`;
-            const { data } = await axios.get(uri, { headers });
+            const uri = `/groups/info/${groupId}`;
+            const { data } = await socialApi.get(uri, { headers });
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -53,7 +54,7 @@ const GroupController = {
                 error.message,
                 'Erro interno no servidor',
                 'feed',
-                'getGroupMembers'
+                'getGroupById'
             );
         }
     },
@@ -61,8 +62,8 @@ const GroupController = {
         const groupBody = req.body;
         const headers = { Authorization: req.headers.authorization };
         try {
-            const uri = `${process.env.API_SOCIAL}/groups/`;
-            const { data } = await axios.post(uri, groupBody, { headers });
+            const uri = `/groups/`;
+            const { data } = await socialApi.get(uri, groupBody, { headers });
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -81,8 +82,8 @@ const GroupController = {
         const headers = { Authorization: req.headers.authorization };
 
         try {
-            const uri = `${process.env.API_SOCIAL}/groups/${groupId}`;
-            const { data } = await axios.put(uri, groupBody, { headers });
+            const uri = `/groups/${groupId}`;
+            const { data } = await socialApi.put(uri, groupBody, { headers });
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -100,8 +101,8 @@ const GroupController = {
         const headers = { Authorization: req.headers.authorization };
 
         try {
-            const uri = `${process.env.API_SOCIAL}/groups/${groupId}/${userId}`;
-            const { data } = await axios.delete(uri, { headers });
+            const uri = `/groups/${groupId}/${userId}`;
+            const { data } = await socialApi.delete(uri, { headers });
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -119,8 +120,8 @@ const GroupController = {
         const headers = { Authorization: req.headers.authorization };
 
         try {
-            const uri = `${process.env.API_SOCIAL}/groups/${groupId}`;
-            const { data } = await axios.delete(uri, { headers });
+            const uri = `/groups/${groupId}`;
+            const { data } = await socialApi.delete(uri, { headers });
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
