@@ -37,7 +37,7 @@ async function listTrainingSectionDetails(req, res) {
         .lean();
 
     if (!section) {
-        throw new ApiError('Seção de treinamento não encontrada', 404, undefined, { skipDbLog: true });
+        throw new ApiError('Seção de treinamento não encontrada', 400, undefined, { skipDbLog: true });
     }
 
     res.status(200).json(section);
