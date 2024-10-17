@@ -178,7 +178,10 @@ module.exports = {
     },
     async signup(req, res) {
         const { token } = req.query;
-        const { cpf: networkLogin, password, ...data } = req.body;
+        const { password, ...data } = req.body;
+
+        const networkLogin = data.cpf;
+
         const today = moment(new Date());
         // Seta elegibilidades padrões
         let groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO'];
@@ -263,7 +266,7 @@ module.exports = {
             console.log(formatedDate)
             const userData = {
                 networkLogin,
-                email: networkLogin,
+                // email: networkLogin,
                 password: hashPassword,
                 passwordValid: true,
                 clientUserKey: CLIENT_ID + '@@' + networkLogin,
