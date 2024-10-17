@@ -1,6 +1,6 @@
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
-const { User } = require('../../users/model');
+const { populatePostsWithComments } = require('../buisiness');
 
 const GroupController = {
     async getAllGroups(req, res) {
@@ -10,16 +10,9 @@ const GroupController = {
             const uri = `groups${query}`;
             const { data } = await socialApi.get(uri);
 
-            const ids = [...new Set(data.data.map((x) => x.ownerId))];
-            const users = await User.find({ _id: { $in: ids } }, '_id name profilePhoto').lean();
+            const PopulatedData = await populatePostsWithComments('owner', data)
+            const response = { data: PopulatedData, PopulatedData: data.total };
 
-            const userMap = Object.fromEntries(users.map((user) => [user._id.toString(), user]));
-
-            const populatedData = data.data.map((group) => ({
-                ...group,
-                owner: userMap[group.ownerId],
-            }));
-            const response = { data: populatedData, total: data.total };
             return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
@@ -37,6 +30,7 @@ const GroupController = {
         try {
             const uri = `/groups/user/${userId}`;
             const { data } = await socialApi.get(uri);
+            
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
