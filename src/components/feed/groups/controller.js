@@ -21,7 +21,7 @@ const GroupController = {
                     owner: userMap[group.ownerId],
                 },
             }));
-            return _messages.success(res, req, populatedData[0]);
+            return _messages.success(res, req, populatedData);
         } catch (error) {
             return _messages.internalServer(
                 res,
