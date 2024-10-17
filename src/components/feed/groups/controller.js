@@ -16,12 +16,11 @@ const GroupController = {
             const userMap = Object.fromEntries(users.map((user) => [user._id.toString(), user]));
 
             const populatedData = data.data.map((group) => ({
-                data: {
-                    ...group,
-                    owner: userMap[group.ownerId],
-                },
+                ...group,
+                owner: userMap[group.ownerId],
             }));
-            return _messages.success(res, req, populatedData);
+            const response = { data: populatedData, total: data.total };
+            return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
                 res,
