@@ -1,6 +1,6 @@
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
-const { populatePostsWithComments } = require('../buisiness');
+const { populateUserFields } = require('../buisiness');
 
 const GroupController = {
     async getAllGroups(req, res) {
@@ -10,8 +10,8 @@ const GroupController = {
             const uri = `groups${query}`;
             const { data } = await socialApi.get(uri);
 
-            const PopulatedData = await populatePostsWithComments('owner', data)
-            const response = { data: PopulatedData, PopulatedData: data.total };
+            const PopulatedData = await populateUserFields('owner', 'ownerId', data)
+            const response = { data: PopulatedData, total: data.total };
 
             return _messages.success(res, req, response);
         } catch (error) {

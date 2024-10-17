@@ -1,6 +1,6 @@
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
-const { populateGroupRequestWithUsers } = require('../buisiness');
+const { populateUserFields } = require('../buisiness');
 
 module.exports = {
     async create(req, res) {
@@ -27,7 +27,12 @@ module.exports = {
             const uri = `posts/groups/${groupId}`;
             const { data } = await socialApi.get(uri);
 
-            return _messages.success(res, req, data);
+            
+            const PopulatedData = await populateUserFields('user', 'userId', data)
+
+            const response= {data: PopulatedData, total: data.length}
+
+            return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
                 res,
@@ -45,7 +50,11 @@ module.exports = {
             const uri = 'posts/public';
             const { data } = await socialApi.get(uri);
 
-            return _messages.success(res, req, data);
+            const PopulatedData = await populateUserFields('user', 'userId', data)
+
+            const response= {data: PopulatedData, total: data.length}
+
+            return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
                 res,
@@ -81,7 +90,11 @@ module.exports = {
             const uri = 'posts/me';
             const { data } = await socialApi.get(uri);
 
-            return _messages.success(res, req, data);
+            const PopulatedData = await populateUserFields('user', 'userId', data)
+
+            const response= {data: PopulatedData, total: data.length}
+
+            return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
                 res,
@@ -100,8 +113,9 @@ module.exports = {
             const uri = `posts/${userId}`;
             const { data } = await socialApi.get(uri);
 
-            const PopulatedData = await populateGroupRequestWithUsers('user', 'userId', data);
-            const response = { data: PopulatedData, PopulatedData: data.total };
+            const PopulatedData = await populateUserFields('user', 'userId', data)
+
+            const response= {data: PopulatedData, total: data.length}
 
             return _messages.success(res, req, response);
         } catch (error) {

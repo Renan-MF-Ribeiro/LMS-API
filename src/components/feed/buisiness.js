@@ -1,18 +1,18 @@
 const { User } = require("../users/model");
 
-// utils/populatePosts.js
-async function populatePostsWithComments(field, data) {
-    const ids = [...new Set(data.data.map((x) => x.ownerId))];
+async function populateUserFields(fieldName, reference, data) {
+    const ids = [...new Set(data.data.map((x) => x[reference]))];
     const users = await User.find({ _id: { $in: ids } }, '_id name profilePhoto').lean();
 
     const userMap = Object.fromEntries(users.map((user) => [user._id.toString(), user]));
 
     const populatedData = data.data.map((group) => ({
+        [fieldName]: userMap[group[reference]],
         ...group,
-        [field]: userMap[group.ownerId],
+        [reference]: undefined
     }));
 
     return populatedData
 }
 
-module.exports = { populatePostsWithComments };
+module.exports = { populateUserFields };
