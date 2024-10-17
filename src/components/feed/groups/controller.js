@@ -67,10 +67,10 @@ const GroupController = {
         }
     },
     async createGroup(req, res) {
-        const groupBody = req.body;
+        const body = JSON.parse(req.fields.payload) ?? null;
         try {
             const uri = `/groups/`;
-            const { data } = await socialApi.post(uri, groupBody);
+            const { data } = await socialApi.post(uri, body);
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -84,12 +84,12 @@ const GroupController = {
         }
     },
     async updateGroup(req, res) {
-        const groupBody = req.body;
+        const body = JSON.parse(req.fields.payload) ?? null;
         const { groupId } = req.params;
 
         try {
             const uri = `/groups/${groupId}`;
-            const { data } = await socialApi.put(uri, groupBody);
+            const { data } = await socialApi.put(uri, body);
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
