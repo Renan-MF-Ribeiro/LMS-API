@@ -1,5 +1,6 @@
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
+const { User } = require('../../users/model');
 
 const GroupController = {
     async getAllGroups(req, res) {
@@ -8,7 +9,19 @@ const GroupController = {
             const query = status ? `?status=${status.toUpperCase()}` : '';
             const uri = `groups${query}`;
             const { data } = await socialApi.get(uri);
-            return _messages.success(res, req, data);
+
+            const ids = [...new Set(data.data.map((x) => x.ownerId))];
+            const users = await User.find({ _id: { $in: ids } }, '_id name profilePhoto').lean();
+
+            const userMap = Object.fromEntries(users.map((user) => [user._id.toString(), user]));
+
+            const populatedData = data.data.map((group) => ({
+                data: {
+                    ...group,
+                    owner: userMap[group.ownerId],
+                },
+            }));
+            return _messages.success(res, req, populatedData[0]);
         } catch (error) {
             return _messages.internalServer(
                 res,
