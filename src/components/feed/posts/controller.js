@@ -27,7 +27,7 @@ module.exports = {
         try {
             const { groupId } = req.params;
             const uri = `posts/groups/${groupId}`;
-            const { data } = await socialApi.get(uri);
+            const { data } = await socialApi.get(uri, { params: req.query });
 
             const PopulatedData = await populateUserFields('user', 'userId', data);
 
@@ -49,7 +49,7 @@ module.exports = {
     async findAllPublic(req, res) {
         try {
             const uri = 'posts/public';
-            const { data } = await socialApi.get(uri);
+            const { data } = await socialApi.get(uri, { params: req.query });
 
             const PopulatedData = await populateUserFields('user', 'userId', data);
 
@@ -71,7 +71,7 @@ module.exports = {
     async getFeed(req, res) {
         try {
             const uri = 'posts/feed';
-            const { data } = await socialApi.get(uri);
+            const { data } = await socialApi.get(uri, { params: req.query });
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -88,7 +88,7 @@ module.exports = {
     async listCompanyPosts(req, res) {
         try {
             const uri = 'posts/company';
-            const { data } = await socialApi.get(uri);
+            const { data } = await socialApi.get(uri, { params: req.query });
 
             const PopulatedData = await populateUserFields('user', 'userId', data)
 
@@ -110,7 +110,7 @@ module.exports = {
     async findMyPosts(req, res) {
         try {
             const uri = 'posts/me';
-            const { data } = await socialApi.get(uri);
+            const { data } = await socialApi.get(uri, { params: req.query });
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -129,7 +129,7 @@ module.exports = {
         try {
             const { userId } = req.params;
             const uri = `posts/${userId}`;
-            const { data } = await socialApi.get(uri);
+            const { data } = await socialApi.get(uri, { params: req.query });
 
             const PopulatedData = await populateUserFields('user', 'userId', data);
 

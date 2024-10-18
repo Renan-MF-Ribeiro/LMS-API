@@ -5,10 +5,11 @@ const { populateUserFields, populateSingleUserFields } = require('../buisiness')
 const GroupController = {
     async getAllGroups(req, res) {
         const { status } = req.query;
+        
         try {
             const query = status ? `?status=${status.toUpperCase()}` : '';
             const uri = `groups${query}`;
-            const { data } = await socialApi.get(uri);
+            const { data } = await socialApi.get(uri, { params: req.query });
 
             const PopulatedData = await populateUserFields('owner', 'ownerId', data)
             const response = { data: PopulatedData, total: data.total };
