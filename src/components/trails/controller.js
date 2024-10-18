@@ -646,14 +646,36 @@ module.exports = {
 
     async duplicate(req, res) {
         try {
-            const body = req.body;
+            const { oldTrailId, ...body } = req.body;
+
             delete body?.descriptionView;
+
             if (body.collaborative) {
                 body.collaborative = false
             }
 
             const docClone = new Trail(body);
-            await docClone.save();
+            const newDbTrail = await docClone.save();
+
+            if (oldTrailId) {
+                await Trail.updateOne(
+                    { _id: newDbTrail._id },
+                    {
+                        $set: {
+                            items: body.items?.map((item) => {
+                                const urlItem = item.urlItem?.replace(oldTrailId, newDbTrail._id) ?? null;
+                                const urlTrail = item.urlTrail?.replace(oldTrailId, newDbTrail._id) ?? null;
+
+                                return {
+                                    ...item,
+                                    urlItem,
+                                    urlTrail,
+                                }
+                            }) ?? [],
+                        }
+                    }
+                )
+            }
 
             _messages.success(
                 res,
