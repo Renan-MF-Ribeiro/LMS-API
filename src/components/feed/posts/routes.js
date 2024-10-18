@@ -4,6 +4,7 @@ const _controller = require('./controller');
 module.exports = express
     .Router()
     .post('/', _controller.create)
+    .get('/', _controller.findAllPosts)
     .get('/groups/:groupId', _controller.findAllByGroup)
     .get('/public', _controller.findAllPublic)
     .get('/feed', _controller.getFeed)
