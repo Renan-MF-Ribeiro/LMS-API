@@ -700,6 +700,7 @@ const ItemController = {
 
                 _messages.success(res, req, item);
             } catch (error) {
+                console.log(error)
                 if (error.name === 'ValidationError') {
                     const messages = {};
                     for (const k in error.errors)
