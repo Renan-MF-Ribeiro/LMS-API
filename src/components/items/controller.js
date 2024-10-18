@@ -633,7 +633,7 @@ const ItemController = {
                         }
                     }
                 }
-                if (payload.kind === 'EventItem') {
+                if (payload.kind === 'EventItem' && payload.kind === 'ActivityItem') {
                     delete payload.contentPath;
                 }
                 payload = {
