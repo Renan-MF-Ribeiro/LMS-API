@@ -7,6 +7,7 @@ module.exports = express
     .get('/groups/:groupId', _controller.findAllByGroup)
     .get('/public', _controller.findAllPublic)
     .get('/feed', _controller.getFeed)
+    .get('/', _controller.listCompanyPosts)
     .get('/me', _controller.findMyPosts)
     .get('/:userId', _controller.findUserPosts)
     .put('/comments', _controller.comment)
