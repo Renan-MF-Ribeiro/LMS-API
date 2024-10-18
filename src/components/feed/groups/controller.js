@@ -31,10 +31,8 @@ const GroupController = {
             const uri = `/groups/user/${userId}`;
             const { data } = await socialApi.get(uri);
             
-            const PopulatedData = await populateUserFields('owner', 'ownerId', data)
-            const response = { data: PopulatedData, total: data.total };
 
-            return _messages.success(res, req, response);
+            return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
                 res,

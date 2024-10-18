@@ -5,9 +5,10 @@ const { populateUserFields } = require('../buisiness');
 
 module.exports = {
     async create(req, res) {
+        const body = JSON.parse(req.fields.payload) ?? null;
         try {
             const uri = 'posts';
-            const { data } = await socialApi.post(uri, req.body);
+            const { data } = await socialApi.post(uri, body);
 
             return _messages.success(res, req, data);
         } catch (error) {
