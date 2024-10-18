@@ -5,6 +5,7 @@ const formidable = require('express-formidable');
 module.exports = express
     .Router()
     .get('/', _controller.getAllGroups)
+    .get('/avaliable', _controller.getAvaliableGroups)
     .post('/', formidable(), _controller.createGroup)
     .get('/user/:userId', _controller.findUsersGroup)
     .get('/info/:groupId', _controller.getGroupById)

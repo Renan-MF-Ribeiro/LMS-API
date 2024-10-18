@@ -26,6 +26,23 @@ const GroupController = {
             );
         }
     },
+    async getAvaliableGroups(req, res) {       
+        try {
+            const uri = `groups/avaliable`;
+            const { data } = await socialApi.get(uri);
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'feed',
+                'getAllGroups'
+            );
+        }
+    },
     async findUsersGroup(req, res) {
         const { userId } = req.params;
         try {

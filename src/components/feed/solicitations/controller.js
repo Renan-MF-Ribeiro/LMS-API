@@ -91,7 +91,23 @@ module.exports = {
     async getGroupSolicitations(req, res) {
         const { groupId } = req.params;
         try {
-            const uri = `solicitations/${groupId}`;
+            const uri = `solicitations/groups/${groupId}`;
+            const { data } = await socialApi.get(uri);
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'feed',
+                'getGroupSolicitations'
+            );
+        }
+    },
+    async getUserSolicitations(req, res) {
+        try {
+            const uri = `solicitations/user`;
             const { data } = await socialApi.get(uri);
             return _messages.success(res, req, data);
         } catch (error) {
