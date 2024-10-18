@@ -633,6 +633,7 @@ const ItemController = {
                         }
                     }
                 }
+                console.log(payload)
                 if (payload.kind === 'ActivityItem') {
                     delete payload.contentPath;
                 }
