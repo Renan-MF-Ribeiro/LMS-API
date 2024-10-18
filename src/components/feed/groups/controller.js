@@ -1,6 +1,6 @@
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
-const { populateUserFields } = require('../buisiness');
+const { populateUserFields, populateSingleUserFields } = require('../buisiness');
 
 const GroupController = {
     async getAllGroups(req, res) {
@@ -31,7 +31,10 @@ const GroupController = {
             const uri = `/groups/user/${userId}`;
             const { data } = await socialApi.get(uri);
             
-            return _messages.success(res, req, data);
+            const PopulatedData = await populateUserFields('owner', 'ownerId', data)
+            const response = { data: PopulatedData, total: data.total };
+
+            return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
                 res,
@@ -48,7 +51,11 @@ const GroupController = {
         try {
             const uri = `/groups/info/${groupId}`;
             const { data } = await socialApi.get(uri);
-            return _messages.success(res, req, data);
+
+            const PopulatedData = await populateSingleUserFields('owner', 'ownerId', data)
+            const response = { data: PopulatedData };
+
+            return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
                 res,

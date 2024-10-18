@@ -84,6 +84,27 @@ module.exports = {
             );
         }
     },
+    async listCompanyPosts(req, res) {
+        try {
+            const uri = 'posts/';
+            const { data } = await socialApi.get(uri);
+
+            const PopulatedData = await populateUserFields('user', 'userId', data)
+
+            const response= {data: PopulatedData, total: data.total}
+
+            return _messages.success(res, req, response);
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'feed',
+                'getFeed'
+            );
+        }
+    },
 
     async findMyPosts(req, res) {
         try {
