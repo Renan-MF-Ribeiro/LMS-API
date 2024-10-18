@@ -16,11 +16,8 @@ async function populateUserFields(fieldName, reference, data) {
 }
 async function populateSingleUserFields(fieldName, reference, data) {
     const id = data[reference];
-
-    // Busca o usuário correspondente pelo ID
     const user = await User.findOne({ _id: id }, '_id name profilePhoto').lean();
 
-    // Adiciona o campo do usuário diretamente ao objeto original
     const populatedData = {
         ...data,
         [fieldName]: user,

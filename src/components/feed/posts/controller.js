@@ -86,7 +86,7 @@ module.exports = {
     },
     async listCompanyPosts(req, res) {
         try {
-            const uri = 'posts/';
+            const uri = 'posts/company';
             const { data } = await socialApi.get(uri);
 
             const PopulatedData = await populateUserFields('user', 'userId', data)
@@ -111,11 +111,7 @@ module.exports = {
             const uri = 'posts/me';
             const { data } = await socialApi.get(uri);
 
-            const PopulatedData = await populateUserFields('user', 'userId', data);
-
-            const response = { data: PopulatedData, total: data.length };
-
-            return _messages.success(res, req, response);
+            return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
                 res,
