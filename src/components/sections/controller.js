@@ -520,7 +520,11 @@ module.exports = {
                 responseSection = setResponse(mostSeenSectionsResult);
                 break;
             default:
-                responseSection = { ...section, trails };
+                responseSection = {
+                    ...section, trails: trails.sort(
+                        trail => section.trails.indexOf(trail._id)
+                    )
+                };
                 break;
         }
 
