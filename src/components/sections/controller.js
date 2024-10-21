@@ -520,11 +520,7 @@ module.exports = {
                 responseSection = setResponse(mostSeenSectionsResult);
                 break;
             default:
-                responseSection = {
-                    ...section, trails: trails.sort(
-                        trail => section.trails.indexOf(trail._id)
-                    )
-                };
+                responseSection = { ...section, trails };
                 break;
         }
 
@@ -535,6 +531,12 @@ module.exports = {
 
         if (responseSection.isTraining) {
             await setAssessmentHistoricOnSections(user._id, [responseSection]);
+        }
+
+        if (responseSection.trails && section.trails) {
+            responseSection.trails = responseSection.trails.sort(
+                trail => section.trails.indexOf(trail._id)
+            )
         }
 
         res.json(responseSection);
