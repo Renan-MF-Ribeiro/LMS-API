@@ -515,7 +515,6 @@ module.exports = {
                 responseSection = setResponse(favoriteSectionsResult);
                 break;
             case DEFAULT_TYPES.MOST_SEEN:
-                console.log('MOST_SEEN', trails)
                 const mostSeenSectionsResult = await mostSeenSections(trails);
                 responseSection = setResponse(mostSeenSectionsResult);
                 break;
@@ -533,10 +532,12 @@ module.exports = {
             await setAssessmentHistoricOnSections(user._id, [responseSection]);
         }
 
-        if (responseSection.trails && section.trails) {
-            responseSection.trails = responseSection.trails.sort(
-                trail => section.trails.indexOf(trail._id)
-            )
+        if (responseSection.trails?.length && section.trails?.length) {
+            const originalOrder = section.trails.map(trail => trail._id);
+
+            responseSection.trails = originalOrder.map(
+                trailId => responseSection.trails.find(trail => String(trail._id) === String(trailId))
+            ).filter(Boolean);
         }
 
         res.json(responseSection);
