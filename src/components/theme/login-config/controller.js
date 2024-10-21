@@ -63,8 +63,10 @@ module.exports = {
 
 
             if (config) {
+                console.log(config.formLogin)
                 config.formLogin.idleTime = config.formLogin.idle ? config.formLogin.idle : false
                 config.formLogin.idleTime = config.formLogin.idleTime ? config.formLogin.idleTime : 60
+                console.log(config.idleTime)
 
                 return _messages.success(res, req, config)
             }
