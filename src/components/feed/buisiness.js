@@ -1,3 +1,4 @@
+const { Trail } = require('../trails/model');
 const { User } = require('../users/model');
 
 async function populateUserFields(fieldName, reference, data) {
@@ -26,5 +27,10 @@ async function populateSingleUserFields(fieldName, reference, data) {
 
     return populatedData;
 }
+async function populateTrailFields(data) {
+    const trails = await Trail.findOne({ _id: { $in: data } }, 'title titleURL thumbPath').lean();
 
-module.exports = { populateUserFields, populateSingleUserFields };
+    return trails;
+}
+
+module.exports = { populateUserFields, populateSingleUserFields, populateTrailFields };
