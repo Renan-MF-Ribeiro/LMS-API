@@ -37,7 +37,7 @@ async function listTrainingSectionDetails(req, res) {
         .lean();
 
     if (!section) {
-        throw new ApiError('Seção de treinamento não encontrada', 404, undefined, { skipDbLog: true });
+        throw new ApiError('Seção de treinamento não encontrada', 400, undefined, { skipDbLog: true });
     }
 
     res.status(200).json(section);
@@ -48,7 +48,7 @@ async function generateTrainingSectionCertificate(req, res) {
 
     const user = await getUserByToken(req);
 
-    const { sections, trails, trackings } = await getEligibilityInfoByUserId(
+    const { sections, trackings } = await getEligibilityInfoByUserId(
         user._id,
         {
             sections: {
@@ -61,12 +61,18 @@ async function generateTrainingSectionCertificate(req, res) {
             }
         },
     );
-
+    
+    if(sections.length) {
+        await setAssessmentHistoricOnSections(user._id, sections);
+    }
+    
     const section = sections[0];
 
     if (!section) {
         throw new ApiError('Seção de treinamento não encontrada', 404, undefined, { skipDbLog: true });
     }
+
+    const trails = section.trails;
 
     const completedTrails = trails.filter(trail => trail.completion === 1);
 
