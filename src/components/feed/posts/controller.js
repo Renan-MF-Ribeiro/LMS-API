@@ -158,7 +158,7 @@ module.exports = {
 
                 if (myPosts) {
                     const { _id } = await getUserByToken(req);
-                    data.data = data.data.filter((post) => _id.equals(userId));
+                    data.data = data.data.filter((post) => _id.equals(post.userId));
                 }
 
                 const PopulatedData = await populateUserFields('user', 'userId', data);
