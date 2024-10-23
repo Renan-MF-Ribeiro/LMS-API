@@ -615,7 +615,6 @@ async function getUsersLoad() {
                 if (existingUser) {
                     const groupsAD = [
                         ...processedUser.groupsAD,
-                        ...existingUser.groupsAD,
                     ];
 
                     existingUsers.push({
