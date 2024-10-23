@@ -12,7 +12,7 @@ module.exports = {
 
     forbidden: async (res, req, err, data, component = null, rota = null) => {
         info(component, rota, 'forbidden', err)
-        await _functions.recordLog(req, 'FORBIDDEN', err, component, rota)
+        await _functions.recordLog(req, 'FORBIDDEN', err, component, rota, data)
         res.status(httpStatus.FORBIDDEN).json(data)
     },
 

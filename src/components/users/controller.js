@@ -739,7 +739,7 @@ module.exports = {
                         res,
                         req,
                         'Usuário ou senha inválidos.',
-                        'Usuário ou senha inválidos.',
+                        { claim, claimKey: ssoForm?.claim ?? '' },
                         'users',
                         'ldapSignIn'
                     );
@@ -1839,6 +1839,15 @@ module.exports = {
 
                 return deepGet(req.samlUserObject, key, null);
             }, null);
+
+            await Log.create({
+                type: 'SSO_CALLBACK',
+                message: 'SSO_CALLBACK',
+                component: 'users',
+                route: 'ssoCallback',
+                dataNew: { samlObject: req.samlUserObject },
+                dataOld: null,
+            });
 
             if (value === undefined || value === null) {
                 console.log('ssoCallback req.samlUserObject', req.samlUserObject);
