@@ -95,6 +95,7 @@ const { handleUserEligibilitiesGamification } = require('../gamification/utils')
 const AssessmentBusiness = require('../assessment/business');
 const { Features } = require('../theme/features/model');
 const { Partner } = require('../partners/model');
+const { Log } = require('../logs/model');
 
 module.exports = {
     async create(req, res) {
