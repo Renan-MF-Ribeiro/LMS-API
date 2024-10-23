@@ -756,7 +756,7 @@ module.exports = {
             }
         } catch (error) {
             console.log(error);
-            _messages.internalServer(res, req, error.message);
+            _messages.internalServer(res, req, error.message, {token, error: error.stack}, 'singleSignOn', 'singleSignOn');
         }
     },
 
