@@ -95,7 +95,6 @@ const { handleUserEligibilitiesGamification } = require('../gamification/utils')
 const AssessmentBusiness = require('../assessment/business');
 const { Features } = require('../theme/features/model');
 const { Partner } = require('../partners/model');
-const { isFeatureEnabled } = require('../../utils/features');
 
 module.exports = {
     async create(req, res) {
@@ -1769,8 +1768,8 @@ module.exports = {
                     filters: dashboardFilters,
                 });
                 const SAS = generateSASToken();
-                
-                if (await isFeatureEnabled('gamification')) {
+
+                if (req.features?.gamification) {
                     GamificationBusiness.createClientUser(networkLogin, groupsAD);
                 }
                 
