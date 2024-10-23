@@ -7,23 +7,40 @@ const clientId = process.env.CLIENT_ID;
 const headers = { 'x-client-key': process.env.API_KEY_ASSESSMENT };
 
 const AssessmentBusiness = {
-    async updateUserEligibilities(userId) {
+    async updateUserEligibilities(userId, pillarId, cycleId, periodId) {
         try {
             const uri = `${host}/users/${clientId}/${userId}`;
             const { data } = await axios.get(uri, { headers });
-            const eligibilities = data.eligibilities.flatMap((eligibility) => eligibility.tags);
-            const assessmentGroups = await Group.find({ 'tags.value': { $in: eligibilities } });
-            await User.updateOne(
-                { _id: userId },
-                { $set: { assessmentGroups: assessmentGroups.flatMap(({ name }) => name) } }
-            );
-        } catch {}
-    },
-    async createUser(userId) {
-        const uri = `${host}/users/${clientId}`;
-            const { data } = await axios.post(uri, { userId }, { headers });
-            
-            return data
+            const eligibilities = data.eligibilities.find((el) => el?.pillar === pillarId)?.tags;
+
+            if (!!eligibilities?.length) {
+                const groups = await Group.find({ 'tags.value': { $in: eligibilities } });
+                const user = await User.findById(userId);
+                const tags = groups.flatMap(({ name }) => name);
+
+                const newAssessmentGroup = { pillarId, cycleId, periodId, tags };
+
+                const index = user.assessmentGroups.findIndex((ag) => {
+                    return (
+                        ag?.pillarId === pillarId &&
+                        ag?.cycleId === cycleId &&
+                        ag?.periodId === periodId
+                    );
+                });
+
+                if (index === -1) {
+                    user.assessmentGroups.push(newAssessmentGroup);
+                } else {
+                    user.assessmentGroups[index] = newAssessmentGroup;
+                }
+
+                user.groupsAD = [...new Set(user.groupsAD.concat(tags))];
+
+                await user.save();
+            }
+        } catch (error) {
+            console.log({ error });
+        }
     },
 
     async listTrainingSectionsStatus(userId, eligibilityTags = []) {
