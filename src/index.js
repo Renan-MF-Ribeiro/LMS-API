@@ -13,6 +13,7 @@ const {
     validateTokenRoute,
     isAssessmentActive,
     isShowcaseActive,
+    setCurrentFeatures,
 } = require('./utils/middlewares');
 const { PUBLIC_PATH } = process.env;
 const app = express();
@@ -110,6 +111,8 @@ const certificateRoutes = require('./components/certificates/routes');
 const dimensionRoutes = require('./components/dimensions/routes');
 const partnerRoutes = require('./components/partners/routes');
 const trainingRouter = require('./components/training/routes');
+
+app.use(setCurrentFeatures);
 
 app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/tracking', validateTokenRoute, trackingRoutes)

@@ -382,215 +382,225 @@ module.exports = {
                 );
             } else {
                 const verify = await Trail.find({
-                    title: { $eq: payload.title },
+                    $or: [{
+                        title: { $eq: payload.title },
+                        _id: { $ne: payload._id },
+                    }, {
+                        _id: { $ne: payload._id },
+                        titleURL: { $regex: payload.titleURL, $options: 'i' }
+                    }]
                 });
+                if (verify.length > 0) {
+                    const titleDuplicate = verify.some((trail) => trail.title === payload.title)
+                    const titleURLDuplicate = verify.some((trail) => trail.titleURL === payload.titleURL)
+                    if (titleURLDuplicate) payload.titleURL = `${payload.titleURL}-${verify.length}`
 
-                if (verify.length === 0) {
-                    let thumbPath;
-                    let bannerPath;
-                    let backgroundPath;
-                    if (thumb) {
-                        thumbPath = await azureBlob(thumb, 'trails/thumbs');
-                        if (process.env.NODE_ENV !== 'local') {
-                            thumbPath = thumbPath.replace(
-                                AZURE_BLOB_URL,
-                                DOMAIN
-                            );
-                        }
-                    }
-                    if (banner) {
-                        bannerPath = await azureBlob(banner, 'trails/banners');
-                    }
-
-                    if (innerTextBanner) {
-                        innerTextBanner = await azureBlob(innerTextBanner, 'trails/banners')
-                    } else {
-                        innerTextBanner = payload.innerTextBanner
-                    }
-
-                    if (background) {
-                        backgroundPath = await azureBlob(
-                            background,
-                            'trails/backgrounds'
+                    if (titleDuplicate) {
+                        return _messages.badRequest(
+                            res,
+                            req,
+                            'Já existe uma trilha com esse título!',
+                            'Já existe uma trilha com esse título!',
+                            'trilhas',
+                            'create'
                         );
-                        if (process.env.NODE_ENV !== 'local') {
-                            backgroundPath = backgroundPath.replace(
-                                AZURE_BLOB_URL,
-                                DOMAIN
-                            );
-                        }
                     }
-
-                    if (payload.supportFileMaterial) {
-                        const fileArray = payload.supportFileMaterial.map(
-                            key => req.files[key],
-                        )
-                        const supportMaterial = []
-
-                        for (const file of fileArray) {
-                            let path = await azureBlob(file, 'trails/material')
-                            path = path.replace(AZURE_BLOB_URL, DOMAIN)
-                            const material = {
-                                _id: new mongoose.Types.ObjectId(),
-                                url: path,
-                                name: file.name,
-                                size: file.size,
-                                deleted: false,
-                            }
-                            supportMaterial.push(material)
-                        }
-                        payload.supportMaterial = [
-                            ...payload.supportMaterial,
-                            ...supportMaterial,
-                        ]
-                        delete payload.supportFileMaterial
+                }
+                let thumbPath;
+                let bannerPath;
+                let backgroundPath;
+                if (thumb) {
+                    thumbPath = await azureBlob(thumb, 'trails/thumbs');
+                    if (process.env.NODE_ENV !== 'local') {
+                        thumbPath = thumbPath.replace(
+                            AZURE_BLOB_URL,
+                            DOMAIN
+                        );
                     }
+                }
+                if (banner) {
+                    bannerPath = await azureBlob(banner, 'trails/banners');
+                }
 
-                    if (payload.galleryFiles) {
-                        const fileArray = payload.galleryFiles.map((item) => {
-                            return {
-                                ...item,
-                                file: req.files[item.name]
-                            }
-                        },
-                        )
-                        const gallery = []
+                if (innerTextBanner) {
+                    innerTextBanner = await azureBlob(innerTextBanner, 'trails/banners')
+                } else {
+                    innerTextBanner = payload.innerTextBanner
+                }
 
-                        for (const image of fileArray) {
-                            const file = image.file
-                            let path = await azureBlob(file, 'trails/gallery')
-                            path = path.replace(AZURE_BLOB_URL, DOMAIN)
-                            const material = {
-                                _id: new mongoose.Types.ObjectId(),
-                                url: path,
-                                name: file.name,
-                                size: file.size,
-                                deleted: false,
-                                title: image.title,
-                                description: image.description
-                            }
-                            gallery.push(material)
-                        }
-                        payload.gallery = [
-                            ...payload.gallery,
-                            ...gallery,
-                        ]
-                        delete payload.galleryFiles
+                if (background) {
+                    backgroundPath = await azureBlob(
+                        background,
+                        'trails/backgrounds'
+                    );
+                    if (process.env.NODE_ENV !== 'local') {
+                        backgroundPath = backgroundPath.replace(
+                            AZURE_BLOB_URL,
+                            DOMAIN
+                        );
                     }
+                }
 
-                    payload = {
-                        ...payload,
-                        enabled: true,
-                        thumbPath: thumbPath,
-                        bannerPath: bannerPath,
-                        backgroundPath,
-                        innerTextBanner
-                    };
+                if (payload.supportFileMaterial) {
+                    const fileArray = payload.supportFileMaterial.map(
+                        key => req.files[key],
+                    )
+                    const supportMaterial = []
 
-                    if (payload.post) {
-                        const hasPostItem = payload.items.some((item) => item.itemID.kind === 'PostItem')
-                        if (hasPostItem) {
-                            const itemPostIndex = payload.items.findIndex((item) => item.itemID.kind === 'PostItem')
-                            const item = payload.items[itemPostIndex]
-                            if (item.itemID.title !== payload.title) {
-                                const updatedItem = {
-                                    ...item.itemID,
-                                    title: payload.title,
-                                    description: payload.description,
-                                    enabled: true,
-                                    thumbPath: payload.thumbPath,
-                                    titleURL: payload.titleURL,
-                                };
-                                const { _doc } = await PostItem.findOneAndUpdate({ _id: item.itemID._id }, updatedItem, { new: true })
-                                payload.items[itemPostIndex].itemID = _doc
-                            }
-                        } else {
-                            const user = await getUserByToken(req);
-                            const item = {
+                    for (const file of fileArray) {
+                        let path = await azureBlob(file, 'trails/material')
+                        path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                        const material = {
+                            _id: new mongoose.Types.ObjectId(),
+                            url: path,
+                            name: file.name,
+                            size: file.size,
+                            deleted: false,
+                        }
+                        supportMaterial.push(material)
+                    }
+                    payload.supportMaterial = [
+                        ...payload.supportMaterial,
+                        ...supportMaterial,
+                    ]
+                    delete payload.supportFileMaterial
+                }
+
+                if (payload.galleryFiles) {
+                    const fileArray = payload.galleryFiles.map((item) => {
+                        return {
+                            ...item,
+                            file: req.files[item.name]
+                        }
+                    },
+                    )
+                    const gallery = []
+
+                    for (const image of fileArray) {
+                        const file = image.file
+                        let path = await azureBlob(file, 'trails/gallery')
+                        path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                        const material = {
+                            _id: new mongoose.Types.ObjectId(),
+                            url: path,
+                            name: file.name,
+                            size: file.size,
+                            deleted: false,
+                            title: image.title,
+                            description: image.description
+                        }
+                        gallery.push(material)
+                    }
+                    payload.gallery = [
+                        ...payload.gallery,
+                        ...gallery,
+                    ]
+                    delete payload.galleryFiles
+                }
+
+                payload = {
+                    ...payload,
+                    enabled: true,
+                    thumbPath: thumbPath,
+                    bannerPath: bannerPath,
+                    backgroundPath,
+                    innerTextBanner
+                };
+
+                if (payload.post) {
+                    const hasPostItem = payload.items.some((item) => item.itemID.kind === 'PostItem')
+                    if (hasPostItem) {
+                        const itemPostIndex = payload.items.findIndex((item) => item.itemID.kind === 'PostItem')
+                        const item = payload.items[itemPostIndex]
+                        if (item.itemID.title !== payload.title) {
+                            const updatedItem = {
+                                ...item.itemID,
                                 title: payload.title,
                                 description: payload.description,
                                 enabled: true,
                                 thumbPath: payload.thumbPath,
                                 titleURL: payload.titleURL,
-                                author: user._id,
-                                kind: 'PostItem'
-                            }
-                            const postItem = await PostItem.create(item);
-                            if (payload.items.length) {
-                                payload.items.push({
-                                    "mandatory": false,
-                                    "chief": false,
-                                    "optional": false,
-                                    "afterSeparator": "empty",
-                                    "itemID": postItem
-                                })
-                            } else {
-                                payload.items = [{
-                                    "mandatory": false,
-                                    "chief": false,
-                                    "optional": false,
-                                    "afterSeparator": "empty",
-                                    "itemID": postItem
-                                }]
-                            }
+                            };
+                            const { _doc } = await PostItem.findOneAndUpdate({ _id: item.itemID._id }, updatedItem, { new: true })
+                            payload.items[itemPostIndex].itemID = _doc
+                        }
+                    } else {
+                        const user = await getUserByToken(req);
+                        const item = {
+                            title: payload.title,
+                            description: payload.description,
+                            enabled: true,
+                            thumbPath: payload.thumbPath,
+                            titleURL: payload.titleURL,
+                            author: user._id,
+                            kind: 'PostItem'
+                        }
+                        const postItem = await PostItem.create(item);
+                        if (payload.items.length) {
+                            payload.items.push({
+                                "mandatory": false,
+                                "chief": false,
+                                "optional": false,
+                                "afterSeparator": "empty",
+                                "itemID": postItem
+                            })
+                        } else {
+                            payload.items = [{
+                                "mandatory": false,
+                                "chief": false,
+                                "optional": false,
+                                "afterSeparator": "empty",
+                                "itemID": postItem
+                            }]
                         }
                     }
-                    const items = []
-                    const OldItems = payload.items
-
-                    delete payload.items
-                    const trail = await Trail.create(payload);
-
-
-
-                    for (const item of OldItems) {
-                        if (item.itemID.kind === 'AluraItem') {
-                            const { _id } = await getUserByToken(req);
-                            let { itemAluraCreated, separators: updatedSeparators } = await createItemIfAlura(item, trail.separators, _id);
-                            item.itemID = itemAluraCreated;
-                            trail.separators = updatedSeparators;
-                        }
-
-                        items.push({
-                            ...item,
-                            urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}/${item.itemID._id}`,
-                            urlTrail: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}`,
-                            itemID: item.itemID._id,
-                        });
-                    }
-
-                    trail.items = items
-                    updateProgressAluraItem(OldItems)
-                    const newData = await Trail.updateOne(
-                        { _id: { $eq: trail._id } },
-                        trail,
-                        { new: true }
-                    );
-                    // const newData = await Trail.find({ _id: { $eq: trail._id } });
-
-                    _messages.success(
-                        res,
-                        req,
-                        trail,
-                        'Atualização de dados',
-                        'trails',
-                        'multiUploadCreate',
-                        newData,
-                        [],
-                        true,
-                        'UPDATE'
-                    );
-                } else {
-                    _messages.badRequest(
-                        res,
-                        req,
-                        'Já existe um trilha cadastrada com esse título',
-                        'Já existe um trilha cadastrada com esse título',
-                        'trails',
-                        'multiUploadCreate',
-                        '5d9f22722cefc7329473e5c5'
-                    );
                 }
+                const items = []
+                const OldItems = payload.items
+
+                delete payload.items
+                const trail = await Trail.create(payload);
+
+
+
+                for (const item of OldItems) {
+                    if (item.itemID.kind === 'AluraItem') {
+                        const { _id } = await getUserByToken(req);
+                        let { itemAluraCreated, separators: updatedSeparators } = await createItemIfAlura(item, trail.separators, _id);
+                        item.itemID = itemAluraCreated;
+                        trail.separators = updatedSeparators;
+                    }
+
+                    items.push({
+                        ...item,
+                        urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}/${item.itemID._id}`,
+                        urlTrail: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}`,
+                        itemID: item.itemID._id,
+                    });
+                }
+
+                trail.items = items
+                updateProgressAluraItem(OldItems)
+                const newData = await Trail.updateOne(
+                    { _id: { $eq: trail._id } },
+                    trail,
+                    { new: true }
+                );
+                // const newData = await Trail.find({ _id: { $eq: trail._id } });
+
+                _messages.success(
+                    res,
+                    req,
+                    trail,
+                    'Atualização de dados',
+                    'trails',
+                    'multiUploadCreate',
+                    newData,
+                    [],
+                    true,
+                    'UPDATE'
+                );
+
             }
         } catch (error) {
             console.log(error)
@@ -649,14 +659,36 @@ module.exports = {
 
     async duplicate (req, res) {
         try {
-            const body = req.body;
+            const { oldTrailId, ...body } = req.body;
+
             delete body?.descriptionView;
+
             if (body.collaborative) {
                 body.collaborative = false
             }
 
             const docClone = new Trail(body);
-            await docClone.save();
+            const newDbTrail = await docClone.save();
+
+            if (oldTrailId) {
+                await Trail.updateOne(
+                    { _id: newDbTrail._id },
+                    {
+                        $set: {
+                            items: body.items?.map((item) => {
+                                const urlItem = item.urlItem?.replace(oldTrailId, newDbTrail._id) ?? null;
+                                const urlTrail = item.urlTrail?.replace(oldTrailId, newDbTrail._id) ?? null;
+
+                                return {
+                                    ...item,
+                                    urlItem,
+                                    urlTrail,
+                                }
+                            }) ?? [],
+                        }
+                    }
+                )
+            }
 
             _messages.success(
                 res,
@@ -755,245 +787,255 @@ module.exports = {
                 )
             } else {
                 const verify = await Trail.find({
-                    title: { $eq: payload.title },
-                    _id: { $ne: _id },
+                    $or: [{
+                        title: { $eq: payload.title },
+                        _id: { $ne: payload._id },
+                    }, {
+                        _id: { $ne: payload._id },
+                        titleURL: { $regex: payload.titleURL, $options: 'i' }
+                    }]
                 })
-                if (verify.length === 0) {
-                    if (thumb) {
-                        thumbPath = await azureBlob(thumb, 'trails/thumbs')
-                        if (process.env.NODE_ENV !== 'local') {
-                            thumbPath = thumbPath.replace(
-                                AZURE_BLOB_URL,
-                                DOMAIN,
-                            )
-                        }
-                    }
-                    if (banner) {
-                        bannerPath = await azureBlob(banner, 'trails/banners')
-                    }
 
-                    if (innerTextBanner) {
-                        innerTextBanner = await azureBlob(innerTextBanner, 'trails/banners')
-                    } else {
-                        innerTextBanner = payload.innerTextBanner
+                if (verify.length > 0) {
+                    const titleDuplicate = verify.some((trail) => trail.title === payload.title)
+                    const titleURLDuplicate = verify.some((trail) => trail.titleURL === payload.titleURL)
+                    if (titleURLDuplicate) payload.titleURL = `${payload.titleURL}-${verify.length}`
+                    if (titleDuplicate) {
+                        return _messages.badRequest(
+                            res,
+                            req,
+                            'Já existe uma trilha com esse título!',
+                            'Já existe uma trilha com esse título!',
+                            'trails',
+                            'update'
+                        );
                     }
-
-                    if (background) {
-                        backgroundPath = await azureBlob(
-                            background,
-                            'trails/backgrounds',
+                }
+                if (thumb) {
+                    thumbPath = await azureBlob(thumb, 'trails/thumbs')
+                    if (process.env.NODE_ENV !== 'local') {
+                        thumbPath = thumbPath.replace(
+                            AZURE_BLOB_URL,
+                            DOMAIN,
                         )
-                        if (process.env.NODE_ENV !== 'local') {
-                            backgroundPath = backgroundPath.replace(
-                                AZURE_BLOB_URL,
-                                DOMAIN,
-                            )
-                        }
-                    } else {
-                        backgroundPath = payload.backgroundPath
-                            ? payload.backgroundPath
-                            : null
                     }
+                }
+                if (banner) {
+                    bannerPath = await azureBlob(banner, 'trails/banners')
+                }
 
-                    delete payload.thumb
-                    delete payload.banner
+                if (innerTextBanner) {
+                    innerTextBanner = await azureBlob(innerTextBanner, 'trails/banners')
+                } else {
+                    innerTextBanner = payload.innerTextBanner
+                }
 
-                    if (payload.separators) {
-                        for (separator of payload.separators) {
-                            if (!ObjectId.isValid(separator._id)) {
-                                const oldId = separator._id
-                                const newId = new mongoose.Types.ObjectId()
-                                payload.items = payload.items.map(item => {
-                                    if (item.afterSeparator == oldId) {
-                                        item.afterSeparator = newId
-                                    }
-                                    return item
-                                })
-                                separator._id = newId
-                            }
-                        }
-                    }
-
-                    if (payload.supportFileMaterial) {
-                        const fileArray = payload.supportFileMaterial.map(
-                            key => req.files[key],
+                if (background) {
+                    backgroundPath = await azureBlob(
+                        background,
+                        'trails/backgrounds',
+                    )
+                    if (process.env.NODE_ENV !== 'local') {
+                        backgroundPath = backgroundPath.replace(
+                            AZURE_BLOB_URL,
+                            DOMAIN,
                         )
-                        const supportMaterial = []
+                    }
+                } else {
+                    backgroundPath = payload.backgroundPath
+                        ? payload.backgroundPath
+                        : null
+                }
 
-                        for (const file of fileArray) {
-                            let path = await azureBlob(file, 'trails/material')
-                            path = path.replace(AZURE_BLOB_URL, DOMAIN)
-                            const material = {
-                                _id: new mongoose.Types.ObjectId(),
-                                url: path,
-                                name: file.name,
-                                size: file.size,
-                                deleted: false,
-                            }
-                            supportMaterial.push(material)
+                delete payload.thumb
+                delete payload.banner
+
+                if (payload.separators) {
+                    for (separator of payload.separators) {
+                        if (!ObjectId.isValid(separator._id)) {
+                            const oldId = separator._id
+                            const newId = new mongoose.Types.ObjectId()
+                            payload.items = payload.items.map(item => {
+                                if (item.afterSeparator == oldId) {
+                                    item.afterSeparator = newId
+                                }
+                                return item
+                            })
+                            separator._id = newId
                         }
-                        payload.supportMaterial = [
-                            ...payload.supportMaterial,
-                            ...supportMaterial,
-                        ]
-                        delete payload.supportFileMaterial
                     }
+                }
 
-                    if (payload.galleryFiles) {
-                        const fileArray = payload.galleryFiles.map(
-                            file => ({ ...file, file: req.files[file.name] }),
-                        )
-                        const gallery = []
+                if (payload.supportFileMaterial) {
+                    const fileArray = payload.supportFileMaterial.map(
+                        key => req.files[key],
+                    )
+                    const supportMaterial = []
 
-                        for (const image of fileArray) {
-                            const file = image.file
-                            let path = await azureBlob(file, 'trails/gallery')
-                            path = path.replace(AZURE_BLOB_URL, DOMAIN)
-                            const material = {
-                                _id: new mongoose.Types.ObjectId(),
-                                url: path,
-                                name: file.name,
-                                size: file.size,
-                                deleted: false,
-                                title: image.title,
-                                description: image.description
-                            }
-                            gallery.push(material)
+                    for (const file of fileArray) {
+                        let path = await azureBlob(file, 'trails/material')
+                        path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                        const material = {
+                            _id: new mongoose.Types.ObjectId(),
+                            url: path,
+                            name: file.name,
+                            size: file.size,
+                            deleted: false,
                         }
+                        supportMaterial.push(material)
+                    }
+                    payload.supportMaterial = [
+                        ...payload.supportMaterial,
+                        ...supportMaterial,
+                    ]
+                    delete payload.supportFileMaterial
+                }
 
-                        payload.gallery = [
-                            ...payload.gallery,
-                            ...gallery,
-                        ]
-                        delete payload.galleryFiles
+                if (payload.galleryFiles) {
+                    const fileArray = payload.galleryFiles.map(
+                        file => ({ ...file, file: req.files[file.name] }),
+                    )
+                    const gallery = []
+
+                    for (const image of fileArray) {
+                        const file = image.file
+                        let path = await azureBlob(file, 'trails/gallery')
+                        path = path.replace(AZURE_BLOB_URL, DOMAIN)
+                        const material = {
+                            _id: new mongoose.Types.ObjectId(),
+                            url: path,
+                            name: file.name,
+                            size: file.size,
+                            deleted: false,
+                            title: image.title,
+                            description: image.description
+                        }
+                        gallery.push(material)
                     }
 
-                    payload = {
-                        ...payload,
-                        thumbPath,
-                        bannerPath,
-                        backgroundPath,
-                        innerTextBanner
-                    }
+                    payload.gallery = [
+                        ...payload.gallery,
+                        ...gallery,
+                    ]
+                    delete payload.galleryFiles
+                }
 
-                    const [trail] = await Trail.find({
-                        _id: { $eq: payload._id },
+                payload = {
+                    ...payload,
+                    thumbPath,
+                    bannerPath,
+                    backgroundPath,
+                    innerTextBanner
+                }
+
+                const [trail] = await Trail.find({
+                    _id: { $eq: payload._id },
+                })
+
+                if (payload.mandatory?.length == 0) {
+                    // Setar todos os mandatory de itens como false.
+                    trail.items.forEach(item => {
+                        item.mandatory = false
                     })
 
-                    if (payload.mandatory?.length == 0) {
-                        // Setar todos os mandatory de itens como false.
-                        trail.items.forEach(item => {
-                            item.mandatory = false
-                        })
+                    payload.items.forEach(item => {
+                        item.mandatory = false
+                    })
+                }
 
-                        payload.items.forEach(item => {
-                            item.mandatory = false
-                        })
-                    }
-
-                    if (payload.post) {
-                        const hasPostItem = payload.items.some((item) => item.itemID.kind === 'PostItem')
-                        if (hasPostItem) {
-                            const itemPostIndex = payload.items.findIndex((item) => item.itemID.kind === 'PostItem')
-                            const item = payload.items[itemPostIndex]
-                            if (item.itemID.title !== payload.title) {
-                                const updatedItem = {
-                                    ...item.itemID,
-                                    title: payload.title,
-                                    description: payload.description,
-                                    enabled: true,
-                                    thumbPath: payload.thumbPath,
-                                    titleURL: payload.titleURL,
-                                };
-                                const { _doc } = await PostItem.findOneAndUpdate({ _id: item.itemID._id }, updatedItem, { new: true })
-                                payload.items[itemPostIndex].itemID = _doc
-                            }
-                        } else {
-                            const user = await getUserByToken(req);
-                            const item = {
+                if (payload.post) {
+                    const hasPostItem = payload.items.some((item) => item.itemID.kind === 'PostItem')
+                    if (hasPostItem) {
+                        const itemPostIndex = payload.items.findIndex((item) => item.itemID.kind === 'PostItem')
+                        const item = payload.items[itemPostIndex]
+                        if (item.itemID.title !== payload.title) {
+                            const updatedItem = {
+                                ...item.itemID,
                                 title: payload.title,
                                 description: payload.description,
                                 enabled: true,
                                 thumbPath: payload.thumbPath,
                                 titleURL: payload.titleURL,
-                                author: user._id,
-                                kind: 'PostItem'
-                            }
-                            const postItem = await PostItem.create(item);
-                            if (payload.items.length) {
-                                payload.items.push({
-                                    "mandatory": false,
-                                    "chief": false,
-                                    "optional": false,
-                                    "afterSeparator": "empty",
-                                    "itemID": postItem
-                                })
-                            } else {
-                                payload.items = [{
-                                    "mandatory": false,
-                                    "chief": false,
-                                    "optional": false,
-                                    "afterSeparator": "empty",
-                                    "itemID": postItem
-                                }]
-                            }
+                            };
+                            const { _doc } = await PostItem.findOneAndUpdate({ _id: item.itemID._id }, updatedItem, { new: true })
+                            payload.items[itemPostIndex].itemID = _doc
+                        }
+                    } else {
+                        const user = await getUserByToken(req);
+                        const item = {
+                            title: payload.title,
+                            description: payload.description,
+                            enabled: true,
+                            thumbPath: payload.thumbPath,
+                            titleURL: payload.titleURL,
+                            author: user._id,
+                            kind: 'PostItem'
+                        }
+                        const postItem = await PostItem.create(item);
+                        if (payload.items.length) {
+                            payload.items.push({
+                                "mandatory": false,
+                                "chief": false,
+                                "optional": false,
+                                "afterSeparator": "empty",
+                                "itemID": postItem
+                            })
+                        } else {
+                            payload.items = [{
+                                "mandatory": false,
+                                "chief": false,
+                                "optional": false,
+                                "afterSeparator": "empty",
+                                "itemID": postItem
+                            }]
                         }
                     }
-
-
-                    const items = []
-
-                    for (const item of payload.items) {
-                        if (item.itemID.kind === 'AluraItem') {
-                            const user = await getUserByToken(req);
-                            let { itemAluraCreated, separators: updatedSeparators } = await createItemIfAlura(item, payload.separators, user._id);
-                            item.itemID = itemAluraCreated;
-                            trail.separators = updatedSeparators;
-                        }
-
-                        items.push({
-                            ...item,
-                            urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}/${item.itemID._id}`,
-                            urlTrail: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}`,
-                            itemID: item.itemID._id,
-                        });
-                    }
-
-                    updateProgressAluraItem(payload.items)
-                    payload.items = items
-                    const oldData = await Trail.updateOne(
-                        { _id: { $eq: payload._id } },
-                        payload,
-                    )
-                    const newData = await Trail.findOne({
-                        _id: { $eq: payload._id },
-                    })
-
-                    await updateCertificateExpirationDate(req)
-
-                    _messages.success(
-                        res,
-                        req,
-                        newData,
-                        'Atualização de dados',
-                        'trails',
-                        'update',
-                        newData,
-                        payload,
-                        true,
-                        'UPDATE',
-                    )
-                } else {
-                    _messages.badRequest(
-                        res,
-                        req,
-                        'Já existe um trilha cadastrada com esse título',
-                        'Já existe um trilha cadastrada com esse título',
-                        'trails',
-                        'update',
-                        '5d9f22722cefc7329473e5c5',
-                    )
                 }
+
+
+                const items = []
+
+                for (const item of payload.items) {
+                    if (item.itemID.kind === 'AluraItem') {
+                        const user = await getUserByToken(req);
+                        let { itemAluraCreated, separators: updatedSeparators } = await createItemIfAlura(item, payload.separators, user._id);
+                        item.itemID = itemAluraCreated;
+                        trail.separators = updatedSeparators;
+                    }
+
+                    items.push({
+                        ...item,
+                        urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}/${item.itemID._id}`,
+                        urlTrail: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}`,
+                        itemID: item.itemID._id,
+                    });
+                }
+
+                updateProgressAluraItem(payload.items)
+                payload.items = items
+                const oldData = await Trail.findOneAndUpdate(
+                    { _id: { $eq: payload._id } },
+                    payload,
+                )
+                const newData = await Trail.findOne({
+                    _id: { $eq: payload._id },
+                })
+
+                await updateCertificateExpirationDate(req)
+
+                _messages.success(
+                    res,
+                    req,
+                    newData,
+                    'Atualização de dados',
+                    'trails',
+                    'update',
+                    newData,
+                    oldData,
+                    true,
+                    'UPDATE',
+                )
+
             }
         } catch (error) {
             console.log(error)
@@ -1213,24 +1255,23 @@ module.exports = {
                     total,
                 });
             } else {
+                const escapedSearchBy = searchBy ? searchBy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
                 let query = searchBy
                     ? {
                         $or: [
                             {
                                 description: {
-                                    $regex: searchBy,
+                                    $regex: escapedSearchBy,
                                     $options: 'i',
                                 }
                             },
-
                             {
                                 title: {
-                                    $regex: searchBy,
+                                    $regex: escapedSearchBy,
                                     $options: 'i',
                                 },
                             },
                         ],
-
                     }
                     : {}
                 query['archive'] = archive ? { $eq: archive === 'true' } : { $ne: true };
@@ -1271,6 +1312,8 @@ module.exports = {
             );
         }
     },
+
+
 
 
     async returnItemsByTrail (req, res) {

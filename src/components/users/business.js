@@ -8,6 +8,7 @@ const {
     calculateDiffDate,
     pagination,
     ordernation,
+    sanitizeCpf
 } = require('../../utils/functions');
 const { ldapClient, returnIdProfileUser, returnIdGroupUser } = require('../../utils/auth');
 const { DashConfig } = require('../dashboard/model');
@@ -392,10 +393,14 @@ module.exports = {
 
     processUsersLoad(data, elegibilityFields = [], onboarding = false) {
         const salt = bcrypt.genSaltSync(10);
-        const initialPasswordKey = '1234';
+        const firstName = String(data.name.split(" ")[0]).trim().toLowerCase();
+        const firstThreeCpf = sanitizeCpf(data.cpf).slice(0, 3);
+        const initialPassword = !onboarding
+            ? "1234"
+            : `${firstName}${firstThreeCpf}`;
         data.password = [
             {
-                hash: bcrypt.hashSync(data?.password ?? initialPasswordKey, salt),
+                hash: bcrypt.hashSync(data?.password ?? initialPassword, salt),
                 valid: true,
                 createdAt: new Date(Date.now()),
             },
@@ -408,6 +413,7 @@ module.exports = {
             data?.createDate ?? new Date()
         );
         data.enabled = true;
+        data.onboarding = onboarding;
 
         const groupsAD =
             onboarding === true
@@ -417,11 +423,6 @@ module.exports = {
         if (elegibilityFields && elegibilityFields.length > 0 && onboarding == false) {
             for (const field of elegibilityFields) {
                 if (data[field]) {
-                    console.log({
-                        field,
-                        datafield: data[field],
-                        type: typeof data[field],
-                    });
                     const fieldType = typeof data[field];
                     if (fieldType === 'object') continue;
 

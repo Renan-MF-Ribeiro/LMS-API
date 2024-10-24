@@ -42,18 +42,18 @@ const HomeController = {
         const filtersValues = Object.values(filters)
         const hasFilters = filtersValues.some((filter) => filter === 'true')
 
-        if(!searchBy?.length && !hasFilters) {
+        if (!searchBy?.length && !hasFilters) {
             return _messages.success(res, req, {});
         }
 
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsGroupsByToken(req);
-            const { skip, limit } = pagination({ 
-                query: { 
-                    pageIndex: Number(pageIndex), 
+            const { skip, limit } = pagination({
+                query: {
+                    pageIndex: Number(pageIndex),
                     pageSize: Number(pageSize)
-                } 
+                }
             })
             let filteredTrails = [];
             let result = [];
@@ -62,11 +62,21 @@ const HomeController = {
                 delete tag.createdAt;
                 tags.push(tag);
             }
-
+            const escapedSearchBy = searchBy ? searchBy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
             const items = await Item.find({
                 $or: [
-                    { title: new RegExp(searchBy, 'gi') },
-                    { description: new RegExp(searchBy, 'gi') },
+                    {
+                        title: {
+                            $regex: escapedSearchBy,
+                            $options: 'i',
+                        }
+                    },
+                    {
+                        description: {
+                            $regex: escapedSearchBy,
+                            $options: 'i',
+                        }
+                    },
                 ],
                 enabled: true,
                 deleted: { $eq: 0 },
@@ -76,8 +86,18 @@ const HomeController = {
                 $or: [
                     {
                         $or: [
-                            { title: new RegExp(searchBy, 'gi') },
-                            { description: new RegExp(searchBy, 'gi') },
+                            {
+                                title: {
+                                    $regex: escapedSearchBy,
+                                    $options: 'i',
+                                }
+                            },
+                            {
+                                description: {
+                                    $regex: escapedSearchBy,
+                                    $options: 'i',
+                                }
+                            },
                         ],
                         tags: { $in: tags },
                         enabled: true,
@@ -90,7 +110,7 @@ const HomeController = {
                 ],
             });
 
-            filteredTrails = filteredTrails.filter((trail) =>{
+            filteredTrails = filteredTrails.filter((trail) => {
                 return checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && checkIfTheTrackIsValid(trail)
             });
 
@@ -113,13 +133,13 @@ const HomeController = {
             if (hasFilters) {
                 result = filterTrails(filters, result, tags);
             }
-            
+
             const sections = await Section.find({
                 trails: { $in: result.map((t) => t._id) },
                 active: 1,
                 deleted: 0,
             }).lean();
-            
+
             const trailMap = new Map();
             sections.forEach((section) => {
                 section.trails.forEach((trailId) => {
@@ -128,21 +148,21 @@ const HomeController = {
                     }
                 });
             });
-            
+
             result = sections
                 .map((section) => {
                     return {
                         ...section,
                         trails: section.trails
-                                .filter((trailId) => {
-                                    return (
-                                        result.some(({ _id }) => _id.equals(trailId)) &&
-                                        section._id.equals(trailMap.get(trailId.toString()))
-                                    );
-                                })
-                                .map((trailId) => {
-                                    return result.find(({ _id }) => _id.equals(trailId));
-                                }),
+                            .filter((trailId) => {
+                                return (
+                                    result.some(({ _id }) => _id.equals(trailId)) &&
+                                    section._id.equals(trailMap.get(trailId.toString()))
+                                );
+                            })
+                            .map((trailId) => {
+                                return result.find(({ _id }) => _id.equals(trailId));
+                            }),
                     };
                 }).filter((section) => section.trails.length > 0);
 
@@ -160,6 +180,7 @@ const HomeController = {
 
             _messages.success(res, req, { data: result.slice(skip, skip + limit), total: result.length });
         } catch (error) {
+            console.log(error)
             _messages.internalServer(
                 res,
                 req,
@@ -171,7 +192,7 @@ const HomeController = {
         }
     },
 
-    async searchTrailsItems (req, res) {
+    async searchTrailsItems(req, res) {
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsGroupsByToken(req);
@@ -251,7 +272,7 @@ const HomeController = {
         }
     },
 
-    async dashboardStudent (req, res) {
+    async dashboardStudent(req, res) {
         try {
             const user = await getUserByToken(req);
             const courses = await getStudentCourses(req);
@@ -334,7 +355,7 @@ const HomeController = {
         }
     },
 
-    async dashboardStudentv2 (req, res) {
+    async dashboardStudentv2(req, res) {
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
@@ -344,7 +365,7 @@ const HomeController = {
                 enabled: true,
                 startDate: { $lt: getDateTodayWithoutHours() },
                 endDate: { $gt: getDateTodayWithoutHours() },
-            }).populate('items.itemID');;
+            }).populate('items.itemID');
             const totalTrails = elegibleTrails.length;
             const { average, highestScoreTrail } = await handleStudentAverage(user);
             const { completedTrails, inProgressTrails } = await handleStudentTrails(
@@ -362,7 +383,7 @@ const HomeController = {
                 totalCompletedTrails: completedTrails.length,
                 totalTrails,
                 percentageCompletedTrails,
-                inProgressTrails: inProgressTrails.filter(x=>x.notStarted == true),
+                inProgressTrails: inProgressTrails.filter(x => x.notStarted == true),
                 average,
                 lastTrail: inProgressTrails[0],
                 highestScoreTitle,
@@ -382,7 +403,7 @@ const HomeController = {
         }
     },
 
-    async searchStudentCourses (req, res) {
+    async searchStudentCourses(req, res) {
         try {
             await getStudentCourses(req);
         } catch (error) {
@@ -397,7 +418,7 @@ const HomeController = {
         }
     },
 
-    async listCertificates (req, res) {
+    async listCertificates(req, res) {
         try {
             const { searchBy } = req.query;
             req.query = { ...req.query, pageSize: req.query.pageSize ?? 5 };
@@ -440,7 +461,7 @@ const HomeController = {
         }
     },
 
-    async listExpiredCertificates (req, res) {
+    async listExpiredCertificates(req, res) {
         try {
             const { searchBy } = req.query;
             req.query = { ...req.query, pageSize: req.query.pageSize ?? 5 };
@@ -455,7 +476,7 @@ const HomeController = {
                 endDate: { $gt: getDateTodayWithoutHours() },
             }).populate('items.itemID');
             const { completedTrails } = await handleStudentTrails(user, elegibleTrails, true);
-            
+
             let certificates = await returnCertificates(completedTrails, user);
 
             if (searchBy) {
@@ -484,7 +505,7 @@ const HomeController = {
         }
     },
 
-    async noCertificates (req, res) {
+    async noCertificates(req, res) {
         try {
             const { searchBy } = req.query;
             req.query = { ...req.query, pageSize: req.query.pageSize ?? 5 };

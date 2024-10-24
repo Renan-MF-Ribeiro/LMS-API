@@ -285,7 +285,6 @@ module.exports = {
                 }
 
                 let trails = await populateTrails(true, query);
-                console.log('Total de trilhas:', trails.length);
 
                 trails = trails.filter((trail) => checkIfTheTrackIsValid(trail));
 
@@ -516,7 +515,6 @@ module.exports = {
                 responseSection = setResponse(favoriteSectionsResult);
                 break;
             case DEFAULT_TYPES.MOST_SEEN:
-                console.log('MOST_SEEN', trails)
                 const mostSeenSectionsResult = await mostSeenSections(trails);
                 responseSection = setResponse(mostSeenSectionsResult);
                 break;
@@ -532,6 +530,14 @@ module.exports = {
 
         if (responseSection.isTraining) {
             await setAssessmentHistoricOnSections(user._id, [responseSection]);
+        }
+
+        if (responseSection.trails?.length && section.trails?.length) {
+            const originalOrder = section.trails.map(trail => trail._id);
+
+            responseSection.trails = originalOrder.map(
+                trailId => responseSection.trails.find(trail => String(trail._id) === String(trailId))
+            ).filter(Boolean);
         }
 
         res.json(responseSection);

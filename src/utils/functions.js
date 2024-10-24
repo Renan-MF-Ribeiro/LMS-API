@@ -26,6 +26,10 @@ module.exports = {
             momentz().format('YYYY')
         );
     },
+    
+    sanitizeCpf (value) {
+        return module.exports.formatNumberCpf(String(value).replace(/\D/g, ''));
+    },
 
     formatDate (date) {
         return momentz(date).format('YYYY-MM-DD HH:mm:ss');
@@ -528,7 +532,7 @@ module.exports = {
             if (dashboard && objTracking && objTracking[0] === undefined) {
                 trail.notStarted = true
             }
-            duration += item.itemID.durationHours ? item.itemID.durationHours : 0;
+            duration += item?.itemID?.durationHours ?? 0;
             lastTrackingUpdate = objTracking ? objTracking.updatedAt : null;
             const score = objTracking && objTracking.score ? objTracking.score : null;
             const completionAt = objTracking ? objTracking.completionAt : null;

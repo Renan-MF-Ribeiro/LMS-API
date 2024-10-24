@@ -156,6 +156,7 @@ module.exports = {
                 const user = await getUserByToken(req);
                 const tags = await getTagsGroupsByToken(req);
                 const today = getDateTodayWithoutHours();
+                
                 if (user.classGroups.length > 0) {
                     for (const classGroup of user.classGroups) {
                         tags.push({
@@ -164,13 +165,7 @@ module.exports = {
                         });
                     }
                 }
-                if (user.assessmentGroups.length > 0) {
-                    const assessmentGroups = await Group.find({
-                        name: { $in: user.assessmentGroups },
-                    });
-                    const assessmentGroupsTags = assessmentGroups.flatMap(({ tags }) => tags);
-                    tags.push(...assessmentGroupsTags);
-                }
+
                 if (user.tags.length > 0) {
                     for (const tag of user.tags) {
                         const diff = calculateDiffDate(
@@ -395,7 +390,6 @@ module.exports = {
                             : function (a, b) {
                                 return a.title.localeCompare(b.title);
                             };
-
                     for (const trail of trails) {
                         const flag = calculateDiffDateTrail(trail);
                         if (flag) {
@@ -432,7 +426,7 @@ module.exports = {
                             };
 
                     for (const trail of trails) {
-                        if (trail.completion === 0) {
+                        if (trail.completion === 0 || !trail.completion) {
                             section.trails.push(trail);
                         }
                     }
@@ -872,9 +866,9 @@ module.exports = {
     },
 
     getTrainingDataFromBody(body) {
-        const { isTraining = false, certificateLayout, certificateDue } = body;
+        const { isTraining = false, certificateLayout, certificateDue, completedTrailsType = 'optional' } = body;
 
-        if (!isTraining) return { isTraining, certificateLayout: null, certificateDue: null };
+        if (!isTraining) return { isTraining, certificateLayout: null, certificateDue: null, completedTrailsType: null };
 
         let certificateDueObj = null;
 
@@ -891,9 +885,10 @@ module.exports = {
             isTraining,
             certificateLayout: certificateLayout ?? null,
             certificateDue: certificateDueObj,
+            completedTrailsType,
         };
     },
-    
+
     async setAssessmentHistoricOnSections(userId, sections) {
         const userWithTags = await UsersWithProcessedTags.findById(userId);
         const dataAssessmentHistoric = await listTrainingSectionsStatus(userId, userWithTags.userTags);
@@ -930,6 +925,12 @@ module.exports = {
                 section.isBlocked = false;
                 section.isCompleted = isCompleted;
                 section.hasCertificate = !!section.certificateLayout;
+            }
+
+            const completedTrailsType = section.completedTrailsType ?? 'optional';
+
+            if (completedTrailsType === 'hidden') {
+                section.trails = section.trails.filter(trail => !trail.isOptional);
             }
         });
 

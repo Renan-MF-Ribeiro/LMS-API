@@ -95,6 +95,7 @@ const { handleUserEligibilitiesGamification } = require('../gamification/utils')
 const AssessmentBusiness = require('../assessment/business');
 const { Features } = require('../theme/features/model');
 const { Partner } = require('../partners/model');
+const { Log } = require('../logs/model');
 
 module.exports = {
     async create(req, res) {
@@ -105,7 +106,7 @@ module.exports = {
                 $or: [{ registration }, { cpf }],
             });
 
-            if (userFound.length > 0) {
+            if (userFound) {
                 return _messages.forbidden(
                     res,
                     req,
@@ -136,6 +137,7 @@ module.exports = {
 
             return _messages.success(res, req, created);
         } catch (error) {
+            console.log({ error })
             let validationErrorKeys;
             let validationError;
 
@@ -177,7 +179,10 @@ module.exports = {
     },
     async signup(req, res) {
         const { token } = req.query;
-        const { email: networkLogin, password, ...data } = req.body;
+        const { password, ...data } = req.body;
+
+        const networkLogin = data.cpf;
+
         const today = moment(new Date());
         // Seta elegibilidades padrões
         let groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO'];
@@ -262,7 +267,7 @@ module.exports = {
             console.log(formatedDate)
             const userData = {
                 networkLogin,
-                email: networkLogin,
+                // email: networkLogin,
                 password: hashPassword,
                 passwordValid: true,
                 clientUserKey: CLIENT_ID + '@@' + networkLogin,
@@ -462,7 +467,7 @@ module.exports = {
                     await GamificationController.dispatch(login, [EVENTS_CATEGORY.LOGIN]);
 
                     if (config.assessment.active) {
-                        await AssessmentBusiness.updateUserEligibilities(user._id);
+                        // await AssessmentBusiness.updateUserEligibilities(user._id);
                     }
 
                     _messages.success(
@@ -700,9 +705,6 @@ module.exports = {
                     var tk = tokenEncript.toString();
                     key = cryptoJS.AES.encrypt(key, '25KP76yNnhiGH9bSj').toString();
 
-                    if (config.assessment.active) {
-                        await AssessmentBusiness.createUser(user._id);
-                    }
                     _messages.success(
                         res,
                         req,
@@ -711,7 +713,7 @@ module.exports = {
                             tk,
                             key,
                             accept: user.acceptTerms,
-                            passwordValid: user.passwordValid,
+                            passwordValid: true,
                             numbers: profilesIDS.numbers,
                             name: user.name,
                             profilePhoto: user.profilePhoto,
@@ -738,7 +740,7 @@ module.exports = {
                         res,
                         req,
                         'Usuário ou senha inválidos.',
-                        'Usuário ou senha inválidos.',
+                        { claim, claimKey: ssoForm?.claim ?? '' },
                         'users',
                         'ldapSignIn'
                     );
@@ -755,7 +757,7 @@ module.exports = {
             }
         } catch (error) {
             console.log(error);
-            _messages.internalServer(res, req, error.message);
+            _messages.internalServer(res, req, error.message, {token, error: error.stack}, 'singleSignOn', 'singleSignOn');
         }
     },
 
@@ -1137,7 +1139,10 @@ module.exports = {
 
             for (const result of results) {
                 const existingUser = await User.findOne({
-                    networkLogin: result.networkLogin,
+                    $or: [
+                        { networkLogin: result.networkLogin },
+                        { networkLogin: result.cpf }
+                    ]
                 });
 
                 const processedUser = processUsersLoad(result, fieldsForElegibility);
@@ -1150,7 +1155,6 @@ module.exports = {
                 if (existingUser) {
                     const groupsAD = [
                         ...processedUser.groupsAD,
-                        ...existingUser.groupsAD.filter((group) => group.startsWith('PERFIL_')),
                     ];
                     existingUsers.push({
                         _id: existingUser._id,
@@ -1237,7 +1241,7 @@ module.exports = {
 
             for (const result of results) {
                 const existingUser = await User.findOne({
-                    networkLogin: result.networkLogin,
+                    networkLogin: result.cpf,
                 });
                 const processedUser = processUsersLoad(result, fieldsForElegibility, onboarding);
                 const account = await processUserAccount(processedUser);
@@ -1330,6 +1334,10 @@ module.exports = {
                                   email: { $regex: searchBy, $options: 'i' },
                                   onboarding: { $ne: true },
                               },
+                              {
+                                cpf: { $regex: searchBy, $options: 'i' },
+                                onboarding: { $ne: true },
+                             },
                           ],
                       }
                     : { onboarding: { $ne: true } }
@@ -1359,6 +1367,10 @@ module.exports = {
                                   email: { $regex: searchBy, $options: 'i' },
                                   onboarding: { $ne: true },
                               },
+                              {
+                                cpf: { $regex: searchBy, $options: 'i' },
+                                onboarding: { $ne: true },
+                             },
                           ],
                       }
                     : { onboarding: { $ne: true } }
@@ -1716,7 +1728,7 @@ module.exports = {
                 profilePhoto,
                 networkLogin,
                 ...user
-            } = await User.findById(body._id);
+            } = await User.findById(body._id).lean();
 
             const namesProfiles = [];
             const namesGroups = [];
@@ -1756,8 +1768,11 @@ module.exports = {
                     filters: dashboardFilters,
                 });
                 const SAS = generateSASToken();
-                if (config.gamification.active)
+
+                if (req.features?.gamification) {
                     GamificationBusiness.createClientUser(networkLogin, groupsAD);
+                }
+                
                 _messages.success(res, req, {
                     SAS,
                     token,
@@ -1826,6 +1841,15 @@ module.exports = {
                 return deepGet(req.samlUserObject, key, null);
             }, null);
 
+            await Log.create({
+                type: 'SSO_CALLBACK',
+                message: 'SSO_CALLBACK',
+                component: 'users',
+                route: 'ssoCallback',
+                dataNew: { samlObject: req.samlUserObject },
+                dataOld: null,
+            });
+
             if (value === undefined || value === null) {
                 console.log('ssoCallback req.samlUserObject', req.samlUserObject);
 
@@ -1844,7 +1868,7 @@ module.exports = {
                 );
             }
 
-            const token = jwt.sign({ [claim]: value }, process.env.JWT_SECRET);
+            const token = jwt.sign({ [claim]: value }, process.env.PROJECT_SECRET_KEY);
 
             res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
         } catch (error) {
