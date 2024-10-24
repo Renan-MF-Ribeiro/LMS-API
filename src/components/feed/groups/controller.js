@@ -70,12 +70,13 @@ const GroupController = {
             const uri = `/groups/info/${groupId}${query}`;
             const { data } = await socialApi.get(uri);
 
-            const [populatedOwner, populatedRequests] = await Promise.all([
-                await populateUserFields('owner', 'ownerId', data),
-                await populateUserFields('user', 'userId', data.requests),
-            ]);
+            let groupRequests = undefined
+            if(requests === "true"){
+                groupRequests = await populateUserFields('user', 'userId', data.requests)
+            }
+            const populatedOwner = await populateUserFields('owner', 'ownerId', data)
             
-            const response = { data: { ...populatedOwner, requests: populatedRequests } };
+            const response = { data: { ...populatedOwner, requests: groupRequests } };
 
             return _messages.success(res, req, response);
         } catch (error) {
