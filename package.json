@@ -76,8 +76,7 @@
         "tincanjs": "^0.50.0",
         "unzipper": "^0.10.11",
         "vimeo": "^2.1.1",
-        "web-push": "^3.6.6",
-        "webhook-discord": "^3.7.8"
+        "web-push": "^3.6.6"
     },
     "devDependencies": {
         "cross-env": "^5.2.1",
