@@ -5,13 +5,13 @@ const { populateUserFields, populateSingleUserFields } = require('../buisiness')
 const GroupController = {
     async getAllGroups(req, res) {
         const { status } = req.query;
-        
+
         try {
             const query = status ? `?status=${status.toUpperCase()}` : '';
             const uri = `groups${query}`;
             const { data } = await socialApi.get(uri, { params: req.query });
 
-            const PopulatedData = await populateUserFields('owner', 'ownerId', data)
+            const PopulatedData = await populateUserFields('owner', 'ownerId', data);
             const response = { data: PopulatedData, total: data.total };
 
             return _messages.success(res, req, response);
@@ -26,7 +26,7 @@ const GroupController = {
             );
         }
     },
-    async getAvaliableGroups(req, res) {       
+    async getAvaliableGroups(req, res) {
         try {
             const uri = `groups/avaliable`;
             const { data } = await socialApi.get(uri);
@@ -48,7 +48,6 @@ const GroupController = {
         try {
             const uri = `/groups/user/${userId}`;
             const { data } = await socialApi.get(uri);
-            
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -64,11 +63,15 @@ const GroupController = {
     },
     async getGroupById(req, res) {
         const { groupId } = req.params;
+        const { requests } = req.query;
+
         try {
-            const uri = `/groups/info/${groupId}`;
+            
+            const query = requests ? `?requests=${requests.toLowerCase()}` : '';
+            const uri = `/groups/info/${groupId}${query}`;
             const { data } = await socialApi.get(uri);
 
-            const PopulatedData = await populateSingleUserFields('owner', 'ownerId', data)
+            const PopulatedData = await populateSingleUserFields('owner', 'ownerId', data);
             const response = { data: PopulatedData };
 
             return _messages.success(res, req, response);
