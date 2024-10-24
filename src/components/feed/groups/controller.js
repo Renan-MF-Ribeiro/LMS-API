@@ -12,7 +12,7 @@ const GroupController = {
             const { data } = await socialApi.get(uri, { params: req.query });
 
             const PopulatedData = await populateUserFields('owner', 'ownerId', data);
-            const response = { data: PopulatedData, total: data.total };
+            const response = { data: PopulatedData.data, total: data.total };
 
             return _messages.success(res, req, response);
         } catch (error) {
