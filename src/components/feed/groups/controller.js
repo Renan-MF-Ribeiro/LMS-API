@@ -1,6 +1,6 @@
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
-const { populateUserFields, populateSingleUserFields } = require('../buisiness');
+const { populateUserFields } = require('../buisiness');
 
 const GroupController = {
     async getAllGroups(req, res) {
@@ -66,13 +66,16 @@ const GroupController = {
         const { requests } = req.query;
 
         try {
-            
             const query = requests ? `?requests=${requests.toLowerCase()}` : '';
             const uri = `/groups/info/${groupId}${query}`;
             const { data } = await socialApi.get(uri);
 
-            const PopulatedData = await populateSingleUserFields('owner', 'ownerId', data);
-            const response = { data: PopulatedData };
+            const [populatedOwner, populatedRequests] = await Promise.all([
+                await populateUserFields('owner', 'ownerId', data),
+                await populateUserFields('user', 'userId', data.requests),
+            ]);
+            
+            const response = { data: { ...populatedOwner, requests: populatedRequests } };
 
             return _messages.success(res, req, response);
         } catch (error) {

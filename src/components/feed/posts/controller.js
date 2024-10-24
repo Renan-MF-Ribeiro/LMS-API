@@ -1,7 +1,7 @@
 const { getUserByToken } = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
-const { populateUserFields, populateSingleUserFields, populateTrailFields } = require('../buisiness');
+const { populateUserFields, populateTrailFields } = require('../buisiness');
 
 module.exports = {
     async create(req, res) {
@@ -153,7 +153,7 @@ module.exports = {
             const uri = `posts/${postId}`;
             const { data } = await socialApi.get(uri);
 
-            const PopulatedData = await populateSingleUserFields('user', 'userId', data);
+            const PopulatedData = await populateUserFields('user', 'userId', data);
             const trails = await populateTrailFields(PopulatedData.trails);
 
             const response = { data: {...PopulatedData, trails} };
