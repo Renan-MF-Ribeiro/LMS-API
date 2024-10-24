@@ -10,6 +10,7 @@ const { Tracking } = require('../components/tracking/model');
 const { Trail } = require('../components/trails/model');
 const { TodayMostSeenTrails, TrailViews } = require('../components/trails/trail-views.model')
 const moment = require('moment');
+const webhook = require('discord-webhook');
 const axios = require('axios');
 const {
     isSCORMCompleted,
