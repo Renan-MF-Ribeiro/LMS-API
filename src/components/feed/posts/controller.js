@@ -37,7 +37,17 @@ module.exports = {
                 }
 
                 const PopulatedData = await populateUserFields('user', 'userId', data);
-                const response = { data: PopulatedData, total: data.length };
+                const postsWithComments = await Promise.all(
+                    PopulatedData.map(async (post) => {
+                        post.reactions.comments = await populateUserFields(
+                            'user',
+                            'userId',
+                            post.reactions.comments
+                        );
+                        return post;
+                    })
+                );
+                const response = { data: postsWithComments, total: data.length };
 
                 return _messages.success(res, req, response);
             } else {
@@ -45,8 +55,18 @@ module.exports = {
                 const { data } = await socialApi.get(uri);
 
                 const PopulatedData = await populateUserFields('user', 'userId', data);
-                const response = { data: PopulatedData, total: data.length };
-    
+                const postsWithComments = await Promise.all(
+                    PopulatedData.map(async (post) => {
+                        post.reactions.comments = await populateUserFields(
+                            'user',
+                            'userId',
+                            post.reactions.comments
+                        );
+                        return post;
+                    })
+                );
+                const response = { data: postsWithComments, total: data.length };
+
                 return _messages.success(res, req, response);
             }
         } catch (error) {
@@ -67,9 +87,20 @@ module.exports = {
             const uri = `posts/groups/${groupId}`;
             const { data } = await socialApi.get(uri, { params: req.query });
 
+            // TODO: otimizar todos os populates
+            // Atualmente a função nao popula nested object items, sendo necessário chama-la duas vezes. Um para as reactions e outra para o post
             const PopulatedData = await populateUserFields('user', 'userId', data);
-
-            const response = { data: PopulatedData, total: data.length };
+            const postsWithComments = await Promise.all(
+                PopulatedData.map(async (post) => {
+                    post.reactions.comments = await populateUserFields(
+                        'user',
+                        'userId',
+                        post.reactions.comments
+                    );
+                    return post;
+                })
+            );
+            const response = { data: postsWithComments, total: data.total };
 
             return _messages.success(res, req, response);
         } catch (error) {
@@ -90,8 +121,17 @@ module.exports = {
             const { data } = await socialApi.get(uri, { params: req.query });
 
             const PopulatedData = await populateUserFields('user', 'userId', data);
-
-            const response = { data: PopulatedData, total: data.length };
+            const postsWithComments = await Promise.all(
+                PopulatedData.map(async (post) => {
+                    post.reactions.comments = await populateUserFields(
+                        'user',
+                        'userId',
+                        post.reactions.comments
+                    );
+                    return post;
+                })
+            );
+            const response = { data: postsWithComments, total: data.total };
 
             return _messages.success(res, req, response);
         } catch (error) {
@@ -128,9 +168,18 @@ module.exports = {
             const uri = 'posts/company';
             const { data } = await socialApi.get(uri, { params: req.query });
 
-            const PopulatedData = await populateUserFields('user', 'userId', data)
-
-            const response= {data: PopulatedData, total: data.total}
+            const PopulatedData = await populateUserFields('user', 'userId', data);
+            const postsWithComments = await Promise.all(
+                PopulatedData.map(async (post) => {
+                    post.reactions.comments = await populateUserFields(
+                        'user',
+                        'userId',
+                        post.reactions.comments
+                    );
+                    return post;
+                })
+            );
+            const response = { data: postsWithComments, total: data.total };
 
             return _messages.success(res, req, response);
         } catch (error) {
@@ -150,7 +199,19 @@ module.exports = {
             const uri = 'posts/me';
             const { data } = await socialApi.get(uri, { params: req.query });
 
-            return _messages.success(res, req, data);
+            const PopulatedData = await populateUserFields('user', 'userId', data);
+            const postsWithComments = await Promise.all(
+                PopulatedData.map(async (post) => {
+                    post.reactions.comments = await populateUserFields(
+                        'user',
+                        'userId',
+                        post.reactions.comments
+                    );
+                    return post;
+                })
+            );
+            const response = { data: postsWithComments, total: data.total };
+            return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
                 res,
@@ -170,8 +231,17 @@ module.exports = {
             const { data } = await socialApi.get(uri, { params: req.query });
 
             const PopulatedData = await populateUserFields('user', 'userId', data);
-
-            const response = { data: PopulatedData, total: data.length };
+            const postsWithComments = await Promise.all(
+                PopulatedData.map(async (post) => {
+                    post.reactions.comments = await populateUserFields(
+                        'user',
+                        'userId',
+                        post.reactions.comments
+                    );
+                    return post;
+                })
+            );
+            const response = { data: postsWithComments, total: data.total };
 
             return _messages.success(res, req, response);
         } catch (error) {
@@ -192,9 +262,16 @@ module.exports = {
             const { data } = await socialApi.get(uri);
 
             const PopulatedData = await populateUserFields('user', 'userId', data);
+            const comments = await populateUserFields('user', 'userId', data.reactions.comments);
             const trails = await populateTrailFields(PopulatedData.trails);
 
-            const response = { data: {...PopulatedData, trails} };
+            const returningObject = {
+                ...PopulatedData,
+                reactions: { ...PopulatedData.reactions, comments },
+                trails,
+            };
+
+            const response = { data: returningObject };
 
             return _messages.success(res, req, response);
         } catch (error) {
@@ -204,7 +281,7 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'feed',
-                'findUserPosts'
+                'findPostById'
             );
         }
     },
