@@ -128,7 +128,7 @@ module.exports = {
     async findUserPosts(req, res) {
         try {
             const { userId } = req.params;
-            const uri = `posts/${userId}`;
+            const uri = `posts/user/${userId}`;
             const { data } = await socialApi.get(uri, { params: req.query });
 
             const PopulatedData = await populateUserFields('user', 'userId', data);
