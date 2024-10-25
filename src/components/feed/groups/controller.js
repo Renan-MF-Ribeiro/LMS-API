@@ -12,7 +12,7 @@ const GroupController = {
             const { data } = await socialApi.get(uri, { params: req.query });
 
             const PopulatedData = await populateUserFields('owner', 'ownerId', data);
-            const response = { data: PopulatedData.data, total: data.total };
+            const response = { data: PopulatedData, total: data.total };
 
             return _messages.success(res, req, response);
         } catch (error) {
@@ -31,7 +31,10 @@ const GroupController = {
             const uri = `groups/avaliable`;
             const { data } = await socialApi.get(uri);
 
-            return _messages.success(res, req, data);
+            const PopulatedData = await populateUserFields('owner', 'ownerId', data);
+            const response = { data: PopulatedData, total: data.total };
+
+            return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
                 res,
@@ -49,7 +52,10 @@ const GroupController = {
             const uri = `/groups/user/${userId}`;
             const { data } = await socialApi.get(uri);
 
-            return _messages.success(res, req, data);
+            const PopulatedData = await populateUserFields('owner', 'ownerId', data);
+            const response = { data: PopulatedData, total: data.total };
+
+            return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
                 res,
