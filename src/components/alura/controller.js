@@ -145,11 +145,20 @@ const AluraController = {
                 headers,
                 params: { date }
             });
-            console.log(data)
+
             if (!data) return _messages.success(res, req, null);
+            if (data.status === 429) {
+                return _messages.badRequest(
+                    res,
+                    req,
+                    'Número de solicitações excedido, tente novamente mais tarde',
+                    'Número de solicitações excedido, tente novamente mais tarde'
+                )
+            }
             const trackingUpdated = await updateOneUserProgressTracking(data, itemId, networkLogin);
             return _messages.success(res, req, trackingUpdated);
         } catch (error) {
+            console.error(error)
             return handleError(res, req, error);
         }
     },
