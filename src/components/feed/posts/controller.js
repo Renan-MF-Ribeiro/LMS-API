@@ -23,6 +23,44 @@ module.exports = {
         }
     },
 
+    async findAllPosts(req, res) {
+        try {
+            const { myPosts, groupId } = req.params;
+
+            if (groupId) {
+                const uri = `posts/groups/${groupId}`;
+                const { data } = await socialApi.get(uri);
+
+                if (myPosts) {
+                    const { _id } = await getUserByToken(req);
+                    data.data = data.data.filter((post) => _id.equals(post.userId));
+                }
+
+                const PopulatedData = await populateUserFields('user', 'userId', data);
+                const response = { data: PopulatedData, total: data.length };
+
+                return _messages.success(res, req, response);
+            } else {
+                const uri = !myPosts ? 'posts/public' : 'posts/me';
+                const { data } = await socialApi.get(uri);
+
+                const PopulatedData = await populateUserFields('user', 'userId', data);
+                const response = { data: PopulatedData, total: data.length };
+    
+                return _messages.success(res, req, response);
+            }
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'feed',
+                'findAllPosts'
+            );
+        }
+    },
+
     async findAllByGroup(req, res) {
         try {
             const { groupId } = req.params;
@@ -31,7 +69,7 @@ module.exports = {
 
             const PopulatedData = await populateUserFields('user', 'userId', data);
 
-            const response = { data: PopulatedData.data, total: data.length };
+            const response = { data: PopulatedData, total: data.length };
 
             return _messages.success(res, req, response);
         } catch (error) {
@@ -53,7 +91,7 @@ module.exports = {
 
             const PopulatedData = await populateUserFields('user', 'userId', data);
 
-            const response = { data: PopulatedData.data, total: data.length };
+            const response = { data: PopulatedData, total: data.length };
 
             return _messages.success(res, req, response);
         } catch (error) {
@@ -92,7 +130,7 @@ module.exports = {
 
             const PopulatedData = await populateUserFields('user', 'userId', data)
 
-            const response= {data: PopulatedData.data, total: data.total}
+            const response= {data: PopulatedData, total: data.total}
 
             return _messages.success(res, req, response);
         } catch (error) {
@@ -133,7 +171,7 @@ module.exports = {
 
             const PopulatedData = await populateUserFields('user', 'userId', data);
 
-            const response = { data: PopulatedData.data, total: data.length };
+            const response = { data: PopulatedData, total: data.length };
 
             return _messages.success(res, req, response);
         } catch (error) {
@@ -167,44 +205,6 @@ module.exports = {
                 'Erro interno no servidor',
                 'feed',
                 'findUserPosts'
-            );
-        }
-    },
-
-    async findAllPosts(req, res) {
-        try {
-            const { myPosts, groupId } = req.params;
-
-            if (groupId) {
-                const uri = `posts/groups/${groupId}`;
-                const { data } = await socialApi.get(uri);
-
-                if (myPosts) {
-                    const { _id } = await getUserByToken(req);
-                    data.data = data.data.filter((post) => _id.equals(post.userId));
-                }
-
-                const PopulatedData = await populateUserFields('user', 'userId', data);
-                const response = { data: PopulatedData.data, total: data.length };
-
-                return _messages.success(res, req, response);
-            } else {
-                const uri = !myPosts ? 'posts/public' : 'posts/me';
-                const { data } = await socialApi.get(uri);
-
-                const PopulatedData = await populateUserFields('user', 'userId', data);
-                const response = { data: PopulatedData.data, total: data.length };
-    
-                return _messages.success(res, req, response);
-            }
-        } catch (error) {
-            return _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'feed',
-                'findAllPosts'
             );
         }
     },
