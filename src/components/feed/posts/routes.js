@@ -14,6 +14,7 @@ module.exports = express
     .get('/user/:userId', _controller.findUserPosts)
     .get('/:postId', _controller.findPostById)
     .put('/comments', _controller.comment)
+    .get('/:postId/comments', _controller.loadMoreComments)
     .put('/likes', _controller.like)
     .post('/shares', _controller.share)
     .delete('/:postId', _controller.delete);

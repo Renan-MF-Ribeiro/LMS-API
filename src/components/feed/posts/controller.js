@@ -303,6 +303,27 @@ module.exports = {
             );
         }
     },
+    async loadMoreComments(req, res) {
+        const { postId } = req.params;
+        try {
+            const uri = `posts/${postId}/comments`;
+            const { data } = await socialApi.get(uri, { params: req.query });
+
+            const PopulatedData = await populateUserFields('user', 'userId', data);
+            const response = { data: PopulatedData };
+
+            return _messages.success(res, req, response);
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'feed',
+                'comment'
+            );
+        }
+    },
 
     async like(req, res) {
         try {
