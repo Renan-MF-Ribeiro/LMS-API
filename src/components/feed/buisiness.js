@@ -18,7 +18,7 @@ async function populateUserFields(fieldName, reference, data) {
         [reference]: undefined,
     });
 
-    return isArray ? {data: data.data.map(populate), total: data.total} : populate(data);
+    return isArray ? data.data.map(populate) : populate(data);
 }
 
 async function populateTrailFields(data) {

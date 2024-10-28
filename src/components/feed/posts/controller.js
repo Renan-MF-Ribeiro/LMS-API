@@ -47,7 +47,7 @@ module.exports = {
                         return post;
                     })
                 );
-                const response = { data: postsWithComments, total: data.length };
+                const response = { data: postsWithComments, total: data.total };
 
                 return _messages.success(res, req, response);
             } else {
@@ -65,7 +65,7 @@ module.exports = {
                         return post;
                     })
                 );
-                const response = { data: postsWithComments, total: data.length };
+                const response = { data: postsWithComments, total: data.total };
 
                 return _messages.success(res, req, response);
             }
