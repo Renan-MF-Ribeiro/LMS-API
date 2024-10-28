@@ -599,7 +599,10 @@ async function getUsersLoad() {
 
             for await (const user of users) {
                 const existingUser = await User.findOne({
-                    networkLogin: user.networkLogin,
+                    $or: [
+                        { networkLogin: user.networkLogin },
+                        { networkLogin: user.cpf }
+                    ]
                 });
 
                 const processedUser = processUsersLoad(
