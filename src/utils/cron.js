@@ -549,12 +549,19 @@ function hideCPFNumbers(cpf) {
     return String(cpf).substring(0, 3) + 'XXXXXXXX';
 }
 
+function usersLoadLog(...data) {
+    console.log(new Date(), '[USERS_LOAD]', ...data);
+}
+
+
 async function getUsersLoad() {
     const env = process.env.NODE_ENV;
 
     const isProduction = env === 'production';
 
     const directory = isProduction ? 'producao' : 'homologacao';
+
+    console.time('[USERS_LOAD] execution time');
 
     try {
         // Lista arquivos no container sftp
@@ -563,139 +570,174 @@ async function getUsersLoad() {
 
         // Se não houver arquivos, encerra a exec
         if (files.length === 0) {
+            usersLoadLog('Nenhum arquivo encontrado para processar');
             return;
         }
 
         // Processa cada arquivo
         for await (const fileName of files) {
-            console.log(`Processando arquivo ${fileName}...`);
+            usersLoadLog(`Processando arquivo ${fileName}...`);
 
-            const file = await getAzureFileByPath('sftp', `${directory}/${fileName}`);
-            const fileExtension = fileName.split('.').pop();
+            try {
+                const file = await getAzureFileByPath('sftp', `${directory}/${fileName}`);
+                const fileExtension = fileName.split('.').pop();
 
-            const users = fileExtension === 'csv'
-                ? await readCSVUsersBuffer(file.readableStream)
-                : await readXLSXUsersBuffer(file.buffer);
+                const users = fileExtension === 'csv'
+                    ? await readCSVUsersBuffer(file.readableStream)
+                    : await readXLSXUsersBuffer(file.buffer);
 
-            const newUsers = [];
-            const existingUsers = [];
-            const usersToSend = [];
+                const newUsers = [];
+                const existingUsers = [];
+                const usersToSend = [];
 
-            const eligibilityResponse = await axios.get(
-                `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
-                {
-                    headers: {
-                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
-                    },
-                }
-            );
-
-            const fieldsForEligibility = eligibilityResponse.data.fields;
-
-            console.log(
-                `Iniciando Processamento de ${users.length} usuários...`
-            );
-
-            for await (const user of users) {
-                const existingUser = await User.findOne({
-                    networkLogin: user.networkLogin,
-                });
-
-                const processedUser = processUsersLoad(
-                    user,
-                    fieldsForEligibility
+                const eligibilityResponse = await axios.get(
+                    `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+                    {
+                        headers: {
+                            'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                        },
+                    }
                 );
 
-                const account = await processUserAccount(processedUser);
+                const fieldsForEligibility = eligibilityResponse.data.fields;
 
-                processedUser.password = existingUser
-                    ? existingUser.password
-                    : processedUser.password;
+                usersLoadLog(
+                    `Iniciando Processamento de ${users.length} usuários...`
+                );
 
-                if (existingUser) {
-                    const groupsAD = [
-                        ...processedUser.groupsAD,
-                    ];
+                for await (const [index, user] of Object.entries(users)) {
+                    if (Number(index) % 100 === 0) {
+                        usersLoadLog(
+                            `Processando usuário ${Number(index) + 1} de ${users.length}...`
+                        );
+                    }
 
-                    existingUsers.push({
-                        _id: existingUser._id,
-                        processedUser: {
+                    const existingUser = await User.findOne({
+                        $or: [
+                            { networkLogin: user.networkLogin },
+                            { networkLogin: user.cpf }
+                        ]
+                    });
+
+                    const processedUser = await processUsersLoad(
+                        user,
+                        fieldsForEligibility
+                    );
+
+                    const account = await processUserAccount(processedUser);
+
+                    processedUser.password = existingUser
+                        ? existingUser.password
+                        : processedUser.password;
+
+                    if (existingUser) {
+                        const groupsAD = [
+                            ...processedUser.groupsAD,
+                        ];
+
+                        existingUsers.push({
+                            _id: existingUser._id,
+                            processedUser: {
+                                ...processedUser,
+                                cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
+                                groupsAD: [...new Set(groupsAD)],
+                            },
+                        });
+                    } else {
+                        usersToSend.push(account);
+                        newUsers.push({
                             ...processedUser,
                             cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
-                            groupsAD: [...new Set(groupsAD)],
-                        },
-                    });
-                } else {
-                    usersToSend.push(account);
-                    newUsers.push({
-                        ...processedUser,
-                        cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
-                    });
+                        });
+                    }
                 }
-            }
 
-            console.log(
-                `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
-            );
+                usersLoadLog(
+                    'Usuários processados!', `Usuários existentes: ${existingUsers.length}, Novos usuários: ${newUsers.length}`
+                );
 
-            const data_start = new Date();
+                const data_start = new Date();
 
-            for (const user of existingUsers) {
-                await User.findByIdAndUpdate(user._id, user.processedUser);
-            }
+                if (config.usersData?.inactivateIfNotInSpreadsheet) {
+                    usersLoadLog('Inativando usuários não presentes na planilha');
 
-            if (config.usersData.inactivateIfNotInSpreadsheet) {
-                await User.updateMany(
-                    { updatedAt: { $lt: data_start } },
-                    { $set: { status: 'INATIVO' } },
-                    { multi: true }
+                    await User.updateMany(
+                        { updatedAt: { $lt: data_start } },
+                        { $set: { status: 'INATIVO' } },
+                        { multi: true }
+                    );
+                }
+
+                if (existingUsers?.length) {
+                    usersLoadLog(
+                        `Iniciando atualizações dos ${existingUsers.length} existentes`
+                    );
+
+                    for (const [index, user] of Object.entries(existingUsers)) {
+                        if (Number(index) % 100 === 0) {
+                            usersLoadLog(
+                                `Atualizando usuário ${Number(index) + 1} de ${existingUsers.length}...`
+                            );
+                        }
+
+                        await User.findByIdAndUpdate(user._id, user.processedUser);
+                    }
+                }
+
+                if (newUsers.length > 0) {
+                    usersLoadLog(
+                        `Iniciando criação de ${newUsers.length} novos usuários`
+                    );
+
+                    await User.insertMany(newUsers);
+
+                    if (config.messenger.sendUsersToMicrosservice) {
+                        await sendAccountsToKafka(usersToSend);
+                        const campaign = createWelcomeCampaign();
+                        await sendMessageToKafka(campaign, newUsers);
+                        await NewMessage.create(campaign);
+                    }
+
+                    usersLoadLog('Novos usuários criados');
+                }
+
+                storageLog(
+                    `Carga de ${users.length} usuários`,
+                    '',
+                    '',
+                    'DAILY_CHARGE'
+                );
+
+                usersLoadLog('Post processing action:', config.usersData?.postProcessingAction ?? 'none');
+
+                switch (config.usersData?.postProcessingAction) {
+                    case "move":
+                        usersLoadLog('Moving file to "processados" folder');
+                        await moveAzureFile('sftp', `${directory}/${fileName}`, `${directory}/processados/${fileName}`);
+                        break;
+                    case "delete":
+                        usersLoadLog('Deleting file');
+                        await deleteAzureFile('sftp', `${directory}/${fileName}`);
+                        break;
+
+                    default:
+                        usersLoadLog('No post processing action');
+                        break;
+                }
+            } catch (error) {
+                usersLoadLog(
+                    'ERROR',
+                    `Erro ao processar arquivo ${fileName}`,
+                    error
                 );
             }
 
-            if (newUsers.length > 0) {
-                console.log(
-                    `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
-                );
-
-                await User.insertMany(newUsers);
-
-                if (config.messenger.sendUsersToMicrosservice) {
-                    await sendAccountsToKafka(usersToSend);
-                    const campaign = createWelcomeCampaign();
-                    await sendMessageToKafka(campaign, newUsers);
-                    await NewMessage.create(campaign);
-                }
-            }
-
-            console.log('Novos usuários criados');
-
-            storageLog(
-                `Carga de ${users.length} usuários`,
-                '',
-                '',
-                'DAILY_CHARGE'
-            );
-
-            console.log('Post processing action:', config.usersData.postProcessingAction ?? 'none');
-
-            switch (config.usersData.postProcessingAction) {
-                case "move":
-                    console.log('Moving file to "processados" folder');
-                    await moveAzureFile('sftp', `${directory}/${fileName}`, `${directory}/processados/${fileName}`);
-                    break;
-                case "delete":
-                    console.log('Deleting file');
-                    await deleteAzureFile('sftp', `${directory}/${fileName}`);
-                    break;
-
-                default:
-                    console.log('No post processing action');
-                    break;
-            }
         }
     } catch (error) {
-        console.log(error);
+        usersLoadLog('ERROR', error);
     }
+
+    console.timeEnd('[USERS_LOAD] execution time');
 }
 
 async function courseReleaseCron () {
