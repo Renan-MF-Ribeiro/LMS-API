@@ -2,22 +2,33 @@ const axios = require('axios');
 const fs = require('fs');
 const FormData = require('form-data');
 const { getUserByToken } = require('../../utils/functions');
+const { User } = require('../users/model');
 
 const _messages = require('../../utils/messages');
 
 module.exports = {
     async create(req, res) {
         try {
-            const user = await getUserByToken(req)
-            const form = new FormData();
-
             const reqPayload = JSON.parse(req.fields.payload);
+            const form = new FormData();
             const payload = {
                 ticket: {
                     ...reqPayload.ticket,
                 },
                 clientName: process.env.COMPOSE_PROJECT_NAME,
             };
+            const user = req.headers.authorization ? await getUserByToken(req) : await User.findOne({ email: payload.ticket.requester.email })
+            if(!user){
+                return _messages.notFound(
+                    res,
+                    req,
+                    'Usuário não encontrado',
+                    'O email informado não está associado com nenhum usuário da plataforma!',
+                    'support',
+                    'createTicket'
+                );
+            }
+            
             payload.ticket.requester._id = user._id
             const strPayload = JSON.stringify(payload);
             form.append('payload', strPayload);
