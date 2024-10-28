@@ -634,6 +634,7 @@ async function getUsersLoad() {
                     if (existingUser) {
                         const groupsAD = [
                             ...processedUser.groupsAD,
+                            ...(existingUser.groupsAD?.filter((group) => group.startsWith('PERFIL_')) ?? []),
                         ];
 
                         existingUsers.push({
