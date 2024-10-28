@@ -10,6 +10,7 @@ const { Tracking } = require('../components/tracking/model');
 const { Trail } = require('../components/trails/model');
 const { TodayMostSeenTrails, TrailViews } = require('../components/trails/trail-views.model')
 const moment = require('moment');
+const webhook = require('discord-webhook-node');
 const axios = require('axios');
 const {
     isSCORMCompleted,
@@ -598,7 +599,10 @@ async function getUsersLoad() {
 
             for await (const user of users) {
                 const existingUser = await User.findOne({
-                    networkLogin: user.networkLogin,
+                    $or: [
+                        { networkLogin: user.networkLogin },
+                        { networkLogin: user.cpf }
+                    ]
                 });
 
                 const processedUser = processUsersLoad(
@@ -615,7 +619,6 @@ async function getUsersLoad() {
                 if (existingUser) {
                     const groupsAD = [
                         ...processedUser.groupsAD,
-                        ...existingUser.groupsAD,
                     ];
 
                     existingUsers.push({
@@ -695,7 +698,19 @@ async function getUsersLoad() {
             }
         }
     } catch (error) {
-        console.log(error);
+        const Hook = new webhook.Webhook(process.env.DISCORD_WEBHOOK);
+        const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} teve problemas para rodar a carga! Erro: ${error.message}`;
+        
+        Hook.err('Erro na carga de usuários', errorMessage);
+        
+        console.error(errorMessage);
+        
+        storageLog(
+            `Erro na carga de usuários`,
+            error.message,
+            '',
+            'DAILY_CHARGE'
+        );
     }
 }
 

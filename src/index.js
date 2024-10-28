@@ -13,6 +13,7 @@ const {
     validateTokenRoute,
     isAssessmentActive,
     isShowcaseActive,
+    setCurrentFeatures,
 } = require('./utils/middlewares');
 const { PUBLIC_PATH } = process.env;
 const app = express();
@@ -114,6 +115,8 @@ const feedRoutes = require('./components/feed/routes');
 const { socialApiMiddleware } = require('./components/social/http-adapter');
 
 app.use(socialApiMiddleware)
+
+app.use(setCurrentFeatures);
 
 app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/tracking', validateTokenRoute, trackingRoutes)

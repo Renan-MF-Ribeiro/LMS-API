@@ -53,6 +53,31 @@ const PostTracking = Tracking.discriminator('PostTracking', new mongoose.Schema(
     ...schemaOptions,
 }))
 
+const AluraLessonStatus = Object.freeze({
+    EmProgresso: 'Em progresso',
+    NaoVisivel: 'Não visivel',
+    EmPausa: 'Em pausa',
+    Concluido: 'Concluido',
+    Cancelado: 'Cancelado',
+})
+
+const AluraTracking = Tracking.discriminator('AluraTracking', new mongoose.Schema({
+    completion: { type: Number, min: 0, max: 1 },
+    progress: { type: Number, min: 0, max: 100 },
+    courseId: { type: Number, required: true },
+    lastAccess: { type: Date, required: true },
+    registrationDate: { type: Date, required: true },
+    lessonStatus: {
+        type: String,
+        required: true,
+        enum: Object.values(AluraLessonStatus),
+        default: AluraLessonStatus.NaoVisivel
+    },
+
+}, {
+    ...schemaOptions,
+}))
+
 const EventTracking = Tracking.discriminator('EventTracking', new mongoose.Schema({
     clickedStatus: [{ id: String, title: String, completion: Boolean }], default: [],
     completion: { type: Number, min: 0, max: 1 },
@@ -167,5 +192,6 @@ module.exports = {
     PostTracking,
     EventTracking,
     ActivityTracking,
-    FormTracking
+    FormTracking,
+    AluraTracking
 }

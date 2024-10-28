@@ -6,13 +6,13 @@ module.exports = {
 
     internalServer: async (res, req, err, data, component = null, rota = null) => {
         error(component, rota, err)
-        await _functions.recordLog(req, 'ERROR', err, component, rota)
+        await _functions.recordLog(req, 'ERROR', err, component, rota, data)
         res.status(httpStatus.INTERNAL_SERVER_ERROR).json(data)
     },
 
     forbidden: async (res, req, err, data, component = null, rota = null) => {
         info(component, rota, 'forbidden', err)
-        await _functions.recordLog(req, 'FORBIDDEN', err, component, rota)
+        await _functions.recordLog(req, 'FORBIDDEN', err, component, rota, data)
         res.status(httpStatus.FORBIDDEN).json(data)
     },
 

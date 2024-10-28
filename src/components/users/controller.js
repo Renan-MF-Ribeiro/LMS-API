@@ -95,6 +95,7 @@ const { handleUserEligibilitiesGamification } = require('../gamification/utils')
 const AssessmentBusiness = require('../assessment/business');
 const { Features } = require('../theme/features/model');
 const { Partner } = require('../partners/model');
+const { Log } = require('../logs/model');
 
 module.exports = {
     async create(req, res) {
@@ -746,7 +747,7 @@ module.exports = {
                         res,
                         req,
                         'Usuário ou senha inválidos.',
-                        'Usuário ou senha inválidos.',
+                        { claim, claimKey: ssoForm?.claim ?? '' },
                         'users',
                         'ldapSignIn'
                     );
@@ -763,7 +764,7 @@ module.exports = {
             }
         } catch (error) {
             console.log(error);
-            _messages.internalServer(res, req, error.message);
+            _messages.internalServer(res, req, error.message, {token, error: error.stack}, 'singleSignOn', 'singleSignOn');
         }
     },
 
@@ -1161,7 +1162,6 @@ module.exports = {
                 if (existingUser) {
                     const groupsAD = [
                         ...processedUser.groupsAD,
-                        ...existingUser.groupsAD.filter((group) => group.startsWith('PERFIL_')),
                     ];
                     existingUsers.push({
                         _id: existingUser._id,
@@ -1775,8 +1775,11 @@ module.exports = {
                     filters: dashboardFilters,
                 });
                 const SAS = generateSASToken();
-                if (config.gamification.active)
+
+                if (req.features?.gamification) {
                     GamificationBusiness.createClientUser(networkLogin, groupsAD);
+                }
+                
                 _messages.success(res, req, {
                     SAS,
                     token,
@@ -1844,6 +1847,15 @@ module.exports = {
 
                 return deepGet(req.samlUserObject, key, null);
             }, null);
+
+            await Log.create({
+                type: 'SSO_CALLBACK',
+                message: 'SSO_CALLBACK',
+                component: 'users',
+                route: 'ssoCallback',
+                dataNew: { samlObject: req.samlUserObject },
+                dataOld: null,
+            });
 
             if (value === undefined || value === null) {
                 console.log('ssoCallback req.samlUserObject', req.samlUserObject);

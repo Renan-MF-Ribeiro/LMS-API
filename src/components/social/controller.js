@@ -8,8 +8,9 @@ const { generateSSOToken } = require('../../utils/auth');
 const { User } = require('../users/model');
 const { UsersWithProcessedTags } = require('../courses/model');
 const config = require('../../../config.json');
-const { getTagsElegiblesByToken } = require('../sections/business');
+const { getTagsElegiblesByToken, checkEligibilityTagsAnd } = require('../sections/business');
 const { ConfigModel } = require('../config/model');
+const { Group } = require('../groups/model');
 
 module.exports = {
     async getConfig(req, res) {
@@ -851,27 +852,71 @@ module.exports = {
 
     async getShareTargets(req, res) {
         try {
-            const { users, trailId } = req.body;
-            const returnUsers = [];
+            const { users = [], trailId } = req.body;
 
-            const trail = await Trail.findById(trailId, 'title titleURL tags -_id');
+            const trail = await Trail.findById(trailId, '_id tags tagsAnd').lean();
 
-            const tags = trail.tags.map((e) => e.value);
-
-            for (let user of users) {
-                const userWithTags = await UsersWithProcessedTags.find({
-                    networkLogin: user.networkLogin,
-                    userTags: { $in: tags },
-                })
-                    .lean()
-                    .limit(10);
-                returnUsers.push({
-                    _id: user._id,
-                    elegible: userWithTags.length > 0 ? true : false,
-                });
+            if (!trail) {
+                _messages.success(
+                    res,
+                    req,
+                    users.map(u => ({ ...u, elegible: false })),
+                    'ok',
+                    'social',
+                    'getShareTargets'
+                )
+                return
             }
 
-            _messages.success(res, req, returnUsers, 'ok', 'social', 'getShareTargets');
+            const availableUsers = await User.find({
+                networkLogin: { $in: users.map(u => u.networkLogin) },
+                status: 'ATIVO',
+            }).select('_id tags groupsAD status').lean();
+
+            if (!availableUsers.length) {
+                _messages.success(
+                    res,
+                    req,
+                    users.map(u => ({ ...u, elegible: false })),
+                    'ok',
+                    'social',
+                    'getShareTargets'
+                )
+                return
+            }
+
+            const groups = await Group.find({
+                name: { $in: availableUsers.map(u => u.groupsAD).flat() }
+            }).select('tags name').lean();
+
+            const returnUsers = availableUsers.map(
+                user => {
+                    const groupTags = groups.filter(g => (user.groupsAD ?? []).includes(g.name))
+                        .map(g => g.tags).flat();
+
+                    const userTags = (user.tags ?? [])
+                        .concat(user.groupsAD ?? [])
+                        .concat(groupTags);
+
+                    return {
+                        _id: user._id,
+                        elegible: checkEligibilityTagsAnd(
+                            userTags,
+                            trail.tagsAnd,
+                            trail.tags
+                        )
+                    }
+                }
+            );
+
+            _messages.success(
+                res,
+                req,
+                returnUsers,
+                'ok',
+                'social',
+                'getShareTargets'
+            );
             return;
         } catch (error) {
             console.log(error);
