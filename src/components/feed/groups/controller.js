@@ -1,6 +1,6 @@
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
-const { populateUserFields } = require('../buisiness');
+const { populateUserFields, populateMembers } = require('../buisiness');
 
 const GroupController = {
     async getAllGroups(req, res) {
@@ -46,6 +46,28 @@ const GroupController = {
             );
         }
     },
+    async getGroupMembers(req, res) {
+        const { groupId } = req.params;
+        try {
+            const uri = `groups/members/${groupId}`;
+            const { data } = await socialApi.get(uri);
+            // Refatorar para utilizar função padrão de populateFields
+            const PopulatedData = await populateMembers(data);
+
+            const response = { data: PopulatedData, total: data.total };
+
+            return _messages.success(res, req, response);
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'feed',
+                'getAllGroups'
+            );
+        }
+    },
     async findUsersGroup(req, res) {
         const { userId } = req.params;
         try {
@@ -76,12 +98,12 @@ const GroupController = {
             const uri = `/groups/info/${groupId}${query}`;
             const { data } = await socialApi.get(uri);
 
-            let groupRequests = undefined
-            if(requests === "true"){
-                groupRequests = await populateUserFields('user', 'userId', data.requests)
+            let groupRequests = undefined;
+            if (requests === 'true') {
+                groupRequests = await populateUserFields('user', 'userId', data.requests);
             }
-            const populatedOwner = await populateUserFields('owner', 'ownerId', data)
-            
+            const populatedOwner = await populateUserFields('owner', 'ownerId', data);
+
             const response = { data: { ...populatedOwner, requests: groupRequests } };
 
             return _messages.success(res, req, response);
