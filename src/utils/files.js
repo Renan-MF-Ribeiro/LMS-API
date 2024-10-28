@@ -923,16 +923,24 @@ module.exports = {
         const parsedDirectory = directory ? (directory.endsWith('/') ? directory : `${directory}/`) : '';
 
         const blobsList = containerClient.listBlobsByHierarchy('/', {
-            prefix: parsedDirectory
+            prefix: parsedDirectory,
+            includeMetadata: true
         });
 
         for await (const blob of blobsList) {
             if (blob.kind === 'prefix') continue;
 
-            files.push(blob.name.replace(parsedDirectory, ''));
+            files.push({
+                file: blob.name.replace(parsedDirectory, ''),
+                lastModified: blob.properties?.lastModified ?? blob.properties?.createdOn,
+            });
         }
 
-        return files;
+        const orderedAndMappedFiles = files.sort(
+            (a, b) => new Date(a.lastModified) - new Date(b.lastModified)
+        ).map(file => file.file);
+
+        return orderedAndMappedFiles;
     },
 
     async getAzureFileByPath(containerName, filePath) {
