@@ -1,5 +1,6 @@
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
+const { populateUserFields } = require('../buisiness');
 
 module.exports = {
     async createSolicitation(req, res) {
@@ -93,7 +94,9 @@ module.exports = {
         try {
             const uri = `solicitations/groups/${groupId}`;
             const { data } = await socialApi.get(uri);
-            return _messages.success(res, req, data);
+            const PopulatedData = await populateUserFields('user', 'userId', data);
+            
+            return _messages.success(res, req, PopulatedData);
         } catch (error) {
             return _messages.internalServer(
                 res,
