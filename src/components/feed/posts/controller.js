@@ -171,9 +171,11 @@ module.exports = {
             );
         }
     },
-    async listCompanyPosts(req, res) {
+    async listPostToBeModerated(req, res) {
+        const { status } = req.query;
         try {
-            const uri = 'posts/company';
+            const query = status ? `?status=${status.toUpperCase()}` : '';
+            const uri = `posts/admin${query}`;
             const { data } = await socialApi.get(uri, { params: req.query });
 
             const PopulatedData = await populateUserFields('user', 'userId', data);
@@ -330,7 +332,7 @@ module.exports = {
                         comment.replies
                     );
                     return comment;
-                }) 
+                })
             );
             const response = { data: postsWithComments, total: data.total };
 
@@ -379,6 +381,26 @@ module.exports = {
                 'Erro interno no servidor',
                 'feed',
                 'share'
+            );
+        }
+    },
+
+    async updatePost(req, res) {
+        const body = JSON.parse(req.fields.payload) ?? null;
+        try {
+            const { postId } = req.params;
+            const uri = `posts/${postId}`;
+            const { data } = await socialApi.update(uri, body);
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'feed',
+                'updatePost'
             );
         }
     },
