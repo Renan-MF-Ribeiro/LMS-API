@@ -166,7 +166,7 @@ module.exports = {
             );
         }
     },
-    async listCompanyPosts(req, res) {
+    async listPostToBeModerated(req, res) {
         const { status } = req.query;
         try {
             const query = status ? `?status=${status.toUpperCase()}` : '';
@@ -381,7 +381,7 @@ module.exports = {
     },
 
     async updatePost(req, res) {
-        const { body } = req
+        const body = JSON.parse(req.fields.payload) ?? null;
         try {
             const { postId } = req.params;
             const uri = `posts/${postId}`;
