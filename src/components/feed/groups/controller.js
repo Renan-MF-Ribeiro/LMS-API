@@ -70,8 +70,10 @@ const GroupController = {
     },
     async findUsersGroup(req, res) {
         const { userId } = req.params;
+        const { searchBy } = req.query;
+        const query = searchBy ? `?searchBy=${searchBy}` : {}
         try {
-            const uri = `/groups/user/${userId}`;
+            const uri = `/groups/user/${userId}${query}`;
             const { data } = await socialApi.get(uri);
 
             const PopulatedData = await populateUserFields('owner', 'ownerId', data);
