@@ -224,8 +224,10 @@ module.exports = {
         try {
             const uri = 'posts/comments';
             const { data } = await socialApi.put(uri, req.body);
+            const PopulatedData = await populateUserFields('user', 'userId', data.data);
+            const response = { data: PopulatedData, total: data.total };
 
-            return _messages.success(res, req, data);
+            return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
                 res,
