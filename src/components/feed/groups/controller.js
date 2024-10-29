@@ -51,9 +51,7 @@ const GroupController = {
         try {
             const uri = `groups/members/${groupId}`;
             const { data } = await socialApi.get(uri);
-            // Refatorar para utilizar função padrão de populateFields
             const PopulatedData = await populateMembers(data);
-
             const response = { data: PopulatedData, total: data.total };
 
             return _messages.success(res, req, response);

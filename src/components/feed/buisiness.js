@@ -52,10 +52,18 @@ async function populateUserFields(fieldName, reference, data) {
     return processItem(data);
 }
 
+
+async function populateMembers(data) {
+    const ids = data.data;
+    const users = await User.find({ _id: { $in: ids } }, '_id name profilePhoto').lean();
+
+    return users;
+}
+
 async function populateTrailFields(data) {
     const trails = await Trail.findOne({ _id: { $in: data } }, 'title titleURL thumbPath').lean();
 
     return trails || undefined;
 }
 
-module.exports = { populateUserFields, populateTrailFields };
+module.exports = { populateUserFields, populateTrailFields, populateMembers };
