@@ -385,7 +385,7 @@ module.exports = {
         try {
             const { postId } = req.params;
             const uri = `posts/${postId}`;
-            const { data } = await socialApi.update(uri, body);
+            const { data } = await socialApi.put(uri, body);
 
             return _messages.success(res, req, data);
         } catch (error) {
