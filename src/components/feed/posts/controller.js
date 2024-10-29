@@ -57,11 +57,14 @@ module.exports = {
                 const PopulatedData = await populateUserFields('user', 'userId', data);
                 const postsWithComments = await Promise.all(
                     PopulatedData.map(async (post) => {
-                        post.reactions.comments = await populateUserFields(
-                            'user',
-                            'userId',
-                            post.reactions.comments
-                        );
+                        post.reactions.comments = {
+                            data: await populateUserFields(
+                                'user',
+                                'userId',
+                                post.reactions.comments
+                            ),
+                            total: post.reactions.comments.total,
+                        };
                         return post;
                     })
                 );
@@ -267,7 +270,10 @@ module.exports = {
 
             const returningObject = {
                 ...PopulatedData,
-                reactions: { ...PopulatedData.reactions, comments },
+                reactions: {
+                    ...PopulatedData.reactions,
+                    comments: { data: comments, total: data.reactions.comments.total },
+                },
                 trails,
             };
 
@@ -310,7 +316,7 @@ module.exports = {
             const { data } = await socialApi.get(uri, { params: req.query });
 
             const PopulatedData = await populateUserFields('user', 'userId', data);
-            const response = { data: PopulatedData };
+            const response = { data: PopulatedData, total: data.total };
 
             return _messages.success(res, req, response);
         } catch (error) {
