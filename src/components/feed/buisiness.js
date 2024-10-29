@@ -1,29 +1,55 @@
 const { Trail } = require('../trails/model');
 const { User } = require('../users/model');
 
+/* 
+ Função recursiva pra popular usuários de arrays ou objetos vindos do SocialApi
+ Funciona recebendo um objeto ou um array de objetos
+
+## Parãmetros:
+- reference: Campo com object ou array de IDs dos usuários à serem populados (ex: userId)
+- fieldName: Nome que será dado no lugar do 'reference' ao final da recursão (ex: Users)
+- data: Object ou array de Object que deve ser populado
+*/
+
 async function populateUserFields(fieldName, reference, data) {
     const isArray = Array.isArray(data.data);
+
+    // Salva todos os ID's de usuários que devem ser populado de 'data'
     const ids = isArray
         ? [...new Set(data.data.map((x) => x[reference]).filter(Boolean))]
-        : [data[reference]];
+        : [data[reference]].filter(Boolean);
+
     const users = await User.find({ _id: { $in: ids } }, '_id name profilePhoto').lean();
     const userMap = Object.fromEntries(users.map((user) => [user._id.toString(), user]));
-    
-    const populate = (item) => ({
-        [fieldName]: userMap[item[reference]],
+
+    const populateItem = (item) => ({
+        [fieldName]: userMap[item[reference]] || null,
         ...item,
-        [reference]: undefined
+        [reference]: undefined,
     });
 
-    return isArray ? data.data.map(populate) : populate(data);
-}
+    // Recursão para popular nested objects de posts caso existam
+    const populateNested = async (nestedData) => ({
+        data: await populateUserFields(fieldName, reference, nestedData),
+        total: nestedData.total,
+    });
+    const processItem = async (item) => ({
+        ...populateItem(item),
+        ...(item.reactions?.comments && {
+            reactions: {
+                ...item.reactions,
+                comments: await populateNested(item.reactions.comments),
+            },
+        }),
+        ...(item.replies?.data?.length && {
+            replies: await populateNested(item.replies),
+        }),
+    });
 
-async function populateMembers(data) {
-    const ids = data.data;
-
-    const users = await User.find({ _id: { $in: ids } }, '_id name profilePhoto').lean();
-
-    return users;
+    if (isArray) {
+        return Promise.all(data.data.map(processItem));
+    }
+    return processItem(data);
 }
 
 async function populateTrailFields(data) {
@@ -32,4 +58,4 @@ async function populateTrailFields(data) {
     return trails || undefined;
 }
 
-module.exports = { populateUserFields, populateTrailFields, populateMembers };
+module.exports = { populateUserFields, populateTrailFields };
