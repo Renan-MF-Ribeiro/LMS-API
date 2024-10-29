@@ -25,14 +25,19 @@ module.exports = {
 
     async findAllPosts(req, res) {
         try {
-            const { myPosts, groupId } = req.params;
+            const { myPosts, groupId } = req.query;
 
             if (groupId) {
                 const uri = `posts/groups/${groupId}`;
                 const { data } = await socialApi.get(uri);
 
-                if (myPosts) {
-                    const { _id } = await getUserByToken(req);
+                if (myPosts === 'true') {
+                    const token = {
+                        headers: {
+                            authorization: req.headers.authorization.replace('Bearer ', '')
+                        }
+                    }
+                    const { _id } = await getUserByToken(token);
                     data.data = data.data.filter((post) => _id.equals(post.userId));
                 }
 
@@ -51,7 +56,7 @@ module.exports = {
 
                 return _messages.success(res, req, response);
             } else {
-                const uri = !myPosts ? 'posts/public' : 'posts/me';
+                const uri = myPosts === 'false' ? 'posts/public' : 'posts/me';
                 const { data } = await socialApi.get(uri);
 
                 const PopulatedData = await populateUserFields('user', 'userId', data);
