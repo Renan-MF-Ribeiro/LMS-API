@@ -71,7 +71,8 @@ const GroupController = {
     async findUsersGroup(req, res) {
         const { userId } = req.params;
         const { searchBy } = req.query;
-        const query = searchBy ? `?searchBy=${searchBy}` : {}
+        const query = searchBy ? `?searchBy=${searchBy}` : ''
+        console.log(query)
         try {
             const uri = `/groups/user/${userId}${query}`;
             const { data } = await socialApi.get(uri);
