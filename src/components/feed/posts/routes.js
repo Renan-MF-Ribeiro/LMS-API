@@ -9,7 +9,7 @@ module.exports = express
     .get('/groups/:groupId', _controller.findAllByGroup)
     .get('/public', _controller.findAllPublic)
     .get('/feed', _controller.getFeed)
-    .get('/company', _controller.listCompanyPosts)
+    .get('/admin', _controller.listCompanyPosts)
     .get('/me', _controller.findMyPosts)
     .get('/user/:userId', _controller.findUserPosts)
     .get('/:postId', _controller.findPostById)
@@ -17,4 +17,5 @@ module.exports = express
     .get('/:postId/comments', _controller.loadMoreComments)
     .put('/likes', _controller.like)
     .post('/shares', _controller.share)
+    .put('/moderate/:postId', _controller.delete)
     .delete('/:postId', _controller.delete);
