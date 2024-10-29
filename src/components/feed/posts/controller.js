@@ -315,8 +315,19 @@ module.exports = {
             const uri = `posts/${postId}/comments`;
             const { data } = await socialApi.get(uri, { params: req.query });
 
+            //TODO: refatorar lógica de populate-user para nested objects
             const PopulatedData = await populateUserFields('user', 'userId', data);
-            const response = { data: PopulatedData, total: data.total };
+            const postsWithComments = await Promise.all(
+                PopulatedData.map(async (comment) => {
+                    comment.replies.data = await populateUserFields(
+                        'user',
+                        'userId',
+                        comment.replies
+                    );
+                    return comment;
+                }) 
+            );
+            const response = { data: postsWithComments, total: data.total };
 
             return _messages.success(res, req, response);
         } catch (error) {
