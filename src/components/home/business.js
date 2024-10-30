@@ -284,13 +284,15 @@ module.exports = {
                                 userLogin: user.networkLogin,
                                 item: item.itemID._id,
                             }).sort({ createdAt: -1 });
+                            
                             item.itemID.completionAt = tracking.completionAt;
 
                             const concludedAt = tracking.completionAt;
                             const { completion } = item;
                             const { durationHours, title, thumbPath } = item.itemID;
+                            
                             certs.push({
-                                duration: durationHours,
+                                duration: durationHours || 0,
                                 concludedAt,
                                 title,
                                 userName: user.name,
@@ -301,9 +303,11 @@ module.exports = {
                                 itemId: item.itemID.id,
                                 certificateLayout: item.itemID.certificateLayout,
                             });
+                            
                             itemsID.push(item.itemID.id);
                         }
                     }
+                    
                     var mostRecentDate = new Date(
                         Math.max.apply(
                             null,
@@ -314,10 +318,10 @@ module.exports = {
                     );
 
                     if (trail && trail.completion === 1) {
-                        let duration = 0;
-                        for (const item of trail.items) {
-                            duration += item.itemID.durationHours;
-                        }
+                        const duration = trail.items.reduce((acc, e) => {
+                            return acc + (e.itemID?.durationHours || 0);
+                        }, 0);
+                        
                         const { title, thumbPath, completion } = trail;
                         certs.push({
                             duration,
