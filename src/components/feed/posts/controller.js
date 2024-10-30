@@ -15,7 +15,7 @@ module.exports = {
             const uri = 'posts';
             const { data } = await socialApi.post(uri, body);
 
-            if (req?.files) {
+            if (Object.keys(req?.files).length > 0) {
                 const uploadBanner = `posts/${data.post._id}/banner`;
 
                 const formData = new FormData();
