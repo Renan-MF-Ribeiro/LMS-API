@@ -9,7 +9,7 @@ const { User } = require('../users/model');
 const { UsersWithProcessedTags } = require('../courses/model');
 const config = require('../../../config.json');
 const { getTagsElegiblesByToken, checkEligibilityTagsAnd } = require('../sections/business');
-const { ConfigModel } = require('../config/model');
+const { ConfigModel, ConfigTypes } = require('../config/model');
 const { Group } = require('../groups/model');
 
 module.exports = {
@@ -35,7 +35,7 @@ module.exports = {
                 }));
             }
 
-            const fields = (await ConfigModel.findOne({ type: 'social-fields' }))?.value ?? [];
+            const fields = (await ConfigModel.findOne({ type: ConfigTypes.SocialFields }))?.value ?? [];
 
             _messages.success(
                 res,
@@ -115,7 +115,7 @@ module.exports = {
 
                 if (reqBody.fields) {
                     await ConfigModel.findOneAndUpdate(
-                        { type: 'social-fields' },
+                        { type: ConfigTypes.SocialFields },
                         { value: reqBody.fields },
                         { upsert: true, new: true }
                     );
@@ -346,7 +346,7 @@ module.exports = {
             };
 
             // GET CONFIG
-            const config = (await ConfigModel.findOne({ type: 'social-fields' }))?.value ?? [];
+            const config = (await ConfigModel.findOne({ type: ConfigTypes.SocialFields }))?.value ?? [];
 
             if (!config?.length) {
                 const { data: response } = await socialApi.get(uri, { params: req.query });

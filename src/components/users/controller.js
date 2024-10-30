@@ -96,6 +96,8 @@ const AssessmentBusiness = require('../assessment/business');
 const { Features } = require('../theme/features/model');
 const { Partner } = require('../partners/model');
 const { Log } = require('../logs/model');
+const { getConfiguration } = require('../config/business');
+const { ConfigTypes } = require('../config/model');
 
 module.exports = {
     async create(req, res) {
@@ -1175,6 +1177,20 @@ module.exports = {
                     usersToSend.push(account);
                     newUsers.push(processedUser);
                 }
+            }
+
+            const automaticEligibilityConfig = await getConfiguration(ConfigTypes.AutomaticEligibility.Onboard);
+
+            if (automaticEligibilityConfig?.enabled) {
+                const { eligibility = [] } = automaticEligibilityConfig;
+
+                existingUsers.forEach(user => {
+                    user.processedUser.groupsAD = [...(user.processedUser.groupsAD ?? []), ...eligibility];
+                });
+
+                newUsers.forEach(user => {
+                    user.groupsAD = [...(user.groupsAD ?? []), ...eligibility];
+                });
             }
 
             console.log(
