@@ -5,6 +5,9 @@ const { populateUserFields, populateTrailFields } = require('../buisiness');
 const FormData = require('form-data');
 const fs = require('fs');
 const mime = require('mime-types');
+const { sendMessageToKafka, processTargetUsers } = require('../../new-messages/business');
+
+const config = require('../../../../config.json');
 
 module.exports = {
     async create(req, res) {
@@ -303,8 +306,36 @@ module.exports = {
 
     async share(req, res) {
         try {
+            const token = {
+                headers: {
+                    authorization: req.headers.authorization.replace('Bearer ', ''),
+                },
+            };
+            const { name } = await getUserByToken(token);
+
             const uri = 'posts/shares';
             const { data } = await socialApi.post(uri, req.body);
+
+            for (let id of req.body.users) {
+                const text = `Olá! O usuário ${name} compartilhou um post com você!`;
+                const texthtml = `<br> <p>Olá! O usuário ${name} compartilhou um post com você!</p> <br>`;
+                const message = {
+                    category: 'notify',
+                    communication: ['notification'],
+                    mode: 'manual',
+                    target: {
+                        type: 'users',
+                        value: {
+                            users: [id],
+                        },
+                    },
+                    text: text,
+                    texthtml: texthtml,
+                    thumbnail: config.messenger.emailTemplate.thumbnail,
+                    title: `Happlearning - ${name} compartilhou um post com você!`,
+                };
+                createMessagesFromBackend(message);
+            }
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -358,3 +389,21 @@ module.exports = {
         }
     },
 };
+
+async function createMessagesFromBackend(body) {
+    try {
+        const campaign = body;
+        const target = campaign.target;
+        let targetUsers = [];
+
+        if (!target.value.user) {
+            targetUsers = await processTargetUsers(target, campaign.category);
+        } else {
+            targetUsers.push({ ...target.value.user });
+        }
+
+        await sendMessageToKafka(campaign, targetUsers);
+    } catch (error) {
+        console.log(error);
+    }
+}
