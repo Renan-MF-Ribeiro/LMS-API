@@ -64,17 +64,7 @@ module.exports = {
                 }
 
                 const PopulatedData = await populateUserFields('user', 'userId', data);
-                const postsWithComments = await Promise.all(
-                    PopulatedData.map(async (post) => {
-                        post.reactions.comments = await populateUserFields(
-                            'user',
-                            'userId',
-                            post.reactions.comments
-                        );
-                        return post;
-                    })
-                );
-                const response = { data: postsWithComments, total: data.total };
+                const response = { data: PopulatedData, total: data.total };
 
                 return _messages.success(res, req, response);
             } else {
@@ -82,20 +72,7 @@ module.exports = {
                 const { data } = await socialApi.get(uri);
 
                 const PopulatedData = await populateUserFields('user', 'userId', data);
-                const postsWithComments = await Promise.all(
-                    PopulatedData.map(async (post) => {
-                        post.reactions.comments = {
-                            data: await populateUserFields(
-                                'user',
-                                'userId',
-                                post.reactions.comments
-                            ),
-                            total: post.reactions.comments.total,
-                        };
-                        return post;
-                    })
-                );
-                const response = { data: postsWithComments, total: data.total };
+                const response = { data: PopulatedData, total: data.total };
 
                 return _messages.success(res, req, response);
             }
@@ -117,20 +94,8 @@ module.exports = {
             const uri = `posts/groups/${groupId}`;
             const { data } = await socialApi.get(uri, { params: req.query });
 
-            // TODO: otimizar todos os populates
-            // Atualmente a função nao popula nested object items, sendo necessário chama-la duas vezes. Um para as reactions e outra para o post
             const PopulatedData = await populateUserFields('user', 'userId', data);
-            const postsWithComments = await Promise.all(
-                PopulatedData.map(async (post) => {
-                    post.reactions.comments = await populateUserFields(
-                        'user',
-                        'userId',
-                        post.reactions.comments
-                    );
-                    return post;
-                })
-            );
-            const response = { data: postsWithComments, total: data.total };
+            const response = { data: PopulatedData, total: data.total };
 
             return _messages.success(res, req, response);
         } catch (error) {
@@ -151,17 +116,7 @@ module.exports = {
             const { data } = await socialApi.get(uri, { params: req.query });
 
             const PopulatedData = await populateUserFields('user', 'userId', data);
-            const postsWithComments = await Promise.all(
-                PopulatedData.map(async (post) => {
-                    post.reactions.comments = await populateUserFields(
-                        'user',
-                        'userId',
-                        post.reactions.comments
-                    );
-                    return post;
-                })
-            );
-            const response = { data: postsWithComments, total: data.total };
+            const response = { data: PopulatedData, total: data.total };
 
             return _messages.success(res, req, response);
         } catch (error) {
@@ -201,17 +156,7 @@ module.exports = {
             const { data } = await socialApi.get(uri, { params: req.query });
 
             const PopulatedData = await populateUserFields('user', 'userId', data);
-            const postsWithComments = await Promise.all(
-                PopulatedData.map(async (post) => {
-                    post.reactions.comments = await populateUserFields(
-                        'user',
-                        'userId',
-                        post.reactions.comments
-                    );
-                    return post;
-                })
-            );
-            const response = { data: postsWithComments, total: data.total };
+            const response = { data: PopulatedData, total: data.total };
 
             return _messages.success(res, req, response);
         } catch (error) {
@@ -232,17 +177,8 @@ module.exports = {
             const { data } = await socialApi.get(uri, { params: req.query });
 
             const PopulatedData = await populateUserFields('user', 'userId', data);
-            const postsWithComments = await Promise.all(
-                PopulatedData.map(async (post) => {
-                    post.reactions.comments = await populateUserFields(
-                        'user',
-                        'userId',
-                        post.reactions.comments
-                    );
-                    return post;
-                })
-            );
-            const response = { data: postsWithComments, total: data.total };
+            const response = { data: PopulatedData, total: data.total };
+
             return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
@@ -263,17 +199,7 @@ module.exports = {
             const { data } = await socialApi.get(uri, { params: req.query });
 
             const PopulatedData = await populateUserFields('user', 'userId', data);
-            const postsWithComments = await Promise.all(
-                PopulatedData.map(async (post) => {
-                    post.reactions.comments = await populateUserFields(
-                        'user',
-                        'userId',
-                        post.reactions.comments
-                    );
-                    return post;
-                })
-            );
-            const response = { data: postsWithComments, total: data.total };
+            const response = { data: PopulatedData, total: data.total };
 
             return _messages.success(res, req, response);
         } catch (error) {
@@ -294,15 +220,10 @@ module.exports = {
             const { data } = await socialApi.get(uri);
 
             const PopulatedData = await populateUserFields('user', 'userId', data);
-            const comments = await populateUserFields('user', 'userId', data.reactions.comments);
             const trails = await populateTrailFields(PopulatedData.trails);
 
             const returningObject = {
                 ...PopulatedData,
-                reactions: {
-                    ...PopulatedData.reactions,
-                    comments: { data: comments, total: data.reactions.comments.total },
-                },
                 trails,
             };
 
@@ -325,8 +246,10 @@ module.exports = {
         try {
             const uri = 'posts/comments';
             const { data } = await socialApi.put(uri, req.body);
+            const PopulatedData = await populateUserFields('user', 'userId', data.data);
+            const response = { data: PopulatedData, total: data.total };
 
-            return _messages.success(res, req, data);
+            return _messages.success(res, req, response);
         } catch (error) {
             return _messages.internalServer(
                 res,
@@ -344,19 +267,8 @@ module.exports = {
             const uri = `posts/${postId}/comments`;
             const { data } = await socialApi.get(uri, { params: req.query });
 
-            //TODO: refatorar lógica de populate-user para nested objects
             const PopulatedData = await populateUserFields('user', 'userId', data);
-            const postsWithComments = await Promise.all(
-                PopulatedData.map(async (comment) => {
-                    comment.replies.data = await populateUserFields(
-                        'user',
-                        'userId',
-                        comment.replies
-                    );
-                    return comment;
-                })
-            );
-            const response = { data: postsWithComments, total: data.total };
+            const response = { data: PopulatedData, total: data.total };
 
             return _messages.success(res, req, response);
         } catch (error) {

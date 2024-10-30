@@ -51,9 +51,7 @@ const GroupController = {
         try {
             const uri = `groups/members/${groupId}`;
             const { data } = await socialApi.get(uri);
-            // Refatorar para utilizar função padrão de populateFields
             const PopulatedData = await populateMembers(data);
-
             const response = { data: PopulatedData, total: data.total };
 
             return _messages.success(res, req, response);
@@ -70,8 +68,11 @@ const GroupController = {
     },
     async findUsersGroup(req, res) {
         const { userId } = req.params;
+        const { searchBy } = req.query;
+        const query = searchBy ? `?searchBy=${searchBy}` : ''
+        console.log(query)
         try {
-            const uri = `/groups/user/${userId}`;
+            const uri = `/groups/user/${userId}${query}`;
             const { data } = await socialApi.get(uri);
 
             const PopulatedData = await populateUserFields('owner', 'ownerId', data);
