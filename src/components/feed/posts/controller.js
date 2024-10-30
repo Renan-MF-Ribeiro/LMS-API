@@ -152,9 +152,15 @@ module.exports = {
         }
     },
     async listPostToBeModerated(req, res) {
-        const { status } = req.query;
+        const { status, type } = req.query;
+        const queryParams = new URLSearchParams();
+
+        if (status) queryParams.append('status', status.toUpperCase());
+        if (type) queryParams.append('type', type.toUpperCase());
+        
+        const searchQuery = queryParams.toString();
         try {
-            const query = status ? `?status=${status.toUpperCase()}` : '';
+            const query = status ? `?${searchQuery}` : '';
             const uri = `posts/admin${query}`;
             const { data } = await socialApi.get(uri, { params: req.query });
 
