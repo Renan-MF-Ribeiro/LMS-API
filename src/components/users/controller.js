@@ -414,6 +414,10 @@ module.exports = {
 
                     const profilesIDS = await returnIdProfileUser(namesProfiles);
                     const groupsIDS = await returnIdGroupUser(namesGroups);
+                    const userGroups = await Group.find({ name: { $in: namesGroups }})
+                    const eligibilities = userGroups.flatMap((group) =>
+                        group.tags.flatMap((tag) => tag?.value || tag.display)
+                    );
 
                     const authwebPush = user.webPushAuthorization
                         ? user.webPushAuthorization[user.webPushAuthorization.length - 1]
@@ -426,6 +430,9 @@ module.exports = {
 
                     const token = generateToken({
                         ref: user._id,
+                        clientId: process.env.CLIENT_ID,
+                        userName: user.name,
+                        userTags: eligibilities,
                         profiles: profilesIDS.result,
                         numbers: profilesIDS.numbers,
                         groups: groupsIDS,
