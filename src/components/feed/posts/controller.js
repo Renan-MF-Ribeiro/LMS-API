@@ -2,13 +2,35 @@ const { getUserByToken } = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
 const { populateUserFields, populateTrailFields } = require('../buisiness');
+const FormData = require('form-data');
+const fs = require('fs');
+const mime = require('mime-types');
 
 module.exports = {
     async create(req, res) {
         const body = JSON.parse(req.fields.payload) ?? null;
+
         try {
+            delete body.banner;
             const uri = 'posts';
             const { data } = await socialApi.post(uri, body);
+
+            if (req?.files) {
+                const uploadBanner = `posts/${data.post._id}/banner`;
+
+                const formData = new FormData();
+                const key = Object.keys(req.files)[0];
+                const file = req.files[key];
+                const filename = `${file.name}.${mime.extension(file.type)}`;
+                formData.append('banner', fs.createReadStream(file.path), filename);
+
+                await socialApi.patch(uploadBanner, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        ...formData.getHeaders(),
+                    },
+                });
+            }
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -34,9 +56,9 @@ module.exports = {
                 if (myPosts === 'true') {
                     const token = {
                         headers: {
-                            authorization: req.headers.authorization.replace('Bearer ', '')
-                        }
-                    }
+                            authorization: req.headers.authorization.replace('Bearer ', ''),
+                        },
+                    };
                     const { _id } = await getUserByToken(token);
                     data.data = data.data.filter((post) => _id.equals(post.userId));
                 }
