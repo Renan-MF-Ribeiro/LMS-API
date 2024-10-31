@@ -690,6 +690,10 @@ module.exports = {
             return deepGet(obj, query.slice(1), defaultVal);
         }
         return obj;
+    },
+
+    stripHtmlTags(text) {
+        return text.replace(/<[^>]*>?/gm, '').trim();
     }
 };
 
