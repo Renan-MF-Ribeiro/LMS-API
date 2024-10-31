@@ -73,7 +73,7 @@ const GroupController = {
         const { userId } = req.params;
         const { searchBy } = req.query;
         const query = searchBy ? `?searchBy=${searchBy}` : '';
-        
+
         try {
             const uri = `/groups/user/${userId}${query}`;
             const { data } = await socialApi.get(uri);
@@ -164,8 +164,28 @@ const GroupController = {
         const { groupId } = req.params;
 
         try {
+            delete body.banner;
             const uri = `/groups/${groupId}`;
             const { data } = await socialApi.put(uri, body);
+
+            if (Object.keys(req?.files).length > 0) {
+                const uploadBanner = `groups/${groupId}/banner`;
+
+                const formData = new FormData();
+                const key = Object.keys(req.files)[0];
+                const file = req.files[key];
+                const filename = `${file.name}.${mime.extension(file.type)}`;
+
+                formData.append('banner', fs.createReadStream(file.path), filename);
+
+                socialApi.patch(uploadBanner, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        ...formData.getHeaders(),
+                    },
+                });
+            }
+
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
