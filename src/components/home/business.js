@@ -335,6 +335,7 @@ module.exports = {
                             trailId: trail._id,
                             certificateLayout: trail.certificateLayout,
                             certificateDue: trail?.certificateDue,
+                            items: trail.items?.map(i => i.itemID).filter(i => i.kind !== 'PostItem') ?? []
                         });
                     }
                 }
