@@ -60,3 +60,7 @@ docker/traefik/certs/*
 !**/.keep
 src/public/uploads
 workspace.code-workspace
+
+# ignore package manger lock json files
+yarn.lock
+pnpm-lock.yaml
