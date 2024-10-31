@@ -292,12 +292,24 @@ module.exports = {
             }
 
             if (newUser && sendSignUpActivationEmail) {
-                const emailToken = generateToken({ networkLogin });
+                const emailToken = generateToken({
+                    networkLogin,
+                    ref: newUser._id,
+                    clientId: process.env.CLIENT_ID,
+                    userName: newUser.name,
+                    userTags: [],
+                });
                 const activationLink = `${process.env.DOMAIN}/login/ativacao?token=${emailToken}`;
                 await sendSignupActivationEmail(newUser.email, activationLink);
             }
 
-            const accessToken = generateToken({ networkLogin });
+            const accessToken = generateToken({ 
+                networkLogin,
+                ref: newUser._id,
+                clientId: process.env.CLIENT_ID,
+                userName: newUser.name,
+                userTags: [],
+            });
             _messages.success(res, req, accessToken);
         } catch (error) {
             console.log(error);
@@ -1755,9 +1767,16 @@ module.exports = {
             if (namesProfiles.length > 0) {
                 const profilesIDS = await returnIdProfileUser(namesProfiles);
                 const groupsIDS = await returnIdGroupUser(namesGroups);
+                const userGroups = await Group.find({ name: { $in: namesGroups }})
+                const eligibilities = userGroups.flatMap((group) =>
+                    group.tags.flatMap((tag) => tag?.value || tag.display)
+                );
 
                 const result = {
                     token: {
+                        clientId: process.env.CLIENT_ID,
+                        userName: name,
+                        userTags: eligibilities,
                         profiles: profilesIDS.result,
                         numbers: profilesIDS.numbers,
                         groups: groupsIDS,
