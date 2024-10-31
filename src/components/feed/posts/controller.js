@@ -27,7 +27,7 @@ module.exports = {
                 const filename = `${file.name}.${mime.extension(file.type)}`;
                 formData.append('banner', fs.createReadStream(file.path), filename);
 
-                await socialApi.patch(uploadBanner, formData, {
+                socialApi.patch(uploadBanner, formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
                         ...formData.getHeaders(),
