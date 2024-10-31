@@ -104,7 +104,7 @@ const GroupController = {
 
             let groupRequests = undefined;
             if (requests === 'true') {
-                groupRequests = await populateUserFields('user', 'userId', data.requests);
+                groupRequests = await populateUserFields('user', 'userId', { data: data.requests });
             }
             const populatedOwner = await populateUserFields('owner', 'ownerId', data);
 
