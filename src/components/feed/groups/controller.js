@@ -1,6 +1,9 @@
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
 const { populateUserFields, populateMembers } = require('../buisiness');
+const FormData = require('form-data');
+const fs = require('fs');
+const mime = require('mime-types');
 
 const GroupController = {
     async getAllGroups(req, res) {
@@ -69,8 +72,8 @@ const GroupController = {
     async findUsersGroup(req, res) {
         const { userId } = req.params;
         const { searchBy } = req.query;
-        const query = searchBy ? `?searchBy=${searchBy}` : ''
-        console.log(query)
+        const query = searchBy ? `?searchBy=${searchBy}` : '';
+        
         try {
             const uri = `/groups/user/${userId}${query}`;
             const { data } = await socialApi.get(uri);
@@ -122,9 +125,29 @@ const GroupController = {
     async createGroup(req, res) {
         const body = JSON.parse(req.fields.payload) ?? null;
         try {
-            const uri = `/groups/`;
+            delete body.banner;
+            const uri = 'groups';
             const { data } = await socialApi.post(uri, body);
-            return _messages.success(res, req, data);
+
+            if (Object.keys(req?.files).length > 0) {
+                const uploadBanner = `groups/${data.group._id}/banner`;
+
+                const formData = new FormData();
+                const key = Object.keys(req.files)[0];
+                const file = req.files[key];
+                const filename = `${file.name}.${mime.extension(file.type)}`;
+
+                formData.append('banner', fs.createReadStream(file.path), filename);
+
+                socialApi.patch(uploadBanner, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        ...formData.getHeaders(),
+                    },
+                });
+            }
+
+            return _messages.success(res, req, {});
         } catch (error) {
             return _messages.internalServer(
                 res,

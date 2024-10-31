@@ -5,8 +5,8 @@ const socialApi = axios.create({ baseURL: process.env.API_SOCIAL });
 const socialApiMiddleware = (req, res, next) => {
     const token = req.headers.authorization;
 
-    if (token) {
-        socialApi.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    if (token && !token?.startsWith('Bearer')) {
+        socialApi.defaults.headers.common.authorization = `Bearer ${token}`;
     }
 
     next();
