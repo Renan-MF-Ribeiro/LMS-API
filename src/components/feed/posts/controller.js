@@ -57,12 +57,7 @@ module.exports = {
                 const { data } = await socialApi.get(uri);
 
                 if (myPosts === 'true') {
-                    const token = {
-                        headers: {
-                            authorization: req.headers.authorization.replace('Bearer ', ''),
-                        },
-                    };
-                    const { _id } = await getUserByToken(token);
+                    const { _id } = await getUserByToken(req);
                     data.data = data.data.filter((post) => _id.equals(post.userId));
                 }
 
@@ -157,7 +152,7 @@ module.exports = {
 
         if (status) queryParams.append('status', status.toUpperCase());
         if (type) queryParams.append('type', type.toUpperCase());
-        
+
         const searchQuery = queryParams.toString();
         try {
             const query = status ? `?${searchQuery}` : '';
@@ -247,13 +242,38 @@ module.exports = {
 
     async comment(req, res) {
         try {
+            const { name } = await getUserByToken(req);
+
             const uri = 'posts/comments';
             const { data } = await socialApi.put(uri, req.body);
             const PopulatedData = await populateUserFields('user', 'userId', data.data);
             const response = { data: PopulatedData, total: data.total };
 
+            const mentions = req?.body?.mentions || [];
+            for (let id of mentions) {
+                const text = `Olá! O usuário ${name} mencionou você em um post!`;
+                const texthtml = `<br> <p>Olá! O usuário ${name} mencionou você em um post!</p> <br>`;
+                const message = {
+                    category: 'notify',
+                    communication: ['notification'],
+                    mode: 'manual',
+                    target: {
+                        type: 'users',
+                        value: {
+                            users: [id],
+                        },
+                    },
+                    text: text,
+                    texthtml: texthtml,
+                    thumbnail: config.messenger.emailTemplate.thumbnail,
+                    title: `Happlearning - ${name} mencionou você em um post!`,
+                };
+                createMessagesFromBackend(message);
+            }
+
             return _messages.success(res, req, response);
         } catch (error) {
+            console.log({ error });
             return _messages.internalServer(
                 res,
                 req,
@@ -306,17 +326,13 @@ module.exports = {
 
     async share(req, res) {
         try {
-            const token = {
-                headers: {
-                    authorization: req.headers.authorization.replace('Bearer ', ''),
-                },
-            };
-            const { name } = await getUserByToken(token);
+            const { name } = await getUserByToken(req);
 
             const uri = 'posts/shares';
             const { data } = await socialApi.post(uri, req.body);
 
-            for (let id of req.body.users) {
+            const users = req?.body?.users || [];
+            for (let id of users) {
                 const text = `Olá! O usuário ${name} compartilhou um post com você!`;
                 const texthtml = `<br> <p>Olá! O usuário ${name} compartilhou um post com você!</p> <br>`;
                 const message = {
