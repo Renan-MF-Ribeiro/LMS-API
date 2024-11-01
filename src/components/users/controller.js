@@ -1544,6 +1544,10 @@ module.exports = {
                 projection: { ...userProjection },
             });
 
+            if(userUpdated?.status) {
+                await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status)
+            }
+
             return _messages.success(res, req, updated, 'Usuário(a) atualizado(a) com sucesso!');
         } catch (error) {
             return _messages.internalServer(
