@@ -164,6 +164,14 @@ const GamificationBusiness = {
 
         return data;
     },
+
+    async setUserStatus(networkLogin, status) {
+        const uri = `${host}/users/${clientId}/${networkLogin}`;
+        const body = { status };
+        const { data } = await axios.patch(uri, body, { headers });
+
+        return data;
+    },
 };
 
 module.exports = GamificationBusiness;

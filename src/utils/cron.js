@@ -1326,15 +1326,16 @@ async function updateTrailsViews () {
     }
 }
 
-async function inactiveOldOnboardingUsers () {
-    console.log('Running inactiveOldOnboardingUsers');
+async function inactiveOldOnboardingUsers() {
+    console.time('[inactiveOldOnboardingUsers] execution time');
+
+    console.log('[inactiveOldOnboardingUsers] Running...');
+
     const daysToInactive = Number(config?.cron?.inactiveOldOnboardingUsers?.daysToInactive ?? 15);
 
-    const lastLoginDate = new Date(
-        new Date().setDate(new Date().getDate() - daysToInactive)
-    );
+    const lastLoginDate = moment().subtract(daysToInactive, 'days').startOf('day').toDate();
 
-    console.log('Inactivating users that have not logged in since', lastLoginDate);
+    console.log('[inactiveOldOnboardingUsers] Inactivating onboarding users that have not logged in since', lastLoginDate);
 
     const lastLoginsWithUser = (
         await LastLogin.find({
@@ -1342,27 +1343,59 @@ async function inactiveOldOnboardingUsers () {
             user: { $ne: null },
         }).populate({
             path: 'user',
-            select: 'status onboarding _id',
+            select: 'status onboarding _id name networkLogin',
             match: {
                 status: 'ATIVO',
-                onboarding: { $eq: true },
+                onboarding: true,
             },
         })
-    ).filter((val) => val.user !== null);
+    ).filter((val) => !!val.user?._id);
 
-    if (lastLoginsWithUser?.length) {
-        const usersToInactivate = lastLoginsWithUser.map((lastLogin) => lastLogin.user._id);
+    const userWithLogin = lastLoginsWithUser.map((lastLogin) => lastLogin.user._id);
 
-        console.log('Inactive onboarding users', usersToInactivate);
+    console.log('[inactiveOldOnboardingUsers] Onboarding users with login to inactive:', userWithLogin.length, JSON.stringify(userWithLogin));
 
+    if (userWithLogin?.length) {
         await User.updateMany(
-            { _id: { $in: usersToInactivate } },
-            { $set: { status: 'INATIVO' } },
+            { _id: { $in: userWithLogin } },
+            { $set: { status: 'INATIVO', updatedAt: new Date() } },
             { multi: true }
         );
     } else {
-        console.log('No users to inactivate');
+        console.log('[inactiveOldOnboardingUsers] No onboarding users with login to inactive');
     }
+
+    const createdUsers = await User.find({
+        status: 'ATIVO',
+        onboarding: true,
+        createdAt: { $lt: lastLoginDate },
+    }).select('status onboarding _id name networkLogin createdAt');
+
+    if (createdUsers?.length) {
+        const lastLoginCreatedUsers = await LastLogin.find({
+            user: { $in: createdUsers.map(user => user._id) },
+        });
+
+        const usersWithoutLogin = createdUsers.filter(
+            user => !lastLoginCreatedUsers.some(lastLogin => String(lastLogin.user) === String(user._id))
+        );
+
+        console.log('[inactiveOldOnboardingUsers] Onboarding users without login to inactive:', usersWithoutLogin.length, JSON.stringify(usersWithoutLogin));
+
+        if (usersWithoutLogin?.length) {
+            await User.updateMany(
+                { _id: { $in: usersWithoutLogin.map(user => user._id) } },
+                { $set: { status: 'INATIVO', updatedAt: new Date() } },
+                { multi: true }
+            );
+        } else {
+            console.log('[inactiveOldOnboardingUsers] No onboarding users without login to inactive');
+        }
+    } else {
+        console.log('[inactiveOldOnboardingUsers] No onboarding users created to inactive');
+    }
+
+    console.timeEnd('[inactiveOldOnboardingUsers] execution time');
 }
 
 async function removeAutomaticEligibilityTags() {
