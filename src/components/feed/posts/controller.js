@@ -229,14 +229,8 @@ module.exports = {
             const { data } = await socialApi.get(uri);
 
             const PopulatedData = await populateUserFields('user', 'userId', data);
-            const trails = await populateTrailFields(PopulatedData.trails);
 
-            const returningObject = {
-                ...PopulatedData,
-                trails,
-            };
-
-            const response = { data: returningObject };
+            const response = { data: PopulatedData };
 
             return _messages.success(res, req, response);
         } catch (error) {
