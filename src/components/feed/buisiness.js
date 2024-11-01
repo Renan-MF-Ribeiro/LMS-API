@@ -33,24 +33,30 @@ async function populateUserFields(fieldName, reference, data) {
         data: await populateUserFields(fieldName, reference, nestedData),
         total: nestedData.total,
     });
-    const processItem = async (item) => ({
-        ...populateItem(item),
-        ...(item.reactions?.comments && {
-            reactions: {
-                ...item.reactions,
-                comments: await populateNested(item.reactions.comments),
-            },
-        }),
-        ...(item.replies?.data?.length && {
-            replies: await populateNested(item.replies),
-        }),
-        ...(item.trails?.length && {
-            trails: await populateTrailFields(item.trails),
-        }),
-    });
+    const processItem = async (item) => {
+        const populatedItem = populateItem(item);
+        if (!populatedItem[fieldName]) return null;
+
+        return {
+            ...populatedItem,
+            ...(item.reactions?.comments && {
+                reactions: {
+                    ...item.reactions,
+                    comments: await populateNested(item.reactions.comments),
+                },
+            }),
+            ...(item.replies?.data?.length && {
+                replies: await populateNested(item.replies),
+            }),
+            ...(item.trails?.length && {
+                trails: await populateTrailFields(item.trails),
+            }),
+        };
+    };
 
     if (isArray) {
-        return Promise.all(data.data.map(processItem));
+        const processedItems = await Promise.all(data.data.map(processItem));
+        return processedItems.filter(Boolean);
     }
     return processItem(data);
 }
