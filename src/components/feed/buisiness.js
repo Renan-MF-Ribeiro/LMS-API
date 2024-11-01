@@ -44,6 +44,9 @@ async function populateUserFields(fieldName, reference, data) {
         ...(item.replies?.data?.length && {
             replies: await populateNested(item.replies),
         }),
+        ...(item.trails?.length && {
+            trails: await populateTrailFields(item.trails),
+        }),
     });
 
     if (isArray) {
@@ -51,7 +54,6 @@ async function populateUserFields(fieldName, reference, data) {
     }
     return processItem(data);
 }
-
 
 async function populateMembers(data) {
     const ids = data.data;
