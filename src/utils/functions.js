@@ -217,7 +217,7 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             try {
                 const token = req.headers.authorization;
-                const { data } = _auth.decodeToken(token);
+                const { data } = _auth.decodeToken(token.replace('Bearer', '').trim());
                 const user = await User.findOne({ _id: { $eq: data.ref } });
                 resolve(user);
             } catch (error) {
