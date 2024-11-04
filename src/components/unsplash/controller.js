@@ -2,7 +2,7 @@ require("dotenv").config();
 const _messages = require("../../utils/messages");
 const { pagination, ordernation } = require('../../utils/functions')
 const axios = require('axios');
-
+const { UNSPLASH_API_KEY } = process.env
 module.exports = {
     async search (req, res) {
         try {
@@ -15,7 +15,7 @@ module.exports = {
                     page,
                     per_page,
                     orientation,
-                    client_id: 'taM3ogQob0HPhithCiFKt_Ou0uzFMXRDRNfoelnYK2s',
+                    client_id: UNSPLASH_API_KEY,
                 },
             });
 
@@ -27,10 +27,29 @@ module.exports = {
                 req,
                 error.message,
                 "Erro interno do servidor",
-                "trails",
-                "createPadlet"
+                "unsplash",
+                "search"
             );
         }
 
+    },
+
+    async dispatchDownload (req, res) {
+        try {
+            const { url } = req.body
+            const { data } = await axios.get(url, { params: { client_id: UNSPLASH_API_KEY, } });
+
+            return _messages.success(res, req, data.url);
+
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                "Erro interno do servidor",
+                "unsplash",
+                "dispatchDownload"
+            );
+        }
     }
 }
