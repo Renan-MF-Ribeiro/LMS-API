@@ -12,4 +12,5 @@ module.exports = express
     .get('/members/:groupId', _controller.getGroupMembers)
     .put('/:groupId', formidable(), _controller.updateGroup)
     .delete('/:groupId/:userId', _controller.deleteUserFromGroup)
+    .delete('quit/:groupId', _controller.quitFromGroup)
     .delete('/:groupId', _controller.deleteGroup);

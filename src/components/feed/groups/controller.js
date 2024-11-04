@@ -214,6 +214,24 @@ const GroupController = {
             );
         }
     },
+    async quitFromGroup(req, res) {
+        const { groupId } = req.params;
+
+        try {
+            const uri = `/groups/quit/${groupId}`;
+            const { data } = await socialApi.delete(uri);
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'feed',
+                'deleteUserFromGroup'
+            );
+        }
+    },
     async deleteGroup(req, res) {
         const { groupId } = req.params;
 
