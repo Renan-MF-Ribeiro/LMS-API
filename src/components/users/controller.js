@@ -16,8 +16,6 @@ const {
     groups,
 } = require('./model');
 
-const { Tracking } = require('../tracking/model')
-
 const {
     generateToken,
     generateMfaToken,
@@ -307,7 +305,7 @@ module.exports = {
                 await sendSignupActivationEmail(newUser.email, activationLink);
             }
 
-            const accessToken = generateToken({
+            const accessToken = generateToken({ 
                 networkLogin,
                 ref: newUser._id,
                 clientId: process.env.CLIENT_ID,
@@ -430,7 +428,7 @@ module.exports = {
 
                     const profilesIDS = await returnIdProfileUser(namesProfiles);
                     const groupsIDS = await returnIdGroupUser(namesGroups);
-                    const userGroups = await Group.find({ name: { $in: namesGroups } })
+                    const userGroups = await Group.find({ name: { $in: namesGroups }})
                     const eligibilities = userGroups.flatMap((group) =>
                         group.tags.flatMap((tag) => tag?.value || tag.display)
                     );
@@ -684,7 +682,7 @@ module.exports = {
 
                     const profilesIDS = await returnIdProfileUser(namesProfiles);
                     const groupsIDS = await returnIdGroupUser(namesGroups);
-                    const userGroups = await Group.find({ name: { $in: namesGroups } })
+                    const userGroups = await Group.find({ name: { $in: namesGroups }})
                     const eligibilities = userGroups.flatMap((group) =>
                         group.tags.flatMap((tag) => tag?.value || tag.display)
                     );
@@ -787,7 +785,7 @@ module.exports = {
             }
         } catch (error) {
             console.log(error);
-            _messages.internalServer(res, req, error.message, { token, error: error.stack }, 'singleSignOn', 'singleSignOn');
+            _messages.internalServer(res, req, error.message, {token, error: error.stack}, 'singleSignOn', 'singleSignOn');
         }
     },
 
@@ -1187,7 +1185,6 @@ module.exports = {
                         ...processedUser.groupsAD,
                         ...(existingUser.groupsAD?.filter((group) => group.startsWith('PERFIL_')) ?? []),
                     ];
-
                     existingUsers.push({
                         _id: existingUser._id,
                         processedUser: {
@@ -1222,11 +1219,6 @@ module.exports = {
                 await User.findByIdAndUpdate(user._id, {
                     ...user.processedUser,
                 });
-
-                await Tracking.updateMany(
-                    { userLogin: user.processedUser.cpf },
-                    { $set: { userLogin: user.processedUser.networkLogin } }
-                );
             }
 
             if (inactivateIfNotInSpreadsheet) {
@@ -1368,29 +1360,29 @@ module.exports = {
             const users = await User.find(
                 searchBy
                     ? {
-                        $or: [
-                            {
-                                name: { $regex: searchBy, $options: 'i' },
-                                onboarding: { $ne: true },
-                            },
-                            {
-                                registration: {
-                                    $regex: searchBy,
-                                    $options: 'i',
-                                },
-                                onboarding: { $ne: true },
-                            },
-                            { alternativeEmail: { $regex: searchBy, $options: 'i' } },
-                            {
-                                email: { $regex: searchBy, $options: 'i' },
-                                onboarding: { $ne: true },
-                            },
-                            {
+                          $or: [
+                              {
+                                  name: { $regex: searchBy, $options: 'i' },
+                                  onboarding: { $ne: true },
+                              },
+                              {
+                                  registration: {
+                                      $regex: searchBy,
+                                      $options: 'i',
+                                  },
+                                  onboarding: { $ne: true },
+                              },
+                              { alternativeEmail: { $regex: searchBy, $options: 'i' } },
+                              {
+                                  email: { $regex: searchBy, $options: 'i' },
+                                  onboarding: { $ne: true },
+                              },
+                              {
                                 cpf: { $regex: searchBy, $options: 'i' },
                                 onboarding: { $ne: true },
-                            },
-                        ],
-                    }
+                             },
+                          ],
+                      }
                     : { onboarding: { $ne: true } }
             )
                 .sort({
@@ -1402,28 +1394,28 @@ module.exports = {
             const total = await User.find(
                 searchBy
                     ? {
-                        $or: [
-                            {
-                                name: { $regex: searchBy, $options: 'i' },
-                                onboarding: { $ne: true },
-                            },
-                            {
-                                registration: {
-                                    $regex: searchBy,
-                                    $options: 'i',
-                                },
-                                onboarding: { $ne: true },
-                            },
-                            {
-                                email: { $regex: searchBy, $options: 'i' },
-                                onboarding: { $ne: true },
-                            },
-                            {
+                          $or: [
+                              {
+                                  name: { $regex: searchBy, $options: 'i' },
+                                  onboarding: { $ne: true },
+                              },
+                              {
+                                  registration: {
+                                      $regex: searchBy,
+                                      $options: 'i',
+                                  },
+                                  onboarding: { $ne: true },
+                              },
+                              {
+                                  email: { $regex: searchBy, $options: 'i' },
+                                  onboarding: { $ne: true },
+                              },
+                              {
                                 cpf: { $regex: searchBy, $options: 'i' },
                                 onboarding: { $ne: true },
-                            },
-                        ],
-                    }
+                             },
+                          ],
+                      }
                     : { onboarding: { $ne: true } }
             ).countDocuments();
 
@@ -1528,8 +1520,8 @@ module.exports = {
                     found.email === email
                         ? 'E-MAIL'
                         : found.networkLogin === networkLogin
-                            ? 'LOGIN'
-                            : 'CPF';
+                        ? 'LOGIN'
+                        : 'CPF';
 
                 return _messages.forbidden(
                     res,
@@ -1552,7 +1544,7 @@ module.exports = {
                 projection: { ...userProjection },
             });
 
-            if (userUpdated?.status) {
+            if(userUpdated?.status) {
                 await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status)
             }
 
@@ -1803,7 +1795,7 @@ module.exports = {
             if (namesProfiles.length > 0) {
                 const profilesIDS = await returnIdProfileUser(namesProfiles);
                 const groupsIDS = await returnIdGroupUser(namesGroups);
-                const userGroups = await Group.find({ name: { $in: namesGroups } })
+                const userGroups = await Group.find({ name: { $in: namesGroups }})
                 const eligibilities = userGroups.flatMap((group) =>
                     group.tags.flatMap((tag) => tag?.value || tag.display)
                 );
@@ -1834,7 +1826,7 @@ module.exports = {
                 if (req.features?.gamification) {
                     GamificationBusiness.createClientUser(networkLogin, groupsAD);
                 }
-
+                
                 _messages.success(res, req, {
                     SAS,
                     token,
@@ -1974,34 +1966,34 @@ module.exports = {
             const collaborativeUsers = await User.find(
                 searchBy
                     ? {
-                        $and: [
-                            {
-                                groupsAD: { $in: ['PERFIL_Colaborador'] },
-                            },
-                            {
-                                $or: [
-                                    {
-                                        name: {
-                                            $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                    {
-                                        registration: {
-                                            $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                    {
-                                        email: {
-                                            $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                ],
-                            },
-                        ],
-                    }
+                          $and: [
+                              {
+                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
+                              },
+                              {
+                                  $or: [
+                                      {
+                                          name: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          registration: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          email: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                  ],
+                              },
+                          ],
+                      }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             )
                 .sort({
@@ -2013,34 +2005,34 @@ module.exports = {
             const total = await User.countDocuments(
                 searchBy
                     ? {
-                        $and: [
-                            {
-                                groupsAD: { $in: ['PERFIL_Colaborador'] },
-                            },
-                            {
-                                $or: [
-                                    {
-                                        name: {
-                                            $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                    {
-                                        registration: {
-                                            $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                    {
-                                        email: {
-                                            $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                ],
-                            },
-                        ],
-                    }
+                          $and: [
+                              {
+                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
+                              },
+                              {
+                                  $or: [
+                                      {
+                                          name: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          registration: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          email: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                  ],
+                              },
+                          ],
+                      }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             );
 
