@@ -54,7 +54,7 @@ module.exports = {
 
             if (groupId) {
                 const uri = `posts/groups/${groupId}`;
-                const { data } = await socialApi.get(uri);
+                const { data } = await socialApi.get(uri, { params: req.query });
 
                 if (myPosts === 'true') {
                     const { _id } = await getUserByToken(req);
@@ -67,7 +67,7 @@ module.exports = {
                 return _messages.success(res, req, response);
             } else {
                 const uri = myPosts === 'false' ? 'posts/public' : 'posts/me';
-                const { data } = await socialApi.get(uri);
+                const { data } = await socialApi.get(uri, { params: req.query });
 
                 const PopulatedData = await populateUserFields('user', 'userId', data);
                 const response = { data: PopulatedData, total: data.total };
