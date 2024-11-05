@@ -1424,6 +1424,7 @@ async function removeAutomaticEligibilityTags() {
 
     const users = await User
         .find({
+            admission: { $exists: true },
             status: 'ATIVO',
             $or: [
                 { groupsAD: { $in: eligibility } },
