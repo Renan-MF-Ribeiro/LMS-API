@@ -1,3 +1,4 @@
+const { getElegibleUsers } = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
 const { populateUserFields, populateMembers } = require('../buisiness');
@@ -80,7 +81,7 @@ const GroupController = {
 
             return _messages.success(res, req, data);
         } catch (error) {
-            console.log(error)
+            console.log(error);
             return _messages.internalServer(
                 res,
                 req,
@@ -122,6 +123,15 @@ const GroupController = {
     },
     async createGroup(req, res) {
         const body = JSON.parse(req.fields.payload) ?? null;
+        if (body.auto === true) {
+            const elegibleUsers = await getElegibleUsers(
+                body?.elegibilities,
+                body?.elegibilitiesAnd
+            );
+            const newUsers = elegibleUsers.map((user) => user._id);
+            body.members = [...newUsers, ...body.members];
+        }
+
         try {
             delete body.banner;
             const uri = 'groups';
