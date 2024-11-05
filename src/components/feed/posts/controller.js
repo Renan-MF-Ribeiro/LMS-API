@@ -1,4 +1,4 @@
-const { getUserByToken } = require('../../../utils/functions');
+const { getUserByToken, getElegibleUsers } = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
 const { populateUserFields, populateTrailFields } = require('../buisiness');
@@ -8,6 +8,8 @@ const mime = require('mime-types');
 const { sendMessageToKafka, processTargetUsers } = require('../../new-messages/business');
 
 const config = require('../../../../config.json');
+const { Group } = require('../../groups/model');
+const { User } = require('../../users/model');
 
 module.exports = {
     async create(req, res) {
@@ -19,7 +21,7 @@ module.exports = {
             const { data } = await socialApi.post(uri, body);
 
             if (Object.keys(req?.files).length > 0) {
-                const uploadBanner = `posts/${data.post._id}/banner`;
+                const uploadContent = `posts/${data.post._id}/banner`;
 
                 const formData = new FormData();
                 const key = Object.keys(req.files)[0];
@@ -27,12 +29,41 @@ module.exports = {
                 const filename = `${file.name}.${mime.extension(file.type)}`;
                 formData.append('banner', fs.createReadStream(file.path), filename);
 
-                socialApi.patch(uploadBanner, formData, {
+                socialApi.patch(uploadContent, formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
                         ...formData.getHeaders(),
                     },
                 });
+            }
+
+            if (body?.type === 'ADMIN' && (body?.elegibilities || body?.elegibilitiesAnd)) {
+                const elegibleUsers = await getElegibleUsers(
+                    body?.elegibilities,
+                    body?.elegibilitiesAnd
+                );
+
+                const usersIds = elegibleUsers.map((elegibleUser) => elegibleUser._id);
+                for (let id of usersIds) {
+                    const text = 'Olá! A administração publicou um novo post!';
+                    const texthtml = '<br> <p>Olá! A administração publicou um novo post!</p> <br>';
+                    const message = {
+                        category: 'notify',
+                        communication: ['notification'],
+                        mode: 'manual',
+                        target: {
+                            type: 'users',
+                            value: {
+                                users: [id],
+                            },
+                        },
+                        text: text,
+                        texthtml: texthtml,
+                        thumbnail: config.messenger.emailTemplate.thumbnail,
+                        title: 'Novo post publicado pela administração',
+                    };
+                    createMessagesFromBackend(message);
+                }
             }
 
             return _messages.success(res, req, data);
@@ -267,6 +298,31 @@ module.exports = {
                     texthtml: texthtml,
                     thumbnail: config.messenger.emailTemplate.thumbnail,
                     title: `Happlearning - ${name} mencionou você em um post!`,
+                };
+                createMessagesFromBackend(message);
+            }
+
+            if (req?.body?.postId) {
+                const {
+                    data: { userId },
+                } = await socialApi.get(`posts/${req.body.postId}`);
+
+                const text = `Olá! O usuário ${name} respondeu seu comentário!`;
+                const texthtml = `<br> <p>Olá! O usuário ${name} respondeu seu comentário!</p> <br>`;
+                const message = {
+                    category: 'notify',
+                    communication: ['notification'],
+                    mode: 'manual',
+                    target: {
+                        type: 'users',
+                        value: {
+                            users: [userId],
+                        },
+                    },
+                    text: text,
+                    texthtml: texthtml,
+                    thumbnail: config.messenger.emailTemplate.thumbnail,
+                    title: `Happlearning - ${name} respondeu seu comentário!`,
                 };
                 createMessagesFromBackend(message);
             }
