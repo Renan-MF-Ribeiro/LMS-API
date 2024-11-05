@@ -8,6 +8,8 @@ const mime = require('mime-types');
 const { sendMessageToKafka, processTargetUsers } = require('../../new-messages/business');
 
 const config = require('../../../../config.json');
+const { Group } = require('../../groups/model');
+const { User } = require('../../users/model');
 
 module.exports = {
     async create(req, res) {
@@ -33,6 +35,50 @@ module.exports = {
                         ...formData.getHeaders(),
                     },
                 });
+            }
+
+            if (body?.type === 'ADMIN' && (body?.elegibilities || body?.elegibilitiesAnd)) {
+                const tags = [];
+                const elegibilities = body?.elegibilities || [];
+                const elegibilitiesAnd = body?.elegibilitiesAnd || [];
+                const mergedElegibilities = [...elegibilities, ...elegibilitiesAnd];
+
+                const groups = await Group.find({ 'tags.value': { $in: mergedElegibilities } });
+                const users = await User.find({ groupsAD: { $in: groups.map((g) => g.name) } });
+
+                const userTags = groups.filter((group) => elegibilities.includes(group.name));
+                const userTagsAnd = groups.filter((group) => elegibilitiesAnd.includes(group.name));
+
+                const elegibleUsers = users.filter((user) => {
+                    const hasTags = userTags.some((tag) => user.groupsAD.includes(tag));
+                    const hasTagsAnd = userTagsAnd.every((tag) => user.groupsAD.includes(tag));
+
+                    return hasTags || hasTagsAnd;
+                });
+
+                const usersIds = elegibleUsers.map((elegibleUser) => elegibleUser._id);
+                for (let id of usersIds) {
+                    const text = 'Olá! A administração publicou um novo post!';
+                    const texthtml = '<br> <p>Olá! A administração publicou um novo post!</p> <br>';
+                    const message = {
+                        category: 'notify',
+                        communication: ['notification'],
+                        mode: 'manual',
+                        target: {
+                            type: 'users',
+                            value: {
+                                users: [id],
+                            },
+                        },
+                        text: text,
+                        texthtml: texthtml,
+                        thumbnail: config.messenger.emailTemplate.thumbnail,
+                        title: 'Novo post publicado pela administração',
+                    };
+                    createMessagesFromBackend(message);
+                }
+
+                tags.push(...groups.map((group) => group.name));
             }
 
             return _messages.success(res, req, data);
