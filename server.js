@@ -19,6 +19,7 @@ const {
     startUpdateTrailsViewsCron,
     executeInactiveOldOnboardingUsers,
     executeRemoveAutomaticEligibilityTags,
+    getUsersLoadCron,
 } = require('./src/utils/cron')
 
 const server = app.listen(port, async () => {
@@ -37,6 +38,7 @@ const server = app.listen(port, async () => {
             cronRevokeTrail()
             cronUpdateRecommendedTrails()
             startUpdateTrailsViewsCron()
+            getUsersLoadCron()
             executeInactiveOldOnboardingUsers()
             executeRemoveAutomaticEligibilityTags()
         }
