@@ -26,7 +26,7 @@ module.exports = {
                 const formData = new FormData();
                 const key = Object.keys(req.files)[0];
                 const file = req.files[key];
-                const filename = `${file.naem}.${mime.extension(file.type)}`;
+                const filename = `${file.name}.${mime.extension(file.type)}`;
                 formData.append('content', fs.createReadStream(file.path), filename);
 
                 socialApi.patch(uploadContent, formData, {
