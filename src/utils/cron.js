@@ -714,6 +714,7 @@ async function getUsersLoad() {
                                 `Atualizando usuário ${Number(index) + 1} de ${existingUsers.length}...`
                             );
                         }
+
                         await User.findByIdAndUpdate(user._id, user.processedUser);
 
                         await Tracking.updateMany(
