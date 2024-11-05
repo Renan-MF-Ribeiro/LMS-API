@@ -326,6 +326,7 @@ module.exports = {
                         certs.push({
                             duration,
                             title,
+                            description: trail.description,
                             concludedAt: mostRecentDate,
                             userName: user.name,
                             thumbPath,
