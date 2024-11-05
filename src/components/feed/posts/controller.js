@@ -317,6 +317,31 @@ module.exports = {
                 createMessagesFromBackend(message);
             }
 
+            if (req?.body?.postId) {
+                const {
+                    data: { userId },
+                } = await socialApi.get(`posts/${req.body.postId}`);
+
+                const text = `Olá! O usuário ${name} respondeu seu comentário!`;
+                const texthtml = `<br> <p>Olá! O usuário ${name} respondeu seu comentário!</p> <br>`;
+                const message = {
+                    category: 'notify',
+                    communication: ['notification'],
+                    mode: 'manual',
+                    target: {
+                        type: 'users',
+                        value: {
+                            users: [userId],
+                        },
+                    },
+                    text: text,
+                    texthtml: texthtml,
+                    thumbnail: config.messenger.emailTemplate.thumbnail,
+                    title: `Happlearning - ${name} respondeu seu comentário!`,
+                };
+                createMessagesFromBackend(message);
+            }
+
             return _messages.success(res, req, response);
         } catch (error) {
             console.log({ error });
