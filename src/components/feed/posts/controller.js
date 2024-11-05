@@ -1,4 +1,4 @@
-const { getUserByToken } = require('../../../utils/functions');
+const { getUserByToken, getElegibleUsers } = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
 const { populateUserFields, populateTrailFields } = require('../buisiness');
@@ -21,13 +21,13 @@ module.exports = {
             const { data } = await socialApi.post(uri, body);
 
             if (Object.keys(req?.files).length > 0) {
-                const uploadContent = `posts/${data.post._id}/content`;
+                const uploadContent = `posts/${data.post._id}/banner`;
 
                 const formData = new FormData();
                 const key = Object.keys(req.files)[0];
                 const file = req.files[key];
                 const filename = `${file.name}.${mime.extension(file.type)}`;
-                formData.append('content', fs.createReadStream(file.path), filename);
+                formData.append('banner', fs.createReadStream(file.path), filename);
 
                 socialApi.patch(uploadContent, formData, {
                     headers: {
@@ -38,23 +38,10 @@ module.exports = {
             }
 
             if (body?.type === 'ADMIN' && (body?.elegibilities || body?.elegibilitiesAnd)) {
-                const tags = [];
-                const elegibilities = body?.elegibilities || [];
-                const elegibilitiesAnd = body?.elegibilitiesAnd || [];
-                const mergedElegibilities = [...elegibilities, ...elegibilitiesAnd];
-
-                const groups = await Group.find({ 'tags.value': { $in: mergedElegibilities } });
-                const users = await User.find({ groupsAD: { $in: groups.map((g) => g.name) } });
-
-                const userTags = groups.filter((group) => elegibilities.includes(group.name));
-                const userTagsAnd = groups.filter((group) => elegibilitiesAnd.includes(group.name));
-
-                const elegibleUsers = users.filter((user) => {
-                    const hasTags = userTags.some((tag) => user.groupsAD.includes(tag));
-                    const hasTagsAnd = userTagsAnd.every((tag) => user.groupsAD.includes(tag));
-
-                    return hasTags || hasTagsAnd;
-                });
+                const elegibleUsers = await getElegibleUsers(
+                    body?.elegibilities,
+                    body?.elegibilitiesAnd
+                );
 
                 const usersIds = elegibleUsers.map((elegibleUser) => elegibleUser._id);
                 for (let id of usersIds) {
@@ -77,8 +64,6 @@ module.exports = {
                     };
                     createMessagesFromBackend(message);
                 }
-
-                tags.push(...groups.map((group) => group.name));
             }
 
             return _messages.success(res, req, data);
