@@ -1177,6 +1177,11 @@ module.exports = {
                 await User.findByIdAndUpdate(user._id, {
                     ...user.processedUser,
                 });
+
+                await Tracking.updateMany(
+                    { userLogin: user.processedUser.cpf },
+                    { $set: { userLogin: user.processedUser.networkLogin } }
+                );
             }
 
             if (inactivateIfNotInSpreadsheet) {
