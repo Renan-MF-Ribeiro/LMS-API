@@ -156,6 +156,14 @@ const GamificationController = {
                 const { networkLogin } = req.params;
                 const data = await GamificationBusiness.getClientUser(networkLogin)
 
+                if (data.clientId) {
+                    delete data.clientId;
+                }
+                
+                if (data.eligibilities) {
+                    delete data.eligibilities;
+                }
+
                 return _messages.success(res, req, data);
             } catch (error) {
                 return _messages.badRequest(res, req, error);
