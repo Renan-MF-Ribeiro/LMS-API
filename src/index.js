@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 require('express-async-errors');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -55,6 +56,13 @@ app.use(helmet.xssFilter());
 app.use(helmet.noSniff());
 app.use(htmlInjection(path.resolve(PUBLIC_PATH)));
 
+app.use(rateLimit({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    limit: 1000, // Limit each IP to 100 requests per `window` (here, per 5 minutes)
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => req.path.includes('/tracking') // Skip rate limit for tracking routes
+}));
 app.use(noCache());
 app.use(helmet.referrerPolicy({ policy: 'same-origin' }));
 
