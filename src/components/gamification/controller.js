@@ -156,6 +156,10 @@ const GamificationController = {
                 const { networkLogin } = req.params;
                 const data = await GamificationBusiness.getClientUser(networkLogin)
 
+                if(data._id) {
+                    delete data._id;
+                }
+
                 if (data.clientId) {
                     delete data.clientId;
                 }
