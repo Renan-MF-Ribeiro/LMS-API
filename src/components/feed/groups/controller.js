@@ -54,7 +54,7 @@ const GroupController = {
         const { groupId } = req.params;
         try {
             const uri = `groups/members/${groupId}`;
-            const { data } = await socialApi.get(uri);
+            const { data } = await socialApi.get(uri, { params: req.query });
             const PopulatedData = await populateMembers(data);
             const response = { data: PopulatedData, total: data.total };
 
