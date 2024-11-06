@@ -1,3 +1,4 @@
+const { getElegibleUsers } = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
 const { populateUserFields, populateMembers } = require('../buisiness');
@@ -53,7 +54,7 @@ const GroupController = {
         const { groupId } = req.params;
         try {
             const uri = `groups/members/${groupId}`;
-            const { data } = await socialApi.get(uri);
+            const { data } = await socialApi.get(uri, { params: req.query });
             const PopulatedData = await populateMembers(data);
             const response = { data: PopulatedData, total: data.total };
 
@@ -80,7 +81,7 @@ const GroupController = {
 
             return _messages.success(res, req, data);
         } catch (error) {
-            console.log(error)
+            console.log(error);
             return _messages.internalServer(
                 res,
                 req,
@@ -122,6 +123,15 @@ const GroupController = {
     },
     async createGroup(req, res) {
         const body = JSON.parse(req.fields.payload) ?? null;
+        if (body.auto === true) {
+            const elegibleUsers = await getElegibleUsers(
+                body?.elegibilities,
+                body?.elegibilitiesAnd
+            );
+            const newUsers = elegibleUsers.map((user) => user._id);
+            body.members = [...newUsers, ...body.members];
+        }
+
         try {
             delete body.banner;
             const uri = 'groups';
@@ -166,6 +176,15 @@ const GroupController = {
             const uri = `/groups/${groupId}`;
             const { data } = await socialApi.put(uri, body);
 
+            if (body.auto === true) {
+                const elegibleUsers = await getElegibleUsers(
+                    body?.elegibilities,
+                    body?.elegibilitiesAnd
+                );
+                const newUsers = elegibleUsers.map((user) => user._id);
+                body.members = [newUsers, ...body.members];
+            }
+
             if (Object.keys(req?.files).length > 0) {
                 const uploadBanner = `groups/${groupId}/banner`;
 
@@ -193,6 +212,30 @@ const GroupController = {
                 'Erro interno no servidor',
                 'feed',
                 'updateGroup'
+            );
+        }
+    },
+    async updateElegibleMembers(req, res) {
+        const body = req.body;
+        const { groupId } = req.params;
+        const uri = `/groups/members/${groupId}`;
+
+        try {
+            const members = await getElegibleUsers(body?.elegibilities, body?.elegibilitiesAnd);
+            const memberIds = members.map((user) => user._id);
+            
+            const { data } = await socialApi.patch(uri, memberIds)
+
+            return _messages.success(res, req, data);
+
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'feed',
+                'updateElegibleMembers'
             );
         }
     },
