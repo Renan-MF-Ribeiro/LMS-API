@@ -176,6 +176,15 @@ const GroupController = {
             const uri = `/groups/${groupId}`;
             const { data } = await socialApi.put(uri, body);
 
+            if (body.auto === true) {
+                const elegibleUsers = await getElegibleUsers(
+                    body?.elegibilities,
+                    body?.elegibilitiesAnd
+                );
+                const newUsers = elegibleUsers.map((user) => user._id);
+                body.members = [newUsers, ...body.members];
+            }
+
             if (Object.keys(req?.files).length > 0) {
                 const uploadBanner = `groups/${groupId}/banner`;
 
@@ -203,6 +212,30 @@ const GroupController = {
                 'Erro interno no servidor',
                 'feed',
                 'updateGroup'
+            );
+        }
+    },
+    async updateElegibleMembers(req, res) {
+        const body = req.body;
+        const { groupId } = req.params;
+        const uri = `/groups/members/${groupId}`;
+
+        try {
+            const members = await getElegibleUsers(body?.elegibilities, body?.elegibilitiesAnd);
+            const memberIds = members.map((user) => user._id);
+            
+            const { data } = await socialApi.patch(uri, memberIds)
+
+            return _messages.success(res, req, data);
+
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'feed',
+                'updateElegibleMembers'
             );
         }
     },

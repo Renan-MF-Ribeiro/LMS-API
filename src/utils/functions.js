@@ -717,7 +717,7 @@ module.exports = {
         const mergedElegibilities = [...elegibilities, ...elegibilitiesAnd];
 
         const groups = await Group.find({ 'tags.value': { $in: mergedElegibilities } });
-        const users = await User.find({ groupsAD: { $in: groups.map((g) => g.name), status: "ATIVO" } });
+        const users = await User.find({ groupsAD: { $in: groups.map((g) => g.name) }, status: "ATIVO" });
 
         const userTags = groups.filter((group) => elegibilities.includes(group.name));
         const userTagsAnd = groups.filter((group) => elegibilitiesAnd.includes(group.name));

@@ -11,6 +11,7 @@ module.exports = express
     .get('/info/:groupId', _controller.getGroupById)
     .get('/members/:groupId', _controller.getGroupMembers)
     .put('/:groupId', formidable(), _controller.updateGroup)
+    .patch('/members/:groupId', _controller.updateElegibleMembers)
     .delete('/:groupId/:userId', _controller.deleteUserFromGroup)
     .delete('quit/:groupId', _controller.quitFromGroup)
     .delete('/:groupId', _controller.deleteGroup);
