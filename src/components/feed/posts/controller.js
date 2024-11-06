@@ -16,18 +16,18 @@ module.exports = {
         const body = JSON.parse(req.fields.payload) ?? null;
 
         try {
-            delete body.banner;
+            delete body.content;
             const uri = 'posts';
             const { data } = await socialApi.post(uri, body);
 
             if (Object.keys(req?.files).length > 0) {
-                const uploadContent = `posts/${data.post._id}/banner`;
+                const uploadContent = `posts/${data.post._id}/content`;
 
                 const formData = new FormData();
                 const key = Object.keys(req.files)[0];
                 const file = req.files[key];
                 const filename = `${file.name}.${mime.extension(file.type)}`;
-                formData.append('banner', fs.createReadStream(file.path), filename);
+                formData.append('content', fs.createReadStream(file.path), filename);
 
                 socialApi.patch(uploadContent, formData, {
                     headers: {
