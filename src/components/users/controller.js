@@ -166,7 +166,7 @@ module.exports = {
     async findById(req, res) {
         try {
             const _id = req.params.userId;
-            const user = await User.findOne({ _id });
+            const user = await User.findOne({ _id }).select('-password');
             _messages.success(res, req, user);
         } catch (error) {
             _messages.internalServer(
