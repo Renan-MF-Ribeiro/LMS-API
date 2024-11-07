@@ -2,7 +2,7 @@
 'use strict'
 const config = require('../../config.json')
 const sgMail = require('@sendgrid/mail')
-const { sendMfaToKafka, sendMessageToKafka } = require('../components/new-messages/business')
+const { sendMfaToKafka, sendMessageToKafka, sendRecoveryMessageToKafka } = require('../components/new-messages/business')
 const { processTargetUsers } = require('../components/new-messages/business')
 sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
@@ -41,7 +41,7 @@ module.exports = {
                     title: `Reiniciar senha`
                 };
 
-                createMessagesFromBackend(body)
+                sendEmailRecoveryBackend(body)
 
                 resolve()
             } catch (error) {
@@ -442,6 +442,24 @@ async function createMessagesFromBackend (body) {
         }
 
         await sendMessageToKafka(campaign, targetUsers);
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+async function sendEmailRecoveryBackend (body) {
+    try {
+        const campaign = body;
+        const target = campaign.target;
+        let targetUsers = [];
+
+        if (!target.value.user) {
+            targetUsers = await processTargetUsers(target, campaign.category);
+        } else {
+            targetUsers.push({ ...target.value.user });
+        }
+
+        await sendRecoveryMessageToKafka(campaign, targetUsers);
     } catch (error) {
         console.log(error);
     }
