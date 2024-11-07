@@ -789,7 +789,7 @@ module.exports = {
                 target: {
                     type: 'users',
                     value: {
-                        users: [users],
+                        users,
                     },
                 },
                 text: text,
