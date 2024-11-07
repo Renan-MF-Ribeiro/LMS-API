@@ -6,7 +6,6 @@ const paletteRoutes = require('./palette/routes');
 const galleryRoutes = require('./gallery/routes');
 const featuresRoutes = require('./features/routes');
 const footerRoutes = require('./footer/routes');
-const brandingRoutes = require('./branding/routes');
 
 module.exports = express.Router()
     .use('/login', loginRoutes)
@@ -15,4 +14,3 @@ module.exports = express.Router()
     .use('/gallery', galleryRoutes)
     .use('/features', featuresRoutes)
     .use('/footer', footerRoutes)
-    .use('/branding', brandingRoutes)
