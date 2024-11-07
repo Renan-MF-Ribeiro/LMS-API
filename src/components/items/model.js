@@ -8,7 +8,7 @@ const { PUBLIC_PATH } = process.env;
 connect();
 
 const schemaOptions = {
-    strict: 'throw',
+    strict: false,
     timestamps: true,
     collation: { locale: 'en_US', strength: 1 },
 };
