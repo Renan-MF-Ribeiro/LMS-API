@@ -17,39 +17,12 @@ module.exports = {
                 } else {
                     message = `Olá, o usuário ${userData.name} com número de CPF ${userData.cpf} requisitou troca de senha. A nova senha gerada para o usuário é: <b> ${newPass} </b> <br> Ao entrar na plataforma o mesmo deverá obrigatoriamente trocar a senha <br> Acesse a <a href="${resetPasswordUrl}">plataforma</a> e bons estudos.`
                 }
-                const html = `<center>
-                    <div border="0" cellpadding="0" cellspacing="0" style="max-height: 800px; max-width: 1000px;">
-                        <div>
-                            <div max-height="328"><img data-imagetype="External"
-                                    src="${config.messenger.emailTemplate.thumbnail}" alt="Thumbnail"
-                                    style="width:100%; height:100%">
-                            </div>
-                        </div>
-                        <div>
-                            <center>
-                                <div style="vertical-align: middle; height: 110px;">
-                                    <div class="content"
-                                    style="font-size:1.5rem; font-weight:bold; text-align:center; font-family:ubuntu,Roboto,sans-serif;">
+                const html = `<html>
+                                <head></head>
+                                <body>
                                     ${message}
-                                    </div>
-                                </div>
-                            </center>
-                        </div>
-                        <div>
-                        <center>
-                            <div style="height: 50px;">
-                                    <a href="${resetPasswordUrl}" target="_blank" style="font-size: 1rem; border: 0px; text-transform: uppercase; text-align: center;
-                                    text-decoration: none; border-radius: 5px; color: rgb(255, 255, 255); font-weight: bold; font-family: Ubuntu, Roboto, sans-serif;
-                                    padding: 1rem; background-color: ${config.messenger.emailTemplate.primary} !important;">Acessar</a>
-                            </div>
-                        </center>
-                        </div>
-                        <div height="75"><img data-imagetype="External"
-                                src="${config.messenger.emailTemplate.footer}" alt="Footer"
-                                style="width:100%; height:100%">
-                        </div>
-                    </div>
-                    </center>`
+                                </body>
+                              </html>`
 
                 const body = {
                     category: "notify",
