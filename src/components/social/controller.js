@@ -35,7 +35,8 @@ module.exports = {
                 }));
             }
 
-            const fields = (await ConfigModel.findOne({ type: ConfigTypes.SocialFields }))?.value ?? [];
+            const fields =
+                (await ConfigModel.findOne({ type: ConfigTypes.SocialFields }))?.value ?? [];
 
             _messages.success(
                 res,
@@ -346,7 +347,8 @@ module.exports = {
             };
 
             // GET CONFIG
-            const config = (await ConfigModel.findOne({ type: ConfigTypes.SocialFields }))?.value ?? [];
+            const config =
+                (await ConfigModel.findOne({ type: ConfigTypes.SocialFields }))?.value ?? [];
 
             if (!config?.length) {
                 const { data: response } = await socialApi.get(uri, { params: req.query });
@@ -776,28 +778,26 @@ module.exports = {
             const { name } = await _functions.getUserByToken(req);
             const { users, trailId } = req.body;
 
-            for (let id of users) {
-                const trail = await Trail.findById(trailId, 'title titleURL');
+            const trail = await Trail.findById(trailId, 'title titleURL');
 
-                const text = `Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!`;
-                const texthtml = `<br> <p>Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!</p> <br>`;
-                const message = {
-                    category: 'notify',
-                    communication: ['notification', 'email'],
-                    mode: 'manual',
-                    target: {
-                        type: 'users',
-                        value: {
-                            users: [id],
-                        },
+            const text = `Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!`;
+            const texthtml = `<br> <p>Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!</p> <br>`;
+            const message = {
+                category: 'notify',
+                communication: ['notification', 'email'],
+                mode: 'manual',
+                target: {
+                    type: 'users',
+                    value: {
+                        users: [users],
                     },
-                    text: text,
-                    texthtml: texthtml,
-                    thumbnail: config.messenger.emailTemplate.thumbnail,
-                    title: `Happlearning - ${name} compartilhou um conteúdo com você!`,
-                };
-                createMessagesFromBackend(message);
-            }
+                },
+                text: text,
+                texthtml: texthtml,
+                thumbnail: config.messenger.emailTemplate.thumbnail,
+                title: `Happlearning - ${name} compartilhou um conteúdo com você!`,
+            };
+            await createMessagesFromBackend(message);
 
             const uri = `home/share/${process.env.CLIENT_ID}`;
             const { data } = await socialApi.post(uri, { users: users, trailId });
@@ -860,63 +860,54 @@ module.exports = {
                 _messages.success(
                     res,
                     req,
-                    users.map(u => ({ ...u, elegible: false })),
+                    users.map((u) => ({ ...u, elegible: false })),
                     'ok',
                     'social',
                     'getShareTargets'
-                )
-                return
+                );
+                return;
             }
 
             const availableUsers = await User.find({
-                networkLogin: { $in: users.map(u => u.networkLogin) },
+                networkLogin: { $in: users.map((u) => u.networkLogin) },
                 status: 'ATIVO',
-            }).select('_id tags groupsAD status').lean();
+            })
+                .select('_id tags groupsAD status')
+                .lean();
 
             if (!availableUsers.length) {
                 _messages.success(
                     res,
                     req,
-                    users.map(u => ({ ...u, elegible: false })),
+                    users.map((u) => ({ ...u, elegible: false })),
                     'ok',
                     'social',
                     'getShareTargets'
-                )
-                return
+                );
+                return;
             }
 
             const groups = await Group.find({
-                name: { $in: availableUsers.map(u => u.groupsAD).flat() }
-            }).select('tags name').lean();
+                name: { $in: availableUsers.map((u) => u.groupsAD).flat() },
+            })
+                .select('tags name')
+                .lean();
 
-            const returnUsers = availableUsers.map(
-                user => {
-                    const groupTags = groups.filter(g => (user.groupsAD ?? []).includes(g.name))
-                        .map(g => g.tags).flat();
+            const returnUsers = availableUsers.map((user) => {
+                const groupTags = groups
+                    .filter((g) => (user.groupsAD ?? []).includes(g.name))
+                    .map((g) => g.tags)
+                    .flat();
 
-                    const userTags = (user.tags ?? [])
-                        .concat(user.groupsAD ?? [])
-                        .concat(groupTags);
+                const userTags = (user.tags ?? []).concat(user.groupsAD ?? []).concat(groupTags);
 
-                    return {
-                        _id: user._id,
-                        elegible: checkEligibilityTagsAnd(
-                            userTags,
-                            trail.tagsAnd,
-                            trail.tags
-                        )
-                    }
-                }
-            );
+                return {
+                    _id: user._id,
+                    elegible: checkEligibilityTagsAnd(userTags, trail.tagsAnd, trail.tags),
+                };
+            });
 
-            _messages.success(
-                res,
-                req,
-                returnUsers,
-                'ok',
-                'social',
-                'getShareTargets'
-            );
+            _messages.success(res, req, returnUsers, 'ok', 'social', 'getShareTargets');
             return;
         } catch (error) {
             console.log(error);

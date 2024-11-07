@@ -5,7 +5,11 @@ const { populateUserFields, populateTrailFields } = require('../buisiness');
 const FormData = require('form-data');
 const fs = require('fs');
 const mime = require('mime-types');
-const { sendMessageToKafka, processTargetUsers } = require('../../new-messages/business');
+const {
+    sendMessageToKafka,
+    processTargetUsers,
+    sendCustomMessageToKafka,
+} = require('../../new-messages/business');
 
 const config = require('../../../../config.json');
 const { Group } = require('../../groups/model');
@@ -21,13 +25,13 @@ module.exports = {
             const { data } = await socialApi.post(uri, body);
 
             if (Object.keys(req?.files).length > 0) {
-                const uploadContent = `posts/${data.post._id}/banner`;
+                const uploadContent = `posts/${data.post._id}/content`;
 
                 const formData = new FormData();
                 const key = Object.keys(req.files)[0];
                 const file = req.files[key];
                 const filename = `${file.name}.${mime.extension(file.type)}`;
-                formData.append('banner', fs.createReadStream(file.path), filename);
+                formData.append('content', fs.createReadStream(file.path), filename);
 
                 socialApi.patch(uploadContent, formData, {
                     headers: {
@@ -44,26 +48,26 @@ module.exports = {
                 );
 
                 const usersIds = elegibleUsers.map((elegibleUser) => elegibleUser._id);
-                for (let id of usersIds) {
-                    const text = 'Olá! A administração publicou um novo post!';
-                    const texthtml = '<br> <p>Olá! A administração publicou um novo post!</p> <br>';
-                    const message = {
-                        category: 'notify',
-                        communication: ['notification'],
-                        mode: 'manual',
-                        target: {
-                            type: 'users',
-                            value: {
-                                users: [id],
-                            },
+                sendCustomMessageToKafka();
+
+                const text = 'Olá! A administração publicou um novo post!';
+                const texthtml = '<br> <p>Olá! A administração publicou um novo post!</p> <br>';
+                const message = {
+                    category: 'notify',
+                    communication: ['notification'],
+                    mode: 'manual',
+                    target: {
+                        type: 'users',
+                        value: {
+                            users: [usersIds],
                         },
-                        text: text,
-                        texthtml: texthtml,
-                        thumbnail: config.messenger.emailTemplate.thumbnail,
-                        title: 'Novo post publicado pela administração',
-                    };
-                    createMessagesFromBackend(message);
-                }
+                    },
+                    text: text,
+                    texthtml: texthtml,
+                    thumbnail: config.messenger.emailTemplate.thumbnail,
+                    title: 'Novo post publicado pela administração',
+                };
+                await createMessagesFromBackend(message);
             }
 
             return _messages.success(res, req, data);
@@ -281,26 +285,24 @@ module.exports = {
             const response = { data: PopulatedData, total: data.total };
 
             const mentions = req?.body?.mentions || [];
-            for (let id of mentions) {
-                const text = `Olá! O usuário ${name} mencionou você em um post!`;
-                const texthtml = `<br> <p>Olá! O usuário ${name} mencionou você em um post!</p> <br>`;
-                const message = {
-                    category: 'notify',
-                    communication: ['notification'],
-                    mode: 'manual',
-                    target: {
-                        type: 'users',
-                        value: {
-                            users: [id],
-                        },
+            const text = `Olá! O usuário ${name} mencionou você em um post!`;
+            const texthtml = `<br> <p>Olá! O usuário ${name} mencionou você em um post!</p> <br>`;
+            const message = {
+                category: 'notify',
+                communication: ['notification'],
+                mode: 'manual',
+                target: {
+                    type: 'users',
+                    value: {
+                        users: [mentions],
                     },
-                    text: text,
-                    texthtml: texthtml,
-                    thumbnail: config.messenger.emailTemplate.thumbnail,
-                    title: `Happlearning - ${name} mencionou você em um post!`,
-                };
-                createMessagesFromBackend(message);
-            }
+                },
+                text: text,
+                texthtml: texthtml,
+                thumbnail: config.messenger.emailTemplate.thumbnail,
+                title: `Happlearning - ${name} mencionou você em um post!`,
+            };
+            await createMessagesFromBackend(message);
 
             if (req?.body?.postId) {
                 const {
@@ -388,26 +390,24 @@ module.exports = {
             const { data } = await socialApi.post(uri, req.body);
 
             const users = req?.body?.users || [];
-            for (let id of users) {
-                const text = `Olá! O usuário ${name} compartilhou um post com você!`;
-                const texthtml = `<br> <p>Olá! O usuário ${name} compartilhou um post com você!</p> <br>`;
-                const message = {
-                    category: 'notify',
-                    communication: ['notification'],
-                    mode: 'manual',
-                    target: {
-                        type: 'users',
-                        value: {
-                            users: [id],
-                        },
+            const text = `Olá! O usuário ${name} compartilhou um post com você!`;
+            const texthtml = `<br> <p>Olá! O usuário ${name} compartilhou um post com você!</p> <br>`;
+            const message = {
+                category: 'notify',
+                communication: ['notification'],
+                mode: 'manual',
+                target: {
+                    type: 'users',
+                    value: {
+                        users: [users],
                     },
-                    text: text,
-                    texthtml: texthtml,
-                    thumbnail: config.messenger.emailTemplate.thumbnail,
-                    title: `Happlearning - ${name} compartilhou um post com você!`,
-                };
-                createMessagesFromBackend(message);
-            }
+                },
+                text: text,
+                texthtml: texthtml,
+                thumbnail: config.messenger.emailTemplate.thumbnail,
+                title: `Happlearning - ${name} compartilhou um post com você!`,
+            };
+            await createMessagesFromBackend(message);
 
             return _messages.success(res, req, data);
         } catch (error) {
