@@ -16,8 +16,8 @@ module.exports = express
     .post(
         '/auth',
         rateLimit({
-            windowMs: 5 * 60 * 1000, // 5 minutes
-            limit: 10, // Limit each IP to 10 requests per `window` (here, per 5 minutes)
+            windowMs: 1 * 60 * 1000, // 1 minutes
+            limit: 10, // Limit each IP to 10 requests per `window` (here, per 1 minutes)
             standardHeaders: true,
             legacyHeaders: false,
         }),
