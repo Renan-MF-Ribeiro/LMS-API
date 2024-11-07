@@ -102,6 +102,38 @@ module.exports = {
         }
     },
 
+    async sendRecoveryMessageToKafka(campaign, users) {
+        try {
+            const producer = kafka.producer();
+            await producer.connect();
+            const messages = [];
+            for (const user of users) {
+                for (const communication of campaign.communication) {
+                    const stringMessage = JSON.stringify(
+                        await processRecoveryMessage(
+                            { ...campaign, communication },
+                            user
+                        )
+                    );
+                    messages.push({ value: stringMessage });
+                }
+            }
+            const chunk = 10;
+            for (let i = 0; i < messages.length; i += chunk) {
+                const temporary = messages.slice(i, i + chunk);
+                await producer.send({
+                    topic: process.env.TOPIC_MSG,
+                    messages: temporary,
+                });
+            }
+
+            await producer.disconnect();
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    },
+
     async getUserList(trailFilters, userFilter) {
         let dbCounter = 0;
 
@@ -547,6 +579,37 @@ async function processMessage(campaign, user) {
                 ? userEmailAndDeviceId.deviceId
                 : null,
             notificationlink,
+        };
+        return message;
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+async function processRecoveryMessage(campaign, user) {
+    try {
+        let { communication, target, ...data } = campaign;
+        target.recovery = campaign.recovery;
+        target.resetPasswordUrl = campaign.resetPasswordUrl;
+        const foundUser = await User.findOne({ _id: user });
+        const userEmailAndDeviceId = await User.findById(user._id).select(
+            'email deviceId -_id'
+        );
+
+        const message = {
+            clientid,
+            type: communication,
+            ...data,
+            identifier: foundUser.networkLogin,
+            viewed: false,
+            userEmail: campaign.userEmail
+                ? campaign.userEmail
+                : userEmailAndDeviceId.email
+                ? userEmailAndDeviceId.email
+                : null,
+            userDevice: userEmailAndDeviceId.deviceId
+                ? userEmailAndDeviceId.deviceId
+                : null,
         };
         return message;
     } catch (error) {
