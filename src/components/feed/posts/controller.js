@@ -48,7 +48,6 @@ module.exports = {
                 );
 
                 const usersIds = elegibleUsers.map((elegibleUser) => elegibleUser._id);
-                sendCustomMessageToKafka();
 
                 const text = 'Olá! A administração publicou um novo post!';
                 const texthtml = '<br> <p>Olá! A administração publicou um novo post!</p> <br>';
