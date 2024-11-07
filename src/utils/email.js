@@ -7,7 +7,7 @@ const { processTargetUsers } = require('../components/new-messages/business')
 sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
 module.exports = {
-    sendEmailRecoryPassword (strTo, hasEmail, newPass, resetPasswordUrl = '', userData) {
+    sendEmailRecoveryPassword (strTo, hasEmail, newPass, resetPasswordUrl = '', userData) {
         return new Promise(async (resolve, reject) => {
             try {
                 let message
@@ -50,14 +50,25 @@ module.exports = {
                         </div>
                     </div>
                     </center>`
-                await sgMail.send({
-                    from: 'Happlearning <noreply@happmobi.com.br>',
-                    to: strTo,
-                    subject: 'Reiniciar senha',
-                    text: 'Reiniciar senha',
-                    category: `${process.env.CLIENT_ID}`,
-                    html,
-                })
+
+                const body = {
+                    category: "notify",
+                    communication: ["email"],
+                    userEmail: strTo,
+                    userDevice: null,
+                    mode: "manual",
+                    target: {
+                        type: "users",
+                        value: {
+                            users: [`${userData._id}`],
+                        },
+                    },
+                    text: message,
+                    texthtml: html,
+                    title: `Reiniciar senha`
+                };
+
+                createMessagesFromBackend(body)
 
                 resolve()
             } catch (error) {

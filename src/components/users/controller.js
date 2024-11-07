@@ -65,7 +65,7 @@ const {
 } = require('../../utils/functions');
 
 const {
-    sendEmailRecoryPassword,
+    sendEmailRecoveryPassword,
     sendLogEmail,
     sendSignupActivationEmail,
     sendNotificationEmail,
@@ -885,12 +885,12 @@ module.exports = {
                 }
                 newEmail = `${newEmail}@${email[1]}`;
 
-                await sendEmailRecoryPassword(
+                await sendEmailRecoveryPassword(
                     user.email ? user.email : emails,
                     !!user.email,
                     password_new,
                     resetPasswordUrl,
-                    { name: user.name, networkLogin: user.networkLogin }
+                    user
                 );
                 // $2a$10$G06bQZrp8R8kn2cnImS47eHQv./K4i0bp1yBaNDyj3WSrsCH/639G --> senha
                 return await _messages.success(
