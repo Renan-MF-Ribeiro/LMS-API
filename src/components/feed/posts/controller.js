@@ -58,7 +58,7 @@ module.exports = {
                     target: {
                         type: 'users',
                         value: {
-                            users: [usersIds],
+                            users: usersIds,
                         },
                     },
                     text: text,
@@ -293,7 +293,7 @@ module.exports = {
                 target: {
                     type: 'users',
                     value: {
-                        users: [mentions],
+                        users: mentions,
                     },
                 },
                 text: text,
@@ -398,7 +398,7 @@ module.exports = {
                 target: {
                     type: 'users',
                     value: {
-                        users: [users],
+                        users,
                     },
                 },
                 text: text,
