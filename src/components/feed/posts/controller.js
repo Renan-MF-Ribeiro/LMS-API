@@ -24,7 +24,7 @@ module.exports = {
             const uri = 'posts';
             const { data } = await socialApi.post(uri, body);
 
-            if (Object.keys(req?.files).length > 0) {
+             if (Object.keys(req?.files).length > 0) {
                 const uploadContent = `posts/${data.post._id}/content`;
 
                 const formData = new FormData();
@@ -41,13 +41,14 @@ module.exports = {
                 });
             }
 
-            if (body?.type === 'ADMIN' && (body?.elegibilities || body?.elegibilitiesAnd)) {
+            if (body.notifyUsers === true && (body?.elegibilities || body?.elegibilitiesAnd)) {
                 const elegibleUsers = await getElegibleUsers(
                     body?.elegibilities,
                     body?.elegibilitiesAnd
                 );
 
                 const usersIds = elegibleUsers.map((elegibleUser) => elegibleUser._id);
+                sendCustomMessageToKafka();
 
                 const text = 'Olá! A administração publicou um novo post!';
                 const texthtml = '<br> <p>Olá! A administração publicou um novo post!</p> <br>';
@@ -58,7 +59,7 @@ module.exports = {
                     target: {
                         type: 'users',
                         value: {
-                            users: usersIds,
+                            users: [usersIds],
                         },
                     },
                     text: text,
@@ -293,7 +294,7 @@ module.exports = {
                 target: {
                     type: 'users',
                     value: {
-                        users: mentions,
+                        users: [mentions],
                     },
                 },
                 text: text,
@@ -398,7 +399,7 @@ module.exports = {
                 target: {
                     type: 'users',
                     value: {
-                        users,
+                        users: [users],
                     },
                 },
                 text: text,
