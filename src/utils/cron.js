@@ -10,6 +10,7 @@ const { Tracking } = require('../components/tracking/model');
 const { Trail } = require('../components/trails/model');
 const { TodayMostSeenTrails, TrailViews } = require('../components/trails/trail-views.model')
 const moment = require('moment');
+const webhook = require('discord-webhook-node');
 const axios = require('axios');
 const {
     isSCORMCompleted,
@@ -59,6 +60,9 @@ const {
     notifyResponsibleUsers,
 } = require('../components/new-messages/controller');
 const { Section } = require('../components/sections/model');
+const { getConfiguration } = require('../components/config/business');
+const { ConfigTypes } = require('../components/config/model');
+const ApiError = require('../errors/ApiError');
 
 const emailTemplate = config.messenger.emailTemplate;
 const groupingA = config.cron.average.groupA;
@@ -273,6 +277,22 @@ module.exports = {
             new CronJob(
                 config.cron.inactiveOldOnboardingUsers.cronExpression ?? '59 23 * * *',
                 () => { inactiveOldOnboardingUsers(); },
+                null,
+                true,
+                'America/Sao_Paulo'
+            );
+        }
+    },
+    
+    executeRemoveAutomaticEligibilityTags(runningFromAPI = false) {
+        if (runningFromAPI) {
+            return removeAutomaticEligibilityTags();
+        }
+
+        if (config.cron?.removeAutomaticEligibilityTags?.active) {
+            new CronJob(
+                config.cron.removeAutomaticEligibilityTags.cronExpression ?? '59 23 * * *',
+                () => { removeAutomaticEligibilityTags(); },
                 null,
                 true,
                 'America/Sao_Paulo'
@@ -629,7 +649,7 @@ async function getUsersLoad() {
                     processedUser.password = existingUser
                         ? existingUser.password
                         : processedUser.password;
-
+                  
                     if (existingUser) {
                         const groupsAD = [
                             ...processedUser.groupsAD,
@@ -651,6 +671,20 @@ async function getUsersLoad() {
                             cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
                         });
                     }
+                }
+
+                const automaticEligibilityConfig = await getConfiguration(ConfigTypes.AutomaticEligibility.Onboard);
+
+                if (automaticEligibilityConfig?.enabled) {
+                    const { eligibility = [] } = automaticEligibilityConfig;
+
+                    existingUsers.forEach(user => {
+                        user.processedUser.groupsAD = [...(user.processedUser.groupsAD ?? []), ...eligibility];
+                    });
+
+                    newUsers.forEach(user => {
+                        user.groupsAD = [...(user.groupsAD ?? []), ...eligibility];
+                    });
                 }
 
                 usersLoadLog(
@@ -1334,6 +1368,94 @@ async function inactiveOldOnboardingUsers() {
         );
     } else {
         console.log('[inactiveOldOnboardingUsers] No onboarding users with login to inactive');
+    }
+
+    const createdUsers = await User.find({
+        status: 'ATIVO',
+        onboarding: true,
+        createdAt: { $lt: lastLoginDate },
+    }).select('status onboarding _id name networkLogin createdAt');
+
+    if (createdUsers?.length) {
+        const lastLoginCreatedUsers = await LastLogin.find({
+            user: { $in: createdUsers.map(user => user._id) },
+        });
+
+        const usersWithoutLogin = createdUsers.filter(
+            user => !lastLoginCreatedUsers.some(lastLogin => String(lastLogin.user) === String(user._id))
+        );
+
+        console.log('[inactiveOldOnboardingUsers] Onboarding users without login to inactive:', usersWithoutLogin.length, JSON.stringify(usersWithoutLogin));
+
+        if (usersWithoutLogin?.length) {
+            await User.updateMany(
+                { _id: { $in: usersWithoutLogin.map(user => user._id) } },
+                { $set: { status: 'INATIVO', updatedAt: new Date() } },
+                { multi: true }
+            );
+        } else {
+            console.log('[inactiveOldOnboardingUsers] No onboarding users without login to inactive');
+        }
+    } else {
+        console.log('[inactiveOldOnboardingUsers] No onboarding users created to inactive');
+    }
+
+    console.timeEnd('[inactiveOldOnboardingUsers] execution time');
+}
+
+async function removeAutomaticEligibilityTags() {
+    console.log('Running removeAutomaticEligibilityTags');
+    const automaticEligibilityConfig = await getConfiguration(ConfigTypes.AutomaticEligibility.Onboard);
+
+    if (!automaticEligibilityConfig) {
+        throw new ApiError('No automatic eligibility configuration found');
+    }
+
+    const { enabled, days, eligibility } = automaticEligibilityConfig;
+
+    if (!enabled) {
+        throw new ApiError('Automatic eligibility tags are disabled');
+    }
+
+    if (!eligibility?.length) {
+        throw new ApiError('No eligibility tags were configured');
+    }
+
+    console.log('Days', days, 'Eligibility', eligibility);
+
+    const users = await User
+        .find({
+            admission: { $exists: true },
+            status: 'ATIVO',
+            $or: [
+                { groupsAD: { $in: eligibility } },
+                { 'tags.value': { $in: eligibility } },
+            ]
+        })
+        .select('_id name groupsAD admission status')
+        .lean();
+
+    console.log('Users to check', users.length);
+
+    for await (const user of users) {
+        const { _id, name, groupsAD, admission } = user;
+
+        const admissionDate = moment(admission, 'DD/MM/YYYY');
+        const diffInDays = moment().diff(admissionDate, 'days');
+
+        console.log('User', _id, name, 'Admission', admissionDate.format('DD/MM/YYYY'), 'Diff in days', diffInDays);
+
+        if (diffInDays > days) {
+            const newGroupsAD = groupsAD.filter(group => !eligibility.includes(group));
+
+            if (groupsAD.length !== newGroupsAD.length) {
+                console.log('Removing eligibility tags', _id, name, groupsAD, '>>', newGroupsAD);
+                await User.updateOne(
+                    { _id },
+                    { groupsAD: newGroupsAD }
+                );
+            }
+        }
     }
 
     const createdUsers = await User.find({

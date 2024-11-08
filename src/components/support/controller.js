@@ -17,7 +17,7 @@ module.exports = {
                 },
                 clientName: process.env.COMPOSE_PROJECT_NAME,
             };
-            const user = req.headers.authorization ? await getUserByToken(req) : await User.findOne({ email: payload.ticket.requester.email })
+            const user = req.headers.authorization ? await getUserByToken(req) : await User.findOne({ networkLogin: payload.ticket.custom_fields[1].value })
             if(!user){
                 return _messages.notFound(
                     res,
