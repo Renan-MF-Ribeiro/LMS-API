@@ -1,8 +1,10 @@
 require('dotenv').config();
-const express = require('express');
 require('express-async-errors');
+
+const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const noCache = require('nocache');
 const path = require('path');
@@ -18,62 +20,8 @@ const {
 const { PUBLIC_PATH } = process.env;
 const app = express();
 const passport = require('./utils/passport');
-const config = require('../config.json');
 
 const { errorHandler } = require('./utils/errors');
-
-var corsOptions = {
-    origin: [
-        process.env.DOMAIN,
-        'http://localhost:4200',
-        'https://monitoring.happlearning.com.br',
-    ],
-    credentials: true,
-    allowedHeaders: [
-        'Content-Type',
-        'Range',
-        'X-CSRF-TOKEN',
-        'Authorization',
-        'Mfatoken',
-    ],
-    exposedHeaders: [
-        'Accept-Ranges',
-        'Content-Encoding',
-        'Content-Length',
-        'Content-Range',
-    ],
-};
-//
-
-// if (process.env.NODE_ENV === 'local') {
-//     corsOptions = Object.assign(corsOptions, { origin: 'http://localhost:4200' })
-// }
-
-app.use(cors(corsOptions));
-
-app.use(helmet.xssFilter());
-app.use(helmet.noSniff());
-app.use(htmlInjection(path.resolve(PUBLIC_PATH)));
-
-app.use(noCache());
-app.use(helmet.referrerPolicy({ policy: 'same-origin' }));
-
-app.use(morgan('dev'));
-
-app.use(
-    bodyParser.json({
-        limit: '100mb',
-    })
-);
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cookieParser());
-app.use(express.static(path.resolve(PUBLIC_PATH)));
-app.get('/', (req, res) => {
-    res.sendFile(path.resolve(path.join(PUBLIC_PATH, 'index.html')));
-});
-
-app.use(passport.initialize());
-app.use(passport.session());
 
 const usersRoutes = require('./components/users/routes');
 const itemsRoutes = require('./components/items/routes');
@@ -114,6 +62,71 @@ const trainingRouter = require('./components/training/routes');
 const feedRoutes = require('./components/feed/routes');
 const configRouter = require('./components/config/routes');
 const { socialApiMiddleware } = require('./components/social/http-adapter');
+
+const corsOptions = {
+    origin: [
+        process.env.DOMAIN,
+        'https://monitoring.happlearning.com.br',
+    ],
+    credentials: true,
+    allowedHeaders: [
+        'Content-Type',
+        'Range',
+        'X-CSRF-TOKEN',
+        'Authorization',
+        'Mfatoken',
+    ],
+    exposedHeaders: [
+        'Accept-Ranges',
+        'Content-Encoding',
+        'Content-Length',
+        'Content-Range',
+    ],
+};
+
+if (process.env.NODE_ENV !== 'production') {
+    corsOptions.origin.push('http://localhost:4200');
+}
+
+app.disable('x-powered-by');
+
+app.disable('server');
+
+app.use(cors(corsOptions));
+
+app.use(helmet({
+    referrerPolicy: { policy: 'same-origin' },
+}));
+
+app.use(htmlInjection(path.resolve(PUBLIC_PATH)));
+
+app.use(rateLimit({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    limit: 600, // Limit each IP to 100 requests per `window` (here, per 5 minutes)
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => req.path.includes('/tracking') // Skip rate limit for tracking routes
+}));
+
+app.use(noCache());
+
+app.use(morgan('dev'));
+
+app.use(bodyParser.json());
+
+app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use(cookieParser());
+
+app.use(express.static(path.resolve(PUBLIC_PATH)));
+
+app.get('/', (req, res) => {
+    res.sendFile(path.resolve(path.join(PUBLIC_PATH, 'index.html')));
+});
+
+app.use(passport.initialize());
+
+app.use(passport.session());
 
 app.use(socialApiMiddleware)
 

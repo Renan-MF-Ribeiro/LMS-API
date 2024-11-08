@@ -1,4 +1,5 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const _controller = require('./controller');
 const multiparty = require('connect-multiparty');
 const formidable = require('express-formidable');
@@ -12,7 +13,16 @@ const {
 const Saml2js = require('saml2js');
 module.exports = express
     .Router()
-    .post('/auth', _controller.ldapSignIn)
+    .post(
+        '/auth',
+        rateLimit({
+            windowMs: 1 * 60 * 1000, // 1 minutes
+            limit: 10, // Limit each IP to 10 requests per `window` (here, per 1 minutes)
+            standardHeaders: true,
+            legacyHeaders: false,
+        }),
+        _controller.ldapSignIn
+    )
     .post('/accept-terms', validateTokenRoute, _controller.acceptTerms)
     .post(
         '/accept-terms-collaboration',
