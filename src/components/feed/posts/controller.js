@@ -66,7 +66,7 @@ module.exports = {
                     thumbnail: config.messenger.emailTemplate.thumbnail,
                     title: 'Novo post publicado pela administração',
                 };
-                await createMessagesFromBackend(message);
+                createMessagesFromBackend(message);
             }
 
             return _messages.success(res, req, data);
