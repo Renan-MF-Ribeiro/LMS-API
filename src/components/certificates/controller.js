@@ -1,4 +1,3 @@
-const { stripHtmlTags } = require('../../utils/functions');
 const _messages = require('../../utils/messages');
 const { Trail } = require('../trails/model');
 const { certificateClient, getHeaders, prepareFormData, getInitialDate } = require('./business');
@@ -74,7 +73,7 @@ module.exports = {
     },
     async createCertificate(req, res) {
         try {
-            const { userName, trailName, itemName, layoutId, trailId, trailDescription } = req.body;
+            const { userName, trailName, itemName, layoutId, trailId } = req.body;
 
             const initialDate = (layoutId && trailId)
                 ? await getInitialDate(req)
@@ -82,7 +81,7 @@ module.exports = {
 
             const { data } = await certificateClient.post(
                 '/certificates',
-                { ...req.body, initialDate, trailDescription: stripHtmlTags(trailDescription ?? '') },
+                { ...req.body, initialDate },
                 { headers: getHeaders(req), responseType: 'arraybuffer' }
             );
 

@@ -241,22 +241,21 @@ const AssessmentController = {
     async review (req, res) {
         try {
             const { _id: userId } = await getUserByToken(req);
-            const { pillarId, cycleId, periodId, questionId, alternativeId } = req.body
 
             const uri = `${host}/historics/${clientId}/review`;
             const { data } = await axios.post(
                 uri,
                 {
                     userId,
-                    pillarId,
-                    cycleId,
-                    periodId,
-                    questionId,
-                    alternativeId,
+                    pillarId: req.body.pillarId,
+                    cycleId: req.body.cycleId,
+                    periodId: req.body.periodId,
+                    questionId: req.body.questionId,
+                    alternativeId: req.body.alternativeId,
                 },
                 { headers }
             );
-            await AssessmentBusiness.updateUserEligibilities(userId, pillarId, cycleId, periodId);
+            await AssessmentBusiness.updateUserEligibilities(userId);
 
             return _messages.success(res, req, data);
         } catch (error) {

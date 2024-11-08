@@ -13,11 +13,11 @@ const { Trail } = require('../components/trails/model');
 const { Item } = require('../components/items/model');
 
 module.exports = {
-    getDateToday() {
+    getDateToday () {
         return momentz().format('YYYY-MM-DD HH:mm:ss');
     },
 
-    getDateTodayExtensive() {
+    getDateTodayExtensive () {
         return (
             momentz().format('DD') +
             ' de ' +
@@ -26,23 +26,23 @@ module.exports = {
             momentz().format('YYYY')
         );
     },
-
-    sanitizeCpf(value) {
+    
+    sanitizeCpf (value) {
         return module.exports.formatNumberCpf(String(value).replace(/\D/g, ''));
     },
 
-    formatDate(date) {
+    formatDate (date) {
         return momentz(date).format('YYYY-MM-DD HH:mm:ss');
     },
 
-    formatDateWithoutHours(date) {
+    formatDateWithoutHours (date) {
         if (!date) {
             return null;
         }
         return momentz(date).format('YYYY-MM-DD');
     },
 
-    findObjectInRange(data, referenceDate) {
+    findObjectInRange (data, referenceDate) {
         let foundObject = null;
 
         for (const obj of data) {
@@ -76,26 +76,26 @@ module.exports = {
         }
     },
 
-    formatDateWithoutHoursBrasilian(date) {
+    formatDateWithoutHoursBrasilian (date) {
         if (!date) {
             return null;
         }
         return momentz(date).add(3, 'hours').format('DD/MM/YYYY');
     },
 
-    getDateTodayWithoutHours() {
+    getDateTodayWithoutHours () {
         return momentz().format('YYYY-MM-DD');
     },
 
-    subtractHours(date) {
+    subtractHours (date) {
         return momentz(date).subtract('3', 'hours').format('YYYY-MM-DD HH:mm:ss');
     },
 
-    calculateDiffDate(dateInitial, dateFinal, format) {
+    calculateDiffDate (dateInitial, dateFinal, format) {
         return moment(dateInitial).diff(dateFinal, format);
     },
 
-    getDates(DATA_INICIO, DATA_FIM) {
+    getDates (DATA_INICIO, DATA_FIM) {
         const startDate = new Date(DATA_INICIO);
         const limitDate = new Date(DATA_FIM);
 
@@ -107,13 +107,11 @@ module.exports = {
         const limitMonth = limitDate.getMonth() + 1;
         const limitYear = limitDate.getFullYear();
 
-        const startString = `${startYear}-${startMonth >= 10 ? startMonth : '0' + startMonth}-${
-            startDay >= 10 ? startDay : '0' + startDay
-        }T00:00:00.000-03:00`;
+        const startString = `${startYear}-${startMonth >= 10 ? startMonth : '0' + startMonth}-${startDay >= 10 ? startDay : '0' + startDay
+            }T00:00:00.000-03:00`;
 
-        const limitString = `${limitYear}-${limitMonth >= 10 ? limitMonth : '0' + limitMonth}-${
-            limitDay >= 10 ? limitDay : '0' + limitDay
-        }T23:59:59.000-03:00`;
+        const limitString = `${limitYear}-${limitMonth >= 10 ? limitMonth : '0' + limitMonth}-${limitDay >= 10 ? limitDay : '0' + limitDay
+            }T23:59:59.000-03:00`;
 
         return {
             startDate: new Date(startString),
@@ -121,22 +119,22 @@ module.exports = {
         };
     },
 
-    getDataByToken(req) {
+    getDataByToken (req) {
         const dataToken = _auth.decodeToken(req.headers.authorization);
         return dataToken.data;
     },
 
-    returnsLetterPosition(letter) {
+    returnsLetterPosition (letter) {
         const alfabetic = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         return alfabetic.indexOf(letter);
     },
 
-    returnSliceDataRandom(data, initial, final) {
+    returnSliceDataRandom (data, initial, final) {
         const dataSlice = chance.shuffle(data).slice(initial, final);
         return dataSlice;
     },
 
-    pagination(req) {
+    pagination (req) {
         const { pageSize, pageIndex } = req.query;
         let skip = pageIndex || 0;
         const limit = pageSize || 10;
@@ -148,7 +146,7 @@ module.exports = {
         return { skip, limit };
     },
 
-    ordernation(req) {
+    ordernation (req) {
         const { orderBy, direction } = req.query;
         let order = 'createdAt';
         let sort = 'desc';
@@ -159,14 +157,14 @@ module.exports = {
         return { order, sort };
     },
 
-    formatExcelDateToString(date) {
+    formatExcelDateToString (date) {
         const dateArray = date.split(' ');
         const month = returnMonthNumber(dateArray[1]);
         const newDate = `${dateArray[2]}/${month}/${dateArray[3]}`;
         return newDate;
     },
 
-    recordLog(
+    recordLog (
         req,
         type,
         message,
@@ -186,7 +184,7 @@ module.exports = {
                     try {
                         var { data } = _auth.decodeToken(token);
                         user = await User.findOne({ _id: { $eq: data.ref } });
-                    } catch {}
+                    } catch { }
                 }
                 const userLogin = dataUser ? dataUser.networkLogin : null;
                 const userId = dataUser ? dataUser.userId : null;
@@ -202,7 +200,7 @@ module.exports = {
                     login: req.body.login ? req.body.login : userLogin,
                     groups: namesGroups,
                     deviceType: req.body.deviceType ? req.body.deviceType : null,
-                    browserDetails: req.body.browserDetails ? req.body.browserDetails : null,
+                    browserDetails: req.body.browserDetails ? req.body.browserDetails : null
                 });
                 resolve();
             } catch (error) {
@@ -211,15 +209,15 @@ module.exports = {
         });
     },
 
-    sleep(milliseconds) {
+    sleep (milliseconds) {
         return new Promise((resolve) => setTimeout(resolve, milliseconds));
     },
 
-    getUserByToken(req) {
+    getUserByToken (req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const token = req.headers.authorization;
-                const { data } = _auth.decodeToken(token.replace('Bearer', '').trim());
+                const { data } = _auth.decodeToken(token);
                 const user = await User.findOne({ _id: { $eq: data.ref } });
                 resolve(user);
             } catch (error) {
@@ -228,7 +226,7 @@ module.exports = {
         });
     },
 
-    getGroupByToken(req) {
+    getGroupByToken (req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const token = req.headers.authorization;
@@ -242,7 +240,7 @@ module.exports = {
         });
     },
 
-    getTagsGroupsByToken(req) {
+    getTagsGroupsByToken (req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const token = req.headers.authorization;
@@ -275,7 +273,7 @@ module.exports = {
         });
     },
 
-    isSCORMCompleted(status = '') {
+    isSCORMCompleted (status = '') {
         return [
             SCORMLessonStatus.COMPLETED,
             SCORMLessonStatus.FAILED,
@@ -283,7 +281,7 @@ module.exports = {
         ].includes(status.toLowerCase());
     },
 
-    getTagsGroups(groupsID) {
+    getTagsGroups (groupsID) {
         return new Promise(async (resolve, reject) => {
             try {
                 const groups = groupsID;
@@ -313,7 +311,7 @@ module.exports = {
         });
     },
 
-    calculateAverage(user) {
+    calculateAverage (user) {
         return new Promise(async (resolve, reject) => {
             try {
                 const evaluations = await HistoricEvaluation.find({
@@ -350,7 +348,7 @@ module.exports = {
         });
     },
 
-    handleStudentAverage(user) {
+    handleStudentAverage (user) {
         return new Promise(async (resolve, reject) => {
             try {
                 const evaluations = await HistoricEvaluation.find({
@@ -394,7 +392,7 @@ module.exports = {
         });
     },
 
-    handleStudentTrails(user, trails, onlyExpired = false) {
+    handleStudentTrails (user, trails, onlyExpired = false) {
         return new Promise(async (resolve, reject) => {
             try {
                 const completedTrails = [];
@@ -425,10 +423,7 @@ module.exports = {
                     } else {
                         let nextItem;
                         const item = trailItems.find(({ itemID }) => !itemID?.completion);
-                        const progress =
-                            (trailItems.filter(({ itemID }) => itemID?.completion === 1).length *
-                                100) /
-                            trailItems.length;
+                        const progress = trailItems.filter(({ itemID }) => itemID?.completion === 1).length * 100 / trailItems.length
                         if (item) {
                             foundItem = await Item.findById(item?.itemID);
                             nextItem = {
@@ -444,7 +439,7 @@ module.exports = {
                             titleURL: trail.titleURL,
                             nextItem,
                             progress,
-                            notStarted: trail.notStarted,
+                            notStarted: trail.notStarted
                         });
                     }
                 }
@@ -456,11 +451,11 @@ module.exports = {
         });
     },
 
-    convertMinutesToHours(min) {
+    convertMinutesToHours (min) {
         return moment.utc().startOf('day').add(min, 'minutes').format('HH:mm');
     },
 
-    duration(inputMilliseconds) {
+    duration (inputMilliseconds) {
         var hours;
         var minutes;
         var seconds;
@@ -495,11 +490,11 @@ module.exports = {
         return rtnStr;
     },
 
-    addHours(date) {
+    addHours (date) {
         return momentz(date).add(3, 'hours').format('YYYY-MM-DD hh:mm:ss');
     },
 
-    checksIfTheEndDateIsLessThanTheStartDate(startDate, endDate) {
+    checksIfTheEndDateIsLessThanTheStartDate (startDate, endDate) {
         if (endDate) {
             if (momentz(endDate).format('YYYY-MM-DD') < momentz(startDate).format('YYYY-MM-DD'))
                 return false;
@@ -507,12 +502,12 @@ module.exports = {
         return true;
     },
 
-    removeAccents(text) {
+    removeAccents (text) {
         if (!text) text = '';
         return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     },
 
-    clearString(text) {
+    clearString (text) {
         return this.removeAccents(text)
             .replace(/[\])}[{(]/g, '')
             .split(' ')
@@ -520,12 +515,12 @@ module.exports = {
             .toUpperCase();
     },
 
-    processTrailTracking(trail, allTrackingUser, dashboard = false) {
+    processTrailTracking (trail, allTrackingUser, dashboard = false) {
         let containsACompletedItem = false;
         const completionDate = [];
         const scoreArr = [];
         let lastTrackingUpdate;
-        trail.notStarted = false;
+        trail.notStarted = false
         let duration = 0;
 
         for (const item of trail.items) {
@@ -535,7 +530,7 @@ module.exports = {
                 }
             })[0];
             if (dashboard && objTracking && objTracking[0] === undefined) {
-                trail.notStarted = true;
+                trail.notStarted = true
             }
             duration += item?.itemID?.durationHours ?? 0;
             lastTrackingUpdate = objTracking ? objTracking.updatedAt : null;
@@ -605,7 +600,7 @@ module.exports = {
         trail.lastTrackingUpdate = lastTrackingUpdate;
         trail.completionAt = mostRecentDate;
         trail.completion = getTrailCompletion(trail);
-        trail.duration = duration;
+        trail.duration = duration
 
         const itemsCompletion = trail.items.map((item) => item?.completion || 0);
         const completionTotal = itemsCompletion.reduce((acc, curr) => acc + curr, 0);
@@ -613,7 +608,7 @@ module.exports = {
         return { trail, containsACompletedItem };
     },
 
-    processExpirationDate(trail, user) {
+    processExpirationDate (trail, user) {
         const expirationType = trail.expirationType;
         const userCreationDate = new Date(user.createdAt).getTime();
         const trailReleaseDate = new Date(trail.startDate).getTime();
@@ -627,7 +622,7 @@ module.exports = {
         }
         return trail;
     },
-    formatNumberCpf(value) {
+    formatNumberCpf (value) {
         const cpfLength = 11;
         if (value.length < cpfLength) {
             for (let i = value.length; i < cpfLength; i++) {
@@ -637,12 +632,12 @@ module.exports = {
         return value;
     },
 
-    formatCnpj(value) {
+    formatCnpj (value) {
         const formatValue = value.replace(/[^\w\s]/gi, '');
         return formatValue;
     },
 
-    formatNumberRegistration(value) {
+    formatNumberRegistration (value) {
         const registrationLength = 6;
         if (value.length < registrationLength) {
             for (let i = value.length; i < registrationLength; i++) {
@@ -652,12 +647,12 @@ module.exports = {
         return value;
     },
 
-    isValidDate(date) {
+    isValidDate (date) {
         const d = new Date(date);
         return d instanceof Date && !isNaN(d);
     },
 
-    findMostOccurringElements(arr, numElements) {
+    findMostOccurringElements (arr, numElements) {
         const countMap = arr.reduce((countMap, element) => {
             countMap[element] = (countMap[element] || 0) + 1;
             return countMap;
@@ -668,37 +663,25 @@ module.exports = {
         return mostOccurringElements.map(([element]) => element);
     },
 
-    async strategyConfig() {
+    async strategyConfig () {
         const config = await ConfigLogin.findOne({})
             .sort({ createdAt: -1 })
-            .select({
-                createdAt: 0,
-                updatedAt: 0,
-                _id: 0,
-                __v: 0,
-                'formLogin._id': 0,
-                'ssoForm._id': 0,
-            })
+            .select({ createdAt: 0, updatedAt: 0, _id: 0, __v: 0, "formLogin._id": 0, 'ssoForm._id': 0 })
             .exec();
 
-        return (strategy = new passportSaml.Strategy(
+        return strategy = new passportSaml.Strategy(
             {
                 entryPoint: config.sso.entrypoint,
                 issuer: config.sso.issuer,
                 callbackUrl: config.sso.callback_url,
                 cert: config.sso.certifier,
             },
-            (profile, done) => done(null, profile)
-        ));
+            (profile, done) => done(null, profile),
+        )
     },
 
     deepGet(obj, query, defaultVal) {
-        query = Array.isArray(query)
-            ? query
-            : query
-                  .replace(/(\[(\d)\])/g, '.$2')
-                  .replace(/^\./, '')
-                  .split('.');
+        query = Array.isArray(query) ? query : query.replace(/(\[(\d)\])/g, '.$2').replace(/^\./, '').split('.');
         if (!(query[0] in obj)) {
             return defaultVal;
         }
@@ -707,31 +690,10 @@ module.exports = {
             return deepGet(obj, query.slice(1), defaultVal);
         }
         return obj;
-    },
-
-    stripHtmlTags(text) {
-        return text.replace(/<[^>]*>?/gm, '').trim();
-    },
-
-    async getElegibleUsers(elegibilities = [], elegibilitiesAnd = []) {
-        const mergedElegibilities = [...elegibilities, ...elegibilitiesAnd];
-
-        const groups = await Group.find({ 'tags.value': { $in: mergedElegibilities } });
-        const users = await User.find({ groupsAD: { $in: groups.map((g) => g.name) }, status: "ATIVO" });
-
-        const userTags = groups.filter((group) => elegibilities.includes(group.name));
-        const userTagsAnd = groups.filter((group) => elegibilitiesAnd.includes(group.name));
-
-        return users.filter((user) => {
-            const hasTags = userTags.some((tag) => user.groupsAD.includes(tag));
-            const hasTagsAnd = userTagsAnd.every((tag) => user.groupsAD.includes(tag));
-
-            return hasTags || hasTagsAnd;
-        });
-    },
+    }
 };
 
-function nameMonth(month) {
+function nameMonth (month) {
     const months = [
         'Janeiro',
         'Fevereiro',
@@ -749,7 +711,7 @@ function nameMonth(month) {
     return months[month - 1];
 }
 
-function calculateRatingEvaluation(amountQuestionsCorrect, amountOfQuestions) {
+function calculateRatingEvaluation (amountQuestionsCorrect, amountOfQuestions) {
     return new Promise((resolve, reject) => {
         const result = {
             values: {
@@ -770,7 +732,7 @@ function calculateRatingEvaluation(amountQuestionsCorrect, amountOfQuestions) {
     });
 }
 
-function getTrailCompletion(trail) {
+function getTrailCompletion (trail) {
     const completed = trail.items.find((val) => val.completion === 1);
     const incomplete = trail.items.find(
         (val) =>
@@ -789,14 +751,14 @@ function getTrailCompletion(trail) {
     }
 }
 
-function _isSCORMCompleted(status = '') {
+function _isSCORMCompleted (status = '') {
     return [
         SCORMLessonStatus.COMPLETED,
         SCORMLessonStatus.FAILED,
         SCORMLessonStatus.PASSED,
     ].includes(status.toLowerCase());
 }
-function returnMonthNumber(month) {
+function returnMonthNumber (month) {
     switch (month) {
         case 'Jan':
             return '01';

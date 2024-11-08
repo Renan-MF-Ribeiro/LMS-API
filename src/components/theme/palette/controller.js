@@ -54,15 +54,6 @@ module.exports = {
                 logo_adminPath = logo_adminPath.replace(AZURE_BLOB_URL, DOMAIN)
                 body.logo_admin = logo_adminPath
             }
-
-            const favicon = fileArray.findIndex(el => el.name === body.favicon)
-            if (favicon >= 0) {
-
-                let faviconPath = await azureBlob(fileArray[favicon], 'showcase/home', false, 'lmsassetsanon')
-                faviconPath = faviconPath.replace(AZURE_BLOB_URL, DOMAIN)
-                body.favicon = faviconPath
-            }
-
             let theme
             if (body._id) {
                 if (body.enabled) {

@@ -96,8 +96,6 @@ const AssessmentBusiness = require('../assessment/business');
 const { Features } = require('../theme/features/model');
 const { Partner } = require('../partners/model');
 const { Log } = require('../logs/model');
-const { getConfiguration } = require('../config/business');
-const { ConfigTypes } = require('../config/model');
 
 module.exports = {
     async create(req, res) {
@@ -294,24 +292,12 @@ module.exports = {
             }
 
             if (newUser && sendSignUpActivationEmail) {
-                const emailToken = generateToken({
-                    networkLogin,
-                    ref: newUser._id,
-                    clientId: process.env.CLIENT_ID,
-                    userName: newUser.name,
-                    userTags: [],
-                });
+                const emailToken = generateToken({ networkLogin });
                 const activationLink = `${process.env.DOMAIN}/login/ativacao?token=${emailToken}`;
                 await sendSignupActivationEmail(newUser.email, activationLink);
             }
 
-            const accessToken = generateToken({ 
-                networkLogin,
-                ref: newUser._id,
-                clientId: process.env.CLIENT_ID,
-                userName: newUser.name,
-                userTags: [],
-            });
+            const accessToken = generateToken({ networkLogin });
             _messages.success(res, req, accessToken);
         } catch (error) {
             console.log(error);
@@ -428,10 +414,6 @@ module.exports = {
 
                     const profilesIDS = await returnIdProfileUser(namesProfiles);
                     const groupsIDS = await returnIdGroupUser(namesGroups);
-                    const userGroups = await Group.find({ name: { $in: namesGroups }})
-                    const eligibilities = userGroups.flatMap((group) =>
-                        group.tags.flatMap((tag) => tag?.value || tag.display)
-                    );
 
                     const authwebPush = user.webPushAuthorization
                         ? user.webPushAuthorization[user.webPushAuthorization.length - 1]
@@ -444,9 +426,6 @@ module.exports = {
 
                     const token = generateToken({
                         ref: user._id,
-                        clientId: process.env.CLIENT_ID,
-                        userName: user.name,
-                        userTags: eligibilities,
                         profiles: profilesIDS.result,
                         numbers: profilesIDS.numbers,
                         groups: groupsIDS,
@@ -682,10 +661,6 @@ module.exports = {
 
                     const profilesIDS = await returnIdProfileUser(namesProfiles);
                     const groupsIDS = await returnIdGroupUser(namesGroups);
-                    const userGroups = await Group.find({ name: { $in: namesGroups }})
-                    const eligibilities = userGroups.flatMap((group) =>
-                        group.tags.flatMap((tag) => tag?.value || tag.display)
-                    );
 
                     // VERIFY FEATURE WELCOME
                     const hasWelcomeComponentFeature = await Features.exists({
@@ -694,9 +669,6 @@ module.exports = {
 
                     const token = generateSSOToken({
                         ref: user._id,
-                        clientId: process.env.CLIENT_ID,
-                        userName: user.name,
-                        userTags: eligibilities,
                         profiles: profilesIDS.result,
                         numbers: profilesIDS.numbers,
                         groups: groupsIDS,
@@ -1198,20 +1170,6 @@ module.exports = {
                 }
             }
 
-            const automaticEligibilityConfig = await getConfiguration(ConfigTypes.AutomaticEligibility.Onboard);
-
-            if (automaticEligibilityConfig?.enabled) {
-                const { eligibility = [] } = automaticEligibilityConfig;
-
-                existingUsers.forEach(user => {
-                    user.processedUser.groupsAD = [...(user.processedUser.groupsAD ?? []), ...eligibility];
-                });
-
-                newUsers.forEach(user => {
-                    user.groupsAD = [...(user.groupsAD ?? []), ...eligibility];
-                });
-            }
-
             console.log(
                 `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
             );
@@ -1549,10 +1507,6 @@ module.exports = {
                 projection: { ...userProjection },
             });
 
-            if(userUpdated?.status) {
-                await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status)
-            }
-
             return _messages.success(res, req, updated, 'Usuário(a) atualizado(a) com sucesso!');
         } catch (error) {
             return _messages.internalServer(
@@ -1800,16 +1754,9 @@ module.exports = {
             if (namesProfiles.length > 0) {
                 const profilesIDS = await returnIdProfileUser(namesProfiles);
                 const groupsIDS = await returnIdGroupUser(namesGroups);
-                const userGroups = await Group.find({ name: { $in: namesGroups }})
-                const eligibilities = userGroups.flatMap((group) =>
-                    group.tags.flatMap((tag) => tag?.value || tag.display)
-                );
 
                 const result = {
                     token: {
-                        clientId: process.env.CLIENT_ID,
-                        userName: name,
-                        userTags: eligibilities,
                         profiles: profilesIDS.result,
                         numbers: profilesIDS.numbers,
                         groups: groupsIDS,

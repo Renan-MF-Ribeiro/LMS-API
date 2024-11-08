@@ -34,10 +34,6 @@
             "active": true,
             "daysToInactive": 15,
             "cronExpression": "59 23 * * *"
-        },
-        "removeAutomaticEligibilityTags": {
-            "active": true,
-            "cronExpression": "59 23 * * *"
         }
     },
     "usersData": {

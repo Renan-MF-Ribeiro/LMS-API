@@ -11,7 +11,6 @@ const { Trail } = require('./model');
 const { Item, PostItem } = require('../items/model');
 const { populateTrails } = require('../trails/business');
 const { Tracking } = require('../tracking/model');
-const { updateProgressAluraItem } = require('../tracking/business');
 const {
     pagination,
     ordernation,
@@ -41,12 +40,11 @@ const {
 } = require('../sections/business');
 
 const { updateCertificateExpirationDate } = require('../certificates/business');
-const { createItemIfAlura } = require('../items/business');
 
 const ObjectId = require("mongoose").Types.ObjectId;
 
 module.exports = {
-    async getCollaborative (req, res) {
+    async getCollaborative(req, res) {
         try {
             const queryParams = req.query;
 
@@ -76,7 +74,7 @@ module.exports = {
         }
     },
 
-    async getCollaborativeChannel (req, res) {
+    async getCollaborativeChannel(req, res) {
         try {
             const user = await getUserByToken(req);
             const { skip, limit } = pagination(req);
@@ -155,7 +153,7 @@ module.exports = {
         }
     },
 
-    async create (req, res) {
+    async create(req, res) {
         try {
 
             const payload = req.body
@@ -254,7 +252,7 @@ module.exports = {
         }
     },
 
-    async findById (req, res) {
+    async findById(req, res) {
         try {
             const _id = req.params.trailId;
             const trail = await Trail.findOne({ _id }, '-innerText');
@@ -271,7 +269,7 @@ module.exports = {
         }
     },
 
-    async findByIdWithTrackingAndInnerText (req, res) {
+    async findByIdWithTrackingAndInnerText(req, res) {
         try {
             const findValue = req.params.trailId;
             const user = await getUserByToken(req);
@@ -353,7 +351,7 @@ module.exports = {
         }
     },
 
-    async multiUploadCreate (req, res) {
+    async multiUploadCreate(req, res) {
 
         try {
             const { thumb, banner, background } = req.files;
@@ -556,31 +554,20 @@ module.exports = {
                     }
                 }
                 const items = []
-                const OldItems = payload.items
 
-                delete payload.items
                 const trail = await Trail.create(payload);
 
-
-
-                for (const item of OldItems) {
-                    if (item.itemID.kind === 'AluraItem') {
-                        const { _id } = await getUserByToken(req);
-                        let { itemAluraCreated, separators: updatedSeparators } = await createItemIfAlura(item, trail.separators, _id);
-                        item.itemID = itemAluraCreated;
-                        trail.separators = updatedSeparators;
-                    }
-
+                payload.items.forEach((item) => {
                     items.push({
                         ...item,
                         urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}/${item.itemID._id}`,
                         urlTrail: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}`,
                         itemID: item.itemID._id,
-                    });
-                }
+                    })
+                })
 
                 trail.items = items
-                updateProgressAluraItem(OldItems)
+
                 const newData = await Trail.updateOne(
                     { _id: { $eq: trail._id } },
                     trail,
@@ -615,7 +602,7 @@ module.exports = {
         }
     },
 
-    async changeStatus (req, res) {
+    async changeStatus(req, res) {
         try {
             const { _id, enabled } = req.body;
 
@@ -657,7 +644,7 @@ module.exports = {
         }
     },
 
-    async duplicate (req, res) {
+    async duplicate(req, res) {
         try {
             const { oldTrailId, ...body } = req.body;
 
@@ -709,7 +696,7 @@ module.exports = {
         }
     },
 
-    async changeShowcase (req, res) {
+    async changeShowcase(req, res) {
         try {
             const { _id, showcase } = req.body;
 
@@ -751,7 +738,7 @@ module.exports = {
         }
     },
 
-    async update (req, res) {
+    async update(req, res) {
         try {
             let { thumb, banner, background, innerTextBanner } = req.files
             const { _id } = JSON.parse(req.fields.payload)
@@ -995,24 +982,17 @@ module.exports = {
 
                 const items = []
 
-                for (const item of payload.items) {
-                    if (item.itemID.kind === 'AluraItem') {
-                        const user = await getUserByToken(req);
-                        let { itemAluraCreated, separators: updatedSeparators } = await createItemIfAlura(item, payload.separators, user._id);
-                        item.itemID = itemAluraCreated;
-                        trail.separators = updatedSeparators;
-                    }
-
+                payload.items?.forEach((item) => {
                     items.push({
                         ...item,
                         urlItem: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}/${item.itemID._id}`,
                         urlTrail: `http://happmobi.com.br/${TINCAN_OWNER}/${trail._id}`,
                         itemID: item.itemID._id,
-                    });
-                }
+                    })
+                })
 
-                updateProgressAluraItem(payload.items)
                 payload.items = items
+
                 const oldData = await Trail.findOneAndUpdate(
                     { _id: { $eq: payload._id } },
                     payload,
@@ -1020,6 +1000,7 @@ module.exports = {
                 const newData = await Trail.findOne({
                     _id: { $eq: payload._id },
                 })
+
 
                 await updateCertificateExpirationDate(req)
 
@@ -1050,7 +1031,7 @@ module.exports = {
         }
     },
 
-    async linkItems (req, res) {
+    async linkItems(req, res) {
         try {
             let exist = false;
             const { idItem, idTrail } = req.body;
@@ -1114,7 +1095,7 @@ module.exports = {
         }
     },
 
-    async linkSeparators (req, res) {
+    async linkSeparators(req, res) {
         try {
             const { idTrail, separator } = req.body;
             const { separators } = await Trail.findOne({
@@ -1153,7 +1134,7 @@ module.exports = {
         }
     },
 
-    async updateSeparators (req, res) {
+    async updateSeparators(req, res) {
         try {
             let exist = false;
             const { idTrail, separator } = req.body;
@@ -1196,7 +1177,7 @@ module.exports = {
         }
     },
 
-    async unlinkSeparators (req, res) {
+    async unlinkSeparators(req, res) {
         try {
             let exist = false;
             const { idTrail, separator } = req.body;
@@ -1238,7 +1219,7 @@ module.exports = {
         }
     },
 
-    async findAll (req, res) {
+    async findAll(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1316,7 +1297,7 @@ module.exports = {
 
 
 
-    async returnItemsByTrail (req, res) {
+    async returnItemsByTrail(req, res) {
         try {
             const { skip, limit } = pagination(req)
             const { order, sort } = ordernation(req)
@@ -1400,7 +1381,7 @@ module.exports = {
         }
     },
 
-    async returnItemsByTrailMenu (req, res) {
+    async returnItemsByTrailMenu(req, res) {
         try {
             const { id } = req.params;
             const user = await getUserByToken(req);
@@ -1465,7 +1446,7 @@ module.exports = {
         }
     },
 
-    async unlinkItems (req, res) {
+    async unlinkItems(req, res) {
         try {
             const { idItem, idTrail } = req.body;
             const { items } = await Trail.findOne(
@@ -1514,7 +1495,7 @@ module.exports = {
         }
     },
 
-    async changeItemOrderFromTrail (req, res) {
+    async changeItemOrderFromTrail(req, res) {
         try {
             const { idTrail, order } = req.body;
 
@@ -1596,7 +1577,7 @@ module.exports = {
         }
     },
 
-    async returnBannersElegibles_new (req, res) {
+    async returnBannersElegibles_new(req, res) {
         // # Nova versão para retornar banner, para melhorar a performance
         try {
             var dtInicio = new Date();
@@ -1675,7 +1656,7 @@ module.exports = {
         }
     },
 
-    async returnBannersElegibles (req, res) {
+    async returnBannersElegibles(req, res) {
         try {
             var dtInicio = new Date();
 
@@ -1736,7 +1717,7 @@ module.exports = {
         }
     },
 
-    async returnTrailsByIDS (req, res) {
+    async returnTrailsByIDS(req, res) {
         try {
             const { trailsIDS } = req.body;
             const arrTrails = [];
@@ -1759,7 +1740,7 @@ module.exports = {
         }
     },
 
-    async returnLinkTrailByItem (idItem) {
+    async returnLinkTrailByItem(idItem) {
         return new Promise(async (resolve, reject) => {
             try {
                 const trails = await Trail.find({ 'items.itemID': idItem });
@@ -1779,7 +1760,7 @@ module.exports = {
         });
     },
 
-    async mandatory (req, res) {
+    async mandatory(req, res) {
         try {
             const { idTrail, idItem, mandatory } = req.body;
             const trail = await Trail.findById(idTrail);
@@ -1818,7 +1799,7 @@ module.exports = {
         }
     },
 
-    async xapi (req, res) {
+    async xapi(req, res) {
         try {
             const trails = await Trail.find();
 
@@ -1862,7 +1843,7 @@ module.exports = {
      * @param {*} req Request
      * @param {*} res Response
      */
-    async getCourseInformation (req, res) {
+    async getCourseInformation(req, res) {
         try {
             const findValueTrail = req.params.trailId;
             const itemId = req.params.itemId;
@@ -1903,7 +1884,7 @@ module.exports = {
         }
     },
 
-    async returnTrailsByUser (req, res) {
+    async returnTrailsByUser(req, res) {
         try {
             const { userId } = req.query;
             const trails = await populateTrails(true, {
@@ -1920,7 +1901,7 @@ module.exports = {
         }
     },
 
-    async updateModeration (req, res) {
+    async updateModeration(req, res) {
         try {
             const { moderation, tags, trailId } = req.body;
 
@@ -1958,7 +1939,7 @@ module.exports = {
         }
     },
 
-    async saveComplaint (req, res) {
+    async saveComplaint(req, res) {
         try {
             const { reason, trailId } = req.body;
 
@@ -1986,7 +1967,7 @@ module.exports = {
         }
     },
 
-    async uploadMaterial (req, res) {
+    async uploadMaterial(req, res) {
         try {
             let trailId = req.fields.trailId;
             let fileArray = Object.keys(req.files).map((key) => req.files[key]);
@@ -2021,7 +2002,7 @@ module.exports = {
         }
     },
 
-    async listMaterial (req, res) {
+    async listMaterial(req, res) {
         try {
             let trailId = req.params.id;
             const trail = await Trail.findById(trailId);
@@ -2041,7 +2022,7 @@ module.exports = {
         }
     },
 
-    async listGallery (req, res) {
+    async listGallery(req, res) {
         try {
             let trailId = req.params.id;
             const trail = await Trail.findById(trailId);
@@ -2061,7 +2042,7 @@ module.exports = {
         }
     },
 
-    async downloadMaterial (req, res) {
+    async downloadMaterial(req, res) {
         try {
             let trailId = req.body.trailId;
             let materialId = req.body.materialId;
@@ -2098,7 +2079,7 @@ module.exports = {
         }
     },
 
-    async deleteMaterial (req, res) {
+    async deleteMaterial(req, res) {
         try {
             let trailId = req.body.trailId;
             let materialId = mongoose.Types.ObjectId(req.body.materialId);
@@ -2126,7 +2107,7 @@ module.exports = {
     },
 };
 
-function processTrailAndItems (trail) {
+function processTrailAndItems(trail) {
     let duration = 0;
     for (const item of trail.items) {
         duration += item.itemID.durationHours;
@@ -2146,7 +2127,7 @@ function processTrailAndItems (trail) {
     return trail;
 }
 
-function prepareObject (trail) {
+function prepareObject(trail) {
     return {
         _id: trail._id,
         title: trail.title,
@@ -2163,7 +2144,7 @@ function prepareObject (trail) {
     };
 }
 
-function createModerationAlert (trail, verb) {
+function createModerationAlert(trail, verb) {
     const title = `O conteúdo ${trail.title} foi ${verb}!`;
     const text = `Seu conteúdo ${trail.title} acabou de ser ${verb} por um moderador!`;
     const texthtml = `<p>Seu conteúdo ${trail.title} acabou de ser ${verb} por um moderador!</p>`;
@@ -2177,7 +2158,7 @@ function createModerationAlert (trail, verb) {
     return { title, text, communication, category, target, mode, texthtml };
 }
 
-async function createMessagesFromBackend (body) {
+async function createMessagesFromBackend(body) {
     try {
         const campaign = body;
         const target = campaign.target;

@@ -11,7 +11,6 @@ const {
     PostTracking
 } = require("./model");
 
-const axios = require('axios');
 const TRACKING_KINDS = Object.freeze({
     DocumentTracking: DocumentTracking,
     MediaTracking: MediaTracking,
@@ -103,24 +102,5 @@ module.exports = {
         }
         await ExamTracking.findByIdAndUpdate(tracking._id, { ...result })
         return result
-    },
-
-    async updateProgressAluraItem (items) {
-        const host = process.env.API_ALURA;
-        const clientId = process.env.CLIENT_ID;
-        const headers = { 'x-client-key': process.env.API_KEY_ALURA };
-        const body = items.map(item => {
-            if (item.itemID.kind === 'AluraItem')
-                return {
-                    itemId: null,
-                    aluraId: item.itemID.id
-                }
-        }).filter(item => item !== undefined)
-        try {
-            const uri = `${host}/trackings/update/${clientId}`;
-            await axios.post(uri, body, { headers });
-        } catch (error) {
-            console.log(error)
-        }
     }
 }

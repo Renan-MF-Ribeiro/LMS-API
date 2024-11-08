@@ -43,7 +43,6 @@ const featuresSchema = new mongoose.Schema({
     calendar: { type: Boolean, required: true, default: false },
     onboarding: { type: Boolean, required: true, default: false },
     partners: { type: Boolean, required: true, default: false },
-    alura: { type: Boolean, required: true, default: false },
 }, {
     ...schemaOptions,
 })

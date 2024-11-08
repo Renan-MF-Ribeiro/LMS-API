@@ -1,6 +1,6 @@
 const { Types } = require("mongoose");
 const ApiError = require("../../errors/ApiError");
-const { getUserByToken, stripHtmlTags } = require("../../utils/functions");
+const { getUserByToken } = require("../../utils/functions");
 const { certificateClient, getHeaders } = require("../certificates/business");
 const { setAssessmentHistoricOnSections } = require("../sections/business");
 const { Section } = require("../sections/model");
@@ -182,7 +182,7 @@ async function generateTrainingSectionCertificate(req, res) {
         userName: user.name,
         sectionId: section._id,
         sectionName: section.title,
-        sectionDescription: stripHtmlTags(section.description ?? ''),
+        sectionDescription: section.description,
         layoutId: section.certificateLayout,
         certificateDue: section.certificateDue,
         expirationDate,

@@ -14,7 +14,6 @@ const {
     executeRecommendedTrails,
     executeUpdateTrailsViewsCron,
     handleInactiveOldOnboardingUsers,
-    handleRemoveAutomaticEligibilityTags,
 } = require('./controller')
 
 router
@@ -31,7 +30,6 @@ router
     .get('/recommended-trails', executeRecommendedTrails)
     .get('/update-trails-views', executeUpdateTrailsViewsCron)
     .get('/inactive-old-onboarding-users', handleInactiveOldOnboardingUsers)
-    .get('/remove-automatic-eligibility-tags', handleRemoveAutomaticEligibilityTags)
 
 
 module.exports = router
