@@ -890,6 +890,7 @@ const ItemController = {
                 });
                 return;
             }
+
             _messages.success(res, req, {
                 ...item._doc,
                 trailTitle: trail.title,
@@ -1386,7 +1387,7 @@ const ItemController = {
                 }
 
             query['archive'] = archive ? { $eq: archive === 'true' } : { $ne: true };
-            query['kind'] = { $nin: ['PostItem', 'AluraItem'] };;
+            query['kind'] = { $ne: 'PostItem' };
             let total = await Item.find(query).count();
 
             let itens = await Item.find(query)

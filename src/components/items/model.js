@@ -344,20 +344,6 @@ const PostItem = Item.discriminator(
     )
 );
 
-const AluraItem = Item.discriminator(
-    'AluraItem',
-    new mongoose.Schema(
-        {
-            id: { type: Number, required: true },
-            description: { type: String, required: false },
-            durationHours: { type: Number, required: false },
-
-            ...endpointOptions,
-        },
-        { ...schemaOptions }
-    )
-);
-
 const FORM_ITEM_TYPE = Object.freeze({
     DICHOTOMOUS: 'dichotomous',
     MULTIPLE: 'multiple',
@@ -410,6 +396,5 @@ module.exports = {
     SoonItem,
     PostItem,
     FormItem,
-    AluraItem,
     FORM_ITEM_TYPE
 };

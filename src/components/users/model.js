@@ -32,19 +32,6 @@ const optionsSchema = {
     collation: { locale: 'en_US', strength: 1 },
 };
 
-const assessmentGroupSchema = new mongoose.Schema(
-    {
-        pillarId: { type: String, required: true },
-        cycleId: { type: String, required: true },
-        periodId: { type: String, required: true },
-        tags: { type: [String], default: [] },
-    },
-    {
-        _id: false,
-        timestamps: true,
-    }
-);
-
 const userSchema = new mongoose.Schema(
     {
         networkLogin: { type: String, trim: true, required: true },
@@ -122,11 +109,25 @@ const userSchema = new mongoose.Schema(
         task: { type: String, trim: true },
         webPushAuthorization: { type: Array, required: false, default: [] },
         onboarding: { type: Boolean, default: false },
-        assessmentGroups: { type: [{ type: assessmentGroupSchema }], required: false, default: [] },
+        assessmentGroups: { type: Array, default: [] },
         civilName: { type: String, trim: true },
         socialName: { type: String, trim: true },
         welcomeVideoWatched: { type: Boolean, default: false },
-
+        rgm: { type: String, trim: true },
+        modality: { type: String, trim: true },
+        maritalStatus: { type: String, trim: true },
+        children: { type: Boolean, trim: true },
+        activity: { type: Boolean, trim: true },
+        income: { type: String, trim: true },
+        specialization: { type: String, trim: true },
+        university: { type: String, trim: true },
+        areaKnowledge: { type: String, trim: true },
+        subarea: { type: String, trim: true },
+        course: { type: String, trim: true },
+        deficiency: { type: String, trim: true },
+        typeDeficiency: { type: String, trim: true },
+        sexualOrientation: { type: String, trim: true },
+        genderIdentity: { type: String, trim: true },
     },
     {
         ...optionsSchema,

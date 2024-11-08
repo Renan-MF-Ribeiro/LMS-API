@@ -1346,8 +1346,8 @@ module.exports = {
 
             const course = await ClassModel.findOneAndUpdate(
                 {
-                    _id: mongoose.Types.ObjectId(body.qrcode),
-                    'users.userID': mongoose.Types.ObjectId(user._id),
+                    _id: { $eq: body.qrcode },
+                    'users._id': mongoose.Types.ObjectId(user._id),
                 },
                 {
                     $set: {

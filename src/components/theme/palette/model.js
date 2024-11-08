@@ -79,11 +79,9 @@ const paletteSchema = new mongoose.Schema({
 })
 
 const themeSchema = new mongoose.Schema({
-    name: { type: String },
     title: { type: String },
     logo: { type: String },
     logo_admin: { type: String },
-    favicon: { type: String },
     palette: paletteSchema,
     enabled: { type: Boolean, default: false, required: true },
     defaultPalette: paletteSchema,

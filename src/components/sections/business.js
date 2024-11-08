@@ -156,7 +156,6 @@ module.exports = {
                 const user = await getUserByToken(req);
                 const tags = await getTagsGroupsByToken(req);
                 const today = getDateTodayWithoutHours();
-                
                 if (user.classGroups.length > 0) {
                     for (const classGroup of user.classGroups) {
                         tags.push({
@@ -165,7 +164,13 @@ module.exports = {
                         });
                     }
                 }
-
+                if (user.assessmentGroups.length > 0) {
+                    const assessmentGroups = await Group.find({
+                        name: { $in: user.assessmentGroups },
+                    });
+                    const assessmentGroupsTags = assessmentGroups.flatMap(({ tags }) => tags);
+                    tags.push(...assessmentGroupsTags);
+                }
                 if (user.tags.length > 0) {
                     for (const tag of user.tags) {
                         const diff = calculateDiffDate(

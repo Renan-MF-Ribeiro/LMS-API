@@ -7,7 +7,6 @@ const { Trail } = require('./model');
 const { Item } = require('../items/model');
 const config = require('../../../config.json')
 const axios = require('axios');
-const { socialApi } = require('../social/http-adapter');
 
 module.exports = {
     async checkItem (item) {
@@ -54,7 +53,8 @@ module.exports = {
                 let socialStatus = ""
 
                 if (config.social.active) {
-                    const { data } = await socialApi.get(`client-config/${process.env.CLIENT_ID}`);
+                    const uri = `${process.env.API_SOCIAL}/client-config/${process.env.CLIENT_ID}`;
+                    const { data } = await axios.get(uri);
                     socialConfig = data
                 }
 

@@ -13,7 +13,6 @@ const {
     executeRecommendedTrails,
     executeUpdateTrailsViewsCron,
     executeInactiveOldOnboardingUsers,
-    executeRemoveAutomaticEligibilityTags,
 } = require('../../utils/cron');
 
 module.exports = {
@@ -161,20 +160,6 @@ module.exports = {
         }
 
         await executeInactiveOldOnboardingUsers(true);
-
-        res.status(200).json({
-            message: 'CRON INICIADO COM SUCESSO',
-        });
-    },
-    
-    async handleRemoveAutomaticEligibilityTags(req, res) {
-        if (!config.cron?.removeAutomaticEligibilityTags?.active) {
-            return res.status(400).json({
-                message: 'FUNCIONALIDADE INATIVA',
-            });
-        }
-
-        await executeRemoveAutomaticEligibilityTags(true);
 
         res.status(200).json({
             message: 'CRON INICIADO COM SUCESSO',
