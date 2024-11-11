@@ -66,10 +66,16 @@ module.exports = {
             body.certificateDue = JSON.parse(body.certificateDue);
 
             let thumbPath;
-            const { thumb } = req.files;
+            const { thumb, banner } = req.files;
             if (thumb) {
                 thumbPath = await azureBlob(thumb, 'items/thumbs');
                 body.thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
+            }
+
+            let bannerPath;
+            if (banner) {
+                bannerPath = await azureBlob(banner, 'items/banners');
+                body.banner = bannerPath.replace(AZURE_BLOB_URL, DOMAIN);
             }
 
             if (!body.passingScore || body.passingScore === 'null')
@@ -221,11 +227,17 @@ module.exports = {
             body.certificateDue = JSON.parse(body.certificateDue);
 
 
+            const { thumb, banner } = req.files;
             let thumbPath;
-            const { thumb } = req.files;
             if (thumb) {
                 thumbPath = await azureBlob(thumb, 'items/thumbs');
                 body.thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
+            }
+
+            let bannerPath;
+            if (banner) {
+                bannerPath = await azureBlob(banner, 'items/banners');
+                body.banner = bannerPath.replace(AZURE_BLOB_URL, DOMAIN);
             }
 
             if (!body.passingScore || body.passingScore === 'null')
@@ -518,7 +530,7 @@ module.exports = {
                         const nowDate = new Date();
 
                         const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-                        
+
                         const newUsers = JSON.parse(users).map((user) => {
                             return ({
                                 ...user,
@@ -1095,7 +1107,7 @@ module.exports = {
             const { users } = await ClassModel.findById(classID);
             const filterUser = users.filter(
                 (user) => user.userID === student.id || user._id.toString() === student.id
-            );      
+            );
             if (filterUser.length > 0) {
                 const evaluation = await CourseEvaluationModel.updateOne(
                     { classID: classID, studentID: student.id },

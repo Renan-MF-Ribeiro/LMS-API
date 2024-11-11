@@ -37,6 +37,10 @@ const CourseSChema = new mongoose.Schema(
         instructor: { type: 'ObjectId', ref: 'users', required: false },
         inWaitList: { type: Boolean, required: false, default: false },
         score: { type: Number, required: false, default: null },
+        banner: { type: String, required: false },
+        highlighted: { type: Boolean, default: false },
+        startDate: { type: Date },
+        endDate: { type: Date },
     },
     {
         ...schemaOptions,
