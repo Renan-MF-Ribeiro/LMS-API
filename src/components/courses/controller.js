@@ -1,6 +1,6 @@
 const { User } = require('../users/model');
 const mongoose = require('mongoose');
-const config = require('../../../config.json')
+const config = require('../../../config.json');
 const {
     CourseModel,
     ClassModel,
@@ -11,7 +11,7 @@ const {
     WaitListsByUser,
     WaitListsByCourses,
     UsersWithProcessedTags,
-    WaitListModel
+    WaitListModel,
 } = require('./model');
 const moment = require('moment-timezone');
 const { DOMAIN, AZURE_BLOB_URL } = process.env;
@@ -22,18 +22,11 @@ const { Group } = require('../groups/model');
 
 const { Trail } = require('../trails/model');
 
-const {
-    sendMessageToKafka,
-    processTargetUsers,
-} = require('../new-messages/business');
+const { sendMessageToKafka, processTargetUsers } = require('../new-messages/business');
 
 const { internalServer, success, badRequest } = require('../../utils/messages');
 
-const {
-    pagination,
-    ordernation,
-    getUserByToken,
-} = require('../../utils/functions');
+const { pagination, ordernation, getUserByToken } = require('../../utils/functions');
 
 const {
     uploadMaterial,
@@ -53,7 +46,7 @@ const {
 const { default: axios } = require('axios');
 
 module.exports = {
-    async createCourse (req, res) {
+    async createCourse(req, res) {
         try {
             const materials = JSON.parse(req.fields.materials);
             const files = req.files;
@@ -72,16 +65,14 @@ module.exports = {
                 body.thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
             }
 
-            if (!body.passingScore || body.passingScore === 'null')
-                delete body.passingScore;
+            if (!body.passingScore || body.passingScore === 'null') delete body.passingScore;
             if (!body.certificateLayout || body.certificateLayout === 'null')
                 delete body.certificateLayout;
             if (body.dateInitial > body.dateFinal) flagDate = false;
 
             if (flagDate) {
                 if (body.isEvaluationAvailable) {
-                    body.isEvaluationAvailable =
-                        body.isEvaluationAvailable == 'true';
+                    body.isEvaluationAvailable = body.isEvaluationAvailable == 'true';
                 } else {
                     body.isEvaluationAvailable = false;
                 }
@@ -149,7 +140,7 @@ module.exports = {
         }
     },
 
-    async allCourses (req, res) {
+    async allCourses(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -158,23 +149,23 @@ module.exports = {
             const total = await CourseModel.find(
                 searchBy
                     ? {
-                        $text: { $search: searchBy },
-                        deleted: 0,
-                    }
+                          $text: { $search: searchBy },
+                          deleted: 0,
+                      }
                     : {
-                        deleted: 0,
-                    }
+                          deleted: 0,
+                      }
             ).countDocuments();
 
             const courses = await CourseModel.find(
                 searchBy
                     ? {
-                        title: { $regex: searchBy, $options: 'i' },
-                        deleted: 0,
-                    }
+                          title: { $regex: searchBy, $options: 'i' },
+                          deleted: 0,
+                      }
                     : {
-                        deleted: 0,
-                    }
+                          deleted: 0,
+                      }
             )
                 .populate({
                     path: 'materials',
@@ -188,8 +179,6 @@ module.exports = {
                 .limit(parseInt(limit));
 
             const programs = await ProgramModel.find().select('title');
-
-
 
             success(res, req, {
                 data: courses,
@@ -208,7 +197,7 @@ module.exports = {
         }
     },
 
-    async updateCourse (req, res) {
+    async updateCourse(req, res) {
         try {
             const materials = req.fields.materials ? JSON.parse(req.fields.materials) : null;
             const body = req.fields;
@@ -220,7 +209,6 @@ module.exports = {
             body.mandatory = JSON.parse(body.mandatory);
             body.certificateDue = JSON.parse(body.certificateDue);
 
-
             let thumbPath;
             const { thumb } = req.files;
             if (thumb) {
@@ -228,14 +216,11 @@ module.exports = {
                 body.thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
             }
 
-            if (!body.passingScore || body.passingScore === 'null')
-                body.passingScore = null;
+            if (!body.passingScore || body.passingScore === 'null') body.passingScore = null;
             if (!body.certificateLayout || body.certificateLayout === 'null')
                 body.certificateLayout = null;
 
             if (body.dateInitial > body.dateFinal) flagDate = false;
-
-
 
             if (!flagDate) {
                 badRequest(
@@ -247,10 +232,8 @@ module.exports = {
                     '/updateCourse'
                 );
             } else {
-
                 if (body.isEvaluationAvailable) {
-                    body.isEvaluationAvailable =
-                        body.isEvaluationAvailable == 'true';
+                    body.isEvaluationAvailable = body.isEvaluationAvailable == 'true';
                 } else {
                     body.isEvaluationAvailable = false;
                 }
@@ -273,8 +256,6 @@ module.exports = {
                     const programID = await returnProgramaID(body.program);
                     body.program = programID;
 
-
-
                     if (materials) {
                         const materialsArray = Array.isArray(materials)
                             ? [...materials]
@@ -290,8 +271,7 @@ module.exports = {
                     }
 
                     const currentCourse = await CourseModel.findById(body._id);
-                    body.materials =
-                        currentCourse.materials.concat(arrMaterials);
+                    body.materials = currentCourse.materials.concat(arrMaterials);
 
                     if (body.status == 0) {
                         body.isEvaluationAvailable = false;
@@ -313,17 +293,11 @@ module.exports = {
             }
         } catch (error) {
             console.log(error);
-            internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                '/updateCourse'
-            );
+            internalServer(res, req, error.message, 'Erro interno no servidor', '/updateCourse');
         }
     },
 
-    async deleteCourse (req, res) {
+    async deleteCourse(req, res) {
         try {
             const { id } = req.params;
             await CourseModel.findByIdAndUpdate(id, { deleted: 1 });
@@ -340,25 +314,24 @@ module.exports = {
         }
     },
 
-    async instructorAllCourses (req, res) {
+    async instructorAllCourses(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
             const searchBy = req.query.searchBy;
             let arrCoursesFinal;
 
-
             const courses = await CourseModel.find(
                 searchBy
                     ? {
-                        title: { $regex: '' || searchBy, $options: 'i' },
-                        deleted: 0,
-                        status: 1,
-                    }
+                          title: { $regex: '' || searchBy, $options: 'i' },
+                          deleted: 0,
+                          status: 1,
+                      }
                     : {
-                        deleted: 0,
-                        status: 1,
-                    }
+                          deleted: 0,
+                          status: 1,
+                      }
             )
                 .populate({
                     path: 'materials',
@@ -393,7 +366,7 @@ module.exports = {
         }
     },
 
-    async getCourseById (req, res) {
+    async getCourseById(req, res) {
         try {
             const { id } = req.params;
             const course = await CourseModel.findById(id).populate('materials');
@@ -410,7 +383,7 @@ module.exports = {
         }
     },
 
-    async getUsers (req, res) {
+    async getUsers(req, res) {
         try {
             const user = await getUserByToken(req);
             const storeUsers = await getStoreUSers(user.store);
@@ -427,7 +400,7 @@ module.exports = {
         }
     },
 
-    async createClass (req, res) {
+    async createClass(req, res) {
         try {
             let {
                 courseID,
@@ -443,7 +416,7 @@ module.exports = {
                 location,
                 costs,
                 name,
-                signup
+                signup,
             } = req.fields;
             let flagDate = true;
 
@@ -480,8 +453,8 @@ module.exports = {
                 });
 
                 if (canCreateClass) {
-                    const dateInitial = moment(course.dateInitial).startOf('day').toDate()
-                    const dateFinal = moment(course.dateFinal).endOf('day').toDate()
+                    const dateInitial = moment(course.dateInitial).startOf('day').toDate();
+                    const dateFinal = moment(course.dateFinal).endOf('day').toDate();
                     const applicationInitial = new Date(dateApplicationInitial);
                     const applicationFinal = new Date(dateApplicationFinal);
                     if (
@@ -518,16 +491,16 @@ module.exports = {
                         const nowDate = new Date();
 
                         const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-                        
+
                         const newUsers = JSON.parse(users).map((user) => {
-                            return ({
+                            return {
                                 ...user,
                                 ip,
                                 userID: mongoose.Types.ObjectId(user._id ?? user.userID),
                                 presenceAt: user.presence ? nowDate : null,
                                 createdAt: nowDate,
                                 updatedAt: nowDate,
-                            })
+                            };
                         });
 
                         const createdClass = await ClassModel.create({
@@ -543,22 +516,23 @@ module.exports = {
                             canCreateClass,
                             qrcode: qrCode,
                             qrCodeSelfRegistration: qrCodeSelfRegistration,
-                            isSelfRegistrationEnabled:
-                                isSelfRegistrationEnabled,
+                            isSelfRegistrationEnabled: isSelfRegistrationEnabled,
                             limit,
                             location,
                             costs: costsArray,
                             name,
-                            signup
+                            signup,
                         });
 
                         const classesFromCourse = await ClassModel.find({ courseID });
 
-                        const arrUserId = []
+                        const arrUserId = [];
                         for (let user of JSON.parse(users)) {
-                            arrUserId.push(user._id)
-                            const removalPromises = classesFromCourse.map(classFromCourse => {
-                                const inClass = classFromCourse.users.some((u) => u._id == user._id || u.userID == user._id)
+                            arrUserId.push(user._id);
+                            const removalPromises = classesFromCourse.map((classFromCourse) => {
+                                const inClass = classFromCourse.users.some(
+                                    (u) => u._id == user._id || u.userID == user._id
+                                );
 
                                 if (classFromCourse._id.equals(createdClass._id) || !inClass) {
                                     return Promise.resolve();
@@ -583,12 +557,12 @@ module.exports = {
                                     users: arrUserId,
                                 },
                             },
-                            text: `Você está na turma presencial ${name}!\n`,
-                            textHtml: `<p>Você está na turma presencial ${name}!<p>`,
+                            text: `Você está na turma presencial ${name}!\n O local do treinamento será em: ${location}`,
+                            textHtml: `<p>Você está na turma presencial ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
                             thumbnail: config.messenger.emailTemplate.thumbnail,
                             title: `Treinamentos Presenciais: ${name}`,
-                        }
-                        await createMessagesFromBackend(message)
+                        };
+                        await createMessagesFromBackend(message);
 
                         success(res, req, 'Criado com sucesso!');
                         return;
@@ -618,7 +592,7 @@ module.exports = {
         }
     },
 
-    async updateClass (req, res) {
+    async updateClass(req, res) {
         try {
             let {
                 courseID,
@@ -635,7 +609,7 @@ module.exports = {
                 location,
                 costs,
                 name,
-                signup
+                signup,
             } = req.fields;
             const materials = JSON.parse(req.fields.materials);
             const costsArray = JSON.parse(costs);
@@ -663,7 +637,6 @@ module.exports = {
                     '/createClass'
                 );
             } else {
-
                 let user = await getUserByToken(req);
                 let instructorID = user.id;
                 const course = await CourseModel.findById(courseID).populate({
@@ -672,8 +645,8 @@ module.exports = {
                 });
 
                 if (course.deleted === 0 && course.status === 1) {
-                    const dateInitial = moment(course.dateInitial).startOf('day').toDate()
-                    const dateFinal = moment(course.dateFinal).endOf('day').toDate()
+                    const dateInitial = moment(course.dateInitial).startOf('day').toDate();
+                    const dateFinal = moment(course.dateFinal).endOf('day').toDate();
                     const applicationInitial = new Date(dateApplicationInitial);
                     const applicationFinal = new Date(dateApplicationFinal);
                     if (
@@ -712,22 +685,29 @@ module.exports = {
                     const changedUsers = [];
                     const addedUsers = [];
 
-                    const oldUsers = (await ClassModel.findById(classID).select('users'))?.users ?? [];
+                    const oldUsers =
+                        (await ClassModel.findById(classID).select('users'))?.users ?? [];
 
                     for (let user of usersArr) {
-                        const oldUserIndex = oldUsers?.findIndex(
-                            u => String(u._id) === String(user._id) || String(u.userID) === String(user._id)
-                        ) ?? -1;
+                        const oldUserIndex =
+                            oldUsers?.findIndex(
+                                (u) =>
+                                    String(u._id) === String(user._id) ||
+                                    String(u.userID) === String(user._id)
+                            ) ?? -1;
                         const oldUser = oldUserIndex >= 0 && oldUsers[oldUserIndex];
 
-                        const presenceAt = user.presence ? (
-                            user.presenceAt ? new Date(user.presenceAt) : nowDate
-                        ) : null;
+                        const presenceAt = user.presence
+                            ? user.presenceAt
+                                ? new Date(user.presenceAt)
+                                : nowDate
+                            : null;
 
                         const userId = user._id ?? user.userID;
 
                         if (oldUser) {
-                            const presenceChanged = Boolean(oldUser.presence) !== Boolean(user.presence);
+                            const presenceChanged =
+                                Boolean(oldUser.presence) !== Boolean(user.presence);
                             const gradesChanged = Number(oldUser.grades) !== Number(user.grades);
 
                             if (presenceChanged || gradesChanged) {
@@ -753,7 +733,12 @@ module.exports = {
                     }
 
                     const removedUsers = oldUsers.filter(
-                        oldUser => !usersArr.some(user => String(user._id) === String(oldUser._id) || String(user._id) === String(oldUser.userID))
+                        (oldUser) =>
+                            !usersArr.some(
+                                (user) =>
+                                    String(user._id) === String(oldUser._id) ||
+                                    String(user._id) === String(oldUser.userID)
+                            )
                     );
 
                     // Atualiza classe e usuários
@@ -787,7 +772,7 @@ module.exports = {
                         });
 
                         // Dispara notificações para usuários adicionados
-                        const arrUserId = addedUsers.map(user => user._id);
+                        const arrUserId = addedUsers.map((user) => user._id);
 
                         const message = {
                             category: 'notify',
@@ -799,13 +784,13 @@ module.exports = {
                                     users: arrUserId,
                                 },
                             },
-                            text: `Você está na turma presencial ${name}!\n`,
-                            textHtml: `<p>Você está na turma presencial ${name}!<p>`,
+                            text: `Você está na turma presencial ${name}!\n O local do treinamento será em: ${location} `,
+                            textHtml: `<p>Você está na turma presencial ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
                             thumbnail: config.messenger.emailTemplate.thumbnail,
                             title: `Treinamentos Presenciais: ${name}`,
-                        }
+                        };
 
-                        await createMessagesFromBackend(message)
+                        await createMessagesFromBackend(message);
                     }
 
                     // Remove somente usuários que não estão presentes
@@ -813,10 +798,10 @@ module.exports = {
                         await ClassModel.findByIdAndUpdate(classID, {
                             $pull: {
                                 users: {
-                                    _id: { $in: removedUsers.map(u => u._id) },
-                                    presence: false
-                                }
-                            }
+                                    _id: { $in: removedUsers.map((u) => u._id) },
+                                    presence: false,
+                                },
+                            },
                         });
                     }
 
@@ -845,7 +830,7 @@ module.exports = {
         }
     },
 
-    async appliedCourses (req, res) {
+    async appliedCourses(req, res) {
         try {
             const user = await getUserByToken(req);
             const { skip, limit } = pagination(req);
@@ -877,7 +862,7 @@ module.exports = {
         }
     },
 
-    async appliedCourse (req, res) {
+    async appliedCourse(req, res) {
         try {
             const { courseID, classID } = req.params;
             const course = await CourseModel.findById(courseID)
@@ -885,14 +870,12 @@ module.exports = {
                 .populate('program', 'title');
             const classUsers = await getClassByID(classID);
 
-
-
             success(res, req, {
                 course,
                 classUsers,
             });
         } catch (error) {
-            console.error(error)
+            console.error(error);
             internalServer(
                 res,
                 req,
@@ -904,7 +887,7 @@ module.exports = {
         }
     },
 
-    async printAttendanceList (req, res) {
+    async printAttendanceList(req, res) {
         try {
             const { courseId, classId } = req.params;
             const onlyPresenceFlag = req.query?.onlyPresence !== undefined;
@@ -916,32 +899,46 @@ module.exports = {
                 `${process.env.API_PDF_PRINTER}/attendance-list`,
                 {
                     courseName: course.title ?? ' ',
-                    startDate: course.dateInitial ? moment(course.dateInitial).locale('pt-BR').format('DD [de] MMMM [de] YYYY - HH:mm[h]') : ' ',
-                    endDate: course.dateFinal ? moment(course.dateFinal).locale('pt-BR').format('DD [de] MMMM [de] YYYY - HH:mm[h]') : ' ',
+                    startDate: course.dateInitial
+                        ? moment(course.dateInitial)
+                              .locale('pt-BR')
+                              .format('DD [de] MMMM [de] YYYY - HH:mm[h]')
+                        : ' ',
+                    endDate: course.dateFinal
+                        ? moment(course.dateFinal)
+                              .locale('pt-BR')
+                              .format('DD [de] MMMM [de] YYYY - HH:mm[h]')
+                        : ' ',
                     instructor: classUsers.instructor?.name ?? ' ',
                     attendances: classUsers.users
-                        .filter(user => onlyPresenceFlag ? !!user.presence : true)
-                        .map(user => ({
+                        .filter((user) => (onlyPresenceFlag ? !!user.presence : true))
+                        .map((user) => ({
                             userName: user.name ?? ' ',
                             networkLogin: user.registration ?? ' ',
                             attendance: user.presence ?? false,
-                            attendanceDate: user.presenceAt ? moment(user.presenceAt).format('DD/MM/YYYY') : ' ',
-                            attendanceType: user.origin ? (user.origin === 'instructor' ? 'Instrutor' : 'QR Code') : ' ',
-                        }))
+                            attendanceDate: user.presenceAt
+                                ? moment(user.presenceAt).format('DD/MM/YYYY')
+                                : ' ',
+                            attendanceType: user.origin
+                                ? user.origin === 'instructor'
+                                    ? 'Instrutor'
+                                    : 'QR Code'
+                                : ' ',
+                        })),
                 },
                 {
                     headers: { Authorization: req.headers.authorization },
-                    responseType: 'arraybuffer'
+                    responseType: 'arraybuffer',
                 }
-            )
+            );
 
             const file = Buffer.from(data, 'binary');
 
             res.setHeader('Content-Type', 'application/pdf');
             res.setHeader('Content-Disposition', `attachment; filename=${course.title}.pdf`);
-            res.send(file)
+            res.send(file);
         } catch (error) {
-            console.error(error)
+            console.error(error);
             internalServer(
                 res,
                 req,
@@ -953,7 +950,7 @@ module.exports = {
         }
     },
 
-    async deleteMaterial (req, res) {
+    async deleteMaterial(req, res) {
         try {
             const arrMaterials = [];
             const { materialID, classID } = req.params;
@@ -983,7 +980,7 @@ module.exports = {
         }
     },
 
-    async deleteMaterialCourse (req, res) {
+    async deleteMaterialCourse(req, res) {
         try {
             const arrMaterials = [];
             const { materialID, courseID } = req.params;
@@ -1013,14 +1010,20 @@ module.exports = {
         }
     },
 
-    async searchUser (req, res) {
+    async searchUser(req, res) {
         try {
             const { searchBy } = req.query;
             let { usersInClass } = req.body;
             const { skip, limit } = pagination(req);
             const { id } = req.params;
-            usersInClass = usersInClass.map(userID => mongoose.Types.ObjectId(userID))
-            const query = { $and: [{ _id: id }, { 'user.status': 'ATIVO' }, { 'user._id': { $nin: usersInClass } }] };
+            usersInClass = usersInClass.map((userID) => mongoose.Types.ObjectId(userID));
+            const query = {
+                $and: [
+                    { _id: id },
+                    { 'user.status': 'ATIVO' },
+                    { 'user._id': { $nin: usersInClass } },
+                ],
+            };
             if (searchBy) {
                 query.$and.push({
                     $or: [
@@ -1048,9 +1051,7 @@ module.exports = {
                     .sort({ 'user.name': 1 })
             ).map((result) => result.user);
 
-            const total = await CoursesWithTagsAndUsers.find(
-                query
-            ).countDocuments();
+            const total = await CoursesWithTagsAndUsers.find(query).countDocuments();
 
             success(res, req, { data: users, total });
         } catch (error) {
@@ -1066,7 +1067,7 @@ module.exports = {
         }
     },
 
-    async deleteClass (req, res) {
+    async deleteClass(req, res) {
         try {
             const { classID } = req.params;
             const { materials } = await ClassModel.findById(classID);
@@ -1088,14 +1089,14 @@ module.exports = {
         }
     },
 
-    async courseEvaluation (req, res) {
+    async courseEvaluation(req, res) {
         try {
             const { classID, answers } = req.body;
             const student = await getUserByToken(req);
             const { users } = await ClassModel.findById(classID);
             const filterUser = users.filter(
                 (user) => user.userID === student.id || user._id.toString() === student.id
-            );      
+            );
             if (filterUser.length > 0) {
                 const evaluation = await CourseEvaluationModel.updateOne(
                     { classID: classID, studentID: student.id },
@@ -1130,13 +1131,15 @@ module.exports = {
         }
     },
 
-    async verifyCourseEvaluation (req, res) {
+    async verifyCourseEvaluation(req, res) {
         try {
             const { classID } = req.params;
             const student = await getUserByToken(req);
             const { users } = await ClassModel.findById(classID);
             const filterUser = users.filter(
-                (user) => (user.userID === student.id || user._id.toString() === student.id) && user.presence
+                (user) =>
+                    (user.userID === student.id || user._id.toString() === student.id) &&
+                    user.presence
             );
             if (filterUser.length > 0) {
                 const evaluationVerify = await CourseEvaluationModel.find({
@@ -1181,7 +1184,7 @@ module.exports = {
         }
     },
 
-    async getCourseEvaluations (req, res) {
+    async getCourseEvaluations(req, res) {
         try {
             const { classID } = req.params;
             const student = await getUserByToken(req);
@@ -1203,7 +1206,7 @@ module.exports = {
         }
     },
 
-    async getCourseByQrCode (req, res) {
+    async getCourseByQrCode(req, res) {
         try {
             const body = req.body;
             const course = await ClassModel.findOne({
@@ -1223,7 +1226,7 @@ module.exports = {
         }
     },
 
-    async getCourseByQrCodeSelfRegistration (req, res) {
+    async getCourseByQrCodeSelfRegistration(req, res) {
         try {
             const { body } = req;
             const { _id } = await getUserByToken(req);
@@ -1244,12 +1247,10 @@ module.exports = {
 
             const applicationInitial = new Date(course.dateApplicationInitial);
             const applicationFinal = new Date(course.dateApplicationFinal);
-            const applicationEndDay = moment(applicationFinal).endOf('day').toDate()
-            const today = new Date()
+            const applicationEndDay = moment(applicationFinal).endOf('day').toDate();
+            const today = new Date();
 
-            if (applicationInitial > today ||
-                applicationEndDay < today
-            ) {
+            if (applicationInitial > today || applicationEndDay < today) {
                 return badRequest(
                     res,
                     req,
@@ -1260,11 +1261,10 @@ module.exports = {
                 );
             }
 
-
             const eligibility = checkEligibilityTagsAnd(
                 tags ?? [],
                 course.courseID?.mandatory ?? [],
-                course.courseID?.tags ?? [],
+                course.courseID?.tags ?? []
             );
 
             if (!eligibility)
@@ -1284,25 +1284,28 @@ module.exports = {
                     const student = await getUserByToken(req);
 
                     const studentRegister = {
-                        "_id": student._id,
-                        "userID": student._id,
-                        "name": student.name,
-                        "email": student.email,
-                        "networkLogin": student.networkLogin,
-                        "registration": student.registration,
-                        "presence": false,
-                        "grades": 0
-                    }
+                        _id: student._id,
+                        userID: student._id,
+                        name: student.name,
+                        email: student.email,
+                        networkLogin: student.networkLogin,
+                        registration: student.registration,
+                        presence: false,
+                        grades: 0,
+                    };
 
                     await ClassModel.findOneAndUpdate(
-                        { _id: course._id, },
+                        { _id: course._id },
                         { $addToSet: { users: studentRegister } }
-                    )
-                    user = studentRegister
+                    );
+                    user = studentRegister;
                 }
             }
             return success(res, req, {
-                title: course.courseID.title, inClass: !!user, _id: course._id, registered: user?.presence
+                title: course.courseID.title,
+                inClass: !!user,
+                _id: course._id,
+                registered: user?.presence,
             });
         } catch (error) {
             internalServer(
@@ -1316,7 +1319,7 @@ module.exports = {
         }
     },
 
-    async getCourseDetailByQrCode (req, res) {
+    async getCourseDetailByQrCode(req, res) {
         try {
             const { body } = req;
             const course = await CourseModel.findOne({
@@ -1336,7 +1339,7 @@ module.exports = {
         }
     },
 
-    async selfRegistration (req, res) {
+    async selfRegistration(req, res) {
         try {
             const { body } = req;
             const user = await getUserByToken(req);
@@ -1376,18 +1379,19 @@ module.exports = {
         }
     },
 
-    async listJoin (req, res) {
+    async listJoin(req, res) {
         try {
             const { body } = req;
             const user = await getUserByToken(req);
 
             var userID = String(user._id);
 
-            let course = null
+            let course = null;
             course = await ClassModel.findOneAndUpdate(
                 {
-                    _id: body.classesID, 'users._id': { $ne: userID }, 'users.userID': { $ne: userID }
-
+                    _id: body.classesID,
+                    'users._id': { $ne: userID },
+                    'users.userID': { $ne: userID },
                 },
                 {
                     $addToSet: {
@@ -1398,23 +1402,25 @@ module.exports = {
                             name: user.name,
                             registration: user.registration,
                             createdAt: moment().utc().format(),
-                            origin: 'user'
-                        }
-                    }
+                            origin: 'user',
+                        },
+                    },
                 },
                 { new: true }
             );
 
             if (!course) {
-                course = await ClassModel.findOne({ _id: body.classesID })
+                course = await ClassModel.findOne({ _id: body.classesID });
             }
 
             const classesFromCourse = await ClassModel.find({
-                courseID: course.courseID
-            })
+                courseID: course.courseID,
+            });
 
-            const removalPromises = classesFromCourse.map(classFromCourse => {
-                const inClass = classFromCourse.users.some((u) => u._id == user._id || u.userID == user._id)
+            const removalPromises = classesFromCourse.map((classFromCourse) => {
+                const inClass = classFromCourse.users.some(
+                    (u) => u._id == user._id || u.userID == user._id
+                );
 
                 if (classFromCourse._id.equals(body.classesID) || !inClass) {
                     return Promise.resolve();
@@ -1429,7 +1435,6 @@ module.exports = {
 
             await Promise.all(removalPromises);
 
-
             const message = {
                 category: 'notify',
                 communication: ['notification', 'email'],
@@ -1440,12 +1445,12 @@ module.exports = {
                         users: [userID],
                     },
                 },
-                text: `Você está na turma presencial ${course.name}!\n`,
-                textHtml: `<p>Você está na turma presencial ${course.name}!<p>`,
+                text: `Você está na turma presencial ${course.name}!\n O local do treinamento será em: ${course.location}`,
+                textHtml: `<p>Você está na turma presencial ${course.name}!</p> <p>O local do treinamento será em: ${course.location}</p>`,
                 thumbnail: config.messenger.emailTemplate.thumbnail,
                 title: `Treinamentos Presenciais: ${course.name}`,
-            }
-            await createMessagesFromBackend(message)
+            };
+            await createMessagesFromBackend(message);
 
             success(res, req, course);
         } catch (error) {
@@ -1460,17 +1465,17 @@ module.exports = {
         }
     },
 
-    async getInstructorByInstructorGroup (req, res) {
+    async getInstructorByInstructorGroup(req, res) {
         try {
             const { params } = req;
             const tags = [];
             const usersFilter = [];
             const groups = [];
 
-            const course = await CourseModel.findById(
-                params.courseID,
-                'groups'
-            ).populate('groups', 'tags');
+            const course = await CourseModel.findById(params.courseID, 'groups').populate(
+                'groups',
+                'tags'
+            );
 
             course.groups.tags.forEach((tag) => {
                 tags.push(tag.value.toString());
@@ -1518,7 +1523,7 @@ module.exports = {
         }
     },
 
-    async verifyInstructor (req, res) {
+    async verifyInstructor(req, res) {
         try {
             const { params } = req;
             const trails = [];
@@ -1528,12 +1533,10 @@ module.exports = {
             let isInstructorStore = false;
 
             const user = await getUserByToken(req);
-            const course = await CourseModel.findById(params.courseID).populate(
-                {
-                    path: 'groups',
-                    select: ['trails', 'office', 'tags'],
-                }
-            );
+            const course = await CourseModel.findById(params.courseID).populate({
+                path: 'groups',
+                select: ['trails', 'office', 'tags'],
+            });
             const groupEC = await Group.find({
                 name: 'GL_ACADMODA_EC_LIDERTREINADOR',
             });
@@ -1587,10 +1590,7 @@ module.exports = {
                     }
                 }
 
-                if (
-                    arrCompletions.includes(null) ||
-                    arrCompletions.includes(0)
-                ) {
+                if (arrCompletions.includes(null) || arrCompletions.includes(0)) {
                     canCreateClass = false;
                 }
             }
@@ -1621,13 +1621,13 @@ module.exports = {
         }
     },
 
-    async joinWaitList (req, res) {
+    async joinWaitList(req, res) {
         try {
             let { body } = req;
             const alreadyJoined = await WaitListModel.findOne({
                 userID: body.userID,
                 courseID: body.courseID,
-                sent: false
+                sent: false,
             });
 
             if (alreadyJoined) {
@@ -1657,7 +1657,7 @@ module.exports = {
         }
     },
 
-    async getWaitListByUser (req, res) {
+    async getWaitListByUser(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1665,17 +1665,16 @@ module.exports = {
 
             const query = searchBy
                 ? {
-                    $or: [
-                        { 'user.name': { $regex: searchBy, $options: 'i' } },
-                        {
-                            'course.title': {
-                                $regex: searchBy,
-                                $options: 'i',
-                            },
-                        },
-
-                    ],
-                }
+                      $or: [
+                          { 'user.name': { $regex: searchBy, $options: 'i' } },
+                          {
+                              'course.title': {
+                                  $regex: searchBy,
+                                  $options: 'i',
+                              },
+                          },
+                      ],
+                  }
                 : {};
 
             const total = await WaitListsByUser.find(query).countDocuments();
@@ -1701,7 +1700,7 @@ module.exports = {
         }
     },
 
-    async getWaitListByCourse (req, res) {
+    async getWaitListByCourse(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1709,16 +1708,15 @@ module.exports = {
 
             const query = searchBy
                 ? {
-                    $or: [
-                        {
-                            'course.title': {
-                                $regex: searchBy,
-                                $options: 'i',
-                            },
-                        },
-
-                    ],
-                }
+                      $or: [
+                          {
+                              'course.title': {
+                                  $regex: searchBy,
+                                  $options: 'i',
+                              },
+                          },
+                      ],
+                  }
                 : {};
 
             const total = await WaitListsByCourses.find(query).countDocuments();
@@ -1743,21 +1741,20 @@ module.exports = {
         }
     },
 
-    async getWaitlistAndElegibleUsersByCourse (req, res) {
+    async getWaitlistAndElegibleUsersByCourse(req, res) {
         try {
             const courseId = req.query.courseId;
             const elegibleUsers = [];
-            const waitlistUsers = await WaitListsByCourses.findOne({ _id: courseId, sent: false }).select('users');
-            console.log("waitlistUsers", waitlistUsers)
+            const waitlistUsers = await WaitListsByCourses.findOne({
+                _id: courseId,
+                sent: false,
+            }).select('users');
+            console.log('waitlistUsers', waitlistUsers);
             const foundClass = await ClassModel.findOne({
                 courseID: courseId,
-            }).populate('courseID', [
-                'title',
-                'tags',
-                'passingScore',
-            ]);
+            }).populate('courseID', ['title', 'tags', 'passingScore']);
 
-            const foundCourse = await CourseModel.findOne({ _id: courseId })
+            const foundCourse = await CourseModel.findOne({ _id: courseId });
 
             const tags = foundCourse.tags.map((e) => e.value);
 
@@ -1770,17 +1767,12 @@ module.exports = {
 
             // const users = usersWithMandatoryTags.concat(usersWithTags);
             for (let user of usersWithTags) {
-                let userInClass
+                let userInClass;
                 if (foundClass) {
-                    userInClass = foundClass.users.find(
-                        (u) => u.userID == user._id
-                    );
+                    userInClass = foundClass.users.find((u) => u.userID == user._id);
                 }
                 if (userInClass) {
-                    if (
-                        userInClass.grades <
-                        foundClass.courseID.passingScore
-                    ) {
+                    if (userInClass.grades < foundClass.courseID.passingScore) {
                         elegibleUsers.push({
                             _id: user._id,
                             name: user.name,
@@ -1797,9 +1789,7 @@ module.exports = {
             }
 
             const elegibleUsersTotal = elegibleUsers ? elegibleUsers.length : 0;
-            const waitlistUsersTotal = waitlistUsers
-                ? waitlistUsers.users.length
-                : 0;
+            const waitlistUsersTotal = waitlistUsers ? waitlistUsers.users.length : 0;
 
             success(res, req, {
                 waitlistUsers,
@@ -1824,26 +1814,43 @@ module.exports = {
      * @param {Express.Request} req
      * @param {Express.Response} res
      */
-    async importAttendanceList (req, res) {
+    async importAttendanceList(req, res) {
         const file = req.files?.file;
         const { courseId, classId } = req.params;
 
         if (!file) {
-            return badRequest(res, req, 'Arquivo não enviado', 'Arquivo não enviado', 'courses', '/import-attendance-list');
+            return badRequest(
+                res,
+                req,
+                'Arquivo não enviado',
+                'Arquivo não enviado',
+                'courses',
+                '/import-attendance-list'
+            );
         }
 
         try {
             console.time('importAttendanceList - READING FILE');
-            const { data, labels, labelMap, worksheet, workbook } = await readXLSXAttendanceList(file.path, 'Sua Carga Aqui');
+            const { data, labels, labelMap, worksheet, workbook } = await readXLSXAttendanceList(
+                file.path,
+                'Sua Carga Aqui'
+            );
             console.timeEnd('importAttendanceList - READING FILE');
 
-            if (Object.keys(labelMap).some(label => !labels.includes(label))) {
-                return badRequest(res, req, 'Arquivo inválido', 'Arquivo inválido', 'courses', '/import-attendance-list');
+            if (Object.keys(labelMap).some((label) => !labels.includes(label))) {
+                return badRequest(
+                    res,
+                    req,
+                    'Arquivo inválido',
+                    'Arquivo inválido',
+                    'courses',
+                    '/import-attendance-list'
+                );
             }
 
             const { results } = await processAttendanceListImport(courseId, classId, data);
 
-            results.forEach(item => {
+            results.forEach((item) => {
                 const row = worksheet.getRow(item.rowNumber);
                 const cell = row.getCell(labels.length);
                 if (item.message) cell.value = item.message;
@@ -1859,12 +1866,19 @@ module.exports = {
             res.end();
         } catch (error) {
             console.error(error);
-            return internalServer(res, req, error.message, error.message, 'courses', '/import-attendance-list');
+            return internalServer(
+                res,
+                req,
+                error.message,
+                error.message,
+                'courses',
+                '/import-attendance-list'
+            );
         }
     },
 };
 
-async function createMessagesFromBackend (body) {
+async function createMessagesFromBackend(body) {
     try {
         const campaign = body;
         const target = campaign.target;
