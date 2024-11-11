@@ -46,7 +46,7 @@ const {
 const { default: axios } = require('axios');
 
 module.exports = {
-    async createCourse(req, res) {
+    async createCourse (req, res) {
         try {
             const materials = JSON.parse(req.fields.materials);
             const files = req.files;
@@ -59,13 +59,20 @@ module.exports = {
             body.certificateDue = JSON.parse(body.certificateDue);
 
             let thumbPath;
-            const { thumb } = req.files;
+            const { thumb, banner } = req.files;
             if (thumb) {
                 thumbPath = await azureBlob(thumb, 'items/thumbs');
                 body.thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
             }
 
-            if (!body.passingScore || body.passingScore === 'null') delete body.passingScore;
+            let bannerPath;
+            if (banner) {
+                bannerPath = await azureBlob(banner, 'items/banners');
+                body.banner = bannerPath.replace(AZURE_BLOB_URL, DOMAIN);
+            }
+
+            if (!body.passingScore || body.passingScore === 'null')
+                delete body.passingScore;
             if (!body.certificateLayout || body.certificateLayout === 'null')
                 delete body.certificateLayout;
             if (body.dateInitial > body.dateFinal) flagDate = false;
@@ -140,7 +147,7 @@ module.exports = {
         }
     },
 
-    async allCourses(req, res) {
+    async allCourses (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -149,23 +156,23 @@ module.exports = {
             const total = await CourseModel.find(
                 searchBy
                     ? {
-                          $text: { $search: searchBy },
-                          deleted: 0,
-                      }
+                        $text: { $search: searchBy },
+                        deleted: 0,
+                    }
                     : {
-                          deleted: 0,
-                      }
+                        deleted: 0,
+                    }
             ).countDocuments();
 
             const courses = await CourseModel.find(
                 searchBy
                     ? {
-                          title: { $regex: searchBy, $options: 'i' },
-                          deleted: 0,
-                      }
+                        title: { $regex: searchBy, $options: 'i' },
+                        deleted: 0,
+                    }
                     : {
-                          deleted: 0,
-                      }
+                        deleted: 0,
+                    }
             )
                 .populate({
                     path: 'materials',
@@ -197,7 +204,7 @@ module.exports = {
         }
     },
 
-    async updateCourse(req, res) {
+    async updateCourse (req, res) {
         try {
             const materials = req.fields.materials ? JSON.parse(req.fields.materials) : null;
             const body = req.fields;
@@ -209,14 +216,22 @@ module.exports = {
             body.mandatory = JSON.parse(body.mandatory);
             body.certificateDue = JSON.parse(body.certificateDue);
 
+
+            const { thumb, banner } = req.files;
             let thumbPath;
-            const { thumb } = req.files;
             if (thumb) {
                 thumbPath = await azureBlob(thumb, 'items/thumbs');
                 body.thumbPath = thumbPath.replace(AZURE_BLOB_URL, DOMAIN);
             }
 
-            if (!body.passingScore || body.passingScore === 'null') body.passingScore = null;
+            let bannerPath;
+            if (banner) {
+                bannerPath = await azureBlob(banner, 'items/banners');
+                body.banner = bannerPath.replace(AZURE_BLOB_URL, DOMAIN);
+            }
+
+            if (!body.passingScore || body.passingScore === 'null')
+                body.passingScore = null;
             if (!body.certificateLayout || body.certificateLayout === 'null')
                 body.certificateLayout = null;
 
@@ -297,7 +312,7 @@ module.exports = {
         }
     },
 
-    async deleteCourse(req, res) {
+    async deleteCourse (req, res) {
         try {
             const { id } = req.params;
             await CourseModel.findByIdAndUpdate(id, { deleted: 1 });
@@ -314,7 +329,7 @@ module.exports = {
         }
     },
 
-    async instructorAllCourses(req, res) {
+    async instructorAllCourses (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -324,14 +339,14 @@ module.exports = {
             const courses = await CourseModel.find(
                 searchBy
                     ? {
-                          title: { $regex: '' || searchBy, $options: 'i' },
-                          deleted: 0,
-                          status: 1,
-                      }
+                        title: { $regex: '' || searchBy, $options: 'i' },
+                        deleted: 0,
+                        status: 1,
+                    }
                     : {
-                          deleted: 0,
-                          status: 1,
-                      }
+                        deleted: 0,
+                        status: 1,
+                    }
             )
                 .populate({
                     path: 'materials',
@@ -366,7 +381,7 @@ module.exports = {
         }
     },
 
-    async getCourseById(req, res) {
+    async getCourseById (req, res) {
         try {
             const { id } = req.params;
             const course = await CourseModel.findById(id).populate('materials');
@@ -383,7 +398,7 @@ module.exports = {
         }
     },
 
-    async getUsers(req, res) {
+    async getUsers (req, res) {
         try {
             const user = await getUserByToken(req);
             const storeUsers = await getStoreUSers(user.store);
@@ -400,7 +415,7 @@ module.exports = {
         }
     },
 
-    async createClass(req, res) {
+    async createClass (req, res) {
         try {
             let {
                 courseID,
@@ -491,6 +506,7 @@ module.exports = {
                         const nowDate = new Date();
 
                         const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
 
                         const newUsers = JSON.parse(users).map((user) => {
                             return {
@@ -592,7 +608,7 @@ module.exports = {
         }
     },
 
-    async updateClass(req, res) {
+    async updateClass (req, res) {
         try {
             let {
                 courseID,
@@ -830,7 +846,7 @@ module.exports = {
         }
     },
 
-    async appliedCourses(req, res) {
+    async appliedCourses (req, res) {
         try {
             const user = await getUserByToken(req);
             const { skip, limit } = pagination(req);
@@ -862,7 +878,7 @@ module.exports = {
         }
     },
 
-    async appliedCourse(req, res) {
+    async appliedCourse (req, res) {
         try {
             const { courseID, classID } = req.params;
             const course = await CourseModel.findById(courseID)
@@ -887,7 +903,7 @@ module.exports = {
         }
     },
 
-    async printAttendanceList(req, res) {
+    async printAttendanceList (req, res) {
         try {
             const { courseId, classId } = req.params;
             const onlyPresenceFlag = req.query?.onlyPresence !== undefined;
@@ -901,13 +917,13 @@ module.exports = {
                     courseName: course.title ?? ' ',
                     startDate: course.dateInitial
                         ? moment(course.dateInitial)
-                              .locale('pt-BR')
-                              .format('DD [de] MMMM [de] YYYY - HH:mm[h]')
+                            .locale('pt-BR')
+                            .format('DD [de] MMMM [de] YYYY - HH:mm[h]')
                         : ' ',
                     endDate: course.dateFinal
                         ? moment(course.dateFinal)
-                              .locale('pt-BR')
-                              .format('DD [de] MMMM [de] YYYY - HH:mm[h]')
+                            .locale('pt-BR')
+                            .format('DD [de] MMMM [de] YYYY - HH:mm[h]')
                         : ' ',
                     instructor: classUsers.instructor?.name ?? ' ',
                     attendances: classUsers.users
@@ -950,7 +966,7 @@ module.exports = {
         }
     },
 
-    async deleteMaterial(req, res) {
+    async deleteMaterial (req, res) {
         try {
             const arrMaterials = [];
             const { materialID, classID } = req.params;
@@ -980,7 +996,7 @@ module.exports = {
         }
     },
 
-    async deleteMaterialCourse(req, res) {
+    async deleteMaterialCourse (req, res) {
         try {
             const arrMaterials = [];
             const { materialID, courseID } = req.params;
@@ -1010,7 +1026,7 @@ module.exports = {
         }
     },
 
-    async searchUser(req, res) {
+    async searchUser (req, res) {
         try {
             const { searchBy } = req.query;
             let { usersInClass } = req.body;
@@ -1067,7 +1083,7 @@ module.exports = {
         }
     },
 
-    async deleteClass(req, res) {
+    async deleteClass (req, res) {
         try {
             const { classID } = req.params;
             const { materials } = await ClassModel.findById(classID);
@@ -1089,7 +1105,7 @@ module.exports = {
         }
     },
 
-    async courseEvaluation(req, res) {
+    async courseEvaluation (req, res) {
         try {
             const { classID, answers } = req.body;
             const student = await getUserByToken(req);
@@ -1131,7 +1147,7 @@ module.exports = {
         }
     },
 
-    async verifyCourseEvaluation(req, res) {
+    async verifyCourseEvaluation (req, res) {
         try {
             const { classID } = req.params;
             const student = await getUserByToken(req);
@@ -1184,7 +1200,7 @@ module.exports = {
         }
     },
 
-    async getCourseEvaluations(req, res) {
+    async getCourseEvaluations (req, res) {
         try {
             const { classID } = req.params;
             const student = await getUserByToken(req);
@@ -1206,7 +1222,7 @@ module.exports = {
         }
     },
 
-    async getCourseByQrCode(req, res) {
+    async getCourseByQrCode (req, res) {
         try {
             const body = req.body;
             const course = await ClassModel.findOne({
@@ -1226,7 +1242,7 @@ module.exports = {
         }
     },
 
-    async getCourseByQrCodeSelfRegistration(req, res) {
+    async getCourseByQrCodeSelfRegistration (req, res) {
         try {
             const { body } = req;
             const { _id } = await getUserByToken(req);
@@ -1319,7 +1335,7 @@ module.exports = {
         }
     },
 
-    async getCourseDetailByQrCode(req, res) {
+    async getCourseDetailByQrCode (req, res) {
         try {
             const { body } = req;
             const course = await CourseModel.findOne({
@@ -1339,7 +1355,7 @@ module.exports = {
         }
     },
 
-    async selfRegistration(req, res) {
+    async selfRegistration (req, res) {
         try {
             const { body } = req;
             const user = await getUserByToken(req);
@@ -1379,7 +1395,7 @@ module.exports = {
         }
     },
 
-    async listJoin(req, res) {
+    async listJoin (req, res) {
         try {
             const { body } = req;
             const user = await getUserByToken(req);
@@ -1465,7 +1481,7 @@ module.exports = {
         }
     },
 
-    async getInstructorByInstructorGroup(req, res) {
+    async getInstructorByInstructorGroup (req, res) {
         try {
             const { params } = req;
             const tags = [];
@@ -1523,7 +1539,7 @@ module.exports = {
         }
     },
 
-    async verifyInstructor(req, res) {
+    async verifyInstructor (req, res) {
         try {
             const { params } = req;
             const trails = [];
@@ -1621,7 +1637,7 @@ module.exports = {
         }
     },
 
-    async joinWaitList(req, res) {
+    async joinWaitList (req, res) {
         try {
             let { body } = req;
             const alreadyJoined = await WaitListModel.findOne({
@@ -1657,7 +1673,7 @@ module.exports = {
         }
     },
 
-    async getWaitListByUser(req, res) {
+    async getWaitListByUser (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1665,16 +1681,16 @@ module.exports = {
 
             const query = searchBy
                 ? {
-                      $or: [
-                          { 'user.name': { $regex: searchBy, $options: 'i' } },
-                          {
-                              'course.title': {
-                                  $regex: searchBy,
-                                  $options: 'i',
-                              },
-                          },
-                      ],
-                  }
+                    $or: [
+                        { 'user.name': { $regex: searchBy, $options: 'i' } },
+                        {
+                            'course.title': {
+                                $regex: searchBy,
+                                $options: 'i',
+                            },
+                        },
+                    ],
+                }
                 : {};
 
             const total = await WaitListsByUser.find(query).countDocuments();
@@ -1700,7 +1716,7 @@ module.exports = {
         }
     },
 
-    async getWaitListByCourse(req, res) {
+    async getWaitListByCourse (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1708,15 +1724,15 @@ module.exports = {
 
             const query = searchBy
                 ? {
-                      $or: [
-                          {
-                              'course.title': {
-                                  $regex: searchBy,
-                                  $options: 'i',
-                              },
-                          },
-                      ],
-                  }
+                    $or: [
+                        {
+                            'course.title': {
+                                $regex: searchBy,
+                                $options: 'i',
+                            },
+                        },
+                    ],
+                }
                 : {};
 
             const total = await WaitListsByCourses.find(query).countDocuments();
@@ -1741,7 +1757,7 @@ module.exports = {
         }
     },
 
-    async getWaitlistAndElegibleUsersByCourse(req, res) {
+    async getWaitlistAndElegibleUsersByCourse (req, res) {
         try {
             const courseId = req.query.courseId;
             const elegibleUsers = [];
@@ -1814,7 +1830,7 @@ module.exports = {
      * @param {Express.Request} req
      * @param {Express.Response} res
      */
-    async importAttendanceList(req, res) {
+    async importAttendanceList (req, res) {
         const file = req.files?.file;
         const { courseId, classId } = req.params;
 
@@ -1878,7 +1894,7 @@ module.exports = {
     },
 };
 
-async function createMessagesFromBackend(body) {
+async function createMessagesFromBackend (body) {
     try {
         const campaign = body;
         const target = campaign.target;
