@@ -35,6 +35,7 @@ const {
 const { populateTrails } = require('../trails/business');
 const { Section } = require('../sections/model');
 const config = require('../../../config.json');
+const { maxBy } = require('lodash');
 
 const HomeController = {
     async searchBy(req, res) {
@@ -360,32 +361,44 @@ const HomeController = {
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
             const courses = await getStudentCourses(req);
-            const elegibleTrails = await Trail.find({
+
+            const eligibleTrails = await Trail.find({
                 tags: { $in: tags },
                 enabled: true,
                 startDate: { $lt: getDateTodayWithoutHours() },
                 endDate: { $gt: getDateTodayWithoutHours() },
-            }).populate('items.itemID');
-            const totalTrails = elegibleTrails.length;
+            })
+                .sort({ createdAt: -1 })
+                .populate('items.itemID');
+
+            const totalTrails = eligibleTrails.length;
+
             const { average, highestScoreTrail } = await handleStudentAverage(user);
-            const { completedTrails, inProgressTrails } = await handleStudentTrails(
+
+            const { completedTrails, inProgressTrails: notFilteredInProgressTrails } = await handleStudentTrails(
                 user,
-                elegibleTrails
+                eligibleTrails
             );
+
             const percentageCompletedTrails = Number(
                 ((completedTrails.length / totalTrails) * 100).toFixed(2)
             );
 
             const highestScoreTitle = highestScoreTrail?.title;
+
             const highestScoreUrl = highestScoreTrail?.titleURL;
+
+            const inProgressTrails = notFilteredInProgressTrails.filter(trail => trail.notStarted === true && trail.nextItem);
+
+            const highestProgressTrail = maxBy(inProgressTrails, (trail) => trail.progress ?? 0) || null;
 
             _messages.success(res, req, {
                 totalCompletedTrails: completedTrails.length,
                 totalTrails,
                 percentageCompletedTrails,
-                inProgressTrails: inProgressTrails.filter(x => x.notStarted == true),
+                inProgressTrails,
                 average,
-                lastTrail: inProgressTrails[0],
+                lastTrail: highestProgressTrail,
                 highestScoreTitle,
                 highestScoreUrl,
                 courses
