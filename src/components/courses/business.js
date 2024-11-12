@@ -192,7 +192,7 @@ module.exports = {
         });
     },
 
-    getCoursesByUserID (userID) {
+    getCoursesByUserID(userID) {
         return new Promise(async (resolve, reject) => {
             try {
                 const classes = await ClassModel.find(
@@ -209,8 +209,10 @@ module.exports = {
                         'qrcode',
                         'dateApplicationInitial',
                         'dateApplicationFinal',
-                        'name'
-                    ]
+                        'name',
+                        'createdAt',
+                    ],
+                    { sort: { createdAt: -1 } }
                 )
                     .populate({
                         path: 'courseID',
@@ -221,6 +223,7 @@ module.exports = {
                         match: { author: 'INSTRUTOR' },
                     })
                     .populate('instructor', ['name']);
+
                 const classesFilter = classes.filter((item) => {
                     const usersFilter = item.users.filter((user) => {
                         if (user.presence && (user.userID === userID || user._id?.toString() === userID)) {
