@@ -156,7 +156,7 @@ module.exports = {
                 const user = await getUserByToken(req);
                 const tags = await getTagsGroupsByToken(req);
                 const today = getDateTodayWithoutHours();
-                
+
                 if (user.classGroups.length > 0) {
                     for (const classGroup of user.classGroups) {
                         tags.push({
@@ -540,6 +540,10 @@ module.exports = {
                         certificateLayout: 1,
                         workload: 1,
                         instructor: 1,
+                        banner: 1,
+                        startDate: 1,
+                        endDate: 1,
+                        highlighted: 1,
                     })
                     .lean();
 
@@ -865,7 +869,7 @@ module.exports = {
         return data;
     },
 
-    getTrainingDataFromBody(body) {
+    getTrainingDataFromBody (body) {
         const { isTraining = false, certificateLayout, certificateDue, completedTrailsType = 'optional' } = body;
 
         if (!isTraining) return { isTraining, certificateLayout: null, certificateDue: null, completedTrailsType: null };
@@ -889,7 +893,7 @@ module.exports = {
         };
     },
 
-    async setAssessmentHistoricOnSections(userId, sections) {
+    async setAssessmentHistoricOnSections (userId, sections) {
         const userWithTags = await UsersWithProcessedTags.findById(userId);
         const dataAssessmentHistoric = await listTrainingSectionsStatus(userId, userWithTags.userTags);
 
