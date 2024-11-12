@@ -98,7 +98,7 @@ module.exports = {
         })
     },
 
-    returnQuestionsByCategory (categories) {
+    returnQuestionsByCategory(categories) {
         return new Promise(async (resolve, reject) => {
             try {
                 const questionsOfEvaluations = []
@@ -120,16 +120,18 @@ module.exports = {
                         amountOfQuestions += questionsOfCategory.length
 
                     }
+
                     const questions =
                         (category.randomQuestions
-                            ? returnSliceDataRandom(questionsOfCategory, 0, category.amountOfQuestions)
-                            : questionsOfCategory.slice(0, category.amountOfQuestions)
+                            ? returnSliceDataRandom(questionsOfCategory, 0, amountOfQuestions)
+                            : questionsOfCategory.slice(0, amountOfQuestions)
                         ).map(question => ({ _id: question._id, type: 'question' }))
 
                     if (category.case) {
                         category.case['type'] = 'case'
                         questions.unshift(category.case)
                     }
+
                     questionsOfEvaluations.push(questions)
 
                 }
