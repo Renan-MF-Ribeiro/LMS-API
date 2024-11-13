@@ -54,7 +54,7 @@ stages:
           - task: CmdLine@2
             displayName: "Set DEBUG environment variable"
             inputs:
-              script: "echo 'DEBUG=*' >> $(System.DefaultWorkingDirectory)/.env"
+              script: "echo 'DEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
           # Print environment variables
           - task: CmdLine@2
