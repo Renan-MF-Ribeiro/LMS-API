@@ -761,6 +761,7 @@ module.exports = {
 
         const worksheet = await workbook.csv.read(file, {
             parserOptions: { delimiter: ';' },
+            map: (value) => value
         });
 
         const labels = [];

@@ -400,18 +400,16 @@ module.exports = {
             : `${firstName}${firstThreeCpf}`;
         data.password = [
             {
-                hash: bcrypt.hashSync(data?.password ?? initialPassword, salt),
+                hash: bcrypt.hashSync(String(data?.password ?? initialPassword), salt),
                 valid: true,
                 createdAt: new Date(Date.now()),
             },
         ];
 
         data.clientUserKey = CLIENT_ID + '@@' + data.networkLogin;
-        data.birthDate = _functions.formatDateWithoutHoursBrasilian(data.birthDate);
-        data.admission = _functions.formatDateWithoutHoursBrasilian(data.admission);
-        data.createDate = _functions.formatDateWithoutHoursBrasilian(
-            data?.createDate ?? new Date()
-        );
+        data.birthDate = data.birthDate ? moment(data.birthDate, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
+        data.admission = data.admission ? moment(data.admission, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
+        data.createDate = data.createDate ? moment(data.createDate, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
         data.enabled = true;
         data.onboarding = onboarding;
 
@@ -473,8 +471,6 @@ module.exports = {
 
         if (data.cpf) {
             data.cpf = String(data.cpf).replace(/[^a-z0-9]/gi, '');
-            data.cpf = _functions.formatNumberCpf(data.cpf);
-            // data.networkLogin = data.cpf
         }
 
         if (onboarding) {

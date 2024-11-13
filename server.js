@@ -1,7 +1,7 @@
 require('dotenv').config()
 const { createTerminus } = require('@godaddy/terminus')
 const { ldapClient } = require('./src/utils/auth')
-const { log } = require('./src/utils/logger')
+const { log, error } = require('./src/utils/logger')
 const app = require('./src/index')
 const port = process.env.PORT || 3000
 const HOSTNAME = process.env.HOSTNAME
@@ -21,11 +21,13 @@ const {
     executeRemoveAutomaticEligibilityTags,
     getUsersLoadCron,
 } = require('./src/utils/cron')
+const { getDbCurrentFeatures, setAppCurrentFeatures } = require('./src/utils/features')
 
 const server = app.listen(port, async () => {
-    if(HOSTNAME){
+    if (HOSTNAME) {
         const lastIndex = HOSTNAME.lastIndexOf('-');
         const result = HOSTNAME.substring(lastIndex + 1);
+
         if (result == "0") {
             cronNotifyResponsibleUsers()
             updateAverageCourses()
@@ -43,10 +45,16 @@ const server = app.listen(port, async () => {
             executeRemoveAutomaticEligibilityTags()
         }
     }
-    
+
     log('Host: ' + HOSTNAME)
     log('Listening on port: ' + port)
-    console.log('RUNNING')
+
+    try {
+        const dbCurrentFeatures = (await getDbCurrentFeatures()) ?? null;
+        setAppCurrentFeatures(app, dbCurrentFeatures);
+    } catch (err) {
+        error('Error setting features: ' + err);
+    }
 })
 
 createTerminus(server, {

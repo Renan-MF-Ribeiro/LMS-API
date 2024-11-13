@@ -8,7 +8,7 @@ const {
     validateMonitoringToken,
 } = require('./auth');
 const config = require('../../config.json');
-const { getCurrentFeatures } = require('./features');
+const { getDbCurrentFeatures, setAppCurrentFeatures, getAppCurrentFeatures } = require('./features');
 
 module.exports = {
     sendCsrf(req, res, next) {
@@ -309,14 +309,18 @@ module.exports = {
     },
 
     async setCurrentFeatures(req, res, next) {
-        let currentFeatures = req.app.get('features');
+        const appCurrentFeatures = getAppCurrentFeatures(req.app);
 
-        if (!currentFeatures) {
-            currentFeatures = await getCurrentFeatures();
-            req.app.set('features', currentFeatures);
+        if (appCurrentFeatures) {
+            req.features = appCurrentFeatures;
+            return next();
         }
 
-        req.features = currentFeatures ?? null;
+        const dbCurrentFeatures = (await getDbCurrentFeatures()) ?? null;
+
+        setAppCurrentFeatures(req.app, dbCurrentFeatures);
+
+        req.features = dbCurrentFeatures;
 
         next();
     }

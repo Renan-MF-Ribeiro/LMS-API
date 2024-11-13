@@ -100,6 +100,8 @@ app.use(helmet({
 
 app.use(htmlInjection(path.resolve(PUBLIC_PATH)));
 
+app.set('trust proxy', 1);
+
 app.use(rateLimit({
     windowMs: 5 * 60 * 1000, // 5 minutes
     limit: 600, // Limit each IP to 100 requests per `window` (here, per 5 minutes)
@@ -129,8 +131,6 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use(socialApiMiddleware)
-
-app.use(setCurrentFeatures);
 
 app.use(setCurrentFeatures);
 

@@ -42,31 +42,30 @@ module.exports = {
             }
 
             if (body.notifyUsers === true && (body?.elegibilities || body?.elegibilitiesAnd)) {
-                const elegibleUsers = await getElegibleUsers(
-                    body?.elegibilities,
-                    body?.elegibilitiesAnd
-                );
-
-                const usersIds = elegibleUsers.map((elegibleUser) => elegibleUser._id);
-
+                const { _id } = await getUserByToken(req);
                 const text = 'Olá! A administração publicou um novo post!';
                 const texthtml = '<br> <p>Olá! A administração publicou um novo post!</p> <br>';
-                const message = {
-                    category: 'notify',
-                    communication: ['notification'],
-                    mode: 'manual',
-                    target: {
-                        type: 'users',
-                        value: {
-                            users: usersIds,
-                        },
+                const title = 'Novo post publicado pela administração';
+
+                const messageList = {
+                    user: true,
+                    trail: false,
+                    listName: title,
+                    client: process.env.CLIENT_ID,
+                    userId: _id,
+                    elegibilities: body?.elegibilities,
+                    elegibilitiesAnd: body?.elegibilitiesAnd,
+                    sendToKafka: {
+                        category: 'notify',
+                        type: ['notification'],
+                        title: title,
+                        text: text,
+                        texthtml: texthtml,
+                        thumbnail: config.messenger.emailTemplate.thumbnail,
                     },
-                    text: text,
-                    texthtml: texthtml,
-                    thumbnail: config.messenger.emailTemplate.thumbnail,
-                    title: 'Novo post publicado pela administração',
                 };
-                createMessagesFromBackend(message);
+
+                sendCustomMessageToKafka(messageList, process.env.TOPIC_MSG_LIST);
             }
 
             return _messages.success(res, req, data);
