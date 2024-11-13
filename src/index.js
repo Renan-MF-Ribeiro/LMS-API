@@ -132,8 +132,6 @@ app.use(socialApiMiddleware)
 
 app.use(setCurrentFeatures);
 
-app.use(setCurrentFeatures);
-
 app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/tracking', validateTokenRoute, trackingRoutes)
     .use('/trails', validateTokenRoute, trailsRoutes)

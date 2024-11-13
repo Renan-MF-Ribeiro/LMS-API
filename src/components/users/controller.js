@@ -446,9 +446,7 @@ module.exports = {
                         : null;
 
                     // VERIFY FEATURE WELCOME
-                    const hasWelcomeComponentFeature = await Features.exists({
-                        welcomeComponent: true,
-                    });
+                    const hasWelcomeComponentFeature = req.features?.welcomeComponent ?? false;
 
                     const token = generateToken({
                         ref: user._id,
@@ -696,9 +694,7 @@ module.exports = {
                     );
 
                     // VERIFY FEATURE WELCOME
-                    const hasWelcomeComponentFeature = await Features.exists({
-                        welcomeComponent: true,
-                    });
+                    const hasWelcomeComponentFeature = req.features?.welcomeComponent ?? false;
 
                     const token = generateSSOToken({
                         ref: user._id,
