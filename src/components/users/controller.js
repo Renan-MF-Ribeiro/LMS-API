@@ -99,6 +99,14 @@ const { Log } = require('../logs/model');
 const { getConfiguration } = require('../config/business');
 const { ConfigTypes } = require('../config/model');
 
+const isProduction = process.env.NODE_ENV === 'production';
+
+function hideCPFNumbers(cpf) {
+    if (!cpf) return cpf;
+
+    return String(cpf).substring(0, 3) + 'XXXXXXXX';
+}
+
 module.exports = {
     async create(req, res) {
         try {
@@ -1169,7 +1177,7 @@ module.exports = {
                 const existingUser = await User.findOne({
                     $or: [
                         { networkLogin: result.networkLogin },
-                        { networkLogin: new RegExp(`${result.cpf}$`, 'i') }
+                        { networkLogin: result.cpf }
                     ]
                 });
 
@@ -1190,11 +1198,15 @@ module.exports = {
                         processedUser: {
                             ...processedUser,
                             groupsAD: [...new Set(groupsAD)],
+                            cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
                         },
                     });
                 } else {
                     usersToSend.push(account);
-                    newUsers.push(processedUser);
+                    newUsers.push({
+                        ...processedUser,
+                        cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
+                    });
                 }
             }
 

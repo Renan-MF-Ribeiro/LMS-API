@@ -471,8 +471,6 @@ module.exports = {
 
         if (data.cpf) {
             data.cpf = String(data.cpf).replace(/[^a-z0-9]/gi, '');
-            data.cpf = _functions.formatNumberCpf(data.cpf);
-            // data.networkLogin = data.cpf
         }
 
         if (onboarding) {
