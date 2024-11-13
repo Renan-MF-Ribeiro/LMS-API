@@ -521,36 +521,55 @@ async function processRecoveryMessage(campaign, user) {
 }
 
 async function processNotificationLink(target, communication) {
-    const { type, value } = target;
+    const { type } = target;
 
-    if ((type && type === 'trail') || target.trail) {
-        const _trail = target.trail || (await Trail.findOne({ _id: value.trailId }));
+    let response = undefined;
 
-        const item = await Item.findOne({ _id: value.itemId });
-
-        const token = generateSSOToken({
-            networkLogin: value.user?.networkLogin || target.networkLogin,
-            communication,
-            trailTitle: _trail.title,
-        });
-        const redirectTo = value.itemId
-            ? `/player/${_trail.titleURL}/${item.titleURL}`
-            : `/menu/${_trail.titleURL}`;
-        const url = `${process.env.DOMAIN}/login/entrar/sso?token=${token}&redirectTo=${redirectTo}`;
-        const notificationlink = {
-            trailid: value.trailId || _trail._id,
-            itemid: value.itemId,
-            url,
-        };
-
-        return notificationlink;
-    } else {
-        return {
+    if (!type) {
+        response = {
             url: `${process.env.DOMAIN}/login/entrar?redirectTo=/home`,
-            trailid: '',
-            item: '',
         };
     }
+
+    if (target.content) {
+        const { type, value } = target.content;
+
+        switch (type) {
+            case 'trail': {
+                const _trail = value || (await Trail.findOne({ _id: value.trailId }));
+                const item = target.value.itemId ? await Item.findOne({ _id: value.itemId }) : null;
+
+                const token = generateSSOToken({
+                    networkLogin: value.user?.networkLogin || target.networkLogin,
+                    communication,
+                    trailTitle: _trail.title,
+                });
+                const redirectTo = item
+                    ? `/player/${_trail.titleURL}/${item.titleURL}`
+                    : `/menu/${_trail.titleURL}`;
+
+                response = {
+                    trailId: _trail._id,
+                    itemId: value.itemId || '',
+                    url: `${process.env.DOMAIN}/login/entrar/sso?token=${token}&redirectTo=${redirectTo}`,
+                };
+                break;
+            }
+            case 'post': {
+                const url = `${process.env.DOMAIN}/app/home/canal/feed/post/${value}`;
+                response = {
+                    postId: target.postId,
+                    url,
+                };
+                break;
+            }
+            default:
+                response = {
+                    url: `${process.env.DOMAIN}/login/entrar?redirectTo=/home`,
+                };
+        }
+    }
+    return response;
 }
 
 async function returnUsersBasedOnTarget(type, value, category) {

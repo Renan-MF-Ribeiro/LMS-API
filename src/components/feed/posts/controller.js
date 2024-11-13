@@ -400,6 +400,7 @@ module.exports = {
                     value: {
                         users,
                     },
+                    content: {type: "post", value: data.post._id}
                 },
                 text: text,
                 texthtml: texthtml,
