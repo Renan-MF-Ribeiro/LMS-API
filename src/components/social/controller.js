@@ -791,7 +791,7 @@ module.exports = {
                     value: {
                         users,
                     },
-                    trail,
+                    content: { type: 'trail', value: trail },
                     networkLogin,
                 },
                 text: text,
