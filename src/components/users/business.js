@@ -407,11 +407,9 @@ module.exports = {
         ];
 
         data.clientUserKey = CLIENT_ID + '@@' + data.networkLogin;
-        data.birthDate = _functions.formatDateWithoutHoursBrasilian(data.birthDate);
-        data.admission = _functions.formatDateWithoutHoursBrasilian(data.admission);
-        data.createDate = _functions.formatDateWithoutHoursBrasilian(
-            data?.createDate ?? new Date()
-        );
+        data.birthDate = data.birthDate ? moment(data.birthDate, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
+        data.admission = data.admission ? moment(data.admission, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
+        data.createDate = data.createDate ? moment(data.createDate, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
         data.enabled = true;
         data.onboarding = onboarding;
 
