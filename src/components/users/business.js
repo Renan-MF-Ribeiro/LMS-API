@@ -400,7 +400,7 @@ module.exports = {
             : `${firstName}${firstThreeCpf}`;
         data.password = [
             {
-                hash: bcrypt.hashSync(data?.password ?? initialPassword, salt),
+                hash: bcrypt.hashSync(String(data?.password ?? initialPassword), salt),
                 valid: true,
                 createdAt: new Date(Date.now()),
             },
