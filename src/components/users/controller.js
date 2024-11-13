@@ -1169,7 +1169,7 @@ module.exports = {
                 const existingUser = await User.findOne({
                     $or: [
                         { networkLogin: result.networkLogin },
-                        { networkLogin: result.cpf }
+                        { networkLogin: formatNumberCpf(result.cpf) }
                     ]
                 });
 
