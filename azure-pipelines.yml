@@ -56,12 +56,6 @@ stages:
             inputs:
               script: "echo 'DEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
-          # Print environment variables
-          - task: CmdLine@2
-            displayName: "Print environment variables"
-            inputs:
-              script: "cat $(System.DefaultWorkingDirectory)/.env"
-            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
           - task: CmdLine@2
             inputs:
               script: "mv $(dotenvprod.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
