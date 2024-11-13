@@ -1313,11 +1313,17 @@ module.exports = {
                 if (existingUser) {
                     existingUsers.push({
                         _id: existingUser._id,
-                        processedUser,
+                        processedUser: {
+                            ...processedUser,
+                            cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
+                        },
                     });
                 } else {
                     usersToSend.push(account);
-                    newUsers.push(processedUser);
+                    newUsers.push({
+                        ...processedUser,
+                        cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
+                    });
                 }
             }
 
