@@ -48,9 +48,12 @@ stages:
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
           - task: CmdLine@2
             inputs:
-              - script: "mv $(dotenvstaging.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
-              # Write DEBUG=happlearning at the end of the .env file
-              - script: "echo 'DEBUG=happlearning' >> $(System.DefaultWorkingDirectory)/.env"
+              script: "mv $(dotenvstaging.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
+          - task: CmdLine@2
+            displayName: "Set DEBUG environment variable"
+            inputs:
+              script: "echo 'DEBUG=happlearning' >> $(System.DefaultWorkingDirectory)/.env"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
           - task: CmdLine@2
             inputs:
