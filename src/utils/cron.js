@@ -635,7 +635,7 @@ async function getUsersLoad() {
                     const existingUser = await User.findOne({
                         $or: [
                             { networkLogin: user.networkLogin },
-                            { networkLogin: formatNumberCpf(user.cpf) }
+                            { networkLogin: new RegExp(`${user.cpf}$`, 'i') }
                         ]
                     });
 
