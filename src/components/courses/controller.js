@@ -958,7 +958,7 @@ module.exports = {
             internalServer(
                 res,
                 req,
-                error.message,
+                {error},
                 'Erro interno no servidor',
                 'courses',
                 '/print-attendance-list'
