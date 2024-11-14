@@ -293,7 +293,8 @@ module.exports = {
                     reqUser: name,
                     communication: ['notification'],
                     type: 'mention',
-                    where: 'comentário',
+                    contentType: 'comentário',
+                    contentId: PopulatedData._id,
                 };
                 await createNotification(config, mentionedUsers);
             }
@@ -303,7 +304,7 @@ module.exports = {
                     reqUser: name,
                     communication: ['notification'],
                     type: 'comment',
-                    where: isReplyingPost ? 'post' : 'comentário',
+                    contentType: isReplyingPost ? 'post' : 'comentário',
                 };
                 await createNotification(config, postOwnerId);
             }
@@ -375,7 +376,8 @@ module.exports = {
                     reqUser: name,
                     communication: ['notification'],
                     type: 'share',
-                    where: '',
+                    contentType: 'post',
+                    contentId: data.postId,
                 };
                 await createNotification(config, users);
             }

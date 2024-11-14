@@ -81,18 +81,29 @@ async function createNotification(config, users) {
         texthtml,
         title = undefined;
 
+    // Config.TYPE
+    // Valores que podem ser recebidos em "config.type" ('mention', 'comment', 'share')
+    // É a AÇÃO que está sendo notificada.
+    const shareContent = config.contentType === 'post' ? 'um post' : 'uma trilha';
     const typesOfNotification = {
         mention: 'mencionou você em um',
         comment: 'respondeu seu',
-        share: 'compartilhou um post com você',
+        share: `compartilhou ${shareContent} com você`,
     };
 
-    text = `Olá! O usuário ${config.reqUser} ${typesOfNotification[config.type]} ${config.where}!`;
+    // Config.CONTENT
+    // Valores que podem ser recebidos em "config.contetType" ("post", "comentário", "trilha")
+    // É a ENTIDADADE que está sendo compartilhada
+
+    // As frases são criadas concatenando a ação e o objeto do que está sendo notificado.
+    text = `Olá! O usuário ${config.reqUser} ${typesOfNotification[config.type]} ${
+        config.type !== 'share' ? config.contentType : ''
+    }!`;
     texthtml = `<br> <p>Olá! O usuário ${config.reqUser} ${typesOfNotification[config.type]} ${
-        config.where
+        config.type !== 'share' ? config.contentType : ''
     }!</p> <br>`;
     title = `Happlearning - ${config.reqUser} ${typesOfNotification[config.type]} ${
-        config.where || ''
+        config.type !== 'share' ? config.contentType : ''
     }!`;
 
     const message = {
@@ -106,6 +117,10 @@ async function createNotification(config, users) {
             type: 'users',
             value: {
                 users,
+            },
+            content: {
+                type: config.contentType, // Tipo da entidade sendo notificada (Ex: post, comentário, trilha)
+                value: config.contentId, // ID da entidade que está sendo notificada (Ex: postId, commentId, trailId). Usada para montar a "notificationUrl",
             },
         },
         thumbnail: options.messenger.emailTemplate.thumbnail,

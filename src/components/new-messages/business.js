@@ -465,13 +465,14 @@ module.exports = {
 };
 
 async function processMessage(campaign, user) {
+    let { communication, target, ...data } = campaign;
+    target.recovery = campaign.recovery;
+    target.resetPasswordUrl = campaign.resetPasswordUrl;
+    target.value.user = user;
+
     try {
-        let { communication, target, ...data } = campaign;
-        target.recovery = campaign.recovery;
-        target.resetPasswordUrl = campaign.resetPasswordUrl;
-        const foundUser = await User.findOne({ _id: user });
         const notificationlink = await processNotificationLink(target, communication);
-        const userEmailAndDeviceId = await User.findById(user._id).select('email deviceId -_id');
+        const foundUser = await User.findById(user._id).select('email networkLogin deviceId -_id');
 
         const message = {
             clientid,
@@ -481,10 +482,10 @@ async function processMessage(campaign, user) {
             viewed: false,
             userEmail: campaign.userEmail
                 ? campaign.userEmail
-                : userEmailAndDeviceId.email
-                ? userEmailAndDeviceId.email
+                : foundUser.email
+                ? foundUser.email
                 : null,
-            userDevice: userEmailAndDeviceId.deviceId ? userEmailAndDeviceId.deviceId : null,
+            userDevice: foundUser.deviceId ? foundUser.deviceId : null,
             notificationlink,
         };
         return message;
@@ -536,7 +537,8 @@ async function processNotificationLink(target, communication) {
 
         switch (type) {
             case 'trail': {
-                const _trail = value || (await Trail.findOne({ _id: value.trailId }));
+                const trailid = value ? value : target.value.trailId;
+                const _trail = await Trail.findOne({ _id: trailid });
                 const item = target.value.itemId ? await Item.findOne({ _id: value.itemId }) : null;
 
                 const token = generateSSOToken({
@@ -549,8 +551,8 @@ async function processNotificationLink(target, communication) {
                     : `/menu/${_trail.titleURL}`;
 
                 response = {
-                    trailId: _trail._id,
-                    itemId: value.itemId || '',
+                    trailid,
+                    itemid: target.value.itemId || '',
                     url: `${process.env.DOMAIN}/login/entrar/sso?token=${token}&redirectTo=${redirectTo}`,
                 };
                 break;
@@ -559,6 +561,15 @@ async function processNotificationLink(target, communication) {
                 const url = `${process.env.DOMAIN}/app/home/canal/feed/post/${value}`;
                 response = {
                     postId: target.postId,
+                    url,
+                };
+                break;
+            }
+            case 'comment': {
+                const url = `${process.env.DOMAIN}/app/home/canal/feed/post/${value}`;
+                response = {
+                    postId: target.postId,
+                    commentId: value,
                     url,
                 };
                 break;

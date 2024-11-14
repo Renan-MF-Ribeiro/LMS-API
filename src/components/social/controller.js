@@ -4,13 +4,11 @@ const _functions = require('../../utils/functions');
 const _messages = require('../../utils/messages');
 const { sendMessageToKafka, processTargetUsers } = require('../new-messages/business');
 const { Trail } = require('../trails/model');
-const { generateSSOToken } = require('../../utils/auth');
 const { User } = require('../users/model');
-const { UsersWithProcessedTags } = require('../courses/model');
-const config = require('../../../config.json');
 const { getTagsElegiblesByToken, checkEligibilityTagsAnd } = require('../sections/business');
 const { ConfigModel, ConfigTypes } = require('../config/model');
 const { Group } = require('../groups/model');
+const { createNotification } = require('../feed/buisiness');
 
 module.exports = {
     async getConfig(req, res) {
@@ -774,32 +772,22 @@ module.exports = {
     },
 
     async shareSocialContent(req, res) {
+        const { users, trailId } = req.body;
         try {
-            const { name, networkLogin } = await _functions.getUserByToken(req);
-            const { users, trailId } = req.body;
+            const { name } = await _functions.getUserByToken(req);
 
             const trail = await Trail.findById(trailId, 'title titleURL');
 
-            const text = `Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!`;
-            const texthtml = `<br> <p>Olá! O usuário ${name} compartilhou a trilha ${trail.title} com você!</p> <br>`;
-            const message = {
-                category: 'notify',
-                communication: ['notification', 'email'],
-                mode: 'manual',
-                target: {
-                    type: 'users',
-                    value: {
-                        users,
-                    },
-                    content: { type: 'trail', value: trail },
-                    networkLogin,
-                },
-                text: text,
-                texthtml: texthtml,
-                thumbnail: config.messenger.emailTemplate.thumbnail,
-                title: `Happlearning - ${name} compartilhou um conteúdo com você!`,
-            };
-            await createMessagesFromBackend(message);
+            if (users) {
+                const config = {
+                    reqUser: name,
+                    communication: ['notification', 'email'],
+                    type: 'share',
+                    contentType: 'trail',
+                    contentId: trail._id,
+                };
+                await createNotification(config, users);
+            }
 
             const uri = `home/share/${process.env.CLIENT_ID}`;
             const { data } = await socialApi.post(uri, { users: users, trailId });
