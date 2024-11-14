@@ -1,5 +1,7 @@
+const { processTargetUsers, sendMessageToKafka } = require('../new-messages/business');
 const { Trail } = require('../trails/model');
 const { User } = require('../users/model');
+const options = require('../../../config.json');
 
 /* 
  Função recursiva pra popular usuários de arrays ou objetos vindos do SocialApi
@@ -74,4 +76,60 @@ async function populateTrailFields(data) {
     return [trails] || undefined;
 }
 
-module.exports = { populateUserFields, populateTrailFields, populateMembers };
+async function createNotification(config, users) {
+    let text,
+        texthtml,
+        title = undefined;
+
+    switch (config.type) {
+        case 'mention':
+            text = `Olá! O usuário ${config.reqUser} mencionou você em um ${config.where}!`;
+            texthtml = `<br> <p>Olá! O usuário ${config.reqUser} mencionou você em um ${config.where}!</p> <br>`;
+            title = `Happlearning - ${config.reqUser} mencionou você em um ${config.where}!`;
+            break;
+
+        case 'comment':
+            text = `Olá! O usuário ${config.reqUser} respondeu seu comentário aaaaa!`;
+            texthtml = `<br> <p>Olá! O usuário ${config.reqUser.name} respondeu seu comentário!</p> <br>`;
+            title = `Happlearning - ${config.reqUser.name} respondeu seu comentário!`;
+            break;
+    }
+
+    const message = {
+        title,
+        text,
+        texthtml,
+        communication: config.communication,
+        category: 'notify',
+        mode: 'manual',
+        target: {
+            type: 'users',
+            value: {
+                users,
+            },
+        },
+        thumbnail: options.messenger.emailTemplate.thumbnail,
+    };
+
+    try {
+        async function createMessagesFromBackend(campaign) {
+            const target = campaign.target;
+
+            let targetUsers = [];
+
+            if (!target.value.user) {
+                targetUsers = await processTargetUsers(target, campaign.category);
+            } else {
+                targetUsers.push({ ...target.value.user });
+            }
+
+            await sendMessageToKafka(campaign, targetUsers);
+        }
+
+        await createMessagesFromBackend(message);
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+module.exports = { populateUserFields, populateTrailFields, populateMembers, createNotification };
