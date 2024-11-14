@@ -362,31 +362,23 @@ module.exports = {
     },
 
     async share(req, res) {
+        const users = req.body?.users;
+
         try {
             const { name } = await getUserByToken(req);
 
             const uri = 'posts/shares';
             const { data } = await socialApi.post(uri, req.body);
 
-            const users = req?.body?.users || [];
-            const text = `Olá! O usuário ${name} compartilhou um post com você!`;
-            const texthtml = `<br> <p>Olá! O usuário ${name} compartilhou um post com você!</p> <br>`;
-            const message = {
-                category: 'notify',
-                communication: ['notification'],
-                mode: 'manual',
-                target: {
-                    type: 'users',
-                    value: {
-                        users,
-                    },
-                },
-                text: text,
-                texthtml: texthtml,
-                thumbnail: config.messenger.emailTemplate.thumbnail,
-                title: `Happlearning - ${name} compartilhou um post com você!`,
-            };
-            await createMessagesFromBackend(message);
+            if (users) {
+                const config = {
+                    reqUser: name,
+                    communication: ['notification'],
+                    type: 'share',
+                    where: '',
+                };
+                await createNotification(config, users);
+            }
 
             return _messages.success(res, req, data);
         } catch (error) {

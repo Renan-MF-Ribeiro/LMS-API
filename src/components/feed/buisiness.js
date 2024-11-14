@@ -81,19 +81,19 @@ async function createNotification(config, users) {
         texthtml,
         title = undefined;
 
-    switch (config.type) {
-        case 'mention':
-            text = `Olá! O usuário ${config.reqUser} mencionou você em um ${config.where}!`;
-            texthtml = `<br> <p>Olá! O usuário ${config.reqUser} mencionou você em um ${config.where}!</p> <br>`;
-            title = `Happlearning - ${config.reqUser} mencionou você em um ${config.where}!`;
-            break;
+    const typesOfNotification = {
+        mention: 'mencionou você em um',
+        comment: 'respondeu seu',
+        share: 'compartilhou um post com você',
+    };
 
-        case 'comment':
-            text = `Olá! O usuário ${config.reqUser} respondeu seu comentário aaaaa!`;
-            texthtml = `<br> <p>Olá! O usuário ${config.reqUser.name} respondeu seu comentário!</p> <br>`;
-            title = `Happlearning - ${config.reqUser.name} respondeu seu comentário!`;
-            break;
-    }
+    text = `Olá! O usuário ${config.reqUser} ${typesOfNotification[config.type]} ${config.where}!`;
+    texthtml = `<br> <p>Olá! O usuário ${config.reqUser} ${typesOfNotification[config.type]} ${
+        config.where
+    }!</p> <br>`;
+    title = `Happlearning - ${config.reqUser} ${typesOfNotification[config.type]} ${
+        config.where || ''
+    }!`;
 
     const message = {
         title,
