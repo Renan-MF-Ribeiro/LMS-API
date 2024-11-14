@@ -775,7 +775,7 @@ module.exports = {
 
     async shareSocialContent(req, res) {
         try {
-            const { name } = await _functions.getUserByToken(req);
+            const { name, networkLogin } = await _functions.getUserByToken(req);
             const { users, trailId } = req.body;
 
             const trail = await Trail.findById(trailId, 'title titleURL');
@@ -791,6 +791,8 @@ module.exports = {
                     value: {
                         users,
                     },
+                    content: { type: 'trail', value: trail },
+                    networkLogin,
                 },
                 text: text,
                 texthtml: texthtml,
@@ -805,7 +807,6 @@ module.exports = {
             _messages.success(res, req, data, 'ok', 'social', 'shareSocialContent');
             return;
         } catch (error) {
-            console.log(error);
             _messages.badRequest(
                 res,
                 req,
