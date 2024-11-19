@@ -114,7 +114,7 @@ app.use(noCache());
 
 app.use(morgan('dev'));
 
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '500mb' }));
 
 app.use(bodyParser.urlencoded({ extended: true }));
 
