@@ -14,9 +14,9 @@ module.exports = {
         let strConn
         try {
             if (DB_USER === '') {
-                strConn = `mongodb://${DB_HOST}`
+                strConn = `mongodb+srv://${DB_HOST}`
             } else {
-                strConn = `mongodb://${DB_USER}:${DB_PASSWORD}@${DB_HOST}/${DB_NAME}`
+                strConn = `mongodb+srv://${DB_USER}:${DB_PASSWORD}@${DB_HOST}/${DB_NAME}`
             }
 
             return mongoose.connect(strConn, { dbName: DB_NAME })
