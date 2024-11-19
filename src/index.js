@@ -107,7 +107,7 @@ app.use(rateLimit({
     limit: 600, // Limit each IP to 100 requests per `window` (here, per 5 minutes)
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => req.path.includes('/tracking') || req.path.includes('/theme'), // Skip rate limit for tracking routes
+    skip: (req) => req.path.includes('/tracking') // Skip rate limit for tracking routes
 }));
 
 app.use(noCache());
