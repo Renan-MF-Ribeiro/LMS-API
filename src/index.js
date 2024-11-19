@@ -102,13 +102,13 @@ app.use(htmlInjection(path.resolve(PUBLIC_PATH)));
 
 app.set('trust proxy', 1);
 
-app.use(rateLimit({
-    windowMs: 5 * 60 * 1000, // 5 minutes
-    limit: 600, // Limit each IP to 100 requests per `window` (here, per 5 minutes)
-    standardHeaders: true,
-    legacyHeaders: false,
-    skip: (req) => req.path.includes('/tracking') // Skip rate limit for tracking routes
-}));
+// app.use(rateLimit({
+//     windowMs: 5 * 60 * 1000, // 5 minutes
+//     limit: 600, // Limit each IP to 100 requests per `window` (here, per 5 minutes)
+//     standardHeaders: true,
+//     legacyHeaders: false,
+//     skip: (req) => req.path.includes('/tracking') || req.path.includes('/theme'), // Skip rate limit for tracking routes
+// }));
 
 app.use(noCache());
 
