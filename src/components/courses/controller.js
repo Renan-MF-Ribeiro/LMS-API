@@ -1036,7 +1036,7 @@ module.exports = {
             const query = {
                 $and: [
                     { _id: id },
-                    { 'user.status': 'ATIVO' },
+                    { 'user.status': { $regex: 'ATIVO', $options: 'i' } },
                     { 'user._id': { $nin: usersInClass } },
                 ],
             };
