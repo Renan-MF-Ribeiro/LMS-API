@@ -909,24 +909,24 @@ module.exports = {
             const onlyPresenceFlag = req.query?.onlyPresence !== undefined;
 
             const course = await CourseModel.findById(courseId);
-            const classUsers = await getClassByID(classId);
-
+            const foundClass = await getClassByID(classId);
+            console.log(foundClass)
             const { data } = await axios.post(
                 `${process.env.API_PDF_PRINTER}/attendance-list`,
                 {
                     courseName: course.title ?? ' ',
-                    startDate: course.dateInitial
-                        ? moment(course.dateInitial)
+                    startDate: foundClass.dateApplicationInitial
+                        ? moment(foundClass.dateApplicationInitial)
                             .locale('pt-BR')
                             .format('DD [de] MMMM [de] YYYY - HH:mm[h]')
                         : ' ',
-                    endDate: course.dateFinal
-                        ? moment(course.dateFinal)
+                    endDate: foundClass.dateApplicationFinal
+                        ? moment(foundClass.dateApplicationFinal)
                             .locale('pt-BR')
                             .format('DD [de] MMMM [de] YYYY - HH:mm[h]')
                         : ' ',
-                    instructor: classUsers.instructor?.name ?? ' ',
-                    attendances: classUsers.users
+                    instructor: foundClass.minister ?? ' ',
+                    attendances: foundClass.users
                         .filter((user) => (onlyPresenceFlag ? !!user.presence : true))
                         .map((user) => ({
                             userName: user.name ?? ' ',
