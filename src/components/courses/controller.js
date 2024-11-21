@@ -918,11 +918,13 @@ module.exports = {
                     startDate: foundClass.dateApplicationInitial
                         ? moment(foundClass.dateApplicationInitial)
                             .locale('pt-BR')
+                            .subtract(3, 'hours')
                             .format('DD [de] MMMM [de] YYYY - HH:mm[h]')
                         : ' ',
                     endDate: foundClass.dateApplicationFinal
                         ? moment(foundClass.dateApplicationFinal)
                             .locale('pt-BR')
+                            .subtract(3, 'hours')
                             .format('DD [de] MMMM [de] YYYY - HH:mm[h]')
                         : ' ',
                     instructor: foundClass.minister ?? ' ',
