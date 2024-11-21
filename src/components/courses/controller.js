@@ -937,7 +937,7 @@ module.exports = {
                             attendanceDate: user.presenceAt
                                 ? moment(user.presenceAt).format('DD/MM/YYYY')
                                 : ' ',
-                            attendanceType: user.origin
+                            attendanceType: user.origin && user.presence
                                 ? user.origin === 'instructor'
                                     ? 'Instrutor'
                                     : 'QR Code'
