@@ -51,13 +51,14 @@ const SectionSchema = new mongoose.Schema(
         active: { type: Number, default: 1 },
         formation: { type: Number, default: 0 },
         certificate: { type: Number, default: 0 },
-        trails: { type: [{ type: 'ObjectId', ref: 'trails' }] },
+        trails: { type: mongoose.Schema.Types.Mixed },
         position: { type: Number, default: 0 },
         ordination: { type: Number, required: false }, // 0 - DATA / 1 - ORDEM ALFABÉTICA
         isTraining: { type: Boolean, required: false },
         certificateLayout: { type: 'ObjectId', required: false },
         certificateDue: { type: certificateDueSchema, required: false },
         completedTrailsType: { type: String, required: false, default: null }, // optional | hidden
+        displayType: { type: String, required: false, default: null }, // optional | hidden
         defaultType: {
             type: String,
             enum: Object.values(DEFAULT_TYPES),

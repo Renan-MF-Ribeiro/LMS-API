@@ -2,7 +2,7 @@ const { Types } = require("mongoose");
 const ApiError = require("../../errors/ApiError");
 const { getUserByToken, stripHtmlTags } = require("../../utils/functions");
 const { certificateClient, getHeaders } = require("../certificates/business");
-const { setAssessmentHistoricOnSections } = require("../sections/business");
+const { setAssessmentHistoricOnSections, populateSectionTrails } = require("../sections/business");
 const { Section } = require("../sections/model");
 const { Trail } = require("../trails/model");
 const { getEligibilityInfoByUserId } = require("../../utils/user");
@@ -22,19 +22,16 @@ async function listTrainingSections(req, res) {
 async function listTrainingSectionDetails(req, res) {
     const sectionId = req.params.sectionId;
 
-    const section = await Section
+    const dbSection = await Section
         .findOne({
             _id: sectionId,
             isTraining: true,
             active: true
         })
         .select('_id title description trails')
-        .populate({
-            path: 'trails',
-            model: Trail,
-            select: '_id title'
-        })
-        .lean();
+        .lean()
+
+    const [section] = await populateSectionTrails([dbSection], { select: '_id title' });
 
     if (!section) {
         throw new ApiError('Seção de treinamento não encontrada', 400, undefined, { skipDbLog: true });

@@ -16,6 +16,41 @@ const { default: axios } = require('axios');
 const moment = require('moment');
 const { TrailViews } = require('../trails/trail-views.model');
 const { listTrainingSectionsStatus } = require('../assessment/business');
+const { Trail } = require('../trails/model');
+const { ObjectId } = require('mongoose').Types
+
+const isSectionTrailInfo = (trail) => (trail.type === 'trail' && ObjectId.isValid(trail._id)) || ObjectId.isValid(trail);
+
+const isValidSectionTrailInfo = (trail) => !ObjectId.isValid(String(trail));
+
+const getSectionTrailId = trail => ObjectId.isValid(trail) ? trail : (trail._id ?? null);
+
+async function populateSectionTrails(sections, options) {
+    for await (const section of sections) {
+        if (!section?.trails?.length) continue;
+
+        const trailsIds = section.trails
+            .filter(trail => isSectionTrailInfo(trail))
+            .map(trail => getSectionTrailId(trail));
+
+        const query = Trail.find({ _id: { $in: trailsIds } });
+
+        if (options?.select) query.select(options.select);
+
+        const trails = await query.lean();
+
+        section.trails = section.trails.map(trail => {
+            if (isSectionTrailInfo(trail)) {
+                const trailId = getSectionTrailId(trail);
+                return trails.find(t => String(t._id) === String(trailId)) ?? trail;
+            }
+
+            return trail;
+        });
+    }
+
+    return sections;
+}
 
 module.exports = {
     checkIfTheTrackIsValid (trail) {
@@ -291,30 +326,18 @@ module.exports = {
                     default: false,
                 }).lean();
 
-                const validTrails = trails.filter((t) => checkIfTheTrackIsValid(t));
-
                 sections.forEach((section) => {
-                    const sortedSections = section.trails.map((t) => String(t));
-                    const filteredSectionTrails = section.trails
-                        .filter((trailId) =>
-                            validTrails.map((t) => String(t._id)).includes(String(trailId))
-                        )
-                        .map((f) => String(f));
+                    const sectionTrails = section.trails
+                        .map(trail => {
+                            return trails.find(t => String(t._id) === String(getSectionTrailId(trail))) ?? trail;
+                        })
+                        .filter(trail => isValidSectionTrailInfo(trail) && checkIfTheTrackIsValid(trail))
 
-                    section.trails = validTrails
-                        .filter((validTrail) =>
-                            filteredSectionTrails.includes(String(validTrail._id))
-                        )
-                        .sort((a, b) => {
-                            return (
-                                sortedSections.indexOf(String(a._id)) -
-                                sortedSections.indexOf(String(b._id))
-                            );
+                    if (sectionTrails.length > 0) {
+                        arrSections.push({
+                            ...section, trails: sectionTrails
                         });
-
-                    if (section.trails.length > 0) {
-                        arrSections.push(section);
-                    }
+                    };
                 });
 
                 resolve(arrSections);
@@ -905,6 +928,8 @@ module.exports = {
             if (trainingSectionInfo) {
                 const optionalTrails = trainingSectionInfo.optionalTrailsId ?? [];
                 const isBlocked = trainingSectionInfo.isBlocked ?? false;
+                const cycleMessage = trainingSectionInfo.cycleMessage ?? null;
+                const exceptionTrainingTrails = trainingSectionInfo.exceptionTrainingTrails ?? [];
 
                 section.trails?.forEach(trail => {
                     if (optionalTrails.includes(String(trail._id))) {
@@ -913,14 +938,20 @@ module.exports = {
                 });
 
                 const isCompleted = section.trails
+                    ?.filter(trail => !exceptionTrainingTrails.includes(String(trail._id)))
                     ?.filter(trail => !trail.isOptional)
                     .every(trail => trail.completion === 1);
+
+                const messages = trainingSectionInfo.messages ?? [];
 
                 section.hasAssessment = true
                 section.isBlocked = isBlocked;
                 section.isCompleted = isCompleted;
                 section.hasCertificate = !!section.certificateLayout;
                 section.optionalTrails = optionalTrails;
+                section.cycleMessage = cycleMessage;
+                section.exceptionTrainingTrails = exceptionTrainingTrails;
+                section.messages = messages;
             }
             else {
                 const isCompleted = section.trails?.every(trail => trail.completion === 1);
@@ -939,7 +970,12 @@ module.exports = {
         });
 
         return sections;
-    }
+    },
+    
+    getSectionTrailId,
+    isSectionTrailInfo,
+    isValidSectionTrailInfo,
+    populateSectionTrails,
 };
 
 function isNecessary (trail, tags) {
