@@ -935,10 +935,17 @@ module.exports = {
                     if (optionalTrails.includes(String(trail._id))) {
                         trail.isOptional = true;
                     }
+
+                    if (exceptionTrainingTrails.includes(String(trail._id))) {
+                        trail.isException = true;
+                    }
                 });
 
                 const isCompleted = section.trails
-                    ?.filter(trail => !exceptionTrainingTrails.includes(String(trail._id)))
+                    ?.filter(
+                        trail => !['default', 'assessment', 'separator', 'certificate'].includes(trail.type)
+                    )
+                    ?.filter(trail => !trail.isException)
                     ?.filter(trail => !trail.isOptional)
                     .every(trail => trail.completion === 1);
 
