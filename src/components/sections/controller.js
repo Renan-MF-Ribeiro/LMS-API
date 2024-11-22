@@ -20,7 +20,11 @@ const {
     checkEligibilityTagsAnd,
     courseInSections,
     getTrainingDataFromBody,
-    setAssessmentHistoricOnSections
+    setAssessmentHistoricOnSections,
+    populateSectionTrails,
+    getSectionTrailId,
+    isSectionTrailInfo,
+    isValidSectionTrailInfo
 } = require('./business');
 
 const { getStudentCourses } = require('../home/business');
@@ -32,6 +36,27 @@ const {
 } = require('../../utils/functions');
 const { TrailsUsersProgress, Trail } = require('../trails/model');
 
+const { ObjectId } = require('mongoose').Types;
+
+function parseSectionBodyTrails(req) {
+    return req.body.trails?.map(trail => {
+        const trailId = getSectionTrailId(trail);
+
+        if (trailId) {
+            if (typeof trailId === 'string') {
+                return new ObjectId(trailId);
+            }
+
+            return {
+                ...trail,
+                _id: new ObjectId(trailId),
+            };
+        }
+
+        return trail;
+    }) ?? [];
+}
+
 module.exports = {
     async returnSections (req, res) {
         try {
@@ -40,23 +65,18 @@ module.exports = {
                 deleted: { $eq: 0 },
             }).countDocuments();
 
-            const populateTrails = {
-                path: 'trails',
-                model: 'Trail',
-                select: ['_id', 'title', 'thumbPath'],
-            };
-            const sections = await Section.find(
-                searchBy
-                    ? {
-                        $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-                        deleted: { $eq: 0 },
-                    }
-                    : {
-                        deleted: { $eq: 0 },
-                    }
-            )
-                .sort({ position: 'asc' })
-                .populate(populateTrails);
+            const query = searchBy
+                ? {
+                    $or: [{ title: { $regex: searchBy, $options: 'i' } }],
+                    deleted: { $eq: 0 },
+                }
+                : { deleted: { $eq: 0 } };
+
+            const sections = await populateSectionTrails(
+                await Section.find(query)
+                    .sort({ position: 'asc' }),
+                { select: ['_id', 'title', 'thumbPath'] }
+            );
 
             _messages.success(res, req, {
                 data: sections,
@@ -85,7 +105,8 @@ module.exports = {
                 const section = await Section.create({
                     ...req.body,
                     position,
-                    ...getTrainingDataFromBody(req.body)
+                    ...getTrainingDataFromBody(req.body),
+                    trails: parseSectionBodyTrails(req),
                 });
 
                 _messages.success(
@@ -133,7 +154,8 @@ module.exports = {
             if (verify.length === 0) {
                 const oldData = await Section.findByIdAndUpdate(_id, {
                     ...req.body,
-                    ...getTrainingDataFromBody(req.body)
+                    ...getTrainingDataFromBody(req.body),
+                    trails: parseSectionBodyTrails(req),
                 });
 
                 const newData = await Section.find({ _id: { $eq: _id } });
@@ -231,15 +253,14 @@ module.exports = {
             if (channelId) {
                 let { idSections } = await Channel.findById(channelId).select('idSections -_id');
 
-                const sectionInfos = await Section.find({ _id: { $in: idSections } })
-                    .select(
-                        'trails -_id'
-                    )
-                    .populate({
-                        path: 'trails',
-                        model: Trail,
-                        select: 'tags tagsAnd _id collaborative',
-                    });
+                const dbSections = await Section
+                    .find({ _id: { $in: idSections } })
+                    .select('trails -_id');
+
+                const sectionInfos = await populateSectionTrails(
+                    dbSections,
+                    { select: 'tags tagsAnd _id collaborative' }
+                );
 
                 const trailsInSections = sectionInfos.map(({ trails }) => {
                     return {
@@ -426,7 +447,9 @@ module.exports = {
 
         const query = { enabled: true };
 
-        if (Object.values(DEFAULT_TYPES).includes(section.defaultType)) {
+        const isDefaultSection = Object.values(DEFAULT_TYPES).includes(section.defaultType);
+
+        if (isDefaultSection) {
             query.$or = [
                 {
                     tags: {
@@ -440,7 +463,11 @@ module.exports = {
                 },
             ]
         } else {
-            query._id = { $in: section.trails };
+            query._id = { 
+                $in: section.trails
+                    .map(trail => getSectionTrailId(trail))
+                    .filter(Boolean)
+            };
         }
 
         const trailsDb = (await populateTrails(true, query))
@@ -455,7 +482,7 @@ module.exports = {
             ],
         });
 
-        const trails = trailsDb.map((trail) => {
+        const processTrailInfo = (trail) => {
             const processedTrail = processTrailTracking(trail, allTrackingUser);
 
             if (trail.expirationType) {
@@ -476,7 +503,22 @@ module.exports = {
             }
 
             return newTrail;
-        });
+        };
+
+        const trails = isDefaultSection
+            ? trailsDb.map(processTrailInfo)
+            : (section.trails?.map(sectionTrail => {
+                if (isSectionTrailInfo(sectionTrail)) {
+                    const trail = trailsDb.find(trail => String(trail._id) === String(getSectionTrailId(sectionTrail)));
+                    
+                    if (!trail) return sectionTrail;
+
+                    return processTrailInfo(trail);
+                }
+
+                return sectionTrail;
+            }) ?? [])
+                .filter(trail => isValidSectionTrailInfo(trail));
 
         let responseSection;
 
@@ -532,7 +574,7 @@ module.exports = {
             await setAssessmentHistoricOnSections(user._id, [responseSection]);
         }
 
-        if (responseSection.trails?.length && section.trails?.length) {
+        if (isDefaultSection && responseSection.trails?.length && section.trails?.length) {
             const originalOrder = section.trails.map(trail => trail._id);
 
             responseSection.trails = originalOrder.map(

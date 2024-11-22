@@ -1,6 +1,6 @@
 const { Types } = require("mongoose");
 const { UsersWithProcessedTags } = require("../components/courses/model");
-const { checkEligibilityTagsAnd, checkIfTheTrackIsValid } = require("../components/sections/business");
+const { checkEligibilityTagsAnd, checkIfTheTrackIsValid, getSectionTrailId, isSectionTrailInfo } = require("../components/sections/business");
 const { Section } = require("../components/sections/model");
 const { Tracking } = require("../components/tracking/model");
 const { populateTrails } = require("../components/trails/business");
@@ -24,7 +24,11 @@ async function getEligibilityInfoByUserId(
 
     const eligibilityTags = userWithTags.userTags;
 
-    const trailsId = Array.from(new Set(sections.map(section => section.trails).flat()));
+    const sectionTrails = Array.from(new Set(sections.map(section => section.trails).flat()));
+
+    const trailsId = sectionTrails
+        .map(trails => getSectionTrailId(trails))
+        .filter(Boolean);
 
     const populatedTrails = await populateTrails(
         true,
@@ -64,10 +68,19 @@ async function getEligibilityInfoByUserId(
     });
 
     const allSections = sections.map(section => {
-        const sectionTrails = allTrails.filter(
-            trail => section.trails
-                .map(trailId => String(trailId))
-                .includes(String(trail._id))
+        const sectionTrails = section.trails.map(
+            trailInfo => {
+                if (isSectionTrailInfo(trailInfo)) {
+                    const trailId = getSectionTrailId(trailInfo);
+                    const trail = allTrails.find(
+                        trail => String(trail._id) === String(trailId)
+                    );
+
+                    return trail ?? trailInfo;
+                }
+
+                return trailInfo;
+            }
         );
 
         return { ...section, trails: sectionTrails }
