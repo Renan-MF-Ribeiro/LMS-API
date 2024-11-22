@@ -433,6 +433,7 @@ module.exports = {
 
     async getSectionDetail (req, res) {
         const sectionId = req.params.id;
+        const channelId = req.query?.channel ?? null;
 
         const user = await getUserByToken(req);
         const tags = await getTagsElegiblesByToken(req);
@@ -450,6 +451,27 @@ module.exports = {
         const isDefaultSection = Object.values(DEFAULT_TYPES).includes(section.defaultType);
 
         if (isDefaultSection) {
+            if (channelId) {
+                const channel = await Channel.findOne({ _id: new ObjectId(channelId) });
+
+                const sectionsIds = channel?.idSections ?? [];
+
+                if (sectionsIds.length) {
+                    const sections = await Section.find({
+                        _id: { $in: sectionsIds },
+                    }).select('trails -_id');
+
+                    if (sections.length) {
+                        const trailsInSections = sections
+                            .flatMap((section) => section.trails.map(trail => getSectionTrailId(trail)))
+                            .filter(Boolean)
+                            .map(trailId => new ObjectId(trailId));
+
+                        if (trailsInSections.length) query._id = { $in: trailsInSections };
+                    }
+                }
+            }
+
             query.$or = [
                 {
                     tags: {
