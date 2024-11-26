@@ -553,7 +553,7 @@ async function processNotificationLink(target, communication) {
                 response = {
                     trailid,
                     itemid: target.value.itemId || '',
-                    url: `${process.env.DOMAIN}/login/entrar/sso?token=${token}&redirectTo=${redirectTo}`,
+                    url: `${process.env.DOMAIN}/login/entrar/sso?token=${token}&redirectTo=/app${redirectTo}`,
                 };
                 break;
             }
