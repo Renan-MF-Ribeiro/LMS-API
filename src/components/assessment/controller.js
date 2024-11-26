@@ -6,7 +6,6 @@ const { Group } = require('../groups/model');
 const { User } = require('../users/model');
 const AssessmentBusiness = require('./business');
 const { getTagsElegiblesByToken, getGroupCodesByToken } = require('../sections/business');
-const { get, set } = require('lodash');
 const { azureBlob } = require('../../utils/files');
 
 const host = process.env.API_ASSESSMENT;
@@ -14,9 +13,13 @@ const clientId = process.env.CLIENT_ID;
 const headers = { 'x-client-key': process.env.API_KEY_ASSESSMENT };
 
 async function parseCycleBodyAndUploadImages(req) {
-    const body = Object.keys(req.fields).reduce((acc, key) => {
-        return set(acc, key, get(req.fields, key));
-    }, {});
+    const reqFields = req.fields?.payload;
+
+    if (!reqFields) throw new Error('Invalid request');
+
+    const reqFiles = Object.entries(req.files ?? []).map(([, file]) => file);
+
+    const body = JSON.parse(reqFields);
 
     if (body.isProcessedOnEnd) {
         body.isProcessedOnEnd = body.isProcessedOnEnd === 'true';
@@ -33,7 +36,7 @@ async function parseCycleBodyAndUploadImages(req) {
                 if (range.max) range.max = Number(range.max);
 
                 if (range.image) {
-                    range.file = req.files?.images.find(image => image.name === range.image);
+                    range.file = reqFiles.find(image => image.name === range.image);
                 }
 
                 return range;

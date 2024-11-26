@@ -19,7 +19,7 @@ router
     .get('/cycles-and-pillars', _controller.listCyclesAndPillars)
     .post('/cycles', jsonOrFormData, _controller.createCycle)
     .put('/cycles', jsonOrFormData, _controller.updateCycle)
-    .delete('/cycles/:cycleId', formidable({ multiples: true }), _controller.deleteCycle)
+    .delete('/cycles/:cycleId', _controller.deleteCycle)
     .get('/matrix', _controller.listClientMatrices)
     .post('/matrix', _controller.createMatrix)
     .put('/matrix/:matrixId', _controller.updateMatrix) 
