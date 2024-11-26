@@ -941,13 +941,15 @@ module.exports = {
                     }
                 });
 
-                const isCompleted = section.trails
+                const filteredTrails = section.trails
                     ?.filter(
                         trail => !['default', 'assessment', 'separator', 'certificate'].includes(trail.type)
                     )
                     ?.filter(trail => !trail.isException)
                     ?.filter(trail => !trail.isOptional)
-                    .every(trail => trail.completion === 1);
+                    ?? [];
+
+                const isCompleted = filteredTrails.length && filteredTrails.every(trail => trail.completion === 1);
 
                 const messages = trainingSectionInfo.messages ?? [];
 
