@@ -949,7 +949,7 @@ module.exports = {
                     ?.filter(trail => !trail.isOptional)
                     ?? [];
 
-                const isCompleted = filteredTrails.length && filteredTrails.every(trail => trail.completion === 1);
+                const isCompleted = filteredTrails.every(trail => trail.completion === 1);
 
                 const messages = trainingSectionInfo.messages ?? [];
 
