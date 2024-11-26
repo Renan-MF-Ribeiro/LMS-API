@@ -46,7 +46,16 @@ module.exports = express
     .post('/import', validateTokenRoute, formidable(), _controller.import)
     .post('/import/onboarding', validateTokenRoute, formidable(), _controller.importOnboarding)
     .get('/', validateTokenRoute, isAdminOrInstructor, _controller.returnUsers)
-    .get('/onboarding', validateTokenRoute, isAdminOrInstructor, _controller.returnUsersOnboarding)
+    .get(
+        '/onboarding',
+        validateTokenRoute,
+        isAdminOrInstructor,
+        (req, res, next) => {
+            req.query.onboarding = true;
+            return next();
+        },
+        _controller.returnUsers
+    )
     .put('/', validateTokenRoute, isAdmin, _controller.updateUser)
     .get('/users/:userId', validateTokenRoute, isAdmin, _controller.findById)
     .get('/import-users-test', validateTokenRoute, _controller.importUserTest)
