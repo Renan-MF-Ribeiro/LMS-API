@@ -71,7 +71,9 @@ async function generateTrainingSectionCertificate(req, res) {
 
     const trails = section.trails;
 
-    const completedTrails = trails.filter(trail => trail.completion === 1);
+    const completedTrails = trails
+        .filter(trail => !trail.isException)
+        .filter(trail => trail.completion === 1);
 
     const items = completedTrails.map(trail => {
         const totalMinutes = Math.round(trail.durationHours);
@@ -111,7 +113,7 @@ async function generateTrainingSectionCertificate(req, res) {
 
     if (!completionDate) {
         throw new ApiError(
-            'Não foi possível gerar o certificado, pois o usuário não completou nenhuma trilha',
+            'Não foi possível gerar o certificado, pois o usuário não completou nenhuma trilha obrigatória',
             400,
             undefined,
             { skipDbLog: true }
