@@ -16,6 +16,7 @@ router
     .delete('/cycles/:cycleId', _controller.deleteCycle)
     .get('/matrix', _controller.listClientMatrices)
     .post('/matrix', _controller.createMatrix)
+    .put('/matrix/:matrixId', _controller.updateMatrix) 
     .delete('/matrix/:id', _controller.softDeleteMatrix)
     .patch(
         '/matrix/update-period/:matrixId/:periodId',

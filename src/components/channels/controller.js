@@ -5,7 +5,7 @@ const { azureBlob } = require('../../utils/files');
 const { DOMAIN, AZURE_BLOB_URL } = process.env;
 const { Section } = require('../sections/model');
 const { Trail } = require('../trails/model');
-const { getTagsElegiblesByToken, checkEligibilityTagsAnd } = require('../sections/business');
+const { getTagsElegiblesByToken, checkEligibilityTagsAnd, getSectionTrailId } = require('../sections/business');
 const config = require('../../../config.json');
 const { Theme } = require('../theme/palette/model');
 
@@ -74,7 +74,11 @@ module.exports = {
 
                 const sections = await Section.find({ _id: { $in: channel.idSections } }).select('trails');
 
-                const trailsIds = sections.reduce((trails, section) => trails.concat(section.trails), []);
+                const trailsIds = sections.flatMap(
+                    (section) => section.trails
+                        .map(trail => getSectionTrailId(trail))
+                        .filter(Boolean)
+                );
 
                 const trails = await Trail.find({ _id: { $in: trailsIds } });
 

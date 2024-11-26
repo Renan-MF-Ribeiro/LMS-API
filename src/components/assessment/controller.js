@@ -181,6 +181,21 @@ const AssessmentController = {
         }
     },
 
+    async updateMatrix (req, res) {
+        try {
+            const { matrixId } = req.params;
+            const body = req.body;
+            delete body.weightsByPeriod
+            const uri = `${host}/matrix/update-matrix/${clientId}/${matrixId}`;
+            const { data } = await axios.put(uri, body, { headers });
+            console.log(data)
+            return _messages.success(res, req, data);
+        } catch (error) {
+            console.log(error)
+            return handleError(res, req, error);
+        }
+    },
+
     async softDeleteMatrix (req, res) {
         try {
             const { id } = req.params;

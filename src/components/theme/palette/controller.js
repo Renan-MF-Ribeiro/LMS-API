@@ -17,7 +17,7 @@ module.exports = {
             const total = await Theme.find(query).count();
             const themes = await Theme.find(query)
                 .skip(parseInt(skip))
-                .limit(0)
+                .limit(parseInt(limit));
 
             return _messages.success(res, req, { data: themes, total })
         }
