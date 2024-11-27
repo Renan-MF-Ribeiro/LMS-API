@@ -152,7 +152,7 @@ const AssessmentController = {
             }
 
             const body = await parseCycleBodyAndUploadImages(req);
-            const { data } = await axios.put(uri, body, { headers });
+            const { data } = await axios.post(uri, body, { headers });
             return _messages.success(res, req, data);
         } catch (error) {
             return handleError(res, req, error);
