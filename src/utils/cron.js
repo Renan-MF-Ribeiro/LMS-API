@@ -775,6 +775,18 @@ async function getUsersLoad() {
         }
     } catch (error) {
         usersLoadLog('ERROR', error);
+
+        const Hook = new webhook.Webhook(process.env.DISCORD_WEBHOOK);
+        const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} teve problemas para rodar a carga! Erro: ${error.message}`;
+        
+        Hook.err('Erro na carga de usuários', errorMessage);
+        
+        storageLog(
+            `Erro na carga de usuários`,
+            error.message,
+            '',
+            'DAILY_CHARGE'
+        );
     }
 
     console.timeEnd('[USERS_LOAD] execution time');
