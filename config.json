@@ -89,5 +89,8 @@
     },
     "userLoadCsv": {
         "active": true
+    },
+    "discord": {
+        "active": true
     }
 }

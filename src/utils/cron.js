@@ -10,7 +10,7 @@ const { Tracking } = require('../components/tracking/model');
 const { Trail } = require('../components/trails/model');
 const { TodayMostSeenTrails, TrailViews } = require('../components/trails/trail-views.model')
 const moment = require('moment');
-const webhook = require('discord-webhook-node');
+const { Webhook } = require('discord-webhook-node');
 const axios = require('axios');
 const {
     isSCORMCompleted,
@@ -576,6 +576,7 @@ function usersLoadLog(...data) {
 
 async function getUsersLoad() {
     const env = process.env.NODE_ENV;
+    const hook = new Webhook(process.env.WEBHOOK_URL);
 
     const isProduction = env === 'production';
 
@@ -591,6 +592,12 @@ async function getUsersLoad() {
         // Se não houver arquivos, encerra a exec
         if (files.length === 0) {
             usersLoadLog('Nenhum arquivo encontrado para processar');
+
+            if (config.discord.active) {
+                const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} não tem nenhum arquivo encontrado para processar!`;
+                hook.warning('Nenhum arquivo encontrado para processar', '', errorMessage);
+            }
+        
             return;
         }
 
@@ -770,11 +777,32 @@ async function getUsersLoad() {
                     `Erro ao processar arquivo ${fileName}`,
                     error
                 );
-            }
 
+                const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} teve problemas para rodar a carga! Erro: ${error.message}`;
+                hook.error('Erro na carga de usuários', '', errorMessage);
+
+                storageLog(
+                    `Erro na carga de usuários`,
+                    error.message,
+                    '',
+                    'DAILY_CHARGE'
+                );
+            }
         }
     } catch (error) {
         usersLoadLog('ERROR', error);
+        
+        if (config.discord.active) {
+            const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} teve problemas para rodar a carga! Erro: ${error.message}`;
+            hook.error('Erro na carga de usuários', '', errorMessage);
+        }
+
+        storageLog(
+            `Erro na carga de usuários`,
+            error.message,
+            '',
+            'DAILY_CHARGE'
+        );
     }
 
     console.timeEnd('[USERS_LOAD] execution time');
