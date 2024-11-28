@@ -96,6 +96,7 @@ const AssessmentBusiness = require('../assessment/business');
 const { Features } = require('../theme/features/model');
 const { Partner } = require('../partners/model');
 const { Log } = require('../logs/model');
+const { Tracking } = require('../tracking/model');
 const { getConfiguration } = require('../config/business');
 const { ConfigTypes } = require('../config/model');
 
