@@ -783,7 +783,7 @@ async function getUsersLoad() {
         usersLoadLog('ERROR', error);
         
         const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} teve problemas para rodar a carga! Erro: ${error.message}`;
-        hook.warning('Erro na carga de usuários', 'Erro na carga de usuários', errorMessage);
+        hook.error('Erro na carga de usuários', '', errorMessage);
         
         storageLog(
             `Erro na carga de usuários`,
