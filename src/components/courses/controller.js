@@ -77,6 +77,10 @@ module.exports = {
                 delete body.certificateLayout;
             if (body.dateInitial > body.dateFinal) flagDate = false;
 
+            body.startDate = (body.startDate === 'null' || !body.startDate) ? null : body.startDate;
+
+            body.endDate = (body.endDate === 'null' || !body.endDate) ? null : body.endDate;
+
             if (flagDate) {
                 if (body.isEvaluationAvailable) {
                     body.isEvaluationAvailable = body.isEvaluationAvailable == 'true';
@@ -236,6 +240,10 @@ module.exports = {
                 body.certificateLayout = null;
 
             if (body.dateInitial > body.dateFinal) flagDate = false;
+
+            body.startDate = (body.startDate === 'null' || !body.startDate) ? null : body.startDate;
+
+            body.endDate = (body.endDate === 'null' || !body.endDate) ? null : body.endDate;
 
             if (!flagDate) {
                 badRequest(

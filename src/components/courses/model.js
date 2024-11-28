@@ -39,8 +39,8 @@ const CourseSChema = new mongoose.Schema(
         score: { type: Number, required: false, default: null },
         banner: { type: String, required: false },
         highlighted: { type: Boolean, default: false },
-        startDate: { type: Date },
-        endDate: { type: Date },
+        startDate: { type: Date, required: false, default: null },
+        endDate: { type: Date, required: false, default: null },
     },
     {
         ...schemaOptions,
