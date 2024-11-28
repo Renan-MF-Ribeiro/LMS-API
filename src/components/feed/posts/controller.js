@@ -42,10 +42,10 @@ module.exports = {
             }
 
             if (body.notifyUsers === true && (body?.elegibilities || body?.elegibilitiesAnd)) {
-                const { _id } = await getUserByToken(req);
-                const text = 'Olá! A administração publicou um novo post!';
+                const { _id, name } = await getUserByToken(req);
+                const title = 'Novo post publicado pela administração!';
                 const texthtml = '<br> <p>Olá! A administração publicou um novo post!</p> <br>';
-                const title = 'Novo post publicado pela administração';
+                const text = `${name}: ${body.title}`;
 
                 const messageList = {
                     user: true,
@@ -62,6 +62,11 @@ module.exports = {
                         text: text,
                         texthtml: texthtml,
                         thumbnail: config.messenger.emailTemplate.thumbnail,
+                        notificationlink: {
+                            url: 'https://v2.staging.happlearning.com.br/login/entrar?redirectTo=/home',
+                            trailid: '',
+                            item: '',
+                        },
                     },
                 };
 
