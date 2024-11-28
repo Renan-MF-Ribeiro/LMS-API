@@ -593,7 +593,7 @@ async function getUsersLoad() {
         if (files.length === 0) {
             usersLoadLog('Nenhum arquivo encontrado para processar');
 
-            const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} não tem nenhum arquivo encontrado para processar! Erro: ${error.message}`;
+            const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} não tem nenhum arquivo encontrado para processar!`;
             hook.warning('Nenhum arquivo encontrado para processar', 'Nenhum arquivo encontrado para processar', errorMessage);
 
         
