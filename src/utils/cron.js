@@ -576,6 +576,8 @@ function usersLoadLog(...data) {
 
 async function getUsersLoad() {
     const env = process.env.NODE_ENV;
+    const Hook = new webhook.Webhook(process.env.DISCORD_WEBHOOK);
+
 
     const isProduction = env === 'production';
 
@@ -591,6 +593,10 @@ async function getUsersLoad() {
         // Se não houver arquivos, encerra a exec
         if (files.length === 0) {
             usersLoadLog('Nenhum arquivo encontrado para processar');
+
+            const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} não tem nenhum arquivo encontrado para processar! Erro: ${error.message}`;
+            Hook.err('Carga de usuários não encontrada!', errorMessage);
+        
             return;
         }
 
@@ -775,10 +781,8 @@ async function getUsersLoad() {
         }
     } catch (error) {
         usersLoadLog('ERROR', error);
-
-        const Hook = new webhook.Webhook(process.env.DISCORD_WEBHOOK);
-        const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} teve problemas para rodar a carga! Erro: ${error.message}`;
         
+        const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} teve problemas para rodar a carga! Erro: ${error.message}`;
         Hook.err('Erro na carga de usuários', errorMessage);
         
         storageLog(
