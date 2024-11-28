@@ -10,7 +10,7 @@ const { Tracking } = require('../components/tracking/model');
 const { Trail } = require('../components/trails/model');
 const { TodayMostSeenTrails, TrailViews } = require('../components/trails/trail-views.model')
 const moment = require('moment');
-const webhook = require('discord-webhook-node');
+const { Webhook } = require('discord-webhook-node');
 const axios = require('axios');
 const {
     isSCORMCompleted,
@@ -576,8 +576,7 @@ function usersLoadLog(...data) {
 
 async function getUsersLoad() {
     const env = process.env.NODE_ENV;
-    const Hook = new webhook.Webhook(process.env.WEBHOOK_URL);
-
+    const hook = new Webhook(process.env.WEBHOOK_URL);
 
     const isProduction = env === 'production';
 
@@ -595,7 +594,8 @@ async function getUsersLoad() {
             usersLoadLog('Nenhum arquivo encontrado para processar');
 
             const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} não tem nenhum arquivo encontrado para processar! Erro: ${error.message}`;
-            Hook.err('Carga de usuários não encontrada!', errorMessage);
+            hook.warning('Nenhum arquivo encontrado para processar', 'Nenhum arquivo encontrado para processar', errorMessage);
+
         
             return;
         }
@@ -783,7 +783,7 @@ async function getUsersLoad() {
         usersLoadLog('ERROR', error);
         
         const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} teve problemas para rodar a carga! Erro: ${error.message}`;
-        Hook.err('Erro na carga de usuários', errorMessage);
+        hook.warning('Erro na carga de usuários', 'Erro na carga de usuários', errorMessage);
         
         storageLog(
             `Erro na carga de usuários`,
