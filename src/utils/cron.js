@@ -576,7 +576,7 @@ function usersLoadLog(...data) {
 
 async function getUsersLoad() {
     const env = process.env.NODE_ENV;
-    const Hook = new webhook.Webhook(process.env.DISCORD_WEBHOOK);
+    const Hook = new webhook.Webhook(process.env.WEBHOOK_URL);
 
 
     const isProduction = env === 'production';
