@@ -593,9 +593,10 @@ async function getUsersLoad() {
         if (files.length === 0) {
             usersLoadLog('Nenhum arquivo encontrado para processar');
 
-            const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} não tem nenhum arquivo encontrado para processar!`;
-            hook.warning('Nenhum arquivo encontrado para processar', 'Nenhum arquivo encontrado para processar', errorMessage);
-
+            if (config.discord.active) {
+                const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} não tem nenhum arquivo encontrado para processar!`;
+                hook.warning('Nenhum arquivo encontrado para processar', '', errorMessage);
+            }
         
             return;
         }
@@ -791,9 +792,11 @@ async function getUsersLoad() {
     } catch (error) {
         usersLoadLog('ERROR', error);
         
-        const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} teve problemas para rodar a carga! Erro: ${error.message}`;
-        hook.error('Erro na carga de usuários', '', errorMessage);
-        
+        if (config.discord.active) {
+            const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} teve problemas para rodar a carga! Erro: ${error.message}`;
+            hook.error('Erro na carga de usuários', '', errorMessage);
+        }
+
         storageLog(
             `Erro na carga de usuários`,
             error.message,
