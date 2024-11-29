@@ -963,7 +963,11 @@ module.exports = {
                 section.messages = messages;
             }
             else {
-                const isCompleted = section.trails?.every(trail => trail.completion === 1);
+                const isCompleted = section.trails
+                    ?.filter(
+                        trail => !['default', 'assessment', 'separator', 'certificate'].includes(trail.type)
+                    )
+                    ?.every(trail => trail.completion === 1);
 
                 section.hasAssessment = false;
                 section.isBlocked = false;
