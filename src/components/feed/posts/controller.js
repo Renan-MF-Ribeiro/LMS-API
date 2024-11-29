@@ -12,13 +12,25 @@ const {
 } = require('../../new-messages/business');
 
 const config = require('../../../../config.json');
-const { Group } = require('../../groups/model');
-const { User } = require('../../users/model');
+const { default: axios } = require('axios');
 
 module.exports = {
     async create(req, res) {
+        const clientElegeMaps = await axios.get(
+            `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+            {
+                headers: {
+                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                },
+            }
+        );
+        const elegeFields = clientElegeMaps.data.fields;
+        const user = await getUserByToken(req);
+        const userCustomElegeFields = elegeFields.map((e) => ({ [e]: user[e] }));
+
         const body = JSON.parse(req.fields.payload) ?? null;
 
+        body.userCustomElegeFields = userCustomElegeFields
         try {
             delete body.content;
             const uri = 'posts';
