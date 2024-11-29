@@ -1,3 +1,4 @@
+const { default: axios } = require('axios');
 const { getElegibleUsers } = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
@@ -123,6 +124,20 @@ const GroupController = {
     },
     async createGroup(req, res) {
         const body = JSON.parse(req.fields.payload) ?? null;
+
+        const clientElegeMaps = await axios.get(
+            `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+            {
+                headers: {
+                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                },
+            }
+        );
+        const elegeFields = clientElegeMaps.data.fields;
+        const user = await getUserByToken(req);
+        const userCustomElegeFields = elegeFields.map((e) => ({ [e]: user[e] }));
+
+        body.userCustomElegeFields = userCustomElegeFields;
         if (body.auto === true) {
             const elegibleUsers = await getElegibleUsers(
                 body?.elegibilities,
@@ -223,11 +238,10 @@ const GroupController = {
         try {
             const members = await getElegibleUsers(body?.elegibilities, body?.elegibilitiesAnd);
             const memberIds = members.map((user) => user._id);
-            
-            const { data } = await socialApi.patch(uri, memberIds)
+
+            const { data } = await socialApi.patch(uri, memberIds);
 
             return _messages.success(res, req, data);
-
         } catch (error) {
             return _messages.internalServer(
                 res,
