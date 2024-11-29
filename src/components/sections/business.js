@@ -980,6 +980,21 @@ module.exports = {
             if (completedTrailsType === 'hidden') {
                 section.trails = section.trails.filter(trail => !trail.isOptional);
             }
+
+            if(section.trails?.length && !section.trails.some(trail => ['default', 'assessment', 'certificate'].includes(trail.type))) {
+                const [firstItem] = section.trails;
+
+                if (firstItem.type === 'separator') {
+                    section.trails.shift();
+                }
+
+                section.trails.unshift({
+                    type: 'default',
+                    title: '',
+                    id: 'default',
+                });
+            }
+
         });
 
         return sections;
