@@ -542,7 +542,7 @@ async function processNotificationLink(target, communication) {
                 const item = target.value.itemId ? await Item.findOne({ _id: value.itemId }) : null;
 
                 const token = generateSSOToken({
-                    networkLogin: value.user?.networkLogin || target.networkLogin,
+                    networkLogin: target.value?.user?.networkLogin || target.networkLogin,
                     communication,
                     trailTitle: _trail.title,
                 });
@@ -553,7 +553,7 @@ async function processNotificationLink(target, communication) {
                 response = {
                     trailid,
                     itemid: target.value.itemId || '',
-                    url: `${process.env.DOMAIN}/login/entrar/sso?token=${token}&redirectTo=/app${redirectTo}`,
+                    url: `${process.env.DOMAIN}/login/entrar/sso?token=${token}&redirectTo=${redirectTo}`,
                 };
                 break;
             }
