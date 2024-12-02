@@ -9,6 +9,7 @@ module.exports = {
         try {
             const { skip, limit } = pagination(req);
             const searchBy = req.query.searchBy;
+            const listAll = req.query.listAll;
             const query = {
                 deleted: { $ne: true }
             }
@@ -17,7 +18,7 @@ module.exports = {
             const total = await Theme.find(query).count();
             const themes = await Theme.find(query)
                 .skip(parseInt(skip))
-                .limit(parseInt(limit));
+                .limit(listAll?0:parseInt(limit));
 
             return _messages.success(res, req, { data: themes, total })
         }
