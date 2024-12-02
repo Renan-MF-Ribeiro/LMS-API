@@ -25,7 +25,7 @@ const isValidSectionTrailInfo = (trail) => !ObjectId.isValid(String(trail));
 
 const getSectionTrailId = trail => ObjectId.isValid(trail) ? trail : (trail._id ?? null);
 
-async function populateSectionTrails(sections, options) {
+async function populateSectionTrails (sections, options) {
     for await (const section of sections) {
         if (!section?.trails?.length) continue;
 
@@ -933,7 +933,7 @@ module.exports = {
                 const cycleImage = trainingSectionInfo.cycleImage ?? null;
                 const exceptionTrainingTrails = trainingSectionInfo.exceptionTrainingTrails ?? [];
                 const hasCertificate = !!section.certificateLayout;
-                const cycleShowTrailResults = trainingSectionInfo?.showTrailResults ?? true;
+                const cycleShowTrailResults = trainingSectionInfo?.cycleShowTrailResults ?? true;
 
                 section.trails?.forEach(trail => {
                     if (optionalTrails.includes(String(trail._id))) {
@@ -991,7 +991,7 @@ module.exports = {
                 section.trails = section.trails.filter(trail => !trail.isOptional);
             }
 
-            if(section.trails?.length && !section.trails.some(trail => ['default', 'assessment', 'certificate'].includes(trail.type))) {
+            if (section.trails?.length && !section.trails.some(trail => ['default', 'assessment', 'certificate'].includes(trail.type))) {
                 const [firstItem] = section.trails;
 
                 if (firstItem.type === 'separator') {
@@ -1009,7 +1009,7 @@ module.exports = {
 
         return sections;
     },
-    
+
     getSectionTrailId,
     isSectionTrailInfo,
     isValidSectionTrailInfo,
