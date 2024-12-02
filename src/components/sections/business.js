@@ -928,8 +928,12 @@ module.exports = {
             if (trainingSectionInfo) {
                 const optionalTrails = trainingSectionInfo.optionalTrailsId ?? [];
                 const isBlocked = trainingSectionInfo.isBlocked ?? false;
+                const hasHistoric = trainingSectionInfo?.hasHistoric ?? false;
                 const cycleMessage = trainingSectionInfo.cycleMessage ?? null;
+                const cycleImage = trainingSectionInfo.cycleImage ?? null;
                 const exceptionTrainingTrails = trainingSectionInfo.exceptionTrainingTrails ?? [];
+                const hasCertificate = !!section.certificateLayout;
+                const cycleShowTrailResults = trainingSectionInfo?.showTrailResults ?? true;
 
                 section.trails?.forEach(trail => {
                     if (optionalTrails.includes(String(trail._id))) {
@@ -953,12 +957,18 @@ module.exports = {
 
                 const messages = trainingSectionInfo.messages ?? [];
 
+                if (!hasHistoric && section.displayType === 'hidden') {
+                    section.trails = section.trails.filter(trail => trail.isException || (trail.type && trail.type !== 'trail'));
+                }
+
                 section.hasAssessment = true
                 section.isBlocked = isBlocked;
-                section.isCompleted = isCompleted;
-                section.hasCertificate = !!section.certificateLayout;
+                section.isCompleted = hasHistoric && isCompleted;
+                section.hasCertificate = hasCertificate;
                 section.optionalTrails = optionalTrails;
                 section.cycleMessage = cycleMessage;
+                section.cycleImage = cycleImage;
+                section.cycleShowTrailResults = cycleShowTrailResults;
                 section.exceptionTrainingTrails = exceptionTrainingTrails;
                 section.messages = messages;
             }

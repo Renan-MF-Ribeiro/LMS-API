@@ -55,6 +55,14 @@ async function parseCycleBodyAndUploadImages(req) {
         }
     }
 
+    if (body.image) {
+        const file = reqFiles.find(image => image.name === body.image);
+        
+        if(file) {
+            body.image = await azureBlob(file, 'cycles') ?? null;
+        }
+    }
+
     return body;
 }
 

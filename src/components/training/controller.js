@@ -69,10 +69,13 @@ async function generateTrainingSectionCertificate(req, res) {
         throw new ApiError('Seção de treinamento não encontrada', 404, undefined, { skipDbLog: true });
     }
 
+    const exceptionCertificateTrails = section.exceptionCertificateTrails ?? [];
+
     const trails = section.trails;
 
     const completedTrails = trails
         .filter(trail => !trail.isException)
+        .filter(trail => !exceptionCertificateTrails.map(trailId => String(trailId)).includes(String(trail._id)))
         .filter(trail => trail.completion === 1);
 
     const items = completedTrails.map(trail => {

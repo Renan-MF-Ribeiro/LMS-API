@@ -15,7 +15,7 @@ async function getEligibilityInfoByUserId(
 ) {
     const sections = await Section
         .find(options?.sections?.filter ?? {})
-        .select('_id title description certificateLayout certificateDue trails isTraining completedTrailsType')
+        .select('_id title description certificateLayout certificateDue trails isTraining completedTrailsType exceptionCertificateTrails')
         .limit(options?.sections?.limit ?? 0)
         .skip(options?.sections?.skip ?? 0)
         .lean();
