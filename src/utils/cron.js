@@ -72,7 +72,7 @@ module.exports = {
     cronNotifyResponsibleUsers () {
         if (config.cron.notifyResponsibleUsers.active) {
             new CronJob(
-                '00 00 * * * *',
+                '00 00 * * *',
                 () => {
                     notifyResponsibleUsers();
                 },

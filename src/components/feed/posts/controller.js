@@ -1,7 +1,7 @@
-const { getUserByToken, getElegibleUsers } = require('../../../utils/functions');
+const { getUserByToken } = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
-const { populateUserFields, populateTrailFields } = require('../buisiness');
+const { populateUserFields, createNotification } = require('../buisiness');
 const FormData = require('form-data');
 const fs = require('fs');
 const mime = require('mime-types');
@@ -291,62 +291,46 @@ module.exports = {
     },
 
     async comment(req, res) {
+        const isMentioningSomeone = req.body?.mentions;
+        const isReplyingPost = req.body?.postId;
+
         try {
-            const { name } = await getUserByToken(req);
+            const { name, _id } = await getUserByToken(req);
 
             const uri = 'posts/comments';
             const { data } = await socialApi.put(uri, req.body);
             const PopulatedData = await populateUserFields('user', 'userId', data.data);
             const response = { data: PopulatedData, total: data.total };
 
-            const mentions = req?.body?.mentions || [];
-            const text = `Olá! O usuário ${name} mencionou você em um post!`;
-            const texthtml = `<br> <p>Olá! O usuário ${name} mencionou você em um post!</p> <br>`;
-            const message = {
-                category: 'notify',
-                communication: ['notification'],
-                mode: 'manual',
-                target: {
-                    type: 'users',
-                    value: {
-                        users: mentions,
-                    },
-                },
-                text: text,
-                texthtml: texthtml,
-                thumbnail: config.messenger.emailTemplate.thumbnail,
-                title: `Happlearning - ${name} mencionou você em um post!`,
-            };
-            await createMessagesFromBackend(message);
+            const { userId: postOwnerId } = await socialApi.get(`posts/${req.body.postId}`);
+            const isReplyingOwnPost = _id === postOwnerId;
 
-            if (req?.body?.postId) {
-                const {
-                    data: { userId },
-                } = await socialApi.get(`posts/${req.body.postId}`);
+            if (isMentioningSomeone) {
+                const mentionedUsers = isMentioningSomeone.filter((user) => user !== postOwnerId);
 
-                const text = `Olá! O usuário ${name} respondeu seu comentário!`;
-                const texthtml = `<br> <p>Olá! O usuário ${name} respondeu seu comentário!</p> <br>`;
-                const message = {
-                    category: 'notify',
+                const config = {
+                    reqUser: name,
                     communication: ['notification'],
-                    mode: 'manual',
-                    target: {
-                        type: 'users',
-                        value: {
-                            users: [userId],
-                        },
-                    },
-                    text: text,
-                    texthtml: texthtml,
-                    thumbnail: config.messenger.emailTemplate.thumbnail,
-                    title: `Happlearning - ${name} respondeu seu comentário!`,
+                    type: 'mention',
+                    contentType: 'comentário',
+                    contentId: PopulatedData._id,
                 };
-                createMessagesFromBackend(message);
+                await createNotification(config, mentionedUsers);
+            }
+
+            if (isReplyingPost && !isReplyingOwnPost) {
+                const config = {
+                    reqUser: name,
+                    communication: ['notification'],
+                    type: 'comment',
+                    contentType: isReplyingPost ? 'post' : 'comentário',
+                };
+                await createNotification(config, postOwnerId);
             }
 
             return _messages.success(res, req, response);
         } catch (error) {
-            console.log({ error });
+            console.log({ error: error.message });
             return _messages.internalServer(
                 res,
                 req,
@@ -398,31 +382,24 @@ module.exports = {
     },
 
     async share(req, res) {
+        const users = req.body?.users;
+
         try {
             const { name } = await getUserByToken(req);
 
             const uri = 'posts/shares';
             const { data } = await socialApi.post(uri, req.body);
 
-            const users = req?.body?.users || [];
-            const text = `Olá! O usuário ${name} compartilhou um post com você!`;
-            const texthtml = `<br> <p>Olá! O usuário ${name} compartilhou um post com você!</p> <br>`;
-            const message = {
-                category: 'notify',
-                communication: ['notification'],
-                mode: 'manual',
-                target: {
-                    type: 'users',
-                    value: {
-                        users,
-                    },
-                },
-                text: text,
-                texthtml: texthtml,
-                thumbnail: config.messenger.emailTemplate.thumbnail,
-                title: `Happlearning - ${name} compartilhou um post com você!`,
-            };
-            await createMessagesFromBackend(message);
+            if (users) {
+                const config = {
+                    reqUser: name,
+                    communication: ['notification'],
+                    type: 'share',
+                    contentType: 'post',
+                    contentId: data.postId,
+                };
+                await createNotification(config, users);
+            }
 
             return _messages.success(res, req, data);
         } catch (error) {
