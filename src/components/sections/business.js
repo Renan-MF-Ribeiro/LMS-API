@@ -949,7 +949,7 @@ module.exports = {
                     ?.filter(trail => !trail.isOptional)
                     ?? [];
 
-                const isCompleted = filteredTrails.length && filteredTrails.every(trail => trail.completion === 1);
+                const isCompleted = filteredTrails.every(trail => trail.completion === 1);
 
                 const messages = trainingSectionInfo.messages ?? [];
 
@@ -963,7 +963,11 @@ module.exports = {
                 section.messages = messages;
             }
             else {
-                const isCompleted = section.trails?.every(trail => trail.completion === 1);
+                const isCompleted = section.trails
+                    ?.filter(
+                        trail => !['default', 'assessment', 'separator', 'certificate'].includes(trail.type)
+                    )
+                    ?.every(trail => trail.completion === 1);
 
                 section.hasAssessment = false;
                 section.isBlocked = false;
@@ -976,6 +980,21 @@ module.exports = {
             if (completedTrailsType === 'hidden') {
                 section.trails = section.trails.filter(trail => !trail.isOptional);
             }
+
+            if(section.trails?.length && !section.trails.some(trail => ['default', 'assessment', 'certificate'].includes(trail.type))) {
+                const [firstItem] = section.trails;
+
+                if (firstItem.type === 'separator') {
+                    section.trails.shift();
+                }
+
+                section.trails.unshift({
+                    type: 'default',
+                    title: '',
+                    id: 'default',
+                });
+            }
+
         });
 
         return sections;

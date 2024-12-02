@@ -6,10 +6,57 @@ const { Group } = require('../groups/model');
 const { User } = require('../users/model');
 const AssessmentBusiness = require('./business');
 const { getTagsElegiblesByToken, getGroupCodesByToken } = require('../sections/business');
+const { azureBlob } = require('../../utils/files');
 
 const host = process.env.API_ASSESSMENT;
 const clientId = process.env.CLIENT_ID;
 const headers = { 'x-client-key': process.env.API_KEY_ASSESSMENT };
+
+async function parseCycleBodyAndUploadImages(req) {
+    const reqFields = req.fields?.payload;
+
+    if (!reqFields) throw new Error('Invalid request');
+
+    const reqFiles = Object.entries(req.files ?? []).map(([, file]) => file);
+
+    const body = JSON.parse(reqFields);
+
+    if (body.isProcessedOnEnd) {
+        body.isProcessedOnEnd = body.isProcessedOnEnd === 'true';
+    }
+
+    if (body.allowMultipleAttempts) {
+        body.allowMultipleAttempts = body.allowMultipleAttempts === 'true';
+    }
+
+    if (body.trainingPillars?.length) {
+        body.trainingPillars = body.trainingPillars.map(pillar => {
+            pillar.range = pillar.range?.map(range => {
+                if (range.min) range.min = Number(range.min);
+                if (range.max) range.max = Number(range.max);
+
+                if (range.image) {
+                    range.file = reqFiles.find(image => image.name === range.image);
+                }
+
+                return range;
+            }) ?? [];
+
+            return pillar;
+        });
+    }
+
+    for await (const [pillarIndex, pillar] of Object.entries(body.trainingPillars)) {
+        for await (const [rangeIndex, range] of Object.entries(pillar.range)) {
+            if (range.file) {
+                body.trainingPillars[pillarIndex].range[rangeIndex].image = await azureBlob(range.file, 'cycles/pillars/ranges') ?? null;
+                delete body.trainingPillars[pillarIndex].range[rangeIndex].file;
+            }
+        }
+    }
+
+    return body;
+}
 
 const AssessmentController = {
     async listPillars (req, res) {
@@ -95,22 +142,34 @@ const AssessmentController = {
         }
     },
 
-    async createCycle (req, res) {
+    async createCycle(req, res) {
         try {
             const uri = `${host}/cycles/${clientId}`;
-            const { data } = await axios.post(uri, req.body, { headers });
 
+            if (req.is('json')) {
+                const { data } = await axios.post(uri, req.body, { headers });
+                return _messages.success(res, req, data);
+            }
+
+            const body = await parseCycleBodyAndUploadImages(req);
+            const { data } = await axios.post(uri, body, { headers });
             return _messages.success(res, req, data);
         } catch (error) {
             return handleError(res, req, error);
         }
     },
 
-    async updateCycle (req, res) {
+    async updateCycle(req, res) {
         try {
             const uri = `${host}/cycles/${clientId}`;
-            const { data } = await axios.put(uri, req.body, { headers });
 
+            if (req.is('json')) {
+                const { data } = await axios.put(uri, req.body, { headers });
+                return _messages.success(res, req, data);
+            }
+
+            const body = await parseCycleBodyAndUploadImages(req);
+            const { data } = await axios.put(uri, body, { headers });
             return _messages.success(res, req, data);
         } catch (error) {
             return handleError(res, req, error);

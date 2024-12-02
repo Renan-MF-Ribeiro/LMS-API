@@ -825,17 +825,21 @@ module.exports = {
         try {
             const { sort, order } = _functions.ordernation(req);
             const { skip, limit } = _functions.pagination(req);
-            const searchBy = req.query.searchBy;
 
-            const total = await ClassGroup.find({}).countDocuments();
+            const { searchBy = null } = req.query;
 
-            const groups = await ClassGroup.find(
-                searchBy
-                    ? {
-                          $or: [{ name: { $regex: searchBy, $options: 'i' } }],
-                      }
-                    : {}
-            )
+            const query = searchBy
+                ? {
+                    $or: [
+                        { groupCode: { $regex: searchBy, $options: 'i' } },
+                        ...(!Number.isNaN(Number(searchBy)) ? [{ classId: Number(searchBy) }] : [])
+                    ]
+                }
+                : {};
+
+            const total = await ClassGroup.find(query).countDocuments();
+
+            const groups = await ClassGroup.find(query)
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));

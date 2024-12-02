@@ -96,6 +96,7 @@ const AssessmentBusiness = require('../assessment/business');
 const { Features } = require('../theme/features/model');
 const { Partner } = require('../partners/model');
 const { Log } = require('../logs/model');
+const { Tracking } = require('../tracking/model');
 const { getConfiguration } = require('../config/business');
 const { ConfigTypes } = require('../config/model');
 
@@ -1374,74 +1375,36 @@ module.exports = {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
+
             const searchBy = req.query.searchBy;
 
-            const users = await User.find(
-                searchBy
-                    ? {
-                          $or: [
-                              {
-                                  name: { $regex: searchBy, $options: 'i' },
-                                  onboarding: { $ne: true },
-                              },
-                              {
-                                  registration: {
-                                      $regex: searchBy,
-                                      $options: 'i',
-                                  },
-                                  onboarding: { $ne: true },
-                              },
-                              { alternativeEmail: { $regex: searchBy, $options: 'i' } },
-                              {
-                                  email: { $regex: searchBy, $options: 'i' },
-                                  onboarding: { $ne: true },
-                              },
-                              {
-                                cpf: { $regex: searchBy, $options: 'i' },
-                                onboarding: { $ne: true },
-                             },
-                          ],
-                      }
-                    : { onboarding: { $ne: true } }
-            )
-                .sort({
-                    [order]: sort,
-                })
+            const isOnboarding = req.query.onboarding === 'true' || req.query.onboarding === true;
+
+            const query = {
+                onboarding: isOnboarding ? true : { $ne: true },
+            }
+
+            if (searchBy) {
+                query.$or = [
+                    { name: { $regex: searchBy, $options: 'i' } },
+                    { registration: { $regex: searchBy, $options: 'i' } },
+                    { email: { $regex: searchBy, $options: 'i' } },
+                    { cpf: { $regex: searchBy, $options: 'i' } },
+                ];
+            }
+
+            const users = await User.find(query)
+                .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
-            const total = await User.find(
-                searchBy
-                    ? {
-                          $or: [
-                              {
-                                  name: { $regex: searchBy, $options: 'i' },
-                                  onboarding: { $ne: true },
-                              },
-                              {
-                                  registration: {
-                                      $regex: searchBy,
-                                      $options: 'i',
-                                  },
-                                  onboarding: { $ne: true },
-                              },
-                              {
-                                  email: { $regex: searchBy, $options: 'i' },
-                                  onboarding: { $ne: true },
-                              },
-                              {
-                                cpf: { $regex: searchBy, $options: 'i' },
-                                onboarding: { $ne: true },
-                             },
-                          ],
-                      }
-                    : { onboarding: { $ne: true } }
-            ).countDocuments();
+            const total = await User.find(query).countDocuments();
 
             const totalActive = await User.find({
                 status: 'ATIVO',
                 onboarding: { $ne: true },
             }).countDocuments();
+
             const totalInactive = await User.find({
                 status: 'INATIVO',
                 onboarding: { $ne: true },
