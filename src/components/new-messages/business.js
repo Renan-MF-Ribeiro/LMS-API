@@ -33,10 +33,7 @@ module.exports = {
             for (const user of users) {
                 for (const communication of campaign.communication) {
                     const stringMessage = JSON.stringify(
-                        await processMessage(
-                            { ...campaign, communication },
-                            user
-                        )
+                        await processMessage({ ...campaign, communication }, user)
                     );
                     messages.push({ value: stringMessage });
                 }
@@ -80,9 +77,7 @@ module.exports = {
             await producer.connect();
             const messages = [];
             for (const user of users) {
-                const stringMessage = JSON.stringify(
-                    await processMessage(campaign, user)
-                );
+                const stringMessage = JSON.stringify(await processMessage(campaign, user));
                 messages.push({ value: stringMessage });
             }
             const chunk = 10;
@@ -110,10 +105,7 @@ module.exports = {
             for (const user of users) {
                 for (const communication of campaign.communication) {
                     const stringMessage = JSON.stringify(
-                        await processRecoveryMessage(
-                            { ...campaign, communication },
-                            user
-                        )
+                        await processRecoveryMessage({ ...campaign, communication }, user)
                     );
                     messages.push({ value: stringMessage });
                 }
@@ -146,13 +138,8 @@ module.exports = {
             if (trailFilters.enable) {
                 const allFiltersResponses = [];
                 for (const currentFilter of trailFilters.filters) {
-                    const {
-                        trail,
-                        notInit,
-                        inProgress,
-                        finished,
-                        ignoreSendInBlueAccept,
-                    } = currentFilter;
+                    const { trail, notInit, inProgress, finished, ignoreSendInBlueAccept } =
+                        currentFilter;
 
                     let currentFilterResponse = [];
 
@@ -178,8 +165,7 @@ module.exports = {
                         ) {
                             const periodStart = new Date(period);
                             const fiveDaysAfter = getFiveDaysAfter(periodStart);
-                            const periodEnd =
-                                fiveDaysAfter >= now ? now : fiveDaysAfter;
+                            const periodEnd = fiveDaysAfter >= now ? now : fiveDaysAfter;
 
                             query.$and = [
                                 { 'user.updatedAt': { $gte: februaryFirst } },
@@ -187,10 +173,7 @@ module.exports = {
                                 { 'user.updatedAt': { $lte: periodEnd } },
                             ];
 
-                            const usersInTrail =
-                                await TrailsTagsWithUsersAndTrackings.find(
-                                    query
-                                );
+                            const usersInTrail = await TrailsTagsWithUsersAndTrackings.find(query);
                             await sleep(1000);
                             dbCounter += 1;
 
@@ -210,27 +193,18 @@ module.exports = {
                             }
                         }
 
-                        currentFilterResponse =
-                            currentFilterResponse.concat(notInitUsers);
-                        query.$and = [
-                            { 'user.updatedAt': { $gte: februaryFirst } },
-                        ];
+                        currentFilterResponse = currentFilterResponse.concat(notInitUsers);
+                        query.$and = [{ 'user.updatedAt': { $gte: februaryFirst } }];
                     }
 
                     if (inProgress) {
                         const inProgressUsers = [];
 
-                        const progressMinimumPercentage =
-                            currentFilter.inProgressSlider[0];
-                        const progressMaximumPercentage =
-                            currentFilter.inProgressSlider[1];
+                        const progressMinimumPercentage = currentFilter.inProgressSlider[0];
+                        const progressMaximumPercentage = currentFilter.inProgressSlider[1];
 
-                        const progressMinDate = new Date(
-                            currentFilter.inProgressInitialDate
-                        );
-                        const progressMaxDate = new Date(
-                            currentFilter.inProgressFinalDate
-                        );
+                        const progressMinDate = new Date(currentFilter.inProgressInitialDate);
+                        const progressMaxDate = new Date(currentFilter.inProgressFinalDate);
 
                         for (
                             let period = februaryFirst;
@@ -239,25 +213,17 @@ module.exports = {
                         ) {
                             const periodStart = new Date(period);
                             const fiveDaysAfter = getFiveDaysAfter(periodStart);
-                            const periodEnd =
-                                fiveDaysAfter >= now ? now : fiveDaysAfter;
+                            const periodEnd = fiveDaysAfter >= now ? now : fiveDaysAfter;
 
                             query.$and = [
                                 { 'user.updatedAt': { $gt: periodStart } },
                                 { 'user.updatedAt': { $lte: periodEnd } },
                             ];
-                            const usersInTrail =
-                                await TrailsTagsWithUsersAndTrackings.find(
-                                    query
-                                );
+                            const usersInTrail = await TrailsTagsWithUsersAndTrackings.find(query);
                             await sleep(1000);
                             dbCounter += 1;
 
-                            for (const {
-                                user,
-                                items,
-                                trackings,
-                            } of usersInTrail) {
+                            for (const { user, items, trackings } of usersInTrail) {
                                 const userCompletedTrackings = trackings.filter(
                                     (tracking) =>
                                         tracking.completionAt !== null &&
@@ -269,51 +235,38 @@ module.exports = {
                                 }
 
                                 const percentage =
-                                    (100 * userCompletedTrackings.length) /
-                                    items.length;
+                                    (100 * userCompletedTrackings.length) / items.length;
                                 if (
                                     percentage >= progressMinimumPercentage &&
                                     percentage <= progressMaximumPercentage
                                 ) {
-                                    const firstTracking =
-                                        userCompletedTrackings.reduce(
-                                            (acc, current) =>
-                                                acc.completionAt <=
-                                                current.completionAt
-                                                    ? { ...acc }
-                                                    : { ...current }
-                                        );
+                                    const firstTracking = userCompletedTrackings.reduce(
+                                        (acc, current) =>
+                                            acc.completionAt <= current.completionAt
+                                                ? { ...acc }
+                                                : { ...current }
+                                    );
 
-                                    const lastTracking =
-                                        userCompletedTrackings.reduce(
-                                            (acc, current) =>
-                                                acc.completionAt >=
-                                                current.completionAt
-                                                    ? { ...acc }
-                                                    : { ...current }
-                                        );
+                                    const lastTracking = userCompletedTrackings.reduce(
+                                        (acc, current) =>
+                                            acc.completionAt >= current.completionAt
+                                                ? { ...acc }
+                                                : { ...current }
+                                    );
 
                                     const firstTrackingCompletionAt =
-                                        typeof firstTracking.completionAt ===
-                                        'string'
-                                            ? new Date(
-                                                  firstTracking.completionAt
-                                              )
+                                        typeof firstTracking.completionAt === 'string'
+                                            ? new Date(firstTracking.completionAt)
                                             : firstTracking.completionAt;
 
                                     const lastTrackingCompletionAt =
-                                        typeof lastTracking.completionAt ===
-                                        'string'
-                                            ? new Date(
-                                                  lastTracking.completionAt
-                                              )
+                                        typeof lastTracking.completionAt === 'string'
+                                            ? new Date(lastTracking.completionAt)
                                             : lastTracking.completionAt;
 
                                     if (
-                                        firstTrackingCompletionAt >=
-                                            progressMinDate &&
-                                        lastTrackingCompletionAt <=
-                                            progressMaxDate
+                                        firstTrackingCompletionAt >= progressMinDate &&
+                                        lastTrackingCompletionAt <= progressMaxDate
                                     ) {
                                         inProgressUsers.push({
                                             name: user.name,
@@ -324,22 +277,15 @@ module.exports = {
                             }
                         }
 
-                        currentFilterResponse =
-                            currentFilterResponse.concat(inProgressUsers);
-                        query.$and = [
-                            { 'user.updatedAt': { $gte: februaryFirst } },
-                        ];
+                        currentFilterResponse = currentFilterResponse.concat(inProgressUsers);
+                        query.$and = [{ 'user.updatedAt': { $gte: februaryFirst } }];
                     }
 
                     if (finished) {
                         const finishedUsers = [];
 
-                        const finishedMinDate = new Date(
-                            currentFilter.finishedInitialDate
-                        );
-                        const finishedMaxDate = new Date(
-                            currentFilter.finishedFinalDate
-                        );
+                        const finishedMinDate = new Date(currentFilter.finishedInitialDate);
+                        const finishedMaxDate = new Date(currentFilter.finishedFinalDate);
 
                         for (
                             let period = februaryFirst;
@@ -348,25 +294,17 @@ module.exports = {
                         ) {
                             const periodStart = new Date(period);
                             const fiveDaysAfter = getFiveDaysAfter(periodStart);
-                            const periodEnd =
-                                fiveDaysAfter >= now ? now : fiveDaysAfter;
+                            const periodEnd = fiveDaysAfter >= now ? now : fiveDaysAfter;
 
                             query.$and = [
                                 { 'user.updatedAt': { $gt: periodStart } },
                                 { 'user.updatedAt': { $lte: periodEnd } },
                             ];
-                            const usersInTrail =
-                                await TrailsTagsWithUsersAndTrackings.find(
-                                    query
-                                );
+                            const usersInTrail = await TrailsTagsWithUsersAndTrackings.find(query);
                             await sleep(1000);
                             dbCounter += 1;
 
-                            for (const {
-                                user,
-                                items,
-                                trackings,
-                            } of usersInTrail) {
+                            for (const { user, items, trackings } of usersInTrail) {
                                 const userCompletedTrackings = trackings.filter(
                                     (tracking) =>
                                         tracking.completionAt !== null &&
@@ -377,31 +315,23 @@ module.exports = {
                                 }
 
                                 const percentage =
-                                    (100 * userCompletedTrackings.length) /
-                                    items.length;
+                                    (100 * userCompletedTrackings.length) / items.length;
                                 if (percentage === 100) {
-                                    const lastTracking =
-                                        userCompletedTrackings.reduce(
-                                            (acc, current) =>
-                                                acc.completionAt >=
-                                                current.completionAt
-                                                    ? { ...acc }
-                                                    : { ...current }
-                                        );
+                                    const lastTracking = userCompletedTrackings.reduce(
+                                        (acc, current) =>
+                                            acc.completionAt >= current.completionAt
+                                                ? { ...acc }
+                                                : { ...current }
+                                    );
 
                                     const lastTrackingCompletionAt =
-                                        typeof lastTracking.completionAt ===
-                                        'string'
-                                            ? new Date(
-                                                  lastTracking.completionAt
-                                              )
+                                        typeof lastTracking.completionAt === 'string'
+                                            ? new Date(lastTracking.completionAt)
                                             : lastTracking.completionAt;
 
                                     if (
-                                        lastTrackingCompletionAt >=
-                                            finishedMinDate &&
-                                        lastTrackingCompletionAt <=
-                                            finishedMaxDate
+                                        lastTrackingCompletionAt >= finishedMinDate &&
+                                        lastTrackingCompletionAt <= finishedMaxDate
                                     ) {
                                         if (currentFilter.enableScore) {
                                             const finishedMinimumScore =
@@ -411,14 +341,9 @@ module.exports = {
 
                                             const {
                                                 trail: { scoreAverage },
-                                            } = processTrailTracking(
-                                                { items },
-                                                trackings
-                                            );
+                                            } = processTrailTracking({ items }, trackings);
                                             const score =
-                                                scoreAverage === null
-                                                    ? 100
-                                                    : scoreAverage;
+                                                scoreAverage === null ? 100 : scoreAverage;
 
                                             if (
                                                 score >= finishedMinimumScore &&
@@ -440,11 +365,8 @@ module.exports = {
                             }
                         }
 
-                        currentFilterResponse =
-                            currentFilterResponse.concat(finishedUsers);
-                        query.$and = [
-                            { 'user.updatedAt': { $gte: februaryFirst } },
-                        ];
+                        currentFilterResponse = currentFilterResponse.concat(finishedUsers);
+                        query.$and = [{ 'user.updatedAt': { $gte: februaryFirst } }];
                     }
 
                     allFiltersResponses.push(currentFilterResponse);
@@ -481,10 +403,7 @@ module.exports = {
                 ) {
                     const periodBegin = new Date(period);
                     const fiveDaysAfter = getFiveDaysAfter(periodBegin);
-                    const periodEnd =
-                        fiveDaysAfter >= finalDateReg
-                            ? finalDateReg
-                            : fiveDaysAfter;
+                    const periodEnd = fiveDaysAfter >= finalDateReg ? finalDateReg : fiveDaysAfter;
 
                     usersQuery.$and = [
                         { createdAt: { $gte: periodBegin } },
@@ -517,15 +436,10 @@ module.exports = {
             console.log({ messaginListLength: messagingList.length });
 
             const nonDuplicate = messagingList.filter(
-                (v, i, a) =>
-                    a.findIndex(
-                        (v2) => v2.name === v.name && v2.email === v.email
-                    ) === i
+                (v, i, a) => a.findIndex((v2) => v2.name === v.name && v2.email === v.email) === i
             );
 
-            const orderedList = nonDuplicate.sort((a, b) =>
-                a.name.localeCompare(b.name)
-            );
+            const orderedList = nonDuplicate.sort((a, b) => a.name.localeCompare(b.name));
 
             console.log({ getUserListDbCalls: dbCounter });
             return orderedList;
@@ -551,18 +465,14 @@ module.exports = {
 };
 
 async function processMessage(campaign, user) {
+    let { communication, target, ...data } = campaign;
+    target.recovery = campaign.recovery;
+    target.resetPasswordUrl = campaign.resetPasswordUrl;
+    target.value.user = user;
+
     try {
-        let { communication, target, ...data } = campaign;
-        target.recovery = campaign.recovery;
-        target.resetPasswordUrl = campaign.resetPasswordUrl;
-        const foundUser = await User.findOne({ _id: user });
-        const notificationlink = await processNotificationLink(
-            target,
-            communication
-        );
-        const userEmailAndDeviceId = await User.findById(user._id).select(
-            'email deviceId -_id'
-        );
+        const notificationlink = await processNotificationLink(target, communication);
+        const foundUser = await User.findById(user._id).select('email networkLogin deviceId -_id');
 
         const message = {
             clientid,
@@ -572,12 +482,10 @@ async function processMessage(campaign, user) {
             viewed: false,
             userEmail: campaign.userEmail
                 ? campaign.userEmail
-                : userEmailAndDeviceId.email
-                ? userEmailAndDeviceId.email
+                : foundUser.email
+                ? foundUser.email
                 : null,
-            userDevice: userEmailAndDeviceId.deviceId
-                ? userEmailAndDeviceId.deviceId
-                : null,
+            userDevice: foundUser.deviceId ? foundUser.deviceId : null,
             notificationlink,
         };
         return message;
@@ -592,9 +500,7 @@ async function processRecoveryMessage(campaign, user) {
         target.recovery = campaign.recovery;
         target.resetPasswordUrl = campaign.resetPasswordUrl;
         const foundUser = await User.findOne({ _id: user });
-        const userEmailAndDeviceId = await User.findById(user._id).select(
-            'email deviceId -_id'
-        );
+        const userEmailAndDeviceId = await User.findById(user._id).select('email deviceId -_id');
 
         const message = {
             clientid,
@@ -607,9 +513,7 @@ async function processRecoveryMessage(campaign, user) {
                 : userEmailAndDeviceId.email
                 ? userEmailAndDeviceId.email
                 : null,
-            userDevice: userEmailAndDeviceId.deviceId
-                ? userEmailAndDeviceId.deviceId
-                : null,
+            userDevice: userEmailAndDeviceId.deviceId ? userEmailAndDeviceId.deviceId : null,
         };
         return message;
     } catch (error) {
@@ -618,34 +522,65 @@ async function processRecoveryMessage(campaign, user) {
 }
 
 async function processNotificationLink(target, communication) {
-    const { type, value } = target;
+    const { type } = target;
 
-    if (type && type === 'trail') {
-        const trail = await Trail.findOne({ _id: value.trailId });
-        const item = await Item.findOne({ _id: value.itemId });
-        const token = generateSSOToken({
-            networkLogin: value.user.networkLogin,
-            communication,
-            trailTitle: trail.title,
-        });
-        const redirectTo = value.itemId
-            ? `/player/${trail.titleURL}/${item.titleURL}`
-            : `/menu/${trail.titleURL}`;
-        const url = `${process.env.DOMAIN}/login/entrar/sso?token=${token}&redirectTo=${redirectTo}`;
-        const notificationlink = {
-            trailid: value.trailId,
-            itemid: value.itemId,
-            url,
-        };
+    let response = undefined;
 
-        return notificationlink;
-    } else {
-        return {
+    if (!type) {
+        response = {
             url: `${process.env.DOMAIN}/login/entrar?redirectTo=/home`,
-            trailid: '',
-            item: '',
         };
     }
+
+    if (target.content) {
+        const { type, value } = target.content;
+
+        switch (type) {
+            case 'trail': {
+                const trailid = value ? value : target.value.trailId;
+                const _trail = await Trail.findOne({ _id: trailid });
+                const item = target.value.itemId ? await Item.findOne({ _id: value.itemId }) : null;
+
+                const token = generateSSOToken({
+                    networkLogin: target.value?.user?.networkLogin || target.networkLogin,
+                    communication,
+                    trailTitle: _trail.title,
+                });
+                const redirectTo = item
+                    ? `/player/${_trail.titleURL}/${item.titleURL}`
+                    : `/menu/${_trail.titleURL}`;
+
+                response = {
+                    trailid,
+                    itemid: target.value.itemId || '',
+                    url: `${process.env.DOMAIN}/login/entrar/sso?token=${token}&redirectTo=${redirectTo}`,
+                };
+                break;
+            }
+            case 'post': {
+                const url = `${process.env.DOMAIN}/app/home/canal/feed/post/${value}`;
+                response = {
+                    postId: target.postId,
+                    url,
+                };
+                break;
+            }
+            case 'comment': {
+                const url = `${process.env.DOMAIN}/app/home/canal/feed/post/${value}`;
+                response = {
+                    postId: target.postId,
+                    commentId: value,
+                    url,
+                };
+                break;
+            }
+            default:
+                response = {
+                    url: `${process.env.DOMAIN}/login/entrar?redirectTo=/home`,
+                };
+        }
+    }
+    return response;
 }
 
 async function returnUsersBasedOnTarget(type, value, category) {
@@ -672,11 +607,7 @@ function getCommonObjects(arrays) {
         const temp = [];
         for (let j = 0; j < arrays[i].length; j += 1) {
             if (
-                arr.some(
-                    (el) =>
-                        el.name === arrays[i][j].name &&
-                        el.email === arrays[i][j].email
-                )
+                arr.some((el) => el.name === arrays[i][j].name && el.email === arrays[i][j].email)
             ) {
                 temp.push(arrays[i][j]);
             }
