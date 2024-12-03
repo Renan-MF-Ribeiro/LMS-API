@@ -870,7 +870,15 @@ module.exports = {
                         },
                     ]);
 
-                    section.trails = mostSeenTrails.map(({ trail, count }) => ({ ...trail, count, confidential: trail.confidential ?? false }))
+                    section.trails = mostSeenTrails.map(({ trail, count }) => {
+                        const completion = trails.find(t => t._id.toString() === trail._id.toString())?.completion || 0;
+                        return { 
+                            ...trail, 
+                            count,
+                            completion,
+                            confidential: trail.confidential ?? false 
+                        };
+                    })
                 }
                 // console.log(section.trails)
                 resolve(trails.length > 0 ? section : []);
