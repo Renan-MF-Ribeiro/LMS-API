@@ -17,6 +17,7 @@ const moment = require('moment');
 const { TrailViews } = require('../trails/trail-views.model');
 const { listTrainingSectionsStatus } = require('../assessment/business');
 const { Trail } = require('../trails/model');
+const { cloneDeep } = require('lodash');
 const { ObjectId } = require('mongoose').Types
 
 const isSectionTrailInfo = (trail) => (trail.type === 'trail' && ObjectId.isValid(trail._id)) || ObjectId.isValid(trail);
@@ -25,8 +26,10 @@ const isValidSectionTrailInfo = (trail) => !ObjectId.isValid(String(trail));
 
 const getSectionTrailId = trail => ObjectId.isValid(trail) ? trail : (trail._id ?? null);
 
-async function populateSectionTrails (sections, options) {
-    for await (const section of sections) {
+async function populateSectionTrails(sections, options) {
+    const newSections = cloneDeep(sections);
+
+    for await (const section of newSections) {
         if (!section?.trails?.length) continue;
 
         const trailsIds = section.trails
@@ -49,7 +52,102 @@ async function populateSectionTrails (sections, options) {
         });
     }
 
-    return sections;
+    return newSections;
+}
+
+async function setAssessmentHistoricOnSections(userId, sections) {
+    const userWithTags = await UsersWithProcessedTags.findById(userId);
+    const dataAssessmentHistoric = await listTrainingSectionsStatus(userId, userWithTags.userTags);
+
+    return cloneDeep(sections).map(currentSection => {
+        if (!currentSection.isTraining) return currentSection;
+
+        const section = cloneDeep(currentSection);
+
+        const trainingSectionInfo = dataAssessmentHistoric.find(info => String(info.trainingSectionId) === String(section._id))
+
+        if (trainingSectionInfo) {
+            const optionalTrails = trainingSectionInfo.optionalTrailsId ?? [];
+            const isBlocked = trainingSectionInfo.isBlocked ?? false;
+            const hasHistoric = trainingSectionInfo?.hasHistoric ?? false;
+            const cycleMessage = trainingSectionInfo.cycleMessage ?? null;
+            const cycleImage = trainingSectionInfo.cycleImage ?? null;
+            const exceptionTrainingTrails = trainingSectionInfo.exceptionTrainingTrails ?? [];
+            const hasCertificate = !!section.certificateLayout;
+            const cycleShowTrailResults = trainingSectionInfo?.cycleShowTrailResults ?? true;
+
+            section.trails?.forEach(trail => {
+                if (optionalTrails.includes(String(trail._id))) {
+                    trail.isOptional = true;
+                }
+
+                if (exceptionTrainingTrails.includes(String(trail._id))) {
+                    trail.isException = true;
+                }
+            });
+
+            const filteredTrails = section.trails
+                ?.filter(
+                    trail => !['default', 'assessment', 'separator', 'certificate'].includes(trail.type)
+                )
+                ?.filter(trail => !trail.isException)
+                ?.filter(trail => !trail.isOptional)
+                ?? [];
+
+            const isCompleted = filteredTrails.every(trail => trail.completion === 1);
+
+            const messages = trainingSectionInfo.messages ?? [];
+
+            if (!hasHistoric && section.displayType === 'hidden') {
+                section.trails = section.trails.filter(trail => trail.isException || (trail.type && trail.type !== 'trail'));
+            }
+
+            section.hasAssessment = true
+            section.isBlocked = isBlocked;
+            section.isCompleted = hasHistoric && isCompleted;
+            section.hasCertificate = hasCertificate;
+            section.optionalTrails = optionalTrails;
+            section.cycleMessage = cycleMessage;
+            section.cycleImage = cycleImage;
+            section.cycleShowTrailResults = cycleShowTrailResults;
+            section.exceptionTrainingTrails = exceptionTrainingTrails;
+            section.messages = messages;
+        }
+        else {
+            const isCompleted = section.trails
+                ?.filter(
+                    trail => !['default', 'assessment', 'separator', 'certificate'].includes(trail.type)
+                )
+                ?.every(trail => trail.completion === 1);
+
+            section.hasAssessment = false;
+            section.isBlocked = false;
+            section.isCompleted = isCompleted;
+            section.hasCertificate = !!section.certificateLayout;
+        }
+
+        const completedTrailsType = section.completedTrailsType ?? 'optional';
+
+        if (completedTrailsType === 'hidden') {
+            section.trails = section.trails.filter(trail => !trail.isOptional);
+        }
+
+        if (section.trails?.length && !section.trails.some(trail => ['default', 'assessment', 'certificate'].includes(trail.type))) {
+            const [firstItem] = section.trails;
+
+            if (firstItem.type === 'separator') {
+                section.trails.shift();
+            }
+
+            section.trails.unshift({
+                type: 'default',
+                title: '',
+                id: 'default',
+            });
+        }
+
+        return section;
+    });
 }
 
 module.exports = {
@@ -916,104 +1014,11 @@ module.exports = {
         };
     },
 
-    async setAssessmentHistoricOnSections (userId, sections) {
-        const userWithTags = await UsersWithProcessedTags.findById(userId);
-        const dataAssessmentHistoric = await listTrainingSectionsStatus(userId, userWithTags.userTags);
-
-        sections.forEach(section => {
-            if (!section.isTraining) return;
-
-            const trainingSectionInfo = dataAssessmentHistoric.find(info => String(info.trainingSectionId) === String(section._id))
-
-            if (trainingSectionInfo) {
-                const optionalTrails = trainingSectionInfo.optionalTrailsId ?? [];
-                const isBlocked = trainingSectionInfo.isBlocked ?? false;
-                const hasHistoric = trainingSectionInfo?.hasHistoric ?? false;
-                const cycleMessage = trainingSectionInfo.cycleMessage ?? null;
-                const cycleImage = trainingSectionInfo.cycleImage ?? null;
-                const exceptionTrainingTrails = trainingSectionInfo.exceptionTrainingTrails ?? [];
-                const hasCertificate = !!section.certificateLayout;
-                const cycleShowTrailResults = trainingSectionInfo?.cycleShowTrailResults ?? true;
-
-                section.trails?.forEach(trail => {
-                    if (optionalTrails.includes(String(trail._id))) {
-                        trail.isOptional = true;
-                    }
-
-                    if (exceptionTrainingTrails.includes(String(trail._id))) {
-                        trail.isException = true;
-                    }
-                });
-
-                const filteredTrails = section.trails
-                    ?.filter(
-                        trail => !['default', 'assessment', 'separator', 'certificate'].includes(trail.type)
-                    )
-                    ?.filter(trail => !trail.isException)
-                    ?.filter(trail => !trail.isOptional)
-                    ?? [];
-
-                const isCompleted = filteredTrails.every(trail => trail.completion === 1);
-
-                const messages = trainingSectionInfo.messages ?? [];
-
-                if (!hasHistoric && section.displayType === 'hidden') {
-                    section.trails = section.trails.filter(trail => trail.isException || (trail.type && trail.type !== 'trail'));
-                }
-
-                section.hasAssessment = true
-                section.isBlocked = isBlocked;
-                section.isCompleted = hasHistoric && isCompleted;
-                section.hasCertificate = hasCertificate;
-                section.optionalTrails = optionalTrails;
-                section.cycleMessage = cycleMessage;
-                section.cycleImage = cycleImage;
-                section.cycleShowTrailResults = cycleShowTrailResults;
-                section.exceptionTrainingTrails = exceptionTrainingTrails;
-                section.messages = messages;
-            }
-            else {
-                const isCompleted = section.trails
-                    ?.filter(
-                        trail => !['default', 'assessment', 'separator', 'certificate'].includes(trail.type)
-                    )
-                    ?.every(trail => trail.completion === 1);
-
-                section.hasAssessment = false;
-                section.isBlocked = false;
-                section.isCompleted = isCompleted;
-                section.hasCertificate = !!section.certificateLayout;
-            }
-
-            const completedTrailsType = section.completedTrailsType ?? 'optional';
-
-            if (completedTrailsType === 'hidden') {
-                section.trails = section.trails.filter(trail => !trail.isOptional);
-            }
-
-            if (section.trails?.length && !section.trails.some(trail => ['default', 'assessment', 'certificate'].includes(trail.type))) {
-                const [firstItem] = section.trails;
-
-                if (firstItem.type === 'separator') {
-                    section.trails.shift();
-                }
-
-                section.trails.unshift({
-                    type: 'default',
-                    title: '',
-                    id: 'default',
-                });
-            }
-
-        });
-
-        return sections;
-    },
-
     getSectionTrailId,
     isSectionTrailInfo,
     isValidSectionTrailInfo,
     populateSectionTrails,
+    setAssessmentHistoricOnSections,
 };
 
 function isNecessary (trail, tags) {
