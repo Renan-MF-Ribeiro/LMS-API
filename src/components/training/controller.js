@@ -161,15 +161,17 @@ async function generateTrainingSectionCertificate(req, res) {
 
                 initialDate = firstItemTracking?.createdAt ?? null;
             } else {
-                const firstTrail = trails.reduce((current, trail) => {
-                    if (!current) return trail;
+                const firstTrail = trails
+                    .filter(trail => Boolean(trail.startDate))
+                    .reduce((current, trail) => {
+                        if (!current) return trail;
 
-                    if (trail.startDate < current.startDate) {
-                        return trail;
-                    }
+                        if (trail.startDate < current.startDate) {
+                            return trail;
+                        }
 
-                    return current;
-                }, null);
+                        return current;
+                    }, null);
 
                 initialDate = firstTrail?.startDate ?? null;
             }
