@@ -45,7 +45,7 @@ async function generateTrainingSectionCertificate(req, res) {
 
     const user = await getUserByToken(req);
 
-    const { sections, trackings } = await getEligibilityInfoByUserId(
+    const { sections: userSections, trackings } = await getEligibilityInfoByUserId(
         user._id,
         {
             sections: {
@@ -59,9 +59,7 @@ async function generateTrainingSectionCertificate(req, res) {
         },
     );
     
-    if(sections.length) {
-        await setAssessmentHistoricOnSections(user._id, sections);
-    }
+    const sections = await setAssessmentHistoricOnSections(user._id, userSections ?? []);
     
     const section = sections[0];
 
@@ -224,9 +222,9 @@ async function listTrainingTrackings(req, res) {
         }
     );
 
-    await setAssessmentHistoricOnSections(user._id, sections);
-
-    res.json(sections);
+    res.json(
+        await setAssessmentHistoricOnSections(user._id, sections)
+    );
 }
 
 module.exports = {
