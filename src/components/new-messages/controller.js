@@ -52,7 +52,7 @@ module.exports = {
                 completedFinalDate: trailFilters.filters?.[0].finishedFinalDate,
                 enableScore: trailFilters.filters?.[0].enableScore,
                 percentScore: trailFilters.filters?.[0].finishedSlider,
-                user: userFilter.filters.enabled,
+                user: userFilter.enable,
                 registrationInitialDate: userFilter.filters?.[0].registrationInitialDate,
                 registrationFinalDate: userFilter.filters?.[0].registrationFinalDate,
                 accessInitialDate: userFilter.filters?.[0].accessInitialDate,
