@@ -30,7 +30,7 @@ module.exports = {
 
         const body = JSON.parse(req.fields.payload) ?? null;
 
-        body.userCustomElegeFields = userCustomElegeFields
+        body.userCustomElegeFields = userCustomElegeFields;
         try {
             delete body.content;
             const uri = 'posts';
@@ -96,6 +96,19 @@ module.exports = {
                 'create'
             );
         }
+    },
+
+    async findRecentPosts(req, res) {
+        const uri = `posts/new`;
+
+        const { data } = await socialApi.get(uri, { params: req.query });
+        let response = { data, total: data.total };
+        if (data) {
+            const PopulatedData = await populateUserFields('user', 'userId', data);
+            response = { data: PopulatedData, total: data.total };
+        }
+
+        return _messages.success(res, req, response);
     },
 
     async findAllPosts(req, res) {
