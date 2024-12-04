@@ -546,8 +546,8 @@ async function processNotificationLink(target, communication) {
                     : `/menu/${_trail.titleURL}`;
 
                 response = {
-                    trailId,
-                    itemId: target.value.itemId || '',
+                    trailid,
+                    itemid: target.value.itemId || '',
                     url: `${process.env.DOMAIN}/login/entrar?redirectTo=${redirectTo}`,
                 };
                 break;
