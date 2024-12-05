@@ -1,5 +1,5 @@
 const { default: axios } = require('axios');
-const { getElegibleUsers } = require('../../../utils/functions');
+const { getElegibleUsers, getUserByToken } = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
 const { populateUserFields, populateMembers } = require('../buisiness');
