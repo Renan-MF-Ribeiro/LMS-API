@@ -12,6 +12,7 @@ const _messages = require('../../utils/messages');
 const { Types } = require('mongoose');
 const axios = require('axios');
 const { getConnectMap } = require('../../utils/connect');
+const { User } = require('../users/model');
 
 module.exports = {
     async getAutomaticEligibilityOnboardConfig(req, res) {
@@ -89,6 +90,21 @@ module.exports = {
             },
             { new: true }
         );
+
+        const noOwners = await User.find({ owner: { $exists: false } });
+        if (noOwners.length > 0) {
+            const map = await getConnectMap();
+            const owner = Object.entries(map).find(([_, v]) => v === issuer)[0];
+
+            await User.bulkWrite(
+                noOwners.map((user) => ({
+                    updateOne: {
+                        filter: { _id: user._id },
+                        update: { $set: { owner: user[owner] || null } },
+                    },
+                }))
+            );
+        }
 
         return _messages.success(res, req, created.value);
     },
