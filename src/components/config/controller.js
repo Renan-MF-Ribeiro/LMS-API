@@ -10,8 +10,6 @@ const {
 } = require('./model');
 const _messages = require('../../utils/messages');
 const { Types } = require('mongoose');
-const axios = require('axios');
-const { getConnectMap } = require('../../utils/connect');
 const { User } = require('../users/model');
 
 module.exports = {
@@ -90,8 +88,6 @@ module.exports = {
 
         const noOwners = await User.find({ owner: { $exists: false } });
         if (noOwners.length > 0) {
-            const map = await getConnectMap();
-
             await User.bulkWrite(
                 noOwners.map((user) => ({
                     updateOne: {
@@ -130,15 +126,12 @@ module.exports = {
             );
         }
 
-        const map = await getConnectMap();
-        const owner = Object.entries(map).find(([_, v]) => v === issuer)[0];
-
         const updated = await SegmentationConfigModel.findOneAndUpdate(
             {},
             {
                 $set: {
                     'value.rule.name': rule.name,
-                    'value.rule.issuer': owner,
+                    'value.rule.issuer': rule.issuer,
                 },
             },
             { new: true }
@@ -182,16 +175,13 @@ module.exports = {
             return _messages.conflict(res, req, null, checkExceptionExists.error);
         }
 
-        const map = await getConnectMap();
-        const owner = Object.entries(map).find(([_, v]) => v === issuer)[0];
-
         const created = await SegmentationConfigModel.findOneAndUpdate(
             {},
             {
                 $push: {
                     'value.exceptions': {
                         name: exception.name,
-                        issuer: owner,
+                        issuer: exception.issuer,
                         value: exception.value,
                     },
                 },
