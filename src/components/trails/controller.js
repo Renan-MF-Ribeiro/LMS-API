@@ -1313,9 +1313,6 @@ module.exports = {
         }
     },
 
-
-
-
     async returnItemsByTrail (req, res) {
         try {
             const { skip, limit } = pagination(req)
@@ -2124,6 +2121,22 @@ module.exports = {
             );
         }
     },
+
+    async archive(req, res) {
+        const trailId = req.params.trailId;
+
+        await Trail.findByIdAndUpdate(trailId, { $set: { enabled: false, archive: true, archivedAt: new Date() } });
+
+        res.status(204).send();
+    },
+
+    async unarchive(req, res) {
+        const trailId = req.params.trailId;
+
+        await Trail.findByIdAndUpdate(trailId, { $set: { archive: false, archivedAt: null } });
+
+        res.status(204).send();
+    }
 };
 
 function processTrailAndItems (trail) {
