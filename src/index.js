@@ -16,6 +16,7 @@ const {
     isAssessmentActive,
     isShowcaseActive,
     setCurrentFeatures,
+    setSegmentationAndOwner,
 } = require('./utils/middlewares');
 const { PUBLIC_PATH } = process.env;
 const app = express();
@@ -133,6 +134,8 @@ app.use(passport.session());
 app.use(socialApiMiddleware)
 
 app.use(setCurrentFeatures);
+
+app.use(setSegmentationAndOwner)
 
 app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/tracking', validateTokenRoute, trackingRoutes)
