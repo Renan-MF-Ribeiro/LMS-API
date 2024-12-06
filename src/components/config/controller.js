@@ -75,16 +75,13 @@ module.exports = {
             return _messages.badRequest(res, req, null, 'Já existe uma regra criada.');
         }
 
-        const map = await getConnectMap();
-        const owner = Object.entries(map).find(([_, v]) => v === issuer)[0];
-
         const created = await SegmentationConfigModel.findOneAndUpdate(
             {},
             {
                 $set: {
                     'value.rule': {
                         name: rule.name,
-                        issuer: owner,
+                        issuer: rule.issuer,
                     },
                 },
             },
@@ -94,13 +91,12 @@ module.exports = {
         const noOwners = await User.find({ owner: { $exists: false } });
         if (noOwners.length > 0) {
             const map = await getConnectMap();
-            const owner = Object.entries(map).find(([_, v]) => v === issuer)[0];
 
             await User.bulkWrite(
                 noOwners.map((user) => ({
                     updateOne: {
                         filter: { _id: user._id },
-                        update: { $set: { owner: user[owner] || null } },
+                        update: { $set: { owner: user[issuer] || null } },
                     },
                 }))
             );
