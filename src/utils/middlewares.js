@@ -301,7 +301,7 @@ module.exports = {
 
     isSuperAdmin: async (req, res, next) => {
         const profiles = await returnProfileByToken(req.headers.authorization);
-        
+
         if (profiles.indexOf('PERFIL_Super_Admin') >= 0) {
             next();
         } else {
@@ -338,22 +338,6 @@ module.exports = {
 
         if (segmentation.value?.rule) {
             req.segmentation = segmentation.value;
-
-            const noOwners = await User.find({ owner: { $exists: false } });
-            if (noOwners.length > 0) {
-                const map = await getConnectMap()
-                const issuer = segmentation.value.rule.issuer;
-                const owner = Object.entries(map).find(([_, v]) => v === issuer)[0];
-
-                await User.bulkWrite(
-                    noOwners.map((user) => ({
-                        updateOne: {
-                            filter: { _id: user._id },
-                            update: { $set: { owner: user[owner] || null } },
-                        },
-                    }))
-                );
-            }
         }
 
         next();
