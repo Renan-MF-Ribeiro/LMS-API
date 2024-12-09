@@ -162,9 +162,10 @@ async function getSegFieldsFromUser(req) {
     const elegeFields = clientElegeMaps.data.fields;
     const user = await getUserByToken(req);
 
-    const userGroups = await Group.find({ name: { $in: user.groupsAD } }, 'name');
-    const groupNames = userGroups.map((t) => t.name);
-
+    const userGroups = await Group.find({ name: { $in: user.groupsAD } }, 'name tags');
+    const eligibilities = userGroups.flatMap((group) =>
+        group.tags.flatMap((tag) => ({ tag: tag?.value, group: group.name }))
+    );
     const userCustomElegeFields = elegeFields.map((e) => {
         const groupAD = `ELEGE_${user[e]
             .normalize('NFD')
@@ -172,13 +173,14 @@ async function getSegFieldsFromUser(req) {
             ?.replace(/ /g, '_')
             ?.toUpperCase()}`;
 
+        const match = eligibilities.find((eligibility) => eligibility.group === groupAD);
         return {
             [e]: user[e],
-            expectedGroup: groupAD,
-            groupAD: groupNames.includes(groupAD) ? groupAD : null,
+            expectedGroup: groupAD, 
+            groupAD: match ? match.group : null, 
+            tag: match ? match.tag : null, 
         };
     });
-
     return userCustomElegeFields;
 }
 
