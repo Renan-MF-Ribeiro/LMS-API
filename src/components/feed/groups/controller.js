@@ -1,7 +1,7 @@
 const { getElegibleUsers } = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
-const { populateUserFields, populateMembers } = require('../buisiness');
+const { populateUserFields, populateMembers, getSegFieldsFromUser } = require('../buisiness');
 const FormData = require('form-data');
 const fs = require('fs');
 const mime = require('mime-types');
@@ -123,6 +123,10 @@ const GroupController = {
     },
     async createGroup(req, res) {
         const body = JSON.parse(req.fields.payload) ?? null;
+        const userCustomElegeFields = await getSegFieldsFromUser(req);
+
+        body.userCustomElegeFields = userCustomElegeFields;
+
         if (body.auto === true) {
             const elegibleUsers = await getElegibleUsers(
                 body?.elegibilities,
@@ -146,7 +150,6 @@ const GroupController = {
                 const filename = `${file.name}.${mime.extension(file.type)}`;
 
                 formData.append('banner', fs.createReadStream(file.path), filename);
-
                 socialApi.patch(uploadBanner, formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
@@ -155,7 +158,7 @@ const GroupController = {
                 });
             }
 
-            return _messages.success(res, req, {});
+            return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
                 res,
@@ -223,11 +226,10 @@ const GroupController = {
         try {
             const members = await getElegibleUsers(body?.elegibilities, body?.elegibilitiesAnd);
             const memberIds = members.map((user) => user._id);
-            
-            const { data } = await socialApi.patch(uri, memberIds)
+
+            const { data } = await socialApi.patch(uri, memberIds);
 
             return _messages.success(res, req, data);
-
         } catch (error) {
             return _messages.internalServer(
                 res,

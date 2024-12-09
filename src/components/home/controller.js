@@ -167,6 +167,22 @@ const HomeController = {
                     };
                 }).filter((section) => section.trails.length > 0);
 
+            const trailsWithoutSection = filteredTrails.filter(
+                (trail) => result.every(
+                    (section) => !section.trails.find(
+                        (sectionTrail) => String(sectionTrail._id) === String(trail._id)
+                    )
+                )
+            );
+
+            if (trailsWithoutSection.length) {
+                result.push({
+                    _id: 'trails-without-section',
+                    title: 'SEM SEÇÃO',
+                    trails: trailsWithoutSection
+                });
+            }
+
             if (config.alura.active) {
                 const host = process.env.API_ALURA;
                 const clientId = process.env.CLIENT_ID;

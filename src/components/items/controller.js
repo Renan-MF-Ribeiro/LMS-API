@@ -1586,6 +1586,22 @@ const ItemController = {
             );
         }
     },
+
+    async archive(req, res) {
+        const itemId = req.params.itemId;
+
+        await Item.findByIdAndUpdate(itemId, { $set: { enabled: false, archive: true, archivedAt: new Date() } });
+
+        res.status(204).send();
+    },
+
+    async unarchive(req, res) {
+        const itemId = req.params.itemId;
+
+        await Item.findByIdAndUpdate(itemId, { $set: { archive: false, archivedAt: null } });
+
+        res.status(204).send();
+    }
 };
 
 module.exports = ItemController;
