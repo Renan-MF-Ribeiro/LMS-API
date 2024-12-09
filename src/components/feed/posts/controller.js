@@ -21,7 +21,7 @@ module.exports = {
             const uri = 'posts';
             const { data } = await socialApi.post(uri, body);
 
-            if (req?.files && Object.keys(req?.files)?.length > 0) {
+            if (Object.keys(req?.files).length > 0) {
                 const uploadContent = `posts/${data.post._id}/content`;
 
                 const formData = new FormData();

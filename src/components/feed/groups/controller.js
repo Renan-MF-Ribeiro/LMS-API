@@ -141,7 +141,7 @@ const GroupController = {
             const uri = 'groups';
             const { data } = await socialApi.post(uri, body);
 
-            if (req?.files && Object.keys(req?.files)?.length > 0) {
+            if (Object.keys(req?.files).length > 0) {
                 const uploadBanner = `groups/${data.group._id}/banner`;
 
                 const formData = new FormData();
