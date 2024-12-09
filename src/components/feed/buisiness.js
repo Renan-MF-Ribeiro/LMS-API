@@ -168,7 +168,7 @@ async function getSegFieldsFromUser(req) {
     );
     const userCustomElegeFields = elegeFields.map((e) => {
         const groupAD = `ELEGE_${user[e]
-            .normalize('NFD')
+            ?.normalize('NFD')
             ?.replace(/[\u0300-\u036f]/g, '')
             ?.replace(/ /g, '_')
             ?.toUpperCase()}`;
