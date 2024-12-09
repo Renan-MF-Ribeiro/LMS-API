@@ -85,7 +85,7 @@ const corsOptions = {
 };
 
 if (process.env.NODE_ENV !== 'production') {
-    corsOptions.origin.push('http://localhost:4200');
+    corsOptions.origin = '*';
 }
 
 app.disable('x-powered-by');
