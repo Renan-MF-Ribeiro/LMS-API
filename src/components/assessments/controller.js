@@ -9,6 +9,7 @@ const _functions = require('../../utils/functions')
 const _files = require('../../utils/files')
 const { Tracking, SCORMLessonStatus } = require('../tracking/model')
 const { processExamTracking } = require('../tracking/business')
+const { User } = require('../users/model')
 
 
 module.exports = {
@@ -22,8 +23,10 @@ module.exports = {
             }).countDocuments()
 
             if (evaluationCheck < 1) {
+                const user = await _functions.getUserByToken(req)
+
                 const evaluation = await Evaluation
-                    .create(req.body)
+                    .create({ ...req.body, owner: user._id })
 
                 _messages.success(res, req, evaluation, 'Criação de dados', 'assessments', 'createEvaluation', evaluation, [], true, 'CREATE')
             } else {
@@ -214,9 +217,31 @@ module.exports = {
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
 
+            const user = await _functions.getUserByToken(req)
+
+            const ownerEvaluations = []
+
+            const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
+            if (user?.owner && !isException) {
+                for(const evaluation of evaluations) {
+                    if(!evaluation?.owner) {
+                        ownerEvaluations.push(evaluation)
+                        continue;
+                    }
+
+                    const issuer = req.segmentation.rule.issuer
+                    const userEvaluationOwner = await User.findOne({ _id: evaluation.owner })
+                    if (userEvaluationOwner[issuer] === user.owner) {
+                        ownerEvaluations.push(group)
+                    }
+                }
+            } else {
+                ownerEvaluations.push(...evaluations)
+            }
+
             _messages.success(res, req, {
-                data: evaluations,
-                total,
+                data: ownerEvaluations,
+                total: total - evaluations.length - ownerEvaluations.length,
             })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'getAllEvaluations')
@@ -247,9 +272,23 @@ module.exports = {
     async getById (req, res) {
         try {
             const { id } = req.params
+
             const evaluation = await Evaluation.findById(id)
 
-            _messages.success(res, req, evaluation,)
+            const user = await _functions.getUserByToken(req)
+            
+            const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
+            if(evaluation?.owner && user?.owner && !isException) {
+                const issuer = req.segmentation.rule.issuer
+                const userEvaluationOwner = await User.findOne({ _id: evaluation.owner })
+                if (userEvaluationOwner[issuer] === user.owner) {
+                    return _messages.success(res, req, evaluation)
+                }
+            } else {
+               return _messages.success(res, req, evaluation)
+            }
+
+            return _messages.forbidden(res, req, null, 'Você não tem permissão para prosseguir com a ação')
         }
         catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'getById')
