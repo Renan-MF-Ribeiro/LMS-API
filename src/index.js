@@ -85,7 +85,9 @@ const corsOptions = {
 };
 
 if (process.env.NODE_ENV !== 'production') {
-    corsOptions.origin = '*';
+    corsOptions.origin = [
+        '*',
+    ]
 }
 
 app.disable('x-powered-by');
