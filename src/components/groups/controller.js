@@ -26,7 +26,9 @@ module.exports = {
                 );
             }
 
-            const group = await Group.create(req.body);
+            const user = await _functions.getUserByToken(req)
+
+            const group = await Group.create({...req.body, owner: user._id });
             _messages.success(
                 res,
                 req,
@@ -56,6 +58,8 @@ module.exports = {
             const { skip, limit } = _functions.pagination(req);
             const searchBy = req.query.searchBy;
 
+            const user = await _functions.getUserByToken(req)
+
             const total = await Group.find(
                 searchBy
                     ? {
@@ -77,9 +81,29 @@ module.exports = {
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
+            const ownerGroups = []
+
+            const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
+            if (user?.owner && !isException) {
+                for(const group of groups) {
+                    if(!group?.owner) {
+                        ownerGroups.push(group)
+                        continue;
+                    }
+
+                    const issuer = req.segmentation.rule.issuer
+                    const userGroupOwner = await User.findOne({ _id: group.owner })
+                    if (userGroupOwner[issuer] === user.owner) {
+                        ownerGroups.push(group)
+                    }
+                }
+            } else {
+                ownerGroups.push(...groups)
+            }
+
             _messages.success(res, req, {
-                data: groups,
-                total,
+                data: ownerGroups,
+                total: total - groups.length - ownerGroups.length,
             });
         } catch (error) {
             _messages.internalServer(
@@ -331,16 +355,40 @@ module.exports = {
             const groups = await Group.find({});
             const trails = await Trail.find({});
 
-            const groupTags = groups
+            const user = await _functions.getUserByToken(req)
+            
+            const ownerGroups = []
+
+            const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
+            if (user?.owner && !isException) {
+                for(const group of groups) {
+                    if(!group?.owner) {
+                        ownerGroups.push(group)
+                        continue;
+                    }
+
+                    const issuer = req.segmentation.rule.issuer
+                    const userGroupOwner = await User.findOne({ _id: group.owner })
+                    if (userGroupOwner[issuer] === user.owner) {
+                        ownerGroups.push(group)
+                    }
+                }
+            } else {
+                ownerGroups.push(...groups)
+            }
+
+            const groupTags = ownerGroups
                 .filter((value) => value.tags?.length > 0)
                 .map((group) => group.tags.map((tag) => tag.value));
             const trailTags = trails
                 .filter((value) => value.tags?.length > 0)
                 .map((trail) => trail.tags.map((tag) => tag.value))
                 .filter((tag) => !/(\bSECAO_)/.test(tag));
+
+
             let tags = [...groupTags, ...trailTags];
 
-            tags = tags.reduce((prev, curr) => prev.concat(curr), []);
+            tags = [...new Set(tags.reduce((prev, curr) => prev.concat(curr), []))];
 
             _messages.success(res, req, tags);
         } catch (error) {
@@ -376,7 +424,29 @@ module.exports = {
                 : { tags: { $exists: true, $ne: [] } };
             const trails = await Trail.find(queryTrail);
 
-            const groupTags = groups
+            const user = await _functions.getUserByToken(req)
+            
+            const ownerGroups = []
+
+            const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
+            if (user?.owner && !isException) {
+                for(const group of groups) {
+                    if(!group?.owner) {
+                        ownerGroups.push(group)
+                        continue;
+                    }
+
+                    const issuer = req.segmentation.rule.issuer
+                    const userGroupOwner = await User.findOne({ _id: group.owner })
+                    if (userGroupOwner[issuer] === user.owner) {
+                        ownerGroups.push(group)
+                    }
+                }
+            } else {
+                ownerGroups.push(...groups)
+            }
+
+            const groupTags = ownerGroups
                 .filter((value) => value.tags?.length > 0)
                 .map((group) => group.tags.map((tag) => tag.value))
                 .filter((tag) => !/(\bPERFIL_)/.test(tag));
@@ -449,7 +519,29 @@ module.exports = {
                 'tags.display': tag,
             });
 
-            const groupTags = groups
+            const user = await _functions.getUserByToken(req)
+
+            const ownerGroups = []
+
+            const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
+            if (user?.owner && !isException) {
+                for(const group of groups) {
+                    if(!group?.owner) {
+                        ownerGroups.push(group)
+                        continue;
+                    }
+
+                    const issuer = req.segmentation.rule.issuer
+                    const userGroupOwner = await User.findOne({ _id: group.owner })
+                    if (userGroupOwner[issuer] === user.owner) {
+                        ownerGroups.push(group)
+                    }
+                }   
+            } else {
+                ownerGroups.push(...groups)
+            }
+
+            const groupTags = ownerGroups
                 .filter((value) => value.tags?.length > 0)
                 .map((group) => ({ name: group.name, _id: group._id }));
 
@@ -574,7 +666,9 @@ module.exports = {
                 );
             }
 
-            const group = await ClassGroup.create(req.body);
+            const user = await _functions.getUserByToken(req)
+
+            const group = await ClassGroup.create({ ...req.body, owner: user._id});
             _messages.success(
                 res,
                 req,
@@ -610,6 +704,9 @@ module.exports = {
 
             const { classes: classGroupRows, workbook } =
                 await _files.readXLSXClassGroups(file.path);
+
+
+            const user = await _functions.getUserByToken(req)
 
             const results = [];
             for (const classGroupRow of classGroupRows) {
@@ -678,6 +775,7 @@ module.exports = {
                                             1000000
                                     ),
                                     status: 2,
+                                    owner: user._id
                                 });
                             }
 
@@ -828,6 +926,8 @@ module.exports = {
 
             const { searchBy = null } = req.query;
 
+            const user = await _functions.getUserByToken(req)
+
             const query = searchBy
                 ? {
                     $or: [
@@ -844,9 +944,29 @@ module.exports = {
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
+            const ownerGroups = []
+
+            const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
+            if (user?.owner && !isException) {
+                for(const group of groups) {
+                    if(!group?.owner) {
+                        ownerGroups.push(group)
+                        continue;
+                    }
+
+                    const issuer = req.segmentation.rule.issuer
+                    const userGroupOwner = await User.findOne({ _id: group.owner })
+                    if (userGroupOwner[issuer] === user.owner) {
+                        ownerGroups.push(group)
+                    }
+                }
+            } else {
+                ownerGroups.push(...groups)
+            }
+
             _messages.success(res, req, {
-                data: groups,
-                total,
+                data: ownerGroups,
+                total: total - groups.length - ownerGroups.length,
             });
         } catch (error) {
             _messages.internalServer(
