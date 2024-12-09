@@ -3,7 +3,8 @@ const moment = require('moment');
 const _messages = require('../../utils/messages');
 const { azureBlob } = require('../../utils/files');
 const { Partner } = require('./model');
-const { pagination, ordernation } = require('../../utils/functions');
+const { pagination, ordernation, getUserByToken } = require('../../utils/functions');
+const { User } = require('../users/model');
 
 module.exports = {
     async getPartners(req, res) {
@@ -26,8 +27,30 @@ module.exports = {
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
+                const user = await getUserByToken(req)
+
+                const ownerPartners = []
+    
+                const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
+                if (user?.owner && !isException) {
+                    for(const partner of partners) {
+                        if(!partner?.owner) {
+                            ownerPartners.push(partner)
+                            continue;
+                        }
+    
+                        const issuer = req.segmentation.rule.issuer
+                        const userPartnerOwner = await User.findOne({ _id: partner.owner })
+                        if (userPartnerOwner[issuer] === user.owner) {
+                            ownerPartners.push(group)
+                        }
+                    }
+                } else {
+                    ownerPartners.push(...partners)
+                }
+
             _messages.success(res, req, {
-                data: partners,
+                data: ownerPartners,
                 total,
             });
         } catch (error) {
