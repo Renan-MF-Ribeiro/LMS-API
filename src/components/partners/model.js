@@ -49,6 +49,7 @@ const PartnerSchema = new mongoose.Schema(
             default: [],
         },
         active: { type: Boolean, default: true },
+        owner: { type: 'ObjectId', ref: 'users' }
     },
     {
         ...optionsSchema,
