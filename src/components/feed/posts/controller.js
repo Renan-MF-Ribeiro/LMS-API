@@ -1,10 +1,7 @@
 const { getUserByToken } = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
-const { populateUserFields, createNotification } = require('../buisiness');
-const FormData = require('form-data');
-const fs = require('fs');
-const mime = require('mime-types');
+const { populateUserFields, createNotification, getSegFieldsFromUser } = require('../buisiness');
 const {
     sendMessageToKafka,
     processTargetUsers,
@@ -12,22 +9,10 @@ const {
 } = require('../../new-messages/business');
 
 const config = require('../../../../config.json');
-const { default: axios } = require('axios');
 
 module.exports = {
     async create(req, res) {
-        const clientElegeMaps = await axios.get(
-            `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
-            {
-                headers: {
-                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
-                },
-            }
-        );
-        const elegeFields = clientElegeMaps.data.fields;
-        const user = await getUserByToken(req);
-        const userCustomElegeFields = elegeFields.map((e) => ({ [e]: user[e] }));
-
+        const userCustomElegeFields = await getSegFieldsFromUser(req);
         const body = JSON.parse(req.fields.payload) ?? null;
 
         body.userCustomElegeFields = userCustomElegeFields;
@@ -36,7 +21,7 @@ module.exports = {
             const uri = 'posts';
             const { data } = await socialApi.post(uri, body);
 
-            if (Object.keys(req?.files).length > 0) {
+            if (req?.files && Object.keys(req?.files)?.length > 0) {
                 const uploadContent = `posts/${data.post._id}/content`;
 
                 const formData = new FormData();

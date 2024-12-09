@@ -2,6 +2,9 @@ const { processTargetUsers, sendMessageToKafka } = require('../new-messages/busi
 const { Trail } = require('../trails/model');
 const { User } = require('../users/model');
 const options = require('../../../config.json');
+const { default: axios } = require('axios');
+const { Group } = require('../groups/model');
+const { getUserByToken } = require('../../utils/functions');
 
 /* 
  Função recursiva pra popular usuários de arrays ou objetos vindos do SocialApi
@@ -147,4 +150,42 @@ async function createNotification(config, users) {
     }
 }
 
-module.exports = { populateUserFields, populateTrailFields, populateMembers, createNotification };
+async function getSegFieldsFromUser(req) {
+    const clientElegeMaps = await axios.get(
+        `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+        {
+            headers: {
+                'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+            },
+        }
+    );
+    const elegeFields = clientElegeMaps.data.fields;
+    const user = await getUserByToken(req);
+
+    const userGroups = await Group.find({ name: { $in: user.groupsAD } }, 'name');
+    const groupNames = userGroups.map((t) => t.name);
+
+    const userCustomElegeFields = elegeFields.map((e) => {
+        const groupAD = `ELEGE_${user[e]
+            .normalize('NFD')
+            ?.replace(/[\u0300-\u036f]/g, '')
+            ?.replace(/ /g, '_')
+            ?.toUpperCase()}`;
+
+        return {
+            [e]: user[e],
+            expectedGroup: groupAD,
+            groupAD: groupNames.includes(groupAD) ? groupAD : null,
+        };
+    });
+
+    return userCustomElegeFields;
+}
+
+module.exports = {
+    populateUserFields,
+    populateTrailFields,
+    populateMembers,
+    createNotification,
+    getSegFieldsFromUser,
+};
