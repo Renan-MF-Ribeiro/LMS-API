@@ -63,7 +63,7 @@ const feedRoutes = require('./components/feed/routes');
 const configRouter = require('./components/config/routes');
 const { socialApiMiddleware } = require('./components/social/http-adapter');
 
-const corsOptions = {
+let corsOptions = {
     origin: [
         process.env.DOMAIN,
         'https://monitoring.happlearning.com.br',
@@ -85,7 +85,7 @@ const corsOptions = {
 };
 
 if (process.env.NODE_ENV !== 'production') {
-    corsOptions.origin = false;
+    corsOptions.origin.push('*');
 }
 
 app.disable('x-powered-by');
