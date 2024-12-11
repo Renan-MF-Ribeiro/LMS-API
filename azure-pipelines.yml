@@ -23,7 +23,7 @@ variables:
   tag: "latest"
 
   sonarQubeServiceConnection: "SQ-Happlearning-API"
-  sonarQubeProjectKey: "sqa_422ca151f5613b0e0c25df5181ada8a76e27b867"
+  sonarQubeProjectKey: "Happlearning-Api"
 
   # Agent VM image name
   vmImageName: "ubuntu-latest"
@@ -43,22 +43,22 @@ stages:
           # Prepare Analysis Configuration task
           - task: SonarQubePrepare@7
             inputs:
-              SonarQube: '$(sonarQubeServiceConnection)'
+              SonarQube: $(sonarQubeServiceConnection)
               scannerMode: 'cli'
-              configMode: 'file'
-            # condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+              configMode: 'manual'
+              cliProjectKey: $(sonarQubeProjectKey)
+              cliProjectName: 'Happlearning Api'
+              cliSources: '.'
 
           # Run Code Analysis task
           - task: SonarQubeAnalyze@7
             inputs:
               jdkversion: 'JAVA_HOME'
-            # condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
 
           # Publish Quality Gate Result task
           - task: SonarQubePublish@7
             inputs:
               pollingTimeoutSec: '300'
-            # condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
 
   - stage: Build
     displayName: Build and push stage
