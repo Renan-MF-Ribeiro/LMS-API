@@ -51,7 +51,7 @@ stages:
           # Run Code Analysis task
           - task: SonarQubeAnalyze@7
             inputs:
-              jdkversion: 'JAVA_HOME'
+              jdkversion: 'JAVA_HOME_17_X64'
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
 
           # Publish Quality Gate Result task
