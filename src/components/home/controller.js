@@ -51,7 +51,7 @@ const HomeController = {
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsGroupsByToken(req);
-            const classGroups = await getGroupCodesByToken(req, tags);
+            const classGroups = user?.classGroups ?? [];
 
             const { skip, limit } = pagination({
                 query: {
@@ -69,7 +69,7 @@ const HomeController = {
 
             classGroups?.forEach(({ groupCode, startDate, limitDate }) => {
                 if (groupCode && startDate && limitDate && startDate <= new Date() && limitDate >= new Date()) {
-                    tags?.push(groupCode)
+                    tags?.push({ display: groupCode, value: groupCode })
                 }
             });
 
@@ -92,8 +92,6 @@ const HomeController = {
                 enabled: true,
                 deleted: { $eq: 0 },
             });
-
-            console.log('item', items.length);
 
             filteredTrails = await populateTrails(true, {
                 $or: [
@@ -123,13 +121,9 @@ const HomeController = {
                 ],
             });
 
-            console.log('filteredTrails 1', items.length);
-
             filteredTrails = filteredTrails.filter((trail) => {
                 return checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && checkIfTheTrackIsValid(trail)
             });
-
-            console.log('filteredTrails 2', items.length);
 
             const itemsIds = filteredTrails.flatMap((t) => t.items.map((i) => i.itemID._id));
             const allTrackingUser = await Tracking.find({
