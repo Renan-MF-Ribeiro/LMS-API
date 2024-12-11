@@ -698,13 +698,14 @@ async function getUsersLoad() {
                     'Usuários processados!', `Usuários existentes: ${existingUsers.length}, Novos usuários: ${newUsers.length}`
                 );
 
-                const data_start = new Date();
-
                 if (config.usersData?.inactivateIfNotInSpreadsheet) {
                     usersLoadLog('Inativando usuários não presentes na planilha');
 
                     await User.updateMany(
-                        { updatedAt: { $lt: data_start } },
+                        {
+                            ignoreLoadInactivation: { $ne: true },
+                            updatedAt: { $lt: new Date() }
+                        },
                         { $set: { status: 'INATIVO' } },
                         { multi: true }
                     );
