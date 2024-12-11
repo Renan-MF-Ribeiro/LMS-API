@@ -29,8 +29,8 @@ variables:
   vmImageName: "ubuntu-latest"
 
 stages:
-  - stage: Build
-    displayName: Build and push stage
+  - stage: SonarQube
+    displayName: SonarQube
     jobs:
       - job: SonarQube
         displayName: 'SonarQube'
@@ -60,6 +60,9 @@ stages:
               pollingTimeoutSec: '300'
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
 
+  - stage: Build
+    displayName: Build and push stage
+    jobs:
       - job: Build
         displayName: Build
         pool:
