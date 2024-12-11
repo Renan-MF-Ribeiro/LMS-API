@@ -45,23 +45,20 @@ stages:
             inputs:
               SonarQube: '$(sonarQubeServiceConnection)'
               scannerMode: 'cli'
-              configMode: 'manual'
-              cliProjectKey: 'Happlearning-Api'
-              cliProjectName: 'Happlearning Api'
-              cliSources: '.'
-            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+              configMode: 'file'
+            # condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
 
           # Run Code Analysis task
           - task: SonarQubeAnalyze@7
             inputs:
               jdkversion: 'JAVA_HOME'
-            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+            # condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
 
           # Publish Quality Gate Result task
           - task: SonarQubePublish@7
             inputs:
               pollingTimeoutSec: '300'
-            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+            # condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
 
   - stage: Build
     displayName: Build and push stage
