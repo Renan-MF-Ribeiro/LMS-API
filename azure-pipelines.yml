@@ -23,7 +23,7 @@ variables:
   tag: "latest"
 
   sonarQubeServiceConnection: "SQ-Happlearning-API"
-  sonarQubeProjectKey: "Happlearning-Api"
+  sonarQubeProjectKey: "sqa_422ca151f5613b0e0c25df5181ada8a76e27b867"
 
   # Agent VM image name
   vmImageName: "ubuntu-latest"
@@ -43,17 +43,16 @@ stages:
           # Prepare Analysis Configuration task
           - task: SonarQubePrepare@7
             inputs:
-              SonarQube: $(sonarQubeServiceConnection)
+              SonarQube: '$(sonarQubeServiceConnection)'
               scannerMode: 'cli'
-              configMode: 'manual'
-              cliProjectKey: $(sonarQubeProjectKey)
-              cliProjectName: 'Happlearning Api'
-              cliSources: '.'
+              configMode: 'file'
 
           # Run Code Analysis task
           - task: SonarQubeAnalyze@7
             inputs:
               jdkversion: 'JAVA_HOME'
+              extraProperties: |
+                sonar.branch.name=
 
           # Publish Quality Gate Result task
           - task: SonarQubePublish@7
