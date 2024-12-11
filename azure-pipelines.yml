@@ -22,6 +22,9 @@ variables:
   dockerfilePath: "$(Build.SourcesDirectory)/Dockerfile"
   tag: "latest"
 
+  sonarQubeServiceConnection: "SQ-Happlearning-API"
+  sonarQubeProjectKey: "sqa_422ca151f5613b0e0c25df5181ada8a76e27b867"
+
   # Agent VM image name
   vmImageName: "ubuntu-latest"
 
@@ -29,6 +32,34 @@ stages:
   - stage: Build
     displayName: Build and push stage
     jobs:
+      - job: SonarQube
+        displayName: 'SonarQube'
+        pool:
+          name: Default
+        steps:
+          - checkout: self
+            fetchDepth: 0
+          
+          # Prepare Analysis Configuration task
+          - task: SonarQubePrepare@7
+            inputs:
+              SonarQube: '$(sonarQubeServiceConnection)'
+              scannerMode: 'cli'
+              configMode: 'file'
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+
+          # Run Code Analysis task
+          - task: SonarQubeAnalyze@7
+            inputs:
+              jdkversion: 'JAVA_HOME_17_X64'
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+
+          # Publish Quality Gate Result task
+          - task: SonarQubePublish@7
+            inputs:
+              pollingTimeoutSec: '300'
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+
       - job: Build
         displayName: Build
         pool:
