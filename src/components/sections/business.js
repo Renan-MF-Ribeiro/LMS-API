@@ -75,6 +75,7 @@ async function setAssessmentHistoricOnSections(userId, sections) {
             const exceptionTrainingTrails = trainingSectionInfo.exceptionTrainingTrails ?? [];
             const hasCertificate = !!section.certificateLayout;
             const cycleShowTrailResults = trainingSectionInfo?.cycleShowTrailResults ?? true;
+            const exceptionCertificateTrails = section.exceptionCertificateTrails ?? [];
 
             section.trails?.forEach(trail => {
                 if (optionalTrails.includes(String(trail._id))) {
@@ -84,6 +85,10 @@ async function setAssessmentHistoricOnSections(userId, sections) {
                 if (exceptionTrainingTrails.includes(String(trail._id))) {
                     trail.isException = true;
                 }
+
+                if (exceptionCertificateTrails.includes(String(trail._id))) {
+                    trail.isCertificateException = true;
+                }
             });
 
             const filteredTrails = section.trails
@@ -92,6 +97,7 @@ async function setAssessmentHistoricOnSections(userId, sections) {
                 )
                 ?.filter(trail => !trail.isException)
                 ?.filter(trail => !trail.isOptional)
+                ?.filter(trail => !trail.isCertificateException)
                 ?? [];
 
             const isCompleted = filteredTrails.every(trail => trail.completion === 1);
