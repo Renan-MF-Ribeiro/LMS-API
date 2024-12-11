@@ -51,8 +51,6 @@ stages:
           - task: SonarQubeAnalyze@7
             inputs:
               jdkversion: 'JAVA_HOME'
-              extraProperties: |
-                sonar.branch.name=
 
           # Publish Quality Gate Result task
           - task: SonarQubePublish@7
