@@ -9,7 +9,8 @@ const {
     getTagsElegiblesByToken,
     filterTrails,
     filterAlura,
-    mapAlura
+    mapAlura,
+    getGroupCodesByToken
 } = require('../sections/business');
 const { User } = require('../users/model');
 const {
@@ -50,6 +51,8 @@ const HomeController = {
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsGroupsByToken(req);
+            const classGroups = await getGroupCodesByToken(req, tags);
+
             const { skip, limit } = pagination({
                 query: {
                     pageIndex: Number(pageIndex),
@@ -63,6 +66,13 @@ const HomeController = {
                 delete tag.createdAt;
                 tags.push(tag);
             }
+
+            classGroups?.forEach(({ groupCode, startDate, limitDate }) => {
+                if (groupCode && startDate && limitDate && startDate <= new Date() && limitDate >= new Date()) {
+                    tags?.push(groupCode)
+                }
+            });
+
             const escapedSearchBy = searchBy ? searchBy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
             const items = await Item.find({
                 $or: [
@@ -82,6 +92,8 @@ const HomeController = {
                 enabled: true,
                 deleted: { $eq: 0 },
             });
+
+            console.log('item', items.length);
 
             filteredTrails = await populateTrails(true, {
                 $or: [
@@ -111,9 +123,13 @@ const HomeController = {
                 ],
             });
 
+            console.log('filteredTrails 1', items.length);
+
             filteredTrails = filteredTrails.filter((trail) => {
                 return checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && checkIfTheTrackIsValid(trail)
             });
+
+            console.log('filteredTrails 2', items.length);
 
             const itemsIds = filteredTrails.flatMap((t) => t.items.map((i) => i.itemID._id));
             const allTrackingUser = await Tracking.find({
@@ -166,22 +182,6 @@ const HomeController = {
                             }),
                     };
                 }).filter((section) => section.trails.length > 0);
-
-            const trailsWithoutSection = filteredTrails.filter(
-                (trail) => result.every(
-                    (section) => !section.trails.find(
-                        (sectionTrail) => String(sectionTrail._id) === String(trail._id)
-                    )
-                )
-            );
-
-            if (trailsWithoutSection.length) {
-                result.push({
-                    _id: 'trails-without-section',
-                    title: 'SEM SEÇÃO',
-                    trails: trailsWithoutSection
-                });
-            }
 
             if (config.alura.active) {
                 const host = process.env.API_ALURA;
