@@ -45,7 +45,10 @@ stages:
             inputs:
               SonarQube: '$(sonarQubeServiceConnection)'
               scannerMode: 'cli'
-              configMode: 'file'
+              configMode: 'manual'
+              cliProjectKey: 'Happlearning-Api'
+              cliProjectName: 'Happlearning Api'
+              cliSources: '.'
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
 
           # Run Code Analysis task
