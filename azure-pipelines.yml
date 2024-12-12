@@ -22,40 +22,40 @@ variables:
   dockerfilePath: "$(Build.SourcesDirectory)/Dockerfile"
   tag: "latest"
 
-  sonarQubeServiceConnection: "SQ-Happlearning-API"
-  sonarQubeProjectKey: "sqa_422ca151f5613b0e0c25df5181ada8a76e27b867"
+  # sonarQubeServiceConnection: "SQ-Happlearning-API"
+  # sonarQubeProjectKey: "sqa_422ca151f5613b0e0c25df5181ada8a76e27b867"
 
   # Agent VM image name
   vmImageName: "ubuntu-latest"
 
 stages:
-  - stage: SonarQube
-    displayName: SonarQube
-    jobs:
-      - job: SonarQube
-        displayName: 'SonarQube'
-        pool:
-          name: Default
-        steps:
-          - checkout: self
-            fetchDepth: 0
+  # - stage: SonarQube
+  #   displayName: SonarQube
+  #   jobs:
+  #     - job: SonarQube
+  #       displayName: 'SonarQube'
+  #       pool:
+  #         name: Default
+  #       steps:
+  #         - checkout: self
+  #           fetchDepth: 0
           
-          # Prepare Analysis Configuration task
-          - task: SonarQubePrepare@7
-            inputs:
-              SonarQube: '$(sonarQubeServiceConnection)'
-              scannerMode: 'cli'
-              configMode: 'file'
+  #         # Prepare Analysis Configuration task
+  #         - task: SonarQubePrepare@7
+  #           inputs:
+  #             SonarQube: '$(sonarQubeServiceConnection)'
+  #             scannerMode: 'cli'
+  #             configMode: 'file'
 
-          # Run Code Analysis task
-          - task: SonarQubeAnalyze@7
-            inputs:
-              jdkversion: 'JAVA_HOME'
+  #         # Run Code Analysis task
+  #         - task: SonarQubeAnalyze@7
+  #           inputs:
+  #             jdkversion: 'JAVA_HOME'
 
-          # Publish Quality Gate Result task
-          - task: SonarQubePublish@7
-            inputs:
-              pollingTimeoutSec: '300'
+  #         # Publish Quality Gate Result task
+  #         - task: SonarQubePublish@7
+  #           inputs:
+  #             pollingTimeoutSec: '300'
 
   - stage: Build
     displayName: Build and push stage
