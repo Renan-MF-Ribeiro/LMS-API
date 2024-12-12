@@ -185,11 +185,15 @@ const HomeController = {
                 )
             );
 
-            if (trailsWithoutSection.length) {
+            const filteredTrailsWithoutSection = hasFilters
+                ? filterTrails(filters, trailsWithoutSection, tags)
+                : trailsWithoutSection;
+
+            if (filteredTrailsWithoutSection.length) {
                 result.push({
                     _id: 'trails-without-section',
                     title: 'SEM SEÇÃO',
-                    trails: trailsWithoutSection
+                    trails: filteredTrailsWithoutSection
                 });
             }
 
