@@ -197,7 +197,8 @@ const HomeController = {
                 });
             }
 
-            if (config.alura.active) {
+            log('SEARCH ALURA?', req?.features?.alura ?? false);
+            if (req?.features?.alura) {
                 const host = process.env.API_ALURA;
                 const clientId = process.env.CLIENT_ID;
                 const headers = { 'x-client-key': process.env.API_KEY_ALURA };
