@@ -22,9 +22,6 @@ variables:
   dockerfilePath: "$(Build.SourcesDirectory)/Dockerfile"
   tag: "latest"
 
-  sonarQubeServiceConnection: "SQ-Happlearning-API"
-  # sonarQubeProjectKey: "sqa_422ca151f5613b0e0c25df5181ada8a76e27b867"
-
   # Agent VM image name
   vmImageName: "ubuntu-latest"
 
@@ -43,9 +40,15 @@ stages:
           # Prepare Analysis Configuration task
           - task: SonarQubePrepare@7
             inputs:
-              SonarQube: '$(sonarQubeServiceConnection)'
+              SonarQube: 'SQ-Happlearning-API'
               scannerMode: 'cli'
               configMode: 'file'
+              cliProjectKey: 'Happlearning-Api'
+              cliProjectName: 'Happlearning Api'
+              extraProperties: |
+                sonar.sources=.
+                sonar.exclusions=**/node_modules/**
+                sonar.token=sqa_422ca151f5613b0e0c25df5181ada8a76e27b867
 
           # Run Code Analysis task
           - task: SonarQubeAnalyze@7
