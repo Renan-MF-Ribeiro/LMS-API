@@ -62,6 +62,7 @@ const {
     removeAccents,
     deepGet,
     formatDateWithoutHoursBrasilian,
+    getDataByToken,
 } = require('../../utils/functions');
 
 const {
@@ -128,6 +129,8 @@ module.exports = {
                 );
             }
 
+            const user = await getUserByToken(req)
+
             const elegibilityResponse = await axios.get(
                 `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
                 {
@@ -140,7 +143,11 @@ module.exports = {
 
             const processedUser = processUsersLoad(req.body, fieldsForElegibility);
 
-            await User.create(processedUser);
+            await User.create({
+                ...processedUser,
+                owner: user?.owner
+            });
+
             const created = await User.findOne(
                 { networkLogin: processedUser.networkLogin },
                 { ...userProjection }
@@ -175,8 +182,36 @@ module.exports = {
     async findById(req, res) {
         try {
             const _id = req.params.userId;
-            const user = await User.findOne({ _id }).select('-password');
-            _messages.success(res, req, user);
+            const user = await getUserByToken(req)
+            
+            const query = { _id }
+
+            if(user?.owner) {
+                const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
+                
+                if(!isException) {
+                    query.$or = [
+                        {
+                            [req.segmentation.rule.issuer]: {
+                                $eq: user.owner
+                            }
+                        },
+                        {
+                            owner: {
+                                exists: false
+                            }
+                        },
+                        {
+                            owner: {
+                                $eq: null
+                            }
+                        }
+                    ]
+                }
+            }
+
+            const foundUser = await User.findOne(query).select('-password');
+            _messages.success(res, req, foundUser);
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -460,6 +495,7 @@ module.exports = {
                         welcomeVideoWatched: !hasWelcomeComponentFeature
                             ? undefined
                             : user?.welcomeVideoWatched,
+                        owner: user.owner
                     });
 
                     const token_analytics = generateTokenAnalytics({
@@ -1299,6 +1335,8 @@ module.exports = {
             );
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
+            const user = await getUserByToken(req)
+
             for (const result of results) {
                 const existingUser = await User.findOne({
                     networkLogin: result.cpf,
@@ -1323,6 +1361,7 @@ module.exports = {
                     newUsers.push({
                         ...processedUser,
                         cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
+                        owner: user?.owner
                     });
                 }
             }
@@ -1387,16 +1426,54 @@ module.exports = {
             const isOnboarding = req.query.onboarding === 'true' || req.query.onboarding === true;
 
             const query = {
-                onboarding: isOnboarding ? true : { $ne: true },
+                $and: [
+                    {
+                        onboarding: isOnboarding ? true : { $ne: true },
+                    }
+                ]
             }
 
             if (searchBy) {
-                query.$or = [
-                    { name: { $regex: searchBy, $options: 'i' } },
-                    { registration: { $regex: searchBy, $options: 'i' } },
-                    { email: { $regex: searchBy, $options: 'i' } },
-                    { cpf: { $regex: searchBy, $options: 'i' } },
-                ];
+                query.$and.push(
+                    {
+                        $or: [
+                            { name: { $regex: searchBy, $options: 'i' } },
+                            { registration: { $regex: searchBy, $options: 'i' } },
+                            { email: { $regex: searchBy, $options: 'i' } },
+                            { cpf: { $regex: searchBy, $options: 'i' } },
+                        ]
+                    }
+                )
+            }
+
+            const user = await getUserByToken(req)
+
+            if(user?.owner) {
+                const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
+                
+                if(!isException) {
+                    query.$and.push(
+                        {
+                            $or: [
+                                {
+                                    [req.segmentation.rule.issuer]: {
+                                        $eq: user.owner
+                                    } 
+                                },
+                                {
+                                    owner: {
+                                        $exists: false
+                                    }
+                                },
+                                {
+                                    owner: {
+                                        $eq: null
+                                    }
+                                }
+                            ]
+                        }
+                    )
+                }
             }
 
             const users = await User.find(query)
@@ -1415,6 +1492,7 @@ module.exports = {
                 status: 'INATIVO',
                 onboarding: { $ne: true },
             }).countDocuments();
+            
 
             _messages.success(res, req, {
                 data: users,
@@ -1762,6 +1840,7 @@ module.exports = {
                 acceptTermsCollaboration,
                 profilePhoto,
                 networkLogin,
+                owner,
                 ...user
             } = await User.findById(body._id).lean();
 
@@ -1796,6 +1875,7 @@ module.exports = {
                         profiles: profilesIDS.result,
                         numbers: profilesIDS.numbers,
                         groups: groupsIDS,
+                        owner
                     },
                     names: namesProfiles.concat(namesGroups),
                 };
@@ -2417,8 +2497,26 @@ module.exports = {
 
     async getAllConteudistas(req, res) {
         try {
+            const user = await getUserByToken(req)
             const users = await User.find({
                 groupsAD: { $in: ['PERFIL_Conteudista'] },
+                $or: [
+                    {
+                        [req.segmentation.rule.issuer]: {
+                            $eq: user.owner
+                        }
+                    },
+                    {
+                        owner: {
+                            exists: false
+                        }
+                    },
+                    {
+                        owner: {
+                            $eq: null
+                        }
+                    }
+                ]
             });
             _messages.success(res, req, users);
         } catch (error) {

@@ -42,6 +42,7 @@ const {
 
 const { updateCertificateExpirationDate } = require('../certificates/business');
 const { createItemIfAlura } = require('../items/business');
+const { findSameOwner } = require('../users/business');
 
 const ObjectId = require("mongoose").Types.ObjectId;
 
@@ -162,6 +163,8 @@ module.exports = {
 
             const idItem = payload.items.map((item) => item.itemID._id)
 
+            const user = await getUserByToken(req)
+
             const items = []
 
             for (const i of idItem) {
@@ -227,6 +230,8 @@ module.exports = {
                 ]
                 delete payload.galleryFiles
             }
+
+            payload.owner = user._id
 
             const trail = await Trail.create(payload)
 
@@ -559,9 +564,11 @@ module.exports = {
                 const OldItems = payload.items
 
                 delete payload.items
+
+                const user = await getUserByToken(req)
+                payload.owner = user._id
+
                 const trail = await Trail.create(payload);
-
-
 
                 for (const item of OldItems) {
                     if (item.itemID.kind === 'AluraItem') {
@@ -1256,8 +1263,11 @@ module.exports = {
                 });
             } else {
                 const escapedSearchBy = searchBy ? searchBy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
-                let query = searchBy
-                    ? {
+                const query = { $and: [{
+                    archive: archive ? { $eq: archive === 'true' } : { $ne: true }
+                }] }
+                if(searchBy) {
+                    query.$and.push({
                         $or: [
                             {
                                 description: {
@@ -1272,22 +1282,32 @@ module.exports = {
                                 },
                             },
                         ],
-                    }
-                    : {}
-                query['archive'] = archive ? { $eq: archive === 'true' } : { $ne: true };
+                    })
+                }
+
                 if (noLimit) {
-                    query = {
-                        ...query,
+                    query.$and.push({
                         enabled: true,
                         archive: { $ne: true }
-                    }
+                    })
                 }
+
+                const user = await getUserByToken(req)
+
+                const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
+                if (user?.owner && !isException) {
+                    const sameOwner = await findSameOwner(req.segmentation.rule.issuer)
+                    query.$and.push({
+                        owner: { $in: sameOwner.map((owner) => owner._id) }
+                    }) 
+                }
+                
                 total = await Trail.find(query).countDocuments();
 
                 const trails = await Trail.find(query)
                     .populate({
                         path: 'items.itemID',
-                        populate: { path: 'idEvaluation', select: ['description'] },
+                        populate: { path: 'idEvaluation', select: ['description'], },
                     })
                     .sort({ [order]: sort })
                     .skip(parseInt(skip))
