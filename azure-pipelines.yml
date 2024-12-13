@@ -42,7 +42,7 @@ stages:
             inputs:
               SonarQube: 'SQ-Happlearning-API'
               scannerMode: 'cli'
-              configMode: 'file'
+              configMode: 'manual'
               cliProjectKey: 'Happlearning-Api'
               cliProjectName: 'Happlearning Api'
               extraProperties: |
