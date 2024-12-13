@@ -55,6 +55,7 @@ stages:
                 sonar.sources=.
                 sonar.exclusions=**/node_modules/**
                 sonar.token=sqa_422ca151f5613b0e0c25df5181ada8a76e27b867
+                sonar.branch.name=
 
           # Run Code Analysis task
           - task: SonarQubeAnalyze@7
