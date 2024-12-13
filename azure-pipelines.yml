@@ -37,6 +37,12 @@ stages:
           - checkout: self
             fetchDepth: 0
 
+          # LIST REPO FOLDERS
+          - task: CmdLine@2
+            inputs:
+              script: |
+                ls -la
+
           # Prepare Analysis Configuration task
           - task: SonarQubePrepare@7
             inputs:
