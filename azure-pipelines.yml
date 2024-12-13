@@ -37,12 +37,6 @@ stages:
           - checkout: self
             fetchDepth: 0
 
-          # LIST REPO FOLDERS
-          - task: CmdLine@2
-            inputs:
-              script: |
-                sonarsource/sonar-scanner-cli -v
-
           # Prepare Analysis Configuration task
           - task: SonarQubePrepare@7
             inputs:
@@ -58,9 +52,9 @@ stages:
                 sonar.branch.name=
 
           # Run Code Analysis task
-          - task: SonarQubeAnalyze@7
-            inputs:
-              jdkversion: 'JAVA_HOME'
+          # - task: SonarQubeAnalyze@7
+          #   inputs:
+          #     jdkversion: 'JAVA_HOME'
 
           # Publish Quality Gate Result task
           - task: SonarQubePublish@7
