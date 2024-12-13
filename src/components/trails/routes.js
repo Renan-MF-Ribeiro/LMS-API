@@ -32,6 +32,8 @@ module.exports = express
     .post('/collaboration/report', isAccountant, _controller.saveComplaint)
     .get('/details/:trailId', _controller.findByIdWithTrackingAndInnerText)
     .get('/:trailId', isAccountant, _controller.findById)
+    .patch('/:trailId/archive', isAccountant, _controller.archive)
+    .patch('/:trailId/unarchive', isAccountant, _controller.unarchive)
     .post('/list', _controller.returnTrailsByIDS)
     .post('/mandatory', _controller.mandatory)
     .get('/xapi', _controller.xapi)

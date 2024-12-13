@@ -9,7 +9,8 @@ const {
     getTagsElegiblesByToken,
     filterTrails,
     filterAlura,
-    mapAlura
+    mapAlura,
+    getGroupCodesByToken
 } = require('../sections/business');
 const { User } = require('../users/model');
 const {
@@ -50,6 +51,8 @@ const HomeController = {
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsGroupsByToken(req);
+            const classGroups = user?.classGroups ?? [];
+
             const { skip, limit } = pagination({
                 query: {
                     pageIndex: Number(pageIndex),
@@ -63,6 +66,13 @@ const HomeController = {
                 delete tag.createdAt;
                 tags.push(tag);
             }
+
+            classGroups?.forEach(({ groupCode, startDate, limitDate }) => {
+                if (groupCode && startDate && limitDate && startDate <= new Date() && limitDate >= new Date()) {
+                    tags?.push({ display: groupCode, value: groupCode })
+                }
+            });
+
             const escapedSearchBy = searchBy ? searchBy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
             const items = await Item.find({
                 $or: [
@@ -167,7 +177,28 @@ const HomeController = {
                     };
                 }).filter((section) => section.trails.length > 0);
 
-            if (config.alura.active) {
+            const trailsWithoutSection = filteredTrails.filter(
+                (trail) => result.every(
+                    (section) => !section.trails.find(
+                        (sectionTrail) => String(sectionTrail._id) === String(trail._id)
+                    )
+                )
+            );
+
+            const filteredTrailsWithoutSection = hasFilters
+                ? filterTrails(filters, trailsWithoutSection, tags)
+                : trailsWithoutSection;
+
+            if (filteredTrailsWithoutSection.length) {
+                result.push({
+                    _id: 'trails-without-section',
+                    title: 'SEM SEÇÃO',
+                    trails: filteredTrailsWithoutSection
+                });
+            }
+
+            log('SEARCH ALURA?', req?.features?.alura ?? false);
+            if (req?.features?.alura) {
                 const host = process.env.API_ALURA;
                 const clientId = process.env.CLIENT_ID;
                 const headers = { 'x-client-key': process.env.API_KEY_ALURA };

@@ -126,7 +126,8 @@ const userSchema = new mongoose.Schema(
         civilName: { type: String, trim: true },
         socialName: { type: String, trim: true },
         welcomeVideoWatched: { type: Boolean, default: false },
-        owner: { type: String }
+        owner: { type: String },
+        ignoreLoadInactivation: { type: Boolean, default: false, required: false },
     },
     {
         ...optionsSchema,

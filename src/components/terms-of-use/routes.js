@@ -1,11 +1,11 @@
 const express = require('express')
 const router = express.Router()
 const _controller = require('./controller')
-const { isAdmin } = require('../../utils/middlewares')
+const { isAdmin, validateTokenRoute } = require('../../utils/middlewares')
 
 router
-    .get('/', isAdmin, _controller.list)
-    .post('/', isAdmin, _controller.create)
+    .get('/', validateTokenRoute, isAdmin, _controller.list)
+    .post('/', validateTokenRoute, isAdmin, _controller.create)
     .get('/last', _controller.getLast)
 
 module.exports = router

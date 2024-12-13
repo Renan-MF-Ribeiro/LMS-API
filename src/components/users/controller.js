@@ -1274,7 +1274,10 @@ module.exports = {
             if (inactivateIfNotInSpreadsheet) {
                 const data_start = new Date();
                 await User.updateMany(
-                    { updatedAt: { $lt: data_start } },
+                    {
+                        ignoreLoadInactivation: { $ne: true },
+                        updatedAt: { $lt: data_start }
+                    },
                     { $set: { status: 'INATIVO' } },
                     { multi: true }
                 );
@@ -1375,7 +1378,10 @@ module.exports = {
             if (inactivateIfNotInSpreadsheet) {
                 const data_start = new Date();
                 await User.updateMany(
-                    { updatedAt: { $lt: data_start } },
+                    {
+                        ignoreLoadInactivation: { $ne: true },
+                        updatedAt: { $lt: data_start }
+                    },
                     { $set: { status: 'INATIVO' } },
                     { multi: true }
                 );

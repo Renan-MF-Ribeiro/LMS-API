@@ -1,36 +1,23 @@
 const { getUserByToken } = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
-const { populateUserFields, createNotification } = require('../buisiness');
-const FormData = require('form-data');
-const fs = require('fs');
-const mime = require('mime-types');
+const { populateUserFields, createNotification, getSegFieldsFromUser } = require('../buisiness');
 const {
     sendMessageToKafka,
     processTargetUsers,
     sendCustomMessageToKafka,
 } = require('../../new-messages/business');
-
+const fs = require('fs');
+const mime = require('mime-types');
 const config = require('../../../../config.json');
-const { default: axios } = require('axios');
+const FormData = require('form-data');
 
 module.exports = {
     async create(req, res) {
-        const clientElegeMaps = await axios.get(
-            `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
-            {
-                headers: {
-                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
-                },
-            }
-        );
-        const elegeFields = clientElegeMaps.data.fields;
-        const user = await getUserByToken(req);
-        const userCustomElegeFields = elegeFields.map((e) => ({ [e]: user[e] }));
-
+        const userCustomElegeFields = await getSegFieldsFromUser(req);
         const body = JSON.parse(req.fields.payload) ?? null;
 
-        body.userCustomElegeFields = userCustomElegeFields
+        body.userCustomElegeFields = userCustomElegeFields;
         try {
             delete body.content;
             const uri = 'posts';
@@ -96,6 +83,19 @@ module.exports = {
                 'create'
             );
         }
+    },
+
+    async findRecentPosts(req, res) {
+        const uri = `posts/new`;
+
+        const { data } = await socialApi.get(uri, { params: req.query });
+        let response = { data, total: data.total };
+        if (data) {
+            const PopulatedData = await populateUserFields('user', 'userId', data);
+            response = { data: PopulatedData, total: data.total };
+        }
+
+        return _messages.success(res, req, response);
     },
 
     async findAllPosts(req, res) {

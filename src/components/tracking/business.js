@@ -41,11 +41,13 @@ module.exports = {
         let trackingToSave = {}
         if (
             trackingType === 'SCORMTracking' ||
-            trackingType === 'ExamTracking'
+            trackingType === 'ExamTracking' ||
+            trackingType === 'ActivityTracking'
         ) {
             trackingToSave = {
                 ..._tracking,
                 score: 0,
+                completion: 1,
                 lessonStatus: 'passed',
             }
         } else {

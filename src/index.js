@@ -87,6 +87,7 @@ const corsOptions = {
 
 if (process.env.NODE_ENV !== 'production') {
     corsOptions.origin.push('http://localhost:4200');
+    corsOptions.origin.push('http://192.168.1.5:4200');
 }
 
 app.disable('x-powered-by');
@@ -153,7 +154,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/logs', validateTokenRoute, logsRoutes)
     .use('/xapi', validateTokenRoute, xapiRoutes)
     .use('/suppliers', supplierRoutes)
-    .use('/terms-of-use', validateTokenRoute, termsOfUseRoutes)
+    .use('/terms-of-use', termsOfUseRoutes)
     .use('/showcase', isShowcaseActive, showCaseRoutes)
     .use('/channels', validateTokenRoute, channelRoutes)
     .use('/messages', validateTokenRoute, messagesRoutes)

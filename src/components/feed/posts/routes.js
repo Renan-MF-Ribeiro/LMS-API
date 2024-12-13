@@ -8,6 +8,7 @@ module.exports = express
     .get('/', _controller.findAllPosts)
     .get('/groups/:groupId', _controller.findAllByGroup)
     .get('/public', _controller.findAllPublic)
+    .get('/new', _controller.findRecentPosts)
     .get('/feed', _controller.getFeed)
     .get('/admin', _controller.listPostToBeModerated)
     .get('/me', _controller.findMyPosts)
