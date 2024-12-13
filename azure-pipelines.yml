@@ -41,7 +41,7 @@ stages:
           - task: CmdLine@2
             inputs:
               script: |
-                ls -la
+                sonarsource/sonar-scanner-cli -v
 
           # Prepare Analysis Configuration task
           - task: SonarQubePrepare@7
