@@ -39,7 +39,7 @@ stages:
 
           - task: CmdLine@2
             inputs:
-              script: "sonar-scanner -v"
+              script: "npx sonar-scanner -v"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
           
           # Prepare Analysis Configuration task
