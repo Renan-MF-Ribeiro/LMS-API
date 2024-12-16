@@ -784,6 +784,19 @@ const TrackingController = {
                     },
                 })
                 .lean();
+            const trails = await Trail.find({
+                "items.itemID": tracking.item._id,
+                "items.chief": true
+            }).lean();
+            const optionalItems = []
+
+            for (let trail of trails) {
+                for (let item of trail.items) {
+                    if (item.optional) {
+                        optionalItems.push(item.itemID)
+                    }
+                }
+            }
 
             const queryStatus =
                 body.score >= tracking.item.passingScore
@@ -810,6 +823,13 @@ const TrackingController = {
                         ...queryStatus,
                     }
                 );
+                if(queryStatus.lessonStatus === 'passed') {
+                    for(let item of optionalItems) {
+                        const foundItem = await Item.findById(item)
+                        const trackingKind = processTrackingType(foundItem)
+                        createCompleteTracking(foundItem, trackingKind, tracking.userLogin)
+                    }
+                }
             }
 
             _messages.success(res, req, 'Atividade atualizada com sucesso!');
