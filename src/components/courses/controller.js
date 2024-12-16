@@ -481,13 +481,12 @@ module.exports = {
                     const applicationInitial = new Date(dateApplicationInitial);
                     const applicationFinal = new Date(dateApplicationFinal);
                     if (
-                        applicationInitial &&
-                        (applicationInitial < dateInitial ||
-                            applicationInitial > dateFinal ||
-                            applicationFinal < dateInitial ||
-                            applicationFinal > dateFinal)
+                        applicationInitial < dateInitial ||
+                        applicationInitial > dateFinal ||
+                        applicationFinal < dateInitial ||
+                        applicationFinal > dateFinal
                     ) {
-                        badRequest(
+                        return badRequest(
                             res,
                             req,
                             '',
@@ -495,7 +494,6 @@ module.exports = {
                             'courses',
                             '/createClass'
                         );
-                        return;
                     } else {
                         if (materials) {
                             const materialsArray = Array.isArray(materials)
