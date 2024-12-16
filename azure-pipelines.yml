@@ -26,40 +26,6 @@ variables:
   vmImageName: "ubuntu-latest"
 
 stages:
-  - stage: SonarQube
-    displayName: SonarQube
-    jobs:
-      - job: SonarQube
-        displayName: 'SonarQube'
-        pool:
-          name: Default
-        steps:
-          - checkout: self
-            fetchDepth: 0
-
-          # Prepare Analysis Configuration task
-          - task: SonarQubePrepare@7
-            inputs:
-              SonarQube: 'SQ-Happlearning-API'
-              scannerMode: 'cli'
-              configMode: 'manual'
-              cliProjectKey: 'Happlearning-Api'
-              cliProjectName: 'Happlearning Api'
-              extraProperties: |
-                sonar.sources=.
-                sonar.exclusions=**/node_modules/**
-                sonar.token=sqa_422ca151f5613b0e0c25df5181ada8a76e27b867
-
-          # Run Code Analysis task
-          - task: SonarQubeAnalyze@7
-            inputs:
-              jdkversion: 'JAVA_HOME'
-
-          # Publish Quality Gate Result task
-          - task: SonarQubePublish@7
-            inputs:
-              pollingTimeoutSec: '300'
-
   - stage: Build
     displayName: Build and push stage
     jobs:
