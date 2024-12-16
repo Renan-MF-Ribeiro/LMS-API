@@ -447,8 +447,8 @@ module.exports = {
             if (dateApplicationInitial || dateApplicationFinal) {
                 if (dateApplicationInitial && dateApplicationFinal === '') {
                     flagDate = true;
-                } else if (dateApplicationInitial > dateApplicationFinal) {
-                    flagDate = false;
+                } else {
+                    if (dateApplicationInitial >= dateApplicationFinal) flagDate = false;
                 }
             }
 
@@ -647,7 +647,7 @@ module.exports = {
                 if (dateApplicationInitial && dateApplicationFinal === '') {
                     flagDate = true;
                 } else {
-                    if (dateApplicationInitial > dateApplicationFinal) flagDate = false;
+                    if (dateApplicationInitial >= dateApplicationFinal) flagDate = false;
                 }
             }
 
