@@ -1298,7 +1298,11 @@ module.exports = {
                 if (user?.owner && !isException) {
                     const sameOwner = await findSameOwner(req.segmentation.rule.issuer)
                     query.$and.push({
-                        owner: { $in: sameOwner.map((owner) => owner._id) }
+                        $or: [
+                            { owner: { $eq: null }},
+                            { owner: { $exists: false } },
+                            { owner: { $in: sameOwner.map((owner) => owner._id) } }
+                        ]
                     }) 
                 }
                 
