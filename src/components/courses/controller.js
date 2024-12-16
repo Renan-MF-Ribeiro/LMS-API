@@ -480,6 +480,8 @@ module.exports = {
                     const dateFinal = moment(course.dateFinal).endOf('day').toDate();
                     const applicationInitial = new Date(dateApplicationInitial);
                     const applicationFinal = new Date(dateApplicationFinal);
+
+                    console.log(applicationInitial, applicationFinal, dateInitial, dateFinal);
                     if (
                         applicationInitial < dateInitial ||
                         applicationInitial > dateFinal ||
