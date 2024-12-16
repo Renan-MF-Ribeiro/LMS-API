@@ -674,11 +674,10 @@ module.exports = {
                     const applicationInitial = new Date(dateApplicationInitial);
                     const applicationFinal = new Date(dateApplicationFinal);
                     if (
-                        applicationInitial &&
-                        (applicationInitial < dateInitial ||
-                            applicationInitial > dateFinal ||
-                            applicationFinal < dateInitial ||
-                            applicationFinal > dateFinal)
+                        applicationInitial < dateInitial ||
+                        applicationInitial > dateFinal ||
+                        applicationFinal < dateInitial ||
+                        applicationFinal > dateFinal
                     ) {
                         return badRequest(
                             res,
