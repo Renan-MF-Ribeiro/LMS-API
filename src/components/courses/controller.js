@@ -481,7 +481,6 @@ module.exports = {
                     const applicationInitial = new Date(dateApplicationInitial);
                     const applicationFinal = new Date(dateApplicationFinal);
 
-                    console.log(applicationInitial, applicationFinal, dateInitial, dateFinal);
                     if (
                         applicationInitial < dateInitial ||
                         applicationInitial > dateFinal ||
