@@ -198,7 +198,7 @@ module.exports = {
                         },
                         {
                             owner: {
-                                exists: false
+                                $exists: false
                             }
                         },
                         {
@@ -213,6 +213,8 @@ module.exports = {
             const foundUser = await User.findOne(query).select('-password');
             _messages.success(res, req, foundUser);
         } catch (error) {
+
+            console.log({ error })
             _messages.internalServer(
                 res,
                 req,
@@ -1454,11 +1456,12 @@ module.exports = {
                 if(!isException) {
                     query.$and.push(
                         {
+
                             $or: [
                                 {
                                     [req.segmentation.rule.issuer]: {
-                                        $eq: user.owner
-                                    } 
+                                        $eq: user.owner.toString()
+                                    }
                                 },
                                 {
                                     owner: {
@@ -1469,8 +1472,8 @@ module.exports = {
                                     owner: {
                                         $eq: null
                                     }
-                                }
-                            ]
+                                },
+                            ],
                         }
                     )
                 }
@@ -1481,8 +1484,8 @@ module.exports = {
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
-            const total = await User.find(query).countDocuments();
-
+            const total = await User.countDocuments(query);
+            
             const totalActive = await User.find({
                 status: 'ATIVO',
                 onboarding: { $ne: true },
@@ -2508,7 +2511,7 @@ module.exports = {
                     },
                     {
                         owner: {
-                            exists: false
+                            $exists: false
                         }
                     },
                     {
