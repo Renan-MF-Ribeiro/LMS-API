@@ -476,8 +476,8 @@ module.exports = {
                 });
 
                 if (canCreateClass) {
-                    const dateInitial = moment(course.dateInitial).startOf('day').toDate();
-                    const dateFinal = moment(course.dateFinal).endOf('day').toDate();
+                    const dateInitial = new Date(course.dateInitial)
+                    const dateFinal = new Date(course.dateFinal)
                     const applicationInitial = new Date(dateApplicationInitial);
                     const applicationFinal = new Date(dateApplicationFinal);
                     if (
@@ -669,8 +669,8 @@ module.exports = {
                 });
 
                 if (course.deleted === 0 && course.status === 1) {
-                    const dateInitial = moment(course.dateInitial).startOf('day').toDate();
-                    const dateFinal = moment(course.dateFinal).endOf('day').toDate();
+                    const dateInitial = new Date(course.dateInitial)
+                    const dateFinal = new Date(course.dateFinal)
                     const applicationInitial = new Date(dateApplicationInitial);
                     const applicationFinal = new Date(dateApplicationFinal);
                     if (
