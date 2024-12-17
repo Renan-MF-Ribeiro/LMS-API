@@ -6,6 +6,7 @@ const { User } = require('../../components/users/model');
 const { Section } = require('../../components/sections/model');
 const { Group, InstructorGroup, ClassGroup } = require('./model');
 const { CourseModel } = require('../courses/model');
+const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business');
 
 module.exports = {
     async create(req, res) {
@@ -26,9 +27,12 @@ module.exports = {
                 );
             }
 
-            const user = await _functions.getUserByToken(req)
+            if (req?.segmentation) {
+                await handleSegmentationOnCreate(req)
+            }
 
-            const group = await Group.create({...req.body, owner: user._id });
+            const group = await Group.create(req.body);
+
             _messages.success(
                 res,
                 req,
@@ -52,58 +56,39 @@ module.exports = {
             );
         }
     },
+    
     async get(req, res) {
         try {
             const { sort, order } = _functions.ordernation(req);
             const { skip, limit } = _functions.pagination(req);
             const searchBy = req.query.searchBy;
 
-            const user = await _functions.getUserByToken(req)
+            const query = { $and: [{
+                deleted: { $eq: 0 }
+            }] }
 
-            const total = await Group.find(
-                searchBy
-                    ? {
-                          $or: [{ name: { $regex: searchBy, $options: 'i' } }],
-                          deleted: { $eq: 0 },
-                      }
-                    : { deleted: { $eq: 0 } }
-            ).countDocuments();
+            if (searchBy) {
+                query.$and.push({
+                    $or: [{ name: { $regex: searchBy, $options: 'i' } }]
+                });
+            }
 
-            const groups = await Group.find(
-                searchBy
-                    ? {
-                          $or: [{ name: { $regex: searchBy, $options: 'i' } }],
-                          deleted: { $eq: 0 },
-                      }
-                    : { deleted: { $eq: 0 } }
-            )
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
+            }
+
+            console.log({ query: JSON.stringify(query, null, 2)})
+
+            const total = await Group.find(query).countDocuments();
+
+            const groups = await Group.find(query)
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
-            const ownerGroups = []
-
-            const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
-            if (user?.owner && !isException) {
-                for(const group of groups) {
-                    if(!group?.owner) {
-                        ownerGroups.push(group)
-                        continue;
-                    }
-
-                    const issuer = req.segmentation.rule.issuer
-                    const userGroupOwner = await User.findOne({ _id: group.owner })
-                    if (userGroupOwner[issuer] === user.owner) {
-                        ownerGroups.push(group)
-                    }
-                }
-            } else {
-                ownerGroups.push(...groups)
-            }
-
             _messages.success(res, req, {
-                data: ownerGroups,
-                total: total - groups.length - ownerGroups.length,
+                data: groups,
+                total
             });
         } catch (error) {
             _messages.internalServer(
@@ -199,15 +184,21 @@ module.exports = {
             const { skip, limit } = _functions.pagination(req);
             const searchBy = req.query.searchBy;
 
-            const total = await InstructorGroup.find().countDocuments();
+            const query = { $and: [{}] }
 
-            const groups = await InstructorGroup.find(
-                searchBy
-                    ? {
-                          $or: [{ name: { $regex: searchBy, $options: 'i' } }],
-                      }
-                    : {}
-            )
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
+            }
+
+            const total = await InstructorGroup.find(query).countDocuments();
+
+            if (searchBy) {
+                query.$and.push({
+                    $or: [{ name: { $regex: searchBy, $options: 'i' } }]
+                })
+            }
+
+            const groups = await InstructorGroup.find(query)
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
@@ -230,7 +221,14 @@ module.exports = {
 
     async getInstructorGroupsActives(req, res) {
         try {
-            const groups = await InstructorGroup.find();
+            const query = {}
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
+            }
+
+            const groups = await InstructorGroup.find(query);
+
             _messages.success(res, req, groups);
         } catch (error) {
             _messages.internalServer(
@@ -246,9 +244,8 @@ module.exports = {
 
     async createInstructor(req, res) {
         try {
-            const { body } = req;
             const group = await InstructorGroup.find({
-                name: { $eq: body.name },
+                name: { $eq: req.body.name },
             });
 
             if (group.length > 0) {
@@ -261,8 +258,14 @@ module.exports = {
                     '/createInstructor'
                 );
             } else {
-                body.office = body.office.id;
-                await InstructorGroup.create(body);
+                req.body.office = req.body.office.id;
+
+                if (req?.segmentation) {
+                    await handleSegmentationOnCreate(req)
+                }
+
+                await InstructorGroup.create(req.body);
+                
                 _messages.success(res, req, 'Grupo criado com sucesso!');
             }
         } catch (error) {
@@ -352,32 +355,16 @@ module.exports = {
 
     async getTags(req, res) {
         try {
-            const groups = await Group.find({});
-            const trails = await Trail.find({});
+            const query = {}
 
-            const user = await _functions.getUserByToken(req)
-            
-            const ownerGroups = []
-
-            const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
-            if (user?.owner && !isException) {
-                for(const group of groups) {
-                    if(!group?.owner) {
-                        ownerGroups.push(group)
-                        continue;
-                    }
-
-                    const issuer = req.segmentation.rule.issuer
-                    const userGroupOwner = await User.findOne({ _id: group.owner })
-                    if (userGroupOwner[issuer] === user.owner) {
-                        ownerGroups.push(group)
-                    }
-                }
-            } else {
-                ownerGroups.push(...groups)
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
             }
 
-            const groupTags = ownerGroups
+            const groups = await Group.find(query);
+            const trails = await Trail.find(query);
+
+            const groupTags = groups
                 .filter((value) => value.tags?.length > 0)
                 .map((group) => group.tags.map((tag) => tag.value));
             const trailTags = trails
@@ -407,46 +394,34 @@ module.exports = {
         try {
             const { sort, order } = _functions.ordernation(req);
             const { skip, limit } = _functions.pagination(req);
-            const searchBy = req.query.searchBy;
-            const queryGroup = searchBy
-                ? {
-                      deleted: 0,
-                      'tags.display': { $regex: searchBy, $options: 'i' },
-                  }
-                : { deleted: 0 };
-            const groups = await Group.find(queryGroup);
-
-            const queryTrail = searchBy
-                ? {
-                      tags: { $exists: true, $ne: [] },
-                      'tags.display': { $regex: searchBy, $options: 'i' },
-                  }
-                : { tags: { $exists: true, $ne: [] } };
-            const trails = await Trail.find(queryTrail);
-
-            const user = await _functions.getUserByToken(req)
             
-            const ownerGroups = []
+            const searchBy = req.query.searchBy;
 
-            const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
-            if (user?.owner && !isException) {
-                for(const group of groups) {
-                    if(!group?.owner) {
-                        ownerGroups.push(group)
-                        continue;
-                    }
+            const queryGroup = { $and: [{}] }
+            const queryTrail = { $and: [{}] }
 
-                    const issuer = req.segmentation.rule.issuer
-                    const userGroupOwner = await User.findOne({ _id: group.owner })
-                    if (userGroupOwner[issuer] === user.owner) {
-                        ownerGroups.push(group)
-                    }
-                }
+            if(searchBy) {
+                queryGroup.$and.push({
+                    deleted: 0,
+                    'tags.display': { $regex: searchBy, $options: 'i' },
+                })
+                queryTrail.$and.push({
+                    tags: { $exists: true, $ne: [] },
+                    'tags.display': { $regex: searchBy, $options: 'i' },
+                })
             } else {
-                ownerGroups.push(...groups)
+                queryGroup.$and.push({ deleted: 0 })
+                queryTrail.$and.push({ tags: { $exists: true, $ne: [] } })
+            }            
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', queryGroup, queryTrail)
             }
 
-            const groupTags = ownerGroups
+            const groups = await Group.find(queryGroup);
+            const trails = await Trail.find(queryTrail);
+
+            const groupTags = groups
                 .filter((value) => value.tags?.length > 0)
                 .map((group) => group.tags.map((tag) => tag.value))
                 .filter((tag) => !/(\bPERFIL_)/.test(tag));
@@ -514,34 +489,25 @@ module.exports = {
     async getGroupsByTag(req, res) {
         try {
             const tag = req.query.tag;
-            const groups = await Group.find({
-                deleted: { $eq: 0 },
-                'tags.display': tag,
-            });
 
-            const user = await _functions.getUserByToken(req)
+            const query = {
+                $and: [
+                    {
+                        deleted: { $eq: 0 },
+                    },
+                    {
+                        'tags.display': tag,
+                    },
+                ],
+            };
 
-            const ownerGroups = []
-
-            const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
-            if (user?.owner && !isException) {
-                for(const group of groups) {
-                    if(!group?.owner) {
-                        ownerGroups.push(group)
-                        continue;
-                    }
-
-                    const issuer = req.segmentation.rule.issuer
-                    const userGroupOwner = await User.findOne({ _id: group.owner })
-                    if (userGroupOwner[issuer] === user.owner) {
-                        ownerGroups.push(group)
-                    }
-                }   
-            } else {
-                ownerGroups.push(...groups)
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
             }
 
-            const groupTags = ownerGroups
+            const groups = await Group.find(query);
+
+            const groupTags = groups
                 .filter((value) => value.tags?.length > 0)
                 .map((group) => ({ name: group.name, _id: group._id }));
 
@@ -625,11 +591,20 @@ module.exports = {
 
     async getSectionTags(req, res) {
         try {
-            const sections = await Section.find({});
+
+            const query = {}
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
+            }
+
+            const sections = await Section.find(query);
             const sectionTags = sections
                 .filter((value) => value.tags.length > 0)
                 .map((section) => section.tags.map((tag) => tag.value))
                 .filter((tag) => !/(\bELEGE_)/.test(tag));
+
+                // TODO owner
 
             let tags = [...sectionTags];
 
@@ -666,9 +641,11 @@ module.exports = {
                 );
             }
 
-            const user = await _functions.getUserByToken(req)
+            if (req?.segmentation) {
+                await handleSegmentationOnCreate(req)
+            }
 
-            const group = await ClassGroup.create({ ...req.body, owner: user._id});
+            const group = await ClassGroup.create(req.body);
             _messages.success(
                 res,
                 req,
@@ -704,9 +681,6 @@ module.exports = {
 
             const { classes: classGroupRows, workbook } =
                 await _files.readXLSXClassGroups(file.path);
-
-
-            const user = await _functions.getUserByToken(req)
 
             const results = [];
             for (const classGroupRow of classGroupRows) {
@@ -765,7 +739,7 @@ module.exports = {
                             if (foundClass) {
                                 classGroup = foundClass;
                             } else {
-                                classGroup = await ClassGroup.create({
+                                const payload = {
                                     groupCode: classGroupRow.NOME_TURMA,
                                     startDate: null,
                                     limitDate: null,
@@ -774,9 +748,14 @@ module.exports = {
                                             (100000000 - 1000000 + 1) +
                                             1000000
                                     ),
-                                    status: 2,
-                                    owner: user._id
-                                });
+                                    status: 2
+                                }
+
+                                if (req?.segmentation) {
+                                    await handleSegmentationOnCreate(req, payload)
+                                }
+
+                                classGroup = await ClassGroup.create(payload);
                             }
 
                             const { startDate, limitDate } =
@@ -926,16 +905,20 @@ module.exports = {
 
             const { searchBy = null } = req.query;
 
-            const user = await _functions.getUserByToken(req)
+            const query = { $and: [{}] }
 
-            const query = searchBy
-                ? {
+            if (searchBy) {
+                query.$and.push({
                     $or: [
                         { groupCode: { $regex: searchBy, $options: 'i' } },
                         ...(!Number.isNaN(Number(searchBy)) ? [{ classId: Number(searchBy) }] : [])
                     ]
-                }
-                : {};
+                })
+            }
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
+            }
 
             const total = await ClassGroup.find(query).countDocuments();
 
@@ -944,29 +927,9 @@ module.exports = {
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
-            const ownerGroups = []
-
-            const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
-            if (user?.owner && !isException) {
-                for(const group of groups) {
-                    if(!group?.owner) {
-                        ownerGroups.push(group)
-                        continue;
-                    }
-
-                    const issuer = req.segmentation.rule.issuer
-                    const userGroupOwner = await User.findOne({ _id: group.owner })
-                    if (userGroupOwner[issuer] === user.owner) {
-                        ownerGroups.push(group)
-                    }
-                }
-            } else {
-                ownerGroups.push(...groups)
-            }
-
             _messages.success(res, req, {
-                data: ownerGroups,
-                total: total - groups.length - ownerGroups.length,
+                data: groups,
+                total
             });
         } catch (error) {
             _messages.internalServer(

@@ -71,7 +71,7 @@ const ItemSchema = new mongoose.Schema(
         feedbackDescription: { type: String },
         archive: { type: Boolean, required: false, default: false },
         archivedAt: { type: Date, required: false, default: null },
-        owner: { type: 'ObjectId', ref: 'users' }
+        owner: { type: String }
     },
     {
         ...schemaOptions,

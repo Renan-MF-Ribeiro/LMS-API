@@ -10,10 +10,11 @@ const {
     getAppCurrentFeatures,
 } = require('./features');
 const { ConfigModel, ConfigTypes } = require('../components/config/model');
-const { getSegmentation } = require('../components/config/business');
+const { getSegmentation, isSegmentationException } = require('../components/config/business');
 const { User } = require('../components/users/model');
 const axios = require('axios');
 const { getConnectMap } = require('./connect');
+const { getUserByToken } = require('./functions');
 
 module.exports = {
     sendCsrf(req, res, next) {
@@ -333,11 +334,26 @@ module.exports = {
         next();
     },
 
-    async setSegmentationAndOwner(req, res, next) {
-        const segmentation = await getSegmentation();
+    async setSegmentation(req, res, next) {
+        if (config?.segmentation?.active) {
+            const segmentation = await getSegmentation();
 
-        if (segmentation.value?.rule) {
-            req.segmentation = segmentation.value;
+            if (segmentation.value?.rule) {
+                req.segmentation = segmentation.value;
+
+                try {
+                    const user = await getUserByToken(req);
+
+                    const issuer = req.segmentation.rule.issuer;
+
+                    if (user?.[issuer]) {
+                        req.segmentation.owner = user[issuer];
+                    }
+
+                    const isException = isSegmentationException(user, req.segmentation);
+                    req.segmentation.isException = isException;
+                } catch {}
+            }
         }
 
         next();

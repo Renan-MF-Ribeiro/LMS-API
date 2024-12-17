@@ -92,5 +92,8 @@
     },
     "discord": {
         "active": true
+    },
+    "segmentation": {
+        "active": true
     }
 }

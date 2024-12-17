@@ -14,7 +14,7 @@ const GroupSchema = new mongoose.Schema({
     tags: { type: Array, default: [] },
     deleted: { type: Number, default: 0 },
     active: { type: Number, default: 1 },
-    owner: { type: 'ObjectId', ref: 'users' }
+    owner: { type: String }
 }, {
     ...optionsSchema,
 })
@@ -33,7 +33,7 @@ const ClassGroupSchema = new mongoose.Schema({
     limitDate: { type: Date, required: false },
     classId: { type: Number, required: true },
     status: { type: Number, required: true },
-    owner: { type: 'ObjectId', ref: 'users' }
+    owner: { type: String }
 }, {
     ...optionsSchema,
 })

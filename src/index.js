@@ -16,7 +16,7 @@ const {
     isAssessmentActive,
     isShowcaseActive,
     setCurrentFeatures,
-    setSegmentationAndOwner,
+    setSegmentation,
 } = require('./utils/middlewares');
 const { PUBLIC_PATH } = process.env;
 const app = express();
@@ -137,7 +137,7 @@ app.use(socialApiMiddleware)
 
 app.use(setCurrentFeatures);
 
-app.use(setSegmentationAndOwner)
+app.use(setSegmentation)
 
 app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/tracking', validateTokenRoute, trackingRoutes)

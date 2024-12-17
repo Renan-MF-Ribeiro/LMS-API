@@ -121,7 +121,7 @@ const TrailSchema = new mongoose.Schema(
         trailIdentifier: { type: Number, trim: true, unique: true },
         trailCategory: { type: String, trim: true, required: false },
         positionInProcess: { type: Number, required: false, default: null },
-        owner: { type: 'ObjectId', ref: 'users' }
+        owner: { type: String }
     },
     {
         strict: 'throw',

@@ -8,6 +8,7 @@ const { Trail } = require('../trails/model');
 const { getTagsElegiblesByToken, checkEligibilityTagsAnd, getSectionTrailId } = require('../sections/business');
 const config = require('../../../config.json');
 const { Theme } = require('../theme/palette/model');
+const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business')
 
 
 module.exports = {
@@ -26,22 +27,23 @@ module.exports = {
                 OptionalChannel.push({ type: { $ne: 'collaboration' } })
             }
 
-            let query = searchBy
-                ? {
-                    title: { $regex: searchBy, $options: 'i' },
-                    $and: OptionalChannel
-                }
-                : {
-                    $and: OptionalChannel
-                }
+            const query = { $and: [
+                ...OptionalChannel
+            ] }
 
+            if (searchBy) {
+                query.$and.push({
+                    title: { $regex: searchBy, $options: 'i' }
+                })
+            }
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
+            }
 
             const total = await Channel.find(query).countDocuments();
 
-            const channels = await Channel.find(query)
-                .sort({
-                    [order]: sort,
-                })
+            const channels = await Channel.find(query).sort({ [order]: sort })
 
             _messages.success(res, req, {
                 data: channels,
@@ -61,10 +63,19 @@ module.exports = {
     async getChannelsElegibles (req, res) {
         const tags = await getTagsElegiblesByToken(req);
         try {
-            let channels = await Channel.find({
-                tags: { $in: tags.map((tag) => tag.value) },
-                enabled: true,
-            }).sort({ position: 'asc' }).populate({ path: 'theme', match: { deleted: 0 }, })
+            const query = { $and: [
+                { tags: { $in: tags.map((tag) => tag.value) } },
+                { enabled: true }
+            ]}
+
+            // if (req?.segmentation) {
+            //     handleSegmentationOnQuery(req, 'owner', query)
+            // }
+
+            let channels = await Channel
+                .find(query)
+                .sort({ position: 'asc' })
+                .populate({ path: 'theme', match: { deleted: 0 }, })
 
             channels = await Promise.all(channels.map(async (channel) => {
                 if (channel.type === 'alura') return channel
@@ -72,7 +83,15 @@ module.exports = {
 
                 if (config.collaboration.active && channel.type === 'collaboration') return channel
 
-                const sections = await Section.find({ _id: { $in: channel.idSections } }).select('trails');
+                const sectionQuery = { $and: [
+                    { _id: { $in: channel.idSections } }
+                ] }
+
+                // if (req?.segmentation) {
+                //     handleSegmentationOnQuery(req, 'owner', sectionQuery)
+                // }
+
+                const sections = await Section.find(sectionQuery).select('trails');
 
                 const trailsIds = sections.flatMap(
                     (section) => section.trails
@@ -80,7 +99,15 @@ module.exports = {
                         .filter(Boolean)
                 );
 
-                const trails = await Trail.find({ _id: { $in: trailsIds } });
+                const trailQuery = { $and: [
+                    { _id: { $in: trailsIds } }
+                ] }
+
+                // if (req?.segmentation) {
+                //     handleSegmentationOnQuery(req, 'owner', trailQuery)
+                // }
+
+                const trails = await Trail.find(trailQuery);
 
                 const hasEligibleTrails = trails.some((trail) =>
                     checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative
@@ -88,7 +115,9 @@ module.exports = {
 
                 return hasEligibleTrails ? channel : null;
             }));
+
             channels = channels.filter((channel) => channel)
+
             _messages.success(res, req, channels);
         } catch (error) {
             _messages.internalServer(
@@ -124,6 +153,10 @@ module.exports = {
                     'channels',
                     'create'
                 );
+            }
+
+            if (req?.segmentation) {
+                await handleSegmentationOnCreate(req, body)
             }
 
             const channel = await Channel.create(body);

@@ -21,7 +21,8 @@ const ChannelSchema = new mongoose.Schema({
     position: { type: Number, default: 0 },
     idSections: { type: [{ type: 'ObjectId', ref: 'sections' }] },
     theme: { type: 'ObjectId', ref: 'theme', required: false },
-    type: { type: String, enum: Object.values(CHANNEL_TYPES), required: false, trim: true }
+    type: { type: String, enum: Object.values(CHANNEL_TYPES), required: false, trim: true },
+    owner: { type: String }
 }, {
     ...schemaOptions,
 })

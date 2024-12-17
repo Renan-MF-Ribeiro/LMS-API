@@ -35,6 +35,7 @@ const {
     findObjectInRange,
 } = require('../../utils/functions');
 const { TrailsUsersProgress, Trail } = require('../trails/model');
+const { handleSegmentationOnQuery, handleSegmentationOnCreate } = require('../config/business');
 const ApiError = require('../../errors/ApiError');
 
 const { ObjectId } = require('mongoose').Types;
@@ -62,16 +63,22 @@ module.exports = {
     async returnSections (req, res) {
         try {
             const searchBy = req.query.searchBy;
-            const total = await Section.find({
-                deleted: { $eq: 0 },
-            }).countDocuments();
 
-            const query = searchBy
-                ? {
-                    $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-                    deleted: { $eq: 0 },
-                }
-                : { deleted: { $eq: 0 } };
+            const query = { $and: [{
+                deleted: { $eq: 0 }
+            }] }
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
+            }
+
+            const total = await Section.find(query).countDocuments();
+
+            if (searchBy) {
+                query.$and.push({
+                    $or: [{ title: { $regex: searchBy, $options: 'i' } }]
+                })
+            }
 
             const sections = await populateSectionTrails(
                 await Section.find(query)
@@ -101,7 +108,16 @@ module.exports = {
                 title: { $eq: req.body.title },
             });
             if (verify.length === 0) {
-                const position = await Section.find({ deleted: 0 }).count();
+                const query = { $and: [{
+                    deleted: 0
+                }] }
+
+                if (req?.segmentation) {
+                    handleSegmentationOnQuery(req, 'owner', query)
+                    await handleSegmentationOnCreate(req)
+                }
+
+                const position = await Section.find(query).count();
 
                 const section = await Section.create({
                     ...req.body,
@@ -440,7 +456,17 @@ module.exports = {
         const tags = await getTagsElegiblesByToken(req);
         const classGroups = await getGroupCodesByToken(req, tags);
 
-        const section = await Section.findById(sectionId).lean();
+        const sectionQuery = { $and: [{
+            _id: { 
+                $eq: sectionId
+            }
+        }] }
+
+        if (req?.segmentation) {
+            handleSegmentationOnQuery(req, 'owner', sectionQuery)
+        }
+
+        const section = await Section.findOne(sectionQuery).lean();
 
         if (!section) {
             _messages.notFound(res, req, 'Seção não encontrada');
@@ -448,6 +474,10 @@ module.exports = {
         }
 
         const query = { enabled: true };
+
+        if (req?.segmentation) {
+            handleSegmentationOnQuery(req, 'owner', query)
+        }
 
         const isDefaultSection = Object.values(DEFAULT_TYPES).includes(section.defaultType);
 

@@ -1,3 +1,4 @@
+const { getUserByToken } = require('../../utils/functions');
 const { ConfigModel, ConfigTypes, SegmentationConfigModel } = require('./model');
 
 module.exports = {
@@ -16,7 +17,7 @@ module.exports = {
     },
 
     async checkExceptionExists(exception, _segmentation) {
-        const segmentation = _segmentation || await module.exports.getSegmentation();
+        const segmentation = _segmentation || (await module.exports.getSegmentation());
 
         const isSameName = segmentation.value.exceptions.some((e) => {
             return !e._id.equals(exception?._id) && e.name === exception.name;
@@ -32,6 +33,37 @@ module.exports = {
             return {
                 error: isSameName ? isSameNameError : isSameIssuerError,
             };
+        }
+    },
+
+    isSegmentationException(user, segmentation) {
+        return segmentation.exceptions.some((e) => user[e.issuer] === e.value);
+    },
+
+    async handleSegmentationOnCreate(req, payload) {
+        const user = await getUserByToken(req);
+        const issuer = req.segmentation.rule.issuer;
+        
+        if (user?.[issuer]) {
+            (payload || req.body).owner = user[issuer];
+        }
+    },
+
+    handleSegmentationOnQuery(req, field, ...queries) {
+        if (!req?.segmentation.isException) {
+            const _field = field === 'issuer' ? req.segmentation.rule.issuer : 'owner'
+            
+            queries.forEach((query) => {
+                if(!query?.$and) {
+                    query.$and = []
+                }
+                
+                query.$and.push({
+                    [_field]: {
+                        $eq: req.segmentation.owner,
+                    },
+                });
+            });
         }
     },
 };
