@@ -52,9 +52,9 @@ module.exports = {
                 { deleted: { $eq: 0 } }
             ]}
 
-            if (req?.segmentation) {
-                handleSegmentationOnQuery(req, 'owner', query)
-            }
+            // if (req?.segmentation) {
+            //     handleSegmentationOnQuery(req, 'owner', query)
+            // }
 
             const { description, attempts, duration, categories } = await Evaluation
                 .findOne(query)
