@@ -710,28 +710,4 @@ module.exports = {
             },
         });
     },
-
-    async findSameOwner(owner, issuer) {
-        const users = await User.find({
-            $or: [
-                {
-                    [issuer]: {
-                        $eq: owner
-                    } 
-                },
-                {
-                    owner: {
-                        $exists: false
-                    }
-                },
-                {
-                    owner: {
-                        $eq: null
-                    }
-                }
-            ]
-        })
-        
-        return users
-    }
 };
