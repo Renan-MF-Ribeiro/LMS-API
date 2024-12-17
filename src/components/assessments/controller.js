@@ -10,6 +10,7 @@ const _files = require('../../utils/files')
 const { Tracking, SCORMLessonStatus } = require('../tracking/model')
 const { processExamTracking } = require('../tracking/business')
 const { User } = require('../users/model')
+const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business')
 
 
 module.exports = {
@@ -23,10 +24,12 @@ module.exports = {
             }).countDocuments()
 
             if (evaluationCheck < 1) {
-                const user = await _functions.getUserByToken(req)
+                
+                if (req?.segmentation) {
+                    await handleSegmentationOnCreate(req)
+                }
 
-                const evaluation = await Evaluation
-                    .create({ ...req.body, owner: user._id })
+                const evaluation = await Evaluation.create(req.body)
 
                 _messages.success(res, req, evaluation, 'Criação de dados', 'assessments', 'createEvaluation', evaluation, [], true, 'CREATE')
             } else {
@@ -43,12 +46,18 @@ module.exports = {
             const user = await _functions.getUserByToken(req)
             const { order, sort } = _functions.ordernation(req)
             const { idEvaluation } = await Item.findOne({ _id: { $eq: id } }, 'idEvaluation')
-            const { description, attempts, duration, categories } = await Evaluation
-                .findOne({
-                    _id: { $eq: idEvaluation },
-                    deleted: { $eq: 0 },
 
-                })
+            const query = { $and: [
+                { _id: { $eq: idEvaluation } },
+                { deleted: { $eq: 0 } }
+            ]}
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
+            }
+
+            const { description, attempts, duration, categories } = await Evaluation
+                .findOne(query)
                 .populate({ path: 'categories', match: { deleted: { $eq: 0 }, active: { $eq: 1 }, } })
 
             const timeDuration = await HistoricEvaluation.find({
@@ -195,53 +204,33 @@ module.exports = {
             const { order, sort } = _functions.ordernation(req)
             const searchBy = req.query.searchBy
 
-            const total = await Evaluation.find(searchBy ? {
-                $or: [
-                    { description: { $regex: searchBy, $options: 'i' } },
-                ],
-                deleted: { $eq: 0 },
-            } : {
-                deleted: { $eq: 0 },
-            }).countDocuments()
+            const query = { $and: [{
+                deleted: { $eq: 0 }
+            }] }
 
-            const evaluations = await Evaluation
-                .find(searchBy ? {
+            if (searchBy) {
+                query.$and.push({
                     $or: [
                         { description: { $regex: searchBy, $options: 'i' } },
-                    ],
-                    deleted: { $eq: 0 },
-                } : {
-                    deleted: { $eq: 0 },
+                    ]
                 })
+            }
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
+            }
+
+            const total = await Evaluation.find(query).countDocuments()
+
+            const evaluations = await Evaluation
+                .find(query)
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
 
-            const user = await _functions.getUserByToken(req)
-
-            const ownerEvaluations = []
-
-            const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
-            if (user?.owner && !isException) {
-                for(const evaluation of evaluations) {
-                    if(!evaluation?.owner) {
-                        ownerEvaluations.push(evaluation)
-                        continue;
-                    }
-
-                    const issuer = req.segmentation.rule.issuer
-                    const userEvaluationOwner = await User.findOne({ _id: evaluation.owner })
-                    if (userEvaluationOwner[issuer] === user.owner) {
-                        ownerEvaluations.push(group)
-                    }
-                }
-            } else {
-                ownerEvaluations.push(...evaluations)
-            }
-
             _messages.success(res, req, {
-                data: ownerEvaluations,
-                total: total - evaluations.length - ownerEvaluations.length,
+                data: evaluations,
+                total
             })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'getAllEvaluations')
@@ -273,22 +262,17 @@ module.exports = {
         try {
             const { id } = req.params
 
-            const evaluation = await Evaluation.findById(id)
+            const query = { $and: [{
+                _id: id
+            }] }
 
-            const user = await _functions.getUserByToken(req)
-            
-            const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
-            if(evaluation?.owner && user?.owner && !isException) {
-                const issuer = req.segmentation.rule.issuer
-                const userEvaluationOwner = await User.findOne({ _id: evaluation.owner })
-                if (userEvaluationOwner[issuer] === user.owner) {
-                    return _messages.success(res, req, evaluation)
-                }
-            } else {
-               return _messages.success(res, req, evaluation)
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
             }
 
-            return _messages.forbidden(res, req, null, 'Você não tem permissão para prosseguir com a ação')
+            const evaluation = await Evaluation.findOne(query)
+
+            _messages.success(res, req, evaluation,)
         }
         catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'getById')

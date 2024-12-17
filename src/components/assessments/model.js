@@ -26,7 +26,7 @@ const EvalutionsSchema = new mongoose.Schema({
     active: { type: Number, required: false, default: 1 },
     categories: { type: [{ type: 'ObjectId', ref: 'categories' }] },
     deleted: { type: Number, default: 0 },
-    owner: { type: 'ObjectId', ref: 'users' }
+    owner: { type: String }
 }, {
     ...optionsSchema,
 })
