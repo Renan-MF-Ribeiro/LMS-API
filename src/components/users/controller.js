@@ -98,7 +98,7 @@ const { Features } = require('../theme/features/model');
 const { Partner } = require('../partners/model');
 const { Log } = require('../logs/model');
 const { Tracking } = require('../tracking/model');
-const { getConfiguration } = require('../config/business');
+const { getConfiguration, handleSegmentationOnQuery } = require('../config/business');
 const { ConfigTypes } = require('../config/model');
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -129,8 +129,6 @@ module.exports = {
                 );
             }
 
-            const user = await getUserByToken(req)
-
             const elegibilityResponse = await axios.get(
                 `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
                 {
@@ -143,10 +141,7 @@ module.exports = {
 
             const processedUser = processUsersLoad(req.body, fieldsForElegibility);
 
-            await User.create({
-                ...processedUser,
-                owner: user?.owner
-            });
+            await User.create(processedUser);
 
             const created = await User.findOne(
                 { networkLogin: processedUser.networkLogin },
@@ -155,7 +150,6 @@ module.exports = {
 
             return _messages.success(res, req, created);
         } catch (error) {
-            console.log({ error })
             let validationErrorKeys;
             let validationError;
 
@@ -182,35 +176,15 @@ module.exports = {
     async findById(req, res) {
         try {
             const _id = req.params.userId;
-            const user = await getUserByToken(req)
             
             const query = { _id }
 
-            if(user?.owner) {
-                const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
-                
-                if(!isException) {
-                    query.$or = [
-                        {
-                            [req.segmentation.rule.issuer]: {
-                                $eq: user.owner
-                            }
-                        },
-                        {
-                            owner: {
-                                $exists: false
-                            }
-                        },
-                        {
-                            owner: {
-                                $eq: null
-                            }
-                        }
-                    ]
-                }
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'issuer', query)
             }
 
             const foundUser = await User.findOne(query).select('-password');
+
             _messages.success(res, req, foundUser);
         } catch (error) {
 
@@ -225,6 +199,7 @@ module.exports = {
             );
         }
     },
+
     async signup(req, res) {
         const { token } = req.query;
         const { password, ...data } = req.body;
@@ -496,8 +471,7 @@ module.exports = {
                         groups: groupsIDS,
                         welcomeVideoWatched: !hasWelcomeComponentFeature
                             ? undefined
-                            : user?.welcomeVideoWatched,
-                        owner: user.owner
+                            : user?.welcomeVideoWatched
                     });
 
                     const token_analytics = generateTokenAnalytics({
@@ -1363,7 +1337,6 @@ module.exports = {
                     newUsers.push({
                         ...processedUser,
                         cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
-                        owner: user?.owner
                     });
                 }
             }
@@ -1448,35 +1421,8 @@ module.exports = {
                 )
             }
 
-            const user = await getUserByToken(req)
-
-            if(user?.owner) {
-                const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
-                
-                if(!isException) {
-                    query.$and.push(
-                        {
-
-                            $or: [
-                                {
-                                    [req.segmentation.rule.issuer]: {
-                                        $eq: user.owner.toString()
-                                    }
-                                },
-                                {
-                                    owner: {
-                                        $exists: false
-                                    }
-                                },
-                                {
-                                    owner: {
-                                        $eq: null
-                                    }
-                                },
-                            ],
-                        }
-                    )
-                }
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'issuer', query)
             }
 
             const users = await User.find(query)
@@ -1843,7 +1789,6 @@ module.exports = {
                 acceptTermsCollaboration,
                 profilePhoto,
                 networkLogin,
-                owner,
                 ...user
             } = await User.findById(body._id).lean();
 
@@ -1878,7 +1823,6 @@ module.exports = {
                         profiles: profilesIDS.result,
                         numbers: profilesIDS.numbers,
                         groups: groupsIDS,
-                        owner
                     },
                     names: namesProfiles.concat(namesGroups),
                 };
@@ -2500,27 +2444,18 @@ module.exports = {
 
     async getAllConteudistas(req, res) {
         try {
-            const user = await getUserByToken(req)
-            const users = await User.find({
-                groupsAD: { $in: ['PERFIL_Conteudista'] },
-                $or: [
-                    {
-                        [req.segmentation.rule.issuer]: {
-                            $eq: user.owner
-                        }
-                    },
-                    {
-                        owner: {
-                            $exists: false
-                        }
-                    },
-                    {
-                        owner: {
-                            $eq: null
-                        }
-                    }
-                ]
-            });
+            const query = {
+                $and: [{
+                    groupsAD: { $in: ['PERFIL_Conteudista']}
+                }]
+            }
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'issuer', query)
+            }
+
+            const users = await User.find(query);
+
             _messages.success(res, req, users);
         } catch (error) {
             _messages.internalServer(
