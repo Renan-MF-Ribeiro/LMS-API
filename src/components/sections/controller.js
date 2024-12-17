@@ -36,6 +36,7 @@ const {
 } = require('../../utils/functions');
 const { TrailsUsersProgress, Trail } = require('../trails/model');
 const { handleSegmentationOnQuery, handleSegmentationOnCreate } = require('../config/business');
+const ApiError = require('../../errors/ApiError');
 
 const { ObjectId } = require('mongoose').Types;
 
@@ -836,4 +837,20 @@ module.exports = {
             );
         }
     },
+
+    async changeStatus(req, res) {
+        const { id, status } = req.params;
+
+        const section = await Section.findById(id);
+
+        if (!section) {
+            throw new ApiError('Seção não encontrada', 400);
+        }
+
+        section.active = status === 'active' ? 1 : 0;
+
+        await section.save();
+
+        _messages.success(res, req, 'Status alterado com sucesso');
+    }
 };
