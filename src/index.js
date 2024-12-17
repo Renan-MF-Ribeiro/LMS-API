@@ -61,6 +61,7 @@ const dimensionRoutes = require('./components/dimensions/routes');
 const partnerRoutes = require('./components/partners/routes');
 const trainingRouter = require('./components/training/routes');
 const feedRoutes = require('./components/feed/routes');
+const shopRouter = require('./components/shop/routes');
 const configRouter = require('./components/config/routes');
 const { socialApiMiddleware } = require('./components/social/http-adapter');
 
@@ -175,6 +176,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/training', trainingRouter)
     .use('/feed', feedRoutes)
     .use('/config', configRouter)
+    .use('/shop', shopRouter)
     .use(
         '/assessment',
         isAssessmentActive,
