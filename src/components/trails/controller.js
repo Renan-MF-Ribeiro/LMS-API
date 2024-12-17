@@ -308,9 +308,9 @@ module.exports = {
                 }
                 : { titleURL: findValue };
 
-            if (req?.segmentation) {
-                handleSegmentationOnQuery(req, 'owner', query)
-            }
+            // if (req?.segmentation) {
+            //     handleSegmentationOnQuery(req, 'owner', query)
+            // }
             
             const trails = await populateTrails(true, query);
             if (!trails || !trails[0]) {
