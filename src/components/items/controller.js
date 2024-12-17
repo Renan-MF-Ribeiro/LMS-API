@@ -49,6 +49,7 @@ const { getUserByToken } = require('../../utils/functions');
 const GamificationController = require('../gamification/controller');
 const { EVENTS_CATEGORY } = require('../gamification/model');
 const { User } = require('../users/model');
+const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business');
 const ITEM_KINDS = Object.freeze({
     DocumentItem: DocumentItem,
     MediaItem: MediaItem,
@@ -308,10 +309,13 @@ const ItemController = {
     async create (req, res) {
         const ItemModel = ITEM_KINDS[req.body.kind] || Item;
 
-        const user = await getUserByToken(req)
-
         try {
-            const { _id } = await ItemModel.create({ ...req.body, owner: user._id });
+
+            if (req?.segmentation) {
+                await handleSegmentationOnCreate(req)
+            }
+
+            const { _id } = await ItemModel.create(req.body);
 
             _messages.success(res, req, { _id });
         } catch (error) {
@@ -487,7 +491,10 @@ const ItemController = {
                 delete payload.banner;
                 delete payload.content;
                 payload.author = user._id;
-                payload.owner = user._id
+
+                if (req?.segmentation) {
+                    await handleSegmentationOnCreate(req, payload)
+                }
 
                 const item = await ItemModel.create(payload);
                 _messages.success(res, req, item);
@@ -812,26 +819,17 @@ const ItemController = {
 
             const isObjectId = mongoose.Types.ObjectId.isValid(findValue);
 
-            const query = isObjectId
-                ? { _id: findValue }
-                : { titleURL: findValue };
+            const query = { $and: [{
+                [isObjectId ? '_id' : 'titleURL']: findValue
+            }] }
 
-            const item = await Item.findOne(query);            
-            
-            const user = await getUserByToken(req)
-
-            const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
-            if (item?.owner && user?.owner && !isException) {
-                const issuer = req.segmentation.rule.issuer
-                const userItemOwner = await User.findOne({ _id: item.owner })
-                if (userItemOwner[issuer] === user.owner) {
-                    return _messages.success(res, req, item);
-                }
-            } else {
-                return _messages.success(res, req, item);
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
             }
 
-            return _messages.forbidden(res, req, null, 'Você não tem permissão para prosseguir com a ação')
+            const item = await Item.findOne(query);
+
+            _messages.success(res, req, item);
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -1404,7 +1402,12 @@ const ItemController = {
                 }
 
             query['archive'] = archive ? { $eq: archive === 'true' } : { $ne: true };
-            query['kind'] = { $nin: ['PostItem', 'AluraItem'] };;
+            query['kind'] = { $nin: ['PostItem', 'AluraItem'] };
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
+            }
+
             let total = await Item.find(query).count();
 
             let itens = await Item.find(query)
@@ -1456,31 +1459,10 @@ const ItemController = {
                     .slice(0, parseInt(limit));
             }
             
-            const user = await getUserByToken(req)
-            
-            const ownerItens = []
-
-            const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
-            if (user?.owner && !isException) {
-                for(const item of itens) {
-                    if(!item?.owner) {
-                        ownerItens.push(item)
-                        continue;
-                    }
-
-                    const issuer = req.segmentation.rule.issuer
-                    const userItemOwner = await User.findOne({ _id: item.owner })
-                    if (userItemOwner[issuer] === user.owner) {
-                        ownerItens.push(item)
-                    }
-                }
-            } else {
-                ownerItens.push(...groups)
-            }
 
             _messages.success(res, req, {
-                data: ownerItens,
-                total: ownerItens.length,
+                data: itens,
+                total,
             });
         } catch (error) {
             _messages.internalServer(
