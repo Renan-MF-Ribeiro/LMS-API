@@ -70,7 +70,8 @@ const SectionSchema = new mongoose.Schema(
             enum: Object.values(CARD_TYPE),
             required: false,
             trim: true
-        }
+        },
+        owner: { type: String }
     },
     {
         ...schemaOptions,
