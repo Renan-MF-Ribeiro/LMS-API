@@ -85,19 +85,7 @@ module.exports = {
             },
             { new: true }
         );
-
-        const noOwners = await User.find({ owner: { $exists: false } });
-        if (noOwners.length > 0) {
-            await User.bulkWrite(
-                noOwners.map((user) => ({
-                    updateOne: {
-                        filter: { _id: user._id },
-                        update: { $set: { owner: user[issuer] || null } },
-                    },
-                }))
-            );
-        }
-
+        
         return _messages.success(res, req, created.value);
     },
 
