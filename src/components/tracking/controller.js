@@ -111,14 +111,12 @@ const TrackingController = {
                         registerCompletationAt = true;
                     }
                 } else {
-                    const historicEvaluation = await HistoricEvaluation.findOne({ item: req.body.item }).sort({ createdAt: -1 });
                     const completion = tracking.lessonStatus
                         ? tracking.lessonStatus
                         : SCORMLessonStatus.INCOMPLETE;
                     const newCompletion = req.body.lessonStatus
                         ? req.body.lessonStatus
-                        : historicEvaluation.lessonStatus;
-
+                        : SCORMLessonStatus.INCOMPLETE;
                     isXAPICompleteSent = tracking.isXAPICompleteSent
                         ? tracking.isXAPICompleteSent
                         : false;
@@ -135,11 +133,11 @@ const TrackingController = {
                             isAllowedToSendXAPI = false;
                         }
                     }
-
+                    console.log("completion", completion, "newCompletion", newCompletion, "\n\n\n\n")
                     if (
-                        newCompletion || historicEvaluation.lessonStatus == SCORMLessonStatus.COMPLETED ||
-                        newCompletion || historicEvaluation.lessonStatus == SCORMLessonStatus.FAILED ||
-                        newCompletion || historicEvaluation.lessonStatus == SCORMLessonStatus.PASSED
+                        (newCompletion == SCORMLessonStatus.COMPLETED ||
+                            newCompletion == SCORMLessonStatus.FAILED ||
+                            newCompletion == SCORMLessonStatus.PASSED)
                     ) {
                         registerCompletationAt = true;
                     }
