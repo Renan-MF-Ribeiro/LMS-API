@@ -428,6 +428,8 @@ module.exports = {
             let {
                 courseID,
                 users,
+                registrationDeadline,
+                cancellationDeadline,
                 dateApplicationInitial,
                 dateApplicationFinal,
                 minister,
@@ -444,11 +446,23 @@ module.exports = {
             let flagDate = true;
 
             const costsArray = costs ? JSON.parse(costs) : null;
-            if (dateApplicationInitial || dateApplicationFinal) {
-                if (dateApplicationInitial && dateApplicationFinal === '') {
+            let message;
+
+            if (dateApplicationInitial || dateApplicationFinal || cancellationDeadline || registrationDeadline) {
+                if (!dateApplicationInitial || !dateApplicationFinal || !cancellationDeadline || !registrationDeadline) {
                     flagDate = true;
-                } else {
-                    if (dateApplicationInitial >= dateApplicationFinal) flagDate = false;
+                } else if (dateApplicationInitial >= dateApplicationFinal) {
+                    flagDate = false;
+                    message = 'A data final da aplicação tem que ser maior que a inicial!';
+                } else if (cancellationDeadline > dateApplicationInitial) {
+                    flagDate = false;
+                    message = 'A data limite para cancelamento não pode ser posterior à data de início da aplicação!'
+                } else if (registrationDeadline >= dateApplicationInitial) {
+                    flagDate = false;
+                    message = 'A data limite de registro deve ser anterior à data de início da aplicação!';
+                } else if (registrationDeadline > cancellationDeadline) {
+                    flagDate = false;
+                    message = 'A data limite de registro deve ser anterior ou igual à data limite de cancelamento!';
                 }
             }
 
@@ -456,8 +470,8 @@ module.exports = {
                 badRequest(
                     res,
                     req,
-                    'A data final da aplicação tem que ser maior que a inicial!',
-                    'A data final da aplicação tem que ser maior que a inicial!',
+                    message,
+                    message,
                     'courses',
                     '/createClass'
                 );
@@ -534,6 +548,8 @@ module.exports = {
                             minister,
                             qrcode: req.body.qrCode,
                             materials: arrMaterials,
+                            registrationDeadline,
+                            cancellationDeadline,
                             dateApplicationInitial,
                             dateApplicationFinal,
                             canCreateClass,
@@ -1485,6 +1501,32 @@ module.exports = {
                 'Erro interno no servidor',
                 'courses',
                 '/list-join'
+            );
+        }
+    },
+
+    async listLeave(req,res) {
+        try {
+            const { classesID} = req.body;
+            const user = await getUserByToken(req);
+           
+            var userID = String(user._id);
+
+            const classUpdated = await ClassModel.findOneAndUpdate(
+                { _id: classesID },
+                { $pull: { users: { _id: userID } } },
+                { new: true }
+            );
+            
+            success(res,req, classUpdated)
+        } catch (error) {
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'courses',
+                '/list-leave'
             );
         }
     },
