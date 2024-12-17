@@ -13,7 +13,7 @@ module.exports = {
         const { order, sort } = ordernation(req);
         const searchBy = req.query.searchBy;
 
-        const query = { $and: [] }
+        const query = { $and: [{}] }
 
         if(searchBy) {
             query.$and.push({

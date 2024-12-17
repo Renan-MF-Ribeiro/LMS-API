@@ -184,7 +184,7 @@ module.exports = {
             const { skip, limit } = _functions.pagination(req);
             const searchBy = req.query.searchBy;
 
-            const query = { $and: [] }
+            const query = { $and: [{}] }
 
             if (req?.segmentation) {
                 handleSegmentationOnQuery(req, 'owner', query)
@@ -397,8 +397,8 @@ module.exports = {
             
             const searchBy = req.query.searchBy;
 
-            const queryGroup = { $and: [] }
-            const queryTrail = { $and: [] }
+            const queryGroup = { $and: [{}] }
+            const queryTrail = { $and: [{}] }
 
             if(searchBy) {
                 queryGroup.$and.push({
@@ -905,7 +905,7 @@ module.exports = {
 
             const { searchBy = null } = req.query;
 
-            const query = { $and: [] }
+            const query = { $and: [{}] }
 
             if (searchBy) {
                 query.$and.push({

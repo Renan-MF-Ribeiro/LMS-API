@@ -1274,7 +1274,7 @@ module.exports = {
 
             let total = 0;
             if (req.query.type) {
-                const query = { $and: [] }
+                const query = { $and: [{}] }
 
                 if (req?.segmentation) {
                     handleSegmentationOnQuery(req, 'owner', query)
