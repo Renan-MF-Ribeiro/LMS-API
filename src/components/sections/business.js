@@ -734,6 +734,8 @@ module.exports = {
                         return classFromCourse.dateApplicationFinal <= today ? null : {
                             _id: classFromCourse._id,
                             name: classFromCourse.name,
+                            registrationDeadline: classFromCourse.registrationDeadline,
+                            cancellationDeadline: classFromCourse.cancellationDeadline,
                             dateApplicationInitial: classFromCourse.dateApplicationInitial,
                             dateApplicationFinal: classFromCourse.dateApplicationFinal,
                             location: classFromCourse.location,
