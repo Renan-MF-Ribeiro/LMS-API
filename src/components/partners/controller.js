@@ -5,6 +5,7 @@ const { azureBlob } = require('../../utils/files');
 const { Partner } = require('./model');
 const { pagination, ordernation, getUserByToken } = require('../../utils/functions');
 const { User } = require('../users/model');
+const { handleSegmentationOnQuery } = require('../config/business');
 
 module.exports = {
     async getPartners(req, res) {
@@ -12,11 +13,17 @@ module.exports = {
         const { order, sort } = ordernation(req);
         const searchBy = req.query.searchBy;
 
-        const query = searchBy
-            ? {
-                  $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-              }
-            : {};
+        const query = { $and: [] }
+
+        if(searchBy) {
+            query.$and.push({
+                $or: [{ title: { $regex: searchBy, $options: 'i' } }]
+            })
+        }
+
+        if(req?.segmentation) {
+            handleSegmentationOnQuery(req, 'owner', query)
+        }
 
         try {
             const total = await Partner.find(query).countDocuments();
@@ -27,30 +34,8 @@ module.exports = {
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
-                const user = await getUserByToken(req)
-
-                const ownerPartners = []
-    
-                const isException = req.segmentation.exceptions.some((e) => user[e.issuer] === e.value)
-                if (user?.owner && !isException) {
-                    for(const partner of partners) {
-                        if(!partner?.owner) {
-                            ownerPartners.push(partner)
-                            continue;
-                        }
-    
-                        const issuer = req.segmentation.rule.issuer
-                        const userPartnerOwner = await User.findOne({ _id: partner.owner })
-                        if (userPartnerOwner[issuer] === user.owner) {
-                            ownerPartners.push(group)
-                        }
-                    }
-                } else {
-                    ownerPartners.push(...partners)
-                }
-
             _messages.success(res, req, {
-                data: ownerPartners,
+                data: partners,
                 total,
             });
         } catch (error) {
@@ -64,6 +49,7 @@ module.exports = {
             );
         }
     },
+
     async getActivePartners(req, res) {
         try {
             const partners = await Partner.find({ active: true });
@@ -125,6 +111,10 @@ module.exports = {
             //     return { ...x, key: key };
             // });
             // body.keys = dto;
+
+            if (req?.segmentation) {
+                // await handleSegmentationOnCreate()
+            }
 
             const partner = await Partner.create(body);
             _messages.success(
