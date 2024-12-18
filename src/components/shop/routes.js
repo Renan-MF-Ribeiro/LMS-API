@@ -3,6 +3,7 @@ const { getUserByToken } = require('../../utils/functions');
 const { validateTokenRoute, isAdminOrAccountant } = require('../../utils/middlewares');
 const axios = require('axios');
 const { isSegmentationException } = require('../config/business');
+const { getTagsElegiblesByToken } = require('../sections/business');
 
 const gamificationShopClient = axios.create({
     baseURL: `${process.env.API_GAMIFICATION}/shop`,
@@ -24,7 +25,7 @@ function getDynamicRequestProps(req) {
         params: {
             ...req.query,
             owner: ownerFieldValue ? [ownerFieldValue] : undefined,
-            eligibilities: req.user?.groupsAD ?? [],
+            eligibilities: req.eligibilities ?? [],
         },
     };
 }
@@ -261,6 +262,9 @@ const shopRouter = express.Router();
 
 shopRouter.use(async (req, res, next) => {
     req.user = await getUserByToken(req);
+
+    req.eligibilities = (await getTagsElegiblesByToken(req)).concat(req.user?.groupsAD)
+        ?.map(tag => tag.value ?? tag);
 
     if (!req.user) {
         throw new ApiError('Unauthorized', 401);
