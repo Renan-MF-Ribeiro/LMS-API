@@ -283,7 +283,7 @@ adminRouter
             res
         );
     })
-    .post('/categories', async (req, res) => {
+    .post('/categories', jsonOrFormData, async (req, res) => {
         if (req.is('json')) {
             return handleRequest(
                 gamificationShopClient.post(
@@ -304,7 +304,7 @@ adminRouter
             res
         );
     })
-    .put('/categories/:categoryId', async (req, res) => {
+    .put('/categories/:categoryId', jsonOrFormData, async (req, res) => {
         const { categoryId } = req.params;
 
         if (req.is('json')) {
