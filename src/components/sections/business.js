@@ -731,38 +731,38 @@ module.exports = {
                     const classes = certificateData ? [] : classesFromCourse.map((classFromCourse) => {
                         const inClass = classFromCourse.users.some((user) => user._id == userId || user.userID == userId)
 
-                        const registrationDeadline = new Date(classFromCourse.dateApplicationInitial);
-                        registrationDeadline
-                            .setMinutes(registrationDeadline.getMinutes() - classFromCourse.registrationMinutes);
+                            const registrationDeadline = new Date(classFromCourse.dateApplicationInitial);
+                            registrationDeadline
+                                .setMinutes(registrationDeadline.getMinutes() - classFromCourse.registrationMinutes);
 
-                        const cancellationDeadline = new Date(classFromCourse.dateApplicationInitial);
-                        cancellationDeadline
-                            .setMinutes(cancellationDeadline.getMinutes() - classFromCourse.cancellationMinutes);
+                            const cancellationDeadline = new Date(classFromCourse.dateApplicationInitial);
+                            cancellationDeadline
+                                .setMinutes(cancellationDeadline.getMinutes() - classFromCourse.cancellationMinutes);
 
-                        const currentDate = new Date();
+                            const currentDate = new Date();
 
-                        const currentDateAdjustedForRegistration = new Date(currentDate);
-                        currentDateAdjustedForRegistration
-                            .setMinutes(currentDateAdjustedForRegistration.getMinutes() - classFromCourse.registrationMinutes);
+                            const currentDateAdjustedForRegistration = new Date(currentDate);
+                            currentDateAdjustedForRegistration
+                                .setMinutes(currentDateAdjustedForRegistration.getMinutes() - classFromCourse.registrationMinutes);
 
-                        const currentDateAdjustedForCancellation = new Date(currentDate);
-                        currentDateAdjustedForCancellation
-                            .setMinutes(currentDateAdjustedForCancellation.getMinutes() - classFromCourse.cancellationMinutes);
+                            const currentDateAdjustedForCancellation = new Date(currentDate);
+                            currentDateAdjustedForCancellation
+                                .setMinutes(currentDateAdjustedForCancellation.getMinutes() - classFromCourse.cancellationMinutes);
 
-                        let registerStatus;
-                        let cancellationStatus;
+                            let registerStatus;
+                            let cancellationStatus;
 
-                        if (currentDateAdjustedForRegistration < registrationDeadline) {
-                        registerStatus = 'OPEN';
-                        } else if (currentDateAdjustedForRegistration > registrationDeadline) {
-                        registerStatus = 'CLOSED';
-                        }
+                            if (currentDateAdjustedForRegistration < registrationDeadline) {
+                            registerStatus = 'OPEN';
+                            } else if (currentDateAdjustedForRegistration > registrationDeadline) {
+                            registerStatus = 'CLOSED';
+                            }
 
-                        if (currentDateAdjustedForCancellation < cancellationDeadline) {
-                        cancellationStatus = 'OPEN';
-                        } else if (currentDateAdjustedForCancellation > cancellationDeadline) {
-                        cancellationStatus = 'CLOSED';
-                        }
+                            if (currentDateAdjustedForCancellation < cancellationDeadline) {
+                            cancellationStatus = 'OPEN';
+                            } else if (currentDateAdjustedForCancellation > cancellationDeadline) {
+                            cancellationStatus = 'CLOSED';
+                            }
 
                         console.log('oi')
 
