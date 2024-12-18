@@ -98,6 +98,36 @@ module.exports = {
         return _messages.success(res, req, response);
     },
 
+    async reportPost(req, res) {
+        const { postId } = req.params;
+        const uri = `posts/report/${postId}`;
+
+        try {
+            const { data } = await socialApi.post(uri, req.body);
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            if (error.response?.status === 401) {
+                return _messages.unauthorized(
+                    res,
+                    req,
+                    error.message,
+                    error.response?.data?.message,
+                    'reportPost'
+                );
+            }
+
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'feed',
+                'reportPost'
+            );
+        }
+    },
+
     async findAllPosts(req, res) {
         try {
             const { myPosts, groupId } = req.query;
