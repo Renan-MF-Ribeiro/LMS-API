@@ -130,7 +130,7 @@ userRouter
             res
         );
     })
-    .post('/carts/:cartId?', async (req, res) => {
+    .post('/carts', async (req, res) => {
         const { cartId } = req.params;
 
         const { item, quantity } = req.body;
@@ -144,23 +144,21 @@ userRouter
             res
         );
     })
-    .delete('/carts/:cartId/items/:itemId', async (req, res) => {
-        const { cartId, itemId } = req.params;
+    .delete('/carts/items/:itemId', async (req, res) => {
+        const { itemId } = req.params;
 
         handleRequest(
             gamificationShopClient.delete(
-                `/carts/${cartId}/items/${itemId}`,
+                `/carts/items/${itemId}`,
                 getDynamicRequestProps(req)
             ),
             res
         );
     })
-    .post('/carts/:cartId/checkout', async (req, res) => {
-        const { cartId } = req.params;
-
+    .post('/carts/checkout', async (req, res) => {
         handleRequest(
             gamificationShopClient.post(
-                `/carts/${cartId}/checkout`,
+                `/carts/checkout`,
                 {},
                 getDynamicRequestProps(req)
             ),
