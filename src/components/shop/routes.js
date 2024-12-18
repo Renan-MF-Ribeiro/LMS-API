@@ -23,7 +23,7 @@ function getDynamicRequestProps(req) {
         },
         params: {
             ...req.query,
-            owner: ownerFieldValue,
+            owner: ownerFieldValue ? [ownerFieldValue] : undefined,
             eligibilities: req.user?.groupsAD ?? [],
         },
     };
