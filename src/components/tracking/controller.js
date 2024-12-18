@@ -339,7 +339,7 @@ const TrackingController = {
                 }
             }
 
-            const tracking = await Tracking.findOne({ 
+            const tracking = await Tracking.findOne({
                 item,
                 userLogin,
                 $or: [
@@ -429,6 +429,7 @@ const TrackingController = {
             })
                 .populate({
                     path: 'items',
+                    match: { enabled: true, archived: false },
                     populate: {
                         path: 'itemID',
                         model: 'Item',
@@ -821,8 +822,8 @@ const TrackingController = {
                         ...queryStatus,
                     }
                 );
-                if(queryStatus.lessonStatus === 'passed') {
-                    for(let item of optionalItems) {
+                if (queryStatus.lessonStatus === 'passed') {
+                    for (let item of optionalItems) {
                         const foundItem = await Item.findById(item)
                         const trackingKind = processTrackingType(foundItem)
                         createCompleteTracking(foundItem, trackingKind, tracking.userLogin)
