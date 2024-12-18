@@ -429,7 +429,6 @@ const TrackingController = {
             })
                 .populate({
                     path: 'items',
-                    match: { enabled: true, archived: false },
                     populate: {
                         path: 'itemID',
                         model: 'Item',
@@ -453,6 +452,7 @@ const TrackingController = {
 
             for (const v of trailsWithTracking) {
                 const trail = v.trail;
+                trail.items = v.trail.items.filter((i) => i.itemID.enabled && (!i.itemID.archive && i.itemID.enabled));
                 const completedTrails = [];
                 allItems = trail.items.length;
                 let itemData;
