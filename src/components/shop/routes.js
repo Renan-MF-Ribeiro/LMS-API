@@ -21,6 +21,7 @@ function getDynamicRequestProps(req) {
         : undefined;
 
     return {
+        owner: ownerFieldValue ? [ownerFieldValue] : undefined,
         headers: {
             'x-user-id': req.user.networkLogin
         },
@@ -194,12 +195,14 @@ adminRouter
         );
     })
     .post('/products', jsonOrFormData, async (req, res) => {
+        const { owner, ...config } = getDynamicRequestProps(req)
+
         if (req.is('json')) {
             return handleRequest(
                 gamificationShopClient.post(
                     '/admin/products',
-                    req.body,
-                    getDynamicRequestProps(req)
+                    { ...req.body, owner },
+                    config
                 ),
                 res
             );
@@ -208,7 +211,7 @@ adminRouter
         return handleRequest(
             gamificationShopClient.post(
                 '/admin/products',
-                await parseProductBodyAndUploadImages(req),
+                { ...(await parseProductBodyAndUploadImages(req)), owner },
                 getDynamicRequestProps(req)
             ),
             res
@@ -217,12 +220,14 @@ adminRouter
     .put('/products/:productId', jsonOrFormData, async (req, res) => {
         const { productId } = req.params;
 
+        const { owner, ...config } = getDynamicRequestProps(req)
+
         if (req.is('json')) {
             return handleRequest(
                 gamificationShopClient.put(
                     `/admin/products/${productId}`,
-                    req.body,
-                    getDynamicRequestProps(req)
+                    { ...req.body, owner },
+                    config
                 ),
                 res
             );
@@ -231,7 +236,7 @@ adminRouter
         return handleRequest(
             gamificationShopClient.put(
                 `/admin/products/${productId}`,
-                await parseProductBodyAndUploadImages(req),
+                { ...(await parseProductBodyAndUploadImages(req)), owner },
                 getDynamicRequestProps(req)
             ),
             res
@@ -284,12 +289,14 @@ adminRouter
         );
     })
     .post('/categories', jsonOrFormData, async (req, res) => {
+        const { owner, ...config } = getDynamicRequestProps(req)
+
         if (req.is('json')) {
             return handleRequest(
                 gamificationShopClient.post(
                     '/admin/categories',
-                    req.body,
-                    getDynamicRequestProps(req)
+                    { ...req.body, owner },
+                    config
                 ),
                 res
             );
@@ -298,8 +305,8 @@ adminRouter
         return handleRequest(
             gamificationShopClient.post(
                 '/admin/categories',
-                await parseCategoryBodyAndUploadImages(req),
-                getDynamicRequestProps(req)
+                { ...(await parseCategoryBodyAndUploadImages(req)), owner },
+                config
             ),
             res
         );
@@ -307,12 +314,14 @@ adminRouter
     .put('/categories/:categoryId', jsonOrFormData, async (req, res) => {
         const { categoryId } = req.params;
 
+        const { owner, ...config } = getDynamicRequestProps(req)
+
         if (req.is('json')) {
             return handleRequest(
                 gamificationShopClient.put(
                     `/admin/categories/${categoryId}`,
-                    req.body,
-                    getDynamicRequestProps(req)
+                    { ...req.body, owner },
+                    config
                 ),
                 res
             );
@@ -321,8 +330,8 @@ adminRouter
         return handleRequest(
             gamificationShopClient.put(
                 `/admin/categories/${categoryId}`,
-                await parseCategoryBodyAndUploadImages(req),
-                getDynamicRequestProps(req)
+                { ...(await parseCategoryBodyAndUploadImages(req)), owner },
+                config
             ),
             res
         );
