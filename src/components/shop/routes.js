@@ -130,35 +130,33 @@ userRouter
             res
         );
     })
-    .post('/carts', async (req, res) => {
-        const { cartId } = req.params;
-
+    .post('/cart', async (req, res) => {
         const { item, quantity } = req.body;
 
         handleRequest(
             gamificationShopClient.post(
-                `/carts/${cartId || ''}`,
+                `/cart`,
                 { item, quantity },
                 getDynamicRequestProps(req)
             ),
             res
         );
     })
-    .delete('/carts/items/:itemId', async (req, res) => {
+    .delete('/cart/items/:itemId', async (req, res) => {
         const { itemId } = req.params;
 
         handleRequest(
             gamificationShopClient.delete(
-                `/carts/items/${itemId}`,
+                `/cart/items/${itemId}`,
                 getDynamicRequestProps(req)
             ),
             res
         );
     })
-    .post('/carts/checkout', async (req, res) => {
+    .post('/cart/checkout', async (req, res) => {
         handleRequest(
             gamificationShopClient.post(
-                `/carts/checkout`,
+                `/cart/checkout`,
                 {},
                 getDynamicRequestProps(req)
             ),
