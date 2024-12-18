@@ -385,7 +385,12 @@ module.exports = {
         const users = req.body?.users;
 
         try {
-            const { name } = await getUserByToken(req);
+            const { _id, networkLogin, name } = await getUserByToken(req);
+            
+            req.body.sharedBy = {
+                userId: _id,
+                userName: networkLogin
+            }
 
             const uri = 'posts/shares';
             const { data } = await socialApi.post(uri, req.body);
