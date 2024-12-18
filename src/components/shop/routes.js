@@ -1,7 +1,8 @@
 const express = require('express');
 const { getUserByToken } = require('../../utils/functions');
-const { validateTokenRoute } = require('../../utils/middlewares');
+const { validateTokenRoute, isAdminOrAccountant } = require('../../utils/middlewares');
 const axios = require('axios');
+const { isSegmentationException } = require('../config/business');
 
 const gamificationShopClient = axios.create({
     baseURL: `${process.env.API_GAMIFICATION}/shop`,
@@ -12,35 +13,33 @@ const gamificationShopClient = axios.create({
 });
 
 function getDynamicRequestProps(req) {
+    const ownerFieldValue = !isSegmentationException(req.user, req.segmentation)
+        ? (req.user?.[req.segmentation?.rule?.issuer] ?? null)
+        : undefined;
+
     return {
         headers: {
-            'x-user-id': req.user.networkLogin,
+            'x-user-id': req.user.networkLogin
         },
-        params: req.query,
+        params: {
+            ...req.query,
+            owner: ownerFieldValue,
+            eligibilities: req.user?.groupsAD ?? [],
+        },
     };
 }
 
 function handleRequest(promise, res) {
     promise
         .then(({ data, status }) => res.status(status).json(data))
-        .catch(({ response }) => res.status(response.status).json(response.data));
+        .catch(({ response }) => res.status(response?.status ?? 500).json(response?.data ?? { error: 'Internal Server Error' }));
 }
 
-const router = express.Router();
+const userRouter = express.Router();
 
-router.use(validateTokenRoute);
+const adminRouter = express.Router();
 
-router.use(async (req, res, next) => {
-    req.user = await getUserByToken(req);
-
-    if (!req.user) {
-        throw new ApiError('Unauthorized', 401);
-    }
-
-    next();
-});
-
-router
+userRouter
     // USER
     // CATEGORIES
     .get('/categories', async (req, res) => {
@@ -124,11 +123,12 @@ router
             gamificationShopClient.get('/orders/pending', getDynamicRequestProps(req)),
             res
         );
-    })
+    });
 
-    // ADMIN
+// ADMIN
+adminRouter
     // PRODUCTS
-    .get('/admin/products', async (req, res) => {
+    .get('/products', async (req, res) => {
         handleRequest(
             gamificationShopClient.get(
                 '/admin/products',
@@ -137,7 +137,7 @@ router
             res
         );
     })
-    .post('/admin/products', async (req, res) => {
+    .post('/products', async (req, res) => {
         handleRequest(
             gamificationShopClient.post(
                 '/admin/products',
@@ -147,7 +147,7 @@ router
             res
         );
     })
-    .put('/admin/products/:productId', async (req, res) => {
+    .put('/products/:productId', async (req, res) => {
         const { productId } = req.params;
 
         handleRequest(
@@ -159,7 +159,7 @@ router
             res
         );
     })
-    .delete('/admin/products/:productId', async (req, res) => {
+    .delete('/products/:productId', async (req, res) => {
         const { productId } = req.params;
 
         handleRequest(
@@ -170,7 +170,7 @@ router
             res
         );
     })
-    .get('/admin/products/:productId/orders', async (req, res) => {
+    .get('/products/:productId/orders', async (req, res) => {
         const { productId } = req.params;
 
         handleRequest(
@@ -181,7 +181,7 @@ router
             res
         );
     })
-    .post('/admin/products/:productId/stock', async (req, res) => {
+    .post('/products/:productId/stock', async (req, res) => {
         const { productId } = req.params;
 
         handleRequest(
@@ -195,7 +195,7 @@ router
     })
 
     // CATEGORIES
-    .get('/admin/categories', async (req, res) => {
+    .get('/categories', async (req, res) => {
         handleRequest(
             gamificationShopClient.get(
                 '/admin/categories',
@@ -204,7 +204,7 @@ router
             res
         );
     })
-    .post('/admin/categories', async (req, res) => {
+    .post('/categories', async (req, res) => {
         handleRequest(
             gamificationShopClient.post(
                 '/admin/categories',
@@ -214,7 +214,7 @@ router
             res
         );
     })
-    .put('/admin/categories/:categoryId', async (req, res) => {
+    .put('/categories/:categoryId', async (req, res) => {
         const { categoryId } = req.params;
 
         handleRequest(
@@ -226,7 +226,7 @@ router
             res
         );
     })
-    .delete('/admin/categories/:categoryId', async (req, res) => {
+    .delete('/categories/:categoryId', async (req, res) => {
         const { categoryId } = req.params;
 
         handleRequest(
@@ -239,13 +239,13 @@ router
     })
 
     // ORDERS
-    .get('/admin/orders', async (req, res) => {
+    .get('/orders', async (req, res) => {
         handleRequest(
             gamificationShopClient.get('/admin/orders', getDynamicRequestProps(req)),
             res
         );
     })
-    .patch('/admin/orders/:orderId/:status', async (req, res) => {
+    .patch('/orders/:orderId/:status', async (req, res) => {
         const { orderId, status } = req.params;
 
         handleRequest(
@@ -257,5 +257,22 @@ router
         );
     });
 
+const shopRouter = express.Router();
 
-module.exports = router;
+shopRouter.use(async (req, res, next) => {
+    req.user = await getUserByToken(req);
+
+    if (!req.user) {
+        throw new ApiError('Unauthorized', 401);
+    }
+
+    next();
+});
+
+shopRouter.use(validateTokenRoute);
+
+shopRouter.use('/', userRouter);
+
+shopRouter.use('/admin', isAdminOrAccountant, adminRouter);
+
+module.exports = shopRouter;
