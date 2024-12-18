@@ -731,11 +731,48 @@ module.exports = {
                     const classes = certificateData ? [] : classesFromCourse.map((classFromCourse) => {
                         const inClass = classFromCourse.users.some((user) => user._id == userId || user.userID == userId)
 
+                        const registrationDeadline = new Date(classFromCourse.dateApplicationInitial);
+                        registrationDeadline
+                            .setMinutes(registrationDeadline.getMinutes() - classFromCourse.registrationMinutes);
+
+                        const cancellationDeadline = new Date(classFromCourse.dateApplicationInitial);
+                        cancellationDeadline
+                            .setMinutes(cancellationDeadline.getMinutes() - classFromCourse.cancellationMinutes);
+
+                        const currentDate = new Date();
+
+                        const currentDateAdjustedForRegistration = new Date(currentDate);
+                        currentDateAdjustedForRegistration
+                            .setMinutes(currentDateAdjustedForRegistration.getMinutes() - classFromCourse.registrationMinutes);
+
+                        const currentDateAdjustedForCancellation = new Date(currentDate);
+                        currentDateAdjustedForCancellation
+                            .setMinutes(currentDateAdjustedForCancellation.getMinutes() - classFromCourse.cancellationMinutes);
+
+                        let registerStatus;
+                        let cancellationStatus;
+
+                        if (currentDateAdjustedForRegistration < registrationDeadline) {
+                        registerStatus = 'OPEN';
+                        } else if (currentDateAdjustedForRegistration > registrationDeadline) {
+                        registerStatus = 'CLOSED';
+                        }
+
+                        if (currentDateAdjustedForCancellation < cancellationDeadline) {
+                        cancellationStatus = 'OPEN';
+                        } else if (currentDateAdjustedForCancellation > cancellationDeadline) {
+                        cancellationStatus = 'CLOSED';
+                        }
+
+                        console.log('oi')
+
                         return classFromCourse.dateApplicationFinal <= today ? null : {
                             _id: classFromCourse._id,
                             name: classFromCourse.name,
-                            registrationDeadline: classFromCourse.registrationDeadline,
-                            cancellationDeadline: classFromCourse.cancellationDeadline,
+                            registrationMinutes: classFromCourse.registrationMinutes,
+                            cancellationMinutes: classFromCourse.cancellationMinutes,
+                            registerStatus,
+                            cancellationStatus,
                             dateApplicationInitial: classFromCourse.dateApplicationInitial,
                             dateApplicationFinal: classFromCourse.dateApplicationFinal,
                             location: classFromCourse.location,
@@ -752,8 +789,6 @@ module.exports = {
                 });
 
                 elegibleCourses = await Promise.all(coursePromises);
-
-
 
                 if (section) {
                     const sortFnc =
