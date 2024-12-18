@@ -1,5 +1,7 @@
 const express = require('express');
 const { getUserByToken } = require('../../utils/functions');
+const { validateTokenRoute } = require('../../utils/middlewares');
+const axios = require('axios');
 
 const gamificationShopClient = axios.create({
     baseURL: `${process.env.API_GAMIFICATION}/shop`,
@@ -9,19 +11,29 @@ const gamificationShopClient = axios.create({
     }
 });
 
-const router = express.Router();
-
-router.use(async (req, res, next) => {
-    req.user = await getUserByToken(req);
-    next();
-});
-
 function getDynamicRequestProps(req) {
     return {
-        headers: { 'x-user-id': req.user.networkLogin },
+        headers: {
+            'x-user-id': req.user.networkLogin,
+            'x-client-id': process.env.CLIENT_ID,
+        },
         params: req.query,
     };
 }
+
+const router = express.Router();
+
+router.use(validateTokenRoute);
+
+router.use(async (req, res, next) => {
+    req.user = await getUserByToken(req);
+
+    if (!req.user) {
+        throw new ApiError('Unauthorized', 401);
+    }
+
+    next();
+});
 
 router
     // USER
