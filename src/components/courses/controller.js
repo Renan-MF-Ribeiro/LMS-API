@@ -428,8 +428,8 @@ module.exports = {
             let {
                 courseID,
                 users,
-                registrationDeadline,
-                cancellationDeadline,
+                registrationMinutes,
+                cancellationMinutes,
                 dateApplicationInitial,
                 dateApplicationFinal,
                 minister,
@@ -443,27 +443,20 @@ module.exports = {
                 name,
                 signup,
             } = req.fields;
-            let flagDate = true;
-
+            
             const costsArray = costs ? JSON.parse(costs) : null;
-            let message;
 
-            if (dateApplicationInitial || dateApplicationFinal || cancellationDeadline || registrationDeadline) {
-                if (!dateApplicationInitial || !dateApplicationFinal || !cancellationDeadline || !registrationDeadline) {
-                    flagDate = true;
-                } else if (dateApplicationInitial >= dateApplicationFinal) {
+            let message;
+            let flagDate = true;
+            
+            if (dateApplicationInitial && dateApplicationFinal) {
+                if (dateApplicationInitial >= dateApplicationFinal) {
                     flagDate = false;
                     message = 'A data final da aplicação tem que ser maior que a inicial!';
-                } else if (cancellationDeadline > dateApplicationInitial) {
-                    flagDate = false;
-                    message = 'A data limite para cancelamento não pode ser posterior à data de início da aplicação!'
-                } else if (registrationDeadline >= dateApplicationInitial) {
-                    flagDate = false;
-                    message = 'A data limite de registro deve ser anterior à data de início da aplicação!';
-                } else if (registrationDeadline > cancellationDeadline) {
-                    flagDate = false;
-                    message = 'A data limite de registro deve ser anterior ou igual à data limite de cancelamento!';
                 }
+            } else {
+                flagDate = false;
+                message = 'Todas as datas são obrigatórias!';
             }
 
             if (!flagDate) {
@@ -548,8 +541,8 @@ module.exports = {
                             minister,
                             qrcode: req.body.qrCode,
                             materials: arrMaterials,
-                            registrationDeadline,
-                            cancellationDeadline,
+                            registrationMinutes,
+                            cancellationMinutes,
                             dateApplicationInitial,
                             dateApplicationFinal,
                             canCreateClass,
