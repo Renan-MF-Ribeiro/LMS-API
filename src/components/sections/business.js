@@ -877,7 +877,7 @@ module.exports = {
                     ]);
 
                     section.trails = mostSeenTrails.map(({ trail, count }) => {
-                        const completion = trails.find(t => t._id.toString() === trail._id.toString())?.completion || 0;
+                        const completion = trails.find(t => t._id.toString() === trail._id.toString())?.completion || null;
                         return { 
                             ...trail, 
                             count,
