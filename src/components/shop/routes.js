@@ -8,7 +8,7 @@ const gamificationShopClient = axios.create({
     headers: {
         'x-api-key': process.env.API_KEY_GAMIFICATION,
         'x-client-id': process.env.CLIENT_ID
-    }
+    },
 });
 
 function getDynamicRequestProps(req) {
@@ -18,6 +18,12 @@ function getDynamicRequestProps(req) {
         },
         params: req.query,
     };
+}
+
+function handleRequest(promise, res) {
+    promise
+        .then(({ data, status }) => res.status(status).json(data))
+        .catch(({ response }) => res.status(response.status).json(response.data));
 }
 
 const router = express.Router();
@@ -38,209 +44,217 @@ router
     // USER
     // CATEGORIES
     .get('/categories', async (req, res) => {
-        const { data } = await gamificationShopClient.get(
-            '/categories',
-            getDynamicRequestProps(req)
-        );
-
-        res.json(data);
+        handleRequest(
+            gamificationShopClient.get('/categories', getDynamicRequestProps(req)),
+            res
+        )
     })
     .get('/categories/:categoryId/products', async (req, res) => {
-        const { categoryId } = req.params;
-
-        const { data } = await gamificationShopClient.get(
-            `/categories/${categoryId}/products`,
-            getDynamicRequestProps(req)
+        handleRequest(
+            gamificationShopClient.get(
+                `/categories/${req.params.categoryId}/products`,
+                getDynamicRequestProps(req)
+            ),
+            res
         );
-
-        res.json(data);
     })
 
     // PRODUCTS
     .get('/products', async (req, res) => {
-        const { data } = await gamificationShopClient.get('/products', getDynamicRequestProps(req));
-
-        res.json(data);
+        handleRequest(
+            gamificationShopClient.get('/products', getDynamicRequestProps(req)),
+            res
+        );
     })
 
     // CART
     .get('/cart', async (req, res) => {
-        const { data } = await gamificationShopClient.get('/cart', getDynamicRequestProps(req));
-
-        res.json(data);
+        handleRequest(
+            gamificationShopClient.get('/cart', getDynamicRequestProps(req)),
+            res
+        );
     })
     .post('/carts/:cartId?', async (req, res) => {
         const { cartId } = req.params;
 
         const { item, quantity } = req.body;
 
-        const { data } = await gamificationShopClient.post(
-            `/carts/${cartId || ''}`,
-            { item, quantity },
-            getDynamicRequestProps(req)
+        handleRequest(
+            gamificationShopClient.post(
+                `/carts/${cartId || ''}`,
+                { item, quantity },
+                getDynamicRequestProps(req)
+            ),
+            res
         );
-
-        res.json(data);
     })
     .delete('/carts/:cartId/items/:itemId', async (req, res) => {
         const { cartId, itemId } = req.params;
 
-        const { data } = await gamificationShopClient.delete(
-            `/carts/${cartId}/items/${itemId}`,
-            getDynamicRequestProps(req)
+        handleRequest(
+            gamificationShopClient.delete(
+                `/carts/${cartId}/items/${itemId}`,
+                getDynamicRequestProps(req)
+            ),
+            res
         );
-
-        res.json(data);
     })
     .post('/carts/:cartId/checkout', async (req, res) => {
         const { cartId } = req.params;
 
-        const { data } = await gamificationShopClient.post(
-            `/carts/${cartId}/checkout`,
-            getDynamicRequestProps(req)
+        handleRequest(
+            gamificationShopClient.post(
+                `/carts/${cartId}/checkout`,
+                {},
+                getDynamicRequestProps(req)
+            ),
+            res
         );
-
-        res.json(data);
     })
 
     // ORDERS
     .get('/orders', async (req, res) => {
-        const { data } = await gamificationShopClient.get(
-            '/orders',
-            getDynamicRequestProps(req)
+        handleRequest(
+            gamificationShopClient.get('/orders', getDynamicRequestProps(req)),
+            res
         );
-
-        res.json(data);
     })
     .get('/orders/pending', async (req, res) => {
-        const { data } = await gamificationShopClient.get(
-            '/orders/pending',
-            getDynamicRequestProps(req)
+        handleRequest(
+            gamificationShopClient.get('/orders/pending', getDynamicRequestProps(req)),
+            res
         );
-
-        res.json(data);
     })
 
     // ADMIN
     // PRODUCTS
     .get('/admin/products', async (req, res) => {
-        const { data } = await gamificationShopClient.get(
-            '/admin/products',
-            getDynamicRequestProps(req)
+        handleRequest(
+            gamificationShopClient.get(
+                '/admin/products',
+                getDynamicRequestProps(req)
+            ),
+            res
         );
-
-        res.json(data);
     })
     .post('/admin/products', async (req, res) => {
-        const { data } = await gamificationShopClient.post(
-            '/admin/products',
-            req.body,
-            getDynamicRequestProps(req)
+        handleRequest(
+            gamificationShopClient.post(
+                '/admin/products',
+                req.body,
+                getDynamicRequestProps(req)
+            ),
+            res
         );
-
-        res.json(data);
     })
     .put('/admin/products/:productId', async (req, res) => {
         const { productId } = req.params;
 
-        const { data } = await gamificationShopClient.put(
-            `/admin/products/${productId}`,
-            req.body,
-            getDynamicRequestProps(req)
+        handleRequest(
+            gamificationShopClient.put(
+                `/admin/products/${productId}`,
+                req.body,
+                getDynamicRequestProps(req)
+            ),
+            res
         );
-
-        res.json(data);
     })
     .delete('/admin/products/:productId', async (req, res) => {
         const { productId } = req.params;
 
-        const { data } = await gamificationShopClient.delete(
-            `/admin/products/${productId}`,
-            getDynamicRequestProps(req)
+        handleRequest(
+            gamificationShopClient.delete(
+                `/admin/products/${productId}`,
+                getDynamicRequestProps(req)
+            ),
+            res
         );
-
-        res.json(data);
     })
     .get('/admin/products/:productId/orders', async (req, res) => {
         const { productId } = req.params;
 
-        const { data } = await gamificationShopClient.get(
-            `/admin/products/${productId}/orders`,
-            getDynamicRequestProps(req)
+        handleRequest(
+            gamificationShopClient.get(
+                `/admin/products/${productId}/orders`,
+                getDynamicRequestProps(req)
+            ),
+            res
         );
-
-        res.json(data);
     })
     .post('/admin/products/:productId/stock', async (req, res) => {
         const { productId } = req.params;
 
-        const { data } = await gamificationShopClient.post(
-            `/admin/products/${productId}/stock`,
-            req.body,
-            getDynamicRequestProps(req)
-        );
-
-        res.json(data);
+        handleRequest(
+            gamificationShopClient.post(
+                `/admin/products/${productId}/stock`,
+                req.body,
+                getDynamicRequestProps(req)
+            ),
+            res
+        )
     })
 
     // CATEGORIES
     .get('/admin/categories', async (req, res) => {
-        const { data } = await gamificationShopClient.get(
-            '/admin/categories',
-            getDynamicRequestProps(req)
+        handleRequest(
+            gamificationShopClient.get(
+                '/admin/categories',
+                getDynamicRequestProps(req)
+            ),
+            res
         );
-
-        res.json(data);
     })
     .post('/admin/categories', async (req, res) => {
-        const { data } = await gamificationShopClient.post(
-            '/admin/categories',
-            req.body,
-            getDynamicRequestProps(req)
+        handleRequest(
+            gamificationShopClient.post(
+                '/admin/categories',
+                req.body,
+                getDynamicRequestProps(req)
+            ),
+            res
         );
-
-        res.json(data);
     })
     .put('/admin/categories/:categoryId', async (req, res) => {
         const { categoryId } = req.params;
 
-        const { data } = await gamificationShopClient.put(
-            `/admin/categories/${categoryId}`,
-            req.body,
-            getDynamicRequestProps(req)
+        handleRequest(
+            gamificationShopClient.put(
+                `/admin/categories/${categoryId}`,
+                req.body,
+                getDynamicRequestProps(req)
+            ),
+            res
         );
-
-        res.json(data);
     })
     .delete('/admin/categories/:categoryId', async (req, res) => {
         const { categoryId } = req.params;
 
-        const { data } = await gamificationShopClient.delete(
-            `/admin/categories/${categoryId}`,
-            getDynamicRequestProps(req)
+        handleRequest(
+            gamificationShopClient.delete(
+                `/admin/categories/${categoryId}`,
+                getDynamicRequestProps(req)
+            ),
+            res
         );
-
-        res.json(data);
     })
 
     // ORDERS
     .get('/admin/orders', async (req, res) => {
-        const { data } = await gamificationShopClient.get(
-            '/admin/orders',
-            getDynamicRequestProps(req)
+        handleRequest(
+            gamificationShopClient.get('/admin/orders', getDynamicRequestProps(req)),
+            res
         );
-
-        res.json(data);
     })
     .patch('/admin/orders/:orderId/:status', async (req, res) => {
         const { orderId, status } = req.params;
 
-        const { data } = await gamificationShopClient.patch(
-            `/admin/orders/${orderId}/${status}`,
-            getDynamicRequestProps(req)
+        handleRequest(
+            gamificationShopClient.patch(
+                `/admin/orders/${orderId}/${status}`,
+                getDynamicRequestProps(req)
+            ),
+            res
         );
-
-        res.json(data);
     });
 
 
