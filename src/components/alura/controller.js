@@ -53,7 +53,7 @@ const AluraController = {
             const { data } = await axios.get(uri, { headers });
 
             return _messages.success(res, req, data?.map(
-                section => ({ ...section, type: 'alura' })
+                section => ({ ...section, sectionType: 'alura' })
             ));
         } catch (error) {
             return handleError(res, req, error)
