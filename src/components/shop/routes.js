@@ -15,7 +15,6 @@ function getDynamicRequestProps(req) {
     return {
         headers: {
             'x-user-id': req.user.networkLogin,
-            'x-client-id': process.env.CLIENT_ID,
         },
         params: req.query,
     };
