@@ -11,6 +11,7 @@ const fs = require('fs');
 const mime = require('mime-types');
 const config = require('../../../../config.json');
 const FormData = require('form-data');
+const { getSegmentation } = require('../../config/business');
 
 module.exports = {
     async create(req, res) {
@@ -19,11 +20,22 @@ module.exports = {
 
         body.userCustomElegeFields = userCustomElegeFields;
         try {
+            const segmentation = await getSegmentation();
+
+            if (segmentation.value?.rule?.issuer) {
+                const expectedField = segmentation.value.rule.issuer;
+                const user = await getUserByToken(req);
+                const userField = user[expectedField];
+                if (userField) {
+                    body.owner = userField;
+                }
+            }
+
             delete body.content;
             const uri = 'posts';
             const { data } = await socialApi.post(uri, body);
 
-            if (Object.keys(req?.files).length > 0) {
+             if (Object.keys(req?.files).length > 0) {
                 const uploadContent = `posts/${data.post._id}/content`;
 
                 const formData = new FormData();
@@ -38,7 +50,7 @@ module.exports = {
                         ...formData.getHeaders(),
                     },
                 });
-            }
+            } 
 
             if (body.notifyUsers === true && (body?.elegibilities || body?.elegibilitiesAnd)) {
                 const { _id, name } = await getUserByToken(req);
@@ -227,15 +239,27 @@ module.exports = {
         }
     },
     async listPostToBeModerated(req, res) {
-        const { status, type } = req.query;
+        const { status, type, reports } = req.query;
         const queryParams = new URLSearchParams();
+
+        const segmentation = await getSegmentation();
+
+        if (segmentation.value?.rule?.issuer) {
+            const expectedField = segmentation.value.rule.issuer;
+            const user = await getUserByToken(req);
+            const userField = user[expectedField];
+            if (userField) {
+                queryParams.append('owner', userField);
+            }
+        }
 
         if (status) queryParams.append('status', status.toUpperCase());
         if (type) queryParams.append('type', type.toUpperCase());
+        if (reports) queryParams.append('reports', reports.toUpperCase());
 
         const searchQuery = queryParams.toString();
         try {
-            const query = status ? `?${searchQuery}` : '';
+            const query = `?${searchQuery}`;
             const uri = `posts/admin${query}`;
             const { data } = await socialApi.get(uri, { params: req.query });
 
