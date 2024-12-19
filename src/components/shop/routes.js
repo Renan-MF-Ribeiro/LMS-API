@@ -351,14 +351,16 @@ adminRouter
             res
         );
     })
-    .patch('/orders/:orderId/:status', async (req, res) => {
-        const { orderId, status } = req.params;
+    .patch('/orders/:orderId/status', async (req, res) => {
+        const { orderId } = req.params;
+
+        const { owner, ...config } = getDynamicRequestProps(req);
 
         handleRequest(
             gamificationShopClient.patch(
-                `/admin/orders/${orderId}/${status}`,
-                req.body,
-                getDynamicRequestProps(req)
+                `/admin/orders/${orderId}`,
+                { ...req.body, owner },
+                config
             ),
             res
         );
