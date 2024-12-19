@@ -7,5 +7,5 @@ module.exports = express
     .get('/', _controller.getAllAvatars)
     .get('/:id', _controller.findAvatar)
     .post('/', formidable(), _controller.createAvatar)
-    .put('/:id', _controller.updateAvatar)
+    .put('/:id', formidable(), _controller.updateAvatar)
     .delete('/:id', _controller.deleteAvatar);

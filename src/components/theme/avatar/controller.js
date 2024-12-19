@@ -1,5 +1,4 @@
 const { Avatar } = require('./model');
-
 const { DOMAIN, AZURE_BLOB_URL } = process.env;
 const _messages = require('../../../utils/messages');
 const { azureBlob } = require('../../../utils/files');
@@ -28,7 +27,6 @@ module.exports = {
             if (!avatar) {
                 return _messages.notFound(res, req, null, 'Este avatar não existe');
             }
-            
             _messages.success(res, req, avatar);
         } catch (error) {
             _messages.internalServer(
@@ -43,13 +41,15 @@ module.exports = {
     },
     async createAvatar(req, res) {
         const body = JSON.parse(req.fields?.payload) ?? null;
-        const logo = req.files?.image;
 
         try {
-            if (logo) {
-                let pathAzure = await azureBlob(image, 'avatars', false, 'lmsassetsanon');
+            if (Object.keys(req?.files)?.length > 0) {
+                const key = Object.keys(req.files)[0];
+                const file = req.files[key];
+
+                let pathAzure = await azureBlob(file, 'avatars', false, 'lmsassetsanon');
                 body.image = pathAzure.replace(AZURE_BLOB_URL, DOMAIN);
-            }
+            } 
 
             const avatar = await Avatar.create(body);
             _messages.success(res, req, avatar);
@@ -75,9 +75,18 @@ module.exports = {
                 return _messages.notFound(res, req, null, 'Este avatar não existe');
             }
 
+            if (Object.keys(req?.files)?.length > 0) {
+                const key = Object.keys(req.files)[0];
+                const file = req.files[key];
+
+                let pathAzure = await azureBlob(file, 'avatars', false, 'lmsassetsanon');
+                body.image = pathAzure.replace(AZURE_BLOB_URL, DOMAIN);
+            } 
             const avatar = await Avatar.findByIdAndUpdate(id, body, { new: true });
-            _messages.success(res, req, avatar);
+
+            return _messages.success(res, req, avatar);
         } catch (error) {
+            console.log(error);
             _messages.internalServer(
                 res,
                 req,
@@ -87,7 +96,6 @@ module.exports = {
                 'updateAvatar'
             );
         }
-        _messages.success(res, req, features);
     },
 
     async deleteAvatar(req, res) {
@@ -102,7 +110,7 @@ module.exports = {
             const avatar = await Avatar.findOneAndUpdate({ _id: id }, set({ active: false }), {
                 $new: true,
             });
-            _messages.success(res, req, avatar);
+           return  _messages.success(res, req, avatar);
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -113,6 +121,5 @@ module.exports = {
                 'updateAvatar'
             );
         }
-        _messages.success(res, req, features);
     },
 };
