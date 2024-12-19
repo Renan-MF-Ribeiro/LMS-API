@@ -736,8 +736,8 @@ module.exports = {
                         return classFromCourse.dateApplicationFinal <= today ? null : {
                             _id: classFromCourse._id,
                             name: classFromCourse.name,
-                            registrationMinutes: classFromCourse.registrationMinutes,
-                            cancellationMinutes: classFromCourse.cancellationMinutes,
+                            registrationDeadline: classFromCourse.registrationDeadline,
+                            cancellationDeadline: classFromCourse.cancellationDeadline,
                             dateApplicationInitial: classFromCourse.dateApplicationInitial,
                             dateApplicationFinal: classFromCourse.dateApplicationFinal,
                             location: classFromCourse.location,
@@ -1178,10 +1178,10 @@ function mapAluraTrackings (items) {
     };
 }
 
-function canRegisterOrCancel (dateApplicationInitial, minutes) {
+function canRegisterOrCancel (initialDate, minutes) {
     const currentDate = new Date();
 
-    const deadline = new Date(dateApplicationInitial);
+    const deadline = new Date(initialDate);
     deadline.setMinutes(deadline.getMinutes() - minutes);
 
     return deadline <= currentDate;
@@ -1189,14 +1189,15 @@ function canRegisterOrCancel (dateApplicationInitial, minutes) {
 
 function getClassStatus (classFromCourse, inClass) {
     try {
+        const { dateApplicationInitial, dateApplicationFinal,  registrationDeadline ,cancellationDeadline } = classFromCourse;
         const today = new Date()
         const courseHasSeats = classFromCourse.users.length < classFromCourse.limit || !classFromCourse.limit ? true : false
-        const isCourseInProgress = classFromCourse.dateApplicationInitial <= today && classFromCourse.dateApplicationFinal >= today && courseHasSeats
-        const isCourseOpen = classFromCourse.dateApplicationInitial >= today
-        const isCourseClosed = classFromCourse.dateApplicationFinal <= today
+        const isCourseInProgress = dateApplicationInitial <= today && dateApplicationFinal >= today && courseHasSeats
+        const isCourseOpen = dateApplicationInitial >= today
+        const isCourseClosed = dateApplicationFinal <= today
 
-        const canRegister = canRegisterOrCancel(classFromCourse.dateApplicationInitial, classFromCourse.registrationMinutes)
-        const canCancel = canRegisterOrCancel(classFromCourse.dateApplicationInitial, classFromCourse.cancellationMinutes)
+        const canRegister = canRegisterOrCancel(dateApplicationInitial, registrationDeadline)
+        const canCancel = canRegisterOrCancel(dateApplicationInitial, cancellationDeadline)
 
         if (isCourseInProgress) {
             return "in-progress"
