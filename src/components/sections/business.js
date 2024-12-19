@@ -1184,7 +1184,7 @@ function canRegisterOrCancel (initialDate, minutes) {
     const deadline = new Date(initialDate);
     deadline.setMinutes(deadline.getMinutes() - minutes);
 
-    return deadline <= currentDate;
+    return deadline >= currentDate;
 };
 
 function getClassStatus (classFromCourse, inClass) {
