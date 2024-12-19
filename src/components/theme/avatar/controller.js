@@ -43,12 +43,12 @@ module.exports = {
     },
     async createAvatar(req, res) {
         const body = JSON.parse(req.fields?.payload) ?? null;
-        const logo = req.files?.logo;
+        const logo = req.files?.image;
 
         try {
             if (logo) {
-                let pathAzure = await azureBlob(logo, 'avatars', false, 'lmsassetsanon');
-                body.logo = pathAzure.replace(AZURE_BLOB_URL, DOMAIN);
+                let pathAzure = await azureBlob(image, 'avatars', false, 'lmsassetsanon');
+                body.image = pathAzure.replace(AZURE_BLOB_URL, DOMAIN);
             }
 
             const avatar = await Avatar.create(body);
