@@ -731,48 +731,13 @@ module.exports = {
                     const classes = certificateData ? [] : classesFromCourse.map((classFromCourse) => {
                         const inClass = classFromCourse.users.some((user) => user._id == userId || user.userID == userId)
 
-                            const registrationDeadline = new Date(classFromCourse.dateApplicationInitial);
-                            registrationDeadline
-                                .setMinutes(registrationDeadline.getMinutes() - classFromCourse.registrationMinutes);
-
-                            const cancellationDeadline = new Date(classFromCourse.dateApplicationInitial);
-                            cancellationDeadline
-                                .setMinutes(cancellationDeadline.getMinutes() - classFromCourse.cancellationMinutes);
-
-                            const currentDate = new Date();
-
-                            const currentDateAdjustedForRegistration = new Date(currentDate);
-                            currentDateAdjustedForRegistration
-                                .setMinutes(currentDateAdjustedForRegistration.getMinutes() - classFromCourse.registrationMinutes);
-
-                            const currentDateAdjustedForCancellation = new Date(currentDate);
-                            currentDateAdjustedForCancellation
-                                .setMinutes(currentDateAdjustedForCancellation.getMinutes() - classFromCourse.cancellationMinutes);
-
-                            let registerStatus;
-                            let cancellationStatus;
-
-                            if (currentDateAdjustedForRegistration < registrationDeadline) {
-                            registerStatus = 'OPEN';
-                            } else if (currentDateAdjustedForRegistration > registrationDeadline) {
-                            registerStatus = 'CLOSED';
-                            }
-
-                            if (currentDateAdjustedForCancellation < cancellationDeadline) {
-                            cancellationStatus = 'OPEN';
-                            } else if (currentDateAdjustedForCancellation > cancellationDeadline) {
-                            cancellationStatus = 'CLOSED';
-                            }
-
-                        console.log('oi')
+                            
 
                         return classFromCourse.dateApplicationFinal <= today ? null : {
                             _id: classFromCourse._id,
                             name: classFromCourse.name,
                             registrationMinutes: classFromCourse.registrationMinutes,
                             cancellationMinutes: classFromCourse.cancellationMinutes,
-                            registerStatus,
-                            cancellationStatus,
                             dateApplicationInitial: classFromCourse.dateApplicationInitial,
                             dateApplicationFinal: classFromCourse.dateApplicationFinal,
                             location: classFromCourse.location,
@@ -1213,6 +1178,14 @@ function mapAluraTrackings (items) {
     };
 }
 
+function canRegisterOrCancel (dateApplicationInitial, minutes) {
+    const currentDate = new Date();
+
+    const deadline = new Date(dateApplicationInitial);
+    deadline.setMinutes(deadline.getMinutes() - minutes);
+
+    return deadline <= currentDate;
+};
 
 function getClassStatus (classFromCourse, inClass) {
     try {
@@ -1222,17 +1195,20 @@ function getClassStatus (classFromCourse, inClass) {
         const isCourseOpen = classFromCourse.dateApplicationInitial >= today
         const isCourseClosed = classFromCourse.dateApplicationFinal <= today
 
+        const canRegister = canRegisterOrCancel(classFromCourse.dateApplicationInitial, classFromCourse.registrationMinutes)
+        const canCancel = canRegisterOrCancel(classFromCourse.dateApplicationInitial, classFromCourse.cancellationMinutes)
+
         if (isCourseInProgress) {
             return "in-progress"
         }
         if (inClass) {
             return "registered"
         }
-        if (isCourseClosed || !courseHasSeats) {
+        if (isCourseClosed || !courseHasSeats || !canRegister || !canCancel) {
             return "closed"
         }
-        if (isCourseOpen) {
-            return "open"
+        if (isCourseOpen && (canRegister || canCancel)) {
+            return "open";
         }
 
         return null
@@ -1240,4 +1216,5 @@ function getClassStatus (classFromCourse, inClass) {
         console.log(error);
         reject(error);
     }
+    
 }
