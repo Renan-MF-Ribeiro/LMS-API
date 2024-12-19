@@ -357,6 +357,7 @@ adminRouter
         handleRequest(
             gamificationShopClient.patch(
                 `/admin/orders/${orderId}/${status}`,
+                req.body,
                 getDynamicRequestProps(req)
             ),
             res
