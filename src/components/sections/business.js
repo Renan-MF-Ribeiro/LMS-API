@@ -1030,6 +1030,7 @@ module.exports = {
         };
     },
 
+    canRegisterOrCancel,
     getSectionTrailId,
     isSectionTrailInfo,
     isValidSectionTrailInfo,
@@ -1179,17 +1180,18 @@ function mapAluraTrackings (items) {
 }
 
 function canRegisterOrCancel (initialDate, minutes) {
-    const currentDate = new Date();
-
+    const currentDate = new Date()
+    currentDate.setMinutes(currentDate.getMinutes() - 180);
+    
     const deadline = new Date(initialDate);
     deadline.setMinutes(deadline.getMinutes() - minutes);
-
+ 
     return deadline >= currentDate;
-};
+}
 
 function getClassStatus (classFromCourse, inClass) {
     try {
-        const { dateApplicationInitial, dateApplicationFinal,  registrationDeadline ,cancellationDeadline } = classFromCourse;
+        const { dateApplicationInitial, dateApplicationFinal, registrationDeadline, cancellationDeadline } = classFromCourse;
         const today = new Date()
         const courseHasSeats = classFromCourse.users.length < classFromCourse.limit || !classFromCourse.limit ? true : false
         const isCourseInProgress = dateApplicationInitial <= today && dateApplicationFinal >= today && courseHasSeats
