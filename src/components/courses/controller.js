@@ -43,6 +43,9 @@ const {
     getTagsElegiblesByToken,
     checkEligibilityTagsAnd,
 } = require('../sections/business');
+
+const { canRegisterOrCancel } = require('../sections/business')
+
 const { default: axios } = require('axios');
 
 module.exports = {
@@ -541,8 +544,8 @@ module.exports = {
                             minister,
                             qrcode: req.body.qrCode,
                             materials: arrMaterials,
-                            registrationDeadline,
-                            cancellationDeadline,
+                            registrationDeadline: !registrationDeadline ? 0 : registrationDeadline,
+                            cancellationDeadline: !cancellationDeadline ? 0 : cancellationDeadline,
                             dateApplicationInitial,
                             dateApplicationFinal,
                             canCreateClass,
@@ -784,8 +787,8 @@ module.exports = {
                         qrcode: qrCode,
                         qrCodeSelfRegistration: qrCodeSelfRegistration,
                         isSelfRegistrationEnabled: isSelfRegistrationEnabled,
-                        registrationDeadline,
-                        cancellationDeadline,
+                        registrationDeadline: !registrationDeadline ? 0 : registrationDeadline,
+                        cancellationDeadline: !cancellationDeadline ? 0 : cancellationDeadline,
                         dateApplicationInitial,
                         dateApplicationFinal,
                         limit,
@@ -1504,23 +1507,36 @@ module.exports = {
 
     async listLeave(req,res) {
         try {
-            const { classesID} = req.body;
+            const { classesID } = req.body;
             const user = await getUserByToken(req);
-           
-            var userID = String(user._id);
 
-            const classUpdated = await ClassModel.findOneAndUpdate(
-                { _id: classesID },
-                { $pull: { users: { _id: userID } } },
-                { new: true }
-            );
+            const { cancellationDeadline, dateApplicationInitial } = await ClassModel.findById(classesID)
             
-            success(res,req, classUpdated)
+            const canCancel = canRegisterOrCancel(dateApplicationInitial, cancellationDeadline)
+
+            if(!canCancel) {
+                badRequest(
+                    res,
+                    req,
+                    'Não é possível mais cancelar usa inscrição na classe.',
+                    'Não é possível mais cancelar usa inscrição na classe.',
+                    'courses',
+                    '/list-leave'
+                );
+            } else {
+                const classUpdated = await ClassModel.findOneAndUpdate(
+                    { _id: classesID },
+                    { $pull: { users: { userID: user._id } } },
+                    { new: true }
+                );
+                
+                success(res,req, classUpdated)
+            }
         } catch (error) {
             internalServer(
                 res,
-                req,
-                error.message,
+                req, 
+                error.message, 
                 'Erro interno no servidor',
                 'courses',
                 '/list-leave'
