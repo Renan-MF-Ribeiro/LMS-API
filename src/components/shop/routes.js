@@ -131,12 +131,10 @@ userRouter
         );
     })
     .post('/cart', async (req, res) => {
-        const { item, quantity } = req.body;
-
         handleRequest(
             gamificationShopClient.post(
                 `/cart`,
-                { item, quantity },
+                req.body,
                 getDynamicRequestProps(req)
             ),
             res
@@ -154,11 +152,12 @@ userRouter
         );
     })
     .post('/cart/checkout', async (req, res) => {
+        const { owner, ...config } = getDynamicRequestProps(req);
         handleRequest(
             gamificationShopClient.post(
                 `/cart/checkout`,
-                {},
-                getDynamicRequestProps(req)
+                { owner: owner ? [owner] : null },
+                config,
             ),
             res
         );
@@ -358,7 +357,7 @@ adminRouter
 
         handleRequest(
             gamificationShopClient.patch(
-                `/admin/orders/${orderId}`,
+                `/admin/orders/${orderId}/status`,
                 { ...req.body, owner },
                 config
             ),
