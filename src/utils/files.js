@@ -27,6 +27,7 @@ const {
 } = require('../../src/components/new-messages/business');
 const { Readable } = require('stream');
 const configJson = require('../../config.json');
+const { Theme } = require('../components/theme/palette/model');
 const { Log } = require('../components/logs/model');
 const bucket = process.env.BUCKET;
 aws.config = {
