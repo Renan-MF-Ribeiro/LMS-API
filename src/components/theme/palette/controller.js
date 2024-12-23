@@ -3,6 +3,7 @@ const _messages = require('../../../utils/messages')
 const { DOMAIN, AZURE_BLOB_URL } = process.env
 const { azureBlob } = require('../../../utils/files')
 const { pagination } = require('../../../utils/functions')
+const { uploadVimeo } = require('../../../utils/files')
 
 module.exports = {
     async list (req, res) {
