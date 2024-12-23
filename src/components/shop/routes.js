@@ -6,6 +6,7 @@ const { isSegmentationException } = require('../config/business');
 const { getTagsElegiblesByToken } = require('../sections/business');
 const formidable = require('express-formidable');
 const { azureBlob } = require('../../utils/files');
+const ApiError = require('../../errors/ApiError');
 
 const gamificationShopClient = axios.create({
     baseURL: `${process.env.API_GAMIFICATION}/shop`,
@@ -267,6 +268,22 @@ adminRouter
             gamificationShopClient.post(
                 `/admin/products/${productId}/stock`,
                 req.body,
+                getDynamicRequestProps(req)
+            ),
+            res
+        )
+    })
+    .patch('/products/:productId/:status', async (req, res) => {
+        const { productId, status } = req.params;
+
+        if (!['active', 'inactive'].includes(status)) {
+            throw new ApiError('Invalid status', 400);
+        }
+
+        handleRequest(
+            gamificationShopClient.patch(
+                `/admin/products/${productId}/${status}`,
+                {},
                 getDynamicRequestProps(req)
             ),
             res
