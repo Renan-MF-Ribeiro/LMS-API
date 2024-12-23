@@ -3,14 +3,14 @@ const { getUserByToken } = require('../../utils/functions');
 const { validateTokenRoute, isAdminOrAccountant } = require('../../utils/middlewares');
 const { getTagsElegiblesByToken } = require('../sections/business');
 const ApiError = require('../../errors/ApiError');
-const { 
+const {
     gamificationShopClient,
     getDynamicRequestProps,
     handleShopRequest,
     jsonOrFormData,
     parseProductBodyAndUploadImages,
     parseCategoryBodyAndUploadImages,
- } = require('./business');
+} = require('./business');
 
 const userRouter = express.Router();
 
@@ -274,6 +274,16 @@ adminRouter
             gamificationShopClient.delete(
                 `/admin/categories/${categoryId}`,
                 getDynamicRequestProps(req)
+            ),
+            res
+        );
+    })
+    .post('/categories/indexes', jsonOrFormData, async (req, res) => {
+        return handleShopRequest(
+            gamificationShopClient.post(
+                '/admin/categories/indexes',
+                req.body,
+                ...getDynamicRequestProps(req),
             ),
             res
         );
