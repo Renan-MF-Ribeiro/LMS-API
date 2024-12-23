@@ -1,113 +1,32 @@
 const express = require('express');
 const { getUserByToken } = require('../../utils/functions');
 const { validateTokenRoute, isAdminOrAccountant } = require('../../utils/middlewares');
-const axios = require('axios');
-const { isSegmentationException } = require('../config/business');
 const { getTagsElegiblesByToken } = require('../sections/business');
-const formidable = require('express-formidable');
-const { azureBlob } = require('../../utils/files');
 const ApiError = require('../../errors/ApiError');
-
-const gamificationShopClient = axios.create({
-    baseURL: `${process.env.API_GAMIFICATION}/shop`,
-    headers: {
-        'x-api-key': process.env.API_KEY_GAMIFICATION,
-        'x-client-id': process.env.CLIENT_ID
-    },
-});
-
-function getDynamicRequestProps(req) {
-    const ownerFieldValue = !isSegmentationException(req.user, req.segmentation)
-        ? (req.user?.[req.segmentation?.rule?.issuer] ?? null)
-        : undefined;
-
-    return {
-        owner: ownerFieldValue ? [ownerFieldValue] : undefined,
-        headers: {
-            'x-user-id': req.user.networkLogin
-        },
-        params: {
-            ...req.query,
-            owner: ownerFieldValue ? [ownerFieldValue] : undefined,
-            eligibilities: req.eligibilities ?? [],
-        },
-    };
-}
-
-function handleRequest(promise, res) {
-    promise
-        .then(({ data, status }) => res.status(status).json(data))
-        .catch(({ response }) => res.status(response?.status ?? 500).json(response?.data ?? { error: 'Internal Server Error' }));
-}
-
-function jsonOrFormData(req, res, next) {
-    if (req.is('json')) return next();
-    return formidable({ multiples: true })(req, res, next);
-};
-
-async function parseProductBodyAndUploadImages(req) {
-    const reqFields = req.fields?.payload;
-
-    if (!reqFields) throw new Error('Invalid request');
-
-    const reqFiles = Object.entries(req.files ?? []).map(([, file]) => file);
-
-    const body = JSON.parse(reqFields);
-
-    if (body.image) {
-        const file = reqFiles.find(image => image.name === body.image);
-
-        if (file) {
-            body.image = await azureBlob(file, 'shop/products') ?? null;
-        }
-    }
-
-    return body;
-}
-
-async function parseCategoryBodyAndUploadImages(req) {
-    const reqFields = req.fields?.payload;
-
-    if (!reqFields) throw new Error('Invalid request');
-
-    const reqFiles = Object.entries(req.files ?? []).map(([, file]) => file);
-
-    const body = JSON.parse(reqFields);
-
-    if (body.thumb) {
-        const file = reqFiles.find(image => image.name === body.thumb);
-
-        if (file) {
-            body.thumb = await azureBlob(file, 'shop/categories/thumbs') ?? null;
-        }
-    }
-
-    if (body.banner) {
-        const file = reqFiles.find(image => image.name === body.banner);
-
-        if (file) {
-            body.banner = await azureBlob(file, 'shop/categories/banners') ?? null;
-        }
-    }
-
-    return body;
-}
+const { 
+    gamificationShopClient,
+    getDynamicRequestProps,
+    handleShopRequest,
+    jsonOrFormData,
+    parseProductBodyAndUploadImages,
+    parseCategoryBodyAndUploadImages,
+ } = require('./business');
 
 const userRouter = express.Router();
 
 const adminRouter = express.Router();
 
+// USER
 userRouter
-    // USER
     // CATEGORIES
     .get('/categories', async (req, res) => {
-        handleRequest(
+        handleShopRequest(
             gamificationShopClient.get('/categories', getDynamicRequestProps(req)),
             res
         )
     })
     .get('/categories/:categoryId/products', async (req, res) => {
-        handleRequest(
+        handleShopRequest(
             gamificationShopClient.get(
                 `/categories/${req.params.categoryId}/products`,
                 getDynamicRequestProps(req)
@@ -118,7 +37,7 @@ userRouter
 
     // PRODUCTS
     .get('/products', async (req, res) => {
-        handleRequest(
+        handleShopRequest(
             gamificationShopClient.get('/products', getDynamicRequestProps(req)),
             res
         );
@@ -126,13 +45,13 @@ userRouter
 
     // CART
     .get('/cart', async (req, res) => {
-        handleRequest(
+        handleShopRequest(
             gamificationShopClient.get('/cart', getDynamicRequestProps(req)),
             res
         );
     })
     .post('/cart', async (req, res) => {
-        handleRequest(
+        handleShopRequest(
             gamificationShopClient.post(
                 `/cart`,
                 req.body,
@@ -144,7 +63,7 @@ userRouter
     .delete('/cart/items/:itemId', async (req, res) => {
         const { itemId } = req.params;
 
-        handleRequest(
+        handleShopRequest(
             gamificationShopClient.delete(
                 `/cart/items/${itemId}`,
                 getDynamicRequestProps(req)
@@ -154,7 +73,7 @@ userRouter
     })
     .post('/cart/checkout', async (req, res) => {
         const { owner, ...config } = getDynamicRequestProps(req);
-        handleRequest(
+        handleShopRequest(
             gamificationShopClient.post(
                 `/cart/checkout`,
                 { owner },
@@ -166,13 +85,13 @@ userRouter
 
     // ORDERS
     .get('/orders', async (req, res) => {
-        handleRequest(
+        handleShopRequest(
             gamificationShopClient.get('/orders', getDynamicRequestProps(req)),
             res
         );
     })
     .get('/orders/pending', async (req, res) => {
-        handleRequest(
+        handleShopRequest(
             gamificationShopClient.get('/orders/pending', getDynamicRequestProps(req)),
             res
         );
@@ -182,7 +101,7 @@ userRouter
 adminRouter
     // PRODUCTS
     .get('/products', async (req, res) => {
-        handleRequest(
+        handleShopRequest(
             gamificationShopClient.get(
                 '/admin/products',
                 getDynamicRequestProps(req)
@@ -194,7 +113,7 @@ adminRouter
         const { owner, ...config } = getDynamicRequestProps(req)
 
         if (req.is('json')) {
-            return handleRequest(
+            return handleShopRequest(
                 gamificationShopClient.post(
                     '/admin/products',
                     { ...req.body, owner },
@@ -204,7 +123,7 @@ adminRouter
             );
         }
 
-        return handleRequest(
+        return handleShopRequest(
             gamificationShopClient.post(
                 '/admin/products',
                 { ...(await parseProductBodyAndUploadImages(req)), owner },
@@ -219,7 +138,7 @@ adminRouter
         const { owner, ...config } = getDynamicRequestProps(req)
 
         if (req.is('json')) {
-            return handleRequest(
+            return handleShopRequest(
                 gamificationShopClient.put(
                     `/admin/products/${productId}`,
                     { ...req.body, owner },
@@ -229,7 +148,7 @@ adminRouter
             );
         }
 
-        return handleRequest(
+        return handleShopRequest(
             gamificationShopClient.put(
                 `/admin/products/${productId}`,
                 { ...(await parseProductBodyAndUploadImages(req)), owner },
@@ -242,7 +161,7 @@ adminRouter
     .delete('/products/:productId', async (req, res) => {
         const { productId } = req.params;
 
-        handleRequest(
+        handleShopRequest(
             gamificationShopClient.delete(
                 `/admin/products/${productId}`,
                 getDynamicRequestProps(req)
@@ -253,7 +172,7 @@ adminRouter
     .get('/products/:productId/orders', async (req, res) => {
         const { productId } = req.params;
 
-        handleRequest(
+        handleShopRequest(
             gamificationShopClient.get(
                 `/admin/products/${productId}/orders`,
                 getDynamicRequestProps(req)
@@ -264,7 +183,7 @@ adminRouter
     .post('/products/:productId/stock', async (req, res) => {
         const { productId } = req.params;
 
-        handleRequest(
+        handleShopRequest(
             gamificationShopClient.post(
                 `/admin/products/${productId}/stock`,
                 req.body,
@@ -280,7 +199,7 @@ adminRouter
             throw new ApiError('Invalid status', 400);
         }
 
-        handleRequest(
+        handleShopRequest(
             gamificationShopClient.patch(
                 `/admin/products/${productId}/${status}`,
                 {},
@@ -292,7 +211,7 @@ adminRouter
 
     // CATEGORIES
     .get('/categories', async (req, res) => {
-        handleRequest(
+        handleShopRequest(
             gamificationShopClient.get(
                 '/admin/categories',
                 getDynamicRequestProps(req)
@@ -304,7 +223,7 @@ adminRouter
         const { owner, ...config } = getDynamicRequestProps(req)
 
         if (req.is('json')) {
-            return handleRequest(
+            return handleShopRequest(
                 gamificationShopClient.post(
                     '/admin/categories',
                     { ...req.body, owner },
@@ -314,7 +233,7 @@ adminRouter
             );
         }
 
-        return handleRequest(
+        return handleShopRequest(
             gamificationShopClient.post(
                 '/admin/categories',
                 { ...(await parseCategoryBodyAndUploadImages(req)), owner },
@@ -329,7 +248,7 @@ adminRouter
         const { owner, ...config } = getDynamicRequestProps(req)
 
         if (req.is('json')) {
-            return handleRequest(
+            return handleShopRequest(
                 gamificationShopClient.put(
                     `/admin/categories/${categoryId}`,
                     { ...req.body, owner },
@@ -339,7 +258,7 @@ adminRouter
             );
         }
 
-        return handleRequest(
+        return handleShopRequest(
             gamificationShopClient.put(
                 `/admin/categories/${categoryId}`,
                 { ...(await parseCategoryBodyAndUploadImages(req)), owner },
@@ -351,7 +270,7 @@ adminRouter
     .delete('/categories/:categoryId', async (req, res) => {
         const { categoryId } = req.params;
 
-        handleRequest(
+        handleShopRequest(
             gamificationShopClient.delete(
                 `/admin/categories/${categoryId}`,
                 getDynamicRequestProps(req)
@@ -362,7 +281,7 @@ adminRouter
 
     // ORDERS
     .get('/orders', async (req, res) => {
-        handleRequest(
+        handleShopRequest(
             gamificationShopClient.get('/admin/orders', getDynamicRequestProps(req)),
             res
         );
@@ -372,7 +291,7 @@ adminRouter
 
         const { owner, ...config } = getDynamicRequestProps(req);
 
-        handleRequest(
+        handleShopRequest(
             gamificationShopClient.patch(
                 `/admin/orders/${orderId}/status`,
                 { ...req.body, owner },
