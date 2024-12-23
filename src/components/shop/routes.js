@@ -157,7 +157,7 @@ userRouter
         handleRequest(
             gamificationShopClient.post(
                 `/cart/checkout`,
-                { owner: owner ? [owner] : null },
+                { owner },
                 config,
             ),
             res
