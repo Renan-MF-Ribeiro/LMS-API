@@ -1,6 +1,7 @@
 const { processTargetUsers, sendMessageToKafka } = require('../new-messages/business');
 const { Trail } = require('../trails/model');
 const { User } = require('../users/model');
+const { Avatar } = require('../theme/avatar/model');
 const options = require('../../../config.json');
 const { default: axios } = require('axios');
 const { Group } = require('../groups/model');
@@ -18,20 +19,31 @@ const { getUserByToken } = require('../../utils/functions');
 
 async function populateUserFields(fieldName, reference, data) {
     const isArray = Array.isArray(data.data);
-
     // Salva todos os ID's de usuários que devem ser populado de 'data'
     const ids = isArray
         ? [...new Set(data.data.map((x) => x[reference]).filter(Boolean))]
         : [data[reference]].filter(Boolean);
 
+    const avatarIds = isArray
+        ? [...new Set(data.data.map((x) => x.avatar).filter(Boolean))]
+        : [data.avatar].filter(Boolean);
+
     const users = await User.find({ _id: { $in: ids } }, '_id name profilePhoto').lean();
     const userMap = Object.fromEntries(users.map((user) => [user._id.toString(), user]));
 
-    const populateItem = (item) => ({
-        [fieldName]: userMap[item[reference]] || null,
-        ...item,
-        [reference]: undefined,
-    });
+    const avatars = await Avatar.find({ _id: { $in: avatarIds } }, '_id name image').lean();
+    const avatarMap = Object.fromEntries(avatars.map((avatar) => [avatar._id.toString(), avatar]));
+
+    const populateItem = (item) => {
+        const user = userMap[item[reference]];
+        const avatar = { ...avatarMap[item.avatar], avatar: true, _id: user._id } || null;
+
+        return {
+            [fieldName]: avatar || user || null, // Prioriza avatar, fallback para user
+            ...item,
+            [reference]: undefined, // Remove a referência após popular o campo
+        };
+    };
 
     // Recursão para popular nested objects de posts caso existam
     const populateNested = async (nestedData) => ({
@@ -176,9 +188,9 @@ async function getSegFieldsFromUser(req) {
         const match = eligibilities.find((eligibility) => eligibility.group === groupAD);
         return {
             [e]: user[e],
-            expectedGroup: groupAD, 
-            groupAD: match ? match.group : null, 
-            tag: match ? match.tag : null, 
+            expectedGroup: groupAD,
+            groupAD: match ? match.group : null,
+            tag: match ? match.tag : null,
         };
     });
     return userCustomElegeFields;
