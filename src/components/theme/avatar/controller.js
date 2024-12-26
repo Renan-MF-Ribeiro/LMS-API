@@ -46,8 +46,8 @@ module.exports = {
             if (Object.keys(req?.files)?.length > 0) {
                 const key = Object.keys(req.files)[0];
                 const file = req.files[key];
-
-                let pathAzure = await azureBlob(file, 'avatars', false, 'lmsassetsanon');
+                
+                let pathAzure = await azureBlob(file, 'avatars');
                 body.image = pathAzure.replace(AZURE_BLOB_URL, DOMAIN);
             } 
 
@@ -78,8 +78,7 @@ module.exports = {
             if (Object.keys(req?.files)?.length > 0) {
                 const key = Object.keys(req.files)[0];
                 const file = req.files[key];
-
-                let pathAzure = await azureBlob(file, 'avatars', false, 'lmsassetsanon');
+                let pathAzure = await azureBlob(file, 'avatars');
                 body.image = pathAzure.replace(AZURE_BLOB_URL, DOMAIN);
             } 
             const avatar = await Avatar.findByIdAndUpdate(id, body, { new: true });
