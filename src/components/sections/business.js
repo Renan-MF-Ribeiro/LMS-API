@@ -70,6 +70,7 @@ async function setAssessmentHistoricOnSections(userId, sections) {
             const optionalTrails = trainingSectionInfo.optionalTrailsId ?? [];
             const isBlocked = trainingSectionInfo.isBlocked ?? false;
             const hasHistoric = trainingSectionInfo?.hasHistoric ?? false;
+            const hasActiveCycle = trainingSectionInfo.hasActiveCycle ?? false;
             const cycleMessage = trainingSectionInfo.cycleMessage ?? null;
             const cycleImage = trainingSectionInfo.cycleImage ?? null;
             const exceptionTrainingTrails = trainingSectionInfo.exceptionTrainingTrails ?? [];
@@ -108,7 +109,9 @@ async function setAssessmentHistoricOnSections(userId, sections) {
                 section.trails = section.trails.filter(trail => trail.isException || (trail.type && trail.type !== 'trail'));
             }
 
-            section.hasAssessment = true
+            section.hasAssessment = true;
+            section.hasActiveCycle = hasActiveCycle;
+            section.hasHistoric = hasHistoric;
             section.isBlocked = isBlocked;
             section.isCompleted = hasHistoric && isCompleted;
             section.hasCertificate = hasCertificate;
