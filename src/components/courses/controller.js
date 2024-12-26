@@ -1380,7 +1380,7 @@ module.exports = {
         }
     },
 
-    async selfRegistration(req, res) {
+    async selfRegistration (req, res)  {
         try {
             const { body } = req;
             const user = await getUserByToken(req);
@@ -1391,7 +1391,7 @@ module.exports = {
             const course = await ClassModel.findOneAndUpdate(
                 {
                     _id: new mongoose.Types.ObjectId(body.qrcode),
-                    'users.userID': new mongoose.Types.ObjectId(user._id),
+                    'users._id': String(user._id),
                 },
                 {
                     $set: {
@@ -1407,6 +1407,16 @@ module.exports = {
                 { new: true }
             );
 
+            if (!course) {
+                return badRequest(
+                    res,
+                    req,
+                    'Erro ao marcar presença.',
+                    'Não foi possível realizar a marcação de presença no curso.',
+                    'courses',
+                    '/getCourseByQrCode'
+                );
+            }
             success(res, req, course);
         } catch (error) {
             internalServer(
