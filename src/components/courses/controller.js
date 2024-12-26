@@ -1414,7 +1414,7 @@ module.exports = {
                     'Erro ao marcar presença.',
                     'Não foi possível realizar a marcação de presença no curso.',
                     'courses',
-                    '/getCourseByQrCode'
+                    '/self-registration'
                 );
             }
             success(res, req, course);
@@ -1425,7 +1425,7 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'courses',
-                '/getCourseByQrCode'
+                '/self-registration'
             );
         }
     },
