@@ -2,6 +2,7 @@ const axios = require('axios');
 const { isSegmentationException } = require('../config/business');
 const formidable = require('express-formidable');
 const { azureBlob } = require('../../utils/files');
+const ApiError = require('../../errors/ApiError');
 
 const gamificationShopClient = axios.create({
     baseURL: `${process.env.API_GAMIFICATION}/shop`,
@@ -29,10 +30,25 @@ function getDynamicRequestProps(req) {
     };
 }
 
-function handleShopRequest(promise, res) {
-    promise
-        .then(({ data, status }) => res.status(status).json(data))
-        .catch(({ response }) => res.status(response?.status ?? 500).json(response?.data ?? { error: 'Internal Server Error' }));
+async function handleShopRequest(promise, res) {
+    try {
+        const response = await promise;
+
+        const { data, status } = response;
+
+        return res.status(status)
+            .json(
+                data && data !== ''
+                    ? data
+                    : { ok: true }
+            )
+    } catch (error) {
+        throw new ApiError(
+            error.response?.data?.message ?? 'Internal Server Error',
+            error.response?.status ?? 500,
+            error.response?.data ?? { stack: error.stack }
+        );
+    }
 }
 
 function jsonOrFormData(req, res, next) {

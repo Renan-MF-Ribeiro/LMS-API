@@ -20,13 +20,13 @@ const adminRouter = express.Router();
 userRouter
     // CATEGORIES
     .get('/categories', async (req, res) => {
-        handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.get('/categories', getDynamicRequestProps(req)),
             res
         )
     })
     .get('/categories/:categoryId/products', async (req, res) => {
-        handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.get(
                 `/categories/${req.params.categoryId}/products`,
                 getDynamicRequestProps(req)
@@ -37,7 +37,7 @@ userRouter
 
     // PRODUCTS
     .get('/products', async (req, res) => {
-        handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.get('/products', getDynamicRequestProps(req)),
             res
         );
@@ -45,13 +45,13 @@ userRouter
 
     // CART
     .get('/cart', async (req, res) => {
-        handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.get('/cart', getDynamicRequestProps(req)),
             res
         );
     })
     .post('/cart', async (req, res) => {
-        handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.post(
                 `/cart`,
                 req.body,
@@ -63,7 +63,7 @@ userRouter
     .delete('/cart/items/:itemId', async (req, res) => {
         const { itemId } = req.params;
 
-        handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.delete(
                 `/cart/items/${itemId}`,
                 getDynamicRequestProps(req)
@@ -73,7 +73,7 @@ userRouter
     })
     .post('/cart/checkout', async (req, res) => {
         const { owner, ...config } = getDynamicRequestProps(req);
-        handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.post(
                 `/cart/checkout`,
                 { owner },
@@ -85,13 +85,13 @@ userRouter
 
     // ORDERS
     .get('/orders', async (req, res) => {
-        handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.get('/orders', getDynamicRequestProps(req)),
             res
         );
     })
     .get('/orders/pending', async (req, res) => {
-        handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.get('/orders/pending', getDynamicRequestProps(req)),
             res
         );
@@ -101,7 +101,7 @@ userRouter
 adminRouter
     // PRODUCTS
     .get('/products', async (req, res) => {
-        handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.get(
                 '/admin/products',
                 getDynamicRequestProps(req)
@@ -113,7 +113,7 @@ adminRouter
         const { owner, ...config } = getDynamicRequestProps(req)
 
         if (req.is('json')) {
-            return handleShopRequest(
+            return await handleShopRequest(
                 gamificationShopClient.post(
                     '/admin/products',
                     { ...req.body, owner },
@@ -123,7 +123,7 @@ adminRouter
             );
         }
 
-        return handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.post(
                 '/admin/products',
                 { ...(await parseProductBodyAndUploadImages(req)), owner },
@@ -138,7 +138,7 @@ adminRouter
         const { owner, ...config } = getDynamicRequestProps(req)
 
         if (req.is('json')) {
-            return handleShopRequest(
+            return await handleShopRequest(
                 gamificationShopClient.put(
                     `/admin/products/${productId}`,
                     { ...req.body, owner },
@@ -148,7 +148,7 @@ adminRouter
             );
         }
 
-        return handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.put(
                 `/admin/products/${productId}`,
                 { ...(await parseProductBodyAndUploadImages(req)), owner },
@@ -161,7 +161,7 @@ adminRouter
     .delete('/products/:productId', async (req, res) => {
         const { productId } = req.params;
 
-        handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.delete(
                 `/admin/products/${productId}`,
                 getDynamicRequestProps(req)
@@ -172,7 +172,7 @@ adminRouter
     .get('/products/:productId/orders', async (req, res) => {
         const { productId } = req.params;
 
-        handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.get(
                 `/admin/products/${productId}/orders`,
                 getDynamicRequestProps(req)
@@ -183,7 +183,7 @@ adminRouter
     .post('/products/:productId/stock', async (req, res) => {
         const { productId } = req.params;
 
-        handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.post(
                 `/admin/products/${productId}/stock`,
                 req.body,
@@ -199,7 +199,7 @@ adminRouter
             throw new ApiError('Invalid status', 400);
         }
 
-        handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.patch(
                 `/admin/products/${productId}/${status}`,
                 {},
@@ -211,7 +211,7 @@ adminRouter
 
     // CATEGORIES
     .get('/categories', async (req, res) => {
-        handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.get(
                 '/admin/categories',
                 getDynamicRequestProps(req)
@@ -223,7 +223,7 @@ adminRouter
         const { owner, ...config } = getDynamicRequestProps(req)
 
         if (req.is('json')) {
-            return handleShopRequest(
+            return await handleShopRequest(
                 gamificationShopClient.post(
                     '/admin/categories',
                     { ...req.body, owner },
@@ -233,7 +233,7 @@ adminRouter
             );
         }
 
-        return handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.post(
                 '/admin/categories',
                 { ...(await parseCategoryBodyAndUploadImages(req)), owner },
@@ -248,7 +248,7 @@ adminRouter
         const { owner, ...config } = getDynamicRequestProps(req)
 
         if (req.is('json')) {
-            return handleShopRequest(
+            return await handleShopRequest(
                 gamificationShopClient.put(
                     `/admin/categories/${categoryId}`,
                     { ...req.body, owner },
@@ -258,7 +258,7 @@ adminRouter
             );
         }
 
-        return handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.put(
                 `/admin/categories/${categoryId}`,
                 { ...(await parseCategoryBodyAndUploadImages(req)), owner },
@@ -270,7 +270,7 @@ adminRouter
     .delete('/categories/:categoryId', async (req, res) => {
         const { categoryId } = req.params;
 
-        handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.delete(
                 `/admin/categories/${categoryId}`,
                 getDynamicRequestProps(req)
@@ -278,12 +278,12 @@ adminRouter
             res
         );
     })
-    .post('/categories/indexes', jsonOrFormData, async (req, res) => {
-        return handleShopRequest(
+    .post('/categories/indexes', async (req, res) => {
+        await handleShopRequest(
             gamificationShopClient.post(
                 '/admin/categories/indexes',
                 req.body,
-                ...getDynamicRequestProps(req),
+                getDynamicRequestProps(req),
             ),
             res
         );
@@ -291,7 +291,7 @@ adminRouter
 
     // ORDERS
     .get('/orders', async (req, res) => {
-        handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.get('/admin/orders', getDynamicRequestProps(req)),
             res
         );
@@ -301,7 +301,7 @@ adminRouter
 
         const { owner, ...config } = getDynamicRequestProps(req);
 
-        handleShopRequest(
+        await handleShopRequest(
             gamificationShopClient.patch(
                 `/admin/orders/${orderId}/status`,
                 { ...req.body, owner },
