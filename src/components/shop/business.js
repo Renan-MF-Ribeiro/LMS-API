@@ -1,16 +1,8 @@
-const axios = require('axios');
-const { isSegmentationException } = require('../config/business');
 const formidable = require('express-formidable');
+const { isSegmentationException } = require('../config/business');
 const { azureBlob } = require('../../utils/files');
-const ApiError = require('../../errors/ApiError');
 
-const gamificationShopClient = axios.create({
-    baseURL: `${process.env.API_GAMIFICATION}/shop`,
-    headers: {
-        'x-api-key': process.env.API_KEY_GAMIFICATION,
-        'x-client-id': process.env.CLIENT_ID
-    },
-});
+const ApiError = require('../../errors/ApiError');
 
 function getDynamicRequestProps(req) {
     const ownerFieldValue = !isSegmentationException(req.user, req.segmentation)
@@ -52,7 +44,7 @@ async function handleShopRequest(promise, res) {
     }
 }
 
-function jsonOrFormData(req, res, next) {
+async function jsonOrFormData(req, res, next) {
     if (req.is('json')) return next();
     return formidable({ multiples: true })(req, res, next);
 };
@@ -106,7 +98,6 @@ async function parseCategoryBodyAndUploadImages(req) {
 }
 
 module.exports = {
-    gamificationShopClient,
     getDynamicRequestProps,
     handleShopRequest,
     jsonOrFormData,
