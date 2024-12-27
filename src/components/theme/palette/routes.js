@@ -9,5 +9,5 @@ module.exports = express.Router()
     .delete('/:_id', validateTokenRoute, isAdmin, _controller.delete)
     .get('/list', validateTokenRoute, isAdmin, _controller.list)
     .put('/enable', validateTokenRoute, isAdmin, _controller.changeEnable)
-    .get('/default', validateTokenRoute, isAdmin, _controller.getDefaultTheme)
+    .get('/default', validateTokenRoute, _controller.getDefaultTheme)
 
