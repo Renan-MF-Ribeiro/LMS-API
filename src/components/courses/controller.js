@@ -1438,6 +1438,7 @@ module.exports = {
                     $addToSet: {
                         users: {
                             _id: userID,
+                            userID: mongoose.Types.ObjectId(userID),
                             presence: false,
                             grades: 0,
                             name: user.name,
