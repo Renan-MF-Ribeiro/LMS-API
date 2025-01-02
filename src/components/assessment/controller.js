@@ -46,6 +46,14 @@ async function parseCycleBodyAndUploadImages(req) {
         });
     }
 
+    if (body.periods?.length) {
+        body.periods = body.periods.map(period => {
+            if (period.start) period.start = new Date(period.start).setHours(0, 0, 0, 0);
+            if (period.end) period.end = new Date(period.end).setHours(23, 59, 59, 999);
+            return period;
+        });
+    }
+
     for await (const [pillarIndex, pillar] of Object.entries(body.trainingPillars)) {
         for await (const [rangeIndex, range] of Object.entries(pillar.range)) {
             if (range.file) {
