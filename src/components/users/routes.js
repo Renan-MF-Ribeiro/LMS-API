@@ -24,6 +24,7 @@ module.exports = express
         _controller.ldapSignIn
     )
     .post('/accept-terms', validateTokenRoute, _controller.acceptTerms)
+    .post('/watched-video', validateTokenRoute, _controller.watchedVideo)
     .post(
         '/accept-terms-collaboration',
         validateTokenRoute,
@@ -160,3 +161,4 @@ module.exports = express
         formidable(),
         _controller.readSheetHeaders
     );
+    

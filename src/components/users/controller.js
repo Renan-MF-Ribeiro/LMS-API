@@ -461,6 +461,7 @@ module.exports = {
                     // VERIFY FEATURE WELCOME
                     const hasWelcomeComponentFeature = req.features?.welcomeComponent ?? false;
 
+                    console.log(user.welcomeVideoWatched)
                     const token = generateToken({
                         ref: user._id,
                         clientId: process.env.CLIENT_ID,
@@ -469,9 +470,7 @@ module.exports = {
                         profiles: profilesIDS.result,
                         numbers: profilesIDS.numbers,
                         groups: groupsIDS,
-                        welcomeVideoWatched: !hasWelcomeComponentFeature
-                            ? undefined
-                            : user?.welcomeVideoWatched
+                        welcomeVideoWatched: user?.welcomeVideoWatched,
                     });
 
                     const token_analytics = generateTokenAnalytics({
@@ -717,9 +716,7 @@ module.exports = {
                         profiles: profilesIDS.result,
                         numbers: profilesIDS.numbers,
                         groups: groupsIDS,
-                        welcomeVideoWatched: !hasWelcomeComponentFeature
-                            ? undefined
-                            : user?.welcomeVideoWatched,
+                        welcomeVideoWatched: user?.welcomeVideoWatched,
                     });
 
                     const token_mfa = generateMfaToken({
@@ -810,7 +807,37 @@ module.exports = {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
-                $set: { acceptTerms: true, welcomeVideoWatched: true },
+                $set: { acceptTerms: true },
+            });
+            _messages.success(
+                res,
+                req,
+                'Sucesso',
+                'Aceitação dos termos de uso',
+                'users',
+                'acceptTerms',
+                [],
+                [],
+                true,
+                'TERMS OF USE'
+            );
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'users',
+                'acceptTerms'
+            );
+        }
+    },
+
+    async watchedVideo(req, res) {
+        try {
+            const { _id } = await getUserByToken(req);
+            await User.findByIdAndUpdate(_id, {
+                $set: { welcomeVideoWatched: true },
             });
             _messages.success(
                 res,
