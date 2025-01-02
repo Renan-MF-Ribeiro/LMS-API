@@ -98,7 +98,7 @@ module.exports = {
             return {
                 ...comment,
                 userName: user?.name,
-                trailTitle: trail.title
+                trailTitle: trail?.title ?? 'Trilha não encontrada ou excluída'
             }
         })
     }
