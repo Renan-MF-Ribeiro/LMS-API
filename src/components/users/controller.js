@@ -1796,6 +1796,7 @@ module.exports = {
                         profiles: profilesIDS.result,
                         numbers: profilesIDS.numbers,
                         groups: groupsIDS,
+                        welcomeVideoWatched: user?.welcomeVideoWatched,
                     },
                     names: namesProfiles.concat(namesGroups),
                 };
