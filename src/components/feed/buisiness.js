@@ -36,7 +36,15 @@ async function populateUserFields(fieldName, reference, data) {
 
     const populateItem = (item) => {
         const user = userMap[item[reference]];
-        const avatar = { ...avatarMap[item.avatar], avatar: true, _id: user._id } || null;
+        const avatar = item.avatar
+            ? {
+                  ...avatarMap[item.avatar],
+                  avatar: true,
+                  _id: user._id,
+                  profilePhoto: avatarMap[item.avatar]?.image,
+                  image: undefined
+              }
+            : null;
 
         return {
             [fieldName]: avatar || user || null, // Prioriza avatar, fallback para user
