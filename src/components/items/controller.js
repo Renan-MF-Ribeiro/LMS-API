@@ -644,7 +644,7 @@ const ItemController = {
                         }
                     }
                 }
-                
+
                 payload = {
                     ...(thumbPath ? { thumbPath: thumbPath } : {}),
                     ...(contentPath ? { contentPath: contentPath } : {}),
@@ -819,9 +819,11 @@ const ItemController = {
 
             const isObjectId = mongoose.Types.ObjectId.isValid(findValue);
 
-            const query = { $and: [{
-                [isObjectId ? '_id' : 'titleURL']: findValue
-            }] }
+            const query = {
+                $and: [{
+                    [isObjectId ? '_id' : 'titleURL']: findValue
+                }]
+            }
 
             if (req?.segmentation) {
                 handleSegmentationOnQuery(req, 'owner', query)
@@ -1375,6 +1377,7 @@ const ItemController = {
             if (req.query.enabled !== undefined) q.enabled = true;
             const searchBy = req.query.searchBy;
             const archive = req.query.archive;
+            const collaborative = req.query.collaborative;
             const query = searchBy
                 ? {
                     $or: [
@@ -1403,6 +1406,7 @@ const ItemController = {
 
             query['archive'] = archive ? { $eq: archive === 'true' } : { $ne: true };
             query['kind'] = { $nin: ['PostItem', 'AluraItem'] };
+            query['collaborative'] = collaborative ? { $eq: collaborative === 'true' } : { $ne: true };
 
             if (req?.segmentation) {
                 handleSegmentationOnQuery(req, 'owner', query)
@@ -1458,7 +1462,7 @@ const ItemController = {
                     .slice(parseInt(skip))
                     .slice(0, parseInt(limit));
             }
-            
+
 
             _messages.success(res, req, {
                 data: itens,
@@ -1609,7 +1613,7 @@ const ItemController = {
         }
     },
 
-    async archive(req, res) {
+    async archive (req, res) {
         const itemId = req.params.itemId;
 
         await Item.findByIdAndUpdate(itemId, { $set: { enabled: false, archive: true, archivedAt: new Date() } });
@@ -1617,7 +1621,7 @@ const ItemController = {
         res.status(204).send();
     },
 
-    async unarchive(req, res) {
+    async unarchive (req, res) {
         const itemId = req.params.itemId;
 
         await Item.findByIdAndUpdate(itemId, { $set: { archive: false, archivedAt: null } });
