@@ -46,10 +46,10 @@ module.exports = {
             if (Object.keys(req?.files)?.length > 0) {
                 const key = Object.keys(req.files)[0];
                 const file = req.files[key];
-                
+
                 let pathAzure = await azureBlob(file, 'avatars');
                 body.image = pathAzure.replace(AZURE_BLOB_URL, DOMAIN);
-            } 
+            }
 
             const avatar = await Avatar.create(body);
             _messages.success(res, req, avatar);
@@ -80,7 +80,7 @@ module.exports = {
                 const file = req.files[key];
                 let pathAzure = await azureBlob(file, 'avatars');
                 body.image = pathAzure.replace(AZURE_BLOB_URL, DOMAIN);
-            } 
+            }
             const avatar = await Avatar.findByIdAndUpdate(id, body, { new: true });
 
             return _messages.success(res, req, avatar);
@@ -106,10 +106,9 @@ module.exports = {
                 return _messages.notFound(res, req, null, 'Este avatar não existe');
             }
 
-            const avatar = await Avatar.findOneAndUpdate({ _id: id }, set({ active: false }), {
-                $new: true,
-            });
-           return  _messages.success(res, req, avatar);
+            await Avatar.findOneAndUpdate({ _id: id }, { $set: { active: false } });
+            
+            return _messages.success(res, req, 'Avatar deletado com sucesso');
         } catch (error) {
             _messages.internalServer(
                 res,
