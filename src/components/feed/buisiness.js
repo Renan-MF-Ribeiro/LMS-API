@@ -19,6 +19,7 @@ const { getUserByToken } = require('../../utils/functions');
 
 async function populateUserFields(fieldName, reference, data) {
     const isArray = Array.isArray(data.data);
+
     // Salva todos os ID's de usuários que devem ser populado de 'data'
     const ids = isArray
         ? [...new Set(data.data.map((x) => x[reference]).filter(Boolean))]
@@ -28,6 +29,7 @@ async function populateUserFields(fieldName, reference, data) {
         ? [...new Set(data.data.map((x) => x.avatar).filter(Boolean))]
         : [data.avatar].filter(Boolean);
 
+    // Consultar usuários e avatares no banco
     const users = await User.find({ _id: { $in: ids } }, '_id name profilePhoto').lean();
     const userMap = Object.fromEntries(users.map((user) => [user._id.toString(), user]));
 
@@ -35,29 +37,32 @@ async function populateUserFields(fieldName, reference, data) {
     const avatarMap = Object.fromEntries(avatars.map((avatar) => [avatar._id.toString(), avatar]));
 
     const populateItem = (item) => {
+        // Popular o usuário
         const user = userMap[item[reference]];
-        const avatar = item.avatar
-            ? {
-                  ...avatarMap[item.avatar],
-                  avatar: true,
-                  _id: user._id,
-                  profilePhoto: avatarMap[item.avatar]?.image,
-                  image: undefined
-              }
-            : null;
+        
+        // Popular o avatar se existir
+        if (item.avatar) {
+            item.avatar = {
+                ...avatarMap[item.avatar],
+                avatar: true,
+                profilePhoto: avatarMap[item.avatar]?.image,
+                image: undefined,
+            };
+        }
 
         return {
-            [fieldName]: avatar || user || null, // Prioriza avatar, fallback para user
+            [fieldName]: user || null,
             ...item,
             [reference]: undefined, // Remove a referência após popular o campo
         };
     };
 
-    // Recursão para popular nested objects de posts caso existam
+    // Recursão para popular objetos aninhados de posts caso existam
     const populateNested = async (nestedData) => ({
         data: await populateUserFields(fieldName, reference, nestedData),
         total: nestedData.total,
     });
+
     const processItem = async (item) => {
         const populatedItem = populateItem(item);
         if (!populatedItem[fieldName]) return null;
@@ -85,6 +90,7 @@ async function populateUserFields(fieldName, reference, data) {
     }
     return processItem(data);
 }
+
 
 async function populateMembers(data) {
     const ids = data.data;
