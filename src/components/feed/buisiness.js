@@ -39,15 +39,10 @@ async function populateUserFields(fieldName, reference, data) {
     const populateItem = (item) => {
         // Popular o usuário
         const user = userMap[item[reference]];
-        
+
         // Popular o avatar se existir
         if (item.avatar) {
-            item.avatar = {
-                ...avatarMap[item.avatar],
-                avatar: true,
-                profilePhoto: avatarMap[item.avatar]?.image,
-                image: undefined,
-            };
+            item.avatar = avatarMap[item.avatar];
         }
 
         return {
@@ -90,7 +85,6 @@ async function populateUserFields(fieldName, reference, data) {
     }
     return processItem(data);
 }
-
 
 async function populateMembers(data) {
     const ids = data.data;
