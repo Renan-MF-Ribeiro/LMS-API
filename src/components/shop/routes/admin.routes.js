@@ -136,6 +136,17 @@ adminRouter
             res
         );
     })
+    .get('/categories/:categoryId', async (req, res) => {
+        const { categoryId } = req.params;
+
+        await handleShopRequest(
+            gamificationShopClient.get(
+                `/admin/categories/${categoryId}`,
+                getDynamicRequestProps(req)
+            ),
+            res
+        );
+    })
     .post('/categories', jsonOrFormData, async (req, res) => {
         const { owner, ...config } = getDynamicRequestProps(req)
 
