@@ -59,9 +59,7 @@ module.exports = {
 
         const data = mappedUsers.map((user) => {
             const collaborator = collaborators.find(
-                (collaborator) =>
-                    collaborator._id.toString() ===
-                    user.collaboratorId.toString()
+                (collaborator) => collaborator._id.toString() === user.collaboratorId.toString()
             );
             return {
                 ...user,
@@ -76,30 +74,35 @@ module.exports = {
     },
 
     async handleSearchByTrailOrUser(searchBy) {
-        const searchByTrailOrUser = []
-        if(searchBy) {
-            const trails = await Trail.find({ title: { $regex: searchBy, $options: 'i' } })
-            const users = await User.find({ name: { $regex: searchBy, $options: 'i' } })
-            if(trails) searchByTrailOrUser.push(trails.map(({ _id }) => _id.toString()))
-            if(users) searchByTrailOrUser.push(users.map(({ _id }) => _id.toString()))
+        const searchByTrailOrUser = [];
+        if (searchBy) {
+            const trails = await Trail.find({ title: { $regex: searchBy, $options: 'i' } });
+            const users = await User.find({ name: { $regex: searchBy, $options: 'i' } });
+            if (trails) searchByTrailOrUser.push(trails.map(({ _id }) => _id.toString()));
+            if (users) searchByTrailOrUser.push(users.map(({ _id }) => _id.toString()));
         }
 
-        return searchByTrailOrUser
+        return searchByTrailOrUser;
     },
 
     async handleUserNameAndTrailTitle(data) {
-        const trails = await Trail.find({ _id: { $in: data.map(({ trailId }) => trailId) } }, 'title')
-        const users = await User.find({ _id: { $in: data.map(({ userId }) => userId)} }, 'name')
+        const trails = await Trail.find(
+            { _id: { $in: data.map(({ trailId }) => trailId) } },
+            'title'
+        );
+        const users = await User.find({ _id: { $in: data.map(({ userId }) => userId) } }, 'name');
 
-        return data.map((comment) => {
-            const trail = trails.find(({ _id }) => _id.equals(comment.trailId))
-            const user = users.find(({ _id }) => _id.equals(comment.userId))
-
-            return {
-                ...comment,
-                userName: user?.name,
-                trailTitle: trail?.title ?? 'Trilha não encontrada ou excluída'
-            }
-        })
-    }
+        return data
+            .map((comment) => {
+                const trail = trails.find(({ _id }) => _id.equals(comment.trailId));
+                if (!trail) return null;
+                const user = users.find(({ _id }) => _id.equals(comment.userId));
+                return {
+                    ...comment,
+                    userName: user?.name,
+                    trailTitle: trail?.title ?? 'Trilha não encontrada ou excluída',
+                };
+            })
+            .filter(Boolean);
+    },
 };
