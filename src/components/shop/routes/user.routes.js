@@ -3,6 +3,7 @@ const express = require('express');
 const {
     getDynamicRequestProps,
     handleShopRequest,
+    sendOrderConfirmation,
 } = require('../business');
 
 const gamificationShopClient = require('../clients/gamificationShop');
@@ -72,7 +73,16 @@ userRouter
                 { owner },
                 config,
             ),
-            res
+            res,
+            async function (response) {
+                if (!response) return;
+
+                const { status, data } = response;
+
+                if (status === 201 && data && req.user) {
+                    await sendOrderConfirmation(req.user, data);
+                }
+            }
         );
     })
 
