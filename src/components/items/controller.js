@@ -1463,7 +1463,6 @@ const ItemController = {
                     .slice(0, parseInt(limit));
             }
 
-
             _messages.success(res, req, {
                 data: itens,
                 total,
