@@ -573,6 +573,192 @@ function usersLoadLog(...data) {
     console.log(new Date(), '[USERS_LOAD]', ...data);
 }
 
+async function processUserLoadFile(directory, fileName, isProduction, hook) {
+    try {
+        const file = await getAzureFileByPath('sftp', `${directory}/${fileName}`);
+        const fileExtension = fileName.split('.').pop();
+
+        const users = fileExtension === 'csv'
+            ? await readCSVUsersBuffer(file.readableStream)
+            : await readXLSXUsersBuffer(file.buffer);
+
+        const newUsers = [];
+        const existingUsers = [];
+        const usersToSend = [];
+
+        const eligibilityResponse = await axios.get(
+            `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+            {
+                headers: {
+                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                },
+            }
+        );
+
+        const fieldsForEligibility = eligibilityResponse.data.fields;
+
+        usersLoadLog(
+            `Iniciando Processamento de ${users.length} usuários...`
+        );
+
+        for await (const [index, user] of Object.entries(users)) {
+            if (Number(index) % 100 === 0) {
+                usersLoadLog(
+                    `Processando usuário ${Number(index) + 1} de ${users.length}...`
+                );
+            }
+
+            const existingUser = await User.findOne({
+                $or: [
+                    { networkLogin: user.networkLogin },
+                    { networkLogin: user.cpf }
+                ]
+            });
+
+            const processedUser = await processUsersLoad(
+                user,
+                fieldsForEligibility
+            );
+
+            const account = await processUserAccount(processedUser);
+
+            processedUser.password = existingUser
+                ? existingUser.password
+                : processedUser.password;
+
+            if (existingUser) {
+                const groupsAD = [
+                    ...processedUser.groupsAD,
+                    ...(existingUser.groupsAD?.filter((group) => group.startsWith('PERFIL_')) ?? []),
+                ];
+
+                existingUsers.push({
+                    _id: existingUser._id,
+                    processedUser: {
+                        ...processedUser,
+                        cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
+                        groupsAD: [...new Set(groupsAD)],
+                    },
+                });
+            } else {
+                usersToSend.push(account);
+                newUsers.push({
+                    ...processedUser,
+                    cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
+                });
+            }
+        }
+
+        const automaticEligibilityConfig = await getConfiguration(ConfigTypes.AutomaticEligibility.Onboard);
+
+        if (automaticEligibilityConfig?.enabled) {
+            const { eligibility = [] } = automaticEligibilityConfig;
+
+            existingUsers.forEach(user => {
+                user.processedUser.groupsAD = [...(user.processedUser.groupsAD ?? []), ...eligibility];
+            });
+
+            newUsers.forEach(user => {
+                user.groupsAD = [...(user.groupsAD ?? []), ...eligibility];
+            });
+        }
+
+        usersLoadLog(
+            'Usuários processados!', `Usuários existentes: ${existingUsers.length}, Novos usuários: ${newUsers.length}`
+        );
+
+        if (config.usersData?.inactivateIfNotInSpreadsheet) {
+            usersLoadLog('Inativando usuários não presentes na planilha');
+
+            await User.updateMany(
+                {
+                    ignoreLoadInactivation: { $ne: true },
+                    updatedAt: { $lt: new Date() }
+                },
+                { $set: { status: 'INATIVO' } },
+                { multi: true }
+            );
+        }
+
+        if (existingUsers?.length) {
+            usersLoadLog(
+                `Iniciando atualizações dos ${existingUsers.length} existentes`
+            );
+
+            for (const [index, user] of Object.entries(existingUsers)) {
+                if (Number(index) % 100 === 0) {
+                    usersLoadLog(
+                        `Atualizando usuário ${Number(index) + 1} de ${existingUsers.length}...`
+                    );
+                }
+
+                await User.findByIdAndUpdate(user._id, user.processedUser);
+
+                await Tracking.updateMany(
+                    { userLogin: user.processedUser.cpf },
+                    { $set: { userLogin: user.processedUser.networkLogin } }
+                );
+            }
+        }
+
+        if (newUsers.length > 0) {
+            usersLoadLog(
+                `Iniciando criação de ${newUsers.length} novos usuários`
+            );
+
+            await User.insertMany(newUsers);
+
+            if (config.messenger.sendUsersToMicrosservice) {
+                await sendAccountsToKafka(usersToSend);
+                const campaign = createWelcomeCampaign();
+                await sendMessageToKafka(campaign, newUsers);
+                await NewMessage.create(campaign);
+            }
+
+            usersLoadLog('Novos usuários criados');
+        }
+
+        storageLog(
+            `Carga de ${users.length} usuários`,
+            '',
+            '',
+            'DAILY_CHARGE'
+        );
+
+        usersLoadLog('Post processing action:', config.usersData?.postProcessingAction ?? 'none');
+
+        switch (config.usersData?.postProcessingAction) {
+            case "move":
+                usersLoadLog('Moving file to "processados" folder');
+                await moveAzureFile('sftp', `${directory}/${fileName}`, `${directory}/processados/${fileName}`);
+                break;
+            case "delete":
+                usersLoadLog('Deleting file');
+                await deleteAzureFile('sftp', `${directory}/${fileName}`);
+                break;
+
+            default:
+                usersLoadLog('No post processing action');
+                break;
+        }
+    } catch (error) {
+        usersLoadLog(
+            'ERROR',
+            `Erro ao processar arquivo ${fileName}`,
+            error
+        );
+
+        const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} teve problemas para rodar a carga! Erro: ${error.message}`;
+        hook.error('Erro na carga de usuários', '', errorMessage);
+
+        storageLog(
+            `Erro na carga de usuários`,
+            error.message,
+            '',
+            'DAILY_CHARGE'
+        );
+    }
+}
 
 async function getUsersLoad() {
     const env = process.env.NODE_ENV;
@@ -597,202 +783,21 @@ async function getUsersLoad() {
                 const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} não tem nenhum arquivo encontrado para processar!`;
                 hook.warning('Nenhum arquivo encontrado para processar', '', errorMessage);
             }
-        
+
             return;
         }
 
         // Processa cada arquivo
-        for await (const fileName of files) {
-            usersLoadLog(`Processando arquivo ${fileName}...`);
+        for await (const [index, fileName] of Object.entries(files)) {
+            usersLoadLog(`Processando arquivo ${fileName} (${Number(index) + 1}/${files.length})...`);
 
             try {
-                const file = await getAzureFileByPath('sftp', `${directory}/${fileName}`);
-                const fileExtension = fileName.split('.').pop();
-
-                const users = fileExtension === 'csv'
-                    ? await readCSVUsersBuffer(file.readableStream)
-                    : await readXLSXUsersBuffer(file.buffer);
-
-                const newUsers = [];
-                const existingUsers = [];
-                const usersToSend = [];
-
-                const eligibilityResponse = await axios.get(
-                    `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
-                    {
-                        headers: {
-                            'connect-client-key': process.env.CONNECT_CLIENT_KEY,
-                        },
-                    }
-                );
-
-                const fieldsForEligibility = eligibilityResponse.data.fields;
-
-                usersLoadLog(
-                    `Iniciando Processamento de ${users.length} usuários...`
-                );
-
-                for await (const [index, user] of Object.entries(users)) {
-                    if (Number(index) % 100 === 0) {
-                        usersLoadLog(
-                            `Processando usuário ${Number(index) + 1} de ${users.length}...`
-                        );
-                    }
-
-                    const existingUser = await User.findOne({
-                        $or: [
-                            { networkLogin: user.networkLogin },
-                            { networkLogin: user.cpf }
-                        ]
-                    });
-
-                    const processedUser = await processUsersLoad(
-                        user,
-                        fieldsForEligibility
-                    );
-
-                    const account = await processUserAccount(processedUser);
-
-                    processedUser.password = existingUser
-                        ? existingUser.password
-                        : processedUser.password;
-                  
-                    if (existingUser) {
-                        const groupsAD = [
-                            ...processedUser.groupsAD,
-                            ...(existingUser.groupsAD?.filter((group) => group.startsWith('PERFIL_')) ?? []),
-                        ];
-
-                        existingUsers.push({
-                            _id: existingUser._id,
-                            processedUser: {
-                                ...processedUser,
-                                cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
-                                groupsAD: [...new Set(groupsAD)],
-                            },
-                        });
-                    } else {
-                        usersToSend.push(account);
-                        newUsers.push({
-                            ...processedUser,
-                            cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
-                        });
-                    }
-                }
-
-                const automaticEligibilityConfig = await getConfiguration(ConfigTypes.AutomaticEligibility.Onboard);
-
-                if (automaticEligibilityConfig?.enabled) {
-                    const { eligibility = [] } = automaticEligibilityConfig;
-
-                    existingUsers.forEach(user => {
-                        user.processedUser.groupsAD = [...(user.processedUser.groupsAD ?? []), ...eligibility];
-                    });
-
-                    newUsers.forEach(user => {
-                        user.groupsAD = [...(user.groupsAD ?? []), ...eligibility];
-                    });
-                }
-
-                usersLoadLog(
-                    'Usuários processados!', `Usuários existentes: ${existingUsers.length}, Novos usuários: ${newUsers.length}`
-                );
-
-                if (config.usersData?.inactivateIfNotInSpreadsheet) {
-                    usersLoadLog('Inativando usuários não presentes na planilha');
-
-                    await User.updateMany(
-                        {
-                            ignoreLoadInactivation: { $ne: true },
-                            updatedAt: { $lt: new Date() }
-                        },
-                        { $set: { status: 'INATIVO' } },
-                        { multi: true }
-                    );
-                }
-
-                if (existingUsers?.length) {
-                    usersLoadLog(
-                        `Iniciando atualizações dos ${existingUsers.length} existentes`
-                    );
-
-                    for (const [index, user] of Object.entries(existingUsers)) {
-                        if (Number(index) % 100 === 0) {
-                            usersLoadLog(
-                                `Atualizando usuário ${Number(index) + 1} de ${existingUsers.length}...`
-                            );
-                        }
-
-                        await User.findByIdAndUpdate(user._id, user.processedUser);
-
-                        await Tracking.updateMany(
-                            { userLogin: user.processedUser.cpf },
-                            { $set: { userLogin: user.processedUser.networkLogin } }
-                        );
-                    }
-                }
-
-                if (newUsers.length > 0) {
-                    usersLoadLog(
-                        `Iniciando criação de ${newUsers.length} novos usuários`
-                    );
-
-                    await User.insertMany(newUsers);
-
-                    if (config.messenger.sendUsersToMicrosservice) {
-                        await sendAccountsToKafka(usersToSend);
-                        const campaign = createWelcomeCampaign();
-                        await sendMessageToKafka(campaign, newUsers);
-                        await NewMessage.create(campaign);
-                    }
-
-                    usersLoadLog('Novos usuários criados');
-                }
-
-                storageLog(
-                    `Carga de ${users.length} usuários`,
-                    '',
-                    '',
-                    'DAILY_CHARGE'
-                );
-
-                usersLoadLog('Post processing action:', config.usersData?.postProcessingAction ?? 'none');
-
-                switch (config.usersData?.postProcessingAction) {
-                    case "move":
-                        usersLoadLog('Moving file to "processados" folder');
-                        await moveAzureFile('sftp', `${directory}/${fileName}`, `${directory}/processados/${fileName}`);
-                        break;
-                    case "delete":
-                        usersLoadLog('Deleting file');
-                        await deleteAzureFile('sftp', `${directory}/${fileName}`);
-                        break;
-
-                    default:
-                        usersLoadLog('No post processing action');
-                        break;
-                }
-            } catch (error) {
-                usersLoadLog(
-                    'ERROR',
-                    `Erro ao processar arquivo ${fileName}`,
-                    error
-                );
-
-                const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} teve problemas para rodar a carga! Erro: ${error.message}`;
-                hook.error('Erro na carga de usuários', '', errorMessage);
-
-                storageLog(
-                    `Erro na carga de usuários`,
-                    error.message,
-                    '',
-                    'DAILY_CHARGE'
-                );
-            }
+                await processUserLoadFile(directory, fileName, isProduction, hook);
+            } catch (err) { continue; }
         }
     } catch (error) {
         usersLoadLog('ERROR', error);
-        
+
         if (hook) {
             const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} teve problemas para rodar a carga! Erro: ${error.message}`;
             hook.error('Erro na carga de usuários', '', errorMessage);

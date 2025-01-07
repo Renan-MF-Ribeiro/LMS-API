@@ -63,6 +63,7 @@ const trainingRouter = require('./components/training/routes');
 const feedRoutes = require('./components/feed/routes');
 const shopRouter = require('./components/shop/routes');
 const configRouter = require('./components/config/routes');
+const avatarRoutes = require('./components/theme/avatar/routes');
 const { socialApiMiddleware } = require('./components/social/http-adapter');
 
 const corsOptions = {
@@ -177,6 +178,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/feed', feedRoutes)
     .use('/config', configRouter)
     .use('/shop', shopRouter)
+    .use('/avatar', avatarRoutes)
     .use(
         '/assessment',
         isAssessmentActive,

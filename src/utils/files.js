@@ -27,6 +27,7 @@ const {
 } = require('../../src/components/new-messages/business');
 const { Readable } = require('stream');
 const configJson = require('../../config.json');
+const { Theme } = require('../components/theme/palette/model');
 const { Log } = require('../components/logs/model');
 const bucket = process.env.BUCKET;
 aws.config = {
@@ -354,6 +355,50 @@ module.exports = {
             console.log('Error', error);
         }
     },
+
+    async uploadVimeo(file, themeId) {
+        let vimeoTrx;
+        let uploadStatus;
+        const vimeoFolderUri = `/${configJson.vimeoFolder}`;
+        
+        vimeoTrx = new Vimeo(
+            process.env.VIMEO_CLIENTID,
+            process.env.VIMEO_CLIENTSECRET,
+            process.env.VIMEO_ACCESSTOKEN
+        );
+        vimeoTrx.upload(
+            String(file.path),
+            {
+                name: file.name,
+                description: `${file.name + ' - ' + 'VIDEO DE APRESENTAÇÃO'}`,
+                folder_uri: vimeoFolderUri,
+            },
+            function (uri) {
+                console.log('uri', uri)
+                const vimeoId = uri.split('/')[2];
+                const path = 'https://vimeo.com/' + vimeoId;
+                Theme.findByIdAndUpdate(themeId, { welcomeVideo: path }).exec();
+                return path;
+            },
+            function (bytes_uploaded, bytes_total) {
+                var percentage = (
+                    (bytes_uploaded / bytes_total) *
+                    100
+                ).toFixed(2);
+                console.log(bytes_uploaded, bytes_total, percentage + '%');
+            },
+            function (error) {
+                uploadStatus = {
+                    message: 'Something went wrong',
+                    error: error,
+                };
+                console.error('Something went wrong: ' + error);
+            }
+        );
+
+        return uploadStatus;
+    },
+
 
     vimeoFilePathCreate (file, payload, user, mode = 'create') {
         let filePath;

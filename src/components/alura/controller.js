@@ -52,7 +52,9 @@ const AluraController = {
             const uri = `${host}/courses/sections/${clientId}`;
             const { data } = await axios.get(uri, { headers });
 
-            return _messages.success(res, req, data);
+            return _messages.success(res, req, data?.map(
+                section => ({ ...section, sectionType: 'alura' })
+            ));
         } catch (error) {
             return handleError(res, req, error)
         }

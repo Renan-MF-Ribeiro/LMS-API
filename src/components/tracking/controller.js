@@ -339,7 +339,7 @@ const TrackingController = {
                 }
             }
 
-            const tracking = await Tracking.findOne({ 
+            const tracking = await Tracking.findOne({
                 item,
                 userLogin,
                 $or: [
@@ -452,6 +452,7 @@ const TrackingController = {
 
             for (const v of trailsWithTracking) {
                 const trail = v.trail;
+                trail.items = v.trail.items.filter((i) => i.itemID.enabled && (!i.itemID.archive && i.itemID.enabled));
                 const completedTrails = [];
                 allItems = trail.items.length;
                 let itemData;
@@ -821,8 +822,8 @@ const TrackingController = {
                         ...queryStatus,
                     }
                 );
-                if(queryStatus.lessonStatus === 'passed') {
-                    for(let item of optionalItems) {
+                if (queryStatus.lessonStatus === 'passed') {
+                    for (let item of optionalItems) {
                         const foundItem = await Item.findById(item)
                         const trackingKind = processTrackingType(foundItem)
                         createCompleteTracking(foundItem, trackingKind, tracking.userLogin)

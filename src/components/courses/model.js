@@ -99,6 +99,8 @@ const ClassSchema = new mongoose.Schema(
             default: false,
         },
         signup: { type: Boolean, required: true, default: false },
+        registrationDeadline: { type: Number, required: false },
+        cancellationDeadline: { type: Number, required: false },
         dateApplication: { type: Date, required: false },
         dateApplicationInitial: { type: Date, required: false },
         dateApplicationFinal: { type: Date, required: false },
