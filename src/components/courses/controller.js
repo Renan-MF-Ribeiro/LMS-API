@@ -1286,7 +1286,7 @@ module.exports = {
                     '/getCourseByQrCodeSelfRegistration'
                 );
 
-            const applicationInitial = new Date(course.dateApplicationInitial);
+            const applicationInitial = moment(course.dateApplicationInitial).startOf('day').toDate();
             const applicationFinal = new Date(course.dateApplicationFinal);
             const applicationEndDay = moment(applicationFinal).endOf('day').toDate();
             const today = new Date();
