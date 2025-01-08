@@ -43,11 +43,15 @@ async function handleShopRequest(promise, res, postAction) {
                     : { ok: true }
             )
     } catch (error) {
+        const message = error.response?.data?.stack?.message ?? error.response?.data?.message ?? error.message ?? 'Internal Server Error';
+        const statusCode = error.response?.data?.stack?.status ?? error.response?.status ?? 500;
+        const data = error.response?.data?.stack?.response ?? error.response?.data ?? error;
+
         throw new ApiError(
-            error.response?.data?.message ?? 'Internal Server Error',
-            error.response?.status ?? 500,
-            error.response?.data ?? { message: error.message, stack: error.stack },
-            { skipDbLog: error.response?.status === 400 }
+            message,
+            statusCode,
+            data,
+            { skipDbLog: statusCode === 400 }
         );
     }
 }
