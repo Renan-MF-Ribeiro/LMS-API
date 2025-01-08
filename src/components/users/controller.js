@@ -50,6 +50,9 @@ const {
     processDashFilters,
     getLoginConfig,
     createClassGroup,
+    buildSearchObject,
+    generateNewPassword,
+    maskEmail
 } = require('./business');
 
 const {
@@ -103,14 +106,14 @@ const { ConfigTypes } = require('../config/model');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-function hideCPFNumbers(cpf) {
+function hideCPFNumbers (cpf) {
     if (!cpf) return cpf;
 
     return String(cpf).substring(0, 3) + 'XXXXXXXX';
 }
 
 module.exports = {
-    async create(req, res) {
+    async create (req, res) {
         try {
             const { registration, cpf } = req.body;
 
@@ -173,10 +176,10 @@ module.exports = {
         }
     },
 
-    async findById(req, res) {
+    async findById (req, res) {
         try {
             const _id = req.params.userId;
-            
+
             const query = { _id }
 
             if (req?.segmentation) {
@@ -200,7 +203,7 @@ module.exports = {
         }
     },
 
-    async signup(req, res) {
+    async signup (req, res) {
         const { token } = req.query;
         const { password, ...data } = req.body;
 
@@ -326,7 +329,7 @@ module.exports = {
                 await sendSignupActivationEmail(newUser.email, activationLink);
             }
 
-            const accessToken = generateToken({ 
+            const accessToken = generateToken({
                 networkLogin,
                 ref: newUser._id,
                 clientId: process.env.CLIENT_ID,
@@ -347,7 +350,7 @@ module.exports = {
         }
     },
 
-    async activateUser(req, res) {
+    async activateUser (req, res) {
         try {
             const { token, email } = req.body;
             const isUser = await bcrypt.compare(email, token);
@@ -369,7 +372,7 @@ module.exports = {
         }
     },
 
-    async ldapSignIn(req, res) {
+    async ldapSignIn (req, res) {
         let user = {};
 
         try {
@@ -449,7 +452,7 @@ module.exports = {
 
                     const profilesIDS = await returnIdProfileUser(namesProfiles);
                     const groupsIDS = await returnIdGroupUser(namesGroups);
-                    const userGroups = await Group.find({ name: { $in: namesGroups }})
+                    const userGroups = await Group.find({ name: { $in: namesGroups } })
                     const eligibilities = userGroups.flatMap((group) =>
                         group.tags.flatMap((tag) => tag?.value || tag.display)
                     );
@@ -582,7 +585,7 @@ module.exports = {
         }
     },
 
-    async feedbackElegible(req, res) {
+    async feedbackElegible (req, res) {
         const user = await getUserByToken(req);
         const today = new Date();
         const uri = `${process.env.API_SURVEY}/feedback/listbyuser?userid=${user._id}`;
@@ -617,7 +620,7 @@ module.exports = {
         }
     },
 
-    async singleSignOn(req, res) {
+    async singleSignOn (req, res) {
         let user = {};
         const { ssoForm } = await getLoginConfig();
 
@@ -700,7 +703,7 @@ module.exports = {
 
                     const profilesIDS = await returnIdProfileUser(namesProfiles);
                     const groupsIDS = await returnIdGroupUser(namesGroups);
-                    const userGroups = await Group.find({ name: { $in: namesGroups }})
+                    const userGroups = await Group.find({ name: { $in: namesGroups } })
                     const eligibilities = userGroups.flatMap((group) =>
                         group.tags.flatMap((tag) => tag?.value || tag.display)
                     );
@@ -799,11 +802,11 @@ module.exports = {
             }
         } catch (error) {
             console.log(error);
-            _messages.internalServer(res, req, error.message, {token, error: error.stack}, 'singleSignOn', 'singleSignOn');
+            _messages.internalServer(res, req, error.message, { token, error: error.stack }, 'singleSignOn', 'singleSignOn');
         }
     },
 
-    async acceptTerms(req, res) {
+    async acceptTerms (req, res) {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
@@ -833,7 +836,7 @@ module.exports = {
         }
     },
 
-    async watchedVideo(req, res) {
+    async watchedVideo (req, res) {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
@@ -863,7 +866,7 @@ module.exports = {
         }
     },
 
-    async acceptTermsCollaboration(req, res) {
+    async acceptTermsCollaboration (req, res) {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
@@ -893,79 +896,39 @@ module.exports = {
         }
     },
 
-    async recoveryPassword(req, res) {
+    async recoveryPassword (req, res) {
         try {
             const { body, domain, changeByEmail } = req.body;
-
-            let search = Object();
-            Object.entries(body).forEach(([k, v]) => {
-                search = Object.assign(search, {
-                    [k]: { $eq: v },
-                });
-            });
-
-            const user = await User.findOne(search);
+            const search = buildSearchObject(body);
+            const user = await User.findOne(search);;
 
             if (!user) {
-                throw 'user not found';
+                throw { code: 404, message: 'Usuário não encontrado', error: 'user not found' };
             }
 
-            const password_new = Math.random()
-                .toString(36)
-                .replace(/[^a-zA-Z0-9_]+/g, '')
-                .substring(0, 6);
-
-            var salt = bcrypt.genSaltSync(10);
-            var hashPass = bcrypt.hashSync(password_new, salt);
-
-            var newPass = user.password.map(function (item, indice) {
-                item.valid = false;
-                return item;
-            });
-            const networkLogin = user.networkLogin;
-            const _id = user._id;
-
+            const { password_new, newPass } = generateNewPassword(user);
             const token = generateToken({
-                networkLogin,
-                _id,
+                networkLogin: user.networkLogin,
+                _id: user._id,
                 password_old: password_new,
             });
 
             const resetPasswordUrl = `${domain}/login/troca-senha?token=${token}`;
-
-            newPass.push({
-                hash: hashPass,
-                valid: true,
-                createdAt: new Date(),
-            });
-
-            const isUser = await User.findOneAndUpdate(search, {
+            await User.findOneAndUpdate(search, {
                 password: newPass,
                 passwordValid: false,
             });
 
-            if (isUser.email && changeByEmail) {
-                const email = isUser.email.split('@');
-                const emailName = email[0];
-                let newEmail = '';
-                for (const i in emailName) {
-                    if (i > 2 && i < emailName.length) {
-                        newEmail += '*';
-                    } else {
-                        newEmail += emailName[i];
-                    }
-                }
-                newEmail = `${newEmail}@${email[1]}`;
-
+            if (user.email && changeByEmail) {
+                const newEmail = maskEmail(user.email);
                 await sendEmailRecoveryPassword(
-                    user.email ? user.email : emails,
-                    !!user.email,
+                    user.email,
+                    true,
                     password_new,
                     resetPasswordUrl,
                     user
                 );
-                // $2a$10$G06bQZrp8R8kn2cnImS47eHQv./K4i0bp1yBaNDyj3WSrsCH/639G --> senha
-                return await _messages.success(
+                return _messages.success(
                     res,
                     req,
                     { status: 'Sucesso', userEmail: newEmail },
@@ -978,14 +941,12 @@ module.exports = {
                     'RECOVERY PASSWORD'
                 );
             } else {
-                return await _messages.success(res, req, password_new);
-                // _messages.badRequest(res, req, 'Email não existe', 'Não existe uma conta associada a este email')
+                return _messages.success(res, req, password_new);
             }
         } catch (error) {
-            if (error === 'user not found') {
-                return await _messages.notFound(res, req, error, error);
+            if (error?.error === 'user not found') {
+                return _messages.notFound(res, req, error.error, error);
             }
-            console.log(error);
             _messages.internalServer(
                 res,
                 req,
@@ -997,7 +958,7 @@ module.exports = {
         }
     },
 
-    async changePassword(req, res) {
+    async changePassword (req, res) {
         try {
             const { password_old, password_new, password_newConfirm } = req.body;
             const { _id } = await getUserByToken(req);
@@ -1094,7 +1055,7 @@ module.exports = {
         }
     },
 
-    async changePasswordByEmail(req, res) {
+    async changePasswordByEmail (req, res) {
         try {
             const { password_new, password_newConfirm } = req.body;
             const { data } = decodeToken(req.headers.authorization);
@@ -1186,7 +1147,7 @@ module.exports = {
         }
     },
 
-    async import(req, res) {
+    async import (req, res) {
         try {
             var file = null;
             const newUsers = [];
@@ -1315,7 +1276,7 @@ module.exports = {
         }
     },
 
-    async importOnboarding(req, res) {
+    async importOnboarding (req, res) {
         try {
             const onboarding = true;
             var file = null;
@@ -1418,7 +1379,7 @@ module.exports = {
         }
     },
 
-    async returnUsers(req, res) {
+    async returnUsers (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1458,7 +1419,7 @@ module.exports = {
                 .limit(parseInt(limit));
 
             const total = await User.countDocuments(query);
-            
+
             const totalActive = await User.find({
                 status: 'ATIVO',
                 onboarding: { $ne: true },
@@ -1468,7 +1429,7 @@ module.exports = {
                 status: 'INATIVO',
                 onboarding: { $ne: true },
             }).countDocuments();
-            
+
 
             _messages.success(res, req, {
                 data: users,
@@ -1488,7 +1449,7 @@ module.exports = {
         }
     },
 
-    async returnUsersOnboarding(req, res) {
+    async returnUsersOnboarding (req, res) {
         try {
             const users = await findUsers(req, { onboarding: true });
             _messages.success(res, req, users);
@@ -1504,7 +1465,7 @@ module.exports = {
         }
     },
 
-    async returnUserById(req, res) {
+    async returnUserById (req, res) {
         try {
             const { _id } = await getUserByToken(req);
             const user = await User.findOne({ _id: _id }, { password: 0 });
@@ -1524,7 +1485,7 @@ module.exports = {
         }
     },
 
-    async updateUser(req, res) {
+    async updateUser (req, res) {
         try {
             const { _id, email, cpf, networkLogin, tags } = req.body;
             delete req.body.ip;
@@ -1562,8 +1523,8 @@ module.exports = {
                     found.email === email
                         ? 'E-MAIL'
                         : found.networkLogin === networkLogin
-                        ? 'LOGIN'
-                        : 'CPF';
+                            ? 'LOGIN'
+                            : 'CPF';
 
                 return _messages.forbidden(
                     res,
@@ -1586,7 +1547,7 @@ module.exports = {
                 projection: { ...userProjection },
             });
 
-            if(userUpdated?.status) {
+            if (userUpdated?.status) {
                 await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status)
             }
 
@@ -1603,7 +1564,7 @@ module.exports = {
         }
     },
 
-    async updateUserById(req, res) {
+    async updateUserById (req, res) {
         try {
             const { _id } = req.body;
             await User.findByIdAndUpdate(_id, req.body);
@@ -1620,7 +1581,7 @@ module.exports = {
         }
     },
 
-    async changePhoto(req, res) {
+    async changePhoto (req, res) {
         try {
             const user = await getUserByToken(req);
             const file = req.files.file;
@@ -1640,7 +1601,7 @@ module.exports = {
         }
     },
 
-    async isAuthenticated(req, res) {
+    async isAuthenticated (req, res) {
         if (await validateToken(req)) {
             _messages.success(res, req, true);
         } else {
@@ -1655,7 +1616,7 @@ module.exports = {
         }
     },
 
-    async isAuthenticatedNginx(req, res) {
+    async isAuthenticatedNginx (req, res) {
         if (await validateTokenNginx(req.params.token)) {
             _messages.success(res, req, true);
         } else {
@@ -1670,7 +1631,7 @@ module.exports = {
         }
     },
 
-    async selfData(req, res) {
+    async selfData (req, res) {
         try {
             const { data } = await decodeToken(req.headers.authorization);
             const user = await User.findOne(
@@ -1690,7 +1651,7 @@ module.exports = {
         }
     },
 
-    async importUserTest(req, res) {
+    async importUserTest (req, res) {
         try {
             const usersTest = await UserTest.find();
             for (const result of usersTest) {
@@ -1748,7 +1709,7 @@ module.exports = {
         }
     },
 
-    async exportUsers(req, res) {
+    async exportUsers (req, res) {
         try {
             const users = await User.find();
             const records = [];
@@ -1774,7 +1735,7 @@ module.exports = {
         }
     },
 
-    async email(req, res) {
+    async email (req, res) {
         try {
             const error = { message: 'ERRO NA CARGA DIÁRIA', stack: 'erro' };
             await sendLogEmail('success', error, 100, 10, 40, 50, '13/01/2020', 10, 20, 30);
@@ -1785,7 +1746,7 @@ module.exports = {
         }
     },
 
-    async importUsersDisabled(req, res) {
+    async importUsersDisabled (req, res) {
         try {
             const { file } = req.files;
             const results = await _files.readCSV(file.path);
@@ -1806,7 +1767,7 @@ module.exports = {
         }
     },
 
-    async emulation(req, res) {
+    async emulation (req, res) {
         try {
             const { body } = req;
             const {
@@ -1837,7 +1798,7 @@ module.exports = {
             if (namesProfiles.length > 0) {
                 const profilesIDS = await returnIdProfileUser(namesProfiles);
                 const groupsIDS = await returnIdGroupUser(namesGroups);
-                const userGroups = await Group.find({ name: { $in: namesGroups }})
+                const userGroups = await Group.find({ name: { $in: namesGroups } })
                 const eligibilities = userGroups.flatMap((group) =>
                     group.tags.flatMap((tag) => tag?.value || tag.display)
                 );
@@ -1869,7 +1830,7 @@ module.exports = {
                 if (req.features?.gamification) {
                     GamificationBusiness.createClientUser(networkLogin, groupsAD);
                 }
-                
+
                 _messages.success(res, req, {
                     SAS,
                     token,
@@ -1903,7 +1864,7 @@ module.exports = {
         }
     },
 
-    async importUpdateStatusUsers(req, res, next) {
+    async importUpdateStatusUsers (req, res, next) {
         try {
             const { file } = req.files;
             const results = await _files.readCSV(file.path);
@@ -1925,7 +1886,7 @@ module.exports = {
         }
     },
 
-    async ssoCallback(req, res) {
+    async ssoCallback (req, res) {
         try {
             const loginConfig = await getLoginConfig();
 
@@ -1981,7 +1942,7 @@ module.exports = {
         }
     },
 
-    async updateDeviceId(req, res) {
+    async updateDeviceId (req, res) {
         try {
             const user = await getUserByToken(req);
             const { deviceId } = req.body;
@@ -2000,7 +1961,7 @@ module.exports = {
         }
     },
 
-    async returnCollaborativeUsers(req, res) {
+    async returnCollaborativeUsers (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -2009,34 +1970,34 @@ module.exports = {
             const collaborativeUsers = await User.find(
                 searchBy
                     ? {
-                          $and: [
-                              {
-                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
-                              },
-                              {
-                                  $or: [
-                                      {
-                                          name: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          registration: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          email: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                  ],
-                              },
-                          ],
-                      }
+                        $and: [
+                            {
+                                groupsAD: { $in: ['PERFIL_Colaborador'] },
+                            },
+                            {
+                                $or: [
+                                    {
+                                        name: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        registration: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        email: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                ],
+                            },
+                        ],
+                    }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             )
                 .sort({
@@ -2048,34 +2009,34 @@ module.exports = {
             const total = await User.countDocuments(
                 searchBy
                     ? {
-                          $and: [
-                              {
-                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
-                              },
-                              {
-                                  $or: [
-                                      {
-                                          name: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          registration: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          email: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                  ],
-                              },
-                          ],
-                      }
+                        $and: [
+                            {
+                                groupsAD: { $in: ['PERFIL_Colaborador'] },
+                            },
+                            {
+                                $or: [
+                                    {
+                                        name: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        registration: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        email: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                ],
+                            },
+                        ],
+                    }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             );
 
@@ -2088,7 +2049,7 @@ module.exports = {
         }
     },
 
-    async setCollaborator(req, res) {
+    async setCollaborator (req, res) {
         try {
             const { userId, moderation } = req.body;
             if (!userId || !moderation) {
@@ -2120,7 +2081,7 @@ module.exports = {
         }
     },
 
-    async toggleCollaboratorModeration(req, res) {
+    async toggleCollaboratorModeration (req, res) {
         try {
             const { userId, moderation } = req.body;
 
@@ -2158,7 +2119,7 @@ module.exports = {
         }
     },
 
-    async removeCollaborator(req, res) {
+    async removeCollaborator (req, res) {
         try {
             const { userId } = req.body;
 
@@ -2189,7 +2150,7 @@ module.exports = {
         }
     },
 
-    async resetUserPassword(req, res) {
+    async resetUserPassword (req, res) {
         try {
             const { userId, password, generate } = req.body;
 
@@ -2265,7 +2226,7 @@ module.exports = {
         }
     },
 
-    async deleteGroups(req, res) {
+    async deleteGroups (req, res) {
         const { tag, userId } = req.body;
 
         const arrTags = Array.isArray(tag) ? tag : [tag];
@@ -2296,7 +2257,7 @@ module.exports = {
         }
     },
 
-    async addGroups(req, res) {
+    async addGroups (req, res) {
         const { tag, userId } = req.body;
         try {
             const normalizedTags = tag.map((t) => removeAccents(t));
@@ -2332,7 +2293,7 @@ module.exports = {
         }
     },
 
-    async deleteClassTag(req, res) {
+    async deleteClassTag (req, res) {
         const { tag, userId } = req.body;
 
         try {
@@ -2345,7 +2306,7 @@ module.exports = {
         }
     },
 
-    async addClassTag(req, res) {
+    async addClassTag (req, res) {
         const { tag, userId } = req.body;
         try {
             await User.findByIdAndUpdate(userId, {
@@ -2365,7 +2326,7 @@ module.exports = {
         }
     },
 
-    async updateClassTag(req, res) {
+    async updateClassTag (req, res) {
         const { tag, _id } = req.body;
         try {
             const { classGroups } = await User.findOne({ _id });
@@ -2396,7 +2357,7 @@ module.exports = {
         }
     },
 
-    async evaluationProgress(req, res) {
+    async evaluationProgress (req, res) {
         try {
             const { idEvaluation } = req.params;
             const user = await getUserByToken(req);
@@ -2470,11 +2431,11 @@ module.exports = {
         }
     },
 
-    async getAllConteudistas(req, res) {
+    async getAllConteudistas (req, res) {
         try {
             const query = {
                 $and: [{
-                    groupsAD: { $in: ['PERFIL_Conteudista']}
+                    groupsAD: { $in: ['PERFIL_Conteudista'] }
                 }]
             }
 
@@ -2497,7 +2458,7 @@ module.exports = {
         }
     },
 
-    async handleNames(req, res) {
+    async handleNames (req, res) {
         try {
             const { networkLogins } = req.body;
             const users = await User.find({ networkLogin: { $in: networkLogins } }, [
@@ -2519,7 +2480,7 @@ module.exports = {
         }
     },
 
-    async generateMultiFactor(req, res) {
+    async generateMultiFactor (req, res) {
         try {
             const { networkLogin } = req.body;
             const user = await User.findOne({ networkLogin: networkLogin });
@@ -2548,7 +2509,7 @@ module.exports = {
         }
     },
 
-    async validateMultiFactor(req, res) {
+    async validateMultiFactor (req, res) {
         try {
             const user = await getUserByToken(req);
             const { secret, token } = req.body;
@@ -2581,7 +2542,7 @@ module.exports = {
         }
     },
 
-    async validateMfaToken(req, res) {
+    async validateMfaToken (req, res) {
         try {
             const isTokenValid = await validateMfaToken(req);
             _messages.success(res, req, isTokenValid);
@@ -2597,7 +2558,7 @@ module.exports = {
         }
     },
 
-    async updateWebPushAuthorization(req, res) {
+    async updateWebPushAuthorization (req, res) {
         try {
             const user = await getUserByToken(req);
             const webPushAuthorization = req.body;
@@ -2627,7 +2588,7 @@ module.exports = {
         }
     },
 
-    async getUserMap(req, res) {
+    async getUserMap (req, res) {
         try {
             const { data } = await axios.get(
                 `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
@@ -2659,7 +2620,7 @@ module.exports = {
         }
     },
 
-    async putUserMap(req, res) {
+    async putUserMap (req, res) {
         try {
             const { body } = req;
 
@@ -2689,7 +2650,7 @@ module.exports = {
         }
     },
 
-    async readSheetHeaders(req, res) {
+    async readSheetHeaders (req, res) {
         try {
             let file = null;
             if (req.files.file) {
