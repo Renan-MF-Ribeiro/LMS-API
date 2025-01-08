@@ -86,7 +86,7 @@ const themeSchema = new mongoose.Schema({
     favicon: { type: String },
     palette: paletteSchema,
     enabled: { type: Boolean, default: false, required: true },
-    defaultPalette: { type: Boolean, default: false },
+    defaultPalette: paletteSchema,
     deleted: { type: Boolean, default: false, required: false },
     welcomeVideo: { type: String },
 }, {
