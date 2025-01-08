@@ -28,11 +28,11 @@ const emailTemplate = config.messenger.emailTemplate;
 require('dotenv').config();
 
 module.exports = {
-    async getLoginConfig() {
+    async getLoginConfig () {
         return await ConfigLogin.findOne().sort({ createdAt: -1 });
     },
 
-    async findUsers(req, { onboarding }) {
+    async findUsers (req, { onboarding }) {
         const { skip, limit } = pagination(req);
         const { order, sort } = ordernation(req);
         const searchBy = req.query.searchBy;
@@ -42,44 +42,44 @@ module.exports = {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                      {
-                          $or: [
-                              {
-                                  onboarding: { $exists: false },
-                                  groupsAD: { $in: tag },
-                              },
-                              {
-                                  onboarding: { $eq: onboarding },
-                                  groupsAD: { $in: tag },
-                              },
-                          ],
-                      },
-                  ];
+                    {
+                        $or: [
+                            {
+                                onboarding: { $exists: false },
+                                groupsAD: { $in: tag },
+                            },
+                            {
+                                onboarding: { $eq: onboarding },
+                                groupsAD: { $in: tag },
+                            },
+                        ],
+                    },
+                ];
         } else {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                      {
-                          $or: [
-                              { onboarding: { $exists: false } },
-                              { onboarding: { $eq: onboarding } },
-                          ],
-                      },
-                  ];
+                    {
+                        $or: [
+                            { onboarding: { $exists: false } },
+                            { onboarding: { $eq: onboarding } },
+                        ],
+                    },
+                ];
         }
 
         const searchByQuery = searchBy
             ? {
-                  $or: [
-                      { name: { $regex: searchBy, $options: 'i' } },
-                      { registration: { $regex: searchBy, $options: 'i' } },
-                      { email: { $regex: searchBy, $options: 'i' } },
-                  ],
-                  $and: onboardingQuery,
-              }
+                $or: [
+                    { name: { $regex: searchBy, $options: 'i' } },
+                    { registration: { $regex: searchBy, $options: 'i' } },
+                    { email: { $regex: searchBy, $options: 'i' } },
+                ],
+                $and: onboardingQuery,
+            }
             : {
-                  $and: onboardingQuery,
-              };
+                $and: onboardingQuery,
+            };
 
         const users = await User.find(searchByQuery)
             .sort({ [order]: sort })
@@ -104,7 +104,7 @@ module.exports = {
         };
     },
 
-    checkAmountOfLocks(id) {
+    checkAmountOfLocks (id) {
         return new Promise(async (resolve, reject) => {
             try {
                 const quantity = await Block.find({
@@ -119,7 +119,7 @@ module.exports = {
         });
     },
 
-    returnLastLoginAttemp(id) {
+    returnLastLoginAttemp (id) {
         return new Promise(async (resolve, reject) => {
             try {
                 const block = await Block.find({
@@ -134,7 +134,7 @@ module.exports = {
         });
     },
 
-    checkLastAttemptTime(dateTimeBlock) {
+    checkLastAttemptTime (dateTimeBlock) {
         return new Promise(async (resolve, reject) => {
             try {
                 const lastTimeBlock = formatDate(dateTimeBlock);
@@ -150,7 +150,7 @@ module.exports = {
 
     // # Exclusivo para validação no LPAD
     // # TODO: Remover
-    signInAndReturnRole(login, password, login2) {
+    signInAndReturnRole (login, password, login2) {
         return new Promise(async (resolve, reject) => {
             try {
                 await ldapClient.bind(login, password);
@@ -207,7 +207,7 @@ module.exports = {
         });
     },
 
-    returnDateSinceFirstLogin(userID) {
+    returnDateSinceFirstLogin (userID) {
         return new Promise(async (resolve, reject) => {
             try {
                 const userLastLogin = await LastLogin.find({ user: userID });
@@ -223,7 +223,7 @@ module.exports = {
         });
     },
 
-    updateGroupsOfUser(userID, groups) {
+    updateGroupsOfUser (userID, groups) {
         return new Promise(async (resolve, reject) => {
             try {
                 await User.findByIdAndUpdate(userID, { groupsAD: groups });
@@ -234,7 +234,7 @@ module.exports = {
         });
     },
 
-    updateLastLoginUser(userID) {
+    updateLastLoginUser (userID) {
         return new Promise(async (resolve, reject) => {
             try {
                 const user = await LastLogin.findOne({ user: userID });
@@ -253,7 +253,7 @@ module.exports = {
         });
     },
 
-    lastLoggedInUsers(userID) {
+    lastLoggedInUsers (userID) {
         return new Promise(async (resolve, reject) => {
             try {
                 const arrUsers = [];
@@ -269,7 +269,7 @@ module.exports = {
         });
     },
 
-    ldapSearch(login, name) {
+    ldapSearch (login, name) {
         return new Promise(async (resolve, reject) => {
             const opts = {
                 filter: `(sAMAccountName=${login})`,
@@ -311,7 +311,7 @@ module.exports = {
         });
     },
 
-    async processDashFilters(user) {
+    async processDashFilters (user) {
         let userMap = [
             { description: 'LOGIN', value: 'networkLogin' },
             { description: 'SENHA', value: 'password' },
@@ -391,7 +391,7 @@ module.exports = {
         }
     },
 
-    processUsersLoad(data, elegibilityFields = [], onboarding = false) {
+    processUsersLoad (data, elegibilityFields = [], onboarding = false) {
         const salt = bcrypt.genSaltSync(10);
         const firstName = String(data.name.split(" ")[0]).trim().toLowerCase();
         const firstThreeCpf = sanitizeCpf(data.cpf).slice(0, 3);
@@ -481,7 +481,7 @@ module.exports = {
         return data;
     },
 
-    async persistUsers(results, { onboarding } = { onboarding: false }) {
+    async persistUsers (results, { onboarding } = { onboarding: false }) {
         const usersToSend = [];
         const newUsers = [];
         const updatedUsers = [];
@@ -531,7 +531,7 @@ module.exports = {
         return { newUsers: newUsers.length, updatedUsers: updatedUsers.length };
     },
 
-    async processUserAccount(data) {
+    async processUserAccount (data) {
         try {
             const { groupsAD = [] } = data;
 
@@ -563,7 +563,7 @@ module.exports = {
         }
     },
 
-    async sendAccountsToKafka(accounts) {
+    async sendAccountsToKafka (accounts) {
         try {
             const producer = kafka.producer();
             await producer.connect();
@@ -579,7 +579,7 @@ module.exports = {
         }
     },
 
-    async getUsersByTrail(trailId, category) {
+    async getUsersByTrail (trailId, category) {
         try {
             const trail = await Trail.findOne({ _id: trailId });
 
@@ -632,7 +632,7 @@ module.exports = {
         }
     },
 
-    async getUsersByGroups(groups) {
+    async getUsersByGroups (groups) {
         try {
             const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin']);
             return users;
@@ -641,7 +641,7 @@ module.exports = {
         }
     },
 
-    async getUsersByTags(tags) {
+    async getUsersByTags (tags) {
         try {
             let groups = [];
 
@@ -659,7 +659,7 @@ module.exports = {
         }
     },
 
-    async getUsersByIds(ids) {
+    async getUsersByIds (ids) {
         try {
             const users = await User.find({ _id: { $in: ids } }, ['networkLogin']);
 
@@ -669,7 +669,7 @@ module.exports = {
         }
     },
 
-    async sendUpdatedDeviceIdToMessenger(device, identifier) {
+    async sendUpdatedDeviceIdToMessenger (device, identifier) {
         try {
             const producer = kafka.producer();
             await producer.connect();
@@ -686,7 +686,7 @@ module.exports = {
         }
     },
 
-    async createWelcomeCampaign() {
+    async createWelcomeCampaign () {
         const title = `Seja bem-vindo(a) à plataforma ${process.env.PROJECT_NAME}!`;
         const text = 'Venha conhecer a plataforma!';
         const communication = ['notification'];
@@ -695,7 +695,7 @@ module.exports = {
         return { title, text, communication, category, mode, ...emailTemplate };
     },
 
-    async createClassGroup(user, groupCode, DATA_INICIO, DATA_FIM) {
+    async createClassGroup (user, groupCode, DATA_INICIO, DATA_FIM) {
         let classGroup = await ClassGroup.findOne({ _id: groupCode });
 
         const { startDate, limitDate } = _functions.getDates(DATA_INICIO, DATA_FIM);
@@ -710,4 +710,51 @@ module.exports = {
             },
         });
     },
+
+    buildSearchObject (body) {
+        let search = {};
+        Object.entries(body).forEach(([k, v]) => {
+            search = Object.assign(search, {
+                [k]: { $eq: v },
+            });
+        });
+        return search;
+    },
+
+    generateNewPassword (user) {
+        const password_new = Math.random()
+            .toString(36)
+            .replace(/\W+/g, '')
+            .substring(0, 6);
+
+        const salt = bcrypt.genSaltSync(10);
+        const hashPass = bcrypt.hashSync(password_new, salt);
+
+        const newPass = user.password.map(item => {
+            item.valid = false;
+            return item;
+        });
+
+        newPass.push({
+            hash: hashPass,
+            valid: true,
+            createdAt: new Date(),
+        });
+
+        return { password_new, hashPass, newPass };
+    },
+
+    maskEmail (email) {
+        const emailParts = email.split('@');
+        const emailName = emailParts[0];
+        let maskedEmail = '';
+        for (let i = 0; i < emailName.length; i++) {
+            if (i > 2 && i < emailName.length) {
+                maskedEmail += '*';
+            } else {
+                maskedEmail += emailName[i];
+            }
+        }
+        return `${maskedEmail}@${emailParts[1]}`;
+    }
 };
