@@ -19,7 +19,8 @@ module.exports = {
             const total = await Theme.find(query).count();
             const themes = await Theme.find(query)
                 .skip(parseInt(skip))
-                .limit(listAll?0:parseInt(limit));
+                .sort({ createdAt: -1 })
+                .limit(listAll ? 0 : parseInt(limit));
 
             return _messages.success(res, req, { data: themes, total })
         }
@@ -129,12 +130,8 @@ module.exports = {
 
     async getDefaultTheme (req, res) {
         try {
-            const theme = await Theme.findOne({ defaultPalette: { $eq: true } }).sort({ createdAt: -1 }).select('-createdAt -updatedAt -_id -__v -palette._id')
+            const theme = await Theme.findOne({ enabled: { $eq: true } }).sort({ createdAt: -1 }).select('-createdAt -updatedAt -_id -__v -palette._id')
             return _messages.success(res, req, theme)
-            if (theme) {
-
-            }
-            return _messages.conflict(res, req, null)
 
         }
         catch (error) {
@@ -191,6 +188,34 @@ module.exports = {
                 'Erro interno no servidor',
                 'theme',
                 'createOrUpdate',
+            )
+        }
+    },
+
+    async duplicateTheme (req, res) {
+        try {
+            const { _id } = req.body
+            const theme = await Theme.findById(_id)
+            const newTheme = {
+                ...theme.toObject(),
+                _id: null,
+                name: `${theme.name} - Cópia`,
+                enabled: false,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            }
+            const newThemeDoc = await Theme.create(newTheme)
+            return _messages.success(res, req, newThemeDoc)
+        }
+        catch (error) {
+            console.error(error)
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'theme',
+                'duplicateTheme',
             )
         }
     }
