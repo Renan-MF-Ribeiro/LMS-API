@@ -1280,8 +1280,8 @@ module.exports = {
                 return badRequest(
                     res,
                     req,
-                    'Turma indisponível.',
-                    'Turma indisponível.',
+                    'Não foi possível encontrar uma turma correspondente ao QRCode informado.',
+                    'Não foi possível encontrar uma turma correspondente ao QRCode informado.',
                     'courses',
                     '/getCourseByQrCodeSelfRegistration'
                 );
@@ -1295,8 +1295,8 @@ module.exports = {
                 return badRequest(
                     res,
                     req,
-                    'Turma indisponível.',
-                    'Turma indisponível.',
+                    'Não foi possível realizar o registro da presença devido ao horário.',
+                    'Não foi possível realizar o registro da presença devido ao horário.',
                     'courses',
                     '/getCourseByQrCodeSelfRegistration'
                 );
