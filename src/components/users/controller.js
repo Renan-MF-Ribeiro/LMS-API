@@ -900,7 +900,24 @@ module.exports = {
         try {
             const { body, domain, changeByEmail } = req.body;
             const search = buildSearchObject(body);
-            const user = await User.findOne(search);;
+
+            if (search.birthDate || search.birthday) {
+                const birthDateValue = search.birthDate || search.birthday;
+
+                const birthDateQuery = {
+                    $or: [
+                        { birthDate: birthDateValue },
+                        { birthday: birthDateValue }
+                    ]
+                }
+
+                search.$or = search.$or ? [...search.$or, ...birthDateQuery.$or] : birthDateQuery.$or;
+
+                delete search.birthDate;
+                delete search.birthday;
+            }
+
+            const user = await User.findOne(search);
 
             if (!user) {
                 throw { code: 404, message: 'Usuário não encontrado', error: 'user not found' };
@@ -1636,7 +1653,7 @@ module.exports = {
             const { data } = await decodeToken(req.headers.authorization);
             const user = await User.findOne(
                 { _id: data.ref },
-                'registration networkLogin name birthday admission typeHiring cargoCode cargo state costCenter hierarchical education gender email board department manager status'
+                'registration networkLogin name birthday birthDate admission typeHiring cargoCode cargo state costCenter hierarchical education gender email board department manager status'
             );
             _messages.success(res, req, user);
         } catch (error) {
@@ -1661,7 +1678,7 @@ module.exports = {
 
                 const objUser = {
                     createDate: result.createDate,
-                    birthday: result.birthday,
+                    birthDate: result.birthDate ?? result.birthday,
                     admission: result.admission,
                     registration: result.registration,
                     cpf: null,
