@@ -29,6 +29,8 @@ const { Readable } = require('stream');
 const configJson = require('../../config.json');
 const { Theme } = require('../components/theme/palette/model');
 const { Log } = require('../components/logs/model');
+const ApiError = require('../errors/ApiError');
+const formidable = require('express-formidable')
 const bucket = process.env.BUCKET;
 aws.config = {
     accessKeyId: process.env.ACCESSKEY,
@@ -195,7 +197,53 @@ const forEachRow = (row, rowNumber, map, labels, users, previousHyperLink) => {
     }
 };
 
+function parseSizeStringToBytes(size) {
+    const sizeString = size.toString().toLowerCase();
+    const sizeNumber = parseInt(sizeString);
+
+    if (sizeString.includes('kb')) {
+        return sizeNumber * 1024;
+    } else if (sizeString.includes('gb')) {
+        return sizeNumber * 1024 * 1024 * 1024;
+    } else {
+        return sizeNumber * 1024 * 1024;
+    }
+}
+
+function getAppMaxFileSize() {
+    const maxFileSize = process.env.MAX_UPLOAD_FILE_SIZE ?? '100mb';
+
+    return {
+        size: maxFileSize,
+        bytes: parseSizeStringToBytes(maxFileSize)
+    }
+}
+
+function validateFileSize(file) {
+    const fileSize = file.size ?? undefined;
+
+    if (fileSize === undefined) return;
+
+    const { size: maxFileSize, bytes } = getAppMaxFileSize();
+
+    if (fileSize > bytes) {
+        throw new ApiError(
+            `O arquivo ${file.name ?? ''} excede o tamanho máximo permitido de ${maxFileSize}`,
+            400
+        );
+    }
+}
+
+function getFormMiddleware(options = {}) {
+    const defaultOptions = { maxFileSize: 1024 * 1024 * 1024 };
+    return formidable({ ...defaultOptions, ...options })
+}
+
 module.exports = {
+    parseSizeStringToBytes,
+    getAppMaxFileSize,
+    validateFileSize,
+    getFormMiddleware,
     // awsAmazon(file, folder) {
     //     return new Promise((resolve, reject) => {
     //         const s3 = new aws.S3();
@@ -238,6 +286,8 @@ module.exports = {
         ignoreStream = false,
         container = 'lmsassets'
     ) {
+        validateFileSize(file);
+
         // return new Promise((resolve, reject) => {
         const blobServiceClient =
             BlobServiceClient.fromConnectionString(AZURE_STRINGCONN);
@@ -357,6 +407,8 @@ module.exports = {
     },
 
     async uploadVimeo(file, themeId) {
+        validateFileSize(file);
+
         let vimeoTrx;
         let uploadStatus;
         const vimeoFolderUri = `/${configJson.vimeoFolder}`;
@@ -401,6 +453,8 @@ module.exports = {
 
 
     vimeoFilePathCreate (file, payload, user, mode = 'create') {
+        validateFileSize(file);
+
         let filePath;
         let fileType;
         let uploadStatus;
@@ -491,6 +545,8 @@ module.exports = {
     },
 
     vimeoFilePathUpdate (file, payload, user, vimeoId) {
+        validateFileSize(file);
+
         let uploadStatus;
         const vimeoIdPath = `/videos/${vimeoId}`;
         const fileName = file.name;

@@ -50,6 +50,7 @@ const GamificationController = require('../gamification/controller');
 const { EVENTS_CATEGORY } = require('../gamification/model');
 const { User } = require('../users/model');
 const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business');
+const ApiError = require('../../errors/ApiError');
 const ITEM_KINDS = Object.freeze({
     DocumentItem: DocumentItem,
     MediaItem: MediaItem,
@@ -712,6 +713,17 @@ const ItemController = {
                 _messages.success(res, req, item);
             } catch (error) {
                 console.log(error)
+                if (error instanceof ApiError) {
+                    return _messages.badRequest(
+                        res,
+                        req,
+                        error.message,
+                        error.message,
+                        'items',
+                        'update'
+                    );
+                };
+
                 if (error.name === 'ValidationError') {
                     const messages = {};
                     for (const k in error.errors)
