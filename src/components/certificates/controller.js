@@ -182,7 +182,7 @@ module.exports = {
 
             const { data } = await certificateClient.get(
                 `/layouts/${clientId}`,
-                { headers: getHeaders(req) }
+                { headers: getHeaders(req), params: req.query }
             );
 
             _messages.success(res, req, data, 'ok', 'certifier', 'getLayouts');
