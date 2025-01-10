@@ -10,8 +10,8 @@ const { Theme } = require('../theme/palette/model');
 
 const { sendMessageToKafka } = require('../new-messages/business');
 
-function getDynamicRequestProps(req) {
-    const ownerFieldValue = !isSegmentationException(req.user, req.segmentation)
+function getDynamicRequestProps(req, ownerIsRequired = false) {
+    const ownerFieldValue = ownerIsRequired || !isSegmentationException(req.user, req.segmentation)
         ? (req.user?.[req.segmentation?.rule?.issuer] ?? null)
         : undefined;
 
