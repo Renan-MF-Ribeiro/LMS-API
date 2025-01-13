@@ -163,8 +163,8 @@ async function sendOrderConfirmation(user, order) {
 
     await sendMessageToKafka({
         title: `Pedido realizado com sucesso!`,
-        textHtml: message,
-        text: message,
+        texthtml: message,
+        text: `Pedido ${orderCode} realizado com sucesso!`,
         // Default
         thumbnail: configJson.messenger.emailTemplate.thumbnail,
         category: 'notify',
