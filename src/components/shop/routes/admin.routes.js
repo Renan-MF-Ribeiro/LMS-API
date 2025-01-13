@@ -27,7 +27,7 @@ adminRouter
         );
     })
     .post('/products', jsonOrFormData, async (req, res) => {
-        const { owner, ...config } = getDynamicRequestProps(req)
+        const { owner, ...config } = getDynamicRequestProps(req, true)
 
         if (req.is('json')) {
             return await handleShopRequest(
@@ -52,7 +52,7 @@ adminRouter
     .put('/products/:productId', jsonOrFormData, async (req, res) => {
         const { productId } = req.params;
 
-        const { owner, ...config } = getDynamicRequestProps(req)
+        const { owner, ...config } = getDynamicRequestProps(req, true)
 
         if (req.is('json')) {
             return await handleShopRequest(
@@ -148,7 +148,7 @@ adminRouter
         );
     })
     .post('/categories', jsonOrFormData, async (req, res) => {
-        const { owner, ...config } = getDynamicRequestProps(req)
+        const { owner, ...config } = getDynamicRequestProps(req, true)
 
         if (req.is('json')) {
             return await handleShopRequest(
@@ -173,7 +173,7 @@ adminRouter
     .put('/categories/:categoryId', jsonOrFormData, async (req, res) => {
         const { categoryId } = req.params;
 
-        const { owner, ...config } = getDynamicRequestProps(req)
+        const { owner, ...config } = getDynamicRequestProps(req, true)
 
         if (req.is('json')) {
             return await handleShopRequest(
