@@ -283,7 +283,7 @@ module.exports = {
                     return {
                         trails: trails.filter(
                             (trail) => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative
-                        ).map(trail => trail._id).slice(0, trailLimit)
+                        ).map(trail => trail._id)
                     }
                 });
 
