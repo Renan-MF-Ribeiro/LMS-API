@@ -1524,7 +1524,7 @@ module.exports = {
             }
 
             const filter = [];
-            const fields = ['cpf', 'email', 'networkLogin'];
+            const fields = ['email', 'networkLogin'];
             fields.map(
                 (f) =>
                     req.body[f] &&
@@ -1533,15 +1533,10 @@ module.exports = {
                         [f]: { $eq: req.body[f] },
                     })
             );
-            const found = filter.length && (await User.findOne({ $or: filter }));
+            const found = filter.length > 0 && (await User.findOne({ $or: filter }));
 
             if (found) {
-                const field =
-                    found.email === email
-                        ? 'E-MAIL'
-                        : found.networkLogin === networkLogin
-                            ? 'LOGIN'
-                            : 'CPF';
+                const field = found.email === email ? 'E-MAIL' : 'LOGIN';
 
                 return _messages.forbidden(
                     res,
