@@ -211,7 +211,7 @@ module.exports = {
 
         const today = moment(new Date());
         // Seta elegibilidades padrões
-        let groupsAD = ['PERFIL_Aluno', 'ELEGE_CURSO'];
+        let groupsAD = ['PERFIL_Aluno'];
         let defaultFields;
         let partnerDays = 0;
         let classGroupsIDs;
