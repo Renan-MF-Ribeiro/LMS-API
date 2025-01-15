@@ -16,7 +16,7 @@ idpIntegrationRouter.get("/", async (req, res) => {
     const { searchBy } = req.query;
 
     const query = {
-        ...(searchBy && { name: { $regex: searchBy, $options: 'i' } })
+        ...(searchBy && { identityProvider: { $regex: searchBy, $options: 'i' } })
     };
 
     const total = await IdpIntegrationModel.countDocuments(query);
