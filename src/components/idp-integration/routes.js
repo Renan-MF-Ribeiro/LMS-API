@@ -63,7 +63,7 @@ idpIntegrationRouter.put("/:id", async (req, res) => {
         {
             ...body,
             profiles: body.profiles.map(profile => ({
-                _id: profile._id?.length
+                _id: mongoose.Types.ObjectId.isValid(profile._id)
                     ? new mongoose.Types.ObjectId(profile._id)
                     : new mongoose.Types.ObjectId(),
                 name: profile.name,
