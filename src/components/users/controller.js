@@ -2061,13 +2061,14 @@ module.exports = {
         }
     },
 
-    async setCollaborator (req, res) {
+    async setCollaborator(req, res) {
         try {
             const { userId, moderation } = req.body;
-            if (!userId || !moderation) {
+            if (!userId) {
                 _messages.badRequest(res, req, 'Payload inválido', {
                     message: 'Payload inválido',
                 });
+                return;
             }
 
             const profiles = moderation
