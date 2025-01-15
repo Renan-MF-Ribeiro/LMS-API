@@ -20,7 +20,8 @@ const {
 } = require('./utils/middlewares');
 const { PUBLIC_PATH } = process.env;
 const app = express();
-const passport = require('./utils/passport');
+
+const { initializePassport } = require('./utils/passport');
 
 const { errorHandler } = require('./utils/errors');
 
@@ -131,9 +132,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.resolve(path.join(PUBLIC_PATH, 'index.html')));
 });
 
-app.use(passport.initialize());
-
-app.use(passport.session());
+initializePassport(app);
 
 app.use(socialApiMiddleware)
 
