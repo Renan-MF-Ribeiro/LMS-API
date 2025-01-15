@@ -11,17 +11,17 @@ passport.deserializeUser((user, done) => {
     done(null, user);
 });
 
-async function configurePassport(name = 'saml') {
+async function configurePassport(strategyName = 'saml') {
     const loginConfig = await getLoginConfig();
 
     if (loginConfig?.ssoForm) {
         const strategy = new passportSaml.Strategy(
             {
-                name,
+                name: strategyName,
                 forceAuthn: loginConfig.ssoForm.forceAuth ?? false,
                 entryPoint: loginConfig.ssoForm.entrypoint,
                 issuer: loginConfig.ssoForm.issuer,
-                callbackUrl: `${loginConfig.ssoForm.callback_url}?name=${name}`,
+                callbackUrl: `${loginConfig.ssoForm.callback_url}?strategy=${strategyName}`,
                 cert: loginConfig.ssoForm.certifier,
             },
             (profile, done) => done(null, profile),
@@ -32,7 +32,7 @@ async function configurePassport(name = 'saml') {
 }
 
 function getRequestStrategyName(req) {
-    return req.query?.name ?? 'saml';
+    return req.query?.strategy ?? 'saml';
 }
 
 function initializePassport(app) {
@@ -41,17 +41,17 @@ function initializePassport(app) {
 }
 
 async function configurePassportSaml(req, res, next) {
-    const authName = getRequestStrategyName(req);
+    const strategyName = getRequestStrategyName(req);
 
-    await configurePassport(authName);
+    await configurePassport(strategyName);
 
     next();
 }
 
 async function authenticatePassportSaml(req, res, next) {
-    const authName = getRequestStrategyName(req);
+    const strategyName = getRequestStrategyName(req);
 
-    passport.authenticate(authName, {
+    passport.authenticate(strategyName, {
         failureRedirect: '/',
         failureFlash: true,
     })(req, res, next);
