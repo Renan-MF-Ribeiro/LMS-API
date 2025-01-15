@@ -43,6 +43,7 @@ idpIntegrationRouter.post("/", async (req, res) => {
 
     const newIdpIntegration = {
         ...body,
+        identityProvider: body.identityProvider?.length ? body.identityProvider : null,
         profiles: body.profiles.map(profile => ({
             name: profile.name,
             profiles: profile.profiles
@@ -62,6 +63,7 @@ idpIntegrationRouter.put("/:id", async (req, res) => {
         id,
         {
             ...body,
+            identityProvider: body.identityProvider?.length ? body.identityProvider : null,
             profiles: body.profiles.map(profile => ({
                 _id: mongoose.Types.ObjectId.isValid(profile._id)
                     ? new mongoose.Types.ObjectId(profile._id)

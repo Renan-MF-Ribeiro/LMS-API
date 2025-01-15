@@ -6,7 +6,7 @@ const IdpIntegrationProfileSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const IdpIntegrationSchema = new mongoose.Schema({
-    identityProvider: { type: String, required: true },
+    identityProvider: { type: String, required: false, default: null },
     active: { type: Boolean, required: false, default: true },
     keyField: { type: String, required: true },
     profiles: { type: [IdpIntegrationProfileSchema], required: false, default: [] }
