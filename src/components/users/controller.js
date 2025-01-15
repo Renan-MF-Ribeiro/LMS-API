@@ -103,6 +103,7 @@ const { Log } = require('../logs/model');
 const { Tracking } = require('../tracking/model');
 const { getConfiguration, handleSegmentationOnQuery } = require('../config/business');
 const { ConfigTypes } = require('../config/model');
+const { IdpIntegrationModel } = require('../idp-integration/models');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -689,7 +690,13 @@ module.exports = {
                         }
                     }
 
-                    const groups = user.groupsAD;
+                    const tokenIdpProfiles = data?.idpProfiles ?? [];
+
+                    const groups = Array.from(
+                        new Set(
+                            [...tokenIdpProfiles, ...(user.groupsAD ?? [])]
+                        )
+                    );
                     const namesProfiles = [];
                     const namesGroups = [];
 
@@ -708,9 +715,6 @@ module.exports = {
                         group.tags.flatMap((tag) => tag?.value || tag.display)
                     );
 
-                    // VERIFY FEATURE WELCOME
-                    const hasWelcomeComponentFeature = req.features?.welcomeComponent ?? false;
-
                     const token = generateSSOToken({
                         ref: user._id,
                         clientId: process.env.CLIENT_ID,
@@ -720,6 +724,7 @@ module.exports = {
                         numbers: profilesIDS.numbers,
                         groups: groupsIDS,
                         welcomeVideoWatched: user?.welcomeVideoWatched,
+                        idpProfiles: tokenIdpProfiles,
                     });
 
                     const token_mfa = generateMfaToken({
@@ -741,7 +746,7 @@ module.exports = {
 
                     const SAS = generateSASToken();
 
-                    await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
+                    // await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
                     await updateLastLoginUser(user._id);
 
                     var tokenEncript = cryptoJS.AES.encrypt(token, 'happlearning');
@@ -1938,7 +1943,30 @@ module.exports = {
                 );
             }
 
-            const token = jwt.sign({ [claim]: value }, process.env.PROJECT_SECRET_KEY);
+            const idpProfiles = new Set();
+
+            const idpIntegrations = await IdpIntegrationModel.find({
+                keyField: { $in: Object.keys(req.samlUserObject) },
+                active: true,
+            });
+
+            for (const idpIntegration of idpIntegrations) {
+                const value = deepGet(req.samlUserObject, idpIntegration.keyField, null);
+
+                if (value) {
+                    const configurations = idpIntegration.profiles
+                        .filter(configuration => configuration.name === value);
+
+                    const profiles = configurations.flatMap(configuration => configuration.profiles);
+
+                    profiles.forEach(profile => idpProfiles.add(profile));
+                }
+            }
+
+            const token = jwt.sign({
+                [claim]: value,
+                idpProfiles: Array.from(idpProfiles)
+            }, process.env.PROJECT_SECRET_KEY);
 
             res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
         } catch (error) {
