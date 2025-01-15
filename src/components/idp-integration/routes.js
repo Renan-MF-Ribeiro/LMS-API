@@ -1,5 +1,8 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const { validateTokenRoute, isAdmin } = require("../../utils/middlewares");
+const { pagination, ordernation } = require("../../utils/functions");
+const { IdpIntegrationModel } = require("./models");
 
 const idpIntegrationRouter = express.Router();
 
@@ -7,61 +10,82 @@ idpIntegrationRouter.use(validateTokenRoute)
 
 idpIntegrationRouter.use(isAdmin)
 
-// export interface IdpIntegrationProfile {
-//     name: string;
-//     profiles: string[];
-// }
+idpIntegrationRouter.get("/", async (req, res) => {
+    const { skip = 0, limit = 10 } = pagination(req);
+    const { order = 'createdAt', sort = 'desc' } = ordernation(req);
+    const { searchBy } = req.query;
 
-// export interface IdpIntegration {
-//     _id: string;
-//     identityProvider: string;
-//     active: boolean;
-//     keyField: string;
-//     profiles: IdpIntegrationProfile[];
-// }
+    const query = {
+        ...(searchBy && { name: { $regex: searchBy, $options: 'i' } })
+    };
 
-const fakeData = Array.from({ length: 20 }, (_, i) => ({
-    _id: i.toString(),
-    identityProvider: `IDP`,
-    active: true,
-    keyField: "office",
-    profiles: [
-        {
-            _id: i.toString(),
-            name: `Admin`,
-            profiles: ["PERFIL_Admin"]
-        },
-        {
-            _id: i.toString(),
-            name: `Geral`,
-            profiles: ["PERFIL_Conteudista", "PERFIL_Analista"]
-        },
-    ]
-}))
+    const total = await IdpIntegrationModel.countDocuments(query);
 
-idpIntegrationRouter.get("/", (req, res) => {
-    res.json({ data: fakeData.slice(0, 10), total: 20 })
+    const data = await IdpIntegrationModel
+        .find(query)
+        .skip(Number(skip))
+        .limit(Number(limit))
+        .sort({ [order]: sort });
+
+    res.json({ total, data });
 });
 
-idpIntegrationRouter.get("/:id", (req, res) => {
-    res.json({
-        _id: req.params.id,
-        identityProvider: `IDP`,
-        active: true,
-        keyField: "office",
-        profiles: [
-            {
-                _id: 'asdasd1',
-                name: `Admin`,
-                profiles: ["PERFIL_Admin"]
-            },
-            {
-                _id: 'asdasd2',
-                name: `Geral`,
-                profiles: ["PERFIL_Conteudista", "PERFIL_Analista"]
-            },
-        ]
-    })
+idpIntegrationRouter.get("/:id", async (req, res) => {
+    const { id } = req.params;
+
+    const idpIntegration = await IdpIntegrationModel.findById(id)
+
+    res.json(idpIntegration);
+});
+
+idpIntegrationRouter.post("/", async (req, res) => {
+    const { body } = req;
+
+    const newIdpIntegration = {
+        ...body,
+        profiles: body.profiles.map(profile => ({
+            name: profile.name,
+            profiles: profile.profiles
+        }))
+    }
+
+    const idpIntegration = await IdpIntegrationModel.create(newIdpIntegration);
+
+    return res.json(idpIntegration)
+});
+
+idpIntegrationRouter.put("/:id", async (req, res) => {
+    const { id } = req.params;
+    const { body } = req;
+
+    const idpIntegration = await IdpIntegrationModel.findByIdAndUpdate(
+        id,
+        {
+            ...body,
+            profiles: body.profiles.map(profile => ({
+                _id: profile._id?.length
+                    ? new mongoose.Types.ObjectId(profile._id)
+                    : new mongoose.Types.ObjectId(),
+                name: profile.name,
+                profiles: profile.profiles
+            }))
+        },
+        { new: true }
+    )
+
+    res.json(idpIntegration);
+});
+
+idpIntegrationRouter.patch("/:id/:status", async (req, res) => {
+    const { id, status } = req.params;
+
+    const idpIntegration = await IdpIntegrationModel.findByIdAndUpdate(
+        id,
+        { active: status === 'active' },
+        { new: true }
+    )
+
+    res.json(idpIntegration);
 });
 
 module.exports = idpIntegrationRouter;
