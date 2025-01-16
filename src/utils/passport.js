@@ -11,7 +11,7 @@ passport.deserializeUser((user, done) => {
     done(null, user);
 });
 
-async function configurePassport(strategyName = 'saml') {
+async function createSamlPassportStrategy(strategyName = 'saml') {
     const loginConfig = await getLoginConfig();
 
     if (loginConfig?.ssoForm?.enabled) {
@@ -43,7 +43,7 @@ function initializePassport(app) {
 async function configurePassportSaml(req, res, next) {
     const strategyName = getRequestStrategyName(req);
 
-    await configurePassport(strategyName);
+    await createSamlPassportStrategy(strategyName);
 
     next();
 }
