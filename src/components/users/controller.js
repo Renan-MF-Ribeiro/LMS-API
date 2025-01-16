@@ -1945,7 +1945,10 @@ module.exports = {
             });
 
             for (const idpIntegration of idpIntegrations) {
-                const samlValue = deepGet(req.samlUserObject, idpIntegration.keyField, null);
+                const samlValue = idpIntegration.keyField.split(',').reduce((acc, key) => {
+                    if (acc !== null && acc !== undefined && acc !== '') return acc;
+                    return deepGet(req.samlUserObject, key, null);
+                }, null);
 
                 if (samlValue) {
                     const values = samlValue.split(idpIntegration.valueSeparator ?? ',');
