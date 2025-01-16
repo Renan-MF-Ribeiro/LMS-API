@@ -127,8 +127,10 @@ const userSchema = new mongoose.Schema(
         socialName: { type: String, trim: true },
         welcomeVideoWatched: { type: Boolean, default: false },
         ignoreLoadInactivation: { type: Boolean, default: false, required: false },
-        university: { type: String, trim: true, required: false},
-        specialization: { type: String, trim: true, required: false},
+        partner: { type: Boolean, default: false, required: false },
+        university: { type: String, trim: true, required: false },
+        specialization: { type: String, trim: true, required: false },
+
 
     },
     {
