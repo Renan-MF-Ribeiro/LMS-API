@@ -697,16 +697,10 @@ module.exports = {
                             [...tokenIdpProfiles, ...(user.groupsAD ?? [])]
                         )
                     );
-                    const namesProfiles = [];
-                    const namesGroups = [];
 
-                    for (const p in groups) {
-                        const strGroup = groups[p];
+                    const namesProfiles = groups.filter((group) => group.startsWith('PERFIL'));
 
-                        if (strGroup.indexOf('PERFIL_') >= 0) namesProfiles.push(strGroup);
-
-                        if (strGroup.indexOf('ELEGE') >= 0) namesGroups.push(strGroup);
-                    }
+                    const namesGroups = groups.filter((group) => group.startsWith('ELEGE'));
 
                     const profilesIDS = await returnIdProfileUser(namesProfiles);
                     const groupsIDS = await returnIdGroupUser(namesGroups);
@@ -746,7 +740,6 @@ module.exports = {
 
                     const SAS = generateSASToken();
 
-                    // await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
                     await updateLastLoginUser(user._id);
 
                     var tokenEncript = cryptoJS.AES.encrypt(token, 'happlearning');
