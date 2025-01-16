@@ -139,6 +139,24 @@ module.exports = {
             );
         }
     },
+    async handleReportedPost(req, res) {
+        const { postId } = req.params;
+        const uri = `posts/report/handle/${postId}`;
+
+        try {
+            const { data } = await socialApi.post(uri);
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'feed',
+                'reportPost'
+            );            
+        }
+    },
 
     async findAllPosts(req, res) {
         try {
