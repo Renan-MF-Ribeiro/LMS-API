@@ -1,6 +1,6 @@
 const { getElegibleUsers, getUserByToken } = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
-const { getSegmentation } = require('../../config/business');
+const { getSegmentation, isSegmentationException } = require('../../config/business');
 const { socialApi } = require('../../social/http-adapter');
 const { populateUserFields, populateMembers, getSegFieldsFromUser } = require('../buisiness');
 const FormData = require('form-data');
@@ -9,7 +9,6 @@ const mime = require('mime-types');
 
 const GroupController = {
     async getAllGroups(req, res) {
-        const { status, type } = req.query;
         const queryParams = new URLSearchParams();
 
         try {
@@ -19,7 +18,9 @@ const GroupController = {
                 const expectedField = segmentation.value.rule.issuer;
                 const user = await getUserByToken(req);
                 const userField = user[expectedField];
-                if (userField) {
+
+                const isAnException = isSegmentationException(user, segmentation.value);
+                if (userField && !isAnException) {
                     queryParams.append('owner', userField);
                 }
             }
