@@ -16,13 +16,21 @@ idpIntegrationRouter.get("/", async (req, res) => {
     const { searchBy } = req.query;
 
     const query = {
-        ...(searchBy && { identityProvider: { $regex: searchBy, $options: 'i' } })
+        ...(searchBy && { strategyName: { $regex: searchBy, $options: 'i' } })
     };
 
     const total = await IdpIntegrationModel.countDocuments(query);
 
     const data = await IdpIntegrationModel
         .find(query)
+        .select({
+            _id: true,
+            name: true,
+            strategyName: true,
+            active: true,
+            keyField: true,
+            valueSeparator: true,
+        })
         .skip(Number(skip))
         .limit(Number(limit))
         .sort({ [order]: sort });
@@ -43,7 +51,8 @@ idpIntegrationRouter.post("/", async (req, res) => {
 
     const newIdpIntegration = {
         ...body,
-        identityProvider: body.identityProvider?.length ? body.identityProvider : null,
+        valueSeparator: body.valueSeparator?.length ? body.valueSeparator : ',',
+        strategyName: body.strategyName?.length ? body.strategyName : null,
         profiles: body.profiles.map(profile => ({
             name: profile.name,
             profiles: profile.profiles
@@ -63,7 +72,8 @@ idpIntegrationRouter.put("/:id", async (req, res) => {
         id,
         {
             ...body,
-            identityProvider: body.identityProvider?.length ? body.identityProvider : null,
+            valueSeparator: body.valueSeparator?.length ? body.valueSeparator : ',',
+            strategyName: body.strategyName?.length ? body.strategyName : null,
             profiles: body.profiles.map(profile => ({
                 _id: mongoose.Types.ObjectId.isValid(profile._id)
                     ? new mongoose.Types.ObjectId(profile._id)
