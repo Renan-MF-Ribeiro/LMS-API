@@ -11,7 +11,7 @@ const fs = require('fs');
 const mime = require('mime-types');
 const config = require('../../../../config.json');
 const FormData = require('form-data');
-const { getSegmentation } = require('../../config/business');
+const { getSegmentation, isSegmentationException } = require('../../config/business');
 
 module.exports = {
     async create(req, res) {
@@ -259,14 +259,15 @@ module.exports = {
     async listPostToBeModerated(req, res) {
         const { status, type, reports } = req.query;
         const queryParams = new URLSearchParams();
-
         const segmentation = await getSegmentation();
 
         if (segmentation.value?.rule?.issuer) {
             const expectedField = segmentation.value.rule.issuer;
             const user = await getUserByToken(req);
             const userField = user[expectedField];
-            if (userField) {
+
+            const isAnException = isSegmentationException(user, segmentation.value)
+            if (userField && !isAnException) {
                 queryParams.append('owner', userField);
             }
         }
