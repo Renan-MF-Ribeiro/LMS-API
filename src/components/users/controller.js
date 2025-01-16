@@ -104,6 +104,7 @@ const { Tracking } = require('../tracking/model');
 const { getConfiguration, handleSegmentationOnQuery } = require('../config/business');
 const { ConfigTypes } = require('../config/model');
 const { IdpIntegrationModel } = require('../idp-integration/models');
+const { getRequestStrategyName } = require('../../utils/passport');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -1939,20 +1940,24 @@ module.exports = {
             const idpProfiles = new Set();
 
             const idpIntegrations = await IdpIntegrationModel.find({
-                keyField: { $in: Object.keys(req.samlUserObject) },
+                strategyName: { $in: [getRequestStrategyName(req), null] },
                 active: true,
             });
 
             for (const idpIntegration of idpIntegrations) {
-                const value = deepGet(req.samlUserObject, idpIntegration.keyField, null);
+                const samlValue = deepGet(req.samlUserObject, idpIntegration.keyField, null);
 
-                if (value) {
-                    const configurations = idpIntegration.profiles
-                        .filter(configuration => configuration.name === value);
+                if (samlValue) {
+                    const values = samlValue.split(idpIntegration.valueSeparator ?? ',');
 
-                    const profiles = configurations.flatMap(configuration => configuration.profiles);
+                    values.forEach(value => {
+                        const currentIdpProfile = idpIntegration.profiles
+                            .filter(idpProfile => idpProfile.name === value);
 
-                    profiles.forEach(profile => idpProfiles.add(profile));
+                        const profiles = currentIdpProfile.flatMap(configuration => configuration.profiles);
+
+                        profiles.forEach(profile => idpProfiles.add(profile));
+                    });
                 }
             }
 
