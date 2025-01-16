@@ -57,4 +57,4 @@ async function authenticatePassportSaml(req, res, next) {
     })(req, res, next);
 }
 
-module.exports = { initializePassport, configurePassportSaml, authenticatePassportSaml };
+module.exports = { initializePassport, configurePassportSaml, authenticatePassportSaml, getRequestStrategyName };
