@@ -21,7 +21,7 @@ const GroupController = {
 
                 const isAnException = isSegmentationException(user, segmentation.value);
                 if (userField && !isAnException) {
-                    queryParams.append('owner', userField);
+                    queryParams.append('owner', userField.toLowerCase());
                 }
             }
 
@@ -164,7 +164,7 @@ const GroupController = {
                 const user = await getUserByToken(req);
                 const userField = user[expectedField];
                 if (userField) {
-                    body.owner = userField;
+                    body.owner = userField.toLowerCase();
                 }
             }
 
