@@ -625,13 +625,19 @@ module.exports = {
     async singleSignOn(req, res) {
         let user = {};
 
-        const ssoForm = await getSsoFormByStrategyName(getRequestStrategyName(req));
-
         const { token } = req.body;
         const secret = process.env.PROJECT_SECRET_KEY;
+
         try {
             const data = jwt.verify(token, secret);
+
+            const tokenIdpProfiles = data?.idpProfiles ?? [];
+            const tokenStrategyName = data?.strategyName ?? undefined;
+
+            const ssoForm = await getSsoFormByStrategyName(tokenStrategyName);
+
             const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data[ssoForm.claim];
+
             if (!claim) {
                 _messages.forbidden(
                     res,
@@ -691,9 +697,6 @@ module.exports = {
                             return;
                         }
                     }
-
-                    const tokenIdpProfiles = data?.idpProfiles ?? [];
-                    const tokenStrategyName = data?.strategyName;
 
                     const groups = Array.from(
                         new Set(
