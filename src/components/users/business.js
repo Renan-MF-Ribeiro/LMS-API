@@ -24,6 +24,7 @@ const { Trail } = require('../trails/model');
 const config = require('../../../config.json');
 const { Tracking } = require('../tracking/model');
 const { ConfigLogin } = require('../theme/login-config/model');
+const ApiError = require('../../errors/ApiError');
 const emailTemplate = config.messenger.emailTemplate;
 require('dotenv').config();
 
@@ -36,6 +37,10 @@ module.exports = {
         }
 
         const lastConfiguration = await lastConfigurationQuery.lean();
+
+        if (!lastConfiguration) {
+            throw new ApiError('Configuração de login não encontrada', 500);
+        }
 
         return {
             ...lastConfiguration,
