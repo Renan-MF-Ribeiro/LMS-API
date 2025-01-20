@@ -67,6 +67,7 @@ module.exports = {
             }
 
             let theme
+
             if (body._id) {
                 const welcomeVideo = fileArray.findIndex(el => el.name === body.welcomeVideo)
                 if (welcomeVideo >= 0) {
@@ -104,7 +105,7 @@ module.exports = {
 
     async getTheme (req, res) {
         try {
-            const theme = await Theme.findOne({ enabled: true }).select('-createdAt -updatedAt -_id -__v -palette._id')
+            const theme = await Theme.findOne({ enabled: true }).select('-createdAt -updatedAt -__v -palette._id')
 
             if (theme) {
 
@@ -130,7 +131,7 @@ module.exports = {
 
     async getDefaultTheme (req, res) {
         try {
-            const theme = await Theme.findOne({ enabled: { $eq: true } }).sort({ createdAt: -1 }).select('-createdAt -updatedAt -_id -__v -palette._id')
+            const theme = await Theme.findOne({ enabled: { $eq: true } }).sort({ createdAt: -1 }).select('-createdAt -updatedAt  -__v -palette._id')
             return _messages.success(res, req, theme)
 
         }

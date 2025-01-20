@@ -89,6 +89,8 @@ const themeSchema = new mongoose.Schema({
     defaultPalette: paletteSchema,
     deleted: { type: Boolean, default: false, required: false },
     welcomeVideo: { type: String },
+    modulesInHeader: { type: Array, default: [], required: false },
+    modulesInHeaderMobile: { type: Array, default: [], required: false },
 }, {
     ...schemaOptions,
 })
