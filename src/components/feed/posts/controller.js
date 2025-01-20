@@ -11,7 +11,7 @@ const fs = require('fs');
 const mime = require('mime-types');
 const config = require('../../../../config.json');
 const FormData = require('form-data');
-const { getSegmentation } = require('../../config/business');
+const { getSegmentation, isSegmentationException } = require('../../config/business');
 
 module.exports = {
     async create(req, res) {
@@ -25,7 +25,7 @@ module.exports = {
             if (segmentation.value?.rule?.issuer) {
                 const expectedField = segmentation.value.rule.issuer;
                 const user = await getUserByToken(req);
-                const userField = user[expectedField];
+                const userField = user[expectedField]?.toLowerCase();
                 if (userField) {
                     body.owner = userField;
                 }
@@ -139,6 +139,24 @@ module.exports = {
             );
         }
     },
+    async handleReportedPost(req, res) {
+        const { postId } = req.params;
+        const uri = `posts/report/handle/${postId}`;
+
+        try {
+            const { data } = await socialApi.post(uri);
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'feed',
+                'reportPost'
+            );            
+        }
+    },
 
     async findAllPosts(req, res) {
         try {
@@ -241,14 +259,15 @@ module.exports = {
     async listPostToBeModerated(req, res) {
         const { status, type, reports } = req.query;
         const queryParams = new URLSearchParams();
-
         const segmentation = await getSegmentation();
 
         if (segmentation.value?.rule?.issuer) {
             const expectedField = segmentation.value.rule.issuer;
             const user = await getUserByToken(req);
-            const userField = user[expectedField];
-            if (userField) {
+            const userField = user[expectedField].toLowerCase();
+
+            const isAnException = isSegmentationException(user, segmentation.value)
+            if (userField && !isAnException) {
                 queryParams.append('owner', userField);
             }
         }
