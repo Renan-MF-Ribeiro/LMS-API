@@ -28,9 +28,14 @@ const emailTemplate = config.messenger.emailTemplate;
 require('dotenv').config();
 
 module.exports = {
-    async getLoginConfig() {
-        const lastConfiguration = await ConfigLogin.findOne().sort({ createdAt: -1 }).lean();
+    async getLoginConfig(selectFields) {
+        const lastConfigurationQuery = ConfigLogin.findOne().sort({ createdAt: -1 });
 
+        if (selectFields) {
+            lastConfigurationQuery.select(selectFields);
+        }
+
+        const lastConfiguration = await lastConfigurationQuery.lean();
 
         return {
             ...lastConfiguration,
