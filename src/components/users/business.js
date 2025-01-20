@@ -28,8 +28,19 @@ const emailTemplate = config.messenger.emailTemplate;
 require('dotenv').config();
 
 module.exports = {
-    async getLoginConfig () {
-        return await ConfigLogin.findOne().sort({ createdAt: -1 });
+    async getLoginConfig() {
+        const lastConfiguration = await ConfigLogin.findOne().sort({ createdAt: -1 }).lean();
+
+
+        return {
+            ...lastConfiguration,
+            ssoForm: Array.isArray(lastConfiguration.ssoForm) ? lastConfiguration.ssoForm : [lastConfiguration.ssoForm],
+        }
+    },
+
+    async getSsoFormByStrategyName(strategyName = 'saml') {
+        const loginConfig = await module.exports.getLoginConfig();
+        return loginConfig.ssoForm?.find((form) => (form.strategyName ?? 'saml') === strategyName) ?? null;
     },
 
     async findUsers (req, { onboarding }) {

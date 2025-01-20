@@ -13,26 +13,26 @@ passport.deserializeUser((user, done) => {
     done(null, user);
 });
 
-async function createSamlPassportStrategy(strategyName = 'saml') {
-    const loginConfig = await getLoginConfig();
+async function createSamlPassportStrategy(config) {
+    log('createSamlPassportStrategy config', {
+        ...config,
+        certifier: config.certifier?.slice(-5) ?? null,
+    });
+    const strategyName = config.strategyName || 'saml';
 
-    log('createSamlPassportStrategy strategyName', strategyName);
+    const strategy = new passportSaml.Strategy(
+        {
+            name: strategyName,
+            forceAuthn: config.forceAuth || false,
+            entryPoint: config.entrypoint,
+            issuer: config.issuer,
+            callbackUrl: `${config.callback_url}?strategy=${strategyName}`,
+            cert: config.certifier,
+        },
+        (profile, done) => done(null, profile),
+    );
 
-    if (loginConfig?.ssoForm?.enabled) {
-        const strategy = new passportSaml.Strategy(
-            {
-                name: strategyName,
-                forceAuthn: loginConfig.ssoForm.forceAuth ?? false,
-                entryPoint: loginConfig.ssoForm.entrypoint,
-                issuer: loginConfig.ssoForm.issuer,
-                callbackUrl: `${loginConfig.ssoForm.callback_url}?strategy=${strategyName}`,
-                cert: loginConfig.ssoForm.certifier,
-            },
-            (profile, done) => done(null, profile),
-        );
-
-        passport.use(strategy);
-    }
+    passport.use(strategy);
 }
 
 function getRequestStrategyName(req) {
@@ -55,6 +55,18 @@ async function authenticatePassportSaml(req, res, next) {
     })(req, res, next);
 }
 
-createSamlPassportStrategy()
+async function createStrategiesFromLoginConfigs() {
+    const loginConfig = await getLoginConfig();
+
+    const configs = loginConfig.ssoForm ?? [];
+
+    for await (const config of configs) {
+        if (config?.enabled) {
+            await createSamlPassportStrategy(config);
+        }
+    }
+}
+
+createStrategiesFromLoginConfigs();
 
 module.exports = { initializePassport, authenticatePassportSaml, getRequestStrategyName };

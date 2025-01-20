@@ -48,11 +48,11 @@ const {
     persistUsers,
     findUsers,
     processDashFilters,
-    getLoginConfig,
     createClassGroup,
     buildSearchObject,
     generateNewPassword,
-    maskEmail
+    maskEmail,
+    getSsoFormByStrategyName
 } = require('./business');
 
 const {
@@ -104,6 +104,7 @@ const { Tracking } = require('../tracking/model');
 const { getConfiguration, handleSegmentationOnQuery } = require('../config/business');
 const { ConfigTypes } = require('../config/model');
 const { fetchIdpProfilesFromRequestWithSamlObject } = require('../idp-integration/business');
+const { getRequestStrategyName } = require('../../utils/passport');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -623,7 +624,8 @@ module.exports = {
 
     async singleSignOn (req, res) {
         let user = {};
-        const { ssoForm } = await getLoginConfig();
+
+        const ssoForm = await getSsoFormByStrategyName(getRequestStrategyName(req));
 
         const { token } = req.body;
         const secret = process.env.PROJECT_SECRET_KEY;
@@ -1902,10 +1904,10 @@ module.exports = {
         try {
             const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestWithSamlObject(req);
 
-            const loginConfig = await getLoginConfig();
+            const ssoForm = await getSsoFormByStrategyName(strategyName);
 
-            const claim = loginConfig?.ssoForm?.claim ?? 'networkLogin';
-            const claimKey = loginConfig?.ssoForm?.claimKey ?? 'no-claim-key-value';
+            const claim = ssoForm?.claim ?? 'networkLogin';
+            const claimKey = ssoForm?.claimKey ?? 'no-claim-key-value';
 
             const value = claimKey.split(',').reduce((acc, key) => {
                 if (acc !== null && acc !== undefined && acc !== '') return acc;
