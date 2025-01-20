@@ -722,7 +722,7 @@ module.exports = {
                         groups: groupsIDS,
                         welcomeVideoWatched: user?.welcomeVideoWatched,
                         idpProfiles: tokenIdpProfiles,
-                        tokenStrategyName,
+                        strategyName: tokenStrategyName,
                     });
 
                     const token_mfa = generateMfaToken({
