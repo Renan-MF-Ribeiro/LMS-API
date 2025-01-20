@@ -1,6 +1,8 @@
 const passport = require('passport');
 const passportSaml = require('passport-saml');
 
+const { log } = require('./logger');
+
 const { getLoginConfig } = require('../components/users/business');
 
 passport.serializeUser((user, done) => {
@@ -13,6 +15,8 @@ passport.deserializeUser((user, done) => {
 
 async function createSamlPassportStrategy(strategyName = 'saml') {
     const loginConfig = await getLoginConfig();
+
+    log('createSamlPassportStrategy strategyName', strategyName);
 
     if (loginConfig?.ssoForm?.enabled) {
         const strategy = new passportSaml.Strategy(
@@ -40,16 +44,10 @@ function initializePassport(app) {
     app.use(passport.session());
 }
 
-async function configurePassportSaml(req, res, next) {
-    const strategyName = getRequestStrategyName(req);
-
-    await createSamlPassportStrategy(strategyName);
-
-    next();
-}
-
 async function authenticatePassportSaml(req, res, next) {
     const strategyName = getRequestStrategyName(req);
+
+    log('authenticatePassportSaml strategyName', strategyName);
 
     passport.authenticate(strategyName, {
         failureRedirect: '/',
@@ -57,4 +55,6 @@ async function authenticatePassportSaml(req, res, next) {
     })(req, res, next);
 }
 
-module.exports = { initializePassport, configurePassportSaml, authenticatePassportSaml, getRequestStrategyName };
+createSamlPassportStrategy()
+
+module.exports = { initializePassport, authenticatePassportSaml, getRequestStrategyName };

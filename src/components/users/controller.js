@@ -103,8 +103,7 @@ const { Log } = require('../logs/model');
 const { Tracking } = require('../tracking/model');
 const { getConfiguration, handleSegmentationOnQuery } = require('../config/business');
 const { ConfigTypes } = require('../config/model');
-const { IdpIntegrationModel } = require('../idp-integration/models');
-const { getRequestStrategyName } = require('../../utils/passport');
+const { fetchIdpProfilesFromRequestWithSamlObject } = require('../idp-integration/business');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -692,6 +691,7 @@ module.exports = {
                     }
 
                     const tokenIdpProfiles = data?.idpProfiles ?? [];
+                    const tokenStrategyName = data?.strategyName;
 
                     const groups = Array.from(
                         new Set(
@@ -720,6 +720,7 @@ module.exports = {
                         groups: groupsIDS,
                         welcomeVideoWatched: user?.welcomeVideoWatched,
                         idpProfiles: tokenIdpProfiles,
+                        tokenStrategyName,
                     });
 
                     const token_mfa = generateMfaToken({
@@ -1899,6 +1900,8 @@ module.exports = {
 
     async ssoCallback (req, res) {
         try {
+            const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestWithSamlObject(req);
+
             const loginConfig = await getLoginConfig();
 
             const claim = loginConfig?.ssoForm?.claim ?? 'networkLogin';
@@ -1937,36 +1940,10 @@ module.exports = {
                 );
             }
 
-            const idpProfiles = new Set();
-
-            const idpIntegrations = await IdpIntegrationModel.find({
-                strategyName: { $in: [getRequestStrategyName(req), null] },
-                active: true,
-            });
-
-            for (const idpIntegration of idpIntegrations) {
-                const samlValue = idpIntegration.keyField.split(',').reduce((acc, key) => {
-                    if (acc !== null && acc !== undefined && acc !== '') return acc;
-                    return deepGet(req.samlUserObject, key, null);
-                }, null);
-
-                if (samlValue) {
-                    const values = samlValue.split(idpIntegration.valueSeparator ?? ',');
-
-                    values.forEach(value => {
-                        const currentIdpProfile = idpIntegration.profiles
-                            .filter(idpProfile => idpProfile.name === value);
-
-                        const profiles = currentIdpProfile.flatMap(configuration => configuration.profiles);
-
-                        profiles.forEach(profile => idpProfiles.add(profile));
-                    });
-                }
-            }
-
             const token = jwt.sign({
                 [claim]: value,
-                idpProfiles: Array.from(idpProfiles)
+                strategyName,
+                idpProfiles,
             }, process.env.PROJECT_SECRET_KEY);
 
             res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);

@@ -3,7 +3,7 @@ const rateLimit = require('express-rate-limit');
 const _controller = require('./controller');
 const multiparty = require('connect-multiparty');
 const formidable = require('express-formidable');
-const { configurePassportSaml, authenticatePassportSaml } = require('../../utils/passport');
+const { authenticatePassportSaml } = require('../../utils/passport');
 const {
     isAdmin,
     isAdminOrInstructor,
@@ -80,7 +80,6 @@ module.exports = express
     .post('/sso', _controller.singleSignOn)
     .get(
         '/sso/saml',
-        configurePassportSaml,
         authenticatePassportSaml,
     )
     .post(
