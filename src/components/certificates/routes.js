@@ -7,7 +7,7 @@ const router = express.Router()
 
 router
     // /certificates
-    .get('/findall/:clientId', validateTokenRoute, _controller.getCertificates)
+    .get('/findall', validateTokenRoute, _controller.getCertificates)
     .get('/find', validateTokenRoute, _controller.getCertificate)
     .get('/find-open', _controller.getCertificateOpen)
     .get('/file', validateTokenRoute, _controller.downloadCertificate)
@@ -20,7 +20,7 @@ router
     .post('/layouts/status', validateTokenRoute, _controller.updateStatus)
     .post('/layouts/create', validateTokenRoute, formidable(), _controller.createLayout)
     .get('/layouts/find-one/:id', validateTokenRoute, _controller.getLayout)
-    .get('/layouts/:clientId', validateTokenRoute, _controller.getLayouts)
+    .get('/layouts', validateTokenRoute, _controller.getLayouts)
     .delete('/layouts/:id', validateTokenRoute, isAccountant, _controller.deleteLayout)
 
 module.exports = router

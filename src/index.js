@@ -62,6 +62,7 @@ const trainingRouter = require('./components/training/routes');
 const feedRoutes = require('./components/feed/routes');
 const configRouter = require('./components/config/routes');
 const { socialApiMiddleware } = require('./components/social/http-adapter');
+const feedbackRoutes = require('./components/feedback/routes');
 
 const corsOptions = {
     origin: [
@@ -177,7 +178,8 @@ app.use('/items', validateTokenRoute, itemsRoutes)
         isAssessmentActive,
         validateTokenRoute,
         assessmentRoutes
-    );
+    )
+    .use('/feedback', validateTokenRoute, feedbackRoutes);
 
 app.use(errorHandler);
 
