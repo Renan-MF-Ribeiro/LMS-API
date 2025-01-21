@@ -22,9 +22,11 @@ const ssoFormSchema = new Schema({
     claim: { type: String, },
     claimKey: { type: String, },
     enabled: { type: Number, default: 0 },
-    buttonLabel: { type: String, default: 'Entrar com SSO', required: false },
-    strategyName: { type: String, default: 'saml', required: false },
     forceAuth: { type: Boolean, default: false },
+    buttonLabel: { type: String, default: 'Entrar com SSO', required: false },
+    buttonBackground: { type: String, default: null, required: false },
+    buttonTextColor: { type: String, default: null, required: false },
+    strategyName: { type: String, default: 'saml', required: false },
 });
 
 // Define the schema for the formLogin form
