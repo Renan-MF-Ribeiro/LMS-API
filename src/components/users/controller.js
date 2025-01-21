@@ -1619,9 +1619,16 @@ module.exports = {
     },
 
     async isAuthenticated(req, res) {
-        if (await validateToken(req)) {
+        try {
+            const token = req.headers.authorization;
+            const secret = process.env.PROJECT_SECRET_KEY;
+            const tokenData = jwt.verify(token, secret);
+
+            console.log('isAuthenticated tokenData', tokenData);
+
             _messages.success(res, req, true);
-        } else {
+        } catch (err) {
+            console.log('err', err)
             _messages.forbidden(
                 res,
                 req,

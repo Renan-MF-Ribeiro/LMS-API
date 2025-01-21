@@ -21,7 +21,10 @@ const ssoFormSchema = new Schema({
     certifier: { type: String, },
     claim: { type: String, },
     claimKey: { type: String, },
-    enabled: { type: Number, default: 0 }
+    enabled: { type: Number, default: 0 },
+    buttonLabel: { type: String, default: 'Entrar com SSO', required: false },
+    strategyName: { type: String, default: 'saml', required: false },
+    forceAuth: { type: Boolean, default: false },
 });
 
 // Define the schema for the formLogin form
@@ -39,7 +42,7 @@ const formLoginSchema = new Schema({
 
 // Define the main schema that includes all the forms
 const configLogin = new Schema({
-    ssoForm: { type: ssoFormSchema, required: false },
+    ssoForm: { type: [ssoFormSchema], required: false },
     formLogin: { type: formLoginSchema, required: false },
     singleUser: { type: Number, default: 0 }
 }, {

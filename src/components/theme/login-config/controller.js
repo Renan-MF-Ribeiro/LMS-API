@@ -1,22 +1,21 @@
 const { ConfigLogin } = require('./model')
 const _messages = require('../../../utils/messages')
+const { getLoginConfig } = require('../../users/business')
 
 module.exports = {
     async createOrUpdate (req, res) {
         try {
             const body = req.body
 
-            let config = await ConfigLogin.findOne({}).sort({ createdAt: -1 })
+            let config = await getLoginConfig()
 
             if (config) {
-
                 config = await ConfigLogin.findByIdAndUpdate(config._id, body)
             } else {
                 config = await ConfigLogin.create(body)
             }
 
             return _messages.success(res, req, config)
-
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -56,11 +55,7 @@ module.exports = {
                 };
             }
 
-            const config = await ConfigLogin.findOne({})
-                .sort({ createdAt: -1 })
-                .select(fieldsToSelect)
-                .exec();
-
+            const config = await getLoginConfig(fieldsToSelect);
 
             if (config) {
                 return _messages.success(res, req, config)
