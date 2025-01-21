@@ -104,7 +104,7 @@ const { Tracking } = require('../tracking/model');
 const { getConfiguration, handleSegmentationOnQuery } = require('../config/business');
 const { ConfigTypes } = require('../config/model');
 const { fetchIdpProfilesFromRequestWithSamlObject } = require('../idp-integration/business');
-const { getRequestStrategyName } = require('../../utils/passport');
+const { log } = require('../../utils/logger');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -631,8 +631,10 @@ module.exports = {
         try {
             const data = jwt.verify(token, secret);
 
-            const tokenIdpProfiles = data?.idpProfiles ?? [];
+            const tokenIdpProfiles = data?.idpProfiles;
             const tokenStrategyName = data?.strategyName ?? undefined;
+
+            log('singleSignOn tokenIdpProfiles', tokenIdpProfiles);
 
             const ssoForm = await getSsoFormByStrategyName(tokenStrategyName);
 
@@ -700,7 +702,16 @@ module.exports = {
 
                     const groups = Array.from(
                         new Set(
-                            [...tokenIdpProfiles, ...(user.groupsAD ?? [])]
+                            [
+                                ...(tokenIdpProfiles ?? []),
+                                ...(
+                                    user.groupsAD?.filter(
+                                        group => tokenIdpProfiles?.length
+                                            ? group.startsWith('ELEGE') || group === 'PERFIL_Aluno'
+                                            : true
+                                    ) ?? []
+                                )
+                            ]
                         )
                     );
 
@@ -747,6 +758,7 @@ module.exports = {
 
                     const SAS = generateSASToken();
 
+                    await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
                     await updateLastLoginUser(user._id);
 
                     var tokenEncript = cryptoJS.AES.encrypt(token, 'happlearning');
@@ -1622,9 +1634,7 @@ module.exports = {
         try {
             const token = req.headers.authorization;
             const secret = process.env.PROJECT_SECRET_KEY;
-            const tokenData = jwt.verify(token, secret);
-
-            console.log('isAuthenticated tokenData', tokenData);
+            jwt.verify(token, secret);
 
             _messages.success(res, req, true);
         } catch (err) {

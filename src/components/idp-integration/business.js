@@ -34,6 +34,11 @@ async function fetchIdpProfilesFromRequestWithSamlObject(req) {
         }
     }
 
+    if (!idpProfiles.size) {
+        log('fetchIdpProfilesFromRequestWithSamlObject no idpProfiles found');
+        return { strategyName, idpProfiles: null };
+    }
+
     const idpProfilesArray = Array.from(idpProfiles);
 
     log('fetchIdpProfilesFromRequestWithSamlObject idpProfiles', idpProfilesArray);
