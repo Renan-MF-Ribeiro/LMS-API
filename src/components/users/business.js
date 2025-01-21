@@ -346,9 +346,14 @@ module.exports = {
             { description: 'DEPARTAMENTO', value: 'department' },
             { description: 'VP', value: 'vp' },
             { description: 'NEGOCIO', value: 'business' },
+            { description: 'UNIVERSIDADE', value: 'university' },
+            { description: 'NIVEL_ESCOLARIDADE', value: 'specialization' },
             { description: 'OPCIONAL_ELEGIBILIDADE1', value: 'optionalEligibility1' },
             { description: 'OPCIONAL_ELEGIBILIDADE2', value: 'optionalEligibility2' },
             { description: 'OPCIONAL_ELEGIBILIDADE3', value: 'optionalEligibility3' },
+            { description: 'OPCIONAL_ELEGIBILIDADE4', value: 'optionalEligibility4' },
+            { description: 'OPCIONAL_ELEGIBILIDADE5', value: 'optionalEligibility5' },
+            { description: 'OPCIONAL_ELEGIBILIDADE6', value: 'optionalEligibility6' },
         ];
         const dashboardFilters = [];
         const dashConfig = await DashConfig.find();
@@ -437,7 +442,7 @@ module.exports = {
             }
         }
 
-        const optionals = ['optionalEligibility1', 'optionalEligibility2', 'optionalEligibility3'];
+        const optionals = ['optionalEligibility1', 'optionalEligibility2', 'optionalEligibility3', 'optionalEligibility4', 'optionalEligibility5', 'optionalEligibility6'];
 
         optionals.forEach(
             (optional) =>

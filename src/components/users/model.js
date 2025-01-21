@@ -119,6 +119,9 @@ const userSchema = new mongoose.Schema(
         optionalEligibility1: { type: String, trim: true },
         optionalEligibility2: { type: String, trim: true },
         optionalEligibility3: { type: String, trim: true },
+        optionalEligibility4: { type: String, trim: true },
+        optionalEligibility5: { type: String, trim: true },
+        optionalEligibility6: { type: String, trim: true },
         task: { type: String, trim: true },
         webPushAuthorization: { type: Array, required: false, default: [] },
         onboarding: { type: Boolean, default: false },
@@ -286,9 +289,14 @@ const defaultUserMap = {
     department: 'DEPARTAMENTO',
     vp: 'VP',
     business: 'NEGOCIO',
+    university: 'UNIVERSIDADE',
+    specialization: 'NIVEL_ESCOLARIDADE',
     optionalEligibility1: 'OPCIONAL_ELEGIBILIDADE1',
     optionalEligibility2: 'OPCIONAL_ELEGIBILIDADE2',
     optionalEligibility3: 'OPCIONAL_ELEGIBILIDADE3',
+    optionalEligibility4: 'OPCIONAL_ELEGIBILIDADE4',
+    optionalEligibility5: 'OPCIONAL_ELEGIBILIDADE5',
+    optionalEligibility6: 'OPCIONAL_ELEGIBILIDADE6',
 };
 
 const userProjection = {
