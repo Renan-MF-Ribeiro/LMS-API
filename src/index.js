@@ -63,6 +63,7 @@ const feedRoutes = require('./components/feed/routes');
 const configRouter = require('./components/config/routes');
 const { socialApiMiddleware } = require('./components/social/http-adapter');
 const feedbackRoutes = require('./components/feedback/routes');
+const happplaceRoutes = require('./components/happplace/routes');
 
 const corsOptions = {
     origin: [
@@ -179,7 +180,8 @@ app.use('/items', validateTokenRoute, itemsRoutes)
         validateTokenRoute,
         assessmentRoutes
     )
-    .use('/feedback', validateTokenRoute, feedbackRoutes);
+    .use('/feedback', validateTokenRoute, feedbackRoutes)
+    .use('/happplace', happplaceRoutes);
 
 app.use(errorHandler);
 

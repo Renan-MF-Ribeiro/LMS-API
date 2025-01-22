@@ -80,7 +80,7 @@ module.exports = {
 
             const { data } = await certificateClient.post(
                 '/certificates',
-                { ...req.body, initialDate, trailDescription: stripHtmlTags(trailDescription ?? ''), clientId: +process.env.CLIENT_ID },
+                { ...req.body, initialDate, trailDescription: stripHtmlTags(trailDescription ?? ''), clientId: process.env.CLIENT_ID },
                 { headers: getHeaders(req), responseType: 'arraybuffer' }
             );
 

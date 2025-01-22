@@ -427,7 +427,7 @@ module.exports = {
     async getListsSendingLists (req, res) {
         try {
             const urlFetch = `${API_MESSENGER}/listsendinglists/`;
-            const response = await axios.get(urlFetch, { headers: getHeaders(req), params: { ...req.query, client: CLIENT_ID } });
+            const response = await axios.get(urlFetch, { headers: getHeaders(req), params: { ...req.query, clientId: CLIENT_ID } });
 
             return _messages.success(res, req, response.data);
         } catch (error) {
@@ -446,7 +446,7 @@ module.exports = {
     async getListMessage (req, res) {
         try {
             const urlFetch = `${API_MESSENGER}/listmessage`;
-            const params = { skip: req.query.skip, limit: req.query.limit, clientId: +CLIENT_ID, identifier: req.query.identifier };
+            const params = { skip: req.query.skip, limit: req.query.limit, clientid: +CLIENT_ID, identifier: req.query.identifier };
             console.log(params)
             const response = await axios.get(urlFetch, { headers: getHeaders(req), params });
 
