@@ -1,5 +1,10 @@
 const axios = require('axios');
+const _messages = require('../../utils/messages');
 const { CLIENT_ID, API_SURVEY } = process.env;
+
+const getHeaders = (req) => ({
+    Authorization: `Bearer ${req.headers.authorization}`
+});
 
 module.exports = {
     async saveSurvey (req, res) {
