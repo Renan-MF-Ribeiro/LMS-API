@@ -634,6 +634,7 @@ module.exports = {
             const tokenIdpProfiles = data?.idpProfiles;
             const tokenStrategyName = data?.strategyName ?? undefined;
 
+            log('singleSignOn tokenStrategyName', tokenStrategyName);
             log('singleSignOn tokenIdpProfiles', tokenIdpProfiles);
 
             const ssoForm = await getSsoFormByStrategyName(tokenStrategyName);

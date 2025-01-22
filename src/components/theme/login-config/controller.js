@@ -1,11 +1,27 @@
+const { Types } = require('mongoose')
+
 const { ConfigLogin } = require('./model')
 const _messages = require('../../../utils/messages')
 const { getLoginConfig } = require('../../users/business')
+const { IdpIntegrationModel } = require('../../idp-integration/models')
 
 module.exports = {
     async createOrUpdate (req, res) {
         try {
             const body = req.body
+
+            const ssoForm = body.ssoForm?.map(info => {
+                return {
+                    ...info,
+                    _id: Types.ObjectId.isValid(info._id) ? info._id : new Types.ObjectId()
+                }
+            }) ?? [];
+
+            const namesFromTo = ssoForm
+                .map(info => ({ from: info.strategyNameFrom, to: info.strategyName }))
+                .filter(info => info.from && info.to && info.from !== info.to);
+
+            body.ssoForm = ssoForm;
 
             let config = await getLoginConfig()
 
@@ -13,6 +29,13 @@ module.exports = {
                 config = await ConfigLogin.findByIdAndUpdate(config._id, body)
             } else {
                 config = await ConfigLogin.create(body)
+            }
+
+            for await (const { from, to } of namesFromTo) {
+                await IdpIntegrationModel.updateMany(
+                    { strategyName: from },
+                    { strategyName: to }
+                )
             }
 
             return _messages.success(res, req, config)
@@ -40,7 +63,6 @@ module.exports = {
                 _id: 0,
                 __v: 0,
                 "formLogin._id": 0,
-                "ssoForm._id": 0,
             };
 
             if (!isConfigurationEnabled) {
