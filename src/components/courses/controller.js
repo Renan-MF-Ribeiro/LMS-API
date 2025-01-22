@@ -50,7 +50,7 @@ const { default: axios } = require('axios');
 const ApiError = require('../../errors/ApiError');
 
 module.exports = {
-    async createCourse(req, res) {
+    async createCourse (req, res) {
         try {
             const materials = JSON.parse(req.fields.materials);
             const files = req.files;
@@ -155,7 +155,7 @@ module.exports = {
         }
     },
 
-    async allCourses(req, res) {
+    async allCourses (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -212,7 +212,7 @@ module.exports = {
         }
     },
 
-    async updateCourse(req, res) {
+    async updateCourse (req, res) {
         try {
             const materials = req.fields.materials ? JSON.parse(req.fields.materials) : null;
             const body = req.fields;
@@ -324,7 +324,7 @@ module.exports = {
         }
     },
 
-    async deleteCourse(req, res) {
+    async deleteCourse (req, res) {
         try {
             const { id } = req.params;
             await CourseModel.findByIdAndUpdate(id, { deleted: 1 });
@@ -341,7 +341,7 @@ module.exports = {
         }
     },
 
-    async instructorAllCourses(req, res) {
+    async instructorAllCourses (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -393,7 +393,7 @@ module.exports = {
         }
     },
 
-    async getCourseById(req, res) {
+    async getCourseById (req, res) {
         try {
             const { id } = req.params;
             const course = await CourseModel.findById(id).populate('materials');
@@ -410,7 +410,7 @@ module.exports = {
         }
     },
 
-    async getUsers(req, res) {
+    async getUsers (req, res) {
         try {
             const user = await getUserByToken(req);
             const storeUsers = await getStoreUSers(user.store);
@@ -427,7 +427,7 @@ module.exports = {
         }
     },
 
-    async createClass(req, res) {
+    async createClass (req, res) {
         try {
             let {
                 courseID,
@@ -628,7 +628,7 @@ module.exports = {
         }
     },
 
-    async updateClass(req, res) {
+    async updateClass (req, res) {
         try {
             let {
                 courseID,
@@ -869,7 +869,7 @@ module.exports = {
         }
     },
 
-    async appliedCourses(req, res) {
+    async appliedCourses (req, res) {
         try {
             const user = await getUserByToken(req);
             const { skip, limit } = pagination(req);
@@ -901,7 +901,7 @@ module.exports = {
         }
     },
 
-    async appliedCourse(req, res) {
+    async appliedCourse (req, res) {
         try {
             const { courseID, classID } = req.params;
             const course = await CourseModel.findById(courseID)
@@ -926,7 +926,7 @@ module.exports = {
         }
     },
 
-    async printAttendanceList(req, res) {
+    async printAttendanceList (req, res) {
         try {
             const { courseId, classId } = req.params;
             const onlyPresenceFlag = req.query?.onlyPresence !== undefined;
@@ -991,7 +991,7 @@ module.exports = {
         }
     },
 
-    async deleteMaterial(req, res) {
+    async deleteMaterial (req, res) {
         try {
             const arrMaterials = [];
             const { materialID, classID } = req.params;
@@ -1021,7 +1021,7 @@ module.exports = {
         }
     },
 
-    async deleteMaterialCourse(req, res) {
+    async deleteMaterialCourse (req, res) {
         try {
             const arrMaterials = [];
             const { materialID, courseID } = req.params;
@@ -1051,7 +1051,7 @@ module.exports = {
         }
     },
 
-    async searchUser(req, res) {
+    async searchUser (req, res) {
         try {
             const { searchBy } = req.query;
             let { usersInClass } = req.body;
@@ -1108,7 +1108,7 @@ module.exports = {
         }
     },
 
-    async deleteClass(req, res) {
+    async deleteClass (req, res) {
         try {
             const { classID } = req.params;
             const { materials } = await ClassModel.findById(classID);
@@ -1130,7 +1130,7 @@ module.exports = {
         }
     },
 
-    async courseEvaluation(req, res) {
+    async courseEvaluation (req, res) {
         try {
             const { classID, answers } = req.body;
             const student = await getUserByToken(req);
@@ -1172,7 +1172,7 @@ module.exports = {
         }
     },
 
-    async verifyCourseEvaluation(req, res) {
+    async verifyCourseEvaluation (req, res) {
         try {
             const { classID } = req.params;
             const student = await getUserByToken(req);
@@ -1225,7 +1225,7 @@ module.exports = {
         }
     },
 
-    async getCourseEvaluations(req, res) {
+    async getCourseEvaluations (req, res) {
         try {
             const { classID } = req.params;
             const student = await getUserByToken(req);
@@ -1247,7 +1247,7 @@ module.exports = {
         }
     },
 
-    async getCourseByQrCode(req, res) {
+    async getCourseByQrCode (req, res) {
         try {
             const body = req.body;
             const course = await ClassModel.findOne({
@@ -1267,7 +1267,7 @@ module.exports = {
         }
     },
 
-    async getCourseByQrCodeSelfRegistration(req, res) {
+    async getCourseByQrCodeSelfRegistration (req, res) {
         try {
             const { body } = req;
             const { _id } = await getUserByToken(req);
@@ -1360,7 +1360,7 @@ module.exports = {
         }
     },
 
-    async getCourseDetailByQrCode(req, res) {
+    async getCourseDetailByQrCode (req, res) {
         try {
             const { body } = req;
             const course = await CourseModel.findOne({
@@ -1380,7 +1380,7 @@ module.exports = {
         }
     },
 
-    async selfRegistration(req, res) {
+    async selfRegistration (req, res) {
         try {
             const { body } = req;
             const user = await getUserByToken(req);
@@ -1420,7 +1420,7 @@ module.exports = {
         }
     },
 
-    async listJoin(req, res) {
+    async listJoin (req, res) {
         try {
             const { body } = req;
             const user = await getUserByToken(req);
@@ -1507,7 +1507,7 @@ module.exports = {
         }
     },
 
-    async listLeave(req, res) {
+    async listLeave (req, res) {
         const { classesID } = req.body;
         const user = await getUserByToken(req);
 
@@ -1528,7 +1528,7 @@ module.exports = {
 
     },
 
-    async getInstructorByInstructorGroup(req, res) {
+    async getInstructorByInstructorGroup (req, res) {
         try {
             const { params } = req;
             const tags = [];
@@ -1586,7 +1586,7 @@ module.exports = {
         }
     },
 
-    async verifyInstructor(req, res) {
+    async verifyInstructor (req, res) {
         try {
             const { params } = req;
             const trails = [];
@@ -1684,7 +1684,7 @@ module.exports = {
         }
     },
 
-    async joinWaitList(req, res) {
+    async joinWaitList (req, res) {
         try {
             let { body } = req;
             const alreadyJoined = await WaitListModel.findOne({
@@ -1720,7 +1720,7 @@ module.exports = {
         }
     },
 
-    async getWaitListByUser(req, res) {
+    async getWaitListByUser (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1763,7 +1763,7 @@ module.exports = {
         }
     },
 
-    async getWaitListByCourse(req, res) {
+    async getWaitListByCourse (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1804,7 +1804,7 @@ module.exports = {
         }
     },
 
-    async getWaitlistAndElegibleUsersByCourse(req, res) {
+    async getWaitlistAndElegibleUsersByCourse (req, res) {
         try {
             const courseId = req.query.courseId;
             const elegibleUsers = [];
@@ -1877,7 +1877,7 @@ module.exports = {
      * @param {Express.Request} req
      * @param {Express.Response} res
      */
-    async importAttendanceList(req, res) {
+    async importAttendanceList (req, res) {
         const file = req.files?.file;
         const { courseId, classId } = req.params;
 
@@ -1941,7 +1941,7 @@ module.exports = {
     },
 };
 
-async function createMessagesFromBackend(body) {
+async function createMessagesFromBackend (body) {
     try {
         const campaign = body;
         const target = campaign.target;

@@ -67,6 +67,8 @@ const idpIntegrationRouter = require('./components/idp-integration/routes');
 const configRouter = require('./components/config/routes');
 const avatarRoutes = require('./components/theme/avatar/routes');
 const { socialApiMiddleware } = require('./components/social/http-adapter');
+const feedbackRoutes = require('./components/feedback/routes');
+const happplaceRoutes = require('./components/happplace/routes');
 
 const corsOptions = {
     origin: [
@@ -185,7 +187,9 @@ app.use('/items', validateTokenRoute, itemsRoutes)
         isAssessmentActive,
         validateTokenRoute,
         assessmentRoutes
-    );
+    )
+    .use('/feedback', validateTokenRoute, feedbackRoutes)
+    .use('/happplace', happplaceRoutes);
 
 app.use(errorHandler);
 

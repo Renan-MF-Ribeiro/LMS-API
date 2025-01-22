@@ -67,6 +67,16 @@ stages:
             displayName: Build and push an image to container registry
             inputs:
               command: buildAndPush
+              repository: $(imageRepositoryImage)
+              dockerfile: $(dockerfilePathImage)
+              containerRegistry: $(dockerRegistryServiceConnection)
+              tags: |
+                $(tag)
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/docker-image'))
+          - task: Docker@2
+            displayName: Build and push an image to container registry
+            inputs:
+              command: buildAndPush
               repository: $(imageRepositoryStaging)
               dockerfile: $(dockerfilePathImage)
               containerRegistry: $(dockerRegistryServiceConnection)
