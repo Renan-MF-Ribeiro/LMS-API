@@ -14,7 +14,7 @@ const { getSegmentation, isSegmentationException } = require('../components/conf
 const { User } = require('../components/users/model');
 const axios = require('axios');
 const { getConnectMap } = require('./connect');
-const { getUserByToken } = require('./functions');
+const { getUserByToken, validateProfile } = require('./functions');
 
 module.exports = {
     sendCsrf(req, res, next) {
@@ -84,237 +84,80 @@ module.exports = {
     },
 
     isAccountant: async (req, res, next) => {
-        const profiles = await returnProfileByToken(req.headers.authorization);
-        if (profiles.indexOf('PERFIL_Conteudista') >= 0) {
-            next();
-        } else {
-            _messages.forbidden(
-                res,
-                req,
-                'Sem permissão de acesso',
-                'Você não tem permissão para prosseguir com a ação!',
-                '',
-                req.originalUrl
-            );
-        }
+        validateProfile(req, res, next, ['PERFIL_Conteudista']);
     },
 
     isCollaborator: async (req, res, next) => {
-        const profiles = await returnProfileByToken(req.headers.authorization);
-        if (profiles.indexOf('PERFIL_Colaborador') >= 0) {
-            next();
-        } else {
-            _messages.forbidden(
-                res,
-                req,
-                'Sem permissão de acesso',
-                'Você não tem permissão para prosseguir com a ação!',
-                '',
-                req.originalUrl
-            );
-        }
+        validateProfile(req, res, next, ['PERFIL_Colaborador']);
     },
 
     isAdmin: async (req, res, next) => {
-        const profiles = await returnProfileByToken(req.headers.authorization);
-        if (profiles.indexOf('PERFIL_Admin') >= 0) {
-            next();
-        } else {
-            _messages.forbidden(
-                res,
-                req,
-                'Sem permissão de acesso',
-                'Você não tem permissão para prosseguir com a ação!',
-                '',
-                req.originalUrl
-            );
-        }
+        validateProfile(req, res, next, ['PERFIL_Admin']);
     },
 
     isAdminOrAccountant: async (req, res, next) => {
-        const profiles = await returnProfileByToken(req.headers.authorization);
-        if (profiles.indexOf('PERFIL_Admin') >= 0 || profiles.indexOf('PERFIL_Conteudista') >= 0) {
-            next();
-        } else {
-            _messages.forbidden(
-                res,
-                req,
-                'Sem permissão de acesso',
-                'Você não tem permissão para prosseguir com a ação!',
-                '',
-                req.originalUrl
-            );
-        }
+        validateProfile(req, res, next, ['PERFIL_Admin, PERFIL_Conteudista']);
     },
 
     isAccountantOrIntegrator: async (req, res, next) => {
-        const profiles = await returnProfileByToken(req.headers.authorization);
-        if (
-            profiles.indexOf('PERFIL_Conteudista') >= 0 ||
-            profiles.indexOf('PERFIL_Integrador') >= 0
-        ) {
-            next();
-        } else {
-            _messages.forbidden(
-                res,
-                req,
-                'Sem permissão de acesso',
-                'Você não tem permissão para prosseguir com a ação!',
-                '',
-                req.originalUrl
-            );
-        }
+        validateProfile(req, res, next, ['PERFIL_Conteudista, PERFIL_Integrador']);
     },
 
     isIntegrator: async (req, res, next) => {
-        const profiles = await returnProfileByToken(req.headers.authorization);
-        if (profiles.indexOf('PERFIL_Integrador') >= 0) {
-            next();
-        } else {
-            _messages.forbidden(
-                res,
-                req,
-                'Sem permissão de acesso',
-                'Você não tem permissão para prosseguir com a ação!',
-                '',
-                req.originalUrl
-            );
-        }
+        validateProfile(req, res, next, ['PERFIL_Integrador']);
     },
 
     isAccountantOrInstructor: async (req, res, next) => {
-        const profiles = await returnProfileByToken(req.headers.authorization);
-        if (
-            profiles.indexOf('PERFIL_Conteudista') >= 0 ||
-            profiles.indexOf('PERFIL_Instrutor') >= 0
-        ) {
-            next();
-        } else {
-            _messages.forbidden(
-                res,
-                req,
-                'Sem permissão de acesso',
-                'Você não tem permissão para prosseguir com a ação!',
-                '',
-                req.originalUrl
-            );
-        }
+        validateProfile(req, res, next, ['PERFIL_Conteudista, PERFIL_Instrutor']);
     },
 
     isInstructor: async (req, res, next) => {
-        const profiles = await returnProfileByToken(req.headers.authorization);
-        if (profiles.indexOf('PERFIL_Instrutor') >= 0) {
-            next();
-        } else {
-            _messages.forbidden(
-                res,
-                req,
-                'Sem permissão de acesso',
-                'Você não tem permissão para prosseguir com a ação!',
-                '',
-                req.originalUrl
-            );
-        }
+        validateProfile(req, res, next, ['PERFIL_Instrutor']);
     },
 
     isAnalyst: async (req, res, next) => {
-        const profiles = await returnProfileByToken(req.headers.authorization);
-        if (profiles.indexOf('PERFIL_Analista') >= 0) {
-            next();
-        } else {
-            _messages.forbidden(
-                res,
-                req,
-                'Sem permissão de acesso',
-                'Você não tem permissão para prosseguir com a ação!',
-                '',
-                req.originalUrl
-            );
-        }
+        validateProfile(req, res, next, ['PERFIL_Analista']);
     },
 
     isStudent: async (req, res, next) => {
-        const profiles = await returnProfileByToken(req.headers.authorization);
-        if (profiles.indexOf('PERFIL_Aluno') >= 0) {
-            next();
-        } else {
-            _messages.forbidden(
-                res,
-                req,
-                'Sem permissão de acesso',
-                'Você não tem permissão para prosseguir com a ação!',
-                '',
-                req.originalUrl
-            );
-        }
+        validateProfile(req, res, next, ['PERFIL_Aluno']);
     },
 
     isAdminOrInstructor: async (req, res, next) => {
-        const profiles = await returnProfileByToken(req.headers.authorization);
-        if (profiles.indexOf('PERFIL_Admin') >= 0 || profiles.indexOf('PERFIL_Instrutor') >= 0) {
-            next();
-        } else {
-            _messages.forbidden(
-                res,
-                req,
-                'Sem permissão de acesso',
-                'Você não tem permissão para prosseguir com a ação!',
-                '',
-                req.originalUrl
-            );
-        }
+        validateProfile(req, res, next, ['PERFIL_Instrutor, PERFIL_Admin']);
+    },
+    isSuperAdmin: async (req, res, next) => {
+        validateProfile(req, res, next, ['PERFIL_Super_Admin']);
     },
 
     validateMonitoringToken: async (req, res, next) => {
         const token = req.headers.authorization;
-        if (token) {
-            if (await validateMonitoringToken(req)) {
-                next();
-            } else {
-                _messages.forbidden(res, req, 'Sem permissão de acesso');
-            }
+        if (!token || !(await validateMonitoringToken(req))) {
+            return _messages.forbidden(res, req, 'Sem permissão de acesso');
         }
+
+        next();
     },
 
     isShowcaseActive: (req, res, next) => {
-        if (config?.showcase?.active) {
-            next();
-        } else {
-            _messages.successEmpty(res, req, 'Feature "Showcase" não está ativa');
+        if (!config?.showcase?.active) {
+            return _messages.successEmpty(res, req, 'Feature "Showcase" não está ativa');
         }
+        next();
     },
 
     isAluraActive: (req, res, next) => {
-        if (config?.alura?.active) {
-            next();
-        } else {
-            _messages.successEmpty(res, req, 'Feature "Alura" não está ativa');
+        if (!config?.alura?.active) {
+            return _messages.successEmpty(res, req, 'Feature "Alura" não está ativa');
         }
+        next();
     },
 
     isAssessmentActive: (req, res, next) => {
-        if (config?.assessment?.active) {
-            next();
-        } else {
-            _messages.successEmpty(res, req, 'Feature "Assessment" não está ativa');
+        if (!config?.assessment?.active) {
+            return _messages.successEmpty(res, req, 'Feature "Assessment" não está ativa');
         }
-    },
-
-    isSuperAdmin: async (req, res, next) => {
-        const profiles = await returnProfileByToken(req.headers.authorization);
-
-        if (profiles.indexOf('PERFIL_Super_Admin') >= 0) {
-            next();
-        } else {
-            _messages.forbidden(
-                res,
-                req,
-                'Sem permissão de acesso',
-                'Você não tem permissão para prosseguir com a ação!',
-                '',
-                req.originalUrl
-            );
-        }
+        next();
     },
 
     async setCurrentFeatures(req, res, next) {
@@ -341,18 +184,16 @@ module.exports = {
             if (segmentation.value?.rule) {
                 req.segmentation = segmentation.value;
 
-                try {
-                    const user = await getUserByToken(req);
+                const user = await getUserByToken(req);
 
-                    const issuer = req.segmentation.rule.issuer;
+                const issuer = req.segmentation.rule.issuer;
 
-                    if (user?.[issuer]) {
-                        req.segmentation.owner = user[issuer];
-                    }
+                if (user?.[issuer]) {
+                    req.segmentation.owner = user[issuer];
+                }
 
-                    const isException = isSegmentationException(user, req.segmentation);
-                    req.segmentation.isException = isException;
-                } catch {}
+                const isException = isSegmentationException(user, req.segmentation);
+                req.segmentation.isException = isException;
             }
         }
 

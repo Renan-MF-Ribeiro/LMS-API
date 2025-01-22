@@ -227,6 +227,21 @@ module.exports = {
             }
         });
     },
+    validateProfile: async (req, res, next, expectedProfiles) => {
+        const profiles = await _auth.returnProfileByToken(req.headers.authorization);
+        const doesUserHasProfile = profiles.some((profile) => expectedProfiles.includes(profile));
+        if (!doesUserHasProfile) {
+            return _messages.forbidden(
+                res,
+                req,
+                'Sem permissão de acesso',
+                'Você não tem permissão para prosseguir com a ação!',
+                '',
+                req.originalUrl
+            );
+        }
+        next();
+    },
 
     getGroupByToken(req) {
         return new Promise(async (resolve, reject) => {
