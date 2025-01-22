@@ -2,20 +2,26 @@ const fs = require('fs');
 const path = require('path');
 const cheerio = require('cheerio');
 const _messages = require('../utils/messages');
-const { returnProfileByToken, validateToken, validateMonitoringToken } = require('./auth');
+const { validateToken, validateMonitoringToken } = require('./auth');
 const config = require('../../config.json');
 const {
     getDbCurrentFeatures,
     setAppCurrentFeatures,
     getAppCurrentFeatures,
 } = require('./features');
-const { ConfigModel, ConfigTypes } = require('../components/config/model');
 const { getSegmentation, isSegmentationException } = require('../components/config/business');
-const { User } = require('../components/users/model');
-const axios = require('axios');
-const { getConnectMap } = require('./connect');
 const { getUserByToken, validateProfile } = require('./functions');
 
+const Profiles = {
+    ADMIN: 'PERFIL_Admin',
+    ACCOUNTANT: 'PERFIL_Conteudista',
+    COLLABORATOR: 'PERFIL_Colaborador',
+    INTEGRATOR: 'PERFIL_Integrador',
+    INSTRUCTOR: 'PERFIL_Instrutor',
+    ANALYST: 'PERFIL_Analista',
+    STUDENT: 'PERFIL_Aluno',
+    SUPER_ADMIN: 'PERFIL_Super_Admin',
+};
 module.exports = {
     sendCsrf(req, res, next) {
         res.cookie('XSRF-TOKEN', req.csrfToken());
@@ -84,50 +90,50 @@ module.exports = {
     },
 
     isAccountant: async (req, res, next) => {
-        validateProfile(req, res, next, ['PERFIL_Conteudista']);
+        validateProfile(req, res, next, [Profiles.ACCOUNTANT]);
     },
 
     isCollaborator: async (req, res, next) => {
-        validateProfile(req, res, next, ['PERFIL_Colaborador']);
+        validateProfile(req, res, next, [Profiles.COLLABORATOR]);
     },
 
     isAdmin: async (req, res, next) => {
-        validateProfile(req, res, next, ['PERFIL_Admin']);
+        validateProfile(req, res, next, [Profiles.ADMIN]);
     },
 
     isAdminOrAccountant: async (req, res, next) => {
-        validateProfile(req, res, next, ['PERFIL_Admin, PERFIL_Conteudista']);
+        validateProfile(req, res, next, [Profiles.ADMIN, Profiles.ACCOUNTANT]);
     },
 
     isAccountantOrIntegrator: async (req, res, next) => {
-        validateProfile(req, res, next, ['PERFIL_Conteudista, PERFIL_Integrador']);
+        validateProfile(req, res, next, [Profiles.ACCOUNTANT, Profiles.INTEGRATOR]);
     },
 
     isIntegrator: async (req, res, next) => {
-        validateProfile(req, res, next, ['PERFIL_Integrador']);
+        validateProfile(req, res, next, [Profiles.INTEGRATOR]);
     },
 
     isAccountantOrInstructor: async (req, res, next) => {
-        validateProfile(req, res, next, ['PERFIL_Conteudista, PERFIL_Instrutor']);
+        validateProfile(req, res, next, [Profiles.ACCOUNTANT, Profiles.INSTRUCTOR]);
     },
 
     isInstructor: async (req, res, next) => {
-        validateProfile(req, res, next, ['PERFIL_Instrutor']);
+        validateProfile(req, res, next, [Profiles.INSTRUCTOR]);
     },
 
     isAnalyst: async (req, res, next) => {
-        validateProfile(req, res, next, ['PERFIL_Analista']);
+        validateProfile(req, res, next, [Profiles.ANALYST]);
     },
 
     isStudent: async (req, res, next) => {
-        validateProfile(req, res, next, ['PERFIL_Aluno']);
+        validateProfile(req, res, next, [Profiles.STUDENT]);
     },
 
     isAdminOrInstructor: async (req, res, next) => {
-        validateProfile(req, res, next, ['PERFIL_Instrutor, PERFIL_Admin']);
+        validateProfile(req, res, next, [Profiles.ADMIN, Profiles.INSTRUCTOR]);
     },
     isSuperAdmin: async (req, res, next) => {
-        validateProfile(req, res, next, ['PERFIL_Super_Admin']);
+        validateProfile(req, res, next, [Profiles.SUPER_ADMIN]);
     },
 
     validateMonitoringToken: async (req, res, next) => {
