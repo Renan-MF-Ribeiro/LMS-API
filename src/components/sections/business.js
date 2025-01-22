@@ -171,15 +171,15 @@ module.exports = {
             }
         }
 
-        if (trail.startDate && trail.endDate) {
-            const startDate = formatDateWithoutHours(trail.startDate);
-            const endDate = formatDateWithoutHours(trail.endDate);
-
-            if (!(startDate <= today && endDate >= today)) {
-                return false;
-            }
+        // retorna caso não haja qualquer uma das datas
+        if (!trail.startDate || !trail.endDate) {
+            return true;
         }
-        return true;
+
+        const startDate = moment(trail.startDate).startOf('day');
+        const endDate = moment(trail.endDate).endOf('day');
+
+        return moment().isBetween(startDate, endDate, null, '[]');
     },
 
     calculateDiffDateTrail (trail) {
@@ -734,9 +734,13 @@ module.exports = {
                     const classes = certificateData ? [] : classesFromCourse.map((classFromCourse) => {
                         const inClass = classFromCourse.users.some((user) => user._id == userId || user.userID == userId)
 
+
+
                         return classFromCourse.dateApplicationFinal <= today ? null : {
                             _id: classFromCourse._id,
                             name: classFromCourse.name,
+                            registrationDeadline: classFromCourse.registrationDeadline,
+                            cancellationDeadline: classFromCourse.cancellationDeadline,
                             dateApplicationInitial: classFromCourse.dateApplicationInitial,
                             dateApplicationFinal: classFromCourse.dateApplicationFinal,
                             location: classFromCourse.location,
@@ -753,8 +757,6 @@ module.exports = {
                 });
 
                 elegibleCourses = await Promise.all(coursePromises);
-
-
 
                 if (section) {
                     const sortFnc =
@@ -880,12 +882,12 @@ module.exports = {
                     ]);
 
                     section.trails = mostSeenTrails.map(({ trail, count }) => {
-                        const completion = trails.find(t => t._id.toString() === trail._id.toString())?.completion || 0;
-                        return { 
-                            ...trail, 
+                        const completion = trails.find(t => t._id.toString() === trail._id.toString())?.completion || null;
+                        return {
+                            ...trail,
                             count,
                             completion,
-                            confidential: trail.confidential ?? false 
+                            confidential: trail.confidential ?? false
                         };
                     })
                 }
@@ -1031,6 +1033,7 @@ module.exports = {
         };
     },
 
+    canRegisterOrCancel,
     getSectionTrailId,
     isSectionTrailInfo,
     isValidSectionTrailInfo,
@@ -1179,14 +1182,27 @@ function mapAluraTrackings (items) {
     };
 }
 
+function canRegisterOrCancel (initialDate, minutes) {
+    const currentDate = new Date()
+    currentDate.setMinutes(currentDate.getMinutes() - 180);
+
+    const deadline = new Date(initialDate);
+    deadline.setMinutes(deadline.getMinutes() - minutes);
+
+    return deadline >= currentDate;
+}
 
 function getClassStatus (classFromCourse, inClass) {
     try {
+        const { dateApplicationInitial, dateApplicationFinal, registrationDeadline, cancellationDeadline } = classFromCourse;
         const today = new Date()
         const courseHasSeats = classFromCourse.users.length < classFromCourse.limit || !classFromCourse.limit ? true : false
-        const isCourseInProgress = classFromCourse.dateApplicationInitial <= today && classFromCourse.dateApplicationFinal >= today && courseHasSeats
-        const isCourseOpen = classFromCourse.dateApplicationInitial >= today
-        const isCourseClosed = classFromCourse.dateApplicationFinal <= today
+        const isCourseInProgress = dateApplicationInitial <= today && dateApplicationFinal >= today && courseHasSeats
+        const isCourseOpen = dateApplicationInitial >= today
+        const isCourseClosed = dateApplicationFinal <= today
+
+        const canRegister = canRegisterOrCancel(dateApplicationInitial, registrationDeadline)
+        const canCancel = canRegisterOrCancel(dateApplicationInitial, cancellationDeadline)
 
         if (isCourseInProgress) {
             return "in-progress"
@@ -1194,11 +1210,11 @@ function getClassStatus (classFromCourse, inClass) {
         if (inClass) {
             return "registered"
         }
-        if (isCourseClosed || !courseHasSeats) {
+        if (isCourseClosed || !courseHasSeats || !canRegister || !canCancel) {
             return "closed"
         }
-        if (isCourseOpen) {
-            return "open"
+        if (isCourseOpen && (canRegister || canCancel)) {
+            return "open";
         }
 
         return null
@@ -1206,4 +1222,5 @@ function getClassStatus (classFromCourse, inClass) {
         console.log(error);
         reject(error);
     }
+
 }

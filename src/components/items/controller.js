@@ -48,6 +48,9 @@ const {
 const { getUserByToken } = require('../../utils/functions');
 const GamificationController = require('../gamification/controller');
 const { EVENTS_CATEGORY } = require('../gamification/model');
+const { User } = require('../users/model');
+const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business');
+const ApiError = require('../../errors/ApiError');
 const ITEM_KINDS = Object.freeze({
     DocumentItem: DocumentItem,
     MediaItem: MediaItem,
@@ -308,6 +311,11 @@ const ItemController = {
         const ItemModel = ITEM_KINDS[req.body.kind] || Item;
 
         try {
+
+            if (req?.segmentation) {
+                await handleSegmentationOnCreate(req)
+            }
+
             const { _id } = await ItemModel.create(req.body);
 
             _messages.success(res, req, { _id });
@@ -485,6 +493,10 @@ const ItemController = {
                 delete payload.content;
                 payload.author = user._id;
 
+                if (req?.segmentation) {
+                    await handleSegmentationOnCreate(req, payload)
+                }
+
                 const item = await ItemModel.create(payload);
                 _messages.success(res, req, item);
             } catch (error) {
@@ -633,7 +645,7 @@ const ItemController = {
                         }
                     }
                 }
-                
+
                 payload = {
                     ...(thumbPath ? { thumbPath: thumbPath } : {}),
                     ...(contentPath ? { contentPath: contentPath } : {}),
@@ -675,7 +687,9 @@ const ItemController = {
 
                 payload.author = user._id;
 
-                let item = await Item.findById({ _id: payload._id });
+                const foundItem = await Item.findById(payload._id);
+                let item = foundItem;
+
                 if (item.kind == 'SoonItem' && item.kind != payload.kind) {
                     await Item.findOneAndUpdate(
                         { _id: item._id },
@@ -698,9 +712,31 @@ const ItemController = {
                     item = await ItemModel.findByIdAndUpdate(payload._id, payload, { new: true });
                 }
 
-                _messages.success(res, req, item);
+                _messages.success(
+                    res,
+                    req,
+                    item,
+                    'Atualização de dados',
+                    'items',
+                    '/update',
+                    item,
+                    foundItem,
+                    true,
+                    'UPDATE'                    
+                );
             } catch (error) {
                 console.log(error)
+                if (error instanceof ApiError) {
+                    return _messages.badRequest(
+                        res,
+                        req,
+                        error.message,
+                        error.message,
+                        'items',
+                        'update'
+                    );
+                };
+
                 if (error.name === 'ValidationError') {
                     const messages = {};
                     for (const k in error.errors)
@@ -808,11 +844,18 @@ const ItemController = {
 
             const isObjectId = mongoose.Types.ObjectId.isValid(findValue);
 
-            const query = isObjectId
-                ? { _id: findValue }
-                : { titleURL: findValue };
+            const query = {
+                $and: [{
+                    [isObjectId ? '_id' : 'titleURL']: findValue
+                }]
+            }
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
+            }
 
             const item = await Item.findOne(query);
+
             _messages.success(res, req, item);
         } catch (error) {
             _messages.internalServer(
@@ -1359,6 +1402,7 @@ const ItemController = {
             if (req.query.enabled !== undefined) q.enabled = true;
             const searchBy = req.query.searchBy;
             const archive = req.query.archive;
+            const collaborative = req.query.collaborative;
             const query = searchBy
                 ? {
                     $or: [
@@ -1386,7 +1430,13 @@ const ItemController = {
                 }
 
             query['archive'] = archive ? { $eq: archive === 'true' } : { $ne: true };
-            query['kind'] = { $nin: ['PostItem', 'AluraItem'] };;
+            query['kind'] = { $nin: ['PostItem', 'AluraItem'] };
+            query['collaborative'] = collaborative ? { $eq: collaborative === 'true' } : { $ne: true };
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
+            }
+
             let total = await Item.find(query).count();
 
             let itens = await Item.find(query)
@@ -1439,8 +1489,8 @@ const ItemController = {
             }
 
             _messages.success(res, req, {
-                total,
                 data: itens,
+                total,
             });
         } catch (error) {
             _messages.internalServer(
@@ -1587,7 +1637,7 @@ const ItemController = {
         }
     },
 
-    async archive(req, res) {
+    async archive (req, res) {
         const itemId = req.params.itemId;
 
         await Item.findByIdAndUpdate(itemId, { $set: { enabled: false, archive: true, archivedAt: new Date() } });
@@ -1595,7 +1645,7 @@ const ItemController = {
         res.status(204).send();
     },
 
-    async unarchive(req, res) {
+    async unarchive (req, res) {
         const itemId = req.params.itemId;
 
         await Item.findByIdAndUpdate(itemId, { $set: { archive: false, archivedAt: null } });

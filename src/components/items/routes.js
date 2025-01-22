@@ -1,5 +1,4 @@
 const express = require('express')
-const formidable = require('express-formidable')
 const shelljs = require('shelljs')
 const _controller = require('./controller')
 const { UPLOADS_PATH } = process.env
@@ -9,17 +8,7 @@ const {
     isCollaborator,
 } = require('../../utils/middlewares')
 
-const events = [
-  {
-    event: 'error',
-    action: function (req, res, err) { 
-        return res.status(413).json({
-          name: 'TOO LARGE',
-          message: 'O tamanho máximo para upload de arquivos é 1GB'
-        })
-    }
-  }
-];
+const { getFormMiddleware } = require('../../utils/files')
 
 try {
     shelljs.mkdir('-p', UPLOADS_PATH)
@@ -27,8 +16,8 @@ try {
 
 module.exports = express.Router()
     .post('/', isAccountant, _controller.create)
-    .put('/', isAccountant, formidable({ maxFileSize: 1024 * 1024 * 1024 }, events), _controller.multiUploadCreate)
-    .put('/update', formidable(), _controller.update)
+    .put('/', isAccountant, getFormMiddleware(), _controller.multiUploadCreate)
+    .put('/update', getFormMiddleware(), _controller.update)
     .put('/update-status', isAccountant, _controller.updateStatus)
     .get('/actives', isAccountant, _controller.findItensActives)
     .get('/details/:itemId', _controller.getItemWithTracking)
@@ -42,9 +31,9 @@ module.exports = express.Router()
     .get('/generate-certificate/:item', _controller.generateCertificate)
     .delete('/:itemId', isAccountant, _controller.disableById)
 
-    .put('/doc', isAccountant, formidable(), _controller.multiUploadDocument)
-    .put('/media', isAccountant, formidable(), _controller.multiUploadMedia)
+    .put('/doc', isAccountant, getFormMiddleware(), _controller.multiUploadDocument)
+    .put('/media', isAccountant, getFormMiddleware(), _controller.multiUploadMedia)
     .post('/scorm', isAccountant, [], _controller.uploadSCORM)
     .put('/:itemId/scorm', isAccountant, [], _controller.updateSCORM)
-    .post('/collaboration', isAccountant, formidable({ maxFileSize: 1024 * 1024 * 1024 }, events), _controller.itemColaborativo)
-    .post('/vimeo', isAccountant, formidable({ maxFileSize: 1024 * 1024 * 1024 }, events), _controller.itemColaborativo)
+    .post('/collaboration', isAccountant, getFormMiddleware(), _controller.itemColaborativo)
+    .post('/vimeo', isAccountant, getFormMiddleware(), _controller.itemColaborativo)

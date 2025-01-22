@@ -2,13 +2,19 @@ const fs = require('fs');
 const path = require('path');
 const cheerio = require('cheerio');
 const _messages = require('../utils/messages');
-const {
-    returnProfileByToken,
-    validateToken,
-    validateMonitoringToken,
-} = require('./auth');
+const { returnProfileByToken, validateToken, validateMonitoringToken } = require('./auth');
 const config = require('../../config.json');
-const { getDbCurrentFeatures, setAppCurrentFeatures, getAppCurrentFeatures } = require('./features');
+const {
+    getDbCurrentFeatures,
+    setAppCurrentFeatures,
+    getAppCurrentFeatures,
+} = require('./features');
+const { ConfigModel, ConfigTypes } = require('../components/config/model');
+const { getSegmentation, isSegmentationException } = require('../components/config/business');
+const { User } = require('../components/users/model');
+const axios = require('axios');
+const { getConnectMap } = require('./connect');
+const { getUserByToken } = require('./functions');
 
 module.exports = {
     sendCsrf(req, res, next) {
@@ -127,10 +133,7 @@ module.exports = {
 
     isAdminOrAccountant: async (req, res, next) => {
         const profiles = await returnProfileByToken(req.headers.authorization);
-        if (
-            profiles.indexOf('PERFIL_Admin') >= 0 ||
-            profiles.indexOf('PERFIL_Conteudista') >= 0
-        ) {
+        if (profiles.indexOf('PERFIL_Admin') >= 0 || profiles.indexOf('PERFIL_Conteudista') >= 0) {
             next();
         } else {
             _messages.forbidden(
@@ -248,10 +251,7 @@ module.exports = {
 
     isAdminOrInstructor: async (req, res, next) => {
         const profiles = await returnProfileByToken(req.headers.authorization);
-        if (
-            profiles.indexOf('PERFIL_Admin') >= 0 ||
-            profiles.indexOf('PERFIL_Instrutor') >= 0
-        ) {
+        if (profiles.indexOf('PERFIL_Admin') >= 0 || profiles.indexOf('PERFIL_Instrutor') >= 0) {
             next();
         } else {
             _messages.forbidden(
@@ -280,11 +280,7 @@ module.exports = {
         if (config?.showcase?.active) {
             next();
         } else {
-            _messages.successEmpty(
-                res,
-                req,
-                'Feature "Showcase" não está ativa'
-            );
+            _messages.successEmpty(res, req, 'Feature "Showcase" não está ativa');
         }
     },
 
@@ -300,10 +296,23 @@ module.exports = {
         if (config?.assessment?.active) {
             next();
         } else {
-            _messages.successEmpty(
+            _messages.successEmpty(res, req, 'Feature "Assessment" não está ativa');
+        }
+    },
+
+    isSuperAdmin: async (req, res, next) => {
+        const profiles = await returnProfileByToken(req.headers.authorization);
+
+        if (profiles.indexOf('PERFIL_Super_Admin') >= 0) {
+            next();
+        } else {
+            _messages.forbidden(
                 res,
                 req,
-                'Feature "Assessment" não está ativa'
+                'Sem permissão de acesso',
+                'Você não tem permissão para prosseguir com a ação!',
+                '',
+                req.originalUrl
             );
         }
     },
@@ -323,5 +332,30 @@ module.exports = {
         req.features = dbCurrentFeatures;
 
         next();
-    }
+    },
+
+    async setSegmentation(req, res, next) {
+        if (config?.segmentation?.active) {
+            const segmentation = await getSegmentation();
+
+            if (segmentation.value?.rule) {
+                req.segmentation = segmentation.value;
+
+                try {
+                    const user = await getUserByToken(req);
+
+                    const issuer = req.segmentation.rule.issuer;
+
+                    if (user?.[issuer]) {
+                        req.segmentation.owner = user[issuer];
+                    }
+
+                    const isException = isSegmentationException(user, req.segmentation);
+                    req.segmentation.isException = isException;
+                } catch {}
+            }
+        }
+
+        next();
+    },
 };

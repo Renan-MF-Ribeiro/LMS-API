@@ -6,6 +6,7 @@ const { validateTokenRoute, isAdmin } = require('../../../utils/middlewares');
 module.exports = express.Router()
     .get('/', _controller.getTheme)
     .put('/', formidable(), validateTokenRoute, isAdmin, _controller.createOrUpdate)
+    .post('/duplicate', validateTokenRoute, isAdmin, _controller.duplicateTheme)
     .delete('/:_id', validateTokenRoute, isAdmin, _controller.delete)
     .get('/list', validateTokenRoute, isAdmin, _controller.list)
     .put('/enable', validateTokenRoute, isAdmin, _controller.changeEnable)

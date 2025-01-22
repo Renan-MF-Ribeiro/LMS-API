@@ -11,6 +11,7 @@ const fs = require('fs');
 const mime = require('mime-types');
 const config = require('../../../../config.json');
 const FormData = require('form-data');
+const { getSegmentation, isSegmentationException } = require('../../config/business');
 
 module.exports = {
     async create(req, res) {
@@ -19,11 +20,22 @@ module.exports = {
 
         body.userCustomElegeFields = userCustomElegeFields;
         try {
+            const segmentation = await getSegmentation();
+
+            if (segmentation.value?.rule?.issuer) {
+                const expectedField = segmentation.value.rule.issuer;
+                const user = await getUserByToken(req);
+                const userField = user[expectedField]?.toLowerCase();
+                if (userField) {
+                    body.owner = userField;
+                }
+            }
+
             delete body.content;
             const uri = 'posts';
             const { data } = await socialApi.post(uri, body);
 
-            if (Object.keys(req?.files).length > 0) {
+             if (Object.keys(req?.files).length > 0) {
                 const uploadContent = `posts/${data.post._id}/content`;
 
                 const formData = new FormData();
@@ -38,7 +50,7 @@ module.exports = {
                         ...formData.getHeaders(),
                     },
                 });
-            }
+            } 
 
             if (body.notifyUsers === true && (body?.elegibilities || body?.elegibilitiesAnd)) {
                 const { _id, name } = await getUserByToken(req);
@@ -96,6 +108,54 @@ module.exports = {
         }
 
         return _messages.success(res, req, response);
+    },
+
+    async reportPost(req, res) {
+        const { postId } = req.params;
+        const uri = `posts/report/${postId}`;
+
+        try {
+            const { data } = await socialApi.post(uri, req.body);
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            if (error.response?.status === 401) {
+                return _messages.unauthorized(
+                    res,
+                    req,
+                    error.message,
+                    error.response?.data?.message,
+                    'reportPost'
+                );
+            }
+
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'feed',
+                'reportPost'
+            );
+        }
+    },
+    async handleReportedPost(req, res) {
+        const { postId } = req.params;
+        const uri = `posts/report/handle/${postId}`;
+
+        try {
+            const { data } = await socialApi.post(uri);
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'feed',
+                'reportPost'
+            );            
+        }
     },
 
     async findAllPosts(req, res) {
@@ -197,15 +257,28 @@ module.exports = {
         }
     },
     async listPostToBeModerated(req, res) {
-        const { status, type } = req.query;
+        const { status, type, reports } = req.query;
         const queryParams = new URLSearchParams();
+        const segmentation = await getSegmentation();
+
+        if (segmentation.value?.rule?.issuer) {
+            const expectedField = segmentation.value.rule.issuer;
+            const user = await getUserByToken(req);
+            const userField = user[expectedField].toLowerCase();
+
+            const isAnException = isSegmentationException(user, segmentation.value)
+            if (userField && !isAnException) {
+                queryParams.append('owner', userField);
+            }
+        }
 
         if (status) queryParams.append('status', status.toUpperCase());
         if (type) queryParams.append('type', type.toUpperCase());
+        if (reports) queryParams.append('reports', reports.toUpperCase());
 
         const searchQuery = queryParams.toString();
         try {
-            const query = status ? `?${searchQuery}` : '';
+            const query = `?${searchQuery}`;
             const uri = `posts/admin${query}`;
             const { data } = await socialApi.get(uri, { params: req.query });
 
@@ -385,7 +458,12 @@ module.exports = {
         const users = req.body?.users;
 
         try {
-            const { name } = await getUserByToken(req);
+            const { _id, networkLogin, name } = await getUserByToken(req);
+            
+            req.body.sharedBy = {
+                userId: _id,
+                userName: networkLogin
+            }
 
             const uri = 'posts/shares';
             const { data } = await socialApi.post(uri, req.body);

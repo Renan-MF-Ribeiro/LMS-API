@@ -42,6 +42,7 @@ const {
 
 const { updateCertificateExpirationDate } = require('../certificates/business');
 const { createItemIfAlura } = require('../items/business');
+const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business');
 
 const ObjectId = require("mongoose").Types.ObjectId;
 
@@ -52,6 +53,10 @@ module.exports = {
 
             const { skip, limit } = pagination(req);
             const searchObj = { collaborative: true, ...queryParams };
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', searchObj)
+            }
 
             const total = await Trail.countDocuments(searchObj);
 
@@ -85,6 +90,10 @@ module.exports = {
                 $or: [{ moderation: 'approved' }, { moderation: 'denounced' }],
                 enabled: true,
             };
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', searchObj)
+            }
 
             const total = await Trail.countDocuments(searchObj);
 
@@ -175,8 +184,6 @@ module.exports = {
                 }
             }
 
-            console.log(items)
-
             payload.items = items
             if (payload.supportFileMaterial) {
                 const fileArray = payload.supportFileMaterial.map(
@@ -228,6 +235,10 @@ module.exports = {
                 delete payload.galleryFiles
             }
 
+            if (req?.segmentation) {
+                await handleSegmentationOnCreate(req, payload)
+            }
+
             const trail = await Trail.create(payload)
 
             _messages.success(
@@ -257,7 +268,14 @@ module.exports = {
     async findById (req, res) {
         try {
             const _id = req.params.trailId;
-            const trail = await Trail.findOne({ _id }, '-innerText');
+
+            const query = { $and: [{ _id}] }
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
+            }
+
+            const trail = await Trail.findOne(query, '-innerText');
             _messages.success(res, req, trail);
         } catch (error) {
             _messages.internalServer(
@@ -289,6 +307,11 @@ module.exports = {
                     $or: [{ _id: findValue }, { titleURL: findValue }],
                 }
                 : { titleURL: findValue };
+
+            // if (req?.segmentation) {
+            //     handleSegmentationOnQuery(req, 'owner', query)
+            // }
+            
             const trails = await populateTrails(true, query);
             if (!trails || !trails[0]) {
                 const course = await CourseModel.findById(findValue)
@@ -559,9 +582,12 @@ module.exports = {
                 const OldItems = payload.items
 
                 delete payload.items
+
+                if (req?.segmentation) {
+                    await handleSegmentationOnCreate(req, payload)
+                }
+
                 const trail = await Trail.create(payload);
-
-
 
                 for (const item of OldItems) {
                     if (item.itemID.kind === 'AluraItem') {
@@ -1248,16 +1274,27 @@ module.exports = {
 
             let total = 0;
             if (req.query.type) {
-                total = await Trail.countDocuments();
-                const trails = await Trail.find();
+                const query = { $and: [{}] }
+
+                if (req?.segmentation) {
+                    handleSegmentationOnQuery(req, 'owner', query)
+                }
+
+                total = await Trail.countDocuments(query);
+                const trails = await Trail.find(query);
+
                 _messages.success(res, req, {
                     data: trails,
                     total,
                 });
+
             } else {
                 const escapedSearchBy = searchBy ? searchBy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
-                let query = searchBy
-                    ? {
+                const query = { $and: [{
+                    archive: archive ? { $eq: archive === 'true' } : { $ne: true }
+                }] }
+                if(searchBy) {
+                    query.$and.push({
                         $or: [
                             {
                                 description: {
@@ -1272,22 +1309,26 @@ module.exports = {
                                 },
                             },
                         ],
-                    }
-                    : {}
-                query['archive'] = archive ? { $eq: archive === 'true' } : { $ne: true };
+                    })
+                }
+
                 if (noLimit) {
-                    query = {
-                        ...query,
+                    query.$and.push({
                         enabled: true,
                         archive: { $ne: true }
-                    }
+                    })
                 }
+
+                if (req?.segmentation) {
+                    handleSegmentationOnQuery(req, 'owner', query)
+                }
+                
                 total = await Trail.find(query).countDocuments();
 
                 const trails = await Trail.find(query)
                     .populate({
                         path: 'items.itemID',
-                        populate: { path: 'idEvaluation', select: ['description'] },
+                        populate: { path: 'idEvaluation', select: ['description'], },
                     })
                     .sort({ [order]: sort })
                     .skip(parseInt(skip))
@@ -1320,18 +1361,19 @@ module.exports = {
             const { id } = req.params
             const user = await getUserByToken(req)
 
-            const total = await Trail.findOne(
-                {
-                    _id: { $eq: id },
-                },
-                'items',
-            )
+            const query = { $and: [{
+                _id: { $eq: id }
+            }] }
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
+            }
+
+            const total = await Trail.findOne(query, 'items')
 
             const trails = await populateTrails(
                 true,
-                {
-                    _id: { $eq: id },
-                },
+                query,
                 {
                     [order]: sort,
                 },
@@ -1414,9 +1456,15 @@ module.exports = {
             //         },
             //     })
 
-            const trails = await populateTrails(true, {
-                _id: { $eq: id },
-            });
+            const query = { $and: [{
+                _id: { $eq: id }
+            }] }
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
+            }
+
+            const trails = await populateTrails(true, query);
 
             const { items, isSequenceEnabled } = trails[0];
 
@@ -1903,9 +1951,17 @@ module.exports = {
     async returnTrailsByUser (req, res) {
         try {
             const { userId } = req.query;
-            const trails = await populateTrails(true, {
-                author: { $eq: userId },
-            });
+
+            const query = { $and: [{
+                author: { $eq: userId }
+            }]}
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
+            }
+
+            const trails = await populateTrails(true, query);
+            
             _messages.success(res, req, { trails });
         } catch (error) {
             _messages.internalServer(
@@ -2041,10 +2097,23 @@ module.exports = {
     async listGallery (req, res) {
         try {
             let trailId = req.params.id;
-            const trail = await Trail.findById(trailId);
+
+            const query = { $and: [{
+                _id: { 
+                    $eq: trailId
+                }
+            }]}
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
+            }
+
+            const trail = await Trail.findOne(query);
+
             const filteredGalleryArray = trail.gallery.filter(
                 (x) => x.deleted === false
             );
+            
             _messages.success(res, req, filteredGalleryArray);
         } catch (error) {
             _messages.internalServer(

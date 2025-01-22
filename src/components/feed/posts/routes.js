@@ -18,5 +18,7 @@ module.exports = express
     .get('/:postId/comments', _controller.loadMoreComments)
     .put('/likes', _controller.like)
     .post('/shares', _controller.share)
+    .post('/report/:postId', _controller.reportPost)
+    .post('/report/handle/:postId', _controller.handleReportedPost)
     .put('/moderate/:postId', formidable(), _controller.updatePost)
     .delete('/:postId', _controller.delete);
