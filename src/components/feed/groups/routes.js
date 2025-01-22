@@ -4,14 +4,16 @@ const formidable = require('express-formidable');
 
 module.exports = express
     .Router()
+    // Rotas públicas
     .get('/', _controller.getAllGroups)
     .get('/avaliable', _controller.getAvaliableGroups)
     .post('/', formidable(), _controller.createGroup)
     .get('/user/:userId', _controller.findUsersGroup)
     .get('/info/:groupId', _controller.getGroupById)
     .get('/members/:groupId', _controller.getGroupMembers)
+    .delete('quit/:groupId', _controller.quitFromGroup)
+    // Rotas de admin
     .put('/:groupId', formidable(), _controller.updateGroup)
     .patch('/members/:groupId', _controller.updateElegibleMembers)
     .delete('/:groupId/:userId', _controller.deleteUserFromGroup)
-    .delete('quit/:groupId', _controller.quitFromGroup)
     .delete('/:groupId', _controller.deleteGroup);
