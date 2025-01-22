@@ -13,6 +13,7 @@ const { getSegmentation, isSegmentationException } = require('../components/conf
 const { getUserByToken, validateProfile } = require('./functions');
 
 const Profiles = {
+    ELEGIBILITY_MANAGER: 'PERFIL_Gestor_Elegibilidade', // Antigo "Perfil_Admin"
     ADMIN: 'PERFIL_Admin',
     ACCOUNTANT: 'PERFIL_Conteudista',
     COLLABORATOR: 'PERFIL_Colaborador',
@@ -20,7 +21,11 @@ const Profiles = {
     INSTRUCTOR: 'PERFIL_Instrutor',
     ANALYST: 'PERFIL_Analista',
     STUDENT: 'PERFIL_Aluno',
+    // Novos perfis
     SUPER_ADMIN: 'PERFIL_Super_Admin',
+    USER_MANAGER: 'PERFIL_Gestor_Usuário',
+    ENGAGEMENT_MANAGER: 'PERFIL_Gestor_Engajamento',
+
 };
 module.exports = {
     sendCsrf(req, res, next) {
@@ -132,8 +137,17 @@ module.exports = {
     isAdminOrInstructor: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.ADMIN, Profiles.INSTRUCTOR]);
     },
+
     isSuperAdmin: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.SUPER_ADMIN]);
+    },
+
+    isUserManager: async (req, res, next) => {
+        validateProfile(req, res, next, [Profiles.USER_MANAGER]);
+    },
+    
+    isEngagementManager: async (req, res, next) => {
+        validateProfile(req, res, next, [Profiles.ENGAGEMENT_MANAGER]);
     },
 
     validateMonitoringToken: async (req, res, next) => {
