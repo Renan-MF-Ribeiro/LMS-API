@@ -25,7 +25,7 @@ module.exports = {
             if (segmentation.value?.rule?.issuer) {
                 const expectedField = segmentation.value.rule.issuer;
                 const user = await getUserByToken(req);
-                const userField = user[expectedField];
+                const userField = user[expectedField]?.toLowerCase();
                 if (userField) {
                     body.owner = userField;
                 }
@@ -264,7 +264,7 @@ module.exports = {
         if (segmentation.value?.rule?.issuer) {
             const expectedField = segmentation.value.rule.issuer;
             const user = await getUserByToken(req);
-            const userField = user[expectedField];
+            const userField = user[expectedField].toLowerCase();
 
             const isAnException = isSegmentationException(user, segmentation.value)
             if (userField && !isAnException) {

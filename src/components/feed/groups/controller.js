@@ -21,7 +21,7 @@ const GroupController = {
 
                 const isAnException = isSegmentationException(user, segmentation.value);
                 if (userField && !isAnException) {
-                    queryParams.append('owner', userField);
+                    queryParams.append('owner', userField.toLowerCase());
                 }
             }
 
@@ -156,18 +156,18 @@ const GroupController = {
         try {
             delete body.banner;
             const uri = 'groups';
-            const { data } = await socialApi.post(uri, body);
-
             const segmentation = await getSegmentation();
 
             if (segmentation.value?.rule?.issuer) {
                 const expectedField = segmentation.value.rule.issuer;
                 const user = await getUserByToken(req);
                 const userField = user[expectedField];
+                
                 if (userField) {
-                    body.owner = userField;
+                    body.owner = userField.toLowerCase();
                 }
             }
+            const { data } = await socialApi.post(uri, body);
 
             if (Object.keys(req?.files).length > 0) {
                 const uploadBanner = `groups/${data.group._id}/banner`;
