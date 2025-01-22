@@ -100,5 +100,13 @@ idpIntegrationRouter.patch("/:id/:status", async (req, res) => {
     res.json(idpIntegration);
 });
 
+idpIntegrationRouter.delete("/:id", async (req, res) => {
+    const { id } = req.params;
+
+    await IdpIntegrationModel.findByIdAndDelete(id);
+
+    res.json({ message: 'IdpIntegration deleted' });
+});
+
 module.exports = idpIntegrationRouter;
 
