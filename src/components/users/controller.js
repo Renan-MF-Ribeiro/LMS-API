@@ -1632,14 +1632,9 @@ module.exports = {
     },
 
     async isAuthenticated(req, res) {
-        try {
-            const token = req.headers.authorization;
-            const secret = process.env.PROJECT_SECRET_KEY;
-            jwt.verify(token, secret);
-
+        if (await validateToken(req)) {
             _messages.success(res, req, true);
-        } catch (err) {
-            console.log('err', err)
+        } else {
             _messages.forbidden(
                 res,
                 req,
