@@ -482,10 +482,6 @@ module.exports = {
 
         const roles = data.roles ? data.roles.split(',').map((item) => item.trim()) : [];
 
-        if (roles.includes('Admin')) {
-            groupsAD.push('PERFIL_Admin');
-        }
-
         if (roles.includes('Analista')) {
             groupsAD.push('PERFIL_Analista');
         }

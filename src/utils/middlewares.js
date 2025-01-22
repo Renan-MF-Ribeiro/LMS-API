@@ -103,11 +103,11 @@ module.exports = {
     },
 
     isAdmin: async (req, res, next) => {
-        validateProfile(req, res, next, [Profiles.ADMIN]);
+        validateProfile(req, res, next, [Profiles.ADMIN, PERFIL_Gestor_Elegibilidade]);
     },
 
     isAdminOrAccountant: async (req, res, next) => {
-        validateProfile(req, res, next, [Profiles.ADMIN, Profiles.ACCOUNTANT]);
+        validateProfile(req, res, next, [Profiles.ADMIN, PERFIL_Gestor_Elegibilidade, Profiles.ACCOUNTANT]);
     },
 
     isAccountantOrIntegrator: async (req, res, next) => {
@@ -135,7 +135,7 @@ module.exports = {
     },
 
     isAdminOrInstructor: async (req, res, next) => {
-        validateProfile(req, res, next, [Profiles.ADMIN, Profiles.INSTRUCTOR]);
+        validateProfile(req, res, next, [Profiles.ADMIN, PERFIL_Gestor_Elegibilidade, Profiles.INSTRUCTOR]);
     },
 
     isSuperAdmin: async (req, res, next) => {
@@ -145,7 +145,7 @@ module.exports = {
     isUserManager: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.USER_MANAGER]);
     },
-    
+
     isEngagementManager: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.ENGAGEMENT_MANAGER]);
     },
