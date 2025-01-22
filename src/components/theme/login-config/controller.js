@@ -4,6 +4,7 @@ const { ConfigLogin } = require('./model')
 const _messages = require('../../../utils/messages')
 const { getLoginConfig } = require('../../users/business')
 const { IdpIntegrationModel } = require('../../idp-integration/models')
+const { createStrategiesFromLoginConfigs, removeStrategies } = require('../../../utils/passport')
 
 module.exports = {
     async createOrUpdate (req, res) {
@@ -25,6 +26,8 @@ module.exports = {
 
             let config = await getLoginConfig()
 
+            const removedStrategies = config.ssoForm?.filter(info => info.strategyName && !ssoForm.some(newInfo => newInfo.strategyName === info.strategyName))
+
             if (config) {
                 config = await ConfigLogin.findByIdAndUpdate(config._id, body)
             } else {
@@ -37,6 +40,12 @@ module.exports = {
                     { strategyName: to }
                 )
             }
+
+            if (removedStrategies?.length) {
+                removeStrategies(removedStrategies.map(info => info.strategyName))
+            }
+
+            await createStrategiesFromLoginConfigs();
 
             return _messages.success(res, req, config)
         } catch (error) {
