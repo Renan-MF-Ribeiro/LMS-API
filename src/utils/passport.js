@@ -67,11 +67,6 @@ async function createStrategiesFromLoginConfigs() {
     }
 }
 
-function removeStrategies(strategies = []) {
-    log('removeStrategies strategies', strategies);
-    strategies.forEach(strategy => passport.unuse(strategy));
-}
-
 createStrategiesFromLoginConfigs();
 
-module.exports = { initializePassport, authenticatePassportSaml, getRequestStrategyName, createStrategiesFromLoginConfigs, removeStrategies };
+module.exports = { initializePassport, authenticatePassportSaml, getRequestStrategyName };
