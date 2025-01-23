@@ -30,6 +30,6 @@ router
     .get('/listsendinglists', isAdmin, _controller.getListsSendingLists)
     .get('/listmessage', _controller.getListMessage)
     .get('/messages/v2/:id', _controller.getById)
-    .post('updateviewed', _controller.updateViewed)
+    .post('/updateviewed', _controller.updateViewed)
     .get('/:id', isAdmin, _controller.getMessageById)
 module.exports = router
