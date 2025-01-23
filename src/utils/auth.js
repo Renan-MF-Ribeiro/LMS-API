@@ -320,6 +320,9 @@ function returnNumberOfProfile(profile) {
         case 'PERFIL_Colaborador_Livre':
             number = 7;
             break;
+        case 'PERFIL_Super_Admin':
+            number = 8;
+            break;
         default:
             number = 0;
             break;

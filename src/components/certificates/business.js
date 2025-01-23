@@ -20,8 +20,8 @@ const prepareFormData = (req) => {
     Object.keys(req.fields).forEach(key => {
         form.append(key, req.fields[key]);
     });
-
-    if(req.files.file) form.append("file", fs.createReadStream(req.files.file.path));
+    form.append('clientId', process.env.CLIENT_ID);
+    if (req.files.file) form.append("file", fs.createReadStream(req.files.file.path));
 
     return form;
 }
@@ -49,7 +49,7 @@ const updateCertificateExpirationDate = async (req) => {
     }
 };
 
-async function getItemInitialDate(userId, trailId) {
+async function getItemInitialDate (userId, trailId) {
     const user = await User.findById(userId).select('networkLogin').lean();
 
     if (!user) return null;
@@ -72,9 +72,9 @@ async function getItemInitialDate(userId, trailId) {
     return firstUserTracking.createdAt;
 }
 
-async function getInitialDate(req) {
+async function getInitialDate (req) {
     const user = await getUserByToken(req);
-    
+
     const { layoutId, trailId } = req.body;
     const userId = user._id;
 
@@ -98,7 +98,7 @@ async function getInitialDate(req) {
     return trail?.startDate ?? null;
 }
 
-module.exports = { 
+module.exports = {
     certificateClient,
     getHeaders,
     prepareFormData,

@@ -1,5 +1,6 @@
-const { getElegibleUsers } = require('../../../utils/functions');
+const { getElegibleUsers, getUserByToken } = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
+const { getSegmentation, isSegmentationException } = require('../../config/business');
 const { socialApi } = require('../../social/http-adapter');
 const { populateUserFields, populateMembers, getSegFieldsFromUser } = require('../buisiness');
 const FormData = require('form-data');
@@ -8,10 +9,25 @@ const mime = require('mime-types');
 
 const GroupController = {
     async getAllGroups(req, res) {
-        const { status } = req.query;
+        const queryParams = new URLSearchParams();
 
         try {
-            const query = status ? `?status=${status.toUpperCase()}` : '';
+            //Apply segmentation rule
+            const segmentation = await getSegmentation();
+            if (segmentation.value?.rule?.issuer) {
+                const expectedField = segmentation.value.rule.issuer;
+                const user = await getUserByToken(req);
+                const userField = user[expectedField];
+
+                const isAnException = isSegmentationException(user, segmentation.value);
+                if (userField && !isAnException) {
+                    queryParams.append('owner', userField.toLowerCase());
+                }
+            }
+
+            const searchQuery = queryParams.toString();
+            const query = `?${searchQuery}`;
+
             const uri = `groups${query}`;
             const { data } = await socialApi.get(uri, { params: req.query });
 
@@ -139,6 +155,17 @@ const GroupController = {
         try {
             delete body.banner;
             const uri = 'groups';
+            const segmentation = await getSegmentation();
+
+            if (segmentation.value?.rule?.issuer) {
+                const expectedField = segmentation.value.rule.issuer;
+                const user = await getUserByToken(req);
+                const userField = user[expectedField];
+                
+                if (userField) {
+                    body.owner = userField.toLowerCase();
+                }
+            }
             const { data } = await socialApi.post(uri, body);
 
             if (Object.keys(req?.files).length > 0) {

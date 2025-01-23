@@ -177,7 +177,27 @@ const HomeController = {
                     };
                 }).filter((section) => section.trails.length > 0);
 
-            if (config.alura.active) {
+            const trailsWithoutSection = filteredTrails.filter(
+                (trail) => result.every(
+                    (section) => !section.trails.find(
+                        (sectionTrail) => String(sectionTrail._id) === String(trail._id)
+                    )
+                )
+            );
+
+            const filteredTrailsWithoutSection = hasFilters
+                ? filterTrails(filters, trailsWithoutSection, tags)
+                : trailsWithoutSection;
+
+            if (filteredTrailsWithoutSection.length) {
+                result.push({
+                    _id: 'trails-without-section',
+                    title: 'SEM SEÇÃO',
+                    trails: filteredTrailsWithoutSection
+                });
+            }
+
+            if (req?.features?.alura) {
                 const host = process.env.API_ALURA;
                 const clientId = process.env.CLIENT_ID;
                 const headers = { 'x-client-key': process.env.API_KEY_ALURA };

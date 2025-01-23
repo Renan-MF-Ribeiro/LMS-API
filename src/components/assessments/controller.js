@@ -9,6 +9,8 @@ const _functions = require('../../utils/functions')
 const _files = require('../../utils/files')
 const { Tracking, SCORMLessonStatus } = require('../tracking/model')
 const { processExamTracking } = require('../tracking/business')
+const { User } = require('../users/model')
+const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business')
 
 
 module.exports = {
@@ -22,8 +24,12 @@ module.exports = {
             }).countDocuments()
 
             if (evaluationCheck < 1) {
-                const evaluation = await Evaluation
-                    .create(req.body)
+                
+                if (req?.segmentation) {
+                    await handleSegmentationOnCreate(req)
+                }
+
+                const evaluation = await Evaluation.create(req.body)
 
                 _messages.success(res, req, evaluation, 'Criação de dados', 'assessments', 'createEvaluation', evaluation, [], true, 'CREATE')
             } else {
@@ -40,12 +46,18 @@ module.exports = {
             const user = await _functions.getUserByToken(req)
             const { order, sort } = _functions.ordernation(req)
             const { idEvaluation } = await Item.findOne({ _id: { $eq: id } }, 'idEvaluation')
-            const { description, attempts, duration, categories } = await Evaluation
-                .findOne({
-                    _id: { $eq: idEvaluation },
-                    deleted: { $eq: 0 },
 
-                })
+            const query = { $and: [
+                { _id: { $eq: idEvaluation } },
+                { deleted: { $eq: 0 } }
+            ]}
+
+            // if (req?.segmentation) {
+            //     handleSegmentationOnQuery(req, 'owner', query)
+            // }
+
+            const { description, attempts, duration, categories } = await Evaluation
+                .findOne(query)
                 .populate({ path: 'categories', match: { deleted: { $eq: 0 }, active: { $eq: 1 }, } })
 
             const timeDuration = await HistoricEvaluation.find({
@@ -192,31 +204,33 @@ module.exports = {
             const { order, sort } = _functions.ordernation(req)
             const searchBy = req.query.searchBy
 
-            const total = await Evaluation.find(searchBy ? {
-                $or: [
-                    { description: { $regex: searchBy, $options: 'i' } },
-                ],
-                deleted: { $eq: 0 },
-            } : {
-                deleted: { $eq: 0 },
-            }).countDocuments()
+            const query = { $and: [{
+                deleted: { $eq: 0 }
+            }] }
 
-            const evaluations = await Evaluation
-                .find(searchBy ? {
+            if (searchBy) {
+                query.$and.push({
                     $or: [
                         { description: { $regex: searchBy, $options: 'i' } },
-                    ],
-                    deleted: { $eq: 0 },
-                } : {
-                    deleted: { $eq: 0 },
+                    ]
                 })
+            }
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
+            }
+
+            const total = await Evaluation.find(query).countDocuments()
+
+            const evaluations = await Evaluation
+                .find(query)
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
 
             _messages.success(res, req, {
                 data: evaluations,
-                total,
+                total
             })
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'getAllEvaluations')
@@ -247,7 +261,16 @@ module.exports = {
     async getById (req, res) {
         try {
             const { id } = req.params
-            const evaluation = await Evaluation.findById(id)
+
+            const query = { $and: [{
+                _id: id
+            }] }
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', query)
+            }
+
+            const evaluation = await Evaluation.findOne(query)
 
             _messages.success(res, req, evaluation,)
         }

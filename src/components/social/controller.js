@@ -774,7 +774,7 @@ module.exports = {
     async shareSocialContent(req, res) {
         const { users, trailId } = req.body;
         try {
-            const { name } = await _functions.getUserByToken(req);
+            const { _id, networkLogin, name } = await _functions.getUserByToken(req);
 
             const trail = await Trail.findById(trailId, 'title titleURL');
 
@@ -790,7 +790,14 @@ module.exports = {
             }
 
             const uri = `home/share/${process.env.CLIENT_ID}`;
-            const { data } = await socialApi.post(uri, { users: users, trailId });
+            const { data } = await socialApi.post(uri, {
+                users: users,
+                trailId,
+                sharedBy: {
+                    userId: _id,
+                    userName: networkLogin,
+                },
+            });
 
             _messages.success(res, req, data, 'ok', 'social', 'shareSocialContent');
             return;

@@ -16,6 +16,7 @@ const {
     isAssessmentActive,
     isShowcaseActive,
     setCurrentFeatures,
+    setSegmentation,
 } = require('./utils/middlewares');
 const { PUBLIC_PATH } = process.env;
 const app = express();
@@ -60,8 +61,12 @@ const dimensionRoutes = require('./components/dimensions/routes');
 const partnerRoutes = require('./components/partners/routes');
 const trainingRouter = require('./components/training/routes');
 const feedRoutes = require('./components/feed/routes');
+const shopRouter = require('./components/shop/routes');
 const configRouter = require('./components/config/routes');
+const avatarRoutes = require('./components/theme/avatar/routes');
 const { socialApiMiddleware } = require('./components/social/http-adapter');
+const feedbackRoutes = require('./components/feedback/routes');
+const happplaceRoutes = require('./components/happplace/routes');
 
 const corsOptions = {
     origin: [
@@ -135,6 +140,8 @@ app.use(socialApiMiddleware)
 
 app.use(setCurrentFeatures);
 
+app.use(setSegmentation)
+
 app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/tracking', validateTokenRoute, trackingRoutes)
     .use('/trails', validateTokenRoute, trailsRoutes)
@@ -172,12 +179,16 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/training', trainingRouter)
     .use('/feed', feedRoutes)
     .use('/config', configRouter)
+    .use('/shop', shopRouter)
+    .use('/avatar', avatarRoutes)
     .use(
         '/assessment',
         isAssessmentActive,
         validateTokenRoute,
         assessmentRoutes
-    );
+    )
+    .use('/feedback', validateTokenRoute, feedbackRoutes)
+    .use('/happplace', happplaceRoutes);
 
 app.use(errorHandler);
 

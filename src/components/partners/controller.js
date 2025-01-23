@@ -3,7 +3,9 @@ const moment = require('moment');
 const _messages = require('../../utils/messages');
 const { azureBlob } = require('../../utils/files');
 const { Partner } = require('./model');
-const { pagination, ordernation } = require('../../utils/functions');
+const { pagination, ordernation, getUserByToken } = require('../../utils/functions');
+const { User } = require('../users/model');
+const { handleSegmentationOnQuery } = require('../config/business');
 
 module.exports = {
     async getPartners(req, res) {
@@ -11,11 +13,17 @@ module.exports = {
         const { order, sort } = ordernation(req);
         const searchBy = req.query.searchBy;
 
-        const query = searchBy
-            ? {
-                  $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-              }
-            : {};
+        const query = { $and: [{}] }
+
+        if(searchBy) {
+            query.$and.push({
+                $or: [{ title: { $regex: searchBy, $options: 'i' } }]
+            })
+        }
+
+        if(req?.segmentation) {
+            handleSegmentationOnQuery(req, 'owner', query)
+        }
 
         try {
             const total = await Partner.find(query).countDocuments();
@@ -41,6 +49,7 @@ module.exports = {
             );
         }
     },
+
     async getActivePartners(req, res) {
         try {
             const partners = await Partner.find({ active: true });
@@ -102,6 +111,10 @@ module.exports = {
             //     return { ...x, key: key };
             // });
             // body.keys = dto;
+
+            if (req?.segmentation) {
+                // await handleSegmentationOnCreate()
+            }
 
             const partner = await Partner.create(body);
             _messages.success(

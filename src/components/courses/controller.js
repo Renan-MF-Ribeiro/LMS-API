@@ -43,7 +43,11 @@ const {
     getTagsElegiblesByToken,
     checkEligibilityTagsAnd,
 } = require('../sections/business');
+
+const { canRegisterOrCancel } = require('../sections/business')
+
 const { default: axios } = require('axios');
+const ApiError = require('../../errors/ApiError');
 
 module.exports = {
     async createCourse (req, res) {
@@ -428,6 +432,8 @@ module.exports = {
             let {
                 courseID,
                 users,
+                registrationDeadline,
+                cancellationDeadline,
                 dateApplicationInitial,
                 dateApplicationFinal,
                 minister,
@@ -441,23 +447,28 @@ module.exports = {
                 name,
                 signup,
             } = req.fields;
-            let flagDate = true;
 
             const costsArray = costs ? JSON.parse(costs) : null;
-            if (dateApplicationInitial || dateApplicationFinal) {
-                if (dateApplicationInitial && dateApplicationFinal === '') {
-                    flagDate = true;
-                } else {
-                    if (dateApplicationInitial >= dateApplicationFinal) flagDate = false;
+
+            let message;
+            let flagDate = true;
+
+            if (dateApplicationInitial && dateApplicationFinal) {
+                if (dateApplicationInitial >= dateApplicationFinal) {
+                    flagDate = false;
+                    message = 'A data final da aplicação tem que ser maior que a inicial!';
                 }
+            } else {
+                flagDate = false;
+                message = 'Todas as datas são obrigatórias!';
             }
 
             if (!flagDate) {
                 badRequest(
                     res,
                     req,
-                    'A data final da aplicação tem que ser maior que a inicial!',
-                    'A data final da aplicação tem que ser maior que a inicial!',
+                    message,
+                    message,
                     'courses',
                     '/createClass'
                 );
@@ -480,6 +491,7 @@ module.exports = {
                     const dateFinal = new Date(course.dateFinal)
                     const applicationInitial = new Date(dateApplicationInitial);
                     const applicationFinal = new Date(dateApplicationFinal);
+
                     if (
                         applicationInitial < dateInitial ||
                         applicationInitial > dateFinal ||
@@ -533,6 +545,8 @@ module.exports = {
                             minister,
                             qrcode: req.body.qrCode,
                             materials: arrMaterials,
+                            registrationDeadline: !registrationDeadline ? 0 : registrationDeadline,
+                            cancellationDeadline: !cancellationDeadline ? 0 : cancellationDeadline,
                             dateApplicationInitial,
                             dateApplicationFinal,
                             canCreateClass,
@@ -623,6 +637,8 @@ module.exports = {
                 qrCode,
                 minister,
                 requester,
+                registrationDeadline,
+                cancellationDeadline,
                 dateApplicationInitial,
                 dateApplicationFinal,
                 qrCodeSelfRegistration,
@@ -772,6 +788,8 @@ module.exports = {
                         qrcode: qrCode,
                         qrCodeSelfRegistration: qrCodeSelfRegistration,
                         isSelfRegistrationEnabled: isSelfRegistrationEnabled,
+                        registrationDeadline: !registrationDeadline ? 0 : registrationDeadline,
+                        cancellationDeadline: !cancellationDeadline ? 0 : cancellationDeadline,
                         dateApplicationInitial,
                         dateApplicationFinal,
                         limit,
@@ -1262,13 +1280,13 @@ module.exports = {
                 return badRequest(
                     res,
                     req,
-                    'Turma indisponível.',
-                    'Turma indisponível.',
+                    'Não foi possível encontrar uma turma correspondente ao QRCode informado.',
+                    'Não foi possível encontrar uma turma correspondente ao QRCode informado.',
                     'courses',
                     '/getCourseByQrCodeSelfRegistration'
                 );
 
-            const applicationInitial = new Date(course.dateApplicationInitial);
+            const applicationInitial = moment(course.dateApplicationInitial).startOf('day').toDate();
             const applicationFinal = new Date(course.dateApplicationFinal);
             const applicationEndDay = moment(applicationFinal).endOf('day').toDate();
             const today = new Date();
@@ -1277,8 +1295,8 @@ module.exports = {
                 return badRequest(
                     res,
                     req,
-                    'Turma indisponível.',
-                    'Turma indisponível.',
+                    'Não foi possível realizar o registro da presença devido ao horário.',
+                    'Não foi possível realizar o registro da presença devido ao horário.',
                     'courses',
                     '/getCourseByQrCodeSelfRegistration'
                 );
@@ -1420,6 +1438,7 @@ module.exports = {
                     $addToSet: {
                         users: {
                             _id: userID,
+                            userID: mongoose.Types.ObjectId(userID),
                             presence: false,
                             grades: 0,
                             name: user.name,
@@ -1486,6 +1505,27 @@ module.exports = {
                 '/list-join'
             );
         }
+    },
+
+    async listLeave (req, res) {
+        const { classesID } = req.body;
+        const user = await getUserByToken(req);
+
+        const { cancellationDeadline, dateApplicationInitial } = await ClassModel.findById(classesID)
+
+        const canCancel = canRegisterOrCancel(dateApplicationInitial, cancellationDeadline)
+
+        if (!canCancel) {
+            throw new ApiError('Não é possível mais cancelar usa inscrição na classe.', 400)
+        }
+        const classUpdated = await ClassModel.findOneAndUpdate(
+            { _id: classesID },
+            { $pull: { users: { userID: user._id } } },
+            { new: true }
+        );
+
+        success(res, req, classUpdated)
+
     },
 
     async getInstructorByInstructorGroup (req, res) {
