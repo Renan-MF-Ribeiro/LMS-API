@@ -485,7 +485,7 @@ module.exports = {
 
     async updateViewed (req, res) {
         try {
-            const urlFetch = `${API_MESSENGER}/messages/v2/updateviewed`;
+            const urlFetch = `${API_MESSENGER}/updateviewed`;
             const response = await axios.post(urlFetch, req.body, { headers: getHeaders(req) });
 
             return _messages.success(res, req, response.data);
