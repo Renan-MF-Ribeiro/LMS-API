@@ -7,7 +7,7 @@ trigger:
   - staging
   - docker-image
   - dev-api
-  - dev-front
+  - dev-painel
 
 resources:
   - repo: self
@@ -18,12 +18,12 @@ variables:
   stagingRunningPort: "3097"
   prodRunningPort: "3097"
   devApiRunningPort: "3094"
-  devFrontRunningPort: "3093"
+  devPainelRunningPort: "3093"
   imageRepositoryProd: '$(name)-backend-prod'
   imageRepositoryStaging: '$(name)-backend-staging'
   imageRepositoryImage: '$(name)-backend-image'
   imageRepositoryDevApi: '$(name)-backend-dev-api'
-  imageRepositoryDevFront: '$(name)-backend-dev-front'
+  imageRepositoryDevPainel: '$(name)-backend-dev-painel'
   containerRegistry: "happlearning.azurecr.io"
   dockerfilePath: "$(Build.SourcesDirectory)/Dockerfile"
   dockerfilePathImage: "$(Build.SourcesDirectory)/DockerfileImage"
@@ -64,8 +64,8 @@ stages:
             displayName: "Download secure file"
             name: dotenvdevfront
             inputs:
-              secureFile: "$(name).env.dev-front"
-            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-front'))
+              secureFile: "$(name).env.dev-painel"
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-painel'))
           
           # Move secure files
           - task: CmdLine@2
@@ -83,7 +83,7 @@ stages:
           - task: CmdLine@2
             inputs:
               script: "mv $(dotenvdevfront.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
-            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-front'))
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-painel'))
           
           # Set DEBUG environment variable
           - task: CmdLine@2
@@ -100,7 +100,7 @@ stages:
             displayName: "Set DEBUG environment variable"
             inputs:
               script: "echo 'DEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
-            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-front'))
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-painel'))
           
           # Build and push an image to container registry
           - task: Docker@2
@@ -157,12 +157,12 @@ stages:
             displayName: Build and push an image to container registry
             inputs:
               command: buildAndPush
-              repository: $(imageRepositoryDevFront)
+              repository: $(imageRepositoryDevPainel)
               dockerfile: $(dockerfilePath)
               containerRegistry: $(dockerRegistryServiceConnection)
               tags: |
                 $(tag)
-            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-front'))
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-painel'))
   
   - stage: Deploy
     displayName: Deploy to container instance
@@ -238,7 +238,7 @@ stages:
                   displayName: Container status
         condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-api'))
       - deployment: DeployDevFront
-        displayName: Deploy dev-front
+        displayName: Deploy dev-painel
         variables:
         - group: DockerLogin
         environment:
@@ -249,14 +249,14 @@ stages:
             deploy:
               steps:
                 - script: sudo az acr login --name happlearning
-                - script: sudo docker pull $(containerRegistry)/$(imageRepositoryDevFront):$(tag)
+                - script: sudo docker pull $(containerRegistry)/$(imageRepositoryDevPainel):$(tag)
                   displayName: Pull latest image
-                - script: sudo docker stop $(imageRepositoryDevFront) || true
+                - script: sudo docker stop $(imageRepositoryDevPainel) || true
                   displayName: Stop current container
-                - script: sudo docker rm $(imageRepositoryDevFront) || true
+                - script: sudo docker rm $(imageRepositoryDevPainel) || true
                   displayName: Remove current container
-                - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryDevFront) -p $(devFrontRunningPort):3000 $(containerRegistry)/$(imageRepositoryDevFront):$(tag)
+                - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryDevPainel) -p $(devPainelRunningPort):3000 $(containerRegistry)/$(imageRepositoryDevPainel):$(tag)
                   displayName: Execute new container instance
                 - script: sudo docker ps
                   displayName: Container status
-        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-front'))
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-painel'))
