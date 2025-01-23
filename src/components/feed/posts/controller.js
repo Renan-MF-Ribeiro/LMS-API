@@ -50,7 +50,7 @@ module.exports = {
                         ...formData.getHeaders(),
                     },
                 });
-            } 
+            }
 
             if (body.notifyUsers === true && (body?.elegibilities || body?.elegibilitiesAnd)) {
                 const { _id, name } = await getUserByToken(req);
@@ -154,7 +154,7 @@ module.exports = {
                 'Erro interno no servidor',
                 'feed',
                 'reportPost'
-            );            
+            );
         }
     },
 
@@ -264,7 +264,7 @@ module.exports = {
         if (segmentation.value?.rule?.issuer) {
             const expectedField = segmentation.value.rule.issuer;
             const user = await getUserByToken(req);
-            const userField = user[expectedField].toLowerCase();
+            const userField = user[expectedField]?.toLowerCase();
 
             const isAnException = isSegmentationException(user, segmentation.value)
             if (userField && !isAnException) {
@@ -459,7 +459,7 @@ module.exports = {
 
         try {
             const { _id, networkLogin, name } = await getUserByToken(req);
-            
+
             req.body.sharedBy = {
                 userId: _id,
                 userName: networkLogin
