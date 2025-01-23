@@ -6,20 +6,24 @@ trigger:
   - main
   - staging
   - docker-image
-  # - development
+  - dev-api
+  - dev-front
 
 resources:
   - repo: self
 
 variables:
-  # Container registry service connection established during pipeline creation
   name: "happlearning-v2"
   dockerRegistryServiceConnection: "93b93a28-98a7-4844-b8f8-c35c737f6e02"
   stagingRunningPort: "3097"
   prodRunningPort: "3097"
-  imageRepositoryProd: "happlearning-v2-backend-prod"
-  imageRepositoryStaging: "happlearning-v2-backend-staging"
-  imageRepositoryImage: "happlearning-v2-backend-image"
+  devApiRunningPort: "3094"
+  devFrontRunningPort: "3093"
+  imageRepositoryProd: '$(name)-backend-prod'
+  imageRepositoryStaging: '$(name)-backend-staging'
+  imageRepositoryImage: '$(name)-backend-image'
+  imageRepositoryDevApi: '$(name)-backend-dev-api'
+  imageRepositoryDevFront: '$(name)-backend-dev-front'
   containerRegistry: "happlearning.azurecr.io"
   dockerfilePath: "$(Build.SourcesDirectory)/Dockerfile"
   dockerfilePathImage: "$(Build.SourcesDirectory)/DockerfileImage"
@@ -37,6 +41,7 @@ stages:
         pool:
           name: Default
         steps:
+          # Download secure files
           - task: DownloadSecureFile@1
             displayName: "Download secure file"
             name: dotenvstaging
@@ -49,10 +54,37 @@ stages:
             inputs:
               secureFile: "$(name).env.prod"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+          - task: DownloadSecureFile@1
+            displayName: "Download secure file"
+            name: dotenvdevapi
+            inputs:
+              secureFile: "$(name).env.dev-api"
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-api'))
+          - task: DownloadSecureFile@1
+            displayName: "Download secure file"
+            name: dotenvdevfront
+            inputs:
+              secureFile: "$(name).env.dev-front"
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-front'))
+          
+          # Move secure files
           - task: CmdLine@2
             inputs:
               script: "mv $(dotenvstaging.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
+          - task: CmdLine@2
+            inputs:
+              script: "mv $(dotenvprod.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+          - task: CmdLine@2
+            inputs:
+              script: "mv $(dotenvdevapi.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-api'))
+          - task: CmdLine@2
+            inputs:
+              script: "mv $(dotenvdevfront.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-front'))
+          
           # Set DEBUG environment variable
           - task: CmdLine@2
             displayName: "Set DEBUG environment variable"
@@ -60,9 +92,17 @@ stages:
               script: "echo 'DEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
           - task: CmdLine@2
+            displayName: "Set DEBUG environment variable"
             inputs:
-              script: "mv $(dotenvprod.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
-            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+              script: "echo 'DEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-api'))
+          - task: CmdLine@2
+            displayName: "Set DEBUG environment variable"
+            inputs:
+              script: "echo 'DEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-front'))
+          
+          # Build and push an image to container registry
           - task: Docker@2
             displayName: Build and push an image to container registry
             inputs:
@@ -103,6 +143,27 @@ stages:
               tags: |
                 $(tag)
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+          - task: Docker@2
+            displayName: Build and push an image to container registry
+            inputs:
+              command: buildAndPush
+              repository: $(imageRepositoryDevApi)
+              dockerfile: $(dockerfilePath)
+              containerRegistry: $(dockerRegistryServiceConnection)
+              tags: |
+                $(tag)
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-api'))
+          - task: Docker@2
+            displayName: Build and push an image to container registry
+            inputs:
+              command: buildAndPush
+              repository: $(imageRepositoryDevFront)
+              dockerfile: $(dockerfilePath)
+              containerRegistry: $(dockerRegistryServiceConnection)
+              tags: |
+                $(tag)
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-front'))
+  
   - stage: Deploy
     displayName: Deploy to container instance
     jobs:
@@ -153,3 +214,49 @@ stages:
                 - script: sudo docker ps
                   displayName: Container status
         condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+      - deployment: DeployDevApi
+        displayName: Deploy dev-api
+        variables:
+        - group: DockerLogin
+        environment:
+          name: HomologVM_Test
+          resourceType: VirtualMachine
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - script: sudo az acr login --name happlearning
+                - script: sudo docker pull $(containerRegistry)/$(imageRepositoryDevApi):$(tag)
+                  displayName: Pull latest image
+                - script: sudo docker stop $(imageRepositoryDevApi) || true
+                  displayName: Stop current container
+                - script: sudo docker rm $(imageRepositoryDevApi) || true
+                  displayName: Remove current container
+                - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryDevApi) -p $(devApiRunningPort):3000 $(containerRegistry)/$(imageRepositoryDevApi):$(tag)
+                  displayName: Execute new container instance
+                - script: sudo docker ps
+                  displayName: Container status
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-api'))
+      - deployment: DeployDevFront
+        displayName: Deploy dev-front
+        variables:
+        - group: DockerLogin
+        environment:
+          name: HomologVM_Test
+          resourceType: VirtualMachine
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - script: sudo az acr login --name happlearning
+                - script: sudo docker pull $(containerRegistry)/$(imageRepositoryDevFront):$(tag)
+                  displayName: Pull latest image
+                - script: sudo docker stop $(imageRepositoryDevFront) || true
+                  displayName: Stop current container
+                - script: sudo docker rm $(imageRepositoryDevFront) || true
+                  displayName: Remove current container
+                - script: sudo docker run -d --restart unless-stopped --name $(imageRepositoryDevFront) -p $(devFrontRunningPort):3000 $(containerRegistry)/$(imageRepositoryDevFront):$(tag)
+                  displayName: Execute new container instance
+                - script: sudo docker ps
+                  displayName: Container status
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-front'))
