@@ -218,8 +218,9 @@ module.exports = {
     getUserByToken(req) {
         return new Promise(async (resolve, reject) => {
             try {
-                const token = req.headers.authorization;
-                const { data } = _auth.decodeToken(token.replace('Bearer', '').trim());
+                const token = req.headers?.authorization;
+                let tk = token.split(' ')[1] || token;
+                const { data } = _auth.decodeToken(tk);
                 const user = await User.findOne({ _id: { $eq: data.ref } });
                 resolve(user);
             } catch (error) {
@@ -228,8 +229,13 @@ module.exports = {
         });
     },
     validateProfile: async (req, res, next, expectedProfiles) => {
-        const profiles = await _auth.returnProfileByToken(req.headers.authorization);
-        const doesUserHasProfile = profiles.some((profile) => expectedProfiles.includes(profile));
+        const profiles = await _auth.returnProfileByToken(req.headers?.authorization);
+
+        const doesUserHasProfile = profiles.some(
+            (profile) =>
+                expectedProfiles.includes(profile) ||
+                expectedProfiles.includes('PERFIL_Super_Admin')
+        );
         if (!doesUserHasProfile) {
             return _messages.forbidden(
                 res,
@@ -708,7 +714,10 @@ module.exports = {
         const mergedElegibilities = [...elegibilities, ...elegibilitiesAnd];
 
         const groups = await Group.find({ 'tags.value': { $in: mergedElegibilities } });
-        const users = await User.find({ groupsAD: { $in: groups.map((g) => g.name) }, status: "ATIVO" });
+        const users = await User.find({
+            groupsAD: { $in: groups.map((g) => g.name) },
+            status: 'ATIVO',
+        });
 
         const userTags = groups.filter((group) => elegibilities.includes(group.name));
         const userTagsAnd = groups.filter((group) => elegibilitiesAnd.includes(group.name));

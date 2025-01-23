@@ -13,7 +13,6 @@ const { getSegmentation, isSegmentationException } = require('../components/conf
 const { getUserByToken, validateProfile } = require('./functions');
 
 const Profiles = {
-    ELEGIBILITY_MANAGER: 'PERFIL_Gestor_Elegibilidade', // Antigo "Perfil_Admin"
     ADMIN: 'PERFIL_Admin',
     ACCOUNTANT: 'PERFIL_Conteudista',
     COLLABORATOR: 'PERFIL_Colaborador',
@@ -22,10 +21,10 @@ const Profiles = {
     ANALYST: 'PERFIL_Analista',
     STUDENT: 'PERFIL_Aluno',
     // Novos perfis
+    ELEGIBILITY_MANAGER: 'Profiles.ELEGIBILITY_MANAGER', // Antigo "Perfil_Admin"
     SUPER_ADMIN: 'PERFIL_Super_Admin',
     USER_MANAGER: 'PERFIL_Gestor_Usuário',
     ENGAGEMENT_MANAGER: 'PERFIL_Gestor_Engajamento',
-
 };
 module.exports = {
     sendCsrf(req, res, next) {
@@ -57,33 +56,9 @@ module.exports = {
     },
 
     validateTokenRoute: async (req, res, next) => {
-        if (req.headers.authorization !== undefined) {
-            const token = req.headers.authorization;
-            if (token != null) {
-                if (await validateToken(req)) {
-                    next();
-                } else {
-                    _messages.forbidden(
-                        res,
-                        req,
-                        'Sessão expirada',
-                        'Sessão expirada!',
-                        '',
-                        req.originalUrl
-                    );
-                }
-            } else {
-                _messages.forbidden(
-                    res,
-                    req,
-                    'Sessão expirada!',
-                    'Sessão expirada!',
-                    '',
-                    req.originalUrl
-                );
-            }
-        } else {
-            _messages.badRequest(
+        const token = req.headers?.authorization;
+        if (!token || !(await validateToken(req))) {
+            return _messages.badRequest(
                 res,
                 req,
                 'Sessão expirada!',
@@ -92,6 +67,7 @@ module.exports = {
                 req.originalUrl
             );
         }
+        next();
     },
 
     isAccountant: async (req, res, next) => {
@@ -103,11 +79,15 @@ module.exports = {
     },
 
     isAdmin: async (req, res, next) => {
-        validateProfile(req, res, next, [Profiles.ADMIN, PERFIL_Gestor_Elegibilidade]);
+        validateProfile(req, res, next, [Profiles.ADMIN, Profiles.ELEGIBILITY_MANAGER]);
     },
 
     isAdminOrAccountant: async (req, res, next) => {
-        validateProfile(req, res, next, [Profiles.ADMIN, PERFIL_Gestor_Elegibilidade, Profiles.ACCOUNTANT]);
+        validateProfile(req, res, next, [
+            Profiles.ADMIN,
+            Profiles.ELEGIBILITY_MANAGER,
+            Profiles.ACCOUNTANT,
+        ]);
     },
 
     isAccountantOrIntegrator: async (req, res, next) => {
@@ -135,7 +115,11 @@ module.exports = {
     },
 
     isAdminOrInstructor: async (req, res, next) => {
-        validateProfile(req, res, next, [Profiles.ADMIN, PERFIL_Gestor_Elegibilidade, Profiles.INSTRUCTOR]);
+        validateProfile(req, res, next, [
+            Profiles.ADMIN,
+            Profiles.ELEGIBILITY_MANAGER,
+            Profiles.INSTRUCTOR,
+        ]);
     },
 
     isSuperAdmin: async (req, res, next) => {

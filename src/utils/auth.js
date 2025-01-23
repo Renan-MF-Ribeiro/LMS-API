@@ -165,7 +165,8 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             try {
                 const result = [];
-                const data = jwt.decode(token, PROJECT_SECRET_KEY);
+                let tk = token.split(' ')[1] || token;
+                const data = jwt.decode(tk, PROJECT_SECRET_KEY);
                 const profiles = data.data.profiles;
 
                 for (const p in profiles) {
@@ -188,8 +189,9 @@ module.exports = {
     validateToken: (req) => {
         return new Promise((resolve) => {
             try {
-                const token = req.headers.authorization;
-                jwt.verify(token, PROJECT_SECRET_KEY, function (err) {
+                const token = req.headers?.authorization;
+                let tk = token?.split(' ')[1] || token
+                jwt.verify(tk, PROJECT_SECRET_KEY, function (err) {
                     if (err) {
                         resolve(false);
                     } else {
