@@ -134,6 +134,10 @@ module.exports = {
         validateProfile(req, res, next, [Profiles.ENGAGEMENT_MANAGER]);
     },
 
+    isUserManagerOrElegibilitiesManager: async (req, res, next) => {
+        validateProfile(req, res, next, [Profiles.USER_MANAGER, Profiles.ELEGIBILITY_MANAGER]);
+    },
+
     validateMonitoringToken: async (req, res, next) => {
         const token = req.headers.authorization;
         if (!token || !(await validateMonitoringToken(req))) {
