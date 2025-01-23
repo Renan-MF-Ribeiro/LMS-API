@@ -48,11 +48,11 @@ const {
     persistUsers,
     findUsers,
     processDashFilters,
+    getLoginConfig,
     createClassGroup,
     buildSearchObject,
     generateNewPassword,
-    maskEmail,
-    getSsoFormByStrategyName
+    maskEmail
 } = require('./business');
 
 const {
@@ -103,8 +103,6 @@ const { Log } = require('../logs/model');
 const { Tracking } = require('../tracking/model');
 const { getConfiguration, handleSegmentationOnQuery } = require('../config/business');
 const { ConfigTypes } = require('../config/model');
-const { fetchIdpProfilesFromRequestWithSamlObject } = require('../idp-integration/business');
-const { log } = require('../../utils/logger');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -624,23 +622,13 @@ module.exports = {
 
     async singleSignOn (req, res) {
         let user = {};
+        const { ssoForm } = await getLoginConfig();
 
         const { token } = req.body;
         const secret = process.env.PROJECT_SECRET_KEY;
-
         try {
             const data = jwt.verify(token, secret);
-
-            const tokenIdpProfiles = data?.idpProfiles;
-            const tokenStrategyName = data?.strategyName ?? undefined;
-
-            log('singleSignOn tokenStrategyName', tokenStrategyName);
-            log('singleSignOn tokenIdpProfiles', tokenIdpProfiles);
-
-            const ssoForm = await getSsoFormByStrategyName(tokenStrategyName);
-
             const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data[ssoForm.claim];
-
             if (!claim) {
                 _messages.forbidden(
                     res,
@@ -701,24 +689,17 @@ module.exports = {
                         }
                     }
 
-                    const groups = Array.from(
-                        new Set(
-                            [
-                                ...(tokenIdpProfiles ?? []),
-                                ...(
-                                    user.groupsAD?.filter(
-                                        group => tokenIdpProfiles?.length
-                                            ? group === 'PERFIL_Aluno' || !group.startsWith('PERFIL')
-                                            : true
-                                    ) ?? []
-                                )
-                            ]
-                        )
-                    );
+                    const groups = user.groupsAD;
+                    const namesProfiles = [];
+                    const namesGroups = [];
 
-                    const namesProfiles = groups.filter((group) => group.startsWith('PERFIL'));
+                    for (const p in groups) {
+                        const strGroup = groups[p];
 
-                    const namesGroups = groups.filter((group) => group.startsWith('ELEGE'));
+                        if (strGroup.indexOf('PERFIL_') >= 0) namesProfiles.push(strGroup);
+
+                        if (strGroup.indexOf('ELEGE') >= 0) namesGroups.push(strGroup);
+                    }
 
                     const profilesIDS = await returnIdProfileUser(namesProfiles);
                     const groupsIDS = await returnIdGroupUser(namesGroups);
@@ -726,6 +707,9 @@ module.exports = {
                     const eligibilities = userGroups.flatMap((group) =>
                         group.tags.flatMap((tag) => tag?.value || tag.display)
                     );
+
+                    // VERIFY FEATURE WELCOME
+                    const hasWelcomeComponentFeature = req.features?.welcomeComponent ?? false;
 
                     const token = generateSSOToken({
                         ref: user._id,
@@ -736,8 +720,6 @@ module.exports = {
                         numbers: profilesIDS.numbers,
                         groups: groupsIDS,
                         welcomeVideoWatched: user?.welcomeVideoWatched,
-                        idpProfiles: tokenIdpProfiles,
-                        strategyName: tokenStrategyName,
                     });
 
                     const token_mfa = generateMfaToken({
@@ -1918,12 +1900,10 @@ module.exports = {
 
     async ssoCallback (req, res) {
         try {
-            const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestWithSamlObject(req);
+            const loginConfig = await getLoginConfig();
 
-            const ssoForm = await getSsoFormByStrategyName(strategyName);
-
-            const claim = ssoForm?.claim ?? 'networkLogin';
-            const claimKey = ssoForm?.claimKey ?? 'no-claim-key-value';
+            const claim = loginConfig?.ssoForm?.claim ?? 'networkLogin';
+            const claimKey = loginConfig?.ssoForm?.claimKey ?? 'no-claim-key-value';
 
             const value = claimKey.split(',').reduce((acc, key) => {
                 if (acc !== null && acc !== undefined && acc !== '') return acc;
@@ -1958,11 +1938,7 @@ module.exports = {
                 );
             }
 
-            const token = jwt.sign({
-                [claim]: value,
-                strategyName,
-                idpProfiles,
-            }, process.env.PROJECT_SECRET_KEY);
+            const token = jwt.sign({ [claim]: value }, process.env.PROJECT_SECRET_KEY);
 
             res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
         } catch (error) {

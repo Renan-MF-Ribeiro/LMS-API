@@ -3,7 +3,7 @@ const rateLimit = require('express-rate-limit');
 const _controller = require('./controller');
 const multiparty = require('connect-multiparty');
 const formidable = require('express-formidable');
-const { authenticatePassportSaml } = require('../../utils/passport');
+const passport = require('../../utils/passport');
 const {
     isAdmin,
     isAdminOrInstructor,
@@ -80,12 +80,19 @@ module.exports = express
     .post('/sso', _controller.singleSignOn)
     .get(
         '/sso/saml',
-        authenticatePassportSaml,
+        passport.authenticate('saml', {
+            successRedirect: '/',
+            failureRedirect: '/login',
+        })
     )
     .post(
         '/sso/saml/callback',
-        authenticatePassportSaml,
+        passport.authenticate('saml', {
+            failureRedirect: '/',
+            failureFlash: true,
+        }),
         (req, res, next) => {
+
             const xmlResponse = req.body.SAMLResponse;
             const parser = new Saml2js(xmlResponse);
             req.samlUserObject = parser.toObject();
