@@ -21,7 +21,7 @@ const Profiles = {
     ANALYST: 'PERFIL_Analista',
     STUDENT: 'PERFIL_Aluno',
     // Novos perfis
-    ELEGIBILITY_MANAGER: 'Profiles.ELEGIBILITY_MANAGER', // Antigo "Perfil_Admin"
+    ELEGIBILITY_MANAGER: 'PERFIL_Gestor_Elegibilidade', // Antigo "Perfil_Admin"
     SUPER_ADMIN: 'PERFIL_Super_Admin',
     USER_MANAGER: 'PERFIL_Gestor_Usuário',
     ENGAGEMENT_MANAGER: 'PERFIL_Gestor_Engajamento',

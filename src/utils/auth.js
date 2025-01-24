@@ -310,6 +310,10 @@ function returnNumberOfProfile(profile) {
         case 'PERFIL_Admin':
             number = 3;
             break;
+            // Apagar depois o perfil admin
+        case 'PERFIL_Gestor_Elegibilidade':
+            number = 3;
+            break;
         case 'PERFIL_Analista':
             number = 4;
             break;
@@ -324,6 +328,12 @@ function returnNumberOfProfile(profile) {
             break;
         case 'PERFIL_Super_Admin':
             number = 8;
+            break;
+        case 'PERFIL_Gestor_Usuário':
+            number = 9;
+            break;
+        case 'PERFIL_Gestor_Engajamento':
+            number = 10;
             break;
         default:
             number = 0;
