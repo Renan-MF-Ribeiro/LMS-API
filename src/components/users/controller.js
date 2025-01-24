@@ -707,7 +707,7 @@ module.exports = {
                                 ...(tokenIdpProfiles ?? []),
                                 ...(
                                     user.groupsAD?.filter(
-                                        group => tokenIdpProfiles?.length
+                                        group => tokenIdpProfiles
                                             ? group === 'PERFIL_Aluno' || !group.startsWith('PERFIL')
                                             : true
                                     ) ?? []
