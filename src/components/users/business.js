@@ -24,12 +24,33 @@ const { Trail } = require('../trails/model');
 const config = require('../../../config.json');
 const { Tracking } = require('../tracking/model');
 const { ConfigLogin } = require('../theme/login-config/model');
+const ApiError = require('../../errors/ApiError');
 const emailTemplate = config.messenger.emailTemplate;
 require('dotenv').config();
 
 module.exports = {
-    async getLoginConfig () {
-        return await ConfigLogin.findOne().sort({ createdAt: -1 });
+    async getLoginConfig(selectFields) {
+        const lastConfigurationQuery = ConfigLogin.findOne().sort({ createdAt: -1 });
+
+        if (selectFields) {
+            lastConfigurationQuery.select(selectFields);
+        }
+
+        const lastConfiguration = await lastConfigurationQuery.lean();
+
+        if (!lastConfiguration) {
+            throw new ApiError('Configuração de login não encontrada', 500);
+        }
+
+        return {
+            ...lastConfiguration,
+            ssoForm: Array.isArray(lastConfiguration.ssoForm) ? lastConfiguration.ssoForm : [lastConfiguration.ssoForm],
+        }
+    },
+
+    async getSsoFormByStrategyName(strategyName = 'saml') {
+        const loginConfig = await module.exports.getLoginConfig();
+        return loginConfig.ssoForm?.find((form) => (form.strategyName ?? 'saml') === strategyName) ?? null;
     },
 
     async findUsers (req, { onboarding }) {
