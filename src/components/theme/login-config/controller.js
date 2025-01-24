@@ -1,22 +1,58 @@
+const { Types } = require('mongoose')
+
 const { ConfigLogin } = require('./model')
 const _messages = require('../../../utils/messages')
+const { getLoginConfig } = require('../../users/business')
+const { IdpIntegrationModel } = require('../../idp-integration/models')
+const { createStrategiesFromLoginConfigs, removeStrategies } = require('../../../utils/passport')
 
 module.exports = {
     async createOrUpdate (req, res) {
         try {
             const body = req.body
 
-            let config = await ConfigLogin.findOne({}).sort({ createdAt: -1 })
+            const ssoForm = body.ssoForm?.map(info => {
+                return {
+                    ...info,
+                    _id: Types.ObjectId.isValid(info._id) ? info._id : new Types.ObjectId()
+                }
+            }) ?? [];
+
+            const namesFromTo = ssoForm
+                .map(info => ({ from: info.strategyNameFrom, to: info.strategyName }))
+                .filter(info => info.from && info.to && info.from !== info.to);
+
+            body.ssoForm = ssoForm;
+
+            let config = await getLoginConfig()
+
+            const removedStrategies = config.ssoForm?.filter(
+                info => info.strategyName && !ssoForm.some(newInfo => newInfo.strategyName === info.strategyName)
+            ) ?? [];
+            const disabledStrategyNames = body.ssoForm?.filter(info => info.strategyName && !info.enabled) ?? [];
+
+            const strategiesToDisable = [...removedStrategies, ...disabledStrategyNames].map(info => info.strategyName);
 
             if (config) {
-
                 config = await ConfigLogin.findByIdAndUpdate(config._id, body)
             } else {
                 config = await ConfigLogin.create(body)
             }
 
-            return _messages.success(res, req, config)
+            for await (const { from, to } of namesFromTo) {
+                await IdpIntegrationModel.updateMany(
+                    { strategyName: from },
+                    { strategyName: to }
+                )
+            }
 
+            if (strategiesToDisable?.length) {
+                removeStrategies(strategiesToDisable)
+            }
+
+            await createStrategiesFromLoginConfigs();
+
+            return _messages.success(res, req, config)
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -41,7 +77,6 @@ module.exports = {
                 _id: 0,
                 __v: 0,
                 "formLogin._id": 0,
-                "ssoForm._id": 0,
             };
 
             if (!isConfigurationEnabled) {
@@ -56,11 +91,7 @@ module.exports = {
                 };
             }
 
-            const config = await ConfigLogin.findOne({})
-                .sort({ createdAt: -1 })
-                .select(fieldsToSelect)
-                .exec();
-
+            const config = await getLoginConfig(fieldsToSelect);
 
             if (config) {
                 return _messages.success(res, req, config)
