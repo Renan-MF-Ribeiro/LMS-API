@@ -978,10 +978,12 @@ module.exports = {
                 user
             );
 
+            const userEmail = maskEmail(user.email);
+
             return _messages.success(
                 res,
                 req,
-                { status: 'Sucesso' },
+                { status: 'Sucesso', userEmail },
                 'Email para recupera senha disparado',
                 'users',
                 'recoveryPassword',

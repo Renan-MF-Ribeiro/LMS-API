@@ -34,7 +34,7 @@ module.exports = express
         '/recovery-password',
         rateLimit({
             windowMs: 1 * 60 * 1000, // 1 minute
-            limit: 1,
+            limit: 2,
             standardHeaders: true,
             legacyHeaders: false,
         }),
