@@ -42,9 +42,17 @@ module.exports = {
             throw new ApiError('Configuração de login não encontrada', 500);
         }
 
+        const ssoForm = Array.isArray(lastConfiguration.ssoForm) ? lastConfiguration.ssoForm : [lastConfiguration.ssoForm];
+
         return {
             ...lastConfiguration,
-            ssoForm: Array.isArray(lastConfiguration.ssoForm) ? lastConfiguration.ssoForm : [lastConfiguration.ssoForm],
+            ssoForm: ssoForm.map(form => ({
+                ...form,
+                strategyName: form.strategyName ?? 'saml',
+                buttonBackground: '#38b9c2',
+                buttonTextColor: '#FFF',
+                buttonLabel: 'Entrar com SSO',
+            })),
         }
     },
 
