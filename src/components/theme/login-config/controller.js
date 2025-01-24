@@ -26,7 +26,12 @@ module.exports = {
 
             let config = await getLoginConfig()
 
-            const removedStrategies = config.ssoForm?.filter(info => info.strategyName && !ssoForm.some(newInfo => newInfo.strategyName === info.strategyName))
+            const removedStrategies = config.ssoForm?.filter(
+                info => info.strategyName && !ssoForm.some(newInfo => newInfo.strategyName === info.strategyName)
+            ) ?? [];
+            const disabledStrategyNames = body.ssoForm?.filter(info => info.strategyName && !info.enabled) ?? [];
+
+            const strategiesToDisable = [...removedStrategies, ...disabledStrategyNames].map(info => info.strategyName);
 
             if (config) {
                 config = await ConfigLogin.findByIdAndUpdate(config._id, body)
@@ -41,8 +46,8 @@ module.exports = {
                 )
             }
 
-            if (removedStrategies?.length) {
-                removeStrategies(removedStrategies.map(info => info.strategyName))
+            if (strategiesToDisable?.length) {
+                removeStrategies(strategiesToDisable)
             }
 
             await createStrategiesFromLoginConfigs();
