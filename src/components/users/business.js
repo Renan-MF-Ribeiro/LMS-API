@@ -49,9 +49,9 @@ module.exports = {
             ssoForm: ssoForm.map(form => ({
                 ...form,
                 strategyName: form.strategyName ?? 'saml',
-                buttonBackground: '#38b9c2',
-                buttonTextColor: '#FFF',
-                buttonLabel: 'Entrar com SSO',
+                buttonBackground: form.buttonBackground ?? '#38b9c2',
+                buttonTextColor: form.buttonTextColor ?? '#FFF',
+                buttonLabel: form.buttonLabel ?? 'Entrar com SSO',
             })),
         }
     },
