@@ -16,6 +16,11 @@ async function fetchIdpProfilesFromRequestWithSamlObject(req) {
         active: true,
     });
 
+    if (!idpIntegrations?.length) {
+        log('fetchIdpProfilesFromRequestWithSamlObject no active idpIntegrations found');
+        return { strategyName, idpProfiles: null, matchedKeysAndValues: [] }
+    };
+
     const matchedKeysAndValues = [];
 
     for (const idpIntegration of idpIntegrations) {
@@ -48,11 +53,6 @@ async function fetchIdpProfilesFromRequestWithSamlObject(req) {
                 profiles.forEach(profile => idpProfiles.add(profile));
             });
         }
-    }
-
-    if (!idpProfiles.size) {
-        log('fetchIdpProfilesFromRequestWithSamlObject no idpProfiles found');
-        return { strategyName, idpProfiles: null, matchedKeysAndValues };
     }
 
     const idpProfilesArray = Array.from(idpProfiles);

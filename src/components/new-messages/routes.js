@@ -26,6 +26,9 @@ router
         '/automation/toggle-active/:messageAutomationId',
         isElegibilityManager,
         _automationController.toggleActive)
-        .post('/send-waitinglist', _controller.sendWaitingListMessage);
-
+    .post('/send-waitinglist', _controller.sendWaitingListMessage)
+    .get('/listsendinglists', isAdmin, _controller.getListsSendingLists)
+    .get('/listmessage', _controller.getListMessage)
+    .get('/messages/v2/:id', _controller.getById)
+    .post('/updateviewed', _controller.updateViewed)
 module.exports = router
