@@ -200,16 +200,19 @@ module.exports = {
             if (segmentation.value?.rule) {
                 req.segmentation = segmentation.value;
 
-                const user = await getUserByToken(req);
+                try {
+                    const user = await getUserByToken(req);
 
-                const issuer = req.segmentation.rule.issuer;
+                    const issuer = req.segmentation.rule.issuer;
 
-                if (user?.[issuer]) {
-                    req.segmentation.owner = user[issuer];
-                }
+                    if (user?.[issuer]) {
+                        req.segmentation.owner = user[issuer];
+                    }
 
-                const isException = isSegmentationException(user, req.segmentation);
-                req.segmentation.isException = isException;
+                    const isException = isSegmentationException(user, req.segmentation);
+                    req.segmentation.isException = isException;
+                    //Fix: improve this logic
+                } catch {}
             }
         }
 
