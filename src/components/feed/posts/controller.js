@@ -13,6 +13,9 @@ const config = require('../../../../config.json');
 const FormData = require('form-data');
 const { getSegmentation, isSegmentationException } = require('../../config/business');
 
+/**
+ * touch dots
+ */
 module.exports = {
     async create(req, res) {
         const userCustomElegeFields = await getSegFieldsFromUser(req);
