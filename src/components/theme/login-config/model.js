@@ -29,6 +29,8 @@ const ssoFormSchema = new Schema({
     strategyName: { type: String, default: 'saml', required: false },
 });
 
+ssoFormSchema.index({ strategyName: 1 }, { unique: true });
+
 // Define the schema for the formLogin form
 const formLoginSchema = new Schema({
     mask: String,
