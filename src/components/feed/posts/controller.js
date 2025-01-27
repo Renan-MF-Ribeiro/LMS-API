@@ -12,7 +12,6 @@ const mime = require('mime-types');
 const config = require('../../../../config.json');
 const FormData = require('form-data');
 const { getSegmentation, isSegmentationException } = require('../../config/business');
-const { randomUUID } = require('crypto');
 
 module.exports = {
     async create(req, res) {
@@ -40,15 +39,10 @@ module.exports = {
                 const uploadContent = `posts/${data.post._id}/content`;
 
                 const formData = new FormData();
-
-                Object.keys(req?.files).forEach((key) => {
-                    const file = req?.files[key];
-                    const filename = `${file.name}-${randomUUID()}.${mime.extension(file.type)}`;
-                    formData.append(key, fs.createReadStream(file.path), {
-                        filename: filename,
-                        contentType: file.type,
-                    });
-                });
+                const key = Object.keys(req.files)[0];
+                const file = req.files[key];
+                const filename = `${file.name}.${mime.extension(file.type)}`;
+                formData.append('content', fs.createReadStream(file.path), filename);
 
                 socialApi.patch(uploadContent, formData, {
                     headers: {
