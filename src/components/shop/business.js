@@ -11,7 +11,7 @@ const { Theme } = require('../theme/palette/model');
 const { sendMessageToKafka } = require('../new-messages/business');
 
 function getDynamicRequestProps(req, ownerIsRequired = false) {
-    const ownerFieldValue = ownerIsRequired || !isSegmentationException(req.user, req.segmentation)
+    const ownerFieldValue = ownerIsRequired || (req.segmentation && !isSegmentationException(req.user, req.segmentation))
         ? (req.user?.[req.segmentation?.rule?.issuer] ?? null)
         : undefined;
 
@@ -163,8 +163,8 @@ async function sendOrderConfirmation(user, order) {
 
     await sendMessageToKafka({
         title: `Pedido realizado com sucesso!`,
-        textHtml: message,
-        text: message,
+        texthtml: message,
+        text: `Pedido ${orderCode} realizado com sucesso!`,
         // Default
         thumbnail: configJson.messenger.emailTemplate.thumbnail,
         category: 'notify',

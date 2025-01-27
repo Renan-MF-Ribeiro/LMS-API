@@ -687,7 +687,9 @@ const ItemController = {
 
                 payload.author = user._id;
 
-                let item = await Item.findById({ _id: payload._id });
+                const foundItem = await Item.findById(payload._id);
+                let item = foundItem;
+
                 if (item.kind == 'SoonItem' && item.kind != payload.kind) {
                     await Item.findOneAndUpdate(
                         { _id: item._id },
@@ -710,7 +712,18 @@ const ItemController = {
                     item = await ItemModel.findByIdAndUpdate(payload._id, payload, { new: true });
                 }
 
-                _messages.success(res, req, item);
+                _messages.success(
+                    res,
+                    req,
+                    item,
+                    'Atualização de dados',
+                    'items',
+                    '/update',
+                    item,
+                    foundItem,
+                    true,
+                    'UPDATE'                    
+                );
             } catch (error) {
                 console.log(error)
                 if (error instanceof ApiError) {

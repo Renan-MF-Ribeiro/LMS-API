@@ -24,12 +24,38 @@ const { Trail } = require('../trails/model');
 const config = require('../../../config.json');
 const { Tracking } = require('../tracking/model');
 const { ConfigLogin } = require('../theme/login-config/model');
+const ApiError = require('../../errors/ApiError');
 const emailTemplate = config.messenger.emailTemplate;
 require('dotenv').config();
 
 module.exports = {
-    async getLoginConfig () {
-        return await ConfigLogin.findOne().sort({ createdAt: -1 });
+    async getLoginConfig(selectFields) {
+        const lastConfigurationQuery = ConfigLogin.findOne().sort({ createdAt: -1 });
+
+        if (selectFields) {
+            lastConfigurationQuery.select(selectFields);
+        }
+
+        const lastConfiguration = await lastConfigurationQuery.lean();
+
+        if (!lastConfiguration) {
+            throw new ApiError('Configuração de login não encontrada', 500);
+        }
+
+        const ssoForm = Array.isArray(lastConfiguration.ssoForm) ? lastConfiguration.ssoForm : [lastConfiguration.ssoForm];
+
+        return {
+            ...lastConfiguration,
+            ssoForm: ssoForm.map(form => ({
+                ...form,
+                strategyName: form.strategyName ?? 'saml',
+            })),
+        }
+    },
+
+    async getSsoFormByStrategyName(strategyName = 'saml') {
+        const loginConfig = await module.exports.getLoginConfig();
+        return loginConfig.ssoForm?.find((form) => (form.strategyName ?? 'saml') === strategyName) ?? null;
     },
 
     async findUsers (req, { onboarding }) {
@@ -346,9 +372,14 @@ module.exports = {
             { description: 'DEPARTAMENTO', value: 'department' },
             { description: 'VP', value: 'vp' },
             { description: 'NEGOCIO', value: 'business' },
+            { description: 'UNIVERSIDADE', value: 'university' },
+            { description: 'NIVEL_ESCOLARIDADE', value: 'specialization' },
             { description: 'OPCIONAL_ELEGIBILIDADE1', value: 'optionalEligibility1' },
             { description: 'OPCIONAL_ELEGIBILIDADE2', value: 'optionalEligibility2' },
             { description: 'OPCIONAL_ELEGIBILIDADE3', value: 'optionalEligibility3' },
+            { description: 'OPCIONAL_ELEGIBILIDADE4', value: 'optionalEligibility4' },
+            { description: 'OPCIONAL_ELEGIBILIDADE5', value: 'optionalEligibility5' },
+            { description: 'OPCIONAL_ELEGIBILIDADE6', value: 'optionalEligibility6' },
         ];
         const dashboardFilters = [];
         const dashConfig = await DashConfig.find();
@@ -437,7 +468,7 @@ module.exports = {
             }
         }
 
-        const optionals = ['optionalEligibility1', 'optionalEligibility2', 'optionalEligibility3'];
+        const optionals = ['optionalEligibility1', 'optionalEligibility2', 'optionalEligibility3', 'optionalEligibility4', 'optionalEligibility5', 'optionalEligibility6'];
 
         optionals.forEach(
             (optional) =>

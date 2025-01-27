@@ -40,7 +40,7 @@ const ApiError = require('../../errors/ApiError');
 
 const { ObjectId } = require('mongoose').Types;
 
-function parseSectionBodyTrails(req) {
+function parseSectionBodyTrails (req) {
     return req.body.trails?.map(trail => {
         const trailId = getSectionTrailId(trail);
 
@@ -64,9 +64,11 @@ module.exports = {
         try {
             const searchBy = req.query.searchBy;
 
-            const query = { $and: [{
-                deleted: { $eq: 0 }
-            }] }
+            const query = {
+                $and: [{
+                    deleted: { $eq: 0 }
+                }]
+            }
 
             if (req?.segmentation) {
                 handleSegmentationOnQuery(req, 'owner', query)
@@ -108,9 +110,11 @@ module.exports = {
                 title: { $eq: req.body.title },
             });
             if (verify.length === 0) {
-                const query = { $and: [{
-                    deleted: 0
-                }] }
+                const query = {
+                    $and: [{
+                        deleted: 0
+                    }]
+                }
 
                 if (req?.segmentation) {
                     handleSegmentationOnQuery(req, 'owner', query)
@@ -456,11 +460,13 @@ module.exports = {
         const tags = await getTagsElegiblesByToken(req);
         const classGroups = await getGroupCodesByToken(req, tags);
 
-        const sectionQuery = { $and: [{
-            _id: { 
-                $eq: sectionId
-            }
-        }] }
+        const sectionQuery = {
+            $and: [{
+                _id: {
+                    $eq: sectionId
+                }
+            }]
+        }
 
         if (req?.segmentation) {
             handleSegmentationOnQuery(req, 'owner', sectionQuery)
@@ -516,7 +522,7 @@ module.exports = {
                 },
             ]
         } else {
-            query._id = { 
+            query._id = {
                 $in: section.trails
                     .map(trail => getSectionTrailId(trail))
                     .filter(Boolean)
@@ -563,7 +569,7 @@ module.exports = {
             : (section.trails?.map(sectionTrail => {
                 if (isSectionTrailInfo(sectionTrail)) {
                     const trail = trailsDb.find(trail => String(trail._id) === String(getSectionTrailId(sectionTrail)));
-                    
+
                     if (!trail) return sectionTrail;
 
                     return processTrailInfo(trail);
@@ -838,7 +844,7 @@ module.exports = {
         }
     },
 
-    async changeStatus(req, res) {
+    async changeStatus (req, res) {
         const { id, status } = req.params;
 
         const section = await Section.findById(id);

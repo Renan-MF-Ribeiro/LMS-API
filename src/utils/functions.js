@@ -668,30 +668,6 @@ module.exports = {
         return mostOccurringElements.map(([element]) => element);
     },
 
-    async strategyConfig() {
-        const config = await ConfigLogin.findOne({})
-            .sort({ createdAt: -1 })
-            .select({
-                createdAt: 0,
-                updatedAt: 0,
-                _id: 0,
-                __v: 0,
-                'formLogin._id': 0,
-                'ssoForm._id': 0,
-            })
-            .exec();
-
-        return (strategy = new passportSaml.Strategy(
-            {
-                entryPoint: config.sso.entrypoint,
-                issuer: config.sso.issuer,
-                callbackUrl: config.sso.callback_url,
-                cert: config.sso.certifier,
-            },
-            (profile, done) => done(null, profile)
-        ));
-    },
-
     deepGet(obj, query, defaultVal) {
         query = Array.isArray(query)
             ? query
