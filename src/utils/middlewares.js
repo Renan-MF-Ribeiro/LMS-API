@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const cheerio = require('cheerio');
 const _messages = require('../utils/messages');
+const _auth = require('./auth');
 const { validateToken, validateMonitoringToken } = require('./auth');
 const config = require('../../config.json');
 const {
@@ -10,7 +11,7 @@ const {
     getAppCurrentFeatures,
 } = require('./features');
 const { getSegmentation, isSegmentationException } = require('../components/config/business');
-const { getUserByToken, validateProfile } = require('./functions');
+const { getUserByToken } = require('./functions');
 
 const Profiles = {
     ADMIN: 'PERFIL_Admin',
@@ -26,6 +27,26 @@ const Profiles = {
     USER_MANAGER: 'PERFIL_Gestor_Usuario',
     ENGAGEMENT_MANAGER: 'PERFIL_Gestor_Engajamento',
 };
+
+const validateProfile= async (req, res, next, expectedProfiles) => {
+    const profiles = await _auth.returnProfileByToken(req.headers?.authorization);
+    const doesUserHasProfile = profiles.some(
+        (profile) =>
+            expectedProfiles.includes(profile)
+    );
+    if (!doesUserHasProfile) {
+        return _messages.forbidden(
+            res,
+            req,
+            'Sem permissão de acesso',
+            'Você não tem permissão para prosseguir com a ação!',
+            '',
+            req.originalUrl
+        );
+    }
+    next();
+}
+
 module.exports = {
     sendCsrf(req, res, next) {
         res.cookie('XSRF-TOKEN', req.csrfToken());

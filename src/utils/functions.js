@@ -12,6 +12,7 @@ const { Tracking } = require('../components/tracking/model');
 const { Trail } = require('../components/trails/model');
 const { Item } = require('../components/items/model');
 
+
 module.exports = {
     getDateToday() {
         return momentz().format('YYYY-MM-DD HH:mm:ss');
@@ -225,25 +226,6 @@ module.exports = {
                 reject(error);
             }
         });
-    },
-    validateProfile: async (req, res, next, expectedProfiles) => {
-        const profiles = await _auth.returnProfileByToken(req.headers?.authorization);
-
-        const doesUserHasProfile = profiles.some(
-            (profile) =>
-                expectedProfiles.includes(profile)
-        );
-        if (!doesUserHasProfile) {
-            return _messages.forbidden(
-                res,
-                req,
-                'Sem permissão de acesso',
-                'Você não tem permissão para prosseguir com a ação!',
-                '',
-                req.originalUrl
-            );
-        }
-        next();
     },
 
     getGroupByToken(req) {
