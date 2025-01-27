@@ -12,6 +12,7 @@ const mime = require('mime-types');
 const config = require('../../../../config.json');
 const FormData = require('form-data');
 const { getSegmentation, isSegmentationException } = require('../../config/business');
+const { randomUUID } = require('crypto');
 
 /**
  * touch dots
@@ -42,10 +43,14 @@ module.exports = {
                 const uploadContent = `posts/${data.post._id}/content`;
 
                 const formData = new FormData();
-                const key = Object.keys(req.files)[0];
-                const file = req.files[key];
-                const filename = `${file.name}.${mime.extension(file.type)}`;
-                formData.append('content', fs.createReadStream(file.path), filename);
+
+                 Object.keys(req?.files).forEach((key, i) => {
+                     const file = req?.files[key];
+                     formData.append(`content-${i}`, fs.createReadStream(file.path), {
+                         filename: file.name.replace(/ /g, '-'),
+                         contentType: file.type,
+                     });
+                 });
 
                 const result = await socialApi.patch(uploadContent, formData, {
                     headers: {
