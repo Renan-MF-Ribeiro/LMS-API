@@ -45,7 +45,7 @@ module.exports = express
         formidable(),
         _controller.importOnboarding
     ) //added
-    .get('/', validateTokenRoute, isAdminOrInstructor, _controller.returnUsers)
+    .get('/', validateTokenRoute, _controller.returnUsers)
     .get(
         '/onboarding',
         validateTokenRoute,
