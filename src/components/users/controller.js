@@ -1929,7 +1929,7 @@ module.exports = {
                 if (acc !== null && acc !== undefined && acc !== '') return acc;
 
                 return deepGet(req.samlUserObject, key, null);
-            }, null);
+            }, null) ?? req.user?.nameID;
 
             await Log.create({
                 type: 'SSO_CALLBACK',
@@ -1963,7 +1963,7 @@ module.exports = {
                 strategyName,
                 idpProfiles,
             }, process.env.PROJECT_SECRET_KEY);
-
+            console.log('token', token);
             res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
         } catch (error) {
             console.log(error);
