@@ -50,12 +50,16 @@ module.exports = {
                     });
                 });
 
-                socialApi.patch(uploadContent, formData, {
+                const result = await socialApi.patch(uploadContent, formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
                         ...formData.getHeaders(),
                     },
                 });
+
+                 if (result?.data && data?.post) {
+                     data.post.content = result.data;
+                 }
             }
 
             if (body.notifyUsers === true && (body?.elegibilities || body?.elegibilitiesAnd)) {
