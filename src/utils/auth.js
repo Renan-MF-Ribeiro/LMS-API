@@ -165,7 +165,8 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             try {
                 const result = [];
-                const data = jwt.decode(token, PROJECT_SECRET_KEY);
+                let tk = token.split(' ')[1] || token;
+                const data = jwt.decode(tk, PROJECT_SECRET_KEY);
                 const profiles = data.data.profiles;
 
                 for (const p in profiles) {
@@ -188,8 +189,9 @@ module.exports = {
     validateToken: (req) => {
         return new Promise((resolve) => {
             try {
-                const token = req.headers.authorization;
-                jwt.verify(token, PROJECT_SECRET_KEY, function (err) {
+                const token = req.headers?.authorization;
+                let tk = token?.split(' ')[1] || token
+                jwt.verify(tk, PROJECT_SECRET_KEY, function (err) {
                     if (err) {
                         resolve(false);
                     } else {
@@ -308,6 +310,10 @@ function returnNumberOfProfile(profile) {
         case 'PERFIL_Admin':
             number = 3;
             break;
+            // Apagar depois o perfil admin
+        case 'PERFIL_Gestor_Elegibilidade':
+            number = 3;
+            break;
         case 'PERFIL_Analista':
             number = 4;
             break;
@@ -322,6 +328,12 @@ function returnNumberOfProfile(profile) {
             break;
         case 'PERFIL_Super_Admin':
             number = 8;
+            break;
+        case 'PERFIL_Gestor_Usuário':
+            number = 9;
+            break;
+        case 'PERFIL_Gestor_Engajamento':
+            number = 10;
             break;
         default:
             number = 0;

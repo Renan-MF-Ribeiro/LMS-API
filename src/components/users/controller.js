@@ -1807,8 +1807,24 @@ module.exports = {
                 acceptTermsCollaboration,
                 profilePhoto,
                 networkLogin,
+                profiles,
                 ...user
             } = await User.findById(body._id).lean();
+
+            const isEmulatingSuperAdmin = profiles.some(
+                (profile) => profile === 'SUPER_ADMIN'
+            );
+            
+            if (isEmulatingSuperAdmin) {
+                return _messages.forbidden(
+                    res,
+                    req,
+                    'Erro interno no servidor',
+                    'Este usuário não pode ser emulado',
+                    'users',
+                    'emulation'
+                );
+            }
 
             const namesProfiles = [];
             const namesGroups = [];

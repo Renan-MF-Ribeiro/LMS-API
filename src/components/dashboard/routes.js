@@ -1,12 +1,12 @@
 const express = require('express')
 const router = express.Router()
 const _controller = require('./controller')
-const { isAdmin } = require('../../utils/middlewares')
+const { isUserManager } = require('../../utils/middlewares')
 
 router
-    .get('/list', isAdmin, _controller.list)
-    .post('/create', isAdmin, _controller.create)
-    .put('/update', isAdmin, _controller.update)
-    .post('/delete', isAdmin, _controller.delete)
+    .get('/list', isUserManager, _controller.list)
+    .post('/create', isUserManager, _controller.create)
+    .put('/update', isUserManager, _controller.update)
+    .post('/delete', isUserManager, _controller.delete)
 
 module.exports = router
