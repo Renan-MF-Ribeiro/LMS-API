@@ -1,7 +1,9 @@
 const passport = require('passport');
 const passportSaml = require('passport-saml');
-const { ConfigLogin } = require('../components/theme/login-config/model');
-const fs = require('fs')
+
+const { log } = require('./logger');
+
+const { getLoginConfig } = require('../components/users/business');
 
 passport.serializeUser((user, done) => {
     done(null, user);
@@ -11,42 +13,65 @@ passport.deserializeUser((user, done) => {
     done(null, user);
 });
 
-const configurePassport = async () => {
-    try {
-        let strategy
-        const config = await ConfigLogin.findOne({})
-            .sort({ createdAt: -1 })
-        if (config) {
+async function createSamlPassportStrategy(config) {
+    log('createSamlPassportStrategy config', {
+        ...config,
+        certifier: config.certifier?.slice(-5) ?? null,
+    });
+    const strategyName = config.strategyName || 'saml';
 
+    const strategy = new passportSaml.Strategy(
+        {
+            name: strategyName,
+            forceAuthn: config.forceAuth || false,
+            entryPoint: config.entrypoint,
+            issuer: config.issuer,
+            callbackUrl: `${config.callback_url}?strategy=${strategyName}`,
+            cert: config.certifier,
+        },
+        (profile, done) => done(null, profile),
+    );
 
-            strategy = new passportSaml.Strategy(
-                {
-                    entryPoint: config.ssoForm.entrypoint,
-                    issuer: config.ssoForm.issuer,
-                    callbackUrl: config.ssoForm.callback_url,
-                    cert: config.ssoForm.certifier,
-                },
-                (profile, done) => done(null, profile),
-            );
-        } else {
-            strategy = new passportSaml.Strategy(
-                {
-                    forceAuthn: true,
-                    entryPoint: process.env.SSO_ENTRYPOINT,
-                    issuer: process.env.SSO_ISSUER,
-                    callbackUrl: process.env.SSO_CALLBACK_URL,
-                    cert: fs.readFileSync('cert/' + process.env.SSO_CERTIFIER + '.cer', 'utf-8'),
-                },
-                (profile, done) => done(null, profile),
-            )
+    passport.use(strategy);
+}
+
+function getRequestStrategyName(req) {
+    return req.query?.strategy ?? 'saml';
+}
+
+function initializePassport(app) {
+    app.use(passport.initialize());
+    app.use(passport.session());
+}
+
+async function authenticatePassportSaml(req, res, next) {
+    const strategyName = getRequestStrategyName(req);
+
+    log('authenticatePassportSaml strategyName', strategyName);
+
+    passport.authenticate(strategyName, {
+        failureRedirect: '/',
+        failureFlash: true,
+    })(req, res, next);
+}
+
+async function createStrategiesFromLoginConfigs() {
+    const loginConfig = await getLoginConfig();
+
+    const configs = loginConfig.ssoForm ?? [];
+
+    for await (const config of configs) {
+        if (config?.enabled) {
+            await createSamlPassportStrategy(config);
         }
-
-        passport.use(strategy);
-    } catch (error) {
-        console.error('Error configuring passport:', error);
     }
-};
+}
 
-configurePassport();
+function removeStrategies(strategies = []) {
+    log('removeStrategies strategies', strategies);
+    strategies.forEach(strategy => passport.unuse(strategy));
+}
 
-module.exports = passport;
+createStrategiesFromLoginConfigs();
+
+module.exports = { initializePassport, authenticatePassportSaml, getRequestStrategyName, createStrategiesFromLoginConfigs, removeStrategies };
