@@ -23,7 +23,7 @@ const Profiles = {
     // Novos perfis
     ELEGIBILITY_MANAGER: 'PERFIL_Gestor_Elegibilidade', // Antigo "Perfil_Admin"
     SUPER_ADMIN: 'PERFIL_Super_Admin',
-    USER_MANAGER: 'PERFIL_Gestor_Usuário',
+    USER_MANAGER: 'PERFIL_Gestor_Usuario',
     ENGAGEMENT_MANAGER: 'PERFIL_Gestor_Engajamento',
 };
 module.exports = {
@@ -78,7 +78,11 @@ module.exports = {
         validateProfile(req, res, next, [Profiles.COLLABORATOR]);
     },
 
-    isAdmin: async (req, res, next) => {
+    isElegibilityManager: async (req, res, next) => {
+        validateProfile(req, res, next, [Profiles.ADMIN, Profiles.ELEGIBILITY_MANAGER]);
+    },
+    
+    isAdmin: async (req, res, next) => { // Retrocompatibilidade
         validateProfile(req, res, next, [Profiles.ADMIN, Profiles.ELEGIBILITY_MANAGER]);
     },
 
@@ -134,8 +138,12 @@ module.exports = {
         validateProfile(req, res, next, [Profiles.ENGAGEMENT_MANAGER]);
     },
 
-    isUserManagerOrElegibilitiesManager: async (req, res, next) => {
+    isUserManagerOrSuperAdminOrElegibilityManager: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.USER_MANAGER, Profiles.ELEGIBILITY_MANAGER]);
+    },
+
+    isUserManagerOrSuperAdmin: async (req, res, next) => {
+        validateProfile(req, res, next, [Profiles.USER_MANAGER, Profiles.SUPER_ADMIN]);
     },
 
     validateMonitoringToken: async (req, res, next) => {

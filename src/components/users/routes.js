@@ -8,7 +8,8 @@ const {
     isAdminOrInstructor,
     validateTokenRoute,
     isUserManager,
-    isUserManagerOrElegibilitiesManager,
+    isUserManagerOrSuperAdmin,
+    isUserManagerOrSuperAdminOrElegibilityManager,
 } = require('../../utils/middlewares');
 
 const Saml2js = require('saml2js');
@@ -35,12 +36,12 @@ module.exports = express
     .get('/auth/isAuthenticatedNginx/:token', _controller.isAuthenticatedNginx)
     .get('/me', _controller.selfData)
     .post('/gamification/names', validateTokenRoute, _controller.handleNames)
-    .post('/users', validateTokenRoute, isUserManager, _controller.create)
-    .post('/import', validateTokenRoute, isUserManager, formidable(), _controller.import) //added
+    .post('/users', validateTokenRoute, isUserManagerOrSuperAdmin, _controller.create)
+    .post('/import', validateTokenRoute, isUserManagerOrSuperAdmin, formidable(), _controller.import) //added
     .post(
         '/import/onboarding',
         validateTokenRoute,
-        isUserManager,
+        isUserManagerOrSuperAdmin,
         formidable(),
         _controller.importOnboarding
     ) //added
@@ -66,7 +67,7 @@ module.exports = express
         multiparty(),
         _controller.importUsersDisabled
     )
-    .post('/emulation', validateTokenRoute, isUserManagerOrElegibilitiesManager, _controller.emulation) //added
+    .post('/emulation', validateTokenRoute, isUserManagerOrSuperAdminOrElegibilityManager, _controller.emulation)
     .post(
         '/import-update-status',
         validateTokenRoute,
@@ -104,13 +105,13 @@ module.exports = express
         _controller.toggleCollaboratorModeration
     )
     .post('/password/reset', validateTokenRoute, isUserManager, _controller.resetUserPassword)
-    .put('/update', validateTokenRoute, _controller.updateUserById)
+    .put('/update', validateTokenRoute, isUserManager, _controller.updateUserById)
     .get('/conteudistas', validateTokenRoute, _controller.getAllConteudistas)
     .get('/details', validateTokenRoute, _controller.returnUserById)
     .get('/feedbackelegibility', validateTokenRoute, _controller.feedbackElegible)
     .post('/remove-permission', validateTokenRoute, _controller.deleteGroups)
-    .post('/add-permission', validateTokenRoute, _controller.addGroups)
-    .post('/remove-class-tag', validateTokenRoute, _controller.deleteClassTag)
+    .post('/add-permission', validateTokenRoute, isUserManagerOrSuperAdminOrElegibilityManager,  _controller.addGroups)
+    .post('/remove-class-tag', validateTokenRoute, isUserManagerOrSuperAdminOrElegibilityManager, _controller.deleteClassTag)
     .post('/add-class-tag', validateTokenRoute, _controller.addClassTag)
     .post('/update-class-tag', validateTokenRoute, _controller.updateClassTag)
     .get('/evaluations/:idEvaluation', validateTokenRoute, _controller.evaluationProgress)

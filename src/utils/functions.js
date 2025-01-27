@@ -107,13 +107,11 @@ module.exports = {
         const limitMonth = limitDate.getMonth() + 1;
         const limitYear = limitDate.getFullYear();
 
-        const startString = `${startYear}-${startMonth >= 10 ? startMonth : '0' + startMonth}-${
-            startDay >= 10 ? startDay : '0' + startDay
-        }T00:00:00.000-03:00`;
+        const startString = `${startYear}-${startMonth >= 10 ? startMonth : '0' + startMonth}-${startDay >= 10 ? startDay : '0' + startDay
+            }T00:00:00.000-03:00`;
 
-        const limitString = `${limitYear}-${limitMonth >= 10 ? limitMonth : '0' + limitMonth}-${
-            limitDay >= 10 ? limitDay : '0' + limitDay
-        }T23:59:59.000-03:00`;
+        const limitString = `${limitYear}-${limitMonth >= 10 ? limitMonth : '0' + limitMonth}-${limitDay >= 10 ? limitDay : '0' + limitDay
+            }T23:59:59.000-03:00`;
 
         return {
             startDate: new Date(startString),
@@ -186,7 +184,7 @@ module.exports = {
                     try {
                         var { data } = _auth.decodeToken(token);
                         user = await User.findOne({ _id: { $eq: data.ref } });
-                    } catch {}
+                    } catch { }
                 }
                 const userLogin = dataUser ? dataUser.networkLogin : null;
                 const userId = dataUser ? dataUser.userId : null;
@@ -218,9 +216,8 @@ module.exports = {
     getUserByToken(req) {
         return new Promise(async (resolve, reject) => {
             try {
-                const token = req.headers?.authorization;
-                let tk = token.split(' ')[1] || token;
-                const { data } = _auth.decodeToken(tk);
+                const token = req.headers.authorization;
+                const { data } = _auth.decodeToken(token.replace('Bearer', '').trim());
                 const user = await User.findOne({ _id: { $eq: data.ref } });
                 resolve(user);
             } catch (error) {
@@ -233,8 +230,7 @@ module.exports = {
 
         const doesUserHasProfile = profiles.some(
             (profile) =>
-                expectedProfiles.includes(profile) ||
-                expectedProfiles.includes('PERFIL_Super_Admin')
+                expectedProfiles.includes(profile)
         );
         if (!doesUserHasProfile) {
             return _messages.forbidden(
@@ -424,17 +420,17 @@ module.exports = {
                     userLogin: { $eq: user.networkLogin },
                     ...(!onlyExpired
                         ? {
-                              $or: [
-                                  { expiredCompletion: { $exists: false } },
-                                  { expiredCompletion: { $eq: null } },
-                              ],
-                          }
+                            $or: [
+                                { expiredCompletion: { $exists: false } },
+                                { expiredCompletion: { $eq: null } },
+                            ],
+                        }
                         : {
-                              $and: [
-                                  { expiredCompletion: { $exists: true } },
-                                  { expiredCompletion: { $ne: null } },
-                              ],
-                          }),
+                            $and: [
+                                { expiredCompletion: { $exists: true } },
+                                { expiredCompletion: { $ne: null } },
+                            ],
+                        }),
                 });
                 for (const t of trails) {
                     const { trail } = module.exports.processTrailTracking(t, allTrackingUser, true);
@@ -693,9 +689,9 @@ module.exports = {
         query = Array.isArray(query)
             ? query
             : query
-                  .replace(/(\[(\d)\])/g, '.$2')
-                  .replace(/^\./, '')
-                  .split('.');
+                .replace(/(\[(\d)\])/g, '.$2')
+                .replace(/^\./, '')
+                .split('.');
         if (!(query[0] in obj)) {
             return defaultVal;
         }

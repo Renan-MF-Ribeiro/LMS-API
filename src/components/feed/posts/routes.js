@@ -1,6 +1,7 @@
 const express = require('express');
 const _controller = require('./controller');
 const formidable = require('express-formidable');
+const { isEngagementManager } = require('../../../utils/middlewares');
 
 module.exports = express
     .Router()
@@ -19,11 +20,11 @@ module.exports = express
     .post('/shares', _controller.share)
 
     // Rotas de admin
-    .get('/admin', _controller.listPostToBeModerated)
-    .get('/:postId', _controller.findPostById)
-    .post('/report/handle/:postId', _controller.handleReportedPost)
-    .put('/moderate/:postId', formidable(), _controller.updatePost)
-    .delete('/:postId', _controller.delete)
+    .get('/admin', isEngagementManager, _controller.listPostToBeModerated)
+    .get('/:postId', isEngagementManager, _controller.findPostById)
+    .post('/report/handle/:postId', isEngagementManager, _controller.handleReportedPost)
+    .put('/moderate/:postId', formidable(), isEngagementManager, _controller.updatePost)
+    .delete('/:postId', isEngagementManager, _controller.delete)
 
     // Deprecated
     .get('/user/:userId', _controller.findUserPosts)

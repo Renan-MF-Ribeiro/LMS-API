@@ -49,7 +49,7 @@ router
     .get('/evaluation-details/:id', _controller.returnEvaluationWithDetails)
     .get('/next-question/:id', isStudent, _controller.nextQuestion)
     .get('/evaluation/:id', isStudent, _controller.returnEvaluation)
-    .get('/:id', isAdmin, _controller.getById)
+    .get('/:id', isAccountant, _controller.getById)
 
     .get('/allQuestions/:idItem/:id', isStudent, _controller.getAllQuestions)
     .get('/questionById/:id', isStudent, _controller.getQuestionById)
