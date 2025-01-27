@@ -14,6 +14,9 @@ const FormData = require('form-data');
 const { getSegmentation, isSegmentationException } = require('../../config/business');
 const { randomUUID } = require('crypto');
 
+/**
+ * touch dots
+ */
 module.exports = {
     async create(req, res) {
         const userCustomElegeFields = await getSegFieldsFromUser(req);
@@ -41,14 +44,13 @@ module.exports = {
 
                 const formData = new FormData();
 
-                Object.keys(req?.files).forEach((key) => {
-                    const file = req?.files[key];
-                    const filename = `${file.name}-${randomUUID()}.${mime.extension(file.type)}`;
-                    formData.append(key, fs.createReadStream(file.path), {
-                        filename: filename,
-                        contentType: file.type,
-                    });
-                });
+                 Object.keys(req?.files).forEach((key, i) => {
+                     const file = req?.files[key];
+                     formData.append(`content-${i}`, fs.createReadStream(file.path), {
+                         filename: file.name.replace(/ /g, '-'),
+                         contentType: file.type,
+                     });
+                 });
 
                 const result = await socialApi.patch(uploadContent, formData, {
                     headers: {
