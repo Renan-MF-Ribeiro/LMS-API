@@ -46,8 +46,11 @@ module.exports = {
 
                  Object.keys(req?.files).forEach((key, i) => {
                      const file = req?.files[key];
-                     formData.append(`content-${i}`, fs.createReadStream(file.path), {
-                         filename: file.name.replace(/ /g, '-'),
+
+                     const filename = `${i}-${file.name.replace(/ /g, '-')}`;
+
+                     formData.append(filename, fs.createReadStream(file.path), {
+                         filename,
                          contentType: file.type,
                      });
                  });
