@@ -3,12 +3,21 @@ const mongoose = require("mongoose");
 const { validateTokenRoute, isAdmin } = require("../../utils/middlewares");
 const { pagination, ordernation } = require("../../utils/functions");
 const { IdpIntegrationModel } = require("./models");
+const { getActiveIdpIntegrations } = require("./business");
 
 const idpIntegrationRouter = express.Router();
 
 idpIntegrationRouter.use(validateTokenRoute)
 
-idpIntegrationRouter.use(isAdmin)
+idpIntegrationRouter.get("/is-active", async (req, res) => {
+    const idpIntegrations = await getActiveIdpIntegrations();
+
+    res.json({
+        active: idpIntegrations?.length > 0
+    });
+});
+
+idpIntegrationRouter.use(isAdmin);
 
 idpIntegrationRouter.get("/", async (req, res) => {
     const { skip = 0, limit = 10 } = pagination(req);
