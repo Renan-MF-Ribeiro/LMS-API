@@ -30,6 +30,7 @@ const Profiles = {
 
 const validateProfile= async (req, res, next, expectedProfiles) => {
     const profiles = await _auth.returnProfileByToken(req.headers?.authorization);
+    //console.log(profiles, expectedProfiles)
     const doesUserHasProfile = profiles.some(
         (profile) =>
             expectedProfiles.includes(profile)
@@ -160,7 +161,7 @@ module.exports = {
     },
 
     isUserManagerOrSuperAdminOrElegibilityManager: async (req, res, next) => {
-        validateProfile(req, res, next, [Profiles.USER_MANAGER, Profiles.ELEGIBILITY_MANAGER]);
+        validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.USER_MANAGER, Profiles.ELEGIBILITY_MANAGER]);
     },
 
     isUserManagerOrSuperAdmin: async (req, res, next) => {
