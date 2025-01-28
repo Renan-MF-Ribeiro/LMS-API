@@ -2314,9 +2314,10 @@ module.exports = {
         const { tag, userId } = req.body;
 
         // Cuurent user é o dono da requisição
-        const currentUser = await returnProfileByToken(req);
+        const token = req.headers.authorization;
+        const currentUserProfiles = await returnProfileByToken(token);
 
-        const isCurrentUserSuperAdmin = currentUser.profiles.includes('PERFIL_Super_Admin');
+        const isCurrentUserSuperAdmin = currentUserProfiles.includes('PERFIL_Super_Admin'); 
 
         const IDPConfig = await getActiveIdpIntegrations()
         const isIDPActive = IDPConfig.length > 0;
@@ -2354,12 +2355,11 @@ module.exports = {
                 eligibilities,
             });
 
-            _messages.success(res, req, {
+            return _messages.success(res, req, {
                 message: 'Tag de permissão adicionada ao usuário',
             });
         } catch (error) {
-            console.error(error);
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users');
+            return _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users');
         }
     },
 
