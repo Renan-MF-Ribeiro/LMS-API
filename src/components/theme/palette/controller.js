@@ -74,10 +74,6 @@ module.exports = {
                     body.welcomeVideo = welcomeVideoPath
                 }
                 if (body.enabled) {
-                    //     await Theme.updateMany({}, { $set: { enabled: false, defaultPalette: null } });
-                    // } else if (body.defaultPalette) {
-                    //     await Theme.updateMany({}, { $set: { defaultPalette: null } });
-                    // } else if (body.enabled) {
                     await Theme.updateMany({}, { $set: { enabled: false } });
                 }
 
@@ -130,7 +126,7 @@ module.exports = {
 
     async getDefaultTheme (req, res) {
         try {
-            const theme = await Theme.findOne({ enabled: { $eq: true } }).sort({ createdAt: -1 }).select('-createdAt -updatedAt -_id -__v -palette._id')
+            const theme = await Theme.findOne({ enabled: { $eq: true } }).sort({ createdAt: -1 }).select('-createdAt -updatedAt -__v -palette._id')
             return _messages.success(res, req, theme)
 
         }
