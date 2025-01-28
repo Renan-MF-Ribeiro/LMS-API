@@ -165,7 +165,7 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             try {
                 const result = [];
-                let tk = token.split(' ')[1] || token;
+                let tk = token?.split(' ')[1] || token;
                 const data = jwt.decode(tk, PROJECT_SECRET_KEY);
                 const profiles = data.data.profiles;
 
@@ -329,7 +329,7 @@ function returnNumberOfProfile(profile) {
         case 'PERFIL_Super_Admin':
             number = 8;
             break;
-        case 'PERFIL_Gestor_Usuário':
+        case 'PERFIL_Gestor_Usuario':
             number = 9;
             break;
         case 'PERFIL_Gestor_Engajamento':
