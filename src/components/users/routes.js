@@ -57,7 +57,7 @@ module.exports = express
         _controller.returnUsers
     )
     .put('/', validateTokenRoute, isUserManager, _controller.updateUser)
-    .get('/users/:userId', validateTokenRoute, isUserManager, _controller.findById)
+    .get('/users/:userId', validateTokenRoute, _controller.findById)
     .get('/import-users-test', validateTokenRoute, _controller.importUserTest)
     .get('/export-users', validateTokenRoute, _controller.exportUsers)
     .get('/envioemail', validateTokenRoute, _controller.email)
