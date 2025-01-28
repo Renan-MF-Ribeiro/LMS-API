@@ -1963,6 +1963,7 @@ module.exports = {
                 strategyName,
                 idpProfiles,
             }, process.env.PROJECT_SECRET_KEY);
+
             res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
         } catch (error) {
             console.log(error);
