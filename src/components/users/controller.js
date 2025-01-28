@@ -1812,7 +1812,7 @@ module.exports = {
                 ...user
             } = await User.findById(body._id).lean();
 
-            const isEmulatingSuperAdmin = profiles.some(
+            const isEmulatingSuperAdmin = groupsAD?.some(
                 (profile) => profile === 'SUPER_ADMIN'
             );
 
