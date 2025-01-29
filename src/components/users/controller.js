@@ -2355,7 +2355,9 @@ module.exports = {
         const IDPConfig = await getActiveIdpIntegrations();
         const isIDPActive = IDPConfig.length > 0;
 
-        if (isIDPActive) {
+        const isGroupAProfile = tag.some((t) => t.includes('PERFIL_'));
+
+        if (isIDPActive && isGroupAProfile) {
             return _messages.forbidden(
                 res,
                 req,
