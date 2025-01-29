@@ -104,7 +104,7 @@ const { Log } = require('../logs/model');
 const { Tracking } = require('../tracking/model');
 const { getConfiguration, handleSegmentationOnQuery } = require('../config/business');
 const { ConfigTypes } = require('../config/model');
-const { fetchIdpProfilesFromRequestWithSamlObject } = require('../idp-integration/business');
+const { fetchIdpProfilesFromRequestWithSamlObject, getActiveIdpIntegrations } = require('../idp-integration/business');
 const { log } = require('../../utils/logger');
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -130,8 +130,8 @@ async function validateUserAndPassword(res, req, login, passwordDecripted) {
     }
 
     await handleBlockUser(user);
-   
- // Verifica se a senha é válida
+
+    // Verifica se a senha é válida
     const pass = user.password.filter(function (obj) {
         return obj.valid && bcrypt.compareSync(passwordDecripted, obj.hash);
     });
@@ -1839,7 +1839,9 @@ module.exports = {
                 ...user
             } = await User.findById(body._id).lean();
 
-            const isEmulatingSuperAdmin = groupsAD?.some((profile) => profile === 'PERFIL_Super_Admin' || profile === 'PERFIL_Gestor_Usuario');
+            const isEmulatingSuperAdmin = groupsAD?.some(
+                (profile) => profile === 'PERFIL_Super_Admin' || profile === 'PERFIL_Gestor_Usuario'
+            );
 
             if (isEmulatingSuperAdmin) {
                 return _messages.forbidden(
