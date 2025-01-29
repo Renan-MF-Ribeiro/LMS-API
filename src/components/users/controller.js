@@ -10,8 +10,10 @@ const {
     User,
     UserTest,
     Block,
+    userSchema,
     userProjection,
     defaultUserMap,
+    groups,
 } = require('./model');
 
 const {
@@ -29,7 +31,7 @@ const {
     generateHappPlaceToken,
     generateMultiFactor,
     validateMultiFactor,
-    returnProfileByToken,
+    returnProfileByToken
 } = require('../../utils/auth');
 
 const {
@@ -45,12 +47,13 @@ const {
     createWelcomeCampaign,
     returnDateSinceFirstLogin,
     persistUsers,
+    findUsers,
     processDashFilters,
     createClassGroup,
     buildSearchObject,
     generateNewPassword,
     maskEmail,
-    getSsoFormByStrategyName,
+    getSsoFormByStrategyName
 } = require('./business');
 
 const {
@@ -60,6 +63,7 @@ const {
     ordernation,
     getUserByToken,
     formatNumberCpf,
+    removeAccents,
     deepGet,
     formatDateWithoutHoursBrasilian,
     getDataByToken,
@@ -81,7 +85,6 @@ const jwt = require('jsonwebtoken');
 const { sendMessageToKafka } = require('../new-messages/business');
 
 const config = require('../../../config.json');
-const GamificationController = require('../gamification/controller');
 const { getNumberOfItemsCompletedOrInProgressOrNotStarted } = require('../home/business');
 const { HistoricEvaluation, Evaluation } = require('../assessments/model');
 const { Question } = require('../assessments/questions/model');
@@ -89,19 +92,19 @@ const { Alternative } = require('../assessments/alternatives/model');
 const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadsheet;
 const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail;
 const { EVENTS_CATEGORY } = require('../gamification/model');
-const AssessmentController = require('../assessment/controller');;
+const AssessmentController = require('../assessment/controller');
+const GamificationController = require('../gamification/controller');
 const GamificationBusiness = require('../gamification/business');
 const { Group } = require('../groups/model');
 const { handleUserEligibilitiesGamification } = require('../gamification/utils');
 const AssessmentBusiness = require('../assessment/business');
+const { Features } = require('../theme/features/model');
+const { Partner } = require('../partners/model');
 const { Log } = require('../logs/model');
 const { Tracking } = require('../tracking/model');
 const { getConfiguration, handleSegmentationOnQuery } = require('../config/business');
 const { ConfigTypes } = require('../config/model');
-const {
-    fetchIdpProfilesFromRequestWithSamlObject,
-    getActiveIdpIntegrations,
-} = require('../idp-integration/business');
+const { fetchIdpProfilesFromRequestWithSamlObject } = require('../idp-integration/business');
 const { log } = require('../../utils/logger');
 
 const isProduction = process.env.NODE_ENV === 'production';

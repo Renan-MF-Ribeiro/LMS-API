@@ -4,7 +4,7 @@ const { Profile } = require('./model')
 module.exports = {
     async findAll(req, res) {
         try {
-            const profiles = await Profile.find()
+            const profiles = await Profile.find().sort({label: 'asc'})
             _messages.success(res, req, profiles)
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'section', '/createSession')
