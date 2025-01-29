@@ -168,6 +168,10 @@ module.exports = {
         validateProfile(req, res, next, [Profiles.USER_MANAGER, Profiles.SUPER_ADMIN]);
     },
 
+    hasElegibilityPermission: async (req, res, next) => {
+        validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.ELEGIBILITY_MANAGER, Profiles.USER_MANAGER, Profiles.ACCOUNTANT]);
+    },
+
     validateMonitoringToken: async (req, res, next) => {
         const token = req.headers.authorization;
         if (!token || !(await validateMonitoringToken(req))) {

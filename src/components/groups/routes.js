@@ -1,7 +1,7 @@
 const express = require('express');
 const formidable = require('express-formidable');
 const _controller = require('./controller');
-const { isAdmin, isAccountant } = require('../../utils/middlewares');
+const { isAdmin, hasElegibilityPermission } = require('../../utils/middlewares');
 
 const router = express.Router();
 
@@ -16,12 +16,12 @@ router
     )
     .get('/', _controller.get)
     .get('/class-groups', _controller.getClassGroups)
-    .get('/tags', isAccountant, _controller.getTags)
-    .get('/tagslist', isAccountant, _controller.getTagsList)
-    .get('/groupsbytag', isAccountant, _controller.getGroupsByTag)
-    .post('/groupsbytag', isAccountant, _controller.updateGroupsByTag)
-    .delete('/groupsbytag/:tag', isAccountant, _controller.removeGroupsByTag)
-    .get('/section-tags', isAccountant, _controller.getSectionTags)
+    .get('/tags', hasElegibilityPermission, _controller.getTags)
+    .get('/tagslist', hasElegibilityPermission, _controller.getTagsList)
+    .get('/groupsbytag', hasElegibilityPermission, _controller.getGroupsByTag)
+    .post('/groupsbytag', hasElegibilityPermission, _controller.updateGroupsByTag)
+    .delete('/groupsbytag/:tag', hasElegibilityPermission, _controller.removeGroupsByTag)
+    .get('/section-tags', hasElegibilityPermission, _controller.getSectionTags)
     .put('/', isAdmin, _controller.update)
     .put('/class-group', isAdmin, _controller.updateClassGroup)
     .delete('/:id', isAdmin, _controller.delete)
