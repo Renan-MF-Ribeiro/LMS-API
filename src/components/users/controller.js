@@ -81,6 +81,7 @@ const jwt = require('jsonwebtoken');
 const { sendMessageToKafka } = require('../new-messages/business');
 
 const config = require('../../../config.json');
+const GamificationController = require('../gamification/controller');
 const { getNumberOfItemsCompletedOrInProgressOrNotStarted } = require('../home/business');
 const { HistoricEvaluation, Evaluation } = require('../assessments/model');
 const { Question } = require('../assessments/questions/model');
@@ -554,7 +555,6 @@ module.exports = {
                 namesGroups,
             } = await generateTokens(user, login, password);
 
-            console.log(tokenHappPlace)
             // GAMIFICATION DISPATCH
             await GamificationController.dispatch(login, [EVENTS_CATEGORY.LOGIN]);
 
