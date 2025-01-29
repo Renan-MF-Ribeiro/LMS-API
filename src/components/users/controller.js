@@ -10,10 +10,8 @@ const {
     User,
     UserTest,
     Block,
-    userSchema,
     userProjection,
     defaultUserMap,
-    groups,
 } = require('./model');
 
 const {
@@ -47,7 +45,6 @@ const {
     createWelcomeCampaign,
     returnDateSinceFirstLogin,
     persistUsers,
-    findUsers,
     processDashFilters,
     createClassGroup,
     buildSearchObject,
@@ -63,7 +60,6 @@ const {
     ordernation,
     getUserByToken,
     formatNumberCpf,
-    removeAccents,
     deepGet,
     formatDateWithoutHoursBrasilian,
     getDataByToken,
@@ -92,14 +88,11 @@ const { Alternative } = require('../assessments/alternatives/model');
 const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadsheet;
 const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail;
 const { EVENTS_CATEGORY } = require('../gamification/model');
-const AssessmentController = require('../assessment/controller');
-const GamificationController = require('../gamification/controller');
+const AssessmentController = require('../assessment/controller');;
 const GamificationBusiness = require('../gamification/business');
 const { Group } = require('../groups/model');
 const { handleUserEligibilitiesGamification } = require('../gamification/utils');
 const AssessmentBusiness = require('../assessment/business');
-const { Features } = require('../theme/features/model');
-const { Partner } = require('../partners/model');
 const { Log } = require('../logs/model');
 const { Tracking } = require('../tracking/model');
 const { getConfiguration, handleSegmentationOnQuery } = require('../config/business');
@@ -133,8 +126,8 @@ async function validateUserAndPassword(res, req, login, passwordDecripted) {
     }
 
     await handleBlockUser(user);
-    // Verifica se a senha é válida
-
+   
+ // Verifica se a senha é válida
     const pass = user.password.filter(function (obj) {
         return obj.valid && bcrypt.compareSync(passwordDecripted, obj.hash);
     });
@@ -187,6 +180,7 @@ async function generateTokens(user, login, password) {
     const groups = user.groupsAD;
     const namesProfiles = [];
     const namesGroups = [];
+    let tokenAnalytics, tokenHappPlace;
 
     for (const p in groups) {
         const strGroup = groups[p];
@@ -202,7 +196,22 @@ async function generateTokens(user, login, password) {
         group.tags.flatMap((tag) => tag?.value || tag.display)
     );
 
-    const dashboardFilters = await processDashFilters(user);
+    if (namesProfiles.includes('PERFIL_Conteudista')) {
+        tokenHappPlace = generateHappPlaceToken({
+            name: user.name,
+            networkLogin: user.networkLogin,
+            clientId: CLIENT_ID,
+        });
+    }
+
+    if (namesProfiles.includes('PERFIL_Analista')) {
+        const dashboardFilters = await processDashFilters(user);
+        tokenAnalytics = generateTokenAnalytics({
+            perfil: profilesIDS.numbers,
+            clientID: CLIENT_ID,
+            filters: dashboardFilters,
+        });
+    }
 
     const authwebPush = user.webPushAuthorization
         ? user.webPushAuthorization[user.webPushAuthorization.length - 1]
@@ -219,26 +228,15 @@ async function generateTokens(user, login, password) {
         welcomeVideoWatched: user?.welcomeVideoWatched,
     });
 
-    const tokenAnalytics = generateTokenAnalytics({
-        perfil: profilesIDS.numbers,
-        clientID: CLIENT_ID,
-        filters: dashboardFilters,
-    });
-
     const mfaToken = generateMfaToken({
         ref: user._id,
         mfa: false,
     });
 
-    const tokenHappplace = generateHappPlaceToken({
-        name: user.name,
-        networkLogin: user.networkLogin,
-        clientId: CLIENT_ID,
-    });
-
     const SAS = generateSASToken();
 
     await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
+
     let tokenEncript = cryptoJS.AES.encrypt(token, login);
     let tk = tokenEncript.toString();
     let key = login + ':' + password;
@@ -250,7 +248,7 @@ async function generateTokens(user, login, password) {
         tk,
         key,
         tokenAnalytics,
-        tokenHappplace,
+        tokenHappPlace,
         mfaToken,
         authwebPush,
         profilesIDS,
@@ -542,6 +540,7 @@ module.exports = {
             user = await validateUserAndPassword(res, req, login, passwordDecripted);
             await updateLastLoginUser(user._id);
 
+            // Gera todos os tokens necessários
             const {
                 tokenAnalytics,
                 tokenHappPlace,
@@ -555,6 +554,7 @@ module.exports = {
                 namesGroups,
             } = await generateTokens(user, login, password);
 
+            console.log(tokenHappPlace)
             // GAMIFICATION DISPATCH
             await GamificationController.dispatch(login, [EVENTS_CATEGORY.LOGIN]);
 
