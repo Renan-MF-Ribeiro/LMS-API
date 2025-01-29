@@ -1836,7 +1836,7 @@ module.exports = {
                 ...user
             } = await User.findById(body._id).lean();
 
-            const isEmulatingSuperAdmin = groupsAD?.some((profile) => profile === 'SUPER_ADMIN');
+            const isEmulatingSuperAdmin = groupsAD?.some((profile) => profile === 'PERFIL_Super_Admin' || profile === 'PERFIL_Gestor_Usuario');
 
             if (isEmulatingSuperAdmin) {
                 return _messages.forbidden(
