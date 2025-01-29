@@ -1,44 +1,83 @@
-const _messages = require('../../utils/messages')
-const { Profile } = require('./model')
+const _messages = require('../../utils/messages');
+const { Profile } = require('./model');
 
 module.exports = {
     async findAll(req, res) {
         try {
-            const profiles = await Profile.find()
-            _messages.success(res, req, profiles)
+            const profiles = await Profile.find().sort({ description: 'asc' });
+            _messages.success(res, req, profiles);
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'section', '/createSession')
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'section',
+                '/createSession'
+            );
         }
     },
 
     async create(req, res) {
         try {
-            const { title } = req.body
+            const { title } = req.body;
             const count = await Profile.find({
                 title: { $eq: title },
-            }).countDocuments()
+            }).countDocuments();
 
             if (count < 1) {
-                const profiles = await Profile.create({ title })
-                _messages.success(res, req, profiles, 'Criação de dados', 'profiles', 'create', profiles, [], true, 'CREATE')
+                const profiles = await Profile.create({ title });
+                _messages.success(
+                    res,
+                    req,
+                    profiles,
+                    'Criação de dados',
+                    'profiles',
+                    'create',
+                    profiles,
+                    [],
+                    true,
+                    'CREATE'
+                );
             } else {
-                _messages.badRequest(res, req, 'Esse perfil já está cadastrado', 'Esse perfil já está cadastrado', 'profiles', 'create')
+                _messages.badRequest(
+                    res,
+                    req,
+                    'Esse perfil já está cadastrado',
+                    'Esse perfil já está cadastrado',
+                    'profiles',
+                    'create'
+                );
             }
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'profiles', '/create')
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'profiles',
+                '/create'
+            );
         }
     },
 
     async update(req, res) {
-        const { id: _id } = req.params
+        const { id: _id } = req.params;
 
-        const profileExists = await Profile.findOne({ _id })
+        const profileExists = await Profile.findOne({ _id });
         if (!profileExists) {
-            return _messages.badRequest(res, req, 'Perfil não encontrado', 'Perfil não encontrado', 'profiles', 'update')
+            return _messages.badRequest(
+                res,
+                req,
+                'Perfil não encontrado',
+                'Perfil não encontrado',
+                'profiles',
+                'update'
+            );
         }
 
-        const profile =  await Profile.findOneAndUpdate({ _id }, req.body, { new: true })
+        const profile = await Profile.findOneAndUpdate({ _id }, req.body, { new: true });
 
-        return _messages.success(res, req, profile, 'Atualização de dados')
-    }
-}
+        return _messages.success(res, req, profile, 'Atualização de dados');
+    },
+};
