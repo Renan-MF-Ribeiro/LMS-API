@@ -31,7 +31,7 @@ const {
     generateHappPlaceToken,
     generateMultiFactor,
     validateMultiFactor,
-    returnProfileByToken
+    returnProfileByToken,
 } = require('../../utils/auth');
 
 const {
@@ -53,7 +53,7 @@ const {
     buildSearchObject,
     generateNewPassword,
     maskEmail,
-    getSsoFormByStrategyName
+    getSsoFormByStrategyName,
 } = require('./business');
 
 const {
@@ -104,7 +104,10 @@ const { Log } = require('../logs/model');
 const { Tracking } = require('../tracking/model');
 const { getConfiguration, handleSegmentationOnQuery } = require('../config/business');
 const { ConfigTypes } = require('../config/model');
-const { fetchIdpProfilesFromRequestWithSamlObject, getActiveIdpIntegrations } = require('../idp-integration/business');
+const {
+    fetchIdpProfilesFromRequestWithSamlObject,
+    getActiveIdpIntegrations,
+} = require('../idp-integration/business');
 const { log } = require('../../utils/logger');
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -2349,13 +2352,16 @@ module.exports = {
         // Cuurent user é o dono da requisição
         const token = req.headers.authorization;
         const currentUserProfiles = await returnProfileByToken(token);
+        const { groupsAD } = await User.findOne({ _id: userId });
+
+        const newTags = tag?.filter((t) => !groupsAD?.includes(t));
 
         const isCurrentUserSuperAdmin = currentUserProfiles.includes('PERFIL_Super_Admin');
 
         const IDPConfig = await getActiveIdpIntegrations();
         const isIDPActive = IDPConfig.length > 0;
 
-        const isGroupAProfile = tag.some((t) => t.includes('PERFIL_'));
+        const isGroupAProfile = newTags?.some((t) => t?.includes('PERFIL_'));
 
         if (isIDPActive && isGroupAProfile) {
             return _messages.forbidden(
