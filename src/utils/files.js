@@ -26,7 +26,6 @@ const {
     sendMessageToKafka,
 } = require('../../src/components/new-messages/business');
 const { Readable } = require('stream');
-const configJson = require('../../config.json');
 const { Theme } = require('../components/theme/palette/model');
 const { Log } = require('../components/logs/model');
 const ApiError = require('../errors/ApiError');
@@ -411,7 +410,7 @@ module.exports = {
 
         let vimeoTrx;
         let uploadStatus;
-        const vimeoFolderUri = `/${configJson.vimeoFolder}`;
+        const vimeoFolderUri = `/${process.env.VIMEO_FOLDER}`;
 
         vimeoTrx = new Vimeo(
             process.env.VIMEO_CLIENTID,
@@ -458,7 +457,7 @@ module.exports = {
         let filePath;
         let fileType;
         let uploadStatus;
-        const vimeoFolderUri = `/${configJson.vimeoFolder}`;
+        const vimeoFolderUri = `/${process.env.VIMEO_FOLDER}`;
         if (isStream(file)) {
             filePath = file.path;
             fileType = mime.lookup(file.path) || 'text/plain';

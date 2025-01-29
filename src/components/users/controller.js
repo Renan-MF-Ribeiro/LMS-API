@@ -510,9 +510,6 @@ module.exports = {
                     // GAMIFICATION DISPATCH
                     await GamificationController.dispatch(login, [EVENTS_CATEGORY.LOGIN]);
 
-                    if (config.assessment.active) {
-                        // await AssessmentBusiness.updateUserEligibilities(user._id);
-                    }
 
                     _messages.success(
                         res,
