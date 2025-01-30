@@ -101,7 +101,7 @@ const { Features } = require('../theme/features/model');
 const { Partner } = require('../partners/model');
 const { Log } = require('../logs/model');
 const { Tracking } = require('../tracking/model');
-const { getConfiguration, handleSegmentationOnQuery } = require('../config/business');
+const { getConfiguration, handleSegmentationOnQuery, getMessengerConfig } = require('../config/business');
 const { ConfigTypes } = require('../config/model');
 const { fetchIdpProfilesFromRequestWithSamlObject } = require('../idp-integration/business');
 const { log } = require('../../utils/logger');
@@ -1202,6 +1202,8 @@ module.exports = {
             );
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
+            const messengerConfig = await getMessengerConfig();
+
             for (const result of results) {
                 const existingUser = await User.findOne({
                     $or: [
@@ -1286,7 +1288,7 @@ module.exports = {
 
                 await User.insertMany(newUsers);
 
-                if (config.messenger.sendUsersToMicrosservice) {
+                if (messengerConfig.sendUsersToMicrosservice) {
                     await sendAccountsToKafka(usersToSend);
                     const campaign = createWelcomeCampaign();
                     await sendMessageToKafka(campaign, newUsers);
@@ -1330,6 +1332,8 @@ module.exports = {
                 }
             );
             const fieldsForElegibility = elegibilityResponse.data.fields;
+
+            const messengerConfig = await getMessengerConfig();
 
             const user = await getUserByToken(req)
 
@@ -1389,7 +1393,7 @@ module.exports = {
 
                 await User.insertMany(newUsers);
 
-                if (config.messenger.sendUsersToMicrosservice) {
+                if (messengerConfig.sendUsersToMicrosservice) {
                     await sendAccountsToKafka(usersToSend);
                     const campaign = createWelcomeCampaign();
                     await sendMessageToKafka(campaign, newUsers);

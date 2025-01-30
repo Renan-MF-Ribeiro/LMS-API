@@ -60,7 +60,7 @@ const {
     notifyResponsibleUsers,
 } = require('../components/new-messages/controller');
 const { Section } = require('../components/sections/model');
-const { getConfiguration } = require('../components/config/business');
+const { getConfiguration, getMessengerConfig } = require('../components/config/business');
 const { ConfigTypes } = require('../components/config/model');
 const ApiError = require('../errors/ApiError');
 
@@ -708,7 +708,9 @@ async function processUserLoadFile(directory, fileName, isProduction, hook) {
 
             await User.insertMany(newUsers);
 
-            if (config.messenger.sendUsersToMicrosservice) {
+            const messengerConfig = await getMessengerConfig();
+
+            if (messengerConfig.sendUsersToMicrosservice) {
                 await sendAccountsToKafka(usersToSend);
                 const campaign = createWelcomeCampaign();
                 await sendMessageToKafka(campaign, newUsers);

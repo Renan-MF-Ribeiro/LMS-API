@@ -1,5 +1,5 @@
 const { getUserByToken } = require('../../utils/functions');
-const { ConfigModel, ConfigTypes, SegmentationConfigModel } = require('./model');
+const { ConfigModel, SegmentationConfigModel, MessengerConfigModel } = require('./model');
 
 module.exports = {
     async getConfiguration(type) {
@@ -66,4 +66,9 @@ module.exports = {
             });
         }
     },
+
+    async getMessengerConfig() {
+        const config = await MessengerConfigModel.findOne().sort({ _id: -1 });
+        return config || (await MessengerConfigModel.create({}));
+    }
 };

@@ -5,6 +5,7 @@ const { pagination, ordernation, getUserByToken } = require('../../utils/functio
 const { Item } = require('../items/model')
 const config = require('../../../config.json')
 const { sendMessage } = require('../../utils/web-push')
+const { getMessengerConfig } = require('../config/business')
 
 module.exports = {
     async createMessages (req, res) {
@@ -96,7 +97,9 @@ module.exports = {
     async notifyResponsibleUsers () {
         const today = new Date()
         const items = await Item.find({ expirationDate: { $exists: true } })
-        const notificationDays = config.cron.notifyResponsibleUsers.notificationDays
+        const notificationDays = config.cron.notifyResponsibleUsers.notificationDays;
+
+        const messengerConfig = await getMessengerConfig();
 
         for (const item of items) {
             if (item.responsible) {
@@ -115,7 +118,7 @@ module.exports = {
                         },
                         text: `O item ${item.title} perderá a validade em ${diffDays} dias!\n`,
                         textHtml: `<p>O item ${item.title} perderá a validade em ${diffDays} dias!<p>`,
-                        thumbnail: config.messenger.emailTemplate.thumbnail,
+                        thumbnail: messengerConfig.emailTemplate.thumbnail,
                         title: `${item.title}`,
                     }
                     createMessagesFromBackend(message)
