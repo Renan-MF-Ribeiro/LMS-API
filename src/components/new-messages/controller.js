@@ -1,5 +1,4 @@
 const axios = require('axios');
-const config = require('../../../config.json');
 const { htmlToText } = require('html-to-text');
 const { NewMessage } = require('./model');
 const moment = require('moment');
@@ -24,7 +23,7 @@ const {
     CourseModel,
 } = require('../courses/model');
 const { createCSVString } = require('../../utils/files');
-const { getMessengerConfig } = require('../config/business');
+const { getMessengerConfig, getCronConfig } = require('../config/business');
 const { CLIENT_ID, SENDINBLUE_API_KEY, SENDINBLUE_FOLDER_ID, API_MESSENGER } =
     process.env;
 
@@ -307,8 +306,10 @@ module.exports = {
     async notifyResponsibleUsers () {
         const today = new Date();
         const items = await Item.find({ expirationDate: { $exists: true } });
-        const notificationDays =
-            config.cron.notifyResponsibleUsers.notificationDays;
+
+        const cronConfig = await getCronConfig();
+
+        const notificationDays = cronConfig.notifyResponsibleUsers.notificationDays;
 
         const messengerConfig = await getMessengerConfig();
 
