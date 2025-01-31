@@ -77,21 +77,37 @@ module.exports = {
 
     async getMessengerConfig() {
         const config = await MessengerConfigModel.findOne().sort({ _id: -1 });
-        return (config || (await MessengerConfigModel.create({})))?.value;
+
+        if (config) return config.value;
+
+        console.log('Creating messenger config');
+        return (await MessengerConfigModel.create({}))?.value
     },
 
     async getCronConfig() {
         const config = await CronConfigModel.findOne().sort({ _id: -1 });
-        return (config || (await CronConfigModel.create({})))?.value;
+
+        if (config) return config.value;
+
+        console.log('Creating cron config');
+        return (await CronConfigModel.create({}))?.value;
     },
 
     async getUsersDataConfig() {
         const config = await UsersDataConfigModel.findOne().sort({ _id: -1 });
-        return (config || (await UsersDataConfigModel.create({})))?.value;
+
+        if (config) return config.value;
+
+        console.log('Creating users data config');
+        return (await UsersDataConfigModel.create({}))?.value;
     },
 
     async getCompanyConfig() {
         const config = await CompanyConfigModel.findOne().sort({ _id: -1 });
-        return (config || (await CompanyConfigModel.create({})))?.value;
+
+        if (config) return config.value;
+
+        console.log('Creating company config');
+        return (await CompanyConfigModel.create({}))?.value;
     }
 };
