@@ -67,6 +67,8 @@ module.exports = {
     async cronNotifyResponsibleUsers () {
         const cronConfig = await getCronConfig();
 
+        console.log('Starting cronNotifyResponsibleUsers', cronConfig.notifyResponsibleUsers.active);
+
         if (cronConfig.notifyResponsibleUsers.active) {
             new CronJob(
                 '00 00 * * *',
@@ -82,6 +84,8 @@ module.exports = {
 
     async updateAverageCourses () {
         const cronConfig = await getCronConfig();
+
+        console.log('Starting updateAverageCourses', cronConfig.average.active);
 
         if (cronConfig.average.active) {
             new CronJob(
@@ -99,6 +103,8 @@ module.exports = {
     async updateAverageRatings () {
         const cronConfig = await getCronConfig();
 
+        console.log('Starting updateAverageRatings', cronConfig.average.active);
+
         if (cronConfig.average.active) {
             new CronJob(
                 '*/60 * * * * ',
@@ -114,6 +120,8 @@ module.exports = {
 
     async sendCourseReleaseNotification () {
         const cronConfig = await getCronConfig();
+
+        console.log('Starting sendCourseReleaseNotification', cronConfig.courseRelease.active);
 
         if (cronConfig.courseRelease.active) {
             new CronJob(
@@ -131,6 +139,8 @@ module.exports = {
     async sendCourseChargeNotification () {
         const cronConfig = await getCronConfig();
 
+        console.log('Starting sendCourseChargeNotification', cronConfig.courseCharge.active);
+
         if (cronConfig.courseCharge.active) {
             new CronJob(
                 '00 08 * * * ',
@@ -145,6 +155,8 @@ module.exports = {
     },
     async deleteReprovedExamTracking () {
         const cronConfig = await getCronConfig();
+
+        console.log('Starting deleteReprovedExamTracking', cronConfig.deleteReprovedExamTracking.active);
 
         if (cronConfig.deleteReprovedExamTracking.active) {
             new CronJob(
@@ -161,6 +173,8 @@ module.exports = {
 
     async cronUpdateRecommendedTrails () {
         const cronConfig = await getCronConfig();
+
+        console.log('Starting cronUpdateRecommendedTrails', cronConfig.recommendedTrails.active);
 
         if (cronConfig.recommendedTrails.active) {
             new CronJob(
@@ -189,6 +203,8 @@ module.exports = {
     async getUsersLoadCron () {
         const cronConfig = await getCronConfig();
 
+        console.log('Starting getUsersLoadCron', cronConfig.userFTP.active);
+
         if (cronConfig.userFTP.active) {
             new CronJob(
                 '00 19 * * * ',
@@ -203,6 +219,8 @@ module.exports = {
     },
     async degreedCharge () {
         const cronConfig = await getCronConfig();
+
+        console.log('Starting degreedCharge', cronConfig.degreed.active);
 
         if (cronConfig.degreed.active) {
             new CronJob(
@@ -219,6 +237,8 @@ module.exports = {
 
     async cronRevokeTrail () {
         const cronConfig = await getCronConfig();
+
+        console.log('Starting cronRevokeTrail', cronConfig.revokeTrail.active);
 
         if (cronConfig.revokeTrail.active) {
             new CronJob(
@@ -264,6 +284,7 @@ module.exports = {
     executeCourseChargeNotification () {
         courseChargeCron();
     },
+
     executeCronUsers () {
         getUsersLoad();
     },
@@ -283,6 +304,8 @@ module.exports = {
 
         const cronConfig = await getCronConfig();
 
+        console.log('Starting executeInactiveOldOnboardingUsers', cronConfig.inactiveOldOnboardingUsers?.active);
+
         if (cronConfig.inactiveOldOnboardingUsers?.active) {
             new CronJob(
                 cronConfig.inactiveOldOnboardingUsers.cronExpression ?? '59 23 * * *',
@@ -300,6 +323,8 @@ module.exports = {
         }
 
         const cronConfig = await getCronConfig();
+
+        console.log('Starting executeRemoveAutomaticEligibilityTags', cronConfig.removeAutomaticEligibilityTags?.active);
 
         if (cronConfig.removeAutomaticEligibilityTags?.active) {
             new CronJob(
