@@ -3,7 +3,6 @@ const path = require('path');
 const cheerio = require('cheerio');
 const _messages = require('../utils/messages');
 const { returnProfileByToken, validateToken, validateMonitoringToken } = require('./auth');
-const config = require('../../config.json');
 const {
     getDbCurrentFeatures,
     setAppCurrentFeatures,
@@ -348,7 +347,7 @@ module.exports = {
     },
 
     async setSegmentation(req, res, next) {
-        if (config?.segmentation?.active) {
+        if (req.features?.segmentation) {
             const segmentation = await getSegmentation();
 
             if (segmentation.value?.rule) {

@@ -1,5 +1,13 @@
+const {
+    ConfigModel,
+    SegmentationConfigModel,
+    MessengerConfigModel,
+    CronConfigModel,
+    UsersDataConfigModel,
+    CompanyConfigModel,
+} = require('./model');
+
 const { getUserByToken } = require('../../utils/functions');
-const { ConfigModel, SegmentationConfigModel, MessengerConfigModel, CronConfigModel } = require('./model');
 
 module.exports = {
     async getConfiguration(type) {
@@ -73,7 +81,17 @@ module.exports = {
     },
 
     async getCronConfig() {
-      const config = await CronConfigModel.findOne().sort({ _id: -1 });
+        const config = await CronConfigModel.findOne().sort({ _id: -1 });
         return (config || (await CronConfigModel.create({})))?.value;
     },
+
+    async getUsersDataConfig() {
+        const config = await UsersDataConfigModel.findOne().sort({ _id: -1 });
+        return (config || (await UsersDataConfigModel.create({})))?.value;
+    },
+
+    async getCompanyConfig() {
+        const config = await CompanyConfigModel.findOne().sort({ _id: -1 });
+        return (config || (await CompanyConfigModel.create({})))?.value;
+    }
 };

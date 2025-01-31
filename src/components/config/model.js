@@ -19,6 +19,8 @@ const ConfigTypes = {
     Segmentation: 'segmentation',
     Messenger: 'messenger',
     Cron: 'cron',
+    UsersData: 'users-data',
+    Company: 'company',
 };
 
 const ConfigSchema = new mongoose.Schema(
@@ -105,7 +107,7 @@ const MessengerConfigModel = ConfigModel.discriminator(
             }, valueSchemaOptions),
         }
     }, schemaOptions)
-)
+);
 
 // CRON
 const CronConfigModel = ConfigModel.discriminator(
@@ -198,10 +200,54 @@ const CronConfigModel = ConfigModel.discriminator(
     }, schemaOptions)
 );
 
+const PostProcessingActions = {
+    Delete: 'delete',
+    Move: 'move',
+}
+
+const UsersDataConfigModel = ConfigModel.discriminator(
+    ConfigTypes.UsersData,
+    new mongoose.Schema({
+        value: {
+            default: {
+                postProcessingAction: "delete",
+                inactivateIfNotInSpreadsheet: false,
+                sendSignUpActivationEmail: false,
+                daysSinceLastFeedback: 180
+            },
+            type: new mongoose.Schema({
+                postProcessingAction: { type: PostProcessingActions, required: true, trim: true, default: PostProcessingActions.Delete },
+                inactivateIfNotInSpreadsheet: { type: Boolean, default: false },
+                sendSignUpActivationEmail: { type: Boolean, default: false },
+                daysSinceLastFeedback: { type: Number, default: 180 },
+            }, valueSchemaOptions)
+        }
+    }, schemaOptions)
+);
+
+const CompanyConfigModel = ConfigModel.discriminator(
+    ConfigTypes.Company,
+    new mongoose.Schema({
+        value: {
+            default: {
+                companyName: "Happmobi",
+                mfaSupportEmail: "suporte@happlearning.com.br",
+            },
+            type: new mongoose.Schema({
+                companyName: { type: String, required: true, trim: true, default: 'Happmobi' },
+                mfaSupportEmail: { type: String, required: true, trim: true, default: "suporte@happlearning.com.br" },
+            }, valueSchemaOptions)
+        }
+    }, schemaOptions)
+);
+
 module.exports = {
-    ConfigModel,
     ConfigTypes,
+    PostProcessingActions,
+    ConfigModel,
     SegmentationConfigModel,
     MessengerConfigModel,
     CronConfigModel,
+    UsersDataConfigModel,
+    CompanyConfigModel
 };

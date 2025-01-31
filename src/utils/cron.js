@@ -52,7 +52,6 @@ const {
 const { sendMessageToKafka } = require('../components/new-messages/business');
 const ExcelJS = require('exceljs');
 
-const config = require('../../config.json');
 const { Item } = require('../components/items/model');
 const { HistoricEvaluation } = require('../components/assessments/model');
 const { uploadFileDegreed } = require('./ftp');
@@ -60,17 +59,15 @@ const {
     notifyResponsibleUsers,
 } = require('../components/new-messages/controller');
 const { Section } = require('../components/sections/model');
-const { getConfiguration, getMessengerConfig } = require('../components/config/business');
+const { getConfiguration, getMessengerConfig, getCronConfig, getUsersDataConfig } = require('../components/config/business');
 const { ConfigTypes } = require('../components/config/model');
 const ApiError = require('../errors/ApiError');
 
-const emailTemplate = config.messenger.emailTemplate;
-const groupingA = config.cron.average.groupA;
-const groupingB = config.cron.average.groupB;
-
 module.exports = {
-    cronNotifyResponsibleUsers () {
-        if (config.cron.notifyResponsibleUsers.active) {
+    async cronNotifyResponsibleUsers () {
+        const cronConfig = await getCronConfig();
+
+        if (cronConfig.notifyResponsibleUsers.active) {
             new CronJob(
                 '00 00 * * *',
                 () => {
@@ -83,8 +80,10 @@ module.exports = {
         }
     },
 
-    updateAverageCourses () {
-        if (config.cron.average.active) {
+    async updateAverageCourses () {
+        const cronConfig = await getCronConfig();
+
+        if (cronConfig.average.active) {
             new CronJob(
                 '*/30 * * * * ',
                 () => {
@@ -97,8 +96,10 @@ module.exports = {
         }
     },
 
-    updateAverageRatings () {
-        if (config.cron.average.active) {
+    async updateAverageRatings () {
+        const cronConfig = await getCronConfig();
+
+        if (cronConfig.average.active) {
             new CronJob(
                 '*/60 * * * * ',
                 () => {
@@ -111,8 +112,10 @@ module.exports = {
         }
     },
 
-    sendCourseReleaseNotification () {
-        if (config.cron.courseRelease.active) {
+    async sendCourseReleaseNotification () {
+        const cronConfig = await getCronConfig();
+
+        if (cronConfig.courseRelease.active) {
             new CronJob(
                 '00 07 * * * ',
                 () => {
@@ -125,8 +128,10 @@ module.exports = {
         }
     },
 
-    sendCourseChargeNotification () {
-        if (config.cron.courseCharge.active) {
+    async sendCourseChargeNotification () {
+        const cronConfig = await getCronConfig();
+
+        if (cronConfig.courseCharge.active) {
             new CronJob(
                 '00 08 * * * ',
                 () => {
@@ -138,8 +143,10 @@ module.exports = {
             );
         }
     },
-    deleteReprovedExamTracking () {
-        if (config.cron.deleteReprovedExamTracking.active) {
+    async deleteReprovedExamTracking () {
+        const cronConfig = await getCronConfig();
+
+        if (cronConfig.deleteReprovedExamTracking.active) {
             new CronJob(
                 '00 00 * * * ',
                 () => {
@@ -152,8 +159,10 @@ module.exports = {
         }
     },
 
-    cronUpdateRecommendedTrails () {
-        if (config.cron.recommendedTrails.active) {
+    async cronUpdateRecommendedTrails () {
+        const cronConfig = await getCronConfig();
+
+        if (cronConfig.recommendedTrails.active) {
             new CronJob(
                 '00 00 * * * ',
                 () => {
@@ -177,8 +186,10 @@ module.exports = {
             'America/Sao_Paulo'
         );
     },
-    getUsersLoadCron () {
-        if (config.cron.userFTP.active) {
+    async getUsersLoadCron () {
+        const cronConfig = await getCronConfig();
+
+        if (cronConfig.userFTP.active) {
             new CronJob(
                 '00 19 * * * ',
                 () => {
@@ -190,8 +201,10 @@ module.exports = {
             );
         }
     },
-    degreedCharge () {
-        if (config.cron.degreed.active) {
+    async degreedCharge () {
+        const cronConfig = await getCronConfig();
+
+        if (cronConfig.degreed.active) {
             new CronJob(
                 '0 2 * * * ',
                 () => {
@@ -204,8 +217,10 @@ module.exports = {
         }
     },
 
-    cronRevokeTrail () {
-        if (config.cron.revokeTrail.active) {
+    async cronRevokeTrail () {
+        const cronConfig = await getCronConfig();
+
+        if (cronConfig.revokeTrail.active) {
             new CronJob(
                 '00 03 * * * ',
                 () => {
@@ -231,14 +246,7 @@ module.exports = {
     },
 
     executeCronAverageCourses () {
-        // userTemporaryTagsCron()
-        // averageCourses()
-        // averageRating()
-        // getUsersLoad()
-        // courseChargeCron()
-        // courseReleaseCron()
         examTrackingDeleteCron();
-        // cronDegreedCharge()
     },
 
     executeRevokeTrail () {
@@ -268,14 +276,16 @@ module.exports = {
         updateTrailsViews()
     },
 
-    executeInactiveOldOnboardingUsers (runningFromAPI = false) {
+    async executeInactiveOldOnboardingUsers (runningFromAPI = false) {
         if (runningFromAPI) {
             return inactiveOldOnboardingUsers();
         }
 
-        if (config.cron?.inactiveOldOnboardingUsers?.active) {
+        const cronConfig = await getCronConfig();
+
+        if (cronConfig.inactiveOldOnboardingUsers?.active) {
             new CronJob(
-                config.cron.inactiveOldOnboardingUsers.cronExpression ?? '59 23 * * *',
+                cronConfig.inactiveOldOnboardingUsers.cronExpression ?? '59 23 * * *',
                 () => { inactiveOldOnboardingUsers(); },
                 null,
                 true,
@@ -284,14 +294,16 @@ module.exports = {
         }
     },
     
-    executeRemoveAutomaticEligibilityTags(runningFromAPI = false) {
+    async executeRemoveAutomaticEligibilityTags(runningFromAPI = false) {
         if (runningFromAPI) {
             return removeAutomaticEligibilityTags();
         }
 
-        if (config.cron?.removeAutomaticEligibilityTags?.active) {
+        const cronConfig = await getCronConfig();
+
+        if (cronConfig.removeAutomaticEligibilityTags?.active) {
             new CronJob(
-                config.cron.removeAutomaticEligibilityTags.cronExpression ?? '59 23 * * *',
+                cronConfig.removeAutomaticEligibilityTags.cronExpression ?? '59 23 * * *',
                 () => { removeAutomaticEligibilityTags(); },
                 null,
                 true,
@@ -343,6 +355,10 @@ async function averageRating () {
         }
 
         const usersLastLogin = await lastLoggedInUsers();
+        const cronConfig = await getCronConfig();
+
+        const groupingA = cronConfig.average.groupA;
+        const groupingB = cronConfig.average.groupB;
 
         const groupA = getGroupSet(usersFinal, groupingA);
         const groupB = getGroupSet(usersFinal, groupingB);
@@ -415,6 +431,11 @@ function ratingCron (grouping, usersLastLogin) {
 async function averageCourses () {
     try {
         const users = await User.find({ status: 'ATIVO' });
+
+        const cronConfig = await getCronConfig();
+
+        const groupingA = cronConfig.average.groupA;
+        const groupingB = cronConfig.average.groupB;
 
         const groupA = getGroupSet(users, groupingA);
         const groupB = getGroupSet(users, groupingB);
@@ -667,7 +688,9 @@ async function processUserLoadFile(directory, fileName, isProduction, hook) {
             'Usuários processados!', `Usuários existentes: ${existingUsers.length}, Novos usuários: ${newUsers.length}`
         );
 
-        if (config.usersData?.inactivateIfNotInSpreadsheet) {
+        const usersDataConfig = await getUsersDataConfig();
+
+        if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
             usersLoadLog('Inativando usuários não presentes na planilha');
 
             await User.updateMany(
@@ -727,9 +750,9 @@ async function processUserLoadFile(directory, fileName, isProduction, hook) {
             'DAILY_CHARGE'
         );
 
-        usersLoadLog('Post processing action:', config.usersData?.postProcessingAction ?? 'none');
+        usersLoadLog('Post processing action:', usersDataConfig?.postProcessingAction ?? 'none');
 
-        switch (config.usersData?.postProcessingAction) {
+        switch (usersDataConfig?.postProcessingAction) {
             case "move":
                 usersLoadLog('Moving file to "processados" folder');
                 await moveAzureFile('sftp', `${directory}/${fileName}`, `${directory}/processados/${fileName}`);
@@ -764,7 +787,7 @@ async function processUserLoadFile(directory, fileName, isProduction, hook) {
 
 async function getUsersLoad() {
     const env = process.env.NODE_ENV;
-    const hook = (config?.discord?.active && process.env.WEBHOOK_URL) ? new Webhook(process.env.WEBHOOK_URL) : null;
+    const hook = process.env.WEBHOOK_URL ? new Webhook(process.env.WEBHOOK_URL) : null;
 
     const isProduction = env === 'production';
 
@@ -833,6 +856,10 @@ async function courseReleaseCron () {
             },
         });
 
+        const messengerConfig = await getMessengerConfig();
+        
+        const emailTemplate = messengerConfig.emailTemplate;
+
         for (const trail of trails) {
             const tags = trail.tags;
 
@@ -874,7 +901,7 @@ async function courseReleaseCron () {
             }
 
             if (elegibleUsers.length > 0) {
-                const campaign = createReleaseCampaign(trail);
+                const campaign = await createReleaseCampaign(trail, emailTemplate);
                 await NewMessage.create(campaign);
                 await sendMessageToKafka(campaign, elegibleUsers);
                 storageLog(
@@ -898,6 +925,11 @@ async function courseChargeCron () {
             enabled: true,
             expirationType: { $exists: true },
         });
+
+        const messengerConfig = await getMessengerConfig();
+        
+        const emailTemplate = messengerConfig.emailTemplate;
+
         for (let trail of trails) {
             const tags = trail.tags;
 
@@ -944,7 +976,7 @@ async function courseChargeCron () {
             }
 
             if (elegibleUsers.length > 0) {
-                const campaign = createChargeCampaign(trail);
+                const campaign = await createChargeCampaign(trail, emailTemplate);
                 await NewMessage.create(campaign);
                 sendMessageToKafka(campaign, elegibleUsers);
                 storageLog(
@@ -1002,7 +1034,7 @@ async function examTrackingDeleteCron () {
     }
 }
 
-function createReleaseCampaign (trail) {
+async function createReleaseCampaign (trail, emailTemplate) {
     const title = `Conheça a nova trilha ${trail.title}`;
     const text = `A trilha ${trail.title} acabou de ser lançada, clique para visualizar!`;
     const communication = ['notification'];
@@ -1023,7 +1055,7 @@ function createReleaseCampaign (trail) {
     };
 }
 
-function createChargeCampaign (trail) {
+async function createChargeCampaign (trail, emailTemplate) {
     const title = `Ei, faltam 5 dias para você concluir a trilha ${trail.title}!`;
     const text = `Você ainda não completou a trilha ${trail.title}! O prazo para a conclusão é até o dia ${trail.expirationDate}. Por favor, clique para visualizar!`;
     const communication = ['notification'];
@@ -1372,7 +1404,9 @@ async function inactiveOldOnboardingUsers() {
 
     console.log('[inactiveOldOnboardingUsers] Running...');
 
-    const daysToInactive = Number(config?.cron?.inactiveOldOnboardingUsers?.daysToInactive ?? 15);
+    const cronConfig = await getCronConfig();
+
+    const daysToInactive = Number(cronConfig?.inactiveOldOnboardingUsers?.daysToInactive ?? 15);
 
     const lastLoginDate = moment().subtract(daysToInactive, 'days').startOf('day').toDate();
 

@@ -193,4 +193,6 @@ app.use('/items', validateTokenRoute, itemsRoutes)
 
 app.use(errorHandler);
 
+global.globalApp = app; // TODO: É a melhor maneira?
+
 module.exports = app;
