@@ -151,6 +151,12 @@ module.exports = {
     isSuperAdmin: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.SUPER_ADMIN]);
     },
+    isSuperAdminOrAnalyst: async (req, res, next) => {
+        validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.ANALYST]);
+    },
+    isSuperAdminOrEngagementManager: async (req, res, next) => {
+        validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.ENGAGEMENT_MANAGER]);
+    },
 
     isUserManager: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.USER_MANAGER]);
@@ -167,9 +173,12 @@ module.exports = {
     isUserManagerOrSuperAdmin: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.USER_MANAGER, Profiles.SUPER_ADMIN]);
     },
+    isAccountantOrCollaborator: async (req, res, next) => {
+        validateProfile(req, res, next, [Profiles.ACCOUNTANT, Profiles.COLLABORATOR]);
+    },
 
     hasElegibilityPermission: async (req, res, next) => {
-        validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.ELEGIBILITY_MANAGER, Profiles.USER_MANAGER, Profiles.ACCOUNTANT]);
+        validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.ELEGIBILITY_MANAGER, Profiles.USER_MANAGER, Profiles.ACCOUNTANT, Profiles.ENGAGEMENT_MANAGER, Profiles.COLLABORATOR]);
     },
 
     validateMonitoringToken: async (req, res, next) => {

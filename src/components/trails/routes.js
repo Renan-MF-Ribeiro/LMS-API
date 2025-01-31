@@ -6,6 +6,7 @@ const {
     isAccountant,
     isAdmin,
     isAdminOrAccountant,
+    hasElegibilityPermission,
 } = require('../../utils/middlewares');
 
 module.exports = express
@@ -21,7 +22,7 @@ module.exports = express
     .put('/change-status', isAccountant, _controller.changeStatus)
     .put('/change-showcase', isAccountant, _controller.changeShowcase)
     .put('/', isAccountant, formidable(), _controller.multiUploadCreate)
-    .get('/', isAdminOrAccountant, _controller.findAll)
+    .get('/', hasElegibilityPermission, _controller.findAll)
     .get('/banners-elegibles', isStudent, _controller.returnBannersElegibles)
     .get('/items/:id', isStudent, _controller.returnItemsByTrail)
     .get('/menu/:id', isStudent, _controller.returnItemsByTrailMenu)
