@@ -9,7 +9,6 @@ router
     .post('/send', isSuperAdmin, _controller.sendListToSendInBlue)
     .get('/download-list', isSuperAdmin, _controller.downloadListFile)
     .get('/', isStudent, _controller.getMessages)
-    .get('/:id', isSuperAdmin, _controller.getMessageById)
     .post('/create', isSuperAdmin, _controller.createMessages)
     .get(
         '/automation/list',
@@ -31,4 +30,5 @@ router
     .get('/listmessage', _controller.getListMessage)
     .get('/messages/v2/:id', _controller.getById)
     .post('/updateviewed', _controller.updateViewed)
+    .get('/:id', isSuperAdmin, _controller.getMessageById)
 module.exports = router
