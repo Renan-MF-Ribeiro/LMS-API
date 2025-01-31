@@ -178,7 +178,7 @@ module.exports = {
     },
 
     hasElegibilityPermission: async (req, res, next) => {
-        validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.ELEGIBILITY_MANAGER, Profiles.USER_MANAGER, Profiles.ACCOUNTANT, Profiles.ENGAGEMENT_MANAGER, Profiles.COLLABORATOR]);
+        validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.ELEGIBILITY_MANAGER, Profiles.USER_MANAGER, Profiles.ACCOUNTANT, Profiles.ENGAGEMENT_MANAGER, Profiles.COLLABORATOR, Profiles.INTEGRATOR]);
     },
 
     validateMonitoringToken: async (req, res, next) => {
