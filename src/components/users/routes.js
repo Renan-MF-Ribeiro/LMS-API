@@ -10,6 +10,7 @@ const {
     isUserManager,
     isUserManagerOrSuperAdmin,
     isUserManagerOrSuperAdminOrElegibilityManager,
+    isUserManagerOrSuperAdminOrInstructor,
 } = require('../../utils/middlewares');
 
 const Saml2js = require('saml2js');
@@ -49,7 +50,7 @@ module.exports = express
     .get(
         '/onboarding',
         validateTokenRoute,
-        isAdminOrInstructor,
+        isUserManagerOrSuperAdminOrInstructor,
         (req, res, next) => {
             req.query.onboarding = true;
             return next();

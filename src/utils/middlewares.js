@@ -150,7 +150,7 @@ module.exports = {
 
     isSuperAdmin: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.SUPER_ADMIN]);
-    },
+    }, 
     isSuperAdminOrAnalyst: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.ANALYST]);
     },
@@ -180,6 +180,11 @@ module.exports = {
     hasElegibilityPermission: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.ELEGIBILITY_MANAGER, Profiles.USER_MANAGER, Profiles.ACCOUNTANT, Profiles.ENGAGEMENT_MANAGER, Profiles.COLLABORATOR, Profiles.INTEGRATOR]);
     },
+
+    isUserManagerOrSuperAdminOrInstructor: async (req, res, next) => {
+        validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.USER_MANAGER, Profiles.INTEGRATOR]);
+    },
+
 
     validateMonitoringToken: async (req, res, next) => {
         const token = req.headers.authorization;
