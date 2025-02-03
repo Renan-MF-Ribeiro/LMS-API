@@ -246,7 +246,8 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             try {
                 const token = req.headers.authorization;
-                const { data } = _auth.decodeToken(token);
+                let tk = token?.split(' ')[1] || token
+                const { data } = _auth.decodeToken(tk);
                 const groups = data.groups;
                 const tagsTemp = [];
                 const tags = [];
