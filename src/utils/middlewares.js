@@ -3,7 +3,6 @@ const path = require('path');
 const cheerio = require('cheerio');
 const _messages = require('../utils/messages');
 const { returnProfileByToken, validateToken, validateMonitoringToken } = require('./auth');
-const config = require('../../config.json');
 const {
     getDbCurrentFeatures,
     setAppCurrentFeatures,
@@ -15,6 +14,7 @@ const { User } = require('../components/users/model');
 const axios = require('axios');
 const { getConnectMap } = require('./connect');
 const { getUserByToken } = require('./functions');
+const ApiError = require('../errors/ApiError');
 
 module.exports = {
     sendCsrf(req, res, next) {
@@ -277,7 +277,7 @@ module.exports = {
     },
 
     isShowcaseActive: (req, res, next) => {
-        if (config?.showcase?.active) {
+        if (req.features?.showcaseComponent) {
             next();
         } else {
             _messages.successEmpty(res, req, 'Feature "Showcase" não está ativa');
@@ -285,7 +285,7 @@ module.exports = {
     },
 
     isAluraActive: (req, res, next) => {
-        if (config?.alura?.active) {
+        if (req.features?.alura) {
             next();
         } else {
             _messages.successEmpty(res, req, 'Feature "Alura" não está ativa');
@@ -293,7 +293,7 @@ module.exports = {
     },
 
     isAssessmentActive: (req, res, next) => {
-        if (config?.assessment?.active) {
+        if (req.features?.assessement) {
             next();
         } else {
             _messages.successEmpty(res, req, 'Feature "Assessment" não está ativa');
@@ -334,8 +334,20 @@ module.exports = {
         next();
     },
 
+    hasFeature(features) {
+        const parsedFeatures = Array.isArray(features) ? features : [features];
+
+        return async function hasFeatureMiddleware(req, res, next) {
+            if (parsedFeatures.every((feature) => req.features?.[feature])) {
+                return next();
+            }
+
+            throw new ApiError('Feature(s) desabilitada(s)', 403, { requiredFeatures: parsedFeatures });
+        }
+    },
+
     async setSegmentation(req, res, next) {
-        if (config?.segmentation?.active) {
+        if (req.features?.segmentation) {
             const segmentation = await getSegmentation();
 
             if (segmentation.value?.rule) {

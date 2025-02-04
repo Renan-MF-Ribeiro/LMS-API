@@ -9,9 +9,8 @@ const {
 } = require('../../new-messages/business');
 const fs = require('fs');
 const mime = require('mime-types');
-const config = require('../../../../config.json');
 const FormData = require('form-data');
-const { getSegmentation, isSegmentationException } = require('../../config/business');
+const { getSegmentation, isSegmentationException, getMessengerConfig } = require('../../config/business');
 
 module.exports = {
     async create(req, res) {
@@ -58,6 +57,8 @@ module.exports = {
                 const texthtml = '<br> <p>Olá! A administração publicou um novo post!</p> <br>';
                 const text = `${name}: ${body.title}`;
 
+                const messengerConfig = await getMessengerConfig();
+
                 const messageList = {
                     user: true,
                     trail: false,
@@ -72,7 +73,7 @@ module.exports = {
                         title: title,
                         text: text,
                         texthtml: texthtml,
-                        thumbnail: config.messenger.emailTemplate.thumbnail,
+                        thumbnail: messengerConfig.emailTemplate.thumbnail,
                         notificationlink: {
                             url: 'https://v2.staging.happlearning.com.br/login/entrar?redirectTo=/home',
                             trailid: '',

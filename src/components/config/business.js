@@ -1,5 +1,13 @@
+const {
+    ConfigModel,
+    SegmentationConfigModel,
+    MessengerConfigModel,
+    CronConfigModel,
+    UsersDataConfigModel,
+    CompanyConfigModel,
+} = require('./model');
+
 const { getUserByToken } = require('../../utils/functions');
-const { ConfigModel, ConfigTypes, SegmentationConfigModel } = require('./model');
 
 module.exports = {
     async getConfiguration(type) {
@@ -66,4 +74,40 @@ module.exports = {
             });
         }
     },
+
+    async getMessengerConfig() {
+        const config = await MessengerConfigModel.findOne().sort({ _id: -1 });
+
+        if (config) return config.value;
+
+        console.log('Creating messenger config');
+        return (await MessengerConfigModel.create({}))?.value
+    },
+
+    async getCronConfig() {
+        const config = await CronConfigModel.findOne().sort({ _id: -1 });
+
+        if (config) return config.value;
+
+        console.log('Creating cron config');
+        return (await CronConfigModel.create({}))?.value;
+    },
+
+    async getUsersDataConfig() {
+        const config = await UsersDataConfigModel.findOne().sort({ _id: -1 });
+
+        if (config) return config.value;
+
+        console.log('Creating users data config');
+        return (await UsersDataConfigModel.create({}))?.value;
+    },
+
+    async getCompanyConfig() {
+        const config = await CompanyConfigModel.findOne().sort({ _id: -1 });
+
+        if (config) return config.value;
+
+        console.log('Creating company config');
+        return (await CompanyConfigModel.create({}))?.value;
+    }
 };
