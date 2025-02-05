@@ -11,6 +11,7 @@ const {
     isUserManagerOrSuperAdmin,
     isUserManagerOrSuperAdminOrElegibilityManager,
     isUserManagerOrSuperAdminOrInstructor,
+    hasElegibilityPermission,
 } = require('../../utils/middlewares');
 
 const Saml2js = require('saml2js');
@@ -50,7 +51,7 @@ module.exports = express
     .get(
         '/onboarding',
         validateTokenRoute,
-        isUserManagerOrSuperAdminOrInstructor,
+        hasElegibilityPermission,
         (req, res, next) => {
             req.query.onboarding = true;
             return next();
