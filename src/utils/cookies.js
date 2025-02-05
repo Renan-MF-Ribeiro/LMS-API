@@ -10,6 +10,7 @@ async function addSASTokenToResponse(res) {
         secure: !isLocal,
         sameSite: isLocal ? 'lax' : 'none',
         expires: expiresOn,
+        priority: 'high',
     });
 
     return { token }
