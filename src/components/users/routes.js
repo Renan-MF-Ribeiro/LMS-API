@@ -29,8 +29,21 @@ module.exports = express
     )
     .post('/accept-terms', validateTokenRoute, _controller.acceptTerms)
     .post('/watched-video', validateTokenRoute, _controller.watchedVideo)
-    .post('/accept-terms-collaboration', validateTokenRoute, _controller.acceptTermsCollaboration)
-    .post('/recovery-password', _controller.recoveryPassword)
+    .post(
+        '/accept-terms-collaboration',
+        validateTokenRoute,
+        _controller.acceptTermsCollaboration
+    )
+    .post(
+        '/recovery-password',
+        rateLimit({
+            windowMs: 1 * 60 * 1000, // 1 minute
+            limit: 2,
+            standardHeaders: true,
+            legacyHeaders: false,
+        }),
+        _controller.recoveryPassword,
+    )
     .post('/change-password', _controller.changePassword)
     .post('/change-password-email', _controller.changePasswordByEmail)
     .post('/change-photo', validateTokenRoute, formidable(), _controller.changePhoto)

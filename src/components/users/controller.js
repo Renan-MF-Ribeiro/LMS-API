@@ -109,6 +109,7 @@ const {
     getActiveIdpIntegrations,
 } = require('../idp-integration/business');
 const { log } = require('../../utils/logger');
+const ApiError = require('../../errors/ApiError');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -943,32 +944,52 @@ module.exports = {
     },
 
     async recoveryPassword(req, res) {
-        try {
-            const { body, domain, changeByEmail } = req.body;
-            const search = buildSearchObject(body);
+        const { body, domain, changeByEmail } = req.body;
 
-            if (search.birthDate || search.birthday) {
-                const birthDateValue = search.birthDate || search.birthday;
+        if (typeof body !== 'object' || Object.values(body).some((value) => !value?.length)) {
+            throw new ApiError('Dados inválidos', 400, body, { skipDbLog: true });
+        }
+        
+        const search = buildSearchObject(body);
 
-                const birthDateQuery = {
-                    $or: [{ birthDate: birthDateValue }, { birthday: birthDateValue }],
-                };
+        if (search.birthDate || search.birthday) {
+            const birthDateValue = search.birthDate || search.birthday;
 
-                search.$or = search.$or
-                    ? [...search.$or, ...birthDateQuery.$or]
-                    : birthDateQuery.$or;
-
-                delete search.birthDate;
-                delete search.birthday;
+            const birthDateQuery = {
+                $or: [
+                    { birthDate: birthDateValue },
+                    { birthday: birthDateValue }
+                ]
             }
 
-            const user = await User.findOne(search);
+            search.$or = search.$or ? [...search.$or, ...birthDateQuery.$or] : birthDateQuery.$or;
 
-            if (!user) {
-                throw { code: 404, message: 'Usuário não encontrado', error: 'user not found' };
+            delete search.birthDate;
+            delete search.birthday;
+        }
+
+        const user = await User.findOne(search);
+
+        if (!user) {
+            if (changeByEmail) {
+                return _messages.success(res, req, { status: 'Sucesso' });
             }
 
-            const { password_new, newPass } = generateNewPassword(user);
+            throw new ApiError('Não é possível alterar a senha', 400, body, { skipDbLog: true });
+        }
+
+        if (changeByEmail && !user.email) {
+            throw new ApiError('Não é possível alterar a senha', 500);
+        }
+
+        const { password_new, newPass } = generateNewPassword(user);
+
+        await User.findByIdAndUpdate(user._id, {
+            password: newPass,
+            passwordValid: false,
+        });
+
+        if (changeByEmail) {
             const token = generateToken({
                 networkLogin: user.networkLogin,
                 _id: user._id,
@@ -976,48 +997,32 @@ module.exports = {
             });
 
             const resetPasswordUrl = `${domain}/login/troca-senha?token=${token}`;
-            await User.findOneAndUpdate(search, {
-                password: newPass,
-                passwordValid: false,
-            });
 
-            if (user.email && changeByEmail) {
-                const newEmail = maskEmail(user.email);
-                await sendEmailRecoveryPassword(
-                    user.email,
-                    true,
-                    password_new,
-                    resetPasswordUrl,
-                    user
-                );
-                return _messages.success(
-                    res,
-                    req,
-                    { status: 'Sucesso', userEmail: newEmail },
-                    'Email para recupera senha disparado',
-                    'users',
-                    'recoveryPassword',
-                    [],
-                    [],
-                    true,
-                    'RECOVERY PASSWORD'
-                );
-            } else {
-                return _messages.success(res, req, password_new);
-            }
-        } catch (error) {
-            if (error?.error === 'user not found') {
-                return _messages.notFound(res, req, error.error, error);
-            }
-            _messages.internalServer(
+            await sendEmailRecoveryPassword(
+                user.email,
+                true,
+                password_new,
+                resetPasswordUrl,
+                user
+            );
+
+            const userEmail = maskEmail(user.email);
+
+            return _messages.success(
                 res,
                 req,
-                error.message,
-                'Erro interno no servidor',
+                { status: 'Sucesso', userEmail },
+                'Email para recupera senha disparado',
                 'users',
-                'recoveryPassword'
+                'recoveryPassword',
+                [],
+                [],
+                true,
+                'RECOVERY PASSWORD'
             );
         }
+
+        return _messages.success(res, req, password_new);
     },
 
     async changePassword(req, res) {
