@@ -6,6 +6,7 @@ async function addSASTokenToResponse(res) {
     const { token, expiresOn } = generateSASToken();
 
     res.cookie('SAS', token, {
+        domain: isLocal ? undefined : `.${process.env.DOMAIN.replace(/https?:\/\//g, '')}`,
         httpOnly: false,
         secure: !isLocal,
         sameSite: isLocal ? 'lax' : 'none',
