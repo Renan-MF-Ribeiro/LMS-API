@@ -30,7 +30,16 @@ module.exports = express
         validateTokenRoute,
         _controller.acceptTermsCollaboration
     )
-    .post('/recovery-password', _controller.recoveryPassword)
+    .post(
+        '/recovery-password',
+        rateLimit({
+            windowMs: 1 * 60 * 1000, // 1 minute
+            limit: 2,
+            standardHeaders: true,
+            legacyHeaders: false,
+        }),
+        _controller.recoveryPassword,
+    )
     .post('/change-password', _controller.changePassword)
     .post('/change-password-email', _controller.changePasswordByEmail)
     .post(
