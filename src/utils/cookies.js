@@ -1,10 +1,10 @@
 const { generateSASToken } = require("./auth");
 
-// function getTokenDomain() {
-//     return process.env.DOMAIN.includes('localhost')
-//         ? undefined
-//         : `.${process.env.DOMAIN.replace(/https?:\/\//g, '')}`;
-// }
+function getTokenDomain() {
+    return process.env.DOMAIN.includes('localhost')
+        ? undefined
+        : `.${process.env.DOMAIN.replace(/https?:\/\//g, '')}`;
+}
 
 async function addSASTokenToResponse(res) {
     const isLocal = process.env.DOMAIN.includes('localhost');
@@ -12,7 +12,7 @@ async function addSASTokenToResponse(res) {
     const { token, expiresOn } = generateSASToken();
 
     res.cookie('SAS', token, {
-        // domain: getTokenDomain(),
+        domain: getTokenDomain(),
         httpOnly: false,
         secure: !isLocal,
         sameSite: isLocal ? 'lax' : 'none',
@@ -27,7 +27,7 @@ async function clearSASTokenFromResponse(res) {
     const isLocal = process.env.DOMAIN.includes('localhost');
 
     res.cookie('SAS', '', {
-        // domain: getTokenDomain(),
+        domain: getTokenDomain(),
         httpOnly: false,
         secure: !isLocal,
         sameSite: isLocal ? 'lax' : 'none',
