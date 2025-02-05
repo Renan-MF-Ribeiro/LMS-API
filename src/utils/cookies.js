@@ -3,7 +3,7 @@ const { generateSASToken } = require("./auth");
 function getTokenDomain() {
     return process.env.DOMAIN.includes('localhost')
         ? undefined
-        : `.${process.env.DOMAIN.replace(/https?:\/\//g, '')}`;
+        : `${process.env.DOMAIN.replace(/https?:\/\//g, '')}`;
 }
 
 async function addSASTokenToResponse(res) {
