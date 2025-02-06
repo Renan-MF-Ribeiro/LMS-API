@@ -37,6 +37,7 @@ const loginSchema = new mongoose.Schema({
         singleUser: buttonSchema,
         formAcess: buttonSchema,
         samlAcess: buttonSchema,
+        sso: buttonSchema,
     },
     inputs: {
         login: inputSchema,
