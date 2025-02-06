@@ -122,7 +122,11 @@ function hideCPFNumbers(cpf) {
 async function validateUserAndPassword(res, req, login, passwordDecripted) {
     // Verifica se usuário existe
     const user = await User.findOne({ networkLogin: { $eq: login }, status: 'ATIVO' }).lean();
-    if (!user) {
+    // Verifica se a senha é válida
+    const pass = user.password.filter(function (obj) {
+        return obj.valid && bcrypt.compareSync(passwordDecripted, obj.hash);
+    });
+    if (!user || pass.length === 0) {
         _messages.forbidden(
             res,
             req,
@@ -134,21 +138,6 @@ async function validateUserAndPassword(res, req, login, passwordDecripted) {
     }
 
     await handleBlockUser(user);
-
-    // Verifica se a senha é válida
-    const pass = user.password.filter(function (obj) {
-        return obj.valid && bcrypt.compareSync(passwordDecripted, obj.hash);
-    });
-    if (pass.length === 0) {
-        return _messages.forbidden(
-            res,
-            req,
-            'Senha inválida',
-            'Senha inválida',
-            'users',
-            'ldapSignIn'
-        );
-    }
 
     if (new Date(pass[0].createdAt).getTime() < Date.now() - 90 * 24 * 60 * 60 * 1000) {
         user.passwordValid = false;
