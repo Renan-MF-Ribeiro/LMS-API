@@ -27,7 +27,6 @@ const {
     returnIdProfileUser,
     returnIdGroupUser,
     generateTokenAnalytics,
-    generateSASToken,
     generateHappPlaceToken,
     generateMultiFactor,
     validateMultiFactor,
@@ -106,6 +105,7 @@ const { ConfigTypes } = require('../config/model');
 const { fetchIdpProfilesFromRequestWithSamlObject } = require('../idp-integration/business');
 const { log } = require('../../utils/logger');
 const ApiError = require('../../errors/ApiError');
+const { addSASTokenToResponse } = require('../../utils/cookies');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -496,7 +496,7 @@ module.exports = {
                         clientId: CLIENT_ID,
                     });
 
-                    const SAS = generateSASToken();
+                    const { token: SAS } = addSASTokenToResponse(res);
 
                     await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
                     await updateLastLoginUser(user._id);
@@ -758,7 +758,7 @@ module.exports = {
                         clientId: CLIENT_ID,
                     });
 
-                    const SAS = generateSASToken();
+                    const { token: SAS } = addSASTokenToResponse(res);
 
                     await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
                     await updateLastLoginUser(user._id);
@@ -1637,6 +1637,8 @@ module.exports = {
 
     async isAuthenticated (req, res) {
         if (await validateToken(req)) {
+            await addSASTokenToResponse(res);
+
             _messages.success(res, req, true);
         } else {
             _messages.forbidden(
@@ -1859,7 +1861,8 @@ module.exports = {
                     clientID: CLIENT_ID,
                     filters: dashboardFilters,
                 });
-                const SAS = generateSASToken();
+                
+                const { token: SAS } = addSASTokenToResponse(res);
 
                 if (req.features?.gamification) {
                     GamificationBusiness.createClientUser(networkLogin, groupsAD);
