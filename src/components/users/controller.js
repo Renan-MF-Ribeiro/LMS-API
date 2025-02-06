@@ -246,7 +246,7 @@ module.exports = {
                 // Busca de qual partner o usuário veio
                 const partner = await Partner.findOne(
                     { active: true, 'keys.key': token },
-                    'keys.elegibilityResult keys.defaultField keys.classGroupResult keys.key keys.endDate'
+                    'keys.elegibilityResult keys.defaultField keys.classGroupResult keys.key keys.endDate title keys.title'
                 );
                 if (!partner) {
                     _messages.unauthorized(
@@ -290,6 +290,7 @@ module.exports = {
                 partnerDays = selectedKey.classGroupResult?.days;
                 // Gera array de objetos referentes a "_id" de classGroups
                 classGroupsIDs = selectedKey.classGroupResult?.classGroups?.map((x) => x);
+                defaultFields.partner = `${partner.title} - ${selectedKey.title}`;
             }
 
             const formatedDate = formatDateWithoutHoursBrasilian(data.birthDate);
@@ -915,7 +916,7 @@ module.exports = {
         }
     },
 
-    async recoveryPassword(req, res) {
+    async recoveryPassword (req, res) {
         const { body, domain, changeByEmail } = req.body;
 
         if (typeof body !== 'object' || Object.values(body).some((value) => !value?.length)) {
@@ -1426,14 +1427,27 @@ module.exports = {
             const searchBy = req.query.searchBy;
 
             const isOnboarding = req.query.onboarding === 'true' || req.query.onboarding === true;
+            const isPartner = req.query.partner === 'true' || req.query.partner === true;
 
             const query = {
                 $and: [
                     {
                         onboarding: isOnboarding ? true : { $ne: true },
+                        partner: isPartner ? { $exists: true } : { $exists: false },
                     }
                 ]
             }
+            const total = await User.countDocuments(query);
+
+            const totalActive = await User.find({
+                status: 'ATIVO',
+                ...query
+            }).countDocuments();
+
+            const totalInactive = await User.find({
+                status: 'INATIVO',
+                ...query
+            }).countDocuments();
 
             if (searchBy) {
                 query.$and.push(
@@ -1456,18 +1470,6 @@ module.exports = {
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
-
-            const total = await User.countDocuments(query);
-
-            const totalActive = await User.find({
-                status: 'ATIVO',
-                onboarding: { $ne: true },
-            }).countDocuments();
-
-            const totalInactive = await User.find({
-                status: 'INATIVO',
-                onboarding: { $ne: true },
-            }).countDocuments();
 
 
             _messages.success(res, req, {
@@ -1861,7 +1863,7 @@ module.exports = {
                     clientID: CLIENT_ID,
                     filters: dashboardFilters,
                 });
-                
+
                 const { token: SAS } = addSASTokenToResponse(res);
 
                 if (req.features?.gamification) {

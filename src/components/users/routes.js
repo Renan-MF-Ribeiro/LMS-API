@@ -74,6 +74,16 @@ module.exports = express
         },
         _controller.returnUsers
     )
+    .get(
+        '/partners',
+        validateTokenRoute,
+        isAdminOrInstructor,
+        (req, res, next) => {
+            req.query.partner = true;
+            return next();
+        },
+        _controller.returnUsers
+    )
     .put('/', validateTokenRoute, isAdmin, _controller.updateUser)
     .get('/users/:userId', validateTokenRoute, isAdmin, _controller.findById)
     .get('/import-users-test', validateTokenRoute, _controller.importUserTest)
@@ -171,4 +181,4 @@ module.exports = express
         formidable(),
         _controller.readSheetHeaders
     );
-    
+
