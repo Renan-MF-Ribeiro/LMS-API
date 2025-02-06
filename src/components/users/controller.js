@@ -246,7 +246,7 @@ module.exports = {
                 // Busca de qual partner o usuário veio
                 const partner = await Partner.findOne(
                     { active: true, 'keys.key': token },
-                    'keys.elegibilityResult keys.defaultField keys.classGroupResult keys.key keys.endDate'
+                    'keys.elegibilityResult keys.defaultField keys.classGroupResult keys.key keys.endDate title keys.title'
                 );
                 if (!partner) {
                     _messages.unauthorized(
@@ -290,7 +290,7 @@ module.exports = {
                 partnerDays = selectedKey.classGroupResult?.days;
                 // Gera array de objetos referentes a "_id" de classGroups
                 classGroupsIDs = selectedKey.classGroupResult?.classGroups?.map((x) => x);
-                defaultFields.partner = true
+                defaultFields.partner = `${partner.title} - ${selectedKey.title}`;
             }
 
             const formatedDate = formatDateWithoutHoursBrasilian(data.birthDate);
@@ -1433,11 +1433,11 @@ module.exports = {
                 $and: [
                     {
                         onboarding: isOnboarding ? true : { $ne: true },
-                        partner: isPartner ? true : { $ne: true },
+                        partner: isPartner ? { $exists: true } : { $ne: true },
                     }
                 ]
             }
-
+            console.log(query['$and'])
             const total = await User.countDocuments(query);
 
             const totalActive = await User.find({
