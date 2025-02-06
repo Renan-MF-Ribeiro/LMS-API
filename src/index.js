@@ -20,7 +20,8 @@ const {
 } = require('./utils/middlewares');
 const { PUBLIC_PATH } = process.env;
 const app = express();
-const passport = require('./utils/passport');
+
+const { initializePassport } = require('./utils/passport');
 
 const { errorHandler } = require('./utils/errors');
 
@@ -62,9 +63,12 @@ const partnerRoutes = require('./components/partners/routes');
 const trainingRouter = require('./components/training/routes');
 const feedRoutes = require('./components/feed/routes');
 const shopRouter = require('./components/shop/routes');
+const idpIntegrationRouter = require('./components/idp-integration/routes');
 const configRouter = require('./components/config/routes');
 const avatarRoutes = require('./components/theme/avatar/routes');
 const { socialApiMiddleware } = require('./components/social/http-adapter');
+const feedbackRoutes = require('./components/feedback/routes');
+const happplaceRoutes = require('./components/happplace/routes');
 
 const corsOptions = {
     origin: [
@@ -130,9 +134,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.resolve(path.join(PUBLIC_PATH, 'index.html')));
 });
 
-app.use(passport.initialize());
-
-app.use(passport.session());
+initializePassport(app);
 
 app.use(socialApiMiddleware)
 
@@ -178,13 +180,16 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/feed', feedRoutes)
     .use('/config', configRouter)
     .use('/shop', shopRouter)
+    .use('/idp-integration', idpIntegrationRouter)
     .use('/avatar', avatarRoutes)
     .use(
         '/assessment',
         isAssessmentActive,
         validateTokenRoute,
         assessmentRoutes
-    );
+    )
+    .use('/feedback', validateTokenRoute, feedbackRoutes)
+    .use('/happplace', happplaceRoutes);
 
 app.use(errorHandler);
 

@@ -27,7 +27,6 @@ const {
     returnIdProfileUser,
     returnIdGroupUser,
     generateTokenAnalytics,
-    generateSASToken,
     generateHappPlaceToken,
     generateMultiFactor,
     validateMultiFactor,
@@ -48,11 +47,11 @@ const {
     persistUsers,
     findUsers,
     processDashFilters,
-    getLoginConfig,
     createClassGroup,
     buildSearchObject,
     generateNewPassword,
-    maskEmail
+    maskEmail,
+    getSsoFormByStrategyName
 } = require('./business');
 
 const {
@@ -103,6 +102,10 @@ const { Log } = require('../logs/model');
 const { Tracking } = require('../tracking/model');
 const { getConfiguration, handleSegmentationOnQuery } = require('../config/business');
 const { ConfigTypes } = require('../config/model');
+const { fetchIdpProfilesFromRequestWithSamlObject } = require('../idp-integration/business');
+const { log } = require('../../utils/logger');
+const ApiError = require('../../errors/ApiError');
+const { addSASTokenToResponse } = require('../../utils/cookies');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -494,7 +497,7 @@ module.exports = {
                         clientId: CLIENT_ID,
                     });
 
-                    const SAS = generateSASToken();
+                    const { token: SAS } = addSASTokenToResponse(res);
 
                     await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
                     await updateLastLoginUser(user._id);
@@ -623,13 +626,23 @@ module.exports = {
 
     async singleSignOn (req, res) {
         let user = {};
-        const { ssoForm } = await getLoginConfig();
 
         const { token } = req.body;
         const secret = process.env.PROJECT_SECRET_KEY;
+
         try {
             const data = jwt.verify(token, secret);
+
+            const tokenIdpProfiles = data?.idpProfiles;
+            const tokenStrategyName = data?.strategyName ?? undefined;
+
+            log('singleSignOn tokenStrategyName', tokenStrategyName);
+            log('singleSignOn tokenIdpProfiles', tokenIdpProfiles);
+
+            const ssoForm = await getSsoFormByStrategyName(tokenStrategyName);
+
             const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data[ssoForm.claim];
+
             if (!claim) {
                 _messages.forbidden(
                     res,
@@ -690,17 +703,24 @@ module.exports = {
                         }
                     }
 
-                    const groups = user.groupsAD;
-                    const namesProfiles = [];
-                    const namesGroups = [];
+                    const groups = Array.from(
+                        new Set(
+                            [
+                                ...(tokenIdpProfiles ?? []),
+                                ...(
+                                    user.groupsAD?.filter(
+                                        group => tokenIdpProfiles
+                                            ? group === 'PERFIL_Aluno' || !group.startsWith('PERFIL')
+                                            : true
+                                    ) ?? []
+                                )
+                            ]
+                        )
+                    );
 
-                    for (const p in groups) {
-                        const strGroup = groups[p];
+                    const namesProfiles = groups.filter((group) => group.startsWith('PERFIL'));
 
-                        if (strGroup.indexOf('PERFIL_') >= 0) namesProfiles.push(strGroup);
-
-                        if (strGroup.indexOf('ELEGE') >= 0) namesGroups.push(strGroup);
-                    }
+                    const namesGroups = groups.filter((group) => group.startsWith('ELEGE'));
 
                     const profilesIDS = await returnIdProfileUser(namesProfiles);
                     const groupsIDS = await returnIdGroupUser(namesGroups);
@@ -708,9 +728,6 @@ module.exports = {
                     const eligibilities = userGroups.flatMap((group) =>
                         group.tags.flatMap((tag) => tag?.value || tag.display)
                     );
-
-                    // VERIFY FEATURE WELCOME
-                    const hasWelcomeComponentFeature = req.features?.welcomeComponent ?? false;
 
                     const token = generateSSOToken({
                         ref: user._id,
@@ -721,6 +738,8 @@ module.exports = {
                         numbers: profilesIDS.numbers,
                         groups: groupsIDS,
                         welcomeVideoWatched: user?.welcomeVideoWatched,
+                        idpProfiles: tokenIdpProfiles,
+                        strategyName: tokenStrategyName,
                     });
 
                     const token_mfa = generateMfaToken({
@@ -740,7 +759,7 @@ module.exports = {
                         clientId: CLIENT_ID,
                     });
 
-                    const SAS = generateSASToken();
+                    const { token: SAS } = addSASTokenToResponse(res);
 
                     await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
                     await updateLastLoginUser(user._id);
@@ -898,33 +917,52 @@ module.exports = {
     },
 
     async recoveryPassword (req, res) {
-        try {
-            const { body, domain, changeByEmail } = req.body;
-            const search = buildSearchObject(body);
+        const { body, domain, changeByEmail } = req.body;
 
-            if (search.birthDate || search.birthday) {
-                const birthDateValue = search.birthDate || search.birthday;
+        if (typeof body !== 'object' || Object.values(body).some((value) => !value?.length)) {
+            throw new ApiError('Dados inválidos', 400, body, { skipDbLog: true });
+        }
 
-                const birthDateQuery = {
-                    $or: [
-                        { birthDate: birthDateValue },
-                        { birthday: birthDateValue }
-                    ]
-                }
+        const search = buildSearchObject(body);
 
-                search.$or = search.$or ? [...search.$or, ...birthDateQuery.$or] : birthDateQuery.$or;
+        if (search.birthDate || search.birthday) {
+            const birthDateValue = search.birthDate || search.birthday;
 
-                delete search.birthDate;
-                delete search.birthday;
+            const birthDateQuery = {
+                $or: [
+                    { birthDate: birthDateValue },
+                    { birthday: birthDateValue }
+                ]
             }
 
-            const user = await User.findOne(search);
+            search.$or = search.$or ? [...search.$or, ...birthDateQuery.$or] : birthDateQuery.$or;
 
-            if (!user) {
-                throw { code: 404, message: 'Usuário não encontrado', error: 'user not found' };
+            delete search.birthDate;
+            delete search.birthday;
+        }
+
+        const user = await User.findOne(search);
+
+        if (!user) {
+            if (changeByEmail) {
+                return _messages.success(res, req, { status: 'Sucesso' });
             }
 
-            const { password_new, newPass } = generateNewPassword(user);
+            throw new ApiError('Não é possível alterar a senha', 400, body, { skipDbLog: true });
+        }
+
+        if (changeByEmail && !user.email) {
+            throw new ApiError('Não é possível alterar a senha', 500);
+        }
+
+        const { password_new, newPass } = generateNewPassword(user);
+
+        await User.findByIdAndUpdate(user._id, {
+            password: newPass,
+            passwordValid: false,
+        });
+
+        if (changeByEmail) {
             const token = generateToken({
                 networkLogin: user.networkLogin,
                 _id: user._id,
@@ -932,48 +970,32 @@ module.exports = {
             });
 
             const resetPasswordUrl = `${domain}/login/troca-senha?token=${token}`;
-            await User.findOneAndUpdate(search, {
-                password: newPass,
-                passwordValid: false,
-            });
 
-            if (user.email && changeByEmail) {
-                const newEmail = maskEmail(user.email);
-                await sendEmailRecoveryPassword(
-                    user.email,
-                    true,
-                    password_new,
-                    resetPasswordUrl,
-                    user
-                );
-                return _messages.success(
-                    res,
-                    req,
-                    { status: 'Sucesso', userEmail: newEmail },
-                    'Email para recupera senha disparado',
-                    'users',
-                    'recoveryPassword',
-                    [],
-                    [],
-                    true,
-                    'RECOVERY PASSWORD'
-                );
-            } else {
-                return _messages.success(res, req, password_new);
-            }
-        } catch (error) {
-            if (error?.error === 'user not found') {
-                return _messages.notFound(res, req, error.error, error);
-            }
-            _messages.internalServer(
+            await sendEmailRecoveryPassword(
+                user.email,
+                true,
+                password_new,
+                resetPasswordUrl,
+                user
+            );
+
+            const userEmail = maskEmail(user.email);
+
+            return _messages.success(
                 res,
                 req,
-                error.message,
-                'Erro interno no servidor',
+                { status: 'Sucesso', userEmail },
+                'Email para recupera senha disparado',
                 'users',
-                'recoveryPassword'
+                'recoveryPassword',
+                [],
+                [],
+                true,
+                'RECOVERY PASSWORD'
             );
         }
+
+        return _messages.success(res, req, password_new);
     },
 
     async changePassword (req, res) {
@@ -1618,6 +1640,8 @@ module.exports = {
 
     async isAuthenticated (req, res) {
         if (await validateToken(req)) {
+            await addSASTokenToResponse(res);
+
             _messages.success(res, req, true);
         } else {
             _messages.forbidden(
@@ -1840,7 +1864,8 @@ module.exports = {
                     clientID: CLIENT_ID,
                     filters: dashboardFilters,
                 });
-                const SAS = generateSASToken();
+
+                const { token: SAS } = addSASTokenToResponse(res);
 
                 if (req.features?.gamification) {
                     GamificationBusiness.createClientUser(networkLogin, groupsAD);
@@ -1903,16 +1928,18 @@ module.exports = {
 
     async ssoCallback (req, res) {
         try {
-            const loginConfig = await getLoginConfig();
+            const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestWithSamlObject(req);
 
-            const claim = loginConfig?.ssoForm?.claim ?? 'networkLogin';
-            const claimKey = loginConfig?.ssoForm?.claimKey ?? 'no-claim-key-value';
+            const ssoForm = await getSsoFormByStrategyName(strategyName);
+
+            const claim = ssoForm?.claim ?? 'networkLogin';
+            const claimKey = ssoForm?.claimKey ?? 'no-claim-key-value';
 
             const value = claimKey.split(',').reduce((acc, key) => {
                 if (acc !== null && acc !== undefined && acc !== '') return acc;
 
                 return deepGet(req.samlUserObject, key, null);
-            }, null);
+            }, null) ?? req.user?.nameID;
 
             await Log.create({
                 type: 'SSO_CALLBACK',
@@ -1941,8 +1968,11 @@ module.exports = {
                 );
             }
 
-            const token = jwt.sign({ [claim]: value }, process.env.PROJECT_SECRET_KEY);
-
+            const token = jwt.sign({
+                [claim]: value,
+                strategyName,
+                idpProfiles,
+            }, process.env.PROJECT_SECRET_KEY);
             res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
         } catch (error) {
             console.log(error);

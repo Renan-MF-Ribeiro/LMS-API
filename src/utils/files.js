@@ -197,7 +197,7 @@ const forEachRow = (row, rowNumber, map, labels, users, previousHyperLink) => {
     }
 };
 
-function parseSizeStringToBytes(size) {
+function parseSizeStringToBytes (size) {
     const sizeString = size.toString().toLowerCase();
     const sizeNumber = parseInt(sizeString);
 
@@ -210,7 +210,7 @@ function parseSizeStringToBytes(size) {
     }
 }
 
-function getAppMaxFileSize() {
+function getAppMaxFileSize () {
     const maxFileSize = process.env.MAX_UPLOAD_FILE_SIZE ?? '100mb';
 
     return {
@@ -219,7 +219,7 @@ function getAppMaxFileSize() {
     }
 }
 
-function validateFileSize(file) {
+function validateFileSize (file) {
     const fileSize = file.size ?? undefined;
 
     if (fileSize === undefined) return;
@@ -234,7 +234,7 @@ function validateFileSize(file) {
     }
 }
 
-function getFormMiddleware(options = {}) {
+function getFormMiddleware (options = {}) {
     const defaultOptions = { maxFileSize: 1024 * 1024 * 1024 };
     return formidable({ ...defaultOptions, ...options })
 }
@@ -406,13 +406,13 @@ module.exports = {
         }
     },
 
-    async uploadVimeo(file, themeId) {
+    async uploadVimeo (file, themeId) {
         validateFileSize(file);
 
         let vimeoTrx;
         let uploadStatus;
         const vimeoFolderUri = `/${configJson.vimeoFolder}`;
-        
+
         vimeoTrx = new Vimeo(
             process.env.VIMEO_CLIENTID,
             process.env.VIMEO_CLIENTSECRET,
@@ -1017,7 +1017,7 @@ module.exports = {
         });
     },
 
-    async listAzureFilesInContainer(containerName, directory) {
+    async listAzureFilesInContainer (containerName, directory) {
         const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STRINGCONN);
         const containerClient = blobServiceClient.getContainerClient(containerName);
         const files = [];
@@ -1045,7 +1045,7 @@ module.exports = {
         return orderedAndMappedFiles;
     },
 
-    async getAzureFileByPath(containerName, filePath) {
+    async getAzureFileByPath (containerName, filePath) {
         const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STRINGCONN);
 
         const containerClient = blobServiceClient.getContainerClient(containerName);
@@ -1067,7 +1067,7 @@ module.exports = {
         };
     },
 
-    async moveAzureFile(containerName, sourcePath, destinationPath) {
+    async moveAzureFile (containerName, sourcePath, destinationPath) {
         const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STRINGCONN);
 
         const containerClient = blobServiceClient.getContainerClient(containerName);
@@ -1083,7 +1083,7 @@ module.exports = {
         return destinationBlockBlobClient.url;
     },
 
-    async deleteAzureFile(containerName, filePath) {
+    async deleteAzureFile (containerName, filePath) {
         const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STRINGCONN);
 
         const containerClient = blobServiceClient.getContainerClient(containerName);

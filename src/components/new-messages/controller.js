@@ -27,12 +27,16 @@ const { createCSVString } = require('../../utils/files');
 const { CLIENT_ID, SENDINBLUE_API_KEY, SENDINBLUE_FOLDER_ID, API_MESSENGER } =
     process.env;
 
+const getHeaders = (req) => ({
+    Authorization: `Bearer ${req.headers.authorization}`
+});
+
 module.exports = {
-    async createMessagingList(req, res) {
+    async createMessagingList (req, res) {
         const { name, trailFilters, userFilter } = req.body;
         let listId = null;
         let messageList = new MessageList();
-        
+
 
         try {
             const user = await getUserByToken(req);
@@ -58,7 +62,7 @@ module.exports = {
                 accessInitialDate: userFilter.filters?.[0].accessInitialDate,
                 accessFinalDate: userFilter.filters?.[0].accessFinalDate,
             };
-            
+
             sendCustomMessageToKafka(messageList, process.env.TOPIC_MSG_LIST);
             const notification = {
                 category: 'notify',
@@ -76,7 +80,7 @@ module.exports = {
             };
 
             _messages.success(res, req, notification);
-            
+
         } catch (error) {
             console.log(error);
             return _messages.internalServer(
@@ -90,7 +94,7 @@ module.exports = {
         }
     },
 
-    async downloadListFile(req, res) {
+    async downloadListFile (req, res) {
         const { listId } = req.query;
         const today = getDateTodayWithoutHours();
         const urlFetch = `${API_MESSENGER}/fetchsendinglist/${listId}`;
@@ -109,7 +113,7 @@ module.exports = {
         res.status(200).send(str);
     },
 
-    async getMessages(req, res) {
+    async getMessages (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -118,12 +122,12 @@ module.exports = {
             const messages = await NewMessage.find(
                 searchBy
                     ? {
-                          $or: [
-                              { title: { $regex: searchBy, $options: 'i' } },
-                              { text: { $regex: searchBy, $options: 'i' } },
-                              { category: { $regex: searchBy, $options: 'i' } },
-                          ],
-                      }
+                        $or: [
+                            { title: { $regex: searchBy, $options: 'i' } },
+                            { text: { $regex: searchBy, $options: 'i' } },
+                            { category: { $regex: searchBy, $options: 'i' } },
+                        ],
+                    }
                     : {}
             )
                 .sort({ [order]: sort })
@@ -133,12 +137,12 @@ module.exports = {
             const total = await NewMessage.find(
                 searchBy
                     ? {
-                          $or: [
-                              { title: { $regex: searchBy, $options: 'i' } },
-                              { text: { $regex: searchBy, $options: 'i' } },
-                              { category: { $regex: searchBy, $options: 'i' } },
-                          ],
-                      }
+                        $or: [
+                            { title: { $regex: searchBy, $options: 'i' } },
+                            { text: { $regex: searchBy, $options: 'i' } },
+                            { category: { $regex: searchBy, $options: 'i' } },
+                        ],
+                    }
                     : {}
             ).count();
 
@@ -155,7 +159,7 @@ module.exports = {
         }
     },
 
-    async getMessageById(req, res) {
+    async getMessageById (req, res) {
         try {
             const { id } = req.params;
             const message = await NewMessage.findOne({ _id: id });
@@ -172,7 +176,7 @@ module.exports = {
         }
     },
 
-    async sendListToSendInBlue(req, res) {
+    async sendListToSendInBlue (req, res) {
         try {
             const { listId } = req.body;
             const urlFetch = `${API_MESSENGER}/fetchsendinglist/${listId}`;
@@ -249,7 +253,7 @@ module.exports = {
         }
     },
 
-    async createMessages(req, res) {
+    async createMessages (req, res) {
         const { sendingListId } = req.body;
         const campaign = req.body;
 
@@ -299,7 +303,7 @@ module.exports = {
         }
     },
 
-    async notifyResponsibleUsers() {
+    async notifyResponsibleUsers () {
         const today = new Date();
         const items = await Item.find({ expirationDate: { $exists: true } });
         const notificationDays =
@@ -332,7 +336,7 @@ module.exports = {
         }
     },
 
-    async sendWaitingListMessage(req, res) {
+    async sendWaitingListMessage (req, res) {
         try {
             const {
                 waitlistUsersArray,
@@ -419,9 +423,87 @@ module.exports = {
             );
         }
     },
+
+    async getListsSendingLists (req, res) {
+        try {
+            const urlFetch = `${API_MESSENGER}/listsendinglists/`;
+            const response = await axios.get(urlFetch, { headers: getHeaders(req), params: { ...req.query, clientId: CLIENT_ID } });
+
+            return _messages.success(res, req, response.data);
+        } catch (error) {
+            console.log(error);
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'list sending lists',
+                'get'
+            );
+        }
+    },
+
+    async getListMessage (req, res) {
+        try {
+            const urlFetch = `${API_MESSENGER}/listmessage`;
+            const params = { skip: req.query.skip, limit: req.query.limit, clientid: +CLIENT_ID, identifier: req.query.identifier };
+            console.log(params)
+            const response = await axios.get(urlFetch, { headers: getHeaders(req), params });
+
+            return _messages.success(res, req, response.data);
+        } catch (error) {
+            console.log(error);
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'List messages',
+                'get'
+            );
+        }
+    },
+
+    async getById (req, res) {
+        try {
+            const urlFetch = `${API_MESSENGER}/messages/v2/${req.params.id}`;
+            const response = await axios.get(urlFetch, { headers: getHeaders(req) });
+
+            return _messages.success(res, req, response.data);
+        } catch (error) {
+            console.log(error);
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'List messages',
+                'get'
+            );
+        }
+    },
+
+    async updateViewed (req, res) {
+        try {
+            const urlFetch = `${API_MESSENGER}/updateviewed`;
+            const response = await axios.post(urlFetch, req.body, { headers: getHeaders(req) });
+
+            return _messages.success(res, req, response.data);
+        } catch (error) {
+            console.log(error);
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'List messages',
+                'get'
+            );
+        }
+    }
 };
 
-async function createMessagesFromBackend(body) {
+async function createMessagesFromBackend (body) {
     try {
         const campaign = body;
         const target = campaign.target;

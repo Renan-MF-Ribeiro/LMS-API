@@ -3,7 +3,7 @@ const rateLimit = require('express-rate-limit');
 const _controller = require('./controller');
 const multiparty = require('connect-multiparty');
 const formidable = require('express-formidable');
-const passport = require('../../utils/passport');
+const { authenticatePassportSaml } = require('../../utils/passport');
 const {
     isAdmin,
     isAdminOrInstructor,
@@ -11,6 +11,7 @@ const {
 } = require('../../utils/middlewares');
 
 const Saml2js = require('saml2js');
+const { clearSASTokenFromResponse } = require('../../utils/cookies');
 module.exports = express
     .Router()
     .post(
@@ -23,6 +24,13 @@ module.exports = express
         }),
         _controller.ldapSignIn
     )
+    .post(
+        '/logout',
+        (req, res) => {
+            clearSASTokenFromResponse(res);
+            res.status(200).send('OK');
+        }
+    )
     .post('/accept-terms', validateTokenRoute, _controller.acceptTerms)
     .post('/watched-video', validateTokenRoute, _controller.watchedVideo)
     .post(
@@ -30,7 +38,16 @@ module.exports = express
         validateTokenRoute,
         _controller.acceptTermsCollaboration
     )
-    .post('/recovery-password', _controller.recoveryPassword)
+    .post(
+        '/recovery-password',
+        rateLimit({
+            windowMs: 1 * 60 * 1000, // 1 minute
+            limit: 2,
+            standardHeaders: true,
+            legacyHeaders: false,
+        }),
+        _controller.recoveryPassword,
+    )
     .post('/change-password', _controller.changePassword)
     .post('/change-password-email', _controller.changePasswordByEmail)
     .post(
@@ -90,19 +107,12 @@ module.exports = express
     .post('/sso', _controller.singleSignOn)
     .get(
         '/sso/saml',
-        passport.authenticate('saml', {
-            successRedirect: '/',
-            failureRedirect: '/login',
-        })
+        authenticatePassportSaml,
     )
     .post(
         '/sso/saml/callback',
-        passport.authenticate('saml', {
-            failureRedirect: '/',
-            failureFlash: true,
-        }),
+        authenticatePassportSaml,
         (req, res, next) => {
-
             const xmlResponse = req.body.SAMLResponse;
             const parser = new Saml2js(xmlResponse);
             req.samlUserObject = parser.toObject();

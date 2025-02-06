@@ -11,7 +11,7 @@ const fs = require('fs');
 const mime = require('mime-types');
 const config = require('../../../../config.json');
 const FormData = require('form-data');
-const { getSegmentation } = require('../../config/business');
+const { getSegmentation, isSegmentationException } = require('../../config/business');
 
 module.exports = {
     async create(req, res) {
@@ -25,7 +25,7 @@ module.exports = {
             if (segmentation.value?.rule?.issuer) {
                 const expectedField = segmentation.value.rule.issuer;
                 const user = await getUserByToken(req);
-                const userField = user[expectedField];
+                const userField = user[expectedField]?.toLowerCase();
                 if (userField) {
                     body.owner = userField;
                 }
@@ -50,7 +50,7 @@ module.exports = {
                         ...formData.getHeaders(),
                     },
                 });
-            } 
+            }
 
             if (body.notifyUsers === true && (body?.elegibilities || body?.elegibilitiesAnd)) {
                 const { _id, name } = await getUserByToken(req);
@@ -154,7 +154,7 @@ module.exports = {
                 'Erro interno no servidor',
                 'feed',
                 'reportPost'
-            );            
+            );
         }
     },
 
@@ -259,14 +259,15 @@ module.exports = {
     async listPostToBeModerated(req, res) {
         const { status, type, reports } = req.query;
         const queryParams = new URLSearchParams();
-
         const segmentation = await getSegmentation();
 
         if (segmentation.value?.rule?.issuer) {
             const expectedField = segmentation.value.rule.issuer;
             const user = await getUserByToken(req);
-            const userField = user[expectedField];
-            if (userField) {
+            const userField = user[expectedField]?.toLowerCase();
+
+            const isAnException = isSegmentationException(user, segmentation.value)
+            if (userField && !isAnException) {
                 queryParams.append('owner', userField);
             }
         }
@@ -458,7 +459,7 @@ module.exports = {
 
         try {
             const { _id, networkLogin, name } = await getUserByToken(req);
-            
+
             req.body.sharedBy = {
                 userId: _id,
                 userName: networkLogin
