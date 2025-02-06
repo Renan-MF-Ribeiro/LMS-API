@@ -7,10 +7,10 @@ const router = express.Router();
 
 router
     .post('/', isElegibilityManager, _controller.create)
-    .post('/class-group', isElegibilityManager, _controller.createClassGroup)
+    .post('/class-group', isUserManagerOrElegibilityManager, _controller.createClassGroup)
     .post(
         '/class-group/import',
-        isElegibilityManager,
+        isUserManagerOrElegibilityManager,
         formidable(),
         _controller.importClassGroups
     )

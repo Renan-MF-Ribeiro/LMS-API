@@ -108,24 +108,8 @@ module.exports = {
         validateProfile(req, res, next, [Profiles.ADMIN, Profiles.ELEGIBILITY_MANAGER]);
     },
 
-    isAdminOrAccountant: async (req, res, next) => {
-        validateProfile(req, res, next, [
-            Profiles.ADMIN,
-            Profiles.ELEGIBILITY_MANAGER,
-            Profiles.ACCOUNTANT,
-        ]);
-    },
-
-    isAccountantOrIntegrator: async (req, res, next) => {
-        validateProfile(req, res, next, [Profiles.ACCOUNTANT, Profiles.INTEGRATOR]);
-    },
-
     isIntegrator: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.INTEGRATOR]);
-    },
-
-    isAccountantOrInstructor: async (req, res, next) => {
-        validateProfile(req, res, next, [Profiles.ACCOUNTANT, Profiles.INSTRUCTOR]);
     },
 
     isInstructor: async (req, res, next) => {
@@ -140,23 +124,9 @@ module.exports = {
         validateProfile(req, res, next, [Profiles.STUDENT]);
     },
 
-    isAdminOrInstructor: async (req, res, next) => {
-        validateProfile(req, res, next, [
-            Profiles.ADMIN,
-            Profiles.ELEGIBILITY_MANAGER,
-            Profiles.INSTRUCTOR,
-        ]);
-    },
-
     isSuperAdmin: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.SUPER_ADMIN]);
     }, 
-    isSuperAdminOrAnalyst: async (req, res, next) => {
-        validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.ANALYST]);
-    },
-    isSuperAdminOrEngagementManager: async (req, res, next) => {
-        validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.ENGAGEMENT_MANAGER]);
-    },
 
     isUserManager: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.USER_MANAGER]);
@@ -166,8 +136,45 @@ module.exports = {
         validateProfile(req, res, next, [Profiles.ENGAGEMENT_MANAGER]);
     },
 
+    isAccountantOrIntegrator: async (req, res, next) => {
+        validateProfile(req, res, next, [Profiles.ACCOUNTANT, Profiles.INTEGRATOR]);
+    },
+
+    isAccountantOrInstructor: async (req, res, next) => {
+        validateProfile(req, res, next, [Profiles.ACCOUNTANT, Profiles.INSTRUCTOR]);
+    },
+
+    isAdminOrAccountant: async (req, res, next) => {
+        validateProfile(req, res, next, [
+            Profiles.ADMIN,
+            Profiles.ELEGIBILITY_MANAGER,
+            Profiles.ACCOUNTANT,
+        ]);
+    },
+
+    isAdminOrInstructor: async (req, res, next) => {
+        validateProfile(req, res, next, [
+            Profiles.ADMIN,
+            Profiles.ELEGIBILITY_MANAGER,
+            Profiles.INSTRUCTOR,
+        ]);
+    },
+
+    
+    isSuperAdminOrAnalyst: async (req, res, next) => {
+        validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.ANALYST]);
+    },
+
+    isSuperAdminOrEngagementManager: async (req, res, next) => {
+        validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.ENGAGEMENT_MANAGER]);
+    },
+
     isUserManagerOrSuperAdminOrElegibilityManager: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.USER_MANAGER, Profiles.ELEGIBILITY_MANAGER]);
+    },
+
+    canListUsers: async (req, res, next) => {
+        validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.USER_MANAGER, Profiles.ELEGIBILITY_MANAGER, Profiles.ENGAGEMENT_MANAGER]);
     },
 
     isUserManagerOrSuperAdmin: async (req, res, next) => {
@@ -183,6 +190,10 @@ module.exports = {
 
     isUserManagerOrSuperAdminOrInstructor: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.USER_MANAGER, Profiles.INTEGRATOR]);
+    },
+
+    isUserManagerOrElegibilityManager: async (req, res, next) => {
+        validateProfile(req, res, next, [Profiles.USER_MANAGER, Profiles.ELEGIBILITY_MANAGER]);
     },
 
 

@@ -12,6 +12,7 @@ const {
     isUserManagerOrSuperAdminOrElegibilityManager,
     isUserManagerOrSuperAdminOrInstructor,
     hasElegibilityPermission,
+    canListUsers,
 } = require('../../utils/middlewares');
 
 const Saml2js = require('saml2js');
@@ -60,7 +61,7 @@ module.exports = express
         formidable(),
         _controller.importOnboarding
     ) //added
-    .get('/', validateTokenRoute, isUserManagerOrSuperAdminOrElegibilityManager, _controller.returnUsers)
+    .get('/', validateTokenRoute, canListUsers, _controller.returnUsers)
     .get(
         '/onboarding',
         validateTokenRoute,
