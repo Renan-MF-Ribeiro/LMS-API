@@ -1433,11 +1433,10 @@ module.exports = {
                 $and: [
                     {
                         onboarding: isOnboarding ? true : { $ne: true },
-                        partner: isPartner ? { $exists: true } : { $ne: true },
+                        partner: isPartner ? { $exists: true } : { $exists: false },
                     }
                 ]
             }
-            console.log(query['$and'])
             const total = await User.countDocuments(query);
 
             const totalActive = await User.find({
