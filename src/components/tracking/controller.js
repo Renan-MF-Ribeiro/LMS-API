@@ -405,6 +405,7 @@ const TrackingController = {
 
             const allTrackingUser = await Tracking.find({
                 userLogin: { $eq: userLogin },
+                kind: { $ne: 'PostTracking' },
                 $or: [
                     { expiredCompletion: { $exists: false } },
                     { expiredCompletion: { $eq: null } },
