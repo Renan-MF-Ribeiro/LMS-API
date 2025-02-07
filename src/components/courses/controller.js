@@ -212,6 +212,22 @@ module.exports = {
         }
     },
 
+    async getPrograms (req, res) {
+        try {
+            const programs = await ProgramModel.find().select('title');
+            success(res, req, programs);
+        } catch (error) {
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'courses',
+                '/getPrograms'
+            );
+        }
+    },
+
     async updateCourse (req, res) {
         try {
             const materials = req.fields.materials ? JSON.parse(req.fields.materials) : null;
@@ -396,8 +412,14 @@ module.exports = {
     async getCourseById (req, res) {
         try {
             const { id } = req.params;
-            const course = await CourseModel.findById(id).populate('materials');
-            success(res, req, course);
+            const course = await CourseModel.findById(id)
+                .populate({
+                    path: 'materials',
+                    match: { author: 'CONTEUDISTA' },
+                }).populate('program', 'title');
+            const programs = await ProgramModel.find().select('title');
+
+            success(res, req, { course, programs });
         } catch (error) {
             internalServer(
                 res,
