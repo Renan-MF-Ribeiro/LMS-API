@@ -1,0 +1,26 @@
+const mongoose = require('mongoose')
+const { connect } = require('../../utils/db')
+connect()
+
+const schemaOptions = {
+    strict: 'throw',
+    timestamps: true,
+    collation: { locale: 'en_US', strength: 1 },
+}
+
+
+const webhooksSchema = new mongoose.Schema({
+    status: { type: Boolean, default: true, },
+    label: { type: String },
+    endpoint: { type: String },
+    target: { type: String },
+    action: { type: String },
+}, {
+    ...schemaOptions,
+})
+
+const Webhooks = mongoose.model('webhooks', webhooksSchema)
+
+module.exports = {
+    Webhooks,
+}

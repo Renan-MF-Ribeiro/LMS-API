@@ -17,6 +17,7 @@ const {
     isShowcaseActive,
     setCurrentFeatures,
     setSegmentation,
+    isAdmin
 } = require('./utils/middlewares');
 const { PUBLIC_PATH } = process.env;
 const app = express();
@@ -69,6 +70,7 @@ const avatarRoutes = require('./components/theme/avatar/routes');
 const { socialApiMiddleware } = require('./components/social/http-adapter');
 const feedbackRoutes = require('./components/feedback/routes');
 const happplaceRoutes = require('./components/happplace/routes');
+const webhooksRoutes = require('./components/webhooks/routes');
 
 const corsOptions = {
     origin: [
@@ -189,7 +191,8 @@ app.use('/items', validateTokenRoute, itemsRoutes)
         assessmentRoutes
     )
     .use('/feedback', validateTokenRoute, feedbackRoutes)
-    .use('/happplace', happplaceRoutes);
+    .use('/happplace', happplaceRoutes)
+    .use('/webhooks', validateTokenRoute, isAdmin, webhooksRoutes);
 
 app.use(errorHandler);
 
