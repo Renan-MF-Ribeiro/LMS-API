@@ -405,6 +405,7 @@ const TrackingController = {
 
             const allTrackingUser = await Tracking.find({
                 userLogin: { $eq: userLogin },
+                kind: { $ne: 'PostTracking' },
                 $or: [
                     { expiredCompletion: { $exists: false } },
                     { expiredCompletion: { $eq: null } },
@@ -452,7 +453,7 @@ const TrackingController = {
 
             for (const v of trailsWithTracking) {
                 const trail = v.trail;
-                trail.items = v.trail.items.filter((i) => i.itemID.enabled && (!i.itemID.archive && i.itemID.enabled));
+                trail.items = v.trail.items.filter((i) => i.itemID.enabled && (!i.itemID.archive && i.itemID.enabled) && i.itemID.kind !== 'PostItem');
                 const completedTrails = [];
                 allItems = trail.items.length;
                 let itemData;

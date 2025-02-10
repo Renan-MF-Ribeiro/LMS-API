@@ -1,5 +1,6 @@
 /* eslint-disable no-async-promise-executor */
 require('dotenv').config();
+const moment = require('moment');
 const ldap = require('ldapjs');
 const jwt = require('jsonwebtoken');
 const twofactor = require('node-2fa');
@@ -107,21 +108,27 @@ module.exports = {
             AZURE_BLOBNAME,
             AZURE_ACCESSKEY
         );
+
         const containerName = 'lmsassets';
+
+        const startsOn = moment().subtract(5, 'minutes').toDate();
+
+        const expiresOn = moment().add(16, 'hours').toDate();
+
         const blobSAS = storage
             .generateBlobSASQueryParameters(
                 {
                     containerName,
                     AZURE_BLOBNAME,
                     permissions: storage.BlobSASPermissions.parse('r'),
-                    startsOn: new Date(Date.now() - 5 * 60 * 1000),
-                    expiresOn: new Date(Date.now() + 16 * 60 * 60 * 1000),
+                    startsOn,
+                    expiresOn,
                 },
                 credentials
             )
             .toString();
 
-        return blobSAS;
+        return { token: blobSAS, expiresOn };
     },
 
     decodeToken: (token) => {
