@@ -12,7 +12,11 @@ const mime = require('mime-types');
 const config = require('../../../../config.json');
 const FormData = require('form-data');
 const { getSegmentation, isSegmentationException } = require('../../config/business');
+const { randomUUID } = require('crypto');
 
+/**
+ * touch dots
+ */
 module.exports = {
     async create(req, res) {
         const userCustomElegeFields = await getSegFieldsFromUser(req);
@@ -39,17 +43,28 @@ module.exports = {
                 const uploadContent = `posts/${data.post._id}/content`;
 
                 const formData = new FormData();
-                const key = Object.keys(req.files)[0];
-                const file = req.files[key];
-                const filename = `${file.name}.${mime.extension(file.type)}`;
-                formData.append('content', fs.createReadStream(file.path), filename);
 
-                socialApi.patch(uploadContent, formData, {
+                 Object.keys(req?.files).forEach((key, i) => {
+                     const file = req?.files[key];
+
+                     const filename = `${i}-${file.name.replace(/ /g, '-')}`;
+
+                     formData.append(filename, fs.createReadStream(file.path), {
+                         filename,
+                         contentType: file.type,
+                     });
+                 });
+
+                const result = await socialApi.patch(uploadContent, formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
                         ...formData.getHeaders(),
                     },
                 });
+
+                 if (result?.data && data?.post) {
+                     data.post.content = result.data;
+                 }
             }
 
             if (body.notifyUsers === true && (body?.elegibilities || body?.elegibilitiesAnd)) {
@@ -498,6 +513,45 @@ module.exports = {
             const { postId } = req.params;
             const uri = `posts/${postId}`;
             const { data } = await socialApi.put(uri, body);
+
+            if (!data) {
+                return _messages.internalServer(
+                    res,
+                    req,
+                    error.message,
+                    'Houve um erro ao atualizar a publicação',
+                    'feed',
+                    'updatePost'
+                );
+            }
+
+            if (Object.keys(req?.files).length > 0) {
+                const uploadContent = `posts/${data._id}/content`;
+
+                const formData = new FormData();
+
+                Object.keys(req?.files).forEach((key, i) => {
+                    const file = req?.files[key];
+
+                    const filename = `${i}-${file.name.replace(/ /g, '-')}`;
+
+                    formData.append(filename, fs.createReadStream(file.path), {
+                        filename,
+                        contentType: file.type,
+                    });
+                });
+
+                const result = await socialApi.patch(uploadContent, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        ...formData.getHeaders(),
+                    },
+                });
+
+                if (result?.data && data?.post) {
+                    data.post.content = result.data;
+                }
+            }
 
             return _messages.success(res, req, data);
         } catch (error) {
