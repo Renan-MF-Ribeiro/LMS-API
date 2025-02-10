@@ -1,6 +1,9 @@
 const express = require('express');
 
 const _functions = require('../../utils/functions');
+const { getConnectMap } = require('../../utils/connect');
+
+const { setConnectMapInForm } = require('./business');
 
 const { FormModel } = require('./model');
 
@@ -28,19 +31,27 @@ formsRouter.get('/', async (req, res) => {
         .limit(Number(limit))
         .lean();
 
-    res.json({ data: forms, total });
+    const connectMap = await getConnectMap(true);
+
+    const mappedForms = forms.map((form) => setConnectMapInForm(connectMap, form));
+
+    res.json({ data: mappedForms, total });
 });
 
 formsRouter.get('/:id', async (req, res) => {
     const { id } = req.params;
 
-    const form = await FormModel.findById(id);
+    const form = await FormModel.findById(id).lean();
 
     if (!form) {
         return res.status(404).json({ message: `Form '${id}' not found` });
     }
 
-    res.json(form);
+    const connectMap = await getConnectMap(true);
+
+    const formWithConnectFields = setConnectMapInForm(connectMap, form);
+
+    res.json(formWithConnectFields);
 });
 
 formsRouter.post('/', async (req, res) => {

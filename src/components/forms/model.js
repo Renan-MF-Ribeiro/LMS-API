@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const FieldSchema = new mongoose.Schema({
-    field: { type: String, required: true },
+    key: { type: String, required: true },
     required: { type: Boolean, required: false, default: false },
     columns: { type: Number, required: false, default: 1 },
 }, { timestamps: true, strict: false });
