@@ -2639,6 +2639,9 @@ module.exports = {
                     headers: {
                         'connect-client-key': process.env.CONNECT_CLIENT_KEY,
                     },
+                    params: {
+                        newFormat: true,
+                    },
                 }
             );
 
@@ -2672,6 +2675,7 @@ module.exports = {
                 {
                     user: { ...body },
                     elegibility: body.elegibility,
+                    newFormat: true,
                 },
                 {
                     headers: {
