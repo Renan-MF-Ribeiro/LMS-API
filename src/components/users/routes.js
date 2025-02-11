@@ -5,12 +5,10 @@ const multiparty = require('connect-multiparty');
 const formidable = require('express-formidable');
 const { authenticatePassportSaml } = require('../../utils/passport');
 const {
-    isAdminOrInstructor,
     validateTokenRoute,
     isUserManager,
     isUserManagerOrSuperAdmin,
     isUserManagerOrSuperAdminOrElegibilityManager,
-    isUserManagerOrSuperAdminOrInstructor,
     hasElegibilityPermission,
     canListUsers,
 } = require('../../utils/middlewares');
@@ -117,15 +115,15 @@ module.exports = express
     .get(
         '/collaboration/list',
         validateTokenRoute,
-        isUserManager,
+        isUserManagerOrSuperAdmin,
         _controller.returnCollaborativeUsers
     )
-    .put('/collaboration/apply', validateTokenRoute, isUserManager, _controller.setCollaborator)
-    .put('/collaboration/remove', validateTokenRoute, isUserManager, _controller.removeCollaborator)
+    .put('/collaboration/apply', validateTokenRoute, isUserManagerOrSuperAdmin, _controller.setCollaborator)
+    .put('/collaboration/remove', validateTokenRoute, isUserManagerOrSuperAdmin, _controller.removeCollaborator)
     .put(
         '/collaboration/moderation',
         validateTokenRoute,
-        isUserManager,
+        isUserManagerOrSuperAdmin,
         _controller.toggleCollaboratorModeration
     )
     .post('/password/reset', validateTokenRoute, isUserManager, _controller.resetUserPassword)
