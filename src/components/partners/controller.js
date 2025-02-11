@@ -6,6 +6,7 @@ const { Partner } = require('./model');
 const { pagination, ordernation, getUserByToken } = require('../../utils/functions');
 const { User } = require('../users/model');
 const { handleSegmentationOnQuery } = require('../config/business');
+const { getDefaultForm } = require('../forms/business');
 
 module.exports = {
     async getPartners(req, res) {
@@ -224,7 +225,11 @@ module.exports = {
                 );
                 return;
             }
-            const partner = await Partner.findOne({ active: true, 'keys.key': token });
+            
+            const partner = await Partner
+                .findOne({ active: true, 'keys.key': token })
+                .populate('keys.form');
+
             if (!partner) {
                 _messages.unauthorized(
                     res,
@@ -248,6 +253,18 @@ module.exports = {
                     'signup'
                 );
                 return;
+            }
+
+            if (partner?.keys?.some(key => !key.form)) {
+                const defaultForm = await getDefaultForm();
+
+                partner.keys = partner.keys.map(key => {
+                    if (!key.form) {
+                        key.form = defaultForm;
+                    }
+
+                    return key;
+                });
             }
 
             _messages.success(res, req, partner);

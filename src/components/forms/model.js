@@ -17,7 +17,9 @@ const FormSchema = new mongoose.Schema({
     name: { type: String, required: true },
     description: { type: String, required: false },
     displayType: { type: String, required: true, default: 'list' }, // list | steps
+    isDefault: { type: Boolean, required: false, default: false },
     sections: { type: [SectionSchema], required: false, default: [] },
+    deletedAt: { type: Date, required: false, default: null },
 }, { timestamps: true, strict: false });
 
 const FormModel = mongoose.model('forms', FormSchema);
