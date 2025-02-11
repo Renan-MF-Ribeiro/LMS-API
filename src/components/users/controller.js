@@ -108,7 +108,7 @@ const ApiError = require('../../errors/ApiError');
 const { addSASTokenToResponse } = require('../../utils/cookies');
 const { FormModel } = require('../forms/model');
 const { getConnectMap } = require('../../utils/connect');
-const { getFormErrorsByMapConfig } = require('../forms/business');
+const { getFormErrorsByMapConfig, getDefaultForm } = require('../forms/business');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -209,21 +209,24 @@ module.exports = {
         }
     },
 
-    async signup (req, res) {
-        const { token } = req.query;
-        const { password, formId, ...data } = req.body;
+    async signup(req, res) {
+        const { token, formId: queryFormId } = req.query;
+        const { password, formId: bodyFormId, ...data } = req.body;
+        const formId = queryFormId || bodyFormId || null;
 
-        if (formId) {
-            const form = await FormModel.findById(formId);
+        const form = (formId ? (await FormModel.findById(formId)?.toObject()) : null) ?? await getDefaultForm();
 
-            if (form) {
-                const connectMap = await getConnectMap(true);
-                const errors = getFormErrorsByMapConfig(connectMap, form.toObject(), data);
+        log('using form', form.name);
 
-                if (errors.length > 0) {
-                    const message = errors[0].message;
-                    throw new ApiError(message, 400, { errors }, { skipDbLog: true });
-                }
+        if (form) {
+            const connectMap = await getConnectMap(true);
+            const errors = getFormErrorsByMapConfig(connectMap, form, data);
+
+            log('errors', errors);
+
+            if (errors.length > 0) {
+                const message = errors[0].message;
+                throw new ApiError(message, 400, { errors }, { skipDbLog: true });
             }
         }
 

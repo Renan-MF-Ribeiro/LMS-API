@@ -1,3 +1,4 @@
+const moment = require('moment');
 const { appDefaultForm } = require("./constants");
 const { FormModel } = require("./model");
 
@@ -129,7 +130,7 @@ async function getDefaultForm() {
     return defaultForm;
 }
 
-async function getFormErrorsByMapConfig(connectMap, form, data) {
+function getFormErrorsByMapConfig(connectMap, form, data) {
     const errors = [];
 
     if (form) {
@@ -142,26 +143,26 @@ async function getFormErrorsByMapConfig(connectMap, form, data) {
             if (!field) return;
 
             if (field.required && !value) {
-                errors.push({ key, message: `Campo ${field.config?.label ?? key} obrigatório` });
+                errors.push({ key, message: `Campo ${field.config?.label ?? key} é obrigatório` });
             }
 
             const fieldType = field.config?.type ?? 'string';
 
             switch (fieldType) {
                 case 'cpf':
-                    if (!value.match(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/)) {
+                    if (value && value.length !== 11) {
                         errors.push({ key, message: 'CPF inválido' });
                     }
                     break;
 
                 case 'email':
-                    if (!value.match(/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/)) {
+                    if (value && !value.match(/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/)) {
                         errors.push({ key, message: 'Email inválido' });
                     }
                     break;
 
                 case 'date':
-                    if (Date.parse(value) === NaN) {
+                    if (value && moment(value, 'YYYY-MM-DD', true).isValid()) {
                         errors.push({ key, message: 'Data inválida' });
                     }
                     break;
