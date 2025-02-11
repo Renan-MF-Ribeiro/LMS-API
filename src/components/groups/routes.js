@@ -1,7 +1,7 @@
 const express = require('express');
 const formidable = require('express-formidable');
 const _controller = require('./controller');
-const { hasElegibilityPermission, isElegibilityManager } = require('../../utils/middlewares');
+const { hasElegibilityPermission, isElegibilityManager, isUserManagerOrElegibilityManager } = require('../../utils/middlewares');
 
 const router = express.Router();
 
