@@ -124,7 +124,7 @@ function getFormErrorsByMapConfig(connectMap, form, data) {
 
             if (!field) return;
 
-            if (field.required && !value?.length) {
+            if ((field.required || key === (form.loginField ?? 'cpf')) && !value?.length) {
                 errors.push({ key, message: `Campo ${field.config?.label ?? key} é obrigatório` });
             }
 

@@ -20,6 +20,7 @@ const FormSchema = new mongoose.Schema({
     isDefault: { type: Boolean, required: false, default: false },
     sections: { type: [SectionSchema], required: false, default: [] },
     deletedAt: { type: Date, required: false, default: null },
+    loginField: { type: String, required: true, default: 'cpf' },
 }, { timestamps: true, strict: false });
 
 const FormModel = mongoose.model('forms', FormSchema);

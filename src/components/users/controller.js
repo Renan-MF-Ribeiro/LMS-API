@@ -216,21 +216,26 @@ module.exports = {
 
         const form = (formId ? (await FormModel.findById(formId)?.toObject()) : null) ?? await getDefaultForm();
 
-        log('using form', form.name);
+        log('using form:', form.name);
+
+        let networkLogin = data.cpf;
 
         if (form) {
             const connectMap = await getConnectMap(true);
             const errors = getFormErrorsByMapConfig(connectMap, form, data);
 
-            log('errors', errors);
+            log('errors:', errors);
 
             if (errors.length > 0) {
                 const message = errors[0].message;
                 throw new ApiError(message, 400, { errors }, { skipDbLog: true });
             }
-        }
 
-        const networkLogin = data.cpf;
+            networkLogin = data[form.loginField ?? 'cpf'];
+
+            log('form login field:', form.loginField ?? 'cpf');
+            log('networkLogin:', networkLogin);
+        }
 
         const today = moment(new Date());
         // Seta elegibilidades padrões
