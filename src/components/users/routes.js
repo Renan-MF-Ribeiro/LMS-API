@@ -16,6 +16,7 @@ const {
 } = require('../../utils/middlewares');
 
 const Saml2js = require('saml2js');
+const { clearSASTokenFromResponse } = require('../../utils/cookies');
 module.exports = express
     .Router()
     .post(
@@ -27,6 +28,13 @@ module.exports = express
             legacyHeaders: false,
         }),
         _controller.ldapSignIn
+    )
+    .post(
+        '/logout',
+        (req, res) => {
+            clearSASTokenFromResponse(res);
+            res.status(200).send('OK');
+        }
     )
     .post('/accept-terms', validateTokenRoute, _controller.acceptTerms)
     .post('/watched-video', validateTokenRoute, _controller.watchedVideo)
