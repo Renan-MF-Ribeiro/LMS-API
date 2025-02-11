@@ -112,24 +112,6 @@ function setConnectMapInForm(connectMap, form) {
     }
 }
 
-async function getDefaultForm() {
-    const defaultForm = await FormModel.findOne({
-        isDefault: true,
-        $or: [
-            { deletedAt: null },
-            { deletedAt: { $exists: false } },
-        ]
-    }).lean();
-
-    if (!defaultForm) {
-        const createdForm = await FormModel.create(appDefaultForm);
-
-        return createdForm.toObject();
-    }
-
-    return defaultForm;
-}
-
 function getFormErrorsByMapConfig(connectMap, form, data) {
     const errors = [];
 
@@ -142,7 +124,7 @@ function getFormErrorsByMapConfig(connectMap, form, data) {
 
             if (!field) return;
 
-            if (field.required && !value) {
+            if (field.required && !value?.length) {
                 errors.push({ key, message: `Campo ${field.config?.label ?? key} é obrigatório` });
             }
 
@@ -167,6 +149,12 @@ function getFormErrorsByMapConfig(connectMap, form, data) {
                     }
                     break;
 
+                case 'boolean':
+                    if (value && typeof value !== 'boolean') {
+                        errors.push({ key, message: 'Valor inválido' });
+                    }
+                    break;
+
                 default:
                     break;
             }
@@ -176,8 +164,26 @@ function getFormErrorsByMapConfig(connectMap, form, data) {
     return errors;
 }
 
+async function getDefaultForm() {
+    const defaultForm = await FormModel.findOne({
+        isDefault: true,
+        $or: [
+            { deletedAt: null },
+            { deletedAt: { $exists: false } },
+        ]
+    }).lean();
+
+    if (!defaultForm) {
+        const createdForm = await FormModel.create(appDefaultForm);
+
+        return createdForm.toObject();
+    }
+
+    return defaultForm;
+}
+
 module.exports = {
     setConnectMapInForm,
-    getDefaultForm,
     getFormErrorsByMapConfig,
+    getDefaultForm,
 };
