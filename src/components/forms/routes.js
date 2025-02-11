@@ -7,11 +7,12 @@ const { pagination, ordernation } = require('../../utils/functions');
 const { setConnectMapInForm, getDefaultForm } = require('./business');
 
 const { FormModel } = require('./model');
+const { validateTokenRoute } = require('../../utils/middlewares');
+
+const formsRouter = express.Router();
 
 // Open routes
-const formsUsersRouter = express.Router();
-
-formsUsersRouter.get('/default', async (req, res) => {
+formsRouter.get('/default', async (req, res) => {
     const form = await getDefaultForm();
 
     const connectMap = await getConnectMap(true);
@@ -22,9 +23,9 @@ formsUsersRouter.get('/default', async (req, res) => {
 });
 
 // Admin routes
-const formsAdminRouter = express.Router();
+formsRouter.use(validateTokenRoute);
 
-formsAdminRouter.get('/', async (req, res) => {
+formsRouter.get('/', async (req, res) => {
     const { skip, limit } = pagination(req);
     const { sort, order } = ordernation(req);
     const { searchBy } = req.query;
@@ -64,7 +65,7 @@ formsAdminRouter.get('/', async (req, res) => {
     res.json({ data: mappedForms, total });
 });
 
-formsAdminRouter.get('/:id', async (req, res) => {
+formsRouter.get('/:id', async (req, res) => {
     const { id } = req.params;
 
     const form = await FormModel.findOne({
@@ -86,7 +87,7 @@ formsAdminRouter.get('/:id', async (req, res) => {
     res.json(formWithConnectFields);
 });
 
-formsAdminRouter.post('/', async (req, res) => {
+formsRouter.post('/', async (req, res) => {
     if (req.body.isDefault) {
         await FormModel.updateMany({}, { $set: { isDefault: false } });
     }
@@ -96,7 +97,7 @@ formsAdminRouter.post('/', async (req, res) => {
     res.status(201).json(form.toObject());
 });
 
-formsAdminRouter.put('/:id', async (req, res) => {
+formsRouter.put('/:id', async (req, res) => {
     const { id } = req.params;
 
     const currentForm = await FormModel.findOne({
@@ -120,7 +121,7 @@ formsAdminRouter.put('/:id', async (req, res) => {
     res.json(updatedForm);
 });
 
-formsAdminRouter.put('/:id/default', async (req, res) => {
+formsRouter.put('/:id/default', async (req, res) => {
     const { id } = req.params;
 
     const currentForm = await FormModel.findOne({
@@ -146,7 +147,7 @@ formsAdminRouter.put('/:id/default', async (req, res) => {
     res.json(updatedForm);
 });
 
-formsAdminRouter.delete('/:id', async (req, res) => {
+formsRouter.delete('/:id', async (req, res) => {
     const { id } = req.params;
 
     const currentForm = await FormModel.findOne({
@@ -165,12 +166,5 @@ formsAdminRouter.delete('/:id', async (req, res) => {
 
     res.json({ message: `Form '${id}' deleted` });
 });
-
-// Main router
-const formsRouter = express.Router();
-
-formsRouter.use('/', formsUsersRouter);
-
-formsRouter.use('/admin', formsAdminRouter);
 
 module.exports = formsRouter;
