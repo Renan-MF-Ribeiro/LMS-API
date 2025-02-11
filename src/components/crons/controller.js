@@ -52,7 +52,7 @@ module.exports = {
         res.status(200).json('CRON INICIADO COM SUCESSO');
     },
 
-    async executeUpdateTrailsViewsCron (req, res) {
+    async executeUpdateTrailsViewsCron(req, res) {
         executeUpdateTrailsViewsCron()
         res.status(200).json('CRON INICIADO COM SUCESSO')
     },
@@ -62,16 +62,12 @@ module.exports = {
             let log = await Log.findOne({
                 component: 'CRON_DAILY_CHARGE',
             }).sort({ createdAt: -1 });
-            if (log) {
+
+            if (log)
                 log = await verifyLog(log);
-                _messages.success(res, req, log);
-            } else {
-                _messages.badRequest(
-                    res,
-                    req,
-                    'Erro ao buscar última execução do cron usuários '
-                );
-            }
+
+            return _messages.success(res, req, log);
+
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -90,14 +86,8 @@ module.exports = {
             });
             if (log) {
                 log = await verifyLog(log);
-                _messages.success(res, req, log);
-            } else {
-                _messages.badRequest(
-                    res,
-                    req,
-                    'Erro ao buscar última execução do cron de médias'
-                );
             }
+            return _messages.success(res, req, log);
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -166,7 +156,7 @@ module.exports = {
             message: 'CRON INICIADO COM SUCESSO',
         });
     },
-    
+
     async handleRemoveAutomaticEligibilityTags(req, res) {
         if (!config.cron?.removeAutomaticEligibilityTags?.active) {
             return res.status(400).json({

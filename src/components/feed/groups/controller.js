@@ -138,6 +138,7 @@ const GroupController = {
         }
     },
     async createGroup(req, res) {
+        // Todo: validar se req.body.type = admin é usado apenas por perfis admin
         const body = JSON.parse(req.fields.payload) ?? null;
         const userCustomElegeFields = await getSegFieldsFromUser(req);
 
