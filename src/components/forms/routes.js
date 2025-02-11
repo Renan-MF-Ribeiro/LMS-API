@@ -22,6 +22,28 @@ formsRouter.get('/default', async (req, res) => {
     res.json(formWithConnectFields);
 });
 
+formsRouter.get('/:id', async (req, res) => {
+    const { id } = req.params;
+
+    const form = await FormModel.findOne({
+        _id: new mongoose.Types.ObjectId(id),
+        $or: [
+            { deletedAt: null },
+            { deletedAt: { $exists: false } },
+        ]
+    }).lean();
+
+    if (!form) {
+        return res.status(404).json({ message: `Form '${id}' not found` });
+    }
+
+    const connectMap = await getConnectMap(true);
+
+    const formWithConnectFields = setConnectMapInForm(connectMap, form);
+
+    res.json(formWithConnectFields);
+});
+
 // Admin routes
 formsRouter.use(validateTokenRoute);
 
@@ -63,28 +85,6 @@ formsRouter.get('/', async (req, res) => {
     const mappedForms = forms.map((form) => setConnectMapInForm(connectMap, form));
 
     res.json({ data: mappedForms, total });
-});
-
-formsRouter.get('/:id', async (req, res) => {
-    const { id } = req.params;
-
-    const form = await FormModel.findOne({
-        _id: new mongoose.Types.ObjectId(id),
-        $or: [
-            { deletedAt: null },
-            { deletedAt: { $exists: false } },
-        ]
-    }).lean();
-
-    if (!form) {
-        return res.status(404).json({ message: `Form '${id}' not found` });
-    }
-
-    const connectMap = await getConnectMap(true);
-
-    const formWithConnectFields = setConnectMapInForm(connectMap, form);
-
-    res.json(formWithConnectFields);
 });
 
 formsRouter.post('/', async (req, res) => {
