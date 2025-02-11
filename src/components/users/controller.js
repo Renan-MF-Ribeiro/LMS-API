@@ -106,6 +106,9 @@ const { fetchIdpProfilesFromRequestWithSamlObject } = require('../idp-integratio
 const { log } = require('../../utils/logger');
 const ApiError = require('../../errors/ApiError');
 const { addSASTokenToResponse } = require('../../utils/cookies');
+const { FormModel } = require('../forms/model');
+const { getConnectMap } = require('../../utils/connect');
+const { getFormErrorsByMapConfig } = require('../forms/business');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -208,7 +211,21 @@ module.exports = {
 
     async signup (req, res) {
         const { token } = req.query;
-        const { password, ...data } = req.body;
+        const { password, formId, ...data } = req.body;
+
+        if (formId) {
+            const form = await FormModel.findById(formId);
+
+            if (form) {
+                const connectMap = await getConnectMap(true);
+                const errors = getFormErrorsByMapConfig(connectMap, form.toObject(), data);
+
+                if (errors.length > 0) {
+                    const message = errors[0].message;
+                    throw new ApiError(message, 400, { errors }, { skipDbLog: true });
+                }
+            }
+        }
 
         const networkLogin = data.cpf;
 

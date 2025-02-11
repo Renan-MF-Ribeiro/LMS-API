@@ -129,7 +129,54 @@ async function getDefaultForm() {
     return defaultForm;
 }
 
+async function getFormErrorsByMapConfig(connectMap, form, data) {
+    const errors = [];
+
+    if (form) {
+        const formWithConnectFields = setConnectMapInForm(connectMap, form);
+        const allFields = formWithConnectFields.sections.flatMap((section) => section.fields);
+
+        Object.entries(data).forEach(([key, value]) => {
+            const field = allFields.find((field) => field.key === key);
+
+            if (!field) return;
+
+            if (field.required && !value) {
+                errors.push({ key, message: `Campo ${field.config?.label ?? key} obrigatório` });
+            }
+
+            const fieldType = field.config?.type ?? 'string';
+
+            switch (fieldType) {
+                case 'cpf':
+                    if (!value.match(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/)) {
+                        errors.push({ key, message: 'CPF inválido' });
+                    }
+                    break;
+
+                case 'email':
+                    if (!value.match(/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/)) {
+                        errors.push({ key, message: 'Email inválido' });
+                    }
+                    break;
+
+                case 'date':
+                    if (Date.parse(value) === NaN) {
+                        errors.push({ key, message: 'Data inválida' });
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+        });
+    }
+
+    return errors;
+}
+
 module.exports = {
     setConnectMapInForm,
     getDefaultForm,
+    getFormErrorsByMapConfig,
 };
