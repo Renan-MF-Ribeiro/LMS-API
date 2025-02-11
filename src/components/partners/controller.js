@@ -6,7 +6,8 @@ const { Partner } = require('./model');
 const { pagination, ordernation, getUserByToken } = require('../../utils/functions');
 const { User } = require('../users/model');
 const { handleSegmentationOnQuery } = require('../config/business');
-const { getDefaultForm } = require('../forms/business');
+const { getDefaultForm, setConnectMapInForm } = require('../forms/business');
+const { getConnectMap } = require('../../utils/connect');
 
 module.exports = {
     async getPartners(req, res) {
@@ -228,7 +229,8 @@ module.exports = {
             
             const partner = await Partner
                 .findOne({ active: true, 'keys.key': token })
-                .populate('keys.form');
+                .populate('keys.form')
+                .lean();
 
             if (!partner) {
                 _messages.unauthorized(
@@ -259,15 +261,26 @@ module.exports = {
                 const defaultForm = await getDefaultForm();
 
                 partner.keys = partner.keys.map(key => {
-                    if (!key.form) {
-                        key.form = defaultForm;
-                    }
-
-                    return key;
+                    return {
+                        ...key,
+                        form: key.form ?? defaultForm
+                    };
                 });
             }
 
-            _messages.success(res, req, partner);
+            const connectMap = await getConnectMap(true);
+
+            const mappedPartner = {
+                ...partner,
+                keys: partner.keys.map(key => {
+                    return {
+                        ...key,
+                        form: setConnectMapInForm(connectMap, key.form)
+                    };
+                })
+            }
+
+            _messages.success(res, req, mappedPartner);
         } catch (error) {
             console.error(error);
             _messages.internalServer(
