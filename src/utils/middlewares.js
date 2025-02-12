@@ -174,7 +174,7 @@ module.exports = {
     },
 
     canListUsers: async (req, res, next) => {
-        validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.USER_MANAGER, Profiles.ELEGIBILITY_MANAGER, Profiles.ENGAGEMENT_MANAGER]);
+        validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.USER_MANAGER, Profiles.ELEGIBILITY_MANAGER, Profiles.ENGAGEMENT_MANAGER, Profiles.INTEGRATOR]);
     },
 
     isUserManagerOrSuperAdmin: async (req, res, next) => {
