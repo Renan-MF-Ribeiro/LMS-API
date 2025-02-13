@@ -2,6 +2,7 @@ require('dotenv').config();
 require('express-async-errors');
 
 const express = require('express');
+const session = require('express-session');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
@@ -133,6 +134,13 @@ app.use(express.static(path.resolve(PUBLIC_PATH)));
 app.get('/', (req, res) => {
     res.sendFile(path.resolve(path.join(PUBLIC_PATH, 'index.html')));
 });
+
+app.use(session({
+    secret: 'seuSegredoSeguro',
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false }
+}))
 
 initializePassport(app);
 
