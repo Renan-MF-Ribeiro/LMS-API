@@ -7,31 +7,28 @@ const { IdpIntegrationModel } = require('../../idp-integration/models')
 const { createStrategiesFromLoginConfigs, removeStrategies } = require('../../../utils/passport')
 
 module.exports = {
-    async createOrUpdate (req, res) {
+    async createOrUpdate(req, res) {
         try {
             const body = req.body
 
-            const ssoForm = body.ssoForm?.map(info => {
-                return {
-                    ...info,
-                    _id: Types.ObjectId.isValid(info._id) ? info._id : new Types.ObjectId()
-                }
-            }) ?? [];
+            body.ssoForm = processForm(body.ssoForm);
+            body.openidForm = processForm(body.openidForm);
 
-            const namesFromTo = ssoForm
+            const namesFromToSso = body.ssoForm
                 .map(info => ({ from: info.strategyNameFrom, to: info.strategyName }))
                 .filter(info => info.from && info.to && info.from !== info.to);
 
-            body.ssoForm = ssoForm;
+            // conexão com idp
+            // const namesFromToOpenId = openidForm
+            //     .map(info => ({ from: info.strategyNameFrom, to: info.strategyName }))
+            //     .filter(info => info.from && info.to && info.from !== info.to);
 
             let config = await getLoginConfig()
 
-            const removedStrategies = config.ssoForm?.filter(
-                info => info.strategyName && !ssoForm.some(newInfo => newInfo.strategyName === info.strategyName)
-            ) ?? [];
-            const disabledStrategyNames = body.ssoForm?.filter(info => info.strategyName && !info.enabled) ?? [];
+            const strategiesToDisable = getStrategiesToDisable(config.ssoForm, body.ssoForm);
 
-            const strategiesToDisable = [...removedStrategies, ...disabledStrategyNames].map(info => info.strategyName);
+            // config do passport
+            // const strategiesToDisableOpenID = getStrategiesToDisable(config.openidForm, body.openidForm);
 
             if (config) {
                 config = await ConfigLogin.findByIdAndUpdate(config._id, body)
@@ -39,7 +36,7 @@ module.exports = {
                 config = await ConfigLogin.create(body)
             }
 
-            for await (const { from, to } of namesFromTo) {
+            for await (const { from, to } of namesFromToSso) {
                 await IdpIntegrationModel.updateMany(
                     { strategyName: from },
                     { strategyName: to }
@@ -54,6 +51,7 @@ module.exports = {
 
             return _messages.success(res, req, config)
         } catch (error) {
+            console.log(error)
             _messages.internalServer(
                 res,
                 req,
@@ -66,7 +64,7 @@ module.exports = {
 
     },
 
-    async getConfigLogin (req, res) {
+    async getConfigLogin(req, res) {
         try {
             const { configuration } = req.query;
             const isConfigurationEnabled = configuration === 'true';
@@ -87,7 +85,13 @@ module.exports = {
                     "ssoForm.entrypoint": 0,
                     "ssoForm.claim": 0,
                     "ssoForm.claimKey": 0,
-                    "ssoForm.issuer": 0
+                    "ssoForm.issuer": 0,
+                    "openidForm.client_id": 0,
+                    "openidForm.client_secret": 0,
+                    "openidForm.tenant": 0,
+                    "openidForm.entrypoint": 0,
+                    "openidForm.claim": 0,
+                    "openidForm.callback_url": 0,
                 };
             }
 
@@ -113,3 +117,21 @@ module.exports = {
         }
     }
 }
+
+const processForm = (form) => {
+    return Array.isArray(form)
+        ? form.map(info => ({
+            ...info,
+            _id: Types.ObjectId.isValid(info._id) ? info._id : new Types.ObjectId()
+        }))
+        : [];
+};
+
+const getStrategiesToDisable = (configForm = [], newForm = []) => {
+    const removedStrategies = configForm.filter(
+        info => info.strategyName && !newForm.some(newInfo => newInfo.strategyName === info.strategyName)
+    );
+    const disabledStrategies = newForm.filter(info => info.strategyName && !info.enabled);
+
+    return [...removedStrategies, ...disabledStrategies].map(info => info.strategyName);
+};
