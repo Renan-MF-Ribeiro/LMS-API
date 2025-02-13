@@ -1,9 +1,10 @@
 const express = require('express');
+const passport = require('passport');
 const rateLimit = require('express-rate-limit');
 const _controller = require('./controller');
 const multiparty = require('connect-multiparty');
 const formidable = require('express-formidable');
-const { authenticatePassportSaml } = require('../../utils/passport');
+const { authenticatePassportSAML, authenticatePassportOPENID } = require('../../utils/passport');
 const {
     isAdmin,
     isAdminOrInstructor,
@@ -95,13 +96,18 @@ module.exports = express
     .post('/signup', _controller.signup)
     .post('/activate', _controller.activateUser)
     .post('/sso', _controller.singleSignOn)
+    .get('/sso/openid/callback', authenticatePassportOPENID)
+    .get(
+        '/sso/openid',
+        authenticatePassportOPENID,
+    )
     .get(
         '/sso/saml',
-        authenticatePassportSaml,
+        authenticatePassportSAML,
     )
     .post(
         '/sso/saml/callback',
-        authenticatePassportSaml,
+        authenticatePassportSAML,
         (req, res, next) => {
             const xmlResponse = req.body.SAMLResponse;
             const parser = new Saml2js(xmlResponse);
@@ -171,4 +177,4 @@ module.exports = express
         formidable(),
         _controller.readSheetHeaders
     );
-    
+
