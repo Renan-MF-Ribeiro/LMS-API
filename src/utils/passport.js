@@ -85,6 +85,18 @@ function authenticatePassportOPENID(req, res, next) {
     const strategyName = getRequestStrategyName(req);
     log('authenticatePassportOPENID strategyName', strategyName);
 
+    req.session.strategy = strategyName;
+
+    passport.authenticate(strategyName, {
+        failureRedirect: '/',
+        failureFlash: true,
+    })(req, res, next);
+}
+
+function authenticatePassportOPENIDcallback(req, res, next) {
+    const strategyName = req.session.strategy;
+    log('authenticatePassportOPENID strategyName', strategyName);
+
     passport.authenticate(strategyName, {
         failureRedirect: '/',
         failureFlash: true,
@@ -124,6 +136,7 @@ module.exports = {
     initializePassport,
     authenticatePassportSAML,
     authenticatePassportOPENID,
+    authenticatePassportOPENIDcallback,
     getRequestStrategyName,
     createStrategiesFromLoginConfigs,
     removeStrategies
