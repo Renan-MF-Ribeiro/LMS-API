@@ -241,7 +241,7 @@ module.exports = {
             };
 
             try {
-                const uri = `client-config/users-lists${process.env.CLIENT_ID}`;
+                const uri = `client-config/users-lists/${process.env.CLIENT_ID}`;
                 const response = await socialApi.patch(uri, body);
 
                 return _messages.success(

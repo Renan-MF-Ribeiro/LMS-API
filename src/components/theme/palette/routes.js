@@ -1,14 +1,14 @@
 const express = require("express");
 const _controller = require("./controller");
 const formidable = require('express-formidable')
-const { validateTokenRoute, isAdmin } = require('../../../utils/middlewares');
+const { validateTokenRoute, isEngagementManager } = require('../../../utils/middlewares');
 
 module.exports = express.Router()
     .get('/', _controller.getTheme)
-    .put('/', formidable(), validateTokenRoute, isAdmin, _controller.createOrUpdate)
-    .post('/duplicate', validateTokenRoute, isAdmin, _controller.duplicateTheme)
-    .delete('/:_id', validateTokenRoute, isAdmin, _controller.delete)
-    .get('/list', validateTokenRoute, isAdmin, _controller.list)
-    .put('/enable', validateTokenRoute, isAdmin, _controller.changeEnable)
+    .put('/', formidable(), validateTokenRoute, isEngagementManager, _controller.createOrUpdate)
+    .post('/duplicate', validateTokenRoute, isEngagementManager, _controller.duplicateTheme)
+    .delete('/:_id', validateTokenRoute, isEngagementManager, _controller.delete)
+    .get('/list', validateTokenRoute, isEngagementManager, _controller.list)
+    .put('/enable', validateTokenRoute, isEngagementManager, _controller.changeEnable)
     .get('/default', validateTokenRoute, _controller.getDefaultTheme)
 

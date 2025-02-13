@@ -225,6 +225,7 @@ module.exports = {
             if (body.certificateDue) body.certificateDue = JSON.parse(body.certificateDue);
 
 
+
             const { thumb, banner } = req.files;
             let thumbPath;
             if (thumb) {
