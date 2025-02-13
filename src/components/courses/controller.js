@@ -219,10 +219,11 @@ module.exports = {
             const arrMaterials = [];
             const files = req.files;
             let flagDate = true;
-            body.tags = JSON.parse(body.tags);
-            body.dimensions = body.dimensions ? JSON.parse(body.dimensions) : null;
-            body.mandatory = JSON.parse(body.mandatory);
-            body.certificateDue = JSON.parse(body.certificateDue);
+            if (body.tags) body.tags = JSON.parse(body.tags);
+            if (body.dimensions) body.dimensions = JSON.parse(body.dimensions);
+            if (body.mandatory) body.mandatory = JSON.parse(body.mandatory);
+            if (body.certificateDue) body.certificateDue = JSON.parse(body.certificateDue);
+
 
 
             const { thumb, banner } = req.files;
@@ -241,7 +242,7 @@ module.exports = {
             if (!body.passingScore || body.passingScore === 'null')
                 body.passingScore = null;
             if (!body.certificateLayout || body.certificateLayout === 'null')
-                body.certificateLayout = null;
+                delete body.certificateLayout;
 
             if (body.dateInitial > body.dateFinal) flagDate = false;
 
