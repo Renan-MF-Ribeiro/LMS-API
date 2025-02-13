@@ -1987,14 +1987,11 @@ module.exports = {
 
     async openIdCallback(req, res) {
         console.log('openIdCallback foi chamado!');
-        console.log('Parâmetros da requisição:', req.query);
 
-        if (req.query.state && req.query.code) {
-            console.log('State:', req.query.state);
-            console.log('Código:', req.query.code);
-        }
 
-        res.redirect(302, 'http://localhost:3000/users/sso/openid/callback');
+
+        req.session.strategy = null;
+        res.send(req.user);
     },
 
     async updateDeviceId(req, res) {
