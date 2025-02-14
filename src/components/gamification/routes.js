@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const _controller = require('./controller');
-const { isAdmin } = require('../../utils/middlewares');
-const formidable = require('express-formidable')
+const { isAdmin, hasFeature } = require('../../utils/middlewares');
+const formidable = require('express-formidable');
+
+router.use(hasFeature('gamefication'));
 
 router
     // Not admin routes
@@ -26,4 +28,4 @@ router
     .put('/rewards/:_id', isAdmin, formidable(), _controller.updateClientRewards)
     .delete('/rewards/:_id', isAdmin, _controller.deleteClientRewards)
 
-    module.exports = router;
+module.exports = router;
