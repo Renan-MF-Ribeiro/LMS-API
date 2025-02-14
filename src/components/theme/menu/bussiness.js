@@ -643,11 +643,15 @@ const MenuDefault = [
                     },
                     {
                         button: "headerConfig",
-                        roles: ["PERFIL_Gestor_Engajamento"]
+                        roles: [
+                            "PERFIL_Gestor_Engajamento"
+                        ]
                     },
                     {
                         button: "welcomeConfig",
-                        roles: ["PERFIL_Gestor_Engajamento"]
+                        roles: [
+                            "PERFIL_Gestor_Engajamento"
+                        ]
                     }
                 ],
             },
