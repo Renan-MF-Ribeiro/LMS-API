@@ -5,7 +5,7 @@ const { UPLOADS_PATH } = process.env
 const {
     isAccountant,
     isStudent,
-    isCollaborator,
+    isAccountantOrCollaborator,
 } = require('../../utils/middlewares')
 
 const { getFormMiddleware } = require('../../utils/files')
@@ -31,9 +31,9 @@ module.exports = express.Router()
     .get('/generate-certificate/:item', _controller.generateCertificate)
     .delete('/:itemId', isAccountant, _controller.disableById)
 
-    .put('/doc', isAccountant, getFormMiddleware(), _controller.multiUploadDocument)
-    .put('/media', isAccountant, getFormMiddleware(), _controller.multiUploadMedia)
+    .put('/doc', isAccountantOrCollaborator, getFormMiddleware(), _controller.multiUploadDocument)
+    .put('/media', isAccountantOrCollaborator, getFormMiddleware(), _controller.multiUploadMedia)
     .post('/scorm', isAccountant, [], _controller.uploadSCORM)
     .put('/:itemId/scorm', isAccountant, [], _controller.updateSCORM)
-    .post('/collaboration', isAccountant, getFormMiddleware(), _controller.itemColaborativo)
-    .post('/vimeo', isAccountant, getFormMiddleware(), _controller.itemColaborativo)
+    .post('/collaboration', isAccountantOrCollaborator, getFormMiddleware(), _controller.itemColaborativo)
+    .post('/vimeo', isAccountantOrCollaborator, getFormMiddleware(), _controller.itemColaborativo)

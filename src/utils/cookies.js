@@ -6,33 +6,34 @@ function getTokenDomain() {
         : `${process.env.DOMAIN.replace(/https?:\/\//g, '')}`;
 }
 
-async function addSASTokenToResponse(res) {
+function getCookieProps() {
     const isLocal = process.env.DOMAIN.includes('localhost');
 
-    const { token, expiresOn } = generateSASToken();
-
-    res.cookie('SAS', token, {
+    return {
         domain: getTokenDomain(),
         httpOnly: false,
         secure: !isLocal,
         sameSite: isLocal ? 'lax' : 'none',
-        expires: expiresOn,
         priority: 'high',
+        encode: String,
+    };
+}
+
+async function addSASTokenToResponse(res) {
+    const { token, expiresOn } = generateSASToken();
+
+    res.cookie('SAS', token, {
+        ...getCookieProps(),
+        expires: expiresOn,
     });
 
     return { token }
 }
 
 async function clearSASTokenFromResponse(res) {
-    const isLocal = process.env.DOMAIN.includes('localhost');
-
     res.cookie('SAS', '', {
-        domain: getTokenDomain(),
-        httpOnly: false,
-        secure: !isLocal,
-        sameSite: isLocal ? 'lax' : 'none',
+        ...getCookieProps(),
         expires: new Date(0),
-        priority: 'high',
     });
 }
 
