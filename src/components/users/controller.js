@@ -104,6 +104,7 @@ const { getConfiguration, handleSegmentationOnQuery } = require('../config/busin
 const { ConfigTypes } = require('../config/model');
 const { fetchIdpProfilesFromRequestWithSamlObject } = require('../idp-integration/business');
 const { log } = require('../../utils/logger');
+const WebhooksController = require("../webhooks/controller");
 const ApiError = require('../../errors/ApiError');
 const { addSASTokenToResponse } = require('../../utils/cookies');
 
@@ -153,6 +154,7 @@ module.exports = {
                 { networkLogin: processedUser.networkLogin },
                 { ...userProjection }
             );
+            await WebhooksController.dispatch('create', 'user', { ...processedUser, password: undefined });
 
             return _messages.success(res, req, created);
         } catch (error) {
@@ -309,6 +311,8 @@ module.exports = {
             };
 
             const newUser = await User.create(userData);
+
+            await WebhooksController.dispatch('create', 'user', userData);
 
             if (token) {
                 const DATA_INICIO = today.startOf('day');
@@ -1732,10 +1736,12 @@ module.exports = {
                     await User.findByIdAndUpdate(user._id, {
                         ...objUser,
                     });
+                    await WebhooksController.dispatch('update', 'user', { ...objUser, password: undefined });
                 } else {
                     await User.create({
                         ...objUser,
                     });
+                    await WebhooksController.dispatch('create', 'user', { ...objUser, password: undefined });
                 }
             }
 

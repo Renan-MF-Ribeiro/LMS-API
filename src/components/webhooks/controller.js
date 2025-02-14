@@ -2,6 +2,28 @@ const { Webhooks } = require('./model')
 const _messages = require('../../utils/messages')
 
 module.exports = {
+    async dispatch (action, target, data) {
+        try {
+            const webhook = await Webhooks.findOne({})
+            if (webhook) {
+                console.log(webhook.endpoint)
+
+                return _messages.success(res, req, 'webhook.endpoint');
+
+            } else {
+                return _messages.success(res, req, 'Webhook não encontrado');
+            }
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'webhooks',
+                'dispatch',
+            )
+        }                
+    },
     async update (req, res) {
         try {
             const body = req.body
