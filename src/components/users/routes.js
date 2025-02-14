@@ -9,7 +9,6 @@ const {
     isUserManager,
     isUserManagerOrSuperAdmin,
     isUserManagerOrSuperAdminOrElegibilityManager,
-    hasElegibilityPermission,
     canListUsers,
 } = require('../../utils/middlewares');
 
@@ -71,7 +70,7 @@ module.exports = express
     .get(
         '/onboarding',
         validateTokenRoute,
-        hasElegibilityPermission,
+        canListUsers,
         (req, res, next) => {
             req.query.onboarding = true;
             return next();
@@ -81,7 +80,7 @@ module.exports = express
     .get(
         '/partners',
         validateTokenRoute,
-        isAdminOrInstructor,
+        canListUsers,
         (req, res, next) => {
             req.query.partner = true;
             return next();
