@@ -47,7 +47,7 @@ router
     .get('/instructor/applied-courses', _controller.appliedCourses)
     .get('/instructor/applied-course/:courseID/:classID', _controller.appliedCourse)
     .get('/instructor/applied-course/:courseId/:classId/print-attendance-list', _controller.printAttendanceList)
-    .post('/instructor/search-user/:id', isInstructor, _controller.searchUser)
+    .post('/instructor/search-user/:id', isAccountantOrInstructor, _controller.searchUser)
     .post(
         '/instructor/create-class',
         isAccountantOrInstructor,
