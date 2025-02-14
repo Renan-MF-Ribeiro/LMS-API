@@ -9,9 +9,8 @@ const {
 } = require('../../new-messages/business');
 const fs = require('fs');
 const mime = require('mime-types');
-const config = require('../../../../config.json');
 const FormData = require('form-data');
-const { getSegmentation, isSegmentationException } = require('../../config/business');
+const { getSegmentation, isSegmentationException, getMessengerConfig } = require('../../config/business');
 
 module.exports = {
     async create(req, res) {
@@ -39,17 +38,28 @@ module.exports = {
                 const uploadContent = `posts/${data.post._id}/content`;
 
                 const formData = new FormData();
-                const key = Object.keys(req.files)[0];
-                const file = req.files[key];
-                const filename = `${file.name}.${mime.extension(file.type)}`;
-                formData.append('content', fs.createReadStream(file.path), filename);
 
-                socialApi.patch(uploadContent, formData, {
+                 Object.keys(req?.files).forEach((key, i) => {
+                     const file = req?.files[key];
+
+                     const filename = `${i}-${file.name.replace(/ /g, '-')}`;
+
+                     formData.append(filename, fs.createReadStream(file.path), {
+                         filename,
+                         contentType: file.type,
+                     });
+                 });
+
+                const result = await socialApi.patch(uploadContent, formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
                         ...formData.getHeaders(),
                     },
                 });
+
+                 if (result?.data && data?.post) {
+                     data.post.content = result.data;
+                 }
             }
 
             if (body.notifyUsers === true && (body?.elegibilities || body?.elegibilitiesAnd)) {
@@ -57,6 +67,8 @@ module.exports = {
                 const title = 'Novo post publicado pela administração!';
                 const texthtml = '<br> <p>Olá! A administração publicou um novo post!</p> <br>';
                 const text = `${name}: ${body.title}`;
+
+                const messengerConfig = await getMessengerConfig();
 
                 const messageList = {
                     user: true,
@@ -72,7 +84,7 @@ module.exports = {
                         title: title,
                         text: text,
                         texthtml: texthtml,
-                        thumbnail: config.messenger.emailTemplate.thumbnail,
+                        thumbnail: messengerConfig.emailTemplate.thumbnail,
                         notificationlink: {
                             url: 'https://v2.staging.happlearning.com.br/login/entrar?redirectTo=/home',
                             trailid: '',
@@ -498,6 +510,45 @@ module.exports = {
             const { postId } = req.params;
             const uri = `posts/${postId}`;
             const { data } = await socialApi.put(uri, body);
+
+            if (!data) {
+                return _messages.internalServer(
+                    res,
+                    req,
+                    error.message,
+                    'Houve um erro ao atualizar a publicação',
+                    'feed',
+                    'updatePost'
+                );
+            }
+
+            if (Object.keys(req?.files).length > 0) {
+                const uploadContent = `posts/${data._id}/content`;
+
+                const formData = new FormData();
+
+                Object.keys(req?.files).forEach((key, i) => {
+                    const file = req?.files[key];
+
+                    const filename = `${i}-${file.name.replace(/ /g, '-')}`;
+
+                    formData.append(filename, fs.createReadStream(file.path), {
+                        filename,
+                        contentType: file.type,
+                    });
+                });
+
+                const result = await socialApi.patch(uploadContent, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        ...formData.getHeaders(),
+                    },
+                });
+
+                if (result?.data && data?.post) {
+                    data.post.content = result.data;
+                }
+            }
 
             return _messages.success(res, req, data);
         } catch (error) {

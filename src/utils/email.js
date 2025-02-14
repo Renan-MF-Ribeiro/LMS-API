@@ -1,9 +1,9 @@
 /* eslint-disable no-async-promise-executor */
 'use strict'
-const config = require('../../config.json')
 const sgMail = require('@sendgrid/mail')
 const { sendMfaToKafka, sendMessageToKafka, sendRecoveryMessageToKafka } = require('../components/new-messages/business')
 const { processTargetUsers } = require('../components/new-messages/business')
+const { getCompanyConfig } = require('../components/config/business')
 sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
 module.exports = {
@@ -97,8 +97,10 @@ module.exports = {
     ) {
         return new Promise(async (resolve, reject) => {
             try {
+                const { companyName, mfaSupportEmail } = await getCompanyConfig();
+
                 let message;
-                message = `Olá, ${userData.name}! Seu token de acesso ao portal ${config.clientName} é <b>${token}</b>. <br> <br> Com ele, você pode ingressar na sua conta com segurança. <br> <br> Em caso de dúvidas ou dificuldades para fazer seu login, entre em contato conosco pelo e-mail ${config.mfaSupportEmail}. Teremos prazer em ajudá-lo(a)!`;
+                message = `Olá, ${userData.name}! Seu token de acesso ao portal ${companyName} é <b>${token}</b>. <br> <br> Com ele, você pode ingressar na sua conta com segurança. <br> <br> Em caso de dúvidas ou dificuldades para fazer seu login, entre em contato conosco pelo e-mail ${mfaSupportEmail}. Teremos prazer em ajudá-lo(a)!`;
                 const body = {
                     category: "notify",
                     communication: ["email"],
@@ -113,7 +115,7 @@ module.exports = {
                     },
                     text: message,
                     texthtml: message,
-                    title: `Seu token de acesso ao portal ${config.clientName} foi gerado com sucesso!`,
+                    title: `Seu token de acesso ao portal ${companyName} foi gerado com sucesso!`,
                     multifactor: true,
                     resetPasswordUrl
                 };

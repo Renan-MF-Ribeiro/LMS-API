@@ -46,6 +46,7 @@ const featuresSchema = new mongoose.Schema({
     partners: { type: Boolean, required: true, default: false },
     alura: { type: Boolean, required: true, default: false },
     feed: { type: Boolean, required: true, default: false },
+    segmentation: { type: Boolean, required: true, default: false },
 }, {
     ...schemaOptions,
 })

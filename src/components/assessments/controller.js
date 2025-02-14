@@ -11,6 +11,7 @@ const { Tracking, SCORMLessonStatus } = require('../tracking/model')
 const { processExamTracking } = require('../tracking/business')
 const { User } = require('../users/model')
 const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business')
+const { orderBy } = require('lodash')
 
 
 module.exports = {
@@ -192,7 +193,7 @@ module.exports = {
                 }
                 allAttempts.push(attempt)
             }
-            _messages.success(res, req, allAttempts)
+            _messages.success(res, req, orderBy(allAttempts, ['evalEnd'], ['desc']))
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'returnEvaluation')
         }

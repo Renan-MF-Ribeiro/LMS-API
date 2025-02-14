@@ -6,7 +6,6 @@ const { DOMAIN, AZURE_BLOB_URL } = process.env;
 const { Section } = require('../sections/model');
 const { Trail } = require('../trails/model');
 const { getTagsElegiblesByToken, checkEligibilityTagsAnd, getSectionTrailId } = require('../sections/business');
-const config = require('../../../config.json');
 const { Theme } = require('../theme/palette/model');
 const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business')
 
@@ -19,11 +18,11 @@ module.exports = {
             const searchBy = req.query.searchBy;
 
             let OptionalChannel = [{}]
-            if (!config.alura.active) {
+            if (!req.features?.alura) {
                 OptionalChannel.push({ type: { $ne: 'alura' } })
             }
 
-            if (!config.collaboration.active) {
+            if (!req.features?.collaborationComponent) {
                 OptionalChannel.push({ type: { $ne: 'collaboration' } })
             }
 
@@ -81,7 +80,7 @@ module.exports = {
                 if (channel.type === 'alura') return channel
                 if (channel.type === 'feed') return channel
 
-                if (config.collaboration.active && channel.type === 'collaboration') return channel
+                if (req.features?.collaborationComponent && channel.type === 'collaboration') return channel
 
                 const sectionQuery = { $and: [
                     { _id: { $in: channel.idSections } }
