@@ -245,6 +245,10 @@ module.exports = {
         revokeTrail();
     },
 
+    executeIntegrator () {
+        integrator();
+    },
+
     executeRecommendedTrails () {
         recommendedTrailsCron();
     },
@@ -1327,6 +1331,22 @@ async function revokeTrail () {
                 );
             }
         }
+    }
+}
+
+async function integrator () {
+    try {
+        const integratorResponse = await axios.put(
+            `${process.env.API_INTEGRATOR}/connection/${process.env.CLIENT_ID}`,
+            {},
+            {
+                headers: {
+                    'x-api-key': process.env.API_KEY_INTEGRATOR,
+                },
+            }
+        );
+    } catch (error) {
+        console.log(error)
     }
 }
 
