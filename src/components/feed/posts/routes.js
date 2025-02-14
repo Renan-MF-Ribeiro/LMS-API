@@ -1,24 +1,31 @@
 const express = require('express');
 const _controller = require('./controller');
 const formidable = require('express-formidable');
+const { isEngagementManager } = require('../../../utils/middlewares');
 
 module.exports = express
     .Router()
+    
+    // Rotas públicas
     .post('/', formidable(), _controller.create)
     .get('/', _controller.findAllPosts)
     .get('/groups/:groupId', _controller.findAllByGroup)
     .get('/public', _controller.findAllPublic)
     .get('/new', _controller.findRecentPosts)
-    .get('/feed', _controller.getFeed)
-    .get('/admin', _controller.listPostToBeModerated)
     .get('/me', _controller.findMyPosts)
-    .get('/user/:userId', _controller.findUserPosts)
-    .get('/:postId', _controller.findPostById)
+    .post('/report/:postId', _controller.reportPost)
     .put('/comments', _controller.comment)
     .get('/:postId/comments', _controller.loadMoreComments)
     .put('/likes', _controller.like)
     .post('/shares', _controller.share)
-    .post('/report/:postId', _controller.reportPost)
-    .post('/report/handle/:postId', _controller.handleReportedPost)
-    .put('/moderate/:postId', formidable(), _controller.updatePost)
-    .delete('/:postId', _controller.delete);
+
+    // Rotas de admin
+    .get('/admin', isEngagementManager, _controller.listPostToBeModerated)
+    .get('/:postId', isEngagementManager, _controller.findPostById)
+    .post('/report/handle/:postId', isEngagementManager, _controller.handleReportedPost)
+    .put('/moderate/:postId', formidable(), isEngagementManager, _controller.updatePost)
+    .delete('/:postId', isEngagementManager, _controller.delete)
+
+    // Deprecated
+    .get('/user/:userId', _controller.findUserPosts)
+    .get('/feed', _controller.getFeed);
