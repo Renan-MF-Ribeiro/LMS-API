@@ -15,6 +15,7 @@ const {
     executeUpdateTrailsViewsCron,
     handleInactiveOldOnboardingUsers,
     handleRemoveAutomaticEligibilityTags,
+    executeIntegratorCron,
 } = require('./controller')
 const { isSuperAdmin } = require('../../utils/middlewares')
 
@@ -27,6 +28,7 @@ router
     .get('/groups-ad', isSuperAdmin, executeGroupsAD)
     .get('/release', isSuperAdmin, executeCourseReleaseNotification)
     .get('/charge', isSuperAdmin, executeCourseChargeNotification)
+    .get('/integrator', isSuperAdmin, executeIntegratorCron)
     .get('/exam-tracking-delete', isSuperAdmin, executeDeleteTrackingCron)
     .get('/revoke-trails', isSuperAdmin, executeCronRevokeTrail)
     .get('/recommended-trails', isSuperAdmin, executeRecommendedTrails)

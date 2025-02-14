@@ -20,6 +20,9 @@
         "degreed": {
             "active": false
         },
+        "integrator": {
+            "active": true
+        },
         "notifyResponsibleUsers": {
             "active": true,
             "notificationDays": [-30, 0, 30, 60, 90]
