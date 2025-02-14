@@ -207,21 +207,21 @@ module.exports = {
     },
 
     isShowcaseActive: (req, res, next) => {
-        if (req.features?.showcaseComponent) {
+        if (!req.features?.showcaseComponent) {
             return _messages.successEmpty(res, req, 'Feature "Showcase" não está ativa');
         }
         next();
     },
 
     isAluraActive: (req, res, next) => {
-        if (req.features?.alura) {
+        if (!req.features?.alura) {
             return _messages.successEmpty(res, req, 'Feature "Alura" não está ativa');
         }
         next();
     },
 
     isAssessmentActive: (req, res, next) => {
-        if (req.features?.assessement) {
+        if (!req.features?.assessement) {
             return _messages.successEmpty(res, req, 'Feature "Assessment" não está ativa');
         }
         next();
