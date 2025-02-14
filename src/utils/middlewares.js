@@ -4,7 +4,6 @@ const cheerio = require('cheerio');
 const _messages = require('../utils/messages');
 const _auth = require('./auth');
 const { validateToken, validateMonitoringToken } = require('./auth');
-const config = require('../../config.json');
 const {
     getDbCurrentFeatures,
     setAppCurrentFeatures,
@@ -208,21 +207,21 @@ module.exports = {
     },
 
     isShowcaseActive: (req, res, next) => {
-        if (!config?.showcase?.active) {
+        if (req.features?.showcaseComponent) {
             return _messages.successEmpty(res, req, 'Feature "Showcase" não está ativa');
         }
         next();
     },
 
     isAluraActive: (req, res, next) => {
-        if (!config?.alura?.active) {
+        if (req.features?.alura) {
             return _messages.successEmpty(res, req, 'Feature "Alura" não está ativa');
         }
         next();
     },
 
     isAssessmentActive: (req, res, next) => {
-        if (!config?.assessment?.active) {
+        if (req.features?.assessement) {
             return _messages.successEmpty(res, req, 'Feature "Assessment" não está ativa');
         }
         next();
