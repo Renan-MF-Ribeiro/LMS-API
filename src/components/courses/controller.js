@@ -595,10 +595,10 @@ module.exports = {
                                     users: arrUserId,
                                 },
                             },
-                            text: `Você está na turma presencial ${name}!\n O local do treinamento será em: ${location}`,
-                            textHtml: `<p>Você está na turma presencial ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
+                            text: `Você está na turma ${name}!\n O local do treinamento será em: ${location}`,
+                            textHtml: `<p>Você está na turma ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
                             thumbnail: messengerConfig.emailTemplate.thumbnail,
-                            title: `Treinamentos Presenciais: ${name}`,
+                            title: `Treinamentos: ${name}`,
                         };
                         await createMessagesFromBackend(message);
 
@@ -827,10 +827,10 @@ module.exports = {
                                     users: arrUserId,
                                 },
                             },
-                            text: `Você está na turma presencial ${name}!\n O local do treinamento será em: ${location} `,
-                            textHtml: `<p>Você está na turma presencial ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
+                            text: `Você está na turma ${name}!\n O local do treinamento será em: ${location} `,
+                            textHtml: `<p>Você está na turma ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
                             thumbnail: messengerConfig.emailTemplate.thumbnail,
-                            title: `Treinamentos Presenciais: ${name}`,
+                            title: `Treinamentos: ${name}`,
                         };
 
                         await createMessagesFromBackend(message);
@@ -1493,10 +1493,10 @@ module.exports = {
                         users: [userID],
                     },
                 },
-                text: `Você está na turma presencial ${course.name}!\n O local do treinamento será em: ${course.location}`,
-                textHtml: `<p>Você está na turma presencial ${course.name}!</p> <p>O local do treinamento será em: ${course.location}</p>`,
+                text: `Você está na turma ${course.name}!\n O local do treinamento será em: ${course.location}`,
+                textHtml: `<p>Você está na turma ${course.name}!</p> <p>O local do treinamento será em: ${course.location}</p>`,
                 thumbnail: messengerConfig.emailTemplate.thumbnail,
-                title: `Treinamentos Presenciais: ${course.name}`,
+                title: `Treinamentos: ${course.name}`,
             };
             await createMessagesFromBackend(message);
 

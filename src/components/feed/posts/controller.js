@@ -12,9 +12,6 @@ const mime = require('mime-types');
 const FormData = require('form-data');
 const { getSegmentation, isSegmentationException, getMessengerConfig } = require('../../config/business');
 
-/**
- * touch dots
- */
 module.exports = {
     async create(req, res) {
         const userCustomElegeFields = await getSegFieldsFromUser(req);
