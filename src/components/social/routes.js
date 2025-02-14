@@ -1,12 +1,12 @@
 const express = require('express');
 const _controller = require('./controller');
-const { isAdmin } = require('../../utils/middlewares');
+const { isEngagementManager } = require('../../utils/middlewares');
 
 module.exports = express.Router()
-    .get('/config', isAdmin, _controller.getConfig)
-    .put('/config', isAdmin, _controller.putConfig)
-    .get('/users-lists', isAdmin, _controller.getUsers)
-    .post('/users-lists', isAdmin, _controller.addOrRemoveFromUserList)
+    .get('/config', isEngagementManager, _controller.getConfig)
+    .put('/config', isEngagementManager, _controller.putConfig)
+    .get('/users-lists', isEngagementManager, _controller.getUsers)
+    .post('/users-lists', isEngagementManager, _controller.addOrRemoveFromUserList)
     .get('/status', _controller.getSocialStatus)
 
     //comments
@@ -15,10 +15,10 @@ module.exports = express.Router()
     .get('/comments/trails/:trailId', _controller.getCommentsByTrailId)
     .put('/comments/update/:commentId', _controller.updateComment)
     // comments management
-    .get('/comments/pending', isAdmin, _controller.getPendingComments)
-    .get('/comments/approved', isAdmin, _controller.getApprovedComments)
-    .get('/comments/rejected', isAdmin, _controller.getRejectedComments)
-    .patch('/comments/:commentId', isAdmin, _controller.updateCommentStatus)
+    .get('/comments/pending', isEngagementManager, _controller.getPendingComments)
+    .get('/comments/approved', isEngagementManager, _controller.getApprovedComments)
+    .get('/comments/rejected', isEngagementManager, _controller.getRejectedComments)
+    .patch('/comments/:commentId', isEngagementManager, _controller.updateCommentStatus)
     //likes
     .post('/like/create', _controller.createLike)
     .get('/like/:trailId/:userId', _controller.getLikesByTrailId)

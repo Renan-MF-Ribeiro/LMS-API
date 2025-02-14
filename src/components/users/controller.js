@@ -27,10 +27,11 @@ const {
     returnIdProfileUser,
     returnIdGroupUser,
     generateTokenAnalytics,
-    generateSASToken,
     generateHappPlaceToken,
     generateMultiFactor,
     validateMultiFactor,
+    returnProfileByToken,
+    generateSASToken,
 } = require('../../utils/auth');
 
 const {
@@ -52,7 +53,7 @@ const {
     buildSearchObject,
     generateNewPassword,
     maskEmail,
-    getSsoFormByStrategyName
+    getSsoFormByStrategyName,
 } = require('./business');
 
 const {
@@ -83,13 +84,11 @@ const cryptoJS = require('crypto-js');
 const jwt = require('jsonwebtoken');
 const { sendMessageToKafka } = require('../new-messages/business');
 
-const config = require('../../../config.json');
 const { getNumberOfItemsCompletedOrInProgressOrNotStarted } = require('../home/business');
 const { HistoricEvaluation, Evaluation } = require('../assessments/model');
 const { Question } = require('../assessments/questions/model');
 const { Alternative } = require('../assessments/alternatives/model');
-const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadsheet;
-const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail;
+
 const { EVENTS_CATEGORY } = require('../gamification/model');
 const AssessmentController = require('../assessment/controller');
 const GamificationController = require('../gamification/controller');
@@ -101,22 +100,161 @@ const { Features } = require('../theme/features/model');
 const { Partner } = require('../partners/model');
 const { Log } = require('../logs/model');
 const { Tracking } = require('../tracking/model');
-const { getConfiguration, handleSegmentationOnQuery } = require('../config/business');
+const { getConfiguration, handleSegmentationOnQuery, getMessengerConfig, getUsersDataConfig } = require('../config/business');
 const { ConfigTypes } = require('../config/model');
-const { fetchIdpProfilesFromRequestWithSamlObject } = require('../idp-integration/business');
+const {
+    fetchIdpProfilesFromRequestWithSamlObject,
+    getActiveIdpIntegrations,
+} = require('../idp-integration/business');
 const { log } = require('../../utils/logger');
 const ApiError = require('../../errors/ApiError');
+const { addSASTokenToResponse } = require('../../utils/cookies');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-function hideCPFNumbers (cpf) {
+function hideCPFNumbers(cpf) {
     if (!cpf) return cpf;
 
     return String(cpf).substring(0, 3) + 'XXXXXXXX';
 }
 
+async function validateUserAndPassword(res, req, login, passwordDecripted) {
+    // Verifica se usuário existe
+    const user = await User.findOne({ networkLogin: { $eq: login }, status: 'ATIVO' }).lean();
+    // Verifica se a senha é válida
+    const pass = user.password.filter(function (obj) {
+        return obj.valid && bcrypt.compareSync(passwordDecripted, obj.hash);
+    });
+    if (!user || pass.length === 0) {
+        _messages.forbidden(
+            res,
+            req,
+            'Usuário ou senha inválidos.',
+            'Usuário ou senha inválidos.',
+            'users',
+            'ldapSignIn'
+        );
+    }
+
+    await handleBlockUser(user);
+
+    if (new Date(pass[0].createdAt).getTime() < Date.now() - 90 * 24 * 60 * 60 * 1000) {
+        user.passwordValid = false;
+    }
+
+    return user;
+}
+// Gerencia block de usuário por tentativas de login consecutivas
+async function handleBlockUser(user) {
+    const countOfBlocks = await checkAmountOfLocks(user._id);
+    // 5 Tentativas
+    if (countOfBlocks >= 5) {
+        const lastLoginAttemp = await returnLastLoginAttemp(user._id);
+        const resultDiff = await checkLastAttemptTime(lastLoginAttemp);
+
+        // 30min
+        if (resultDiff >= 1) {
+            await Block.updateMany({ user: { $eq: user._id } }, { unblocked: true });
+        } else {
+            sendNotificationEmail(
+                user.email,
+                'Conta bloqueada',
+                `Olá ${user.name}, uma nova tentativa de acesso a sua conta não foi permita pois sua conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
+            );
+            return _messages.forbidden(
+                res,
+                req,
+                'Usuário bloqueado temporariamente',
+                'Por favor tente novamente mais tarde!',
+                'users',
+                'ldapSignIn'
+            );
+        }
+    }
+}
+async function generateTokens(user, login, password) {
+    const groups = user.groupsAD;
+    const namesProfiles = [];
+    const namesGroups = [];
+    let tokenAnalytics, tokenHappPlace;
+
+    for (const p in groups) {
+        const strGroup = groups[p];
+
+        if (strGroup.includes('PERFIL_')) namesProfiles.push(strGroup);
+        if (strGroup.includes('ELEGE')) namesGroups.push(strGroup);
+    }
+
+    const profilesIDS = await returnIdProfileUser(namesProfiles);
+    const groupsIDS = await returnIdGroupUser(namesGroups);
+    const userGroups = await Group.find({ name: { $in: namesGroups } });
+    const eligibilities = userGroups.flatMap((group) =>
+        group.tags.flatMap((tag) => tag?.value || tag.display)
+    );
+
+    if (namesProfiles.includes('PERFIL_Conteudista')) {
+        tokenHappPlace = generateHappPlaceToken({
+            name: user.name,
+            networkLogin: user.networkLogin,
+            clientId: CLIENT_ID,
+        });
+    }
+
+    if (namesProfiles.includes('PERFIL_Analista')) {
+        const dashboardFilters = await processDashFilters(user);
+        tokenAnalytics = generateTokenAnalytics({
+            perfil: profilesIDS.numbers,
+            clientID: CLIENT_ID,
+            filters: dashboardFilters,
+        });
+    }
+
+    const authwebPush = user.webPushAuthorization
+        ? user.webPushAuthorization[user.webPushAuthorization.length - 1]
+        : null;
+
+    const token = generateToken({
+        ref: user._id,
+        clientId: process.env.CLIENT_ID,
+        userName: user.name,
+        userTags: eligibilities,
+        profiles: profilesIDS.result,
+        numbers: profilesIDS.numbers,
+        groups: groupsIDS,
+        welcomeVideoWatched: user?.welcomeVideoWatched,
+    });
+
+    const mfaToken = generateMfaToken({
+        ref: user._id,
+        mfa: false,
+    });
+
+    const SAS = generateSASToken();
+
+    await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
+
+    let tokenEncript = cryptoJS.AES.encrypt(token, login);
+    let tk = tokenEncript.toString();
+    let key = login + ':' + password;
+
+    key = cryptoJS.AES.encrypt(key, password).toString();
+
+    return {
+        SAS,
+        tk,
+        key,
+        tokenAnalytics,
+        tokenHappPlace,
+        mfaToken,
+        authwebPush,
+        profilesIDS,
+        namesProfiles,
+        namesGroups,
+    };
+}
+
 module.exports = {
-    async create (req, res) {
+    async create(req, res) {
         try {
             const { registration, cpf } = req.body;
 
@@ -179,22 +317,21 @@ module.exports = {
         }
     },
 
-    async findById (req, res) {
+    async findById(req, res) {
         try {
             const _id = req.params.userId;
 
-            const query = { _id }
+            const query = { _id };
 
             if (req?.segmentation) {
-                handleSegmentationOnQuery(req, 'issuer', query)
+                handleSegmentationOnQuery(req, 'issuer', query);
             }
 
             const foundUser = await User.findOne(query).select('-password');
 
             _messages.success(res, req, foundUser);
         } catch (error) {
-
-            console.log({ error })
+            console.log({ error });
             _messages.internalServer(
                 res,
                 req,
@@ -206,7 +343,7 @@ module.exports = {
         }
     },
 
-    async signup (req, res) {
+    async signup(req, res) {
         const { token } = req.query;
         const { password, ...data } = req.body;
 
@@ -218,6 +355,8 @@ module.exports = {
         let defaultFields;
         let partnerDays = 0;
         let classGroupsIDs;
+
+        const { sendSignUpActivationEmail } = await getUsersDataConfig();
 
         try {
             // Validação de usuário já criado
@@ -293,7 +432,7 @@ module.exports = {
             }
 
             const formatedDate = formatDateWithoutHoursBrasilian(data.birthDate);
-            console.log(formatedDate)
+            console.log(formatedDate);
             const userData = {
                 networkLogin,
                 // email: networkLogin,
@@ -353,7 +492,7 @@ module.exports = {
         }
     },
 
-    async activateUser (req, res) {
+    async activateUser(req, res) {
         try {
             const { token, email } = req.body;
             const isUser = await bcrypt.compare(email, token);
@@ -375,191 +514,17 @@ module.exports = {
         }
     },
 
-    async ldapSignIn (req, res) {
+    async ldapSignIn(req, res) {
         let user = {};
+        const { login, password } = req.body;
 
         try {
-            const { login, password } = req.body;
+            const decrypted = cryptoJS.AES.decrypt(password, 'pass');
+            const passwordDecripted = decrypted.toString(cryptoJS.enc.Utf8);
 
-            var decrypted = cryptoJS.AES.decrypt(password, 'pass');
-
-            const passwordDecripty = decrypted.toString(cryptoJS.enc.Utf8);
-
-            if (login !== undefined && password !== undefined) {
-                user = await User.findOne({ networkLogin: { $eq: login }, status: 'ATIVO' }).lean();
-
-                if (user) {
-                    const dashboardFilters = await processDashFilters(user);
-
-                    const amountOfLocks = await checkAmountOfLocks(user._id);
-                    // 5 Tentativas
-                    if (amountOfLocks >= 50) {
-                        const lastLoginAttemp = await returnLastLoginAttemp(user._id);
-                        const resultDiff = await checkLastAttemptTime(lastLoginAttemp);
-
-                        // 30min
-                        if (resultDiff >= 1) {
-                            await Block.updateMany(
-                                { user: { $eq: user._id } },
-                                { unblocked: true }
-                            );
-                        } else {
-                            sendNotificationEmail(
-                                user.email,
-                                'Conta bloqueada',
-                                `Olá ${user.name}, uma nova tentativa de acesso a sua conta não foi permita pois sua conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
-                            );
-                            _messages.forbidden(
-                                res,
-                                req,
-                                'Usuário bloqueado temporariamente',
-                                'Por favor tente novamente mais tarde!',
-                                'users',
-                                'ldapSignIn'
-                            );
-                            return;
-                        }
-                    }
-
-                    var pass = user.password.filter(function (obj) {
-                        if (obj.valid === true && bcrypt.compareSync(passwordDecripty, obj.hash)) {
-                            return true;
-                        }
-
-                        return false;
-                    });
-
-                    if (pass.length === 0) {
-                        // sendNotificationEmail(user.email, "Falha na sua conta", `Olá ${user.name}, foi feita uma nova tentativa de acesso acesso a sua conta, se você não reconhece esse acesso, por favor, acesse a sua conta e troque a sua senha.`);
-                        throw new Error('Senha inválida');
-                    } else {
-                        if (
-                            new Date(pass[0].createdAt).getTime() <
-                            Date.now() - 90 * 24 * 60 * 60 * 1000
-                        ) {
-                            user.passwordValid = false;
-                        }
-                    }
-
-                    const groups = user.groupsAD;
-                    const namesProfiles = [];
-                    const namesGroups = [];
-
-                    for (const p in groups) {
-                        const strGroup = groups[p];
-
-                        if (strGroup.indexOf('PERFIL_') >= 0) namesProfiles.push(strGroup);
-
-                        if (strGroup.indexOf('ELEGE') >= 0) namesGroups.push(strGroup);
-                    }
-
-                    const profilesIDS = await returnIdProfileUser(namesProfiles);
-                    const groupsIDS = await returnIdGroupUser(namesGroups);
-                    const userGroups = await Group.find({ name: { $in: namesGroups } })
-                    const eligibilities = userGroups.flatMap((group) =>
-                        group.tags.flatMap((tag) => tag?.value || tag.display)
-                    );
-
-                    const authwebPush = user.webPushAuthorization
-                        ? user.webPushAuthorization[user.webPushAuthorization.length - 1]
-                        : null;
-
-                    // VERIFY FEATURE WELCOME
-                    const hasWelcomeComponentFeature = req.features?.welcomeComponent ?? false;
-
-                    console.log(user.welcomeVideoWatched)
-                    const token = generateToken({
-                        ref: user._id,
-                        clientId: process.env.CLIENT_ID,
-                        userName: user.name,
-                        userTags: eligibilities,
-                        profiles: profilesIDS.result,
-                        numbers: profilesIDS.numbers,
-                        groups: groupsIDS,
-                        welcomeVideoWatched: user?.welcomeVideoWatched,
-                    });
-
-                    const token_analytics = generateTokenAnalytics({
-                        perfil: profilesIDS.numbers,
-                        clientID: CLIENT_ID,
-                        filters: dashboardFilters,
-                    });
-
-                    const token_mfa = generateMfaToken({
-                        ref: user._id,
-                        mfa: false,
-                    });
-
-                    const token_happplace = generateHappPlaceToken({
-                        name: user.name,
-                        networkLogin: user.networkLogin,
-                        clientId: CLIENT_ID,
-                    });
-
-                    const SAS = generateSASToken();
-
-                    await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
-                    await updateLastLoginUser(user._id);
-
-                    // sendNotificationEmail(user.email, "Acesso a sua conta", `Olá ${user.name}, foi feito uma novo acesso a sua conta, se você não reconhece esse acesso, por favor, acesse a sua conta e troque a sua senha.`);
-                    var tokenEncript = cryptoJS.AES.encrypt(token, login);
-
-                    var tk = tokenEncript.toString();
-                    var key = login + ':' + password;
-                    key = cryptoJS.AES.encrypt(key, password).toString();
-
-                    // GAMIFICATION DISPATCH
-                    await GamificationController.dispatch(login, [EVENTS_CATEGORY.LOGIN]);
-
-                    if (config.assessment.active) {
-                        // await AssessmentBusiness.updateUserEligibilities(user._id);
-                    }
-
-                    _messages.success(
-                        res,
-                        req,
-                        {
-                            SAS,
-                            tk,
-                            key,
-                            accept: user.acceptTerms,
-                            acceptCollaboration: user.acceptTermsCollaboration,
-                            passwordValid: user.passwordValid,
-                            numbers: profilesIDS.numbers,
-                            name: user.name,
-                            profilePhoto: user.profilePhoto,
-                            tokenAnalytics: token_analytics,
-                            tokenHappPlace: token_happplace,
-                            mfaToken: token_mfa,
-                            networkLogin: user.networkLogin,
-                            userId: user._id,
-                            authwebPush: authwebPush?.keys.auth,
-                            email: user.email,
-                        },
-                        'Sucesso ao logar',
-                        'users',
-                        'ldapSignIn',
-                        [],
-                        [],
-                        true,
-                        'LOGIN',
-                        namesProfiles.concat(namesGroups)
-                    );
-                } else {
-                    console.log('err');
-                    await sleep(3000);
-                    _messages.forbidden(
-                        res,
-                        req,
-                        'Usuário ou senha inválidos.',
-                        'Usuário ou senha inválidos.',
-                        'users',
-                        'ldapSignIn'
-                    );
-                }
-            } else {
-                console.log('err2');
-                _messages.forbidden(
+            // Valida campos faltantes
+            if (!login || !passwordDecripted) {
+                return _messages.forbidden(
                     res,
                     req,
                     'Usuário ou senha não informados',
@@ -568,15 +533,65 @@ module.exports = {
                     'ldapSignIn'
                 );
             }
+
+            // Valida usuário e senha
+            user = await validateUserAndPassword(res, req, login, passwordDecripted);
+            await updateLastLoginUser(user._id);
+
+            // Gera todos os tokens necessários
+            const {
+                tokenAnalytics,
+                tokenHappPlace,
+                mfaToken,
+                key,
+                authwebPush,
+                SAS,
+                tk,
+                profilesIDS,
+                namesProfiles,
+                namesGroups,
+            } = await generateTokens(user, login, password);
+
+            // GAMIFICATION DISPATCH
+            await GamificationController.dispatch(login, [EVENTS_CATEGORY.LOGIN]);
+
+            return _messages.success(
+                res,
+                req,
+                {
+                    SAS,
+                    tk,
+                    key,
+                    accept: user.acceptTerms,
+                    acceptCollaboration: user.acceptTermsCollaboration,
+                    passwordValid: user.passwordValid,
+                    numbers: profilesIDS.numbers,
+                    name: user.name,
+                    profilePhoto: user.profilePhoto,
+                    tokenAnalytics,
+                    tokenHappPlace,
+                    mfaToken,
+                    networkLogin: user.networkLogin,
+                    userId: user._id,
+                    authwebPush: authwebPush?.keys.auth,
+                    email: user.email,
+                },
+                'Sucesso ao logar',
+                'users',
+                'ldapSignIn',
+                [],
+                [],
+                true,
+                'LOGIN',
+                namesProfiles.concat(namesGroups)
+            );
         } catch (error) {
-            console.log(error);
-            await sleep(3000);
             await Block.create({
                 user: user._id,
                 dateTimeBlock: getDateToday(),
                 ip: req.ip,
             });
-            _messages.forbidden(
+            return _messages.forbidden(
                 res,
                 req,
                 error.message,
@@ -588,11 +603,13 @@ module.exports = {
         }
     },
 
-    async feedbackElegible (req, res) {
+    async feedbackElegible(req, res) {
         const user = await getUserByToken(req);
         const today = new Date();
         const uri = `${process.env.API_SURVEY}/feedback/listbyuser?userid=${user._id}`;
         try {
+            const usersDataConfig = await getUsersDataConfig();
+
             const response = await axios.get(uri);
             const firstLogin = await returnDateSinceFirstLogin(user._id);
             const { numberOfItemsCompleted } =
@@ -607,7 +624,7 @@ module.exports = {
 
                 if (
                     firstLogin >= 1 &&
-                    daysSinceLastFeedback >= config.usersData.daysSinceLastFeedback &&
+                    daysSinceLastFeedback >= usersDataConfig.daysSinceLastFeedback &&
                     numberOfItemsCompleted >= 1
                 ) {
                     _messages.success(res, req, true);
@@ -623,7 +640,7 @@ module.exports = {
         }
     },
 
-    async singleSignOn (req, res) {
+    async singleSignOn(req, res) {
         let user = {};
 
         const { token } = req.body;
@@ -703,18 +720,14 @@ module.exports = {
                     }
 
                     const groups = Array.from(
-                        new Set(
-                            [
-                                ...(tokenIdpProfiles ?? []),
-                                ...(
-                                    user.groupsAD?.filter(
-                                        group => tokenIdpProfiles
-                                            ? group === 'PERFIL_Aluno' || !group.startsWith('PERFIL')
-                                            : true
-                                    ) ?? []
-                                )
-                            ]
-                        )
+                        new Set([
+                            ...(tokenIdpProfiles ?? []),
+                            ...(user.groupsAD?.filter((group) =>
+                                tokenIdpProfiles
+                                    ? group === 'PERFIL_Aluno' || !group.startsWith('PERFIL')
+                                    : true
+                            ) ?? []),
+                        ])
                     );
 
                     const namesProfiles = groups.filter((group) => group.startsWith('PERFIL'));
@@ -723,7 +736,7 @@ module.exports = {
 
                     const profilesIDS = await returnIdProfileUser(namesProfiles);
                     const groupsIDS = await returnIdGroupUser(namesGroups);
-                    const userGroups = await Group.find({ name: { $in: namesGroups } })
+                    const userGroups = await Group.find({ name: { $in: namesGroups } });
                     const eligibilities = userGroups.flatMap((group) =>
                         group.tags.flatMap((tag) => tag?.value || tag.display)
                     );
@@ -758,7 +771,7 @@ module.exports = {
                         clientId: CLIENT_ID,
                     });
 
-                    const SAS = generateSASToken();
+                    const { token: SAS } = addSASTokenToResponse(res);
 
                     await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
                     await updateLastLoginUser(user._id);
@@ -821,11 +834,18 @@ module.exports = {
             }
         } catch (error) {
             console.log(error);
-            _messages.internalServer(res, req, error.message, { token, error: error.stack }, 'singleSignOn', 'singleSignOn');
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                { token, error: error.stack },
+                'singleSignOn',
+                'singleSignOn'
+            );
         }
     },
 
-    async acceptTerms (req, res) {
+    async acceptTerms(req, res) {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
@@ -855,7 +875,7 @@ module.exports = {
         }
     },
 
-    async watchedVideo (req, res) {
+    async watchedVideo(req, res) {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
@@ -885,7 +905,7 @@ module.exports = {
         }
     },
 
-    async acceptTermsCollaboration (req, res) {
+    async acceptTermsCollaboration(req, res) {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
@@ -921,7 +941,7 @@ module.exports = {
         if (typeof body !== 'object' || Object.values(body).some((value) => !value?.length)) {
             throw new ApiError('Dados inválidos', 400, body, { skipDbLog: true });
         }
-
+        
         const search = buildSearchObject(body);
 
         if (search.birthDate || search.birthday) {
@@ -997,7 +1017,7 @@ module.exports = {
         return _messages.success(res, req, password_new);
     },
 
-    async changePassword (req, res) {
+    async changePassword(req, res) {
         try {
             const { password_old, password_new, password_newConfirm } = req.body;
             const { _id } = await getUserByToken(req);
@@ -1094,7 +1114,7 @@ module.exports = {
         }
     },
 
-    async changePasswordByEmail (req, res) {
+    async changePasswordByEmail(req, res) {
         try {
             const { password_new, password_newConfirm } = req.body;
             const { data } = decodeToken(req.headers.authorization);
@@ -1186,8 +1206,10 @@ module.exports = {
         }
     },
 
-    async import (req, res) {
+    async import(req, res) {
         try {
+            const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
+            
             var file = null;
             const newUsers = [];
             const existingUsers = [];
@@ -1209,12 +1231,11 @@ module.exports = {
             );
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
+            const messengerConfig = await getMessengerConfig();
+
             for (const result of results) {
                 const existingUser = await User.findOne({
-                    $or: [
-                        { networkLogin: result.networkLogin },
-                        { networkLogin: result.cpf }
-                    ]
+                    $or: [{ networkLogin: result.networkLogin }, { networkLogin: result.cpf }],
                 });
 
                 const processedUser = processUsersLoad(result, fieldsForElegibility);
@@ -1227,14 +1248,17 @@ module.exports = {
                 if (existingUser) {
                     const groupsAD = [
                         ...processedUser.groupsAD,
-                        ...(existingUser.groupsAD?.filter((group) => group.startsWith('PERFIL_')) ?? []),
+                        ...(existingUser.groupsAD?.filter((group) => group.startsWith('PERFIL_')) ??
+                            []),
                     ];
                     existingUsers.push({
                         _id: existingUser._id,
                         processedUser: {
                             ...processedUser,
                             groupsAD: [...new Set(groupsAD)],
-                            cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
+                            cpf: !isProduction
+                                ? hideCPFNumbers(processedUser.cpf)
+                                : processedUser.cpf,
                         },
                     });
                 } else {
@@ -1246,16 +1270,21 @@ module.exports = {
                 }
             }
 
-            const automaticEligibilityConfig = await getConfiguration(ConfigTypes.AutomaticEligibility.Onboard);
+            const automaticEligibilityConfig = await getConfiguration(
+                ConfigTypes.AutomaticEligibility.Onboard
+            );
 
             if (automaticEligibilityConfig?.enabled) {
                 const { eligibility = [] } = automaticEligibilityConfig;
 
-                existingUsers.forEach(user => {
-                    user.processedUser.groupsAD = [...(user.processedUser.groupsAD ?? []), ...eligibility];
+                existingUsers.forEach((user) => {
+                    user.processedUser.groupsAD = [
+                        ...(user.processedUser.groupsAD ?? []),
+                        ...eligibility,
+                    ];
                 });
 
-                newUsers.forEach(user => {
+                newUsers.forEach((user) => {
                     user.groupsAD = [...(user.groupsAD ?? []), ...eligibility];
                 });
             }
@@ -1279,7 +1308,7 @@ module.exports = {
                 await User.updateMany(
                     {
                         ignoreLoadInactivation: { $ne: true },
-                        updatedAt: { $lt: data_start }
+                        updatedAt: { $lt: data_start },
                     },
                     { $set: { status: 'INATIVO' } },
                     { multi: true }
@@ -1293,7 +1322,7 @@ module.exports = {
 
                 await User.insertMany(newUsers);
 
-                if (config.messenger.sendUsersToMicrosservice) {
+                if (messengerConfig.sendUsersToMicrosservice) {
                     await sendAccountsToKafka(usersToSend);
                     const campaign = createWelcomeCampaign();
                     await sendMessageToKafka(campaign, newUsers);
@@ -1315,8 +1344,10 @@ module.exports = {
         }
     },
 
-    async importOnboarding (req, res) {
+    async importOnboarding(req, res) {
         try {
+            const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
+
             const onboarding = true;
             var file = null;
             const newUsers = [];
@@ -1338,6 +1369,8 @@ module.exports = {
             );
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
+            const messengerConfig = await getMessengerConfig();
+
             const user = await getUserByToken(req)
 
             for (const result of results) {
@@ -1356,7 +1389,9 @@ module.exports = {
                         _id: existingUser._id,
                         processedUser: {
                             ...processedUser,
-                            cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
+                            cpf: !isProduction
+                                ? hideCPFNumbers(processedUser.cpf)
+                                : processedUser.cpf,
                         },
                     });
                 } else {
@@ -1382,7 +1417,7 @@ module.exports = {
                 await User.updateMany(
                     {
                         ignoreLoadInactivation: { $ne: true },
-                        updatedAt: { $lt: data_start }
+                        updatedAt: { $lt: data_start },
                     },
                     { $set: { status: 'INATIVO' } },
                     { multi: true }
@@ -1396,7 +1431,7 @@ module.exports = {
 
                 await User.insertMany(newUsers);
 
-                if (config.messenger.sendUsersToMicrosservice) {
+                if (messengerConfig.sendUsersToMicrosservice) {
                     await sendAccountsToKafka(usersToSend);
                     const campaign = createWelcomeCampaign();
                     await sendMessageToKafka(campaign, newUsers);
@@ -1418,7 +1453,7 @@ module.exports = {
         }
     },
 
-    async returnUsers (req, res) {
+    async returnUsers(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1431,25 +1466,23 @@ module.exports = {
                 $and: [
                     {
                         onboarding: isOnboarding ? true : { $ne: true },
-                    }
-                ]
-            }
+                    },
+                ],
+            };
 
             if (searchBy) {
-                query.$and.push(
-                    {
-                        $or: [
-                            { name: { $regex: searchBy, $options: 'i' } },
-                            { registration: { $regex: searchBy, $options: 'i' } },
-                            { email: { $regex: searchBy, $options: 'i' } },
-                            { cpf: { $regex: searchBy, $options: 'i' } },
-                        ]
-                    }
-                )
+                query.$and.push({
+                    $or: [
+                        { name: { $regex: searchBy, $options: 'i' } },
+                        { registration: { $regex: searchBy, $options: 'i' } },
+                        { email: { $regex: searchBy, $options: 'i' } },
+                        { cpf: { $regex: searchBy, $options: 'i' } },
+                    ],
+                });
             }
 
             if (req?.segmentation) {
-                handleSegmentationOnQuery(req, 'issuer', query)
+                handleSegmentationOnQuery(req, 'issuer', query);
             }
 
             const users = await User.find(query)
@@ -1469,7 +1502,6 @@ module.exports = {
                 onboarding: { $ne: true },
             }).countDocuments();
 
-
             _messages.success(res, req, {
                 data: users,
                 total,
@@ -1488,7 +1520,7 @@ module.exports = {
         }
     },
 
-    async returnUsersOnboarding (req, res) {
+    async returnUsersOnboarding(req, res) {
         try {
             const users = await findUsers(req, { onboarding: true });
             _messages.success(res, req, users);
@@ -1504,7 +1536,7 @@ module.exports = {
         }
     },
 
-    async returnUserById (req, res) {
+    async returnUserById(req, res) {
         try {
             const { _id } = await getUserByToken(req);
             const user = await User.findOne({ _id: _id }, { password: 0 });
@@ -1524,7 +1556,7 @@ module.exports = {
         }
     },
 
-    async updateUser (req, res) {
+    async updateUser(req, res) {
         try {
             const { _id, email, cpf, networkLogin, tags } = req.body;
             delete req.body.ip;
@@ -1582,7 +1614,7 @@ module.exports = {
             });
 
             if (userUpdated?.status) {
-                await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status)
+                await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status);
             }
 
             return _messages.success(res, req, updated, 'Usuário(a) atualizado(a) com sucesso!');
@@ -1598,7 +1630,7 @@ module.exports = {
         }
     },
 
-    async updateUserById (req, res) {
+    async updateUserById(req, res) {
         try {
             const { _id } = req.body;
             await User.findByIdAndUpdate(_id, req.body);
@@ -1615,7 +1647,7 @@ module.exports = {
         }
     },
 
-    async changePhoto (req, res) {
+    async changePhoto(req, res) {
         try {
             const user = await getUserByToken(req);
             const file = req.files.file;
@@ -1635,8 +1667,10 @@ module.exports = {
         }
     },
 
-    async isAuthenticated (req, res) {
+    async isAuthenticated(req, res) {
         if (await validateToken(req)) {
+            await addSASTokenToResponse(res);
+
             _messages.success(res, req, true);
         } else {
             _messages.forbidden(
@@ -1650,7 +1684,7 @@ module.exports = {
         }
     },
 
-    async isAuthenticatedNginx (req, res) {
+    async isAuthenticatedNginx(req, res) {
         if (await validateTokenNginx(req.params.token)) {
             _messages.success(res, req, true);
         } else {
@@ -1665,7 +1699,7 @@ module.exports = {
         }
     },
 
-    async selfData (req, res) {
+    async selfData(req, res) {
         try {
             const { data } = await decodeToken(req.headers.authorization);
             const user = await User.findOne(
@@ -1685,7 +1719,7 @@ module.exports = {
         }
     },
 
-    async importUserTest (req, res) {
+    async importUserTest(req, res) {
         try {
             const usersTest = await UserTest.find();
             for (const result of usersTest) {
@@ -1743,7 +1777,7 @@ module.exports = {
         }
     },
 
-    async exportUsers (req, res) {
+    async exportUsers(req, res) {
         try {
             const users = await User.find();
             const records = [];
@@ -1769,7 +1803,7 @@ module.exports = {
         }
     },
 
-    async email (req, res) {
+    async email(req, res) {
         try {
             const error = { message: 'ERRO NA CARGA DIÁRIA', stack: 'erro' };
             await sendLogEmail('success', error, 100, 10, 40, 50, '13/01/2020', 10, 20, 30);
@@ -1780,7 +1814,7 @@ module.exports = {
         }
     },
 
-    async importUsersDisabled (req, res) {
+    async importUsersDisabled(req, res) {
         try {
             const { file } = req.files;
             const results = await _files.readCSV(file.path);
@@ -1801,7 +1835,7 @@ module.exports = {
         }
     },
 
-    async emulation (req, res) {
+    async emulation(req, res) {
         try {
             const { body } = req;
             const {
@@ -1811,8 +1845,24 @@ module.exports = {
                 acceptTermsCollaboration,
                 profilePhoto,
                 networkLogin,
+                profiles,
                 ...user
             } = await User.findById(body._id).lean();
+
+            const isEmulatingSuperAdmin = groupsAD?.some(
+                (profile) => profile === 'PERFIL_Super_Admin' || profile === 'PERFIL_Gestor_Usuario'
+            );
+
+            if (isEmulatingSuperAdmin) {
+                return _messages.forbidden(
+                    res,
+                    req,
+                    'Erro interno no servidor',
+                    'Este usuário não pode ser emulado',
+                    'users',
+                    'emulation'
+                );
+            }
 
             const namesProfiles = [];
             const namesGroups = [];
@@ -1832,7 +1882,7 @@ module.exports = {
             if (namesProfiles.length > 0) {
                 const profilesIDS = await returnIdProfileUser(namesProfiles);
                 const groupsIDS = await returnIdGroupUser(namesGroups);
-                const userGroups = await Group.find({ name: { $in: namesGroups } })
+                const userGroups = await Group.find({ name: { $in: namesGroups } });
                 const eligibilities = userGroups.flatMap((group) =>
                     group.tags.flatMap((tag) => tag?.value || tag.display)
                 );
@@ -1859,7 +1909,8 @@ module.exports = {
                     clientID: CLIENT_ID,
                     filters: dashboardFilters,
                 });
-                const SAS = generateSASToken();
+                
+                const { token: SAS } = addSASTokenToResponse(res);
 
                 if (req.features?.gamification) {
                     GamificationBusiness.createClientUser(networkLogin, groupsAD);
@@ -1898,7 +1949,7 @@ module.exports = {
         }
     },
 
-    async importUpdateStatusUsers (req, res, next) {
+    async importUpdateStatusUsers(req, res, next) {
         try {
             const { file } = req.files;
             const results = await _files.readCSV(file.path);
@@ -1920,20 +1971,23 @@ module.exports = {
         }
     },
 
-    async ssoCallback (req, res) {
+    async ssoCallback(req, res) {
         try {
-            const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestWithSamlObject(req);
+            const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestWithSamlObject(
+                req
+            );
 
             const ssoForm = await getSsoFormByStrategyName(strategyName);
 
             const claim = ssoForm?.claim ?? 'networkLogin';
             const claimKey = ssoForm?.claimKey ?? 'no-claim-key-value';
 
-            const value = claimKey.split(',').reduce((acc, key) => {
-                if (acc !== null && acc !== undefined && acc !== '') return acc;
+            const value =
+                claimKey.split(',').reduce((acc, key) => {
+                    if (acc !== null && acc !== undefined && acc !== '') return acc;
 
-                return deepGet(req.samlUserObject, key, null);
-            }, null) ?? req.user?.nameID;
+                    return deepGet(req.samlUserObject, key, null);
+                }, null) ?? req.user?.nameID;
 
             await Log.create({
                 type: 'SSO_CALLBACK',
@@ -1962,11 +2016,14 @@ module.exports = {
                 );
             }
 
-            const token = jwt.sign({
-                [claim]: value,
-                strategyName,
-                idpProfiles,
-            }, process.env.PROJECT_SECRET_KEY);
+            const token = jwt.sign(
+                {
+                    [claim]: value,
+                    strategyName,
+                    idpProfiles,
+                },
+                process.env.PROJECT_SECRET_KEY
+            );
             res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
         } catch (error) {
             console.log(error);
@@ -1981,7 +2038,7 @@ module.exports = {
         }
     },
 
-    async updateDeviceId (req, res) {
+    async updateDeviceId(req, res) {
         try {
             const user = await getUserByToken(req);
             const { deviceId } = req.body;
@@ -2000,7 +2057,7 @@ module.exports = {
         }
     },
 
-    async returnCollaborativeUsers (req, res) {
+    async returnCollaborativeUsers(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -2009,34 +2066,34 @@ module.exports = {
             const collaborativeUsers = await User.find(
                 searchBy
                     ? {
-                        $and: [
-                            {
-                                groupsAD: { $in: ['PERFIL_Colaborador'] },
-                            },
-                            {
-                                $or: [
-                                    {
-                                        name: {
-                                            $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                    {
-                                        registration: {
-                                            $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                    {
-                                        email: {
-                                            $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                ],
-                            },
-                        ],
-                    }
+                          $and: [
+                              {
+                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
+                              },
+                              {
+                                  $or: [
+                                      {
+                                          name: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          registration: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          email: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                  ],
+                              },
+                          ],
+                      }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             )
                 .sort({
@@ -2048,34 +2105,34 @@ module.exports = {
             const total = await User.countDocuments(
                 searchBy
                     ? {
-                        $and: [
-                            {
-                                groupsAD: { $in: ['PERFIL_Colaborador'] },
-                            },
-                            {
-                                $or: [
-                                    {
-                                        name: {
-                                            $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                    {
-                                        registration: {
-                                            $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                    {
-                                        email: {
-                                            $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                ],
-                            },
-                        ],
-                    }
+                          $and: [
+                              {
+                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
+                              },
+                              {
+                                  $or: [
+                                      {
+                                          name: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          registration: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          email: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                  ],
+                              },
+                          ],
+                      }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             );
 
@@ -2088,7 +2145,7 @@ module.exports = {
         }
     },
 
-    async setCollaborator (req, res) {
+    async setCollaborator(req, res) {
         try {
             const { userId, moderation } = req.body;
             if (!userId) {
@@ -2121,7 +2178,7 @@ module.exports = {
         }
     },
 
-    async toggleCollaboratorModeration (req, res) {
+    async toggleCollaboratorModeration(req, res) {
         try {
             const { userId, moderation } = req.body;
 
@@ -2159,7 +2216,7 @@ module.exports = {
         }
     },
 
-    async removeCollaborator (req, res) {
+    async removeCollaborator(req, res) {
         try {
             const { userId } = req.body;
 
@@ -2190,7 +2247,7 @@ module.exports = {
         }
     },
 
-    async resetUserPassword (req, res) {
+    async resetUserPassword(req, res) {
         try {
             const { userId, password, generate } = req.body;
 
@@ -2266,7 +2323,7 @@ module.exports = {
         }
     },
 
-    async deleteGroups (req, res) {
+    async deleteGroups(req, res) {
         const { tag, userId } = req.body;
 
         const arrTags = Array.isArray(tag) ? tag : [tag];
@@ -2297,8 +2354,45 @@ module.exports = {
         }
     },
 
-    async addGroups (req, res) {
+    async addGroups(req, res) {
         const { tag, userId } = req.body;
+
+        // Cuurent user é o dono da requisição
+        const token = req.headers.authorization;
+        const currentUserProfiles = await returnProfileByToken(token);
+        const { groupsAD } = await User.findOne({ _id: userId });
+
+        const newTags = tag?.filter((t) => !groupsAD?.includes(t));
+
+        const isCurrentUserSuperAdmin = currentUserProfiles.includes('PERFIL_Super_Admin');
+
+        const IDPConfig = await getActiveIdpIntegrations();
+        const isIDPActive = IDPConfig.length > 0;
+
+        const isGroupAProfile = newTags?.some((t) => t?.includes('PERFIL_'));
+
+        if (isIDPActive && isGroupAProfile) {
+            return _messages.forbidden(
+                res,
+                req,
+                'Sem permissão de acesso',
+                'Não é possível adicionar tags de permissão para usuários enquanto configuração IDP estiver ativa',
+                'users',
+                'addGroups'
+            );
+        }
+
+        if (tag === 'PERFIL_Super_Admin' && !isCurrentUserSuperAdmin) {
+            return _messages.forbidden(
+                res,
+                req,
+                'Sem permissão de acesso',
+                'Você não tem permissão para adicionar esta TAG enquanto a configuração de IDP estiver ativa',
+                'users',
+                'addGroups'
+            );
+        }
+
         try {
             const normalizedTags = tag.map((t) => removeAccents(t));
 
@@ -2324,16 +2418,21 @@ module.exports = {
                 eligibilities,
             });
 
-            _messages.success(res, req, {
+            return _messages.success(res, req, {
                 message: 'Tag de permissão adicionada ao usuário',
             });
         } catch (error) {
-            console.error(error);
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users');
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'users'
+            );
         }
     },
 
-    async deleteClassTag (req, res) {
+    async deleteClassTag(req, res) {
         const { tag, userId } = req.body;
 
         try {
@@ -2346,7 +2445,7 @@ module.exports = {
         }
     },
 
-    async addClassTag (req, res) {
+    async addClassTag(req, res) {
         const { tag, userId } = req.body;
         try {
             await User.findByIdAndUpdate(userId, {
@@ -2366,7 +2465,7 @@ module.exports = {
         }
     },
 
-    async updateClassTag (req, res) {
+    async updateClassTag(req, res) {
         const { tag, _id } = req.body;
         try {
             const { classGroups } = await User.findOne({ _id });
@@ -2397,7 +2496,7 @@ module.exports = {
         }
     },
 
-    async evaluationProgress (req, res) {
+    async evaluationProgress(req, res) {
         try {
             const { idEvaluation } = req.params;
             const user = await getUserByToken(req);
@@ -2471,16 +2570,18 @@ module.exports = {
         }
     },
 
-    async getAllConteudistas (req, res) {
+    async getAllConteudistas(req, res) {
         try {
             const query = {
-                $and: [{
-                    groupsAD: { $in: ['PERFIL_Conteudista'] }
-                }]
-            }
+                $and: [
+                    {
+                        groupsAD: { $in: ['PERFIL_Conteudista'] },
+                    },
+                ],
+            };
 
             if (req?.segmentation) {
-                handleSegmentationOnQuery(req, 'issuer', query)
+                handleSegmentationOnQuery(req, 'issuer', query);
             }
 
             const users = await User.find(query);
@@ -2498,7 +2599,7 @@ module.exports = {
         }
     },
 
-    async handleNames (req, res) {
+    async handleNames(req, res) {
         try {
             const { networkLogins } = req.body;
             const users = await User.find({ networkLogin: { $in: networkLogins } }, [
@@ -2520,7 +2621,7 @@ module.exports = {
         }
     },
 
-    async generateMultiFactor (req, res) {
+    async generateMultiFactor(req, res) {
         try {
             const { networkLogin } = req.body;
             const user = await User.findOne({ networkLogin: networkLogin });
@@ -2549,7 +2650,7 @@ module.exports = {
         }
     },
 
-    async validateMultiFactor (req, res) {
+    async validateMultiFactor(req, res) {
         try {
             const user = await getUserByToken(req);
             const { secret, token } = req.body;
@@ -2582,7 +2683,7 @@ module.exports = {
         }
     },
 
-    async validateMfaToken (req, res) {
+    async validateMfaToken(req, res) {
         try {
             const isTokenValid = await validateMfaToken(req);
             _messages.success(res, req, isTokenValid);
@@ -2598,7 +2699,7 @@ module.exports = {
         }
     },
 
-    async updateWebPushAuthorization (req, res) {
+    async updateWebPushAuthorization(req, res) {
         try {
             const user = await getUserByToken(req);
             const webPushAuthorization = req.body;
@@ -2628,7 +2729,7 @@ module.exports = {
         }
     },
 
-    async getUserMap (req, res) {
+    async getUserMap(req, res) {
         try {
             const { data } = await axios.get(
                 `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
@@ -2660,7 +2761,7 @@ module.exports = {
         }
     },
 
-    async putUserMap (req, res) {
+    async putUserMap(req, res) {
         try {
             const { body } = req;
 
@@ -2690,7 +2791,7 @@ module.exports = {
         }
     },
 
-    async readSheetHeaders (req, res) {
+    async readSheetHeaders(req, res) {
         try {
             let file = null;
             if (req.files.file) {
