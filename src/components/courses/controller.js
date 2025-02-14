@@ -220,7 +220,7 @@ module.exports = {
             const files = req.files;
             let flagDate = true;
             body.tags = JSON.parse(body.tags);
-            body.dimensions = JSON.parse(body.dimensions);
+            body.dimensions = body.dimensions ? JSON.parse(body.dimensions) : null;
             body.mandatory = JSON.parse(body.mandatory);
             body.certificateDue = JSON.parse(body.certificateDue);
 

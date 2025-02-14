@@ -1,8 +1,8 @@
 const express = require('express');
 const _controller = require('./controller');
-const { isAdmin } = require('../../utils/middlewares');
+const { isSuperAdmin } = require('../../utils/middlewares');
 
 module.exports = express
     .Router()
-    .get('/', isAdmin, _controller.getActive)
-    .post('/generate', isAdmin, _controller.generate);
+    .get('/', isSuperAdmin, _controller.getActive)
+    .post('/generate', isSuperAdmin, _controller.generate);
