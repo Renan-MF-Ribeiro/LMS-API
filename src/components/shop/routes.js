@@ -1,6 +1,6 @@
 const express = require('express');
 
-const { validateTokenRoute, isAdminOrAccountant } = require('../../utils/middlewares');
+const { validateTokenRoute, isEngagementManager } = require('../../utils/middlewares');
 const { shopMiddleware } = require('./middlewares');
 
 const userRouter = require('./routes/user.routes');
@@ -14,6 +14,6 @@ shopRouter.use(shopMiddleware);
 
 shopRouter.use('/', userRouter);
 
-shopRouter.use('/admin', isAdminOrAccountant, adminRouter);
+shopRouter.use('/admin', isEngagementManager, adminRouter);
 
 module.exports = shopRouter;
