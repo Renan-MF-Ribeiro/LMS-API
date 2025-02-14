@@ -4,9 +4,9 @@ const _messages = require('../../utils/messages')
 module.exports = {
     async dispatch (action, target, data) {
         try {
-            const webhook = await Webhooks.findOne({})
+            const webhook = await Webhooks.findOne({target: target, action: action})
             if (webhook) {
-                console.log(webhook.endpoint)
+                console.log(webhook)
 
                 return _messages.success(res, req, 'webhook.endpoint');
 
