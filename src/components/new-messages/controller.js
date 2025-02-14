@@ -1,5 +1,4 @@
 const axios = require('axios');
-const config = require('../../../config.json');
 const { htmlToText } = require('html-to-text');
 const { NewMessage } = require('./model');
 const moment = require('moment');
@@ -24,6 +23,7 @@ const {
     CourseModel,
 } = require('../courses/model');
 const { createCSVString } = require('../../utils/files');
+const { getMessengerConfig, getCronConfig } = require('../config/business');
 const { CLIENT_ID, SENDINBLUE_API_KEY, SENDINBLUE_FOLDER_ID, API_MESSENGER } =
     process.env;
 
@@ -306,8 +306,12 @@ module.exports = {
     async notifyResponsibleUsers () {
         const today = new Date();
         const items = await Item.find({ expirationDate: { $exists: true } });
-        const notificationDays =
-            config.cron.notifyResponsibleUsers.notificationDays;
+
+        const cronConfig = await getCronConfig();
+
+        const notificationDays = cronConfig.notifyResponsibleUsers.notificationDays;
+
+        const messengerConfig = await getMessengerConfig();
 
         for (const item of items) {
             if (item.responsible) {
@@ -326,7 +330,7 @@ module.exports = {
                         },
                         text: `O item ${item.title} perderá a validade em ${diffDays} dias!\n`,
                         texthtml: `<p>O item ${item.title} perderá a validade em ${diffDays} dias!<p>`,
-                        thumbnail: config.messenger.emailTemplate.thumbnail,
+                        thumbnail: messengerConfig.emailTemplate.thumbnail,
                         title: `${item.title}`,
                     };
 
@@ -362,6 +366,8 @@ module.exports = {
                 texthtml = `<br> <p>Prezado(a) Aluno(a), Desejamos informar que sua inscrição foi registrada na lista de espera para o curso ${course.title}. <br> <br> É com satisfação que comunicamos que uma nova turma deste curso será ministrada no dia ${dateTime[0]} as ${dateTime[1]}, a ser realizada nas instalações localizadas no ${place}. <br> <br> Em situação de impossibilidade de participação, solicitamos que considere reingressar na lista de espera, a fim de oportunizar a vaga a outros interessados. <br> <br> Agradecemos antecipadamente!</p> <br>`;
             }
 
+            const messengerConfig = await getMessengerConfig();
+
             if (waitlistUsersArray.length > 0) {
                 const waitlistUsersIdList = waitlistUsersArray.map(
                     (u) => u._id
@@ -378,7 +384,7 @@ module.exports = {
                     },
                     text: text,
                     texthtml: texthtml,
-                    thumbnail: config.messenger.emailTemplate.thumbnail,
+                    thumbnail: messengerConfig.emailTemplate.thumbnail,
                     title: `Aviso Happlearning`,
                 };
                 createMessagesFromBackend(message);
@@ -404,7 +410,7 @@ module.exports = {
                     },
                     text: text,
                     texthtml: texthtml,
-                    thumbnail: config.messenger.emailTemplate.thumbnail,
+                    thumbnail: messengerConfig.emailTemplate.thumbnail,
                     title: `Aviso Happlearning`,
                 };
                 createMessagesFromBackend(message);

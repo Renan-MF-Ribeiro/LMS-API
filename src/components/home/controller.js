@@ -35,7 +35,6 @@ const {
 
 const { populateTrails } = require('../trails/business');
 const { Section } = require('../sections/model');
-const config = require('../../../config.json');
 const { maxBy } = require('lodash');
 
 const HomeController = {

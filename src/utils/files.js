@@ -26,7 +26,6 @@ const {
     sendMessageToKafka,
 } = require('../../src/components/new-messages/business');
 const { Readable } = require('stream');
-const configJson = require('../../config.json');
 const { Welcome } = require('../components/theme/welcome/model');
 const { Log } = require('../components/logs/model');
 const ApiError = require('../errors/ApiError');
@@ -411,7 +410,7 @@ module.exports = {
 
         let vimeoTrx;
         let uploadStatus;
-        const vimeoFolderUri = `/${configJson.vimeoFolder}`;
+        const vimeoFolderUri = `/${process.env.VIMEO_FOLDER}`;
 
         vimeoTrx = new Vimeo(
             process.env.VIMEO_CLIENTID,
@@ -439,12 +438,20 @@ module.exports = {
                 ).toFixed(2);
                 console.log(bytes_uploaded, bytes_total, percentage + '%');
             },
-            function (error) {
+            async function (error) {
                 uploadStatus = {
                     message: 'Something went wrong',
                     error: error,
                 };
                 console.error('Something went wrong: ' + error);
+
+                await Log.create({
+                    user: user?._id ?? user ?? null,
+                    type: 'VIMEO_UPLOAD_ERROR',
+                    message: 'Erro ao fazer upload de vídeo',
+                    component: `uploadVimeo`,
+                    dataNew: { error, payload },
+                });
             }
         );
 
@@ -458,7 +465,7 @@ module.exports = {
         let filePath;
         let fileType;
         let uploadStatus;
-        const vimeoFolderUri = `/${configJson.vimeoFolder}`;
+        const vimeoFolderUri = `/${process.env.VIMEO_FOLDER}`;
         if (isStream(file)) {
             filePath = file.path;
             fileType = mime.lookup(file.path) || 'text/plain';
@@ -522,20 +529,26 @@ module.exports = {
                     ).toFixed(2);
                     console.log(bytes_uploaded, bytes_total, percentage + '%');
                 },
-                function (error) {
+                async function (error) {
                     uploadStatus = {
                         message: 'Something went wrong',
                         error: error,
                     };
                     console.error('Something went wrong: ' + error);
-                    const trx = async () => {
-                        await Item.findOneAndDelete({
+
+                    await Log.create({
+                        user: user?._id ?? user ?? null,
+                        type: 'VIMEO_UPLOAD_ERROR',
+                        message: 'Erro ao fazer upload de vídeo',
+                        component: `vimeoFilePathCreate`,
+                        dataNew: { error, payload },
+                    });
+
+                    if (mode === 'create') {
+                        await Item.findOneAndUpdate({
                             title: { $eq: payload.title },
                             contentPath: { $eq: payload.contentPath },
-                        });
-                    };
-                    if (mode === 'create') {
-                        trx();
+                        }, { $set: { enabled: false } });
                     }
                 }
             );
@@ -608,12 +621,21 @@ module.exports = {
                     ).toFixed(2);
                     console.log(bytes_uploaded, bytes_total, percentage + '%');
                 },
-                function (error) {
+                async function (error) {
                     uploadStatus = {
                         message: 'Something went wrong',
                         error: error,
                     };
                     console.error('Something went wrong: ' + error);
+
+                    await Log.create({
+                        user: user?._id ?? user ?? null,
+                        type: 'VIMEO_UPLOAD_ERROR',
+                        message: 'Erro ao fazer upload de vídeo',
+                        component: `vimeoFilePathUpdate`,
+                        dataNew: { error, payload },
+                    });
+
                 }
             );
 

@@ -41,33 +41,33 @@ router
     .post('/self-registration', multiparty(), _controller.selfRegistration)
     .post('/list-join', multiparty(), _controller.listJoin)
     .post('/list-leave', multiparty(),_controller.listLeave)
-    .get('/instructor/all', isInstructor, _controller.instructorAllCourses)
-    .get('/instructor/course/:id', isInstructor, _controller.getCourseById)
-    .get('/instructor/users', isInstructor, _controller.getUsers)
+    .get('/instructor/all', isAccountantOrInstructor, _controller.instructorAllCourses)
+    .get('/instructor/course/:id', isAccountantOrInstructor, _controller.getCourseById)
+    .get('/instructor/users', isAccountantOrInstructor, _controller.getUsers)
     .get('/instructor/applied-courses', _controller.appliedCourses)
     .get('/instructor/applied-course/:courseID/:classID', _controller.appliedCourse)
     .get('/instructor/applied-course/:courseId/:classId/print-attendance-list', _controller.printAttendanceList)
-    .post('/instructor/search-user/:id', isInstructor, _controller.searchUser)
+    .post('/instructor/search-user/:id', isAccountantOrInstructor, _controller.searchUser)
     .post(
         '/instructor/create-class',
-        isInstructor,
+        isAccountantOrInstructor,
         formidable(),
         _controller.createClass
     )
     .put(
         '/instructor/update-class',
-        isInstructor,
+        isAccountantOrInstructor,
         formidable(),
         _controller.updateClass
     )
     .delete(
         '/instructor/delete-material/:materialID/:classID',
-        isInstructor,
+        isAccountantOrInstructor,
         _controller.deleteMaterial
     )
     .delete(
         '/instructor/delete-class/:classID',
-        isInstructor,
+        isAccountantOrInstructor,
         _controller.deleteClass
     )
     .post(

@@ -10,7 +10,9 @@ const schemaOptions = {
 }
 
 const ProfileSchema = new mongoose.Schema({
-    title: { type: String, trim: true, required: true, lowercase: true },
+    title: { type: String, trim: true, required: true },
+    label: { type: String, trim: true, required: true},
+    description: { type: String, trim: true, required: false },
 }, {
     ...schemaOptions,
 })
