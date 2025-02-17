@@ -468,6 +468,9 @@ async function processMessage(campaign, user) {
     let { communication, target, ...data } = campaign;
     target.recovery = campaign.recovery;
     target.resetPasswordUrl = campaign.resetPasswordUrl;
+
+    if (!target.value) target.value = {};
+
     target.value.user = user;
 
     try {

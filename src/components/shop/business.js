@@ -1,8 +1,6 @@
 const formidable = require('express-formidable');
-const { isSegmentationException } = require('../config/business');
+const { isSegmentationException, getMessengerConfig } = require('../config/business');
 const { azureBlob } = require('../../utils/files');
-
-const configJson = require('../../../config.json');
 
 const ApiError = require('../../errors/ApiError');
 
@@ -161,12 +159,14 @@ async function sendOrderConfirmation(user, order) {
         </div>
     `;
 
+    const messengerConfig = await getMessengerConfig();
+
     await sendMessageToKafka({
         title: `Pedido realizado com sucesso!`,
         texthtml: message,
         text: `Pedido ${orderCode} realizado com sucesso!`,
         // Default
-        thumbnail: configJson.messenger.emailTemplate.thumbnail,
+        thumbnail: messengerConfig.emailTemplate.thumbnail,
         category: 'notify',
         communication: ['notification', 'email'],
         mode: 'manual',

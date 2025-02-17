@@ -1,13 +1,10 @@
 const webpush = require('web-push');
-const config = require('../../config.json');
-
-
 
 const options = {
     vapidDetails: {
         subject: 'mailto:renan.ribeiro@happmobi.com.br',
-        publicKey: config.vapidKeys.publicKey,
-        privateKey: config.vapidKeys.privateKey,
+        publicKey: '',
+        privateKey: '',
     },
     TTL: 60,
     contentEncoding: 'aes128gcm',

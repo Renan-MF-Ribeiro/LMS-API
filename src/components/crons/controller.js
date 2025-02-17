@@ -1,6 +1,5 @@
 const _messages = require('../../utils/messages');
 const { Log } = require('../logs/model');
-const config = require('../../../config.json');
 const {
     executeCronDailyCharge,
     executeCronAverageCourses,
@@ -16,6 +15,7 @@ const {
     executeRemoveAutomaticEligibilityTags,
     executeIntegrator,
 } = require('../../utils/cron');
+const { getCronConfig } = require('../config/business');
 
 module.exports = {
     async executeDailyCharge(req, res) {
@@ -127,7 +127,9 @@ module.exports = {
     },
 
     async executeCronRevokeTrail(req, res) {
-        if (config.cron.revokeTrail.active) {
+        const cronConfig = await getCronConfig();
+        
+        if (cronConfig.revokeTrail.active) {
             executeRevokeTrail();
             res.status(200).json('CRON INICIADO COM SUCESSO');
         } else {
@@ -135,17 +137,10 @@ module.exports = {
         }
     },
 
-    async executeIntegratorCron(req, res) {
-        if (config.cron.integrator.active) {
-            executeIntegrator();
-            res.status(200).json('CRON INICIADO COM SUCESSO');
-        } else {
-            res.status(500).json('FUNCIONALIDADE INATIVA');
-        }
-    },
-
     async executeRecommendedTrails(req, res) {
-        if (config.cron.recommendedTrails.active) {
+        const cronConfig = await getCronConfig();
+        
+        if (cronConfig.recommendedTrails.active) {
             executeRecommendedTrails();
             res.status(200).json('CRON INICIADO COM SUCESSO');
         } else {
@@ -154,7 +149,9 @@ module.exports = {
     },
 
     async handleInactiveOldOnboardingUsers(req, res) {
-        if (!config.cron?.inactiveOldOnboardingUsers?.active) {
+        const cronConfig = await getCronConfig();
+
+        if (!cronConfig?.inactiveOldOnboardingUsers?.active) {
             return res.status(400).json({
                 message: 'FUNCIONALIDADE INATIVA',
             });
@@ -169,7 +166,9 @@ module.exports = {
     
 
     async handleRemoveAutomaticEligibilityTags(req, res) {
-        if (!config.cron?.removeAutomaticEligibilityTags?.active) {
+        const cronConfig = await getCronConfig();
+        
+        if (!cronConfig?.removeAutomaticEligibilityTags?.active) {
             return res.status(400).json({
                 message: 'FUNCIONALIDADE INATIVA',
             });

@@ -4,7 +4,6 @@ const cheerio = require('cheerio');
 const _messages = require('../utils/messages');
 const _auth = require('./auth');
 const { validateToken, validateMonitoringToken } = require('./auth');
-const config = require('../../config.json');
 const {
     getDbCurrentFeatures,
     setAppCurrentFeatures,
@@ -12,6 +11,7 @@ const {
 } = require('./features');
 const { getSegmentation, isSegmentationException } = require('../components/config/business');
 const { getUserByToken } = require('./functions');
+const ApiError = require('../errors/ApiError');
 
 const Profiles = {
     ADMIN: 'PERFIL_Admin',
@@ -28,7 +28,7 @@ const Profiles = {
     ENGAGEMENT_MANAGER: 'PERFIL_Gestor_Engajamento',
 };
 
-const validateProfile= async (req, res, next, expectedProfiles) => {
+const validateProfile = async (req, res, next, expectedProfiles) => {
     const profiles = await _auth.returnProfileByToken(req.headers?.authorization);
     //console.log(profiles, expectedProfiles)
     const doesUserHasProfile = profiles.some(
@@ -103,7 +103,7 @@ module.exports = {
     isElegibilityManager: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.ADMIN, Profiles.ELEGIBILITY_MANAGER]);
     },
-    
+
     isAdmin: async (req, res, next) => { // Retrocompatibilidade
         validateProfile(req, res, next, [Profiles.ADMIN, Profiles.ELEGIBILITY_MANAGER]);
     },
@@ -126,7 +126,7 @@ module.exports = {
 
     isSuperAdmin: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.SUPER_ADMIN]);
-    }, 
+    },
 
     isUserManager: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.USER_MANAGER]);
@@ -160,7 +160,7 @@ module.exports = {
         ]);
     },
 
-    
+
     isSuperAdminOrAnalyst: async (req, res, next) => {
         validateProfile(req, res, next, [Profiles.SUPER_ADMIN, Profiles.ANALYST]);
     },
@@ -207,21 +207,21 @@ module.exports = {
     },
 
     isShowcaseActive: (req, res, next) => {
-        if (!config?.showcase?.active) {
+        if (!req.features?.showcaseComponent) {
             return _messages.successEmpty(res, req, 'Feature "Showcase" não está ativa');
         }
         next();
     },
 
     isAluraActive: (req, res, next) => {
-        if (!config?.alura?.active) {
+        if (!req.features?.alura) {
             return _messages.successEmpty(res, req, 'Feature "Alura" não está ativa');
         }
         next();
     },
 
     isAssessmentActive: (req, res, next) => {
-        if (!config?.assessment?.active) {
+        if (!req.features?.assessement) {
             return _messages.successEmpty(res, req, 'Feature "Assessment" não está ativa');
         }
         next();
@@ -244,8 +244,20 @@ module.exports = {
         next();
     },
 
+    hasFeature(features) {
+        const parsedFeatures = Array.isArray(features) ? features : [features];
+
+        return async function hasFeatureMiddleware(req, res, next) {
+            if (parsedFeatures.every((feature) => req.features?.[feature])) {
+                return next();
+            }
+
+            throw new ApiError('Feature(s) desabilitada(s)', 403, { requiredFeatures: parsedFeatures });
+        }
+    },
+
     async setSegmentation(req, res, next) {
-        if (config?.segmentation?.active) {
+        if (req.features?.segmentation) {
             const segmentation = await getSegmentation();
 
             if (segmentation.value?.rule) {
@@ -263,7 +275,7 @@ module.exports = {
                     const isException = isSegmentationException(user, req.segmentation);
                     req.segmentation.isException = isException;
                     //Fix: improve this logic
-                } catch {}
+                } catch { }
             }
         }
 
