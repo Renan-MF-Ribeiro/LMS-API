@@ -134,8 +134,6 @@ const userSchema = new mongoose.Schema(
         university: { type: String, trim: true, required: false },
         specialization: { type: String, trim: true, required: false },
         sendInBlueAccept: { type: Boolean, default: false },
-
-
     },
     {
         ...optionsSchema,
