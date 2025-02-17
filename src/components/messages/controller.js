@@ -3,7 +3,6 @@ const _messages = require('../../utils/messages')
 const { Message } = require('./model')
 const { pagination, ordernation, getUserByToken } = require('../../utils/functions')
 const { Item } = require('../items/model')
-const { sendMessage } = require('../../utils/web-push')
 const { getMessengerConfig, getCronConfig } = require('../config/business')
 
 module.exports = {
@@ -25,31 +24,6 @@ module.exports = {
     },
 
 
-
-    async webPushMessage (req, res) {
-        try {
-            const user = await getUserByToken(req);
-            const payload = req.body;
-
-
-            for (const subscription of user.webPushAuthorization) {
-                try {
-                    await sendMessage(subscription, payload);
-                } catch (error) {
-                    console.error(error);
-                    const errorMessage = 'Erro no envio da mensagem via push: ' + JSON.stringify(error)
-                    return _messages.internalServer(res, req, errorMessage, errorMessage, 'messages', 'returnUsers');
-
-                }
-            }
-
-            _messages.success(res, req, '');
-
-        } catch (error) {
-            console.log('error', error);
-            return _messages.internalServer(res, req, error.message, error, 'messages', 'returnUsers');
-        }
-    },
 
     async getMessages (req, res) {
         try {

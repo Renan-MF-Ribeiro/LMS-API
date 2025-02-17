@@ -132,7 +132,7 @@ module.exports = express
     .get('/details', validateTokenRoute, _controller.returnUserById)
     .get('/feedbackelegibility', validateTokenRoute, _controller.feedbackElegible)
     .post('/remove-permission', validateTokenRoute, _controller.deleteGroups)
-    .post('/add-permission', validateTokenRoute, isUserManagerOrSuperAdminOrElegibilityManager,  _controller.addGroups)
+    .post('/add-permission', validateTokenRoute, isUserManagerOrSuperAdminOrElegibilityManager, _controller.addGroups)
     .post('/remove-class-tag', validateTokenRoute, isUserManagerOrSuperAdminOrElegibilityManager, _controller.deleteClassTag)
     .post('/add-class-tag', validateTokenRoute, _controller.addClassTag)
     .post('/update-class-tag', validateTokenRoute, _controller.updateClassTag)
