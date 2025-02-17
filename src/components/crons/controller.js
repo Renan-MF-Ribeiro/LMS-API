@@ -13,6 +13,7 @@ const {
     executeUpdateTrailsViewsCron,
     executeInactiveOldOnboardingUsers,
     executeRemoveAutomaticEligibilityTags,
+    executeIntegrator,
 } = require('../../utils/cron');
 const { getCronConfig } = require('../config/business');
 
@@ -162,6 +163,7 @@ module.exports = {
             message: 'CRON INICIADO COM SUCESSO',
         });
     },
+    
 
     async handleRemoveAutomaticEligibilityTags(req, res) {
         const cronConfig = await getCronConfig();

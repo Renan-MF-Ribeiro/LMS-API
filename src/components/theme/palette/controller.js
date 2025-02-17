@@ -3,7 +3,7 @@ const _messages = require('../../../utils/messages')
 const { DOMAIN, AZURE_BLOB_URL } = process.env
 const { azureBlob } = require('../../../utils/files')
 const { pagination } = require('../../../utils/functions')
-const { uploadVimeo } = require('../../../utils/files')
+
 
 module.exports = {
     async list (req, res) {
@@ -68,12 +68,9 @@ module.exports = {
             }
 
             let theme
+
             if (body._id) {
-                const welcomeVideo = fileArray.findIndex(el => el.name === body.welcomeVideo)
-                if (welcomeVideo >= 0) {
-                    let welcomeVideoPath = await uploadVimeo(fileArray[welcomeVideo], body._id)
-                    body.welcomeVideo = welcomeVideoPath
-                }
+
                 if (body.enabled) {
                     //     await Theme.updateMany({}, { $set: { enabled: false, defaultPalette: null } });
                     // } else if (body.defaultPalette) {

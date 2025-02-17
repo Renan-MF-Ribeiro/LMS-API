@@ -212,6 +212,22 @@ module.exports = {
         }
     },
 
+    async getPrograms (req, res) {
+        try {
+            const programs = await ProgramModel.find().select('title');
+            success(res, req, programs);
+        } catch (error) {
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'courses',
+                '/getPrograms'
+            );
+        }
+    },
+
     async updateCourse (req, res) {
         try {
             const materials = req.fields.materials ? JSON.parse(req.fields.materials) : null;
@@ -219,10 +235,11 @@ module.exports = {
             const arrMaterials = [];
             const files = req.files;
             let flagDate = true;
-            body.tags = JSON.parse(body.tags);
-            body.dimensions = body.dimensions ? JSON.parse(body.dimensions) : null;
-            body.mandatory = JSON.parse(body.mandatory);
-            body.certificateDue = JSON.parse(body.certificateDue);
+            if (body.tags) body.tags = JSON.parse(body.tags);
+            if (body.dimensions) body.dimensions = JSON.parse(body.dimensions);
+            if (body.mandatory) body.mandatory = JSON.parse(body.mandatory);
+            if (body.certificateDue) body.certificateDue = JSON.parse(body.certificateDue);
+
 
 
             const { thumb, banner } = req.files;
@@ -241,7 +258,7 @@ module.exports = {
             if (!body.passingScore || body.passingScore === 'null')
                 body.passingScore = null;
             if (!body.certificateLayout || body.certificateLayout === 'null')
-                body.certificateLayout = null;
+                delete body.certificateLayout;
 
             if (body.dateInitial > body.dateFinal) flagDate = false;
 
@@ -396,8 +413,14 @@ module.exports = {
     async getCourseById (req, res) {
         try {
             const { id } = req.params;
-            const course = await CourseModel.findById(id).populate('materials');
-            success(res, req, course);
+            const course = await CourseModel.findById(id)
+                .populate({
+                    path: 'materials',
+                    match: { author: 'CONTEUDISTA' },
+                }).populate('program', 'title');
+            const programs = await ProgramModel.find().select('title');
+
+            success(res, req, { course, programs });
         } catch (error) {
             internalServer(
                 res,

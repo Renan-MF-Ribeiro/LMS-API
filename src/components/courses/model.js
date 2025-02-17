@@ -21,7 +21,7 @@ const CourseSChema = new mongoose.Schema(
             type: [{ type: 'ObjectId', ref: 'material' }],
             default: [],
         },
-        certificateLayout: { type: 'ObjectId' },
+        certificateLayout: { type: 'ObjectId', required: false, default: null },
         certificate: { type: Number, default: 0 },
         certificateDue: { type: Object, default: null },
         deleted: { type: Number, default: 0 },

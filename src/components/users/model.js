@@ -133,8 +133,7 @@ const userSchema = new mongoose.Schema(
         partner: { type: String, default: false, required: false },
         university: { type: String, trim: true, required: false },
         specialization: { type: String, trim: true, required: false },
-
-
+        sendInBlueAccept: { type: Boolean, default: false },
     },
     {
         ...optionsSchema,
