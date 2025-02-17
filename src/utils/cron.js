@@ -285,8 +285,16 @@ module.exports = {
         courseChargeCron();
     },
 
-    executeCronUsers () {
-        getUsersLoad();
+    async executeCronUsers () {
+        const cronConfig = await getCronConfig();
+
+        console.log('Starting executeCronUsers', cronConfig.userFTP.active, cronConfig.integrator.active);
+
+        if (cronConfig.integrator.active) {
+            integrator();
+        } else {
+            getUsersLoad();
+        }
     },
 
     executeExamDeleteTrackingCron () {
@@ -1386,6 +1394,29 @@ async function revokeTrail () {
                 );
             }
         }
+    }
+}
+
+async function integrator () {
+    try {
+        const integratorResponse = await axios.put(
+            `${process.env.API_INTEGRATOR}/connection/${process.env.CLIENT_ID}`,
+            {},
+            {
+                headers: {
+                    'x-api-key': process.env.API_KEY_INTEGRATOR,
+                },
+            }
+        );
+
+        storageLog(
+            `Carga de usuários com integrador iniciada com sucesso`,
+            '',
+            '',
+            'INTEGRATOR'
+        );
+    } catch (error) {
+        console.log(error)
     }
 }
 
