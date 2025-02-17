@@ -4,6 +4,8 @@ const { Group } = require("../components/groups/model");
 const { Trail } = require("../components/trails/model");
 const { User } = require("../components/users/model");
 
+const { runScript } = require('./utils');
+
 async function createTrailsSheet(workbook) {
     const trails = await Trail.find({})
         .select('_id title tags tagsAnd enabled')
@@ -109,4 +111,4 @@ async function run() {
     process.exit(0);
 }
 
-run();
+runScript(run);
