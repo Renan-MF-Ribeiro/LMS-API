@@ -135,6 +135,9 @@ const CronConfigModel = ConfigModel.discriminator(
                 degreed: {
                     active: false
                 },
+                integrator: {
+                    active: true
+                },
                 notifyResponsibleUsers: {
                     active: true,
                     notificationDays: [-30, 0, 30, 60, 90]
@@ -175,6 +178,9 @@ const CronConfigModel = ConfigModel.discriminator(
                 },
                 degreed: {
                     active: { type: Boolean, default: false },
+                },
+                integrator: {
+                    active: { type: Boolean, default: true }
                 },
                 notifyResponsibleUsers: {
                     active: { type: Boolean, default: false },
