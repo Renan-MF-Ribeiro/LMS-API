@@ -1,5 +1,6 @@
 const mongoose = require('mongoose')
 const { connect } = require('../../../utils/db')
+const { Strategy } = require('passport-saml')
 connect()
 
 const schemaOptions = {
@@ -8,83 +9,39 @@ const schemaOptions = {
     collation: { locale: 'en_US', strength: 1 },
 }
 
+const buttonSchema = new mongoose.Schema({
+    label: { type: String },
+    bgColor: { type: String },
+    textColor: { type: String },
+    border: { type: Number },
+    text: { type: String },
+    tooltip: { type: String },
+    hint: { type: String },
+})
+
+const inputSchema = new mongoose.Schema({
+    type: { type: String },
+    hint: { type: String },
+    label: { type: String },
+})
+
 const loginSchema = new mongoose.Schema({
     buttons: {
-        login: {
-            label: { type: String },
-            bgColor: { type: String },
-            textColor: { type: String },
-            border: { type: Number },
-            text: { type: String },
-            tooltip: { type: String },
-            hint: { type: String },
-        },
-        sso: {
-            label: { type: String },
-            bgColor: { type: String },
-            textColor: { type: String },
-            border: { type: Number },
-            text: { type: String },
-            tooltip: { type: String },
-            hint: { type: String },
-        },
-        recoveryPassword: {
-            label: { type: String },
-            bgColor: { type: String },
-            textColor: { type: String },
-            border: { type: Number },
-            text: { type: String },
-            tooltip: { type: String },
-            hint: { type: String },
-        },
-        singin: {
-            label: { type: String },
-            bgColor: { type: String },
-            textColor: { type: String },
-            border: { type: Number },
-            text: { type: String },
-            tooltip: { type: String },
-            hint: { type: String },
-        },
-        singleUser: {
-            label: { type: String },
-            bgColor: { type: String },
-            textColor: { type: String },
-            border: { type: Number },
-            text: { type: String },
-            tooltip: { type: String },
-            hint: { type: String },
-        },
-        formAcess: {
-            label: { type: String },
-            bgColor: { type: String },
-            textColor: { type: String },
-            border: { type: Number },
-            text: { type: String },
-            tooltip: { type: String },
-            hint: { type: String },
-        },
-        samlAcess: {
-            label: { type: String },
-            bgColor: { type: String },
-            textColor: { type: String },
-            border: { type: Number },
-            text: { type: String },
-            tooltip: { type: String },
-            hint: { type: String },
-        },
+        login: buttonSchema,
+        singleSignOn: [{
+            strategyName: { type: String },
+            button: buttonSchema
+        }],
+        recoveryPassword: buttonSchema,
+        singin: buttonSchema,
+        singleUser: buttonSchema,
+        formAcess: buttonSchema,
+        samlAcess: buttonSchema,
+        sso: buttonSchema,
     },
     inputs: {
-        login: {
-            type: { type: String },
-            hint: { type: String },
-            label: { type: String },
-        },
-        password: {
-            type: { type: String },
-            hint: { type: String },
-            label: { type: String },
-        },
+        login: inputSchema,
+        password: inputSchema,
     },
     background: { type: String },
     backgroundMobile: { type: String },
