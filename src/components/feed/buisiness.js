@@ -2,10 +2,10 @@ const { processTargetUsers, sendMessageToKafka } = require('../new-messages/busi
 const { Trail } = require('../trails/model');
 const { User } = require('../users/model');
 const { Avatar } = require('../theme/avatar/model');
-const options = require('../../../config.json');
 const { default: axios } = require('axios');
 const { Group } = require('../groups/model');
 const { getUserByToken } = require('../../utils/functions');
+const { getMessengerConfig } = require('../config/business');
 
 /* 
  Função recursiva pra popular usuários de arrays ou objetos vindos do SocialApi
@@ -129,6 +129,8 @@ async function createNotification(config, users) {
         config.type !== 'share' ? config.contentType : ''
     }!`;
 
+    const messengerConfig = await getMessengerConfig();
+
     const message = {
         title,
         text,
@@ -146,7 +148,7 @@ async function createNotification(config, users) {
                 value: config.contentId, // ID da entidade que está sendo notificada (Ex: postId, commentId, trailId). Usada para montar a "notificationUrl",
             },
         },
-        thumbnail: options.messenger.emailTemplate.thumbnail,
+        thumbnail: messengerConfig.emailTemplate.thumbnail,
     };
 
     try {

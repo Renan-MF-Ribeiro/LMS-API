@@ -84,13 +84,11 @@ const cryptoJS = require('crypto-js');
 const jwt = require('jsonwebtoken');
 const { sendMessageToKafka } = require('../new-messages/business');
 
-const config = require('../../../config.json');
 const { getNumberOfItemsCompletedOrInProgressOrNotStarted } = require('../home/business');
 const { HistoricEvaluation, Evaluation } = require('../assessments/model');
 const { Question } = require('../assessments/questions/model');
 const { Alternative } = require('../assessments/alternatives/model');
-const inactivateIfNotInSpreadsheet = config.usersData.inactivateIfNotInSpreadsheet;
-const sendSignUpActivationEmail = config.usersData.sendSignUpActivationEmail;
+
 const { EVENTS_CATEGORY } = require('../gamification/model');
 const AssessmentController = require('../assessment/controller');
 const GamificationController = require('../gamification/controller');
@@ -102,7 +100,7 @@ const { Features } = require('../theme/features/model');
 const { Partner } = require('../partners/model');
 const { Log } = require('../logs/model');
 const { Tracking } = require('../tracking/model');
-const { getConfiguration, handleSegmentationOnQuery } = require('../config/business');
+const { getConfiguration, handleSegmentationOnQuery, getMessengerConfig, getUsersDataConfig } = require('../config/business');
 const { ConfigTypes } = require('../config/model');
 const {
     fetchIdpProfilesFromRequestWithSamlObject,
@@ -358,6 +356,8 @@ module.exports = {
         let partnerDays = 0;
         let classGroupsIDs;
 
+        const { sendSignUpActivationEmail } = await getUsersDataConfig();
+
         try {
             // Validação de usuário já criado
             const userExists = await User.findOne({ networkLogin });
@@ -608,6 +608,8 @@ module.exports = {
         const today = new Date();
         const uri = `${process.env.API_SURVEY}/feedback/listbyuser?userid=${user._id}`;
         try {
+            const usersDataConfig = await getUsersDataConfig();
+
             const response = await axios.get(uri);
             const firstLogin = await returnDateSinceFirstLogin(user._id);
             const { numberOfItemsCompleted } =
@@ -622,7 +624,7 @@ module.exports = {
 
                 if (
                     firstLogin >= 1 &&
-                    daysSinceLastFeedback >= config.usersData.daysSinceLastFeedback &&
+                    daysSinceLastFeedback >= usersDataConfig.daysSinceLastFeedback &&
                     numberOfItemsCompleted >= 1
                 ) {
                     _messages.success(res, req, true);
@@ -1206,6 +1208,8 @@ module.exports = {
 
     async import(req, res) {
         try {
+            const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
+            
             var file = null;
             const newUsers = [];
             const existingUsers = [];
@@ -1226,6 +1230,8 @@ module.exports = {
                 }
             );
             const fieldsForElegibility = elegibilityResponse.data.fields;
+
+            const messengerConfig = await getMessengerConfig();
 
             for (const result of results) {
                 const existingUser = await User.findOne({
@@ -1316,7 +1322,7 @@ module.exports = {
 
                 await User.insertMany(newUsers);
 
-                if (config.messenger.sendUsersToMicrosservice) {
+                if (messengerConfig.sendUsersToMicrosservice) {
                     await sendAccountsToKafka(usersToSend);
                     const campaign = createWelcomeCampaign();
                     await sendMessageToKafka(campaign, newUsers);
@@ -1340,6 +1346,8 @@ module.exports = {
 
     async importOnboarding(req, res) {
         try {
+            const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
+
             const onboarding = true;
             var file = null;
             const newUsers = [];
@@ -1361,7 +1369,9 @@ module.exports = {
             );
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
-            const user = await getUserByToken(req);
+            const messengerConfig = await getMessengerConfig();
+
+            const user = await getUserByToken(req)
 
             for (const result of results) {
                 const existingUser = await User.findOne({
@@ -1421,7 +1431,7 @@ module.exports = {
 
                 await User.insertMany(newUsers);
 
-                if (config.messenger.sendUsersToMicrosservice) {
+                if (messengerConfig.sendUsersToMicrosservice) {
                     await sendAccountsToKafka(usersToSend);
                     const campaign = createWelcomeCampaign();
                     await sendMessageToKafka(campaign, newUsers);
