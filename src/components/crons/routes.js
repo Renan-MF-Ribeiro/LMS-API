@@ -16,11 +16,13 @@ const {
     handleInactiveOldOnboardingUsers,
     handleRemoveAutomaticEligibilityTags,
     executeIntegratorCron,
+    LastExecuteIntegrator,
 } = require('./controller')
 const { isSuperAdmin } = require('../../utils/middlewares')
 
 router
     .get('/last-users', isSuperAdmin, LastExecuteDailyCharge)
+    .get('/last-integrator', isSuperAdmin, LastExecuteIntegrator)
     .get('/last-average-courses', isSuperAdmin, LastExecuteAverageCourses)
     .get('/last-groups-ad', isSuperAdmin, LastExecuteGroupsAD)
     .get('/users', isSuperAdmin, executeUsersCron)

@@ -1345,6 +1345,13 @@ async function integrator () {
                 },
             }
         );
+
+        storageLog(
+            `Carga de usuários para o integrador iniciada com sucesso`,
+            '',
+            '',
+            'INTEGRATOR'
+        );
     } catch (error) {
         console.log(error)
     }
