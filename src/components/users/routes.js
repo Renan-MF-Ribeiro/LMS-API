@@ -71,15 +71,25 @@ module.exports = express
     .get(
         '/onboarding',
         validateTokenRoute,
-        hasElegibilityPermission,
+        canListUsers,
         (req, res, next) => {
             req.query.onboarding = true;
             return next();
         },
         _controller.returnUsers
     )
-    .put('/', validateTokenRoute, isUserManager, _controller.updateUser)
-    .get('/users/:userId', validateTokenRoute, _controller.findById)
+    .get(
+        '/partners',
+        validateTokenRoute,
+        canListUsers,
+        (req, res, next) => {
+            req.query.partner = true;
+            return next();
+        },
+        _controller.returnUsers
+    )
+    .put('/', validateTokenRoute, _controller.updateUser)
+    .get('/users/:userId', validateTokenRoute, isAdmin, _controller.findById)
     .get('/import-users-test', validateTokenRoute, _controller.importUserTest)
     .get('/export-users', validateTokenRoute, _controller.exportUsers)
     .get('/envioemail', validateTokenRoute, _controller.email)
