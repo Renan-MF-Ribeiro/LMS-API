@@ -127,7 +127,11 @@ module.exports = {
 
     async getDefaultTheme (req, res) {
         try {
-            const theme = await Theme.findOne({ enabled: { $eq: true } }).sort({ createdAt: -1 }).select('-createdAt -updatedAt -__v -palette._id')
+            let theme = await Theme.findOne({ enabled: { $eq: true }, __t: { $exists: false } }).sort({ createdAt: -1 }).select('-createdAt -updatedAt -__v -palette._id')
+
+            if (!theme) {
+                theme = await Theme.findOne({ __t: { $exists: false } }).sort({ createdAt: -1 }).select('-createdAt -updatedAt -__v -palette._id')
+            }
             return _messages.success(res, req, theme)
 
         }
@@ -201,6 +205,7 @@ module.exports = {
                 createdAt: new Date(),
                 updatedAt: new Date()
             }
+            delete newTheme.welcomeVideo;
             const newThemeDoc = await Theme.create(newTheme)
             return _messages.success(res, req, newThemeDoc)
         }
