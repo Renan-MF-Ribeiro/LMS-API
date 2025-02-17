@@ -1414,7 +1414,7 @@ async function integrator () {
             '',
             '',
             'INTEGRATOR'
-        );s
+        );
     } catch (error) {
         console.log(error)
     }
