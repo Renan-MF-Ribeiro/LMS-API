@@ -273,10 +273,6 @@ module.exports = {
         revokeTrail();
     },
 
-    executeIntegrator () {
-        integrator();
-    },
-
     executeRecommendedTrails () {
         recommendedTrailsCron();
     },
@@ -289,8 +285,16 @@ module.exports = {
         courseChargeCron();
     },
 
-    executeCronUsers () {
-        getUsersLoad();
+    async executeCronUsers () {
+        const cronConfig = await getCronConfig();
+
+        console.log('Starting executeCronUsers', cronConfig.userFTP.active, cronConfig.integrator.active);
+
+        if (cronConfig.integrator.active) {
+            integrator();
+        } else {
+            getUsersLoad();
+        }
     },
 
     executeExamDeleteTrackingCron () {
@@ -1406,11 +1410,11 @@ async function integrator () {
         );
 
         storageLog(
-            `Carga de usuários para o integrador iniciada com sucesso`,
+            `Carga de usuários com integrador iniciada com sucesso`,
             '',
             '',
             'INTEGRATOR'
-        );
+        );s
     } catch (error) {
         console.log(error)
     }
