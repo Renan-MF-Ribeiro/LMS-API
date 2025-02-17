@@ -3,8 +3,7 @@ const _messages = require('../../utils/messages')
 const { Message } = require('./model')
 const { pagination, ordernation, getUserByToken } = require('../../utils/functions')
 const { Item } = require('../items/model')
-const config = require('../../../config.json')
-const { sendMessage } = require('../../utils/web-push')
+const { getMessengerConfig, getCronConfig } = require('../config/business')
 
 module.exports = {
     async createMessages (req, res) {
@@ -25,31 +24,6 @@ module.exports = {
     },
 
 
-
-    async webPushMessage (req, res) {
-        try {
-            const user = await getUserByToken(req);
-            const payload = req.body;
-
-
-            for (const subscription of user.webPushAuthorization) {
-                try {
-                    await sendMessage(subscription, payload);
-                } catch (error) {
-                    console.error(error);
-                    const errorMessage = 'Erro no envio da mensagem via push: ' + JSON.stringify(error)
-                    return _messages.internalServer(res, req, errorMessage, errorMessage, 'messages', 'returnUsers');
-
-                }
-            }
-
-            _messages.success(res, req, '');
-
-        } catch (error) {
-            console.log('error', error);
-            return _messages.internalServer(res, req, error.message, error, 'messages', 'returnUsers');
-        }
-    },
 
     async getMessages (req, res) {
         try {
@@ -96,7 +70,12 @@ module.exports = {
     async notifyResponsibleUsers () {
         const today = new Date()
         const items = await Item.find({ expirationDate: { $exists: true } })
-        const notificationDays = config.cron.notifyResponsibleUsers.notificationDays
+
+        const cronConfig = await getCronConfig();
+
+        const notificationDays = cronConfig.notifyResponsibleUsers.notificationDays;
+
+        const messengerConfig = await getMessengerConfig();
 
         for (const item of items) {
             if (item.responsible) {
@@ -115,7 +94,7 @@ module.exports = {
                         },
                         text: `O item ${item.title} perderá a validade em ${diffDays} dias!\n`,
                         textHtml: `<p>O item ${item.title} perderá a validade em ${diffDays} dias!<p>`,
-                        thumbnail: config.messenger.emailTemplate.thumbnail,
+                        thumbnail: messengerConfig.emailTemplate.thumbnail,
                         title: `${item.title}`,
                     }
                     createMessagesFromBackend(message)

@@ -12,7 +12,8 @@ module.exports = {
             const searchBy = req.query.searchBy;
             const listAll = req.query.listAll;
             const query = {
-                deleted: { $ne: true }
+                deleted: { $ne: true },
+                __t: { $exists: false }//, // exclude subtypes
             }
             if (searchBy) query['title'] = { $regex: searchBy, $options: 'i' }
 
@@ -100,7 +101,7 @@ module.exports = {
 
     async getTheme (req, res) {
         try {
-            const theme = await Theme.findOne({ enabled: true }).select('-createdAt -updatedAt -_id -__v -palette._id')
+            const theme = await Theme.findOne({ enabled: true }).select('-createdAt -updatedAt -__v -palette._id')
 
             if (theme) {
 
