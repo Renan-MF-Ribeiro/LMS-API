@@ -5,9 +5,12 @@ const multiparty = require('connect-multiparty');
 const formidable = require('express-formidable');
 const { authenticatePassportSaml } = require('../../utils/passport');
 const {
-    isAdmin,
-    isAdminOrInstructor,
     validateTokenRoute,
+    isUserManager,
+    isUserManagerOrSuperAdmin,
+    isUserManagerOrSuperAdminOrElegibilityManager,
+    hasElegibilityPermission,
+    canListUsers,
 } = require('../../utils/middlewares');
 
 const Saml2js = require('saml2js');
@@ -50,32 +53,33 @@ module.exports = express
     )
     .post('/change-password', _controller.changePassword)
     .post('/change-password-email', _controller.changePasswordByEmail)
-    .post(
-        '/change-photo',
-        validateTokenRoute,
-        formidable(),
-        _controller.changePhoto
-    )
+    .post('/change-photo', validateTokenRoute, formidable(), _controller.changePhoto)
     .get('/auth/isAuthenticated', _controller.isAuthenticated)
     .get('/auth/isAuthenticatedNginx/:token', _controller.isAuthenticatedNginx)
     .get('/me', _controller.selfData)
     .post('/gamification/names', validateTokenRoute, _controller.handleNames)
-    .post('/users', validateTokenRoute, isAdmin, _controller.create)
-    .post('/import', validateTokenRoute, formidable(), _controller.import)
-    .post('/import/onboarding', validateTokenRoute, formidable(), _controller.importOnboarding)
-    .get('/', validateTokenRoute, isAdminOrInstructor, _controller.returnUsers)
+    .post('/users', validateTokenRoute, isUserManagerOrSuperAdmin, _controller.create)
+    .post('/import', validateTokenRoute, isUserManagerOrSuperAdmin, formidable(), _controller.import) //added
+    .post(
+        '/import/onboarding',
+        validateTokenRoute,
+        isUserManagerOrSuperAdmin,
+        formidable(),
+        _controller.importOnboarding
+    ) //added
+    .get('/', validateTokenRoute, canListUsers, _controller.returnUsers)
     .get(
         '/onboarding',
         validateTokenRoute,
-        isAdminOrInstructor,
+        hasElegibilityPermission,
         (req, res, next) => {
             req.query.onboarding = true;
             return next();
         },
         _controller.returnUsers
     )
-    .put('/', validateTokenRoute, isAdmin, _controller.updateUser)
-    .get('/users/:userId', validateTokenRoute, isAdmin, _controller.findById)
+    .put('/', validateTokenRoute, isUserManager, _controller.updateUser)
+    .get('/users/:userId', validateTokenRoute, _controller.findById)
     .get('/import-users-test', validateTokenRoute, _controller.importUserTest)
     .get('/export-users', validateTokenRoute, _controller.exportUsers)
     .get('/envioemail', validateTokenRoute, _controller.email)
@@ -85,7 +89,7 @@ module.exports = express
         multiparty(),
         _controller.importUsersDisabled
     )
-    .post('/emulation', validateTokenRoute, _controller.emulation)
+    .post('/emulation', validateTokenRoute, isUserManagerOrSuperAdminOrElegibilityManager, _controller.emulation)
     .post(
         '/import-update-status',
         validateTokenRoute,
@@ -95,10 +99,7 @@ module.exports = express
     .post('/signup', _controller.signup)
     .post('/activate', _controller.activateUser)
     .post('/sso', _controller.singleSignOn)
-    .get(
-        '/sso/saml',
-        authenticatePassportSaml,
-    )
+    .get('/sso/saml', authenticatePassportSaml)
     .post(
         '/sso/saml/callback',
         authenticatePassportSaml,
@@ -114,61 +115,32 @@ module.exports = express
     .get(
         '/collaboration/list',
         validateTokenRoute,
-        isAdmin,
+        isUserManagerOrSuperAdmin,
         _controller.returnCollaborativeUsers
     )
-    .put(
-        '/collaboration/apply',
-        validateTokenRoute,
-        isAdmin,
-        _controller.setCollaborator
-    )
-    .put(
-        '/collaboration/remove',
-        validateTokenRoute,
-        isAdmin,
-        _controller.removeCollaborator
-    )
+    .put('/collaboration/apply', validateTokenRoute, isUserManagerOrSuperAdmin, _controller.setCollaborator)
+    .put('/collaboration/remove', validateTokenRoute, isUserManagerOrSuperAdmin, _controller.removeCollaborator)
     .put(
         '/collaboration/moderation',
         validateTokenRoute,
-        isAdmin,
+        isUserManagerOrSuperAdmin,
         _controller.toggleCollaboratorModeration
     )
-    .post(
-        '/password/reset',
-        validateTokenRoute,
-        isAdmin,
-        _controller.resetUserPassword
-    )
-    .put('/update', validateTokenRoute, _controller.updateUserById)
+    .post('/password/reset', validateTokenRoute, isUserManager, _controller.resetUserPassword)
+    .put('/update', validateTokenRoute, isUserManager, _controller.updateUserById)
     .get('/conteudistas', validateTokenRoute, _controller.getAllConteudistas)
     .get('/details', validateTokenRoute, _controller.returnUserById)
-    .get(
-        '/feedbackelegibility',
-        validateTokenRoute,
-        _controller.feedbackElegible
-    )
+    .get('/feedbackelegibility', validateTokenRoute, _controller.feedbackElegible)
     .post('/remove-permission', validateTokenRoute, _controller.deleteGroups)
-    .post('/add-permission', validateTokenRoute, _controller.addGroups)
-    .post('/remove-class-tag', validateTokenRoute, _controller.deleteClassTag)
+    .post('/add-permission', validateTokenRoute, isUserManagerOrSuperAdminOrElegibilityManager,  _controller.addGroups)
+    .post('/remove-class-tag', validateTokenRoute, isUserManagerOrSuperAdminOrElegibilityManager, _controller.deleteClassTag)
     .post('/add-class-tag', validateTokenRoute, _controller.addClassTag)
     .post('/update-class-tag', validateTokenRoute, _controller.updateClassTag)
-    .get(
-        '/evaluations/:idEvaluation',
-        validateTokenRoute,
-        _controller.evaluationProgress
-    )
+    .get('/evaluations/:idEvaluation', validateTokenRoute, _controller.evaluationProgress)
     .get('/mfa/token', _controller.validateMfaToken)
     .post('/mfa/generate', _controller.generateMultiFactor)
     .post('/mfa/validate', _controller.validateMultiFactor)
     .post('/authorization', _controller.updateWebPushAuthorization)
     .get('/map', validateTokenRoute, _controller.getUserMap)
     .put('/map', validateTokenRoute, _controller.putUserMap)
-    .post(
-        '/map/read-headers',
-        validateTokenRoute,
-        formidable(),
-        _controller.readSheetHeaders
-    );
-    
+    .post('/map/read-headers', validateTokenRoute, formidable(), _controller.readSheetHeaders);

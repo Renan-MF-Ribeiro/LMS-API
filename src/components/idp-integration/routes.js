@@ -1,6 +1,6 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const { validateTokenRoute, isAdmin } = require("../../utils/middlewares");
+const { validateTokenRoute, isSuperAdmin } = require("../../utils/middlewares");
 const { pagination, ordernation } = require("../../utils/functions");
 const { IdpIntegrationModel } = require("./models");
 const { getActiveIdpIntegrations } = require("./business");
@@ -17,7 +17,7 @@ idpIntegrationRouter.get("/is-active", async (req, res) => {
     });
 });
 
-idpIntegrationRouter.use(isAdmin);
+idpIntegrationRouter.use(isSuperAdmin);
 
 idpIntegrationRouter.get("/", async (req, res) => {
     const { skip = 0, limit = 10 } = pagination(req);

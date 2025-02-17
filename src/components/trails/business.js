@@ -5,7 +5,6 @@ const {
 
 const { Trail } = require('./model');
 const { Item } = require('../items/model');
-const config = require('../../../config.json')
 const axios = require('axios');
 const { socialApi } = require('../social/http-adapter');
 
@@ -52,8 +51,8 @@ module.exports = {
                 let trails = [];
                 let socialConfig;
                 let socialStatus = ""
-
-                if (config.social.active) {
+                    
+                if (global.globalApp?.get('features')?.social) { // TODO: É a melhor maneira?
                     const { data } = await socialApi.get(`client-config/${process.env.CLIENT_ID}`);
                     socialConfig = data
                 }

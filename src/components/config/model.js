@@ -9,13 +9,20 @@ const schemaOptions = {
     collation: { locale: 'en_US', strength: 1 },
 };
 
+const valueSchemaOptions = { ...schemaOptions, _id: false, timestamps: false };
+
 const ConfigTypes = {
     SocialFields: 'social-fields',
     AutomaticEligibility: {
         Onboard: 'automatic-eligibility-onboard',
     },
     Segmentation: 'segmentation',
+    Messenger: 'messenger',
+    Cron: 'cron',
+    UsersData: 'users-data',
+    Company: 'company',
 };
+
 const ConfigSchema = new mongoose.Schema(
     {
         type: { type: ConfigTypes, required: true, trim: true },
@@ -31,6 +38,7 @@ ConfigSchema.index({ type: 1 }, { unique: true });
 
 const ConfigModel = mongoose.model('configs', ConfigSchema);
 
+// Segmentação
 const SegmentationRuleSchema = new mongoose.Schema({
     name: { type: String, required: true, trim: true },
     issuer: { type: String, required: true, trim: true },
@@ -64,8 +72,182 @@ const SegmentationConfigModel = ConfigModel.discriminator(
     SegmentationConfigSchema
 );
 
+// Messenger
+const MessengerConfigModel = ConfigModel.discriminator(
+    ConfigTypes.Messenger,
+    new mongoose.Schema({
+        value: {
+            default: {
+                sendUsersToMicrosservice: false,
+                sendWelcomeCampaign: false,
+                emailTemplate: {
+                    primary: "#38B9C2",
+                    secondary: "#ffffff",
+                    logo: "https://happlearning.blob.core.windows.net/logo/logoHapp.png",
+                    buttonTextColor: "#FFFFFF",
+                    buttonBackgroundColor: "#38B9C2",
+                    client: "LMS Happlearning",
+                    thumbnail: "https://happlearning.blob.core.windows.net/logo/thumbnailHapp.png",
+                    footer: "https://happlearning.blob.core.windows.net/logo/footerHapp.png"
+                }
+            },
+            type: new mongoose.Schema({
+                sendUsersToMicrosservice: { type: Boolean, default: false },
+                sendWelcomeCampaign: { type: Boolean, default: false },
+                emailTemplate: {
+                    primary: { type: String, required: true, trim: true, default: '#38B9C2' },
+                    secondary: { type: String, required: true, trim: true, default: '#ffffff' },
+                    logo: { type: String, required: true, trim: true, default: 'https://happlearning.blob.core.windows.net/logo/logoHapp.png' },
+                    buttonTextColor: { type: String, required: true, trim: true, default: '#FFFFFF' },
+                    buttonBackgroundColor: { type: String, required: true, trim: true, default: '#38B9C2' },
+                    client: { type: String, required: true, trim: true, default: 'LMS Happlearning' },
+                    thumbnail: { type: String, required: true, trim: true, default: 'https://happlearning.blob.core.windows.net/logo/thumbnailHapp.png' },
+                    footer: { type: String, required: true, trim: true, default: 'https://happlearning.blob.core.windows.net/logo/footerHapp.png' },
+                },
+            }, valueSchemaOptions),
+        }
+    }, schemaOptions)
+);
+
+// CRON
+const CronConfigModel = ConfigModel.discriminator(
+    ConfigTypes.Cron,
+    new mongoose.Schema({
+        value: {
+            default: {
+                average: {
+                    active: false,
+                    groupA: "company",
+                    groupB: "costCenter"
+                },
+                userFTP: {
+                    active: false
+                },
+                courseRelease: {
+                    active: false
+                },
+                courseCharge: {
+                    active: false
+                },
+                deleteReprovedExamTracking: {
+                    active: false
+                },
+                degreed: {
+                    active: false
+                },
+                notifyResponsibleUsers: {
+                    active: true,
+                    notificationDays: [-30, 0, 30, 60, 90]
+                },
+                revokeTrail: {
+                    active: true
+                },
+                recommendedTrails: {
+                    active: true
+                },
+                inactiveOldOnboardingUsers: {
+                    active: true,
+                    daysToInactive: 15,
+                    cronExpression: "59 23 * * *"
+                },
+                removeAutomaticEligibilityTags: {
+                    active: true,
+                    cronExpression: "59 23 * * *"
+                }
+            },
+            type: new mongoose.Schema({
+                average: {
+                    active: { type: Boolean, default: false },
+                    groupA: { type: String, required: true, trim: true, default: 'company' },
+                    groupB: { type: String, required: true, trim: true, default: 'costCenter' },
+                },
+                userFTP: {
+                    active: { type: Boolean, default: false },
+                },
+                courseRelease: {
+                    active: { type: Boolean, default: false },
+                },
+                courseCharge: {
+                    active: { type: Boolean, default: false },
+                },
+                deleteReprovedExamTracking: {
+                    active: { type: Boolean, default: false },
+                },
+                degreed: {
+                    active: { type: Boolean, default: false },
+                },
+                notifyResponsibleUsers: {
+                    active: { type: Boolean, default: false },
+                    notificationDays: { type: [Number], default: [-30, 0, 30, 60, 90] },
+                },
+                revokeTrail: {
+                    active: { type: Boolean, default: false },
+                },
+                recommendedTrails: {
+                    active: { type: Boolean, default: false },
+                },
+                inactiveOldOnboardingUsers: {
+                    active: { type: Boolean, default: false },
+                    daysToInactive: { type: Number, default: 15 },
+                    cronExpression: { type: String, default: '59 23 * * *' },
+                },
+                removeAutomaticEligibilityTags: {
+                    active: { type: Boolean, default: false },
+                    cronExpression: { type: String, default: '59 23 * * *' },
+                },
+            }, valueSchemaOptions)
+        }
+    }, schemaOptions)
+);
+
+const PostProcessingActions = {
+    Delete: 'delete',
+    Move: 'move',
+}
+
+const UsersDataConfigModel = ConfigModel.discriminator(
+    ConfigTypes.UsersData,
+    new mongoose.Schema({
+        value: {
+            default: {
+                postProcessingAction: "delete",
+                inactivateIfNotInSpreadsheet: false,
+                sendSignUpActivationEmail: false,
+                daysSinceLastFeedback: 180
+            },
+            type: new mongoose.Schema({
+                postProcessingAction: { type: PostProcessingActions, required: true, trim: true, default: PostProcessingActions.Delete },
+                inactivateIfNotInSpreadsheet: { type: Boolean, default: false },
+                sendSignUpActivationEmail: { type: Boolean, default: false },
+                daysSinceLastFeedback: { type: Number, default: 180 },
+            }, valueSchemaOptions)
+        }
+    }, schemaOptions)
+);
+
+const CompanyConfigModel = ConfigModel.discriminator(
+    ConfigTypes.Company,
+    new mongoose.Schema({
+        value: {
+            default: {
+                companyName: "Happmobi",
+                mfaSupportEmail: "suporte@happlearning.com.br",
+            },
+            type: new mongoose.Schema({
+                companyName: { type: String, required: true, trim: true, default: 'Happmobi' },
+                mfaSupportEmail: { type: String, required: true, trim: true, default: "suporte@happlearning.com.br" },
+            }, valueSchemaOptions)
+        }
+    }, schemaOptions)
+);
+
 module.exports = {
-    ConfigModel,
     ConfigTypes,
+    PostProcessingActions,
+    ConfigModel,
     SegmentationConfigModel,
+    MessengerConfigModel,
+    CronConfigModel,
+    UsersDataConfigModel,
+    CompanyConfigModel
 };
