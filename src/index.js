@@ -18,7 +18,7 @@ const {
     setCurrentFeatures,
     setSegmentation,
 } = require('./utils/middlewares');
-const { PUBLIC_PATH } = process.env;
+
 const app = express();
 
 const { initializePassport } = require('./utils/passport');
@@ -71,9 +71,11 @@ const { socialApiMiddleware } = require('./components/social/http-adapter');
 const feedbackRoutes = require('./components/feedback/routes');
 const happplaceRoutes = require('./components/happplace/routes');
 
+const environment = require('./environment');
+
 const corsOptions = {
     origin: [
-        process.env.DOMAIN,
+        environment.DOMAIN,
         'https://monitoring.happlearning.com.br',
     ],
     credentials: true,
@@ -92,7 +94,7 @@ const corsOptions = {
     ],
 };
 
-if (process.env.NODE_ENV !== 'production') {
+if (environment.NODE_ENV !== 'production') {
     corsOptions.origin.push('http://localhost:4200');
     corsOptions.origin.push('http://192.168.1.5:4200');
 }
@@ -107,7 +109,7 @@ app.use(helmet({
     referrerPolicy: { policy: 'same-origin' },
 }));
 
-app.use(htmlInjection(path.resolve(PUBLIC_PATH)));
+app.use(htmlInjection(path.resolve(environment.PUBLIC_PATH)));
 
 app.set('trust proxy', 1);
 
@@ -129,10 +131,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(cookieParser());
 
-app.use(express.static(path.resolve(PUBLIC_PATH)));
+app.use(express.static(path.resolve(environment.PUBLIC_PATH)));
 
 app.get('/', (req, res) => {
-    res.sendFile(path.resolve(path.join(PUBLIC_PATH, 'index.html')));
+    res.sendFile(path.resolve(path.join(environment.PUBLIC_PATH, 'index.html')));
 });
 
 initializePassport(app);
@@ -194,5 +196,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/happplace', happplaceRoutes);
 
 app.use(errorHandler);
+
+global.globalApp = app; // TODO: É a melhor maneira?
 
 module.exports = app;

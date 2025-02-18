@@ -19,6 +19,22 @@ module.exports = {
             );
         }
     },
+    async userCanPost(req, res) {
+        try {
+            const uri = `config/userCanPost/${process.env.CLIENT_ID}`;
+            const { data } = await socialApi.get(uri);
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'feed',
+                'userCanPost'
+            );
+        }
+    },
     async getClientFeedConfig(req, res) {
         try {
             const uri = `config/${process.env.CLIENT_ID}`;
