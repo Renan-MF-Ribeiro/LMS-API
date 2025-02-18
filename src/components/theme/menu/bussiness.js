@@ -25,16 +25,12 @@ function verifyAndAddSubMenuItems (parentItem, subMenuItems) {
     for (const subItem of subMenuItems) {
 
         const foundSubItem = parentItem.find(sm => sm.button === subItem.button);
-        console.log('foundSubItem', foundSubItem)
         if (!foundSubItem) {
             parentItem.splice(subItem.index, 0, subItem);
         } else if (foundSubItem.subMenu?.length > 0) {
-            console.log('foundSubItem.subMenu', foundSubItem.subMenu)
             foundSubItem.subMenu = verifyAndAddSubMenuItems(foundSubItem.subMenu, subItem.subMenu);
         }
     }
-    console.log('parentItem', parentItem)
-    console.log('-------------------\n\n')
     return parentItem
 }
 
