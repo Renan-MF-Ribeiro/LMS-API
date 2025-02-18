@@ -1,6 +1,7 @@
 /* eslint-disable handle-callback-err */
 require('dotenv').config();
 const mongoose = require('mongoose');
+const _ = require('lodash');
 const moment = require('moment');
 const { CLIENT_ID } = process.env;
 const _messages = require('../../utils/messages');
@@ -639,7 +640,6 @@ module.exports = {
             log('singleSignOn tokenIdpProfiles', tokenIdpProfiles);
 
             const ssoForm = await getSsoFormByStrategyName(tokenStrategyName);
-
             const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data[ssoForm.claim];
 
             if (!claim) {
@@ -969,6 +969,8 @@ module.exports = {
             });
 
             const resetPasswordUrl = `${domain}/login/troca-senha?token=${token}`;
+
+            console.log(user.email, password_new, resetPasswordUrl)
 
             await sendEmailRecoveryPassword(
                 user.email,
@@ -1986,12 +1988,29 @@ module.exports = {
     },
 
     async openIdCallback(req, res) {
-        console.log('openIdCallback foi chamado!');
+        const { strategy } = req.session;
+        const openidForm = await getSsoFormByStrategyName(strategy);
+        const claimValue = _.get(req.user, openidForm.claim_key);
 
+        const { idpProfiles } = await fetchIdpProfilesFromRequestWithSamlObject(req);
 
+        await Log.create({
+            type: 'SSO_CALLBACK',
+            message: 'SSO_CALLBACK',
+            component: 'users',
+            route: 'ssoCallback',
+            dataNew: { openidObject: req.user },
+            dataOld: null,
+        });
+
+        const token = jwt.sign({
+            [openidForm.claim]: claimValue,
+            strategyName: strategy,
+            idpProfiles,
+        }, process.env.PROJECT_SECRET_KEY);
 
         req.session.strategy = null;
-        res.send(req.user);
+        res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
     },
 
     async updateDeviceId(req, res) {
