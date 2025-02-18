@@ -59,9 +59,13 @@ module.exports = {
         }
     },
 
-    async getSsoFormByStrategyName(strategyName = 'saml') {
+    async getSsoFormByStrategyName(strategyName) {
         const loginConfig = await module.exports.getLoginConfig();
-        return loginConfig.ssoForm?.find((form) => (form.strategyName ?? 'saml') === strategyName) ?? null;
+
+        return (
+            loginConfig.ssoForm?.find((form) => form.strategyName === strategyName) ||
+            loginConfig.openidForm?.find((form) => form.strategyName === strategyName)
+        );
     },
 
     async findUsers(req, { onboarding }) {
