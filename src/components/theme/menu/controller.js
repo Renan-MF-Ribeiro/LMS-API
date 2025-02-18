@@ -32,7 +32,7 @@ module.exports = {
 
     async getMenu (req, res) {
         try {
-            const data = await Menu.find({})
+            const data = await Menu.find({}).sort({ index: 1 });
             _messages.success(res, req, data);
         }
         catch (error) {
