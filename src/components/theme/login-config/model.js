@@ -39,6 +39,7 @@ const openidFormSchema = new Schema({
     client_secret: { type: String, required: true },
     callback_url: { type: String, required: true },
     claim: { type: String, required: true },
+    claimKey: { type: String, required: true },
     enabled: { type: Boolean, default: true, required: true },
     strategyName: { type: String, default: 'openidconnect', required: false },
     authorization_url: { type: String, required: true },
