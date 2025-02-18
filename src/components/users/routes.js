@@ -4,7 +4,7 @@ const rateLimit = require('express-rate-limit');
 const _controller = require('./controller');
 const multiparty = require('connect-multiparty');
 const formidable = require('express-formidable');
-const { authenticatePassportSAML, authenticatePassportOPENID, authenticatePassportOPENIDcallback } = require('../../utils/passport');
+const { authenticatePassportSAML, authenticatePassportOPENID, saveStrategyOnSession } = require('../../utils/passport');
 const {
     isAdmin,
     isAdminOrInstructor,
@@ -96,11 +96,6 @@ module.exports = express
     .post('/signup', _controller.signup)
     .post('/activate', _controller.activateUser)
     .post('/sso', _controller.singleSignOn)
-    .get('/sso/openid/callback', authenticatePassportOPENIDcallback, _controller.openIdCallback)
-    .get(
-        '/sso/openid',
-        authenticatePassportOPENID,
-    )
     .get(
         '/sso/saml',
         authenticatePassportSAML,
@@ -115,6 +110,16 @@ module.exports = express
             next();
         },
         _controller.ssoCallback
+    )
+    .get(
+        '/openid',
+        saveStrategyOnSession,
+        authenticatePassportOPENID,
+    )
+    .get(
+        '/openid/callback',
+        authenticatePassportOPENID,
+        _controller.openIdCallback
     )
     .post('/device', validateTokenRoute, _controller.updateDeviceId)
     .get(
