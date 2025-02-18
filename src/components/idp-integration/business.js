@@ -15,7 +15,7 @@ async function getActiveIdpIntegrations(strategyName) {
 }
 
 async function fetchIdpProfilesFromRequestWithSamlObject(req) {
-    const strategyName = getRequestStrategyName(req);
+    const strategyName = getRequestStrategyName(req) ?? req.session.strategy;
     const idpProfiles = new Set();
 
     log('fetchIdpProfilesFromRequestWithSamlObject strategyName', strategyName);
@@ -36,8 +36,7 @@ async function fetchIdpProfilesFromRequestWithSamlObject(req) {
         log('fetchIdpProfilesFromRequestWithSamlObject idpIntegration', idpIntegration.name);
         const samlValue = idpIntegration.keyField.split(',').reduce((acc, key) => {
             if (acc !== null && acc !== undefined && acc !== '') return acc;
-            const value = _.get(req.samlUserObject, key, null);
-
+            const value = _.get(req.user ?? req.samlUserObject, key, null);
             if (value) {
                 matchedKeysAndValues.push({ key, value });
             }
@@ -48,7 +47,9 @@ async function fetchIdpProfilesFromRequestWithSamlObject(req) {
         log('fetchIdpProfilesFromRequestWithSamlObject samlValue', samlValue ?? 'not found');
 
         if (samlValue) {
-            const values = samlValue.split(idpIntegration.valueSeparator ?? ',');
+            const values = Array.isArray(samlValue)
+                ? samlValue
+                : samlValue.split(idpIntegration.valueSeparator ?? ',');
 
             values.forEach(value => {
                 log('fetchIdpProfilesFromRequestWithSamlObject value', value);
