@@ -1,6 +1,7 @@
 const passport = require('passport');
 const passportSaml = require('passport-saml');
 const OpenIDConnectStrategy = require('passport-openidconnect');
+const axios = require('axios');
 
 const { log } = require('./logger');
 const { getLoginConfig } = require('../components/users/business');
@@ -49,14 +50,18 @@ async function createOpenIdConnectStrategy(config) {
             clientSecret: config.client_secret,
             callbackURL: config.callback_url,
             //alterar scope para ser dinamico com oq o cliente escolher, depois scopos pode precisar de aprovação do google.
-            scope: ['openid', 'profile', config.claim],
+            scope: ['openid', 'profile', 'email'],
 
         },
-        (issuer, profile, done) => {
+        async (issuer, profile, accessToken, refreshToken, done) => {
+            // Adicionando mais informações no profile
+            // profile.accessToken = accessToken;
+            profile.groups = decodeJWT(refreshToken).groups || [];
+            profile.strategyName = strategyName;
             profile.issuer = issuer;
+
             return done(null, profile);
         }
-
     );
 
     passport.use(strategyName, strategy);
@@ -82,28 +87,20 @@ async function authenticatePassportSAML(req, res, next) {
 }
 
 function authenticatePassportOPENID(req, res, next) {
-    const strategyName = getRequestStrategyName(req);
+    const strategyName = getRequestStrategyName(req) ?? req.session.strategy
     log('authenticatePassportOPENID strategyName', strategyName);
 
+    passport.authenticate(strategyName, {
+        failureRedirect: '/',
+        failureFlash: true,
+    })(req, res, next);
+}
+
+function saveStrategyOnSession(req, res, next) {
+    const strategyName = getRequestStrategyName(req)
     req.session.strategy = strategyName;
-
-    passport.authenticate(strategyName, {
-        failureRedirect: '/',
-        failureFlash: true,
-    })(req, res, next);
+    next();
 }
-
-function authenticatePassportOPENIDcallback(req, res, next) {
-    const strategyName = req.session.strategy;
-    log('authenticatePassportOPENID strategyName', strategyName);
-
-    passport.authenticate(strategyName, {
-        failureRedirect: '/',
-        failureFlash: true,
-    })(req, res, next);
-}
-
-
 
 async function createStrategiesFromLoginConfigs() {
     const loginConfig = await getLoginConfig();
@@ -130,13 +127,29 @@ function removeStrategies(strategies = []) {
     strategies.forEach(strategy => passport.unuse(strategy));
 }
 
+function decodeJWT(token) {
+    try {
+        // O token JWT é dividido em três partes separadas por pontos (.)
+        const [header, payload, signature] = token.split('.');
+
+        // Decodificar a parte do payload (que contém as claims)
+        const decodedPayload = Buffer.from(payload, 'base64').toString('utf-8');
+
+        // Converter o payload de JSON para objeto JavaScript
+        return JSON.parse(decodedPayload);
+    } catch (error) {
+        console.error('Erro ao decodificar o token JWT:', error);
+        throw new Error('Token JWT inválido.');
+    }
+}
+
 createStrategiesFromLoginConfigs();
 
 module.exports = {
     initializePassport,
     authenticatePassportSAML,
     authenticatePassportOPENID,
-    authenticatePassportOPENIDcallback,
+    saveStrategyOnSession,
     getRequestStrategyName,
     createStrategiesFromLoginConfigs,
     removeStrategies
