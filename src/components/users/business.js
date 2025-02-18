@@ -443,6 +443,8 @@ module.exports = {
         data.enabled = true;
         data.onboarding = onboarding;
 
+        data.pcd = ['sim', 's', '1', 'true'].includes(String(data.pcd).toLowerCase()) ? 'S' : 'N';
+
         const groupsAD =
             onboarding === true
                 ? ['PERFIL_Aluno', 'ELEGE_ONBOARDING']
