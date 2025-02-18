@@ -2,16 +2,16 @@ const _messages = require('../../utils/messages')
 const { Profile } = require('./model')
 
 module.exports = {
-    async findAll (req, res) {
+    async findAll(req, res) {
         try {
-            const profiles = await Profile.find()
+            const profiles = await Profile.find().sort({label: 'asc'})
             _messages.success(res, req, profiles)
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'section', '/createSession')
         }
     },
 
-    async create (req, res) {
+    async create(req, res) {
         try {
             const { title } = req.body
             const count = await Profile.find({
@@ -28,4 +28,17 @@ module.exports = {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'profiles', '/create')
         }
     },
+
+    async update(req, res) {
+        const { id: _id } = req.params
+
+        const profileExists = await Profile.findOne({ _id })
+        if (!profileExists) {
+            return _messages.badRequest(res, req, 'Perfil não encontrado', 'Perfil não encontrado', 'profiles', 'update')
+        }
+
+        const profile =  await Profile.findOneAndUpdate({ _id }, req.body, { new: true })
+
+        return _messages.success(res, req, profile, 'Atualização de dados')
+    }
 }

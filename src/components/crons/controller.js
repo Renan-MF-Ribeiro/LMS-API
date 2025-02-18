@@ -1,6 +1,5 @@
 const _messages = require('../../utils/messages');
 const { Log } = require('../logs/model');
-const config = require('../../../config.json');
 const {
     executeCronDailyCharge,
     executeCronAverageCourses,
@@ -14,7 +13,9 @@ const {
     executeUpdateTrailsViewsCron,
     executeInactiveOldOnboardingUsers,
     executeRemoveAutomaticEligibilityTags,
+    executeIntegrator,
 } = require('../../utils/cron');
+const { getCronConfig } = require('../config/business');
 
 module.exports = {
     async executeDailyCharge(req, res) {
@@ -52,7 +53,7 @@ module.exports = {
         res.status(200).json('CRON INICIADO COM SUCESSO');
     },
 
-    async executeUpdateTrailsViewsCron (req, res) {
+    async executeUpdateTrailsViewsCron(req, res) {
         executeUpdateTrailsViewsCron()
         res.status(200).json('CRON INICIADO COM SUCESSO')
     },
@@ -62,16 +63,12 @@ module.exports = {
             let log = await Log.findOne({
                 component: 'CRON_DAILY_CHARGE',
             }).sort({ createdAt: -1 });
-            if (log) {
+
+            if (log)
                 log = await verifyLog(log);
-                _messages.success(res, req, log);
-            } else {
-                _messages.badRequest(
-                    res,
-                    req,
-                    'Erro ao buscar última execução do cron usuários '
-                );
-            }
+
+            return _messages.success(res, req, log);
+
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -90,14 +87,8 @@ module.exports = {
             });
             if (log) {
                 log = await verifyLog(log);
-                _messages.success(res, req, log);
-            } else {
-                _messages.badRequest(
-                    res,
-                    req,
-                    'Erro ao buscar última execução do cron de médias'
-                );
             }
+            return _messages.success(res, req, log);
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -136,7 +127,9 @@ module.exports = {
     },
 
     async executeCronRevokeTrail(req, res) {
-        if (config.cron.revokeTrail.active) {
+        const cronConfig = await getCronConfig();
+        
+        if (cronConfig.revokeTrail.active) {
             executeRevokeTrail();
             res.status(200).json('CRON INICIADO COM SUCESSO');
         } else {
@@ -145,7 +138,9 @@ module.exports = {
     },
 
     async executeRecommendedTrails(req, res) {
-        if (config.cron.recommendedTrails.active) {
+        const cronConfig = await getCronConfig();
+        
+        if (cronConfig.recommendedTrails.active) {
             executeRecommendedTrails();
             res.status(200).json('CRON INICIADO COM SUCESSO');
         } else {
@@ -154,7 +149,9 @@ module.exports = {
     },
 
     async handleInactiveOldOnboardingUsers(req, res) {
-        if (!config.cron?.inactiveOldOnboardingUsers?.active) {
+        const cronConfig = await getCronConfig();
+
+        if (!cronConfig?.inactiveOldOnboardingUsers?.active) {
             return res.status(400).json({
                 message: 'FUNCIONALIDADE INATIVA',
             });
@@ -167,8 +164,11 @@ module.exports = {
         });
     },
     
+
     async handleRemoveAutomaticEligibilityTags(req, res) {
-        if (!config.cron?.removeAutomaticEligibilityTags?.active) {
+        const cronConfig = await getCronConfig();
+        
+        if (!cronConfig?.removeAutomaticEligibilityTags?.active) {
             return res.status(400).json({
                 message: 'FUNCIONALIDADE INATIVA',
             });
