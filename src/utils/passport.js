@@ -50,13 +50,12 @@ async function createOpenIdConnectStrategy(config) {
             clientSecret: config.client_secret,
             callbackURL: config.callback_url,
             //alterar scope para ser dinamico com oq o cliente escolher, depois scopos pode precisar de aprovação do google.
-            scope: ['openid', 'profile', 'email'],
+            scope: ['openid', 'profile', config.claim],
 
         },
         async (issuer, profile, accessToken, refreshToken, done) => {
-            // Adicionando mais informações no profile
-            // profile.accessToken = accessToken;
-            profile.groups = decodeJWT(refreshToken).groups || [];
+
+            profile.groups = refreshToken ? decodeJWT(refreshToken).groups || [] : [];
             profile.strategyName = strategyName;
             profile.issuer = issuer;
 
@@ -129,13 +128,10 @@ function removeStrategies(strategies = []) {
 
 function decodeJWT(token) {
     try {
-        // O token JWT é dividido em três partes separadas por pontos (.)
         const [header, payload, signature] = token.split('.');
 
-        // Decodificar a parte do payload (que contém as claims)
         const decodedPayload = Buffer.from(payload, 'base64').toString('utf-8');
 
-        // Converter o payload de JSON para objeto JavaScript
         return JSON.parse(decodedPayload);
     } catch (error) {
         console.error('Erro ao decodificar o token JWT:', error);

@@ -59,7 +59,7 @@ module.exports = {
         }
     },
 
-    async getSsoFormByStrategyName(strategyName) {
+    async getLoginFormByStrategyName(strategyName) {
         const loginConfig = await module.exports.getLoginConfig();
 
         return (

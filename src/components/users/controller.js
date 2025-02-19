@@ -52,7 +52,7 @@ const {
     buildSearchObject,
     generateNewPassword,
     maskEmail,
-    getSsoFormByStrategyName
+    getLoginFormByStrategyName
 } = require('./business');
 
 const {
@@ -103,7 +103,7 @@ const { Log } = require('../logs/model');
 const { Tracking } = require('../tracking/model');
 const { getConfiguration, handleSegmentationOnQuery } = require('../config/business');
 const { ConfigTypes } = require('../config/model');
-const { fetchIdpProfilesFromRequestWithSamlObject } = require('../idp-integration/business');
+const { fetchIdpProfilesFromRequestObject } = require('../idp-integration/business');
 const { log } = require('../../utils/logger');
 const ApiError = require('../../errors/ApiError');
 const { addSASTokenToResponse } = require('../../utils/cookies');
@@ -639,7 +639,7 @@ module.exports = {
             log('singleSignOn tokenStrategyName', tokenStrategyName);
             log('singleSignOn tokenIdpProfiles', tokenIdpProfiles);
 
-            const ssoForm = await getSsoFormByStrategyName(tokenStrategyName);
+            const ssoForm = await getLoginFormByStrategyName(tokenStrategyName);
             const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data[ssoForm.claim];
 
             if (!claim) {
@@ -1927,9 +1927,9 @@ module.exports = {
 
     async ssoCallback(req, res) {
         try {
-            const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestWithSamlObject(req);
+            const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
 
-            const ssoForm = await getSsoFormByStrategyName(strategyName);
+            const ssoForm = await getLoginFormByStrategyName(strategyName);
 
             const claim = ssoForm?.claim ?? 'networkLogin';
             const claimKey = ssoForm?.claimKey ?? 'no-claim-key-value';
@@ -1989,16 +1989,16 @@ module.exports = {
 
     async openIdCallback(req, res) {
         const { strategy } = req.session;
-        const openidForm = await getSsoFormByStrategyName(strategy);
+        const openidForm = await getLoginFormByStrategyName(strategy);
         const claimValue = _.get(req.user, openidForm.claim_key);
 
-        const { idpProfiles } = await fetchIdpProfilesFromRequestWithSamlObject(req);
+        const { idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
 
         await Log.create({
-            type: 'SSO_CALLBACK',
-            message: 'SSO_CALLBACK',
+            type: 'OPENID_CALLBACK',
+            message: 'OPENID_CALLBACK',
             component: 'users',
-            route: 'ssoCallback',
+            route: 'openidCallback',
             dataNew: { openidObject: req.user },
             dataOld: null,
         });
