@@ -1617,12 +1617,15 @@ module.exports = {
                 projection: { ...userProjection },
             });
 
+            await WebhooksController.dispatch('update', 'user', { ...userUpdated, password: undefined });
+
             if (userUpdated?.status) {
                 await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status);
             }
 
             return _messages.success(res, req, updated, 'Usuário(a) atualizado(a) com sucesso!');
         } catch (error) {
+            console.log(error)
             return _messages.internalServer(
                 res,
                 req,

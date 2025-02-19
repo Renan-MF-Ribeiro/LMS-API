@@ -1,27 +1,21 @@
 const { Webhooks } = require('./model')
 const _messages = require('../../utils/messages')
+const axios = require('axios')
 
 module.exports = {
     async dispatch (action, target, data) {
         try {
             const webhook = await Webhooks.findOne({target: target, action: action})
-            if (webhook) {
-                console.log(webhook)
-
-                return _messages.success(res, req, 'webhook.endpoint');
-
+            if (webhook && webhook.status) {
+                console.log(data)
+                await axios.post(webhook.endpoint, data)
+                return "Webhook dispatched"
             } else {
-                return _messages.success(res, req, 'Webhook não encontrado');
-            }
+                throw new Error('Webhook not found or inactive')
+            } 
         } catch (error) {
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'webhooks',
-                'dispatch',
-            )
+            console.log(error)
+            throw new Error(error.message)
         }                
     },
     async update (req, res) {
