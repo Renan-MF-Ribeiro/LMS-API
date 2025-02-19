@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const FieldSchema = new mongoose.Schema({
     key: { type: String, required: true },
     required: { type: Boolean, required: false, default: false },
-    columns: { type: [Number], required: false, default: [1] },
+    columns: { type: Number, required: false, default: 1 },
     row: { type: Number, required: false, default: 0 },
 }, { timestamps: true, strict: false });
 
