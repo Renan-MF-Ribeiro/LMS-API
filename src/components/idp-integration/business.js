@@ -30,6 +30,11 @@ async function fetchIdpProfilesFromRequestObject(req) {
     const filteredIdpIntegrations = idpIntegrations.filter(idpIntegration => idpIntegration.strategyName === strategyName);
     log('fetchIdpProfilesFromRequestObject filteredIdpIntegrations', filteredIdpIntegrations);
 
+    if (!filteredIdpIntegrations?.length) {
+        log('fetchIdpProfilesFromRequestWithSamlObject no active idpIntegrations found for strategyName', strategyName);
+        return { strategyName, idpProfiles: null, matchedKeysAndValues: [] }
+    }
+
     const matchedKeysAndValues = [];
 
     for (const idpIntegration of filteredIdpIntegrations) {
@@ -47,9 +52,7 @@ async function fetchIdpProfilesFromRequestObject(req) {
         log('fetchIdpProfilesFromRequestObject samlValue', samlValue ?? 'not found');
 
         if (samlValue) {
-            const values = Array.isArray(samlValue)
-                ? samlValue
-                : samlValue.split(idpIntegration.valueSeparator ?? ',');
+            const values = Array.isArray(samlValue) ? samlValue : samlValue.split(idpIntegration.valueSeparator ?? ',');
 
             values.forEach(value => {
                 log('fetchIdpProfilesFromRequestObject value', value);
