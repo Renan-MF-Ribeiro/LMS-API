@@ -440,6 +440,9 @@ module.exports = {
         data.birthDate = data.birthDate ? moment(data.birthDate, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
         data.admission = data.admission ? moment(data.admission, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
         data.createDate = data.createDate ? moment(data.createDate, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
+        data.terminationDate = data.terminationDate ? moment(data.terminationDate, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
+        data.vacationStartDate = data.vacationStartDate ? moment(data.vacationStartDate, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
+        data.vacationEndDate  = data.vacationEndDate ? moment(data.vacationEndDate, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
         data.enabled = true;
         data.onboarding = onboarding;
 

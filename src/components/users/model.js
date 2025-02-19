@@ -135,10 +135,10 @@ const userSchema = new mongoose.Schema(
         hierarchicalLevelCode: { type: String, trim: true, required: false },
         pcdCode: { type: String, trim: true, required: false },
         ethnicity: { type: String, trim: true, required: false },
-        terminationDate: { type: Date, required: false },
+        terminationDate: { type: String, required: false },
         reasonRemoval: { type: String, trim: true, required: false },
-        vacationStartDate: { type: Date, required: false },
-        vacationEndDate: { type: Date, required: false },
+        vacationStartDate: { type: String, required: false },
+        vacationEndDate: { type: String, required: false },
         alternativeEmail: { type: String, trim: true, required: false },
 
     },
