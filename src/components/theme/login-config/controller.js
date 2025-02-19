@@ -14,21 +14,19 @@ module.exports = {
             body.ssoForm = processForm(body.ssoForm);
             body.openidForm = processForm(body.openidForm);
 
-            const namesFromToSso = body.ssoForm
+            const namesFromToSAML = body.ssoForm
                 .map(info => ({ from: info.strategyNameFrom, to: info.strategyName }))
                 .filter(info => info.from && info.to && info.from !== info.to);
 
-            // conexão com idp
-            // const namesFromToOpenId = openidForm
-            //     .map(info => ({ from: info.strategyNameFrom, to: info.strategyName }))
-            //     .filter(info => info.from && info.to && info.from !== info.to);
+            const namesFromToOpenId = body.openidForm
+                .map(info => ({ from: info.strategyNameFrom, to: info.strategyName }))
+                .filter(info => info.from && info.to && info.from !== info.to);
 
             let config = await getLoginConfig()
 
-            const strategiesToDisable = getStrategiesToDisable(config.ssoForm, body.ssoForm);
+            const strategiesToDisableSAML = getStrategiesToDisable(config?.ssoForm || [], body.ssoForm);
 
-            // config do passport
-            // const strategiesToDisableOpenID = getStrategiesToDisable(config.openidForm, body.openidForm);
+            const strategiesToDisableOpenID = getStrategiesToDisable(config?.openidForm || [], body.openidForm);
 
             if (config) {
                 config = await ConfigLogin.findByIdAndUpdate(config._id, body)
@@ -36,15 +34,24 @@ module.exports = {
                 config = await ConfigLogin.create(body)
             }
 
-            for await (const { from, to } of namesFromToSso) {
-                await IdpIntegrationModel.updateMany(
-                    { strategyName: from },
-                    { strategyName: to }
+            await Promise.all(
+                namesFromToSAML.map(({ from, to }) =>
+                    IdpIntegrationModel.updateMany({ strategyName: from }, { strategyName: to })
                 )
+            );
+
+            await Promise.all(
+                namesFromToOpenId.map(({ from, to }) =>
+                    IdpIntegrationModel.updateMany({ strategyName: from }, { strategyName: to })
+                )
+            );
+
+            if (strategiesToDisableSAML?.length) {
+                removeStrategies(strategiesToDisableSAML);
             }
 
-            if (strategiesToDisable?.length) {
-                removeStrategies(strategiesToDisable)
+            if (strategiesToDisableOpenID?.length) {
+                removeStrategies(strategiesToDisableOpenID);
             }
 
             await createStrategiesFromLoginConfigs();
@@ -89,7 +96,7 @@ module.exports = {
                     "openidForm.client_id": 0,
                     "openidForm.client_secret": 0,
                     "openidForm.tenant": 0,
-                    "openidForm.entrypoint": 0,
+                    "openidForm.authorization_url": 0,
                     "openidForm.claim": 0,
                     "openidForm.callback_url": 0,
                 };
