@@ -11,7 +11,7 @@ module.exports = {
                 await axios.post(webhook.endpoint, data)
                 return "Webhook dispatched"
             } else {
-                throw new Error('Webhook not found or inactive')
+                throw new Error('Webhook não encontrado ou inativo')
             } 
         } catch (error) {
             console.log(error)
