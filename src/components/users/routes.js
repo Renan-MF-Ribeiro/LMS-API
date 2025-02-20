@@ -89,7 +89,7 @@ module.exports = express
         _controller.returnUsers
     )
     .put('/', validateTokenRoute, _controller.updateUser)
-    .get('/users/:userId', validateTokenRoute, isAdmin, _controller.findById)
+    .get('/users/:userId', validateTokenRoute, _controller.findById)
     .get('/import-users-test', validateTokenRoute, _controller.importUserTest)
     .get('/export-users', validateTokenRoute, _controller.exportUsers)
     .get('/envioemail', validateTokenRoute, _controller.email)
@@ -137,7 +137,7 @@ module.exports = express
         _controller.toggleCollaboratorModeration
     )
     .post('/password/reset', validateTokenRoute, isUserManager, _controller.resetUserPassword)
-    .put('/update', validateTokenRoute, _controller.updateUserById)
+    .put('/update', validateTokenRoute, isUserManager, _controller.updateUserById)
     .get('/conteudistas', validateTokenRoute, _controller.getAllConteudistas)
     .get('/details', validateTokenRoute, _controller.returnUserById)
     .get('/feedbackelegibility', validateTokenRoute, _controller.feedbackElegible)
