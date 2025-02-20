@@ -2028,8 +2028,8 @@ module.exports = {
 
     async openIdCallback(req, res) {
         const { strategy } = req.session;
-        const openidForm = await getLoginFormByStrategyName(strategy);
-        const claimValue = _.get(req.user, openidForm.claim_key);
+        const form = await getLoginFormByStrategyName(strategy);
+        const claimValue = _.get(req.user, form.claimKey);
 
         const { idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
 
@@ -2043,12 +2043,13 @@ module.exports = {
         });
 
         const token = jwt.sign({
-            [openidForm.claim]: claimValue,
+            [form.claim]: claimValue,
             strategyName: strategy,
             idpProfiles,
         }, process.env.PROJECT_SECRET_KEY);
 
         req.session.strategy = null;
+
         res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
     },
 
