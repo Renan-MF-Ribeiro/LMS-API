@@ -10,7 +10,7 @@ const {
     filterTrails,
     filterAlura,
     mapAlura,
-    getGroupCodesByToken
+    courseInSections
 } = require('../sections/business');
 const { User } = require('../users/model');
 const {
@@ -22,6 +22,7 @@ const {
     handleStudentTrails,
     pagination,
 } = require('../../utils/functions');
+const { extractTextFromRichText } = require('../../utils/extract-text-from-richtext')
 const {
     trailsCompletedOrInProgress,
     studentAverageCourses,
@@ -195,6 +196,15 @@ const HomeController = {
                     trails: filteredTrailsWithoutSection
                 });
             }
+
+            // Recupera Cursos presenciais
+            const course = await courseInSections(tags, user);
+            course.trails = course.trails.filter(trail => {
+                const { title, description } = trail;
+                return [title, description].some(stg => extractTextFromRichText(stg).toLowerCase().includes(searchBy.toLowerCase()));
+            });
+
+            result.push(course);
 
             if (req?.features?.alura) {
                 const host = process.env.API_ALURA;

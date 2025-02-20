@@ -9,7 +9,6 @@ const {
     isUserManager,
     isUserManagerOrSuperAdmin,
     isUserManagerOrSuperAdminOrElegibilityManager,
-    hasElegibilityPermission,
     canListUsers,
 } = require('../../utils/middlewares');
 
