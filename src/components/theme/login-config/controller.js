@@ -11,7 +11,7 @@ module.exports = {
         try {
             const body = req.body
 
-            body.ssoForm = processForm(body.ssoForm);
+            body.ssoForm = processForm(body.ssoForm).map(removeEmptyFields);
 
             // const strategies = body.ssoForm.map(info => info.strategyName);
 
@@ -132,3 +132,9 @@ const getStrategiesToDisable = (configForm = [], newForm = []) => {
 
     return [...removedStrategies, ...disabledStrategies].map(info => info.strategyName);
 };
+
+function removeEmptyFields(obj) {
+    return Object.fromEntries(
+        Object.entries(obj).filter(([_, v]) => v !== "" && v !== null)
+    );
+}
