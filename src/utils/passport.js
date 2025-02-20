@@ -19,7 +19,7 @@ async function createSamlPassportStrategy(config) {
         ...config,
         certifier: config.certifier?.slice(-5) ?? null,
     });
-    const strategyName = config.strategyName || 'saml';
+    const strategyName = config.strategyName;
 
     const strategy = new passportSaml.Strategy(
         {
@@ -27,7 +27,7 @@ async function createSamlPassportStrategy(config) {
             forceAuthn: config.forceAuth || false,
             entryPoint: config.entrypoint,
             issuer: config.issuer,
-            callbackUrl: `${config.callback_url}?strategy=${strategyName}`,
+            callbackUrl: `${config.callbackUrl}?strategy=${strategyName}`,
             cert: config.certifier,
         },
         (profile, done) => done(null, profile),
@@ -38,18 +38,17 @@ async function createSamlPassportStrategy(config) {
 
 async function createOpenIdConnectStrategy(config) {
     log('createOpenIdConnectStrategy config', config);
-    const strategyName = config.strategyName || 'openidconnect';
+    const strategyName = config.strategyName;
 
     const strategy = new OpenIDConnectStrategy(
         {
             issuer: config.issuer,
-            authorizationURL: config.authorization_url,
-            tokenURL: config.token_url,
-            userInfoURL: config.user_info_url,
-            clientID: config.client_id,
-            clientSecret: config.client_secret,
-            callbackURL: config.callback_url,
-            //alterar scope para ser dinamico com oq o cliente escolher, depois scopos pode precisar de aprovação do google.
+            authorizationURL: config.authorizationUrl,
+            tokenURL: config.tokenUrl,
+            userInfoURL: config.userInfoUrl,
+            clientID: config.clientId,
+            clientSecret: config.clientSecret,
+            callbackURL: config.callbackUrl,
             scope: ['openid', 'profile', config.claim],
 
         },
@@ -67,7 +66,7 @@ async function createOpenIdConnectStrategy(config) {
 }
 
 function getRequestStrategyName(req) {
-    return req.query?.strategy;
+    return req.query?.strategy ?? req.session.strategy;
 }
 
 function initializePassport(app) {
@@ -75,24 +74,16 @@ function initializePassport(app) {
     app.use(passport.session());
 }
 
-async function authenticatePassportSAML(req, res, next) {
-    const strategyName = getRequestStrategyName(req) ?? 'saml';
-    log('authenticatePassportSAML strategyName', strategyName);
+async function authenticatePassport(req, res, next) {
+    const strategyName = getRequestStrategyName(req);
+
+    log('authenticatePassport strategyName', strategyName);
 
     passport.authenticate(strategyName, {
         failureRedirect: '/',
         failureFlash: true,
     })(req, res, next);
-}
 
-function authenticatePassportOPENID(req, res, next) {
-    const strategyName = getRequestStrategyName(req) ?? req.session.strategy
-    log('authenticatePassportOPENID strategyName', strategyName);
-
-    passport.authenticate(strategyName, {
-        failureRedirect: '/',
-        failureFlash: true,
-    })(req, res, next);
 }
 
 function saveStrategyOnSession(req, res, next) {
@@ -101,20 +92,26 @@ function saveStrategyOnSession(req, res, next) {
     next();
 }
 
+async function strategyHandler(config) {
+    const strategyCreators = {
+        saml: createSamlPassportStrategy,
+        openid: createOpenIdConnectStrategy
+    };
+
+    const createStrategy = strategyCreators[config.strategyType];
+    if (!createStrategy) {
+        throw new Error(`Estratégia desconhecida: ${config.strategyType}`);
+    }
+    return await createStrategy(config);
+}
+
 async function createStrategiesFromLoginConfigs() {
     const loginConfig = await getLoginConfig();
 
     const ssoConfigs = loginConfig.ssoForm ?? [];
     for await (const config of ssoConfigs) {
         if (config?.enabled) {
-            await createSamlPassportStrategy(config);
-        }
-    }
-
-    const openidConfigs = loginConfig.openidForm ?? [];
-    for await (const config of openidConfigs) {
-        if (config?.enabled) {
-            await createOpenIdConnectStrategy(config);
+            await strategyHandler(config);
         }
     }
 
@@ -143,8 +140,7 @@ createStrategiesFromLoginConfigs();
 
 module.exports = {
     initializePassport,
-    authenticatePassportSAML,
-    authenticatePassportOPENID,
+    authenticatePassport,
     saveStrategyOnSession,
     getRequestStrategyName,
     createStrategiesFromLoginConfigs,
