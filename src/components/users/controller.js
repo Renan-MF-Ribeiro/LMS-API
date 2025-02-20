@@ -346,12 +346,16 @@ module.exports = {
         }
     },
 
-    async signup(req, res) {
+    async signup (req, res) {
         const { token, formId: queryFormId } = req.query;
-        const { password, formId: bodyFormId, ...data } = req.body;
+        const { password, passwordConfirmation, loginField, formId: bodyFormId, ...data } = req.body;
         const formId = queryFormId || bodyFormId || null;
 
-        const form = (formId ? (await FormModel.findById(formId)?.toObject()) : null) ?? await getDefaultForm();
+        if (!data.name) {
+            throw new ApiError('Nome é obrigatório', 400, { data }, { skipDbLog: true });
+        }
+
+        const form = (formId ? (await FormModel.findById(formId))?.toObject() : null) ?? await getDefaultForm();
 
         log('using form:', form.name);
 
@@ -373,6 +377,14 @@ module.exports = {
             log('form login field:', form.loginField ?? 'cpf');
             log('networkLogin:', networkLogin);
         }
+
+        if (!networkLogin) {
+            throw new ApiError('Campo de login não informado', 400, { data }, { skipDbLog: true });
+        }
+
+        if (!data.registration?.length) data.registration = networkLogin;
+
+        if (!data.admission?.length) data.admission = moment().format('DD/MM/YYYY');
 
         const today = moment(new Date());
         // Seta elegibilidades padrões
@@ -458,7 +470,7 @@ module.exports = {
             }
 
             const formatedDate = formatDateWithoutHoursBrasilian(data.birthDate);
-            console.log(formatedDate);
+
             const userData = {
                 networkLogin,
                 // email: networkLogin,

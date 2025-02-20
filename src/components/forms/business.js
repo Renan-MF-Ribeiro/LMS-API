@@ -182,8 +182,25 @@ async function getDefaultForm() {
     return defaultForm;
 }
 
+async function getAdminForm() {
+    const adminForm = await FormModel.findOne({
+        isAdmin: true,
+        $or: [
+            { deletedAt: null },
+            { deletedAt: { $exists: false } },
+        ]
+    }).lean();
+
+    if (!adminForm) {
+        return getDefaultForm();
+    }
+
+    return adminForm;
+}
+
 module.exports = {
     setConnectMapInForm,
     getFormErrorsByMapConfig,
     getDefaultForm,
+    getAdminForm,
 };
