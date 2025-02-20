@@ -13,14 +13,6 @@ module.exports = {
 
             body.ssoForm = processForm(body.ssoForm).map(removeEmptyFields);
 
-            // const strategies = body.ssoForm.map(info => info.strategyName);
-
-            // const strategyExists = await ConfigLogin.findOne({ 'ssoForm.strategyName': { $in: strategies } });
-
-            // if (strategyExists) {
-            //     return _messages.conflict(res, req, null)
-            // }
-
             const namesFromTo = body.ssoForm
                 .map(info => ({ from: info.strategyNameFrom, to: info.strategyName }))
                 .filter(info => info.from && info.to && info.from !== info.to);
@@ -59,7 +51,6 @@ module.exports = {
                 'createOrUpdate',
             )
         }
-
     },
 
     async getConfigLogin(req, res) {
