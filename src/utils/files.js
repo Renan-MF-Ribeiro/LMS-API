@@ -26,7 +26,7 @@ const {
     sendMessageToKafka,
 } = require('../../src/components/new-messages/business');
 const { Readable } = require('stream');
-const { Theme } = require('../components/theme/palette/model');
+const { Welcome } = require('../components/theme/welcome/model');
 const { Log } = require('../components/logs/model');
 const ApiError = require('../errors/ApiError');
 const formidable = require('express-formidable')
@@ -428,7 +428,7 @@ module.exports = {
                 console.log('uri', uri)
                 const vimeoId = uri.split('/')[2];
                 const path = 'https://vimeo.com/' + vimeoId;
-                Theme.findByIdAndUpdate(themeId, { welcomeVideo: path }).exec();
+                Welcome.findByIdAndUpdate(themeId, { welcomeVideo: path }).exec();
                 return path;
             },
             function (bytes_uploaded, bytes_total) {
