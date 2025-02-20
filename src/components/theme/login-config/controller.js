@@ -13,13 +13,13 @@ module.exports = {
 
             body.ssoForm = processForm(body.ssoForm);
 
-            const strategies = body.ssoForm.map(info => info.strategyName);
+            // const strategies = body.ssoForm.map(info => info.strategyName);
 
-            const strategyExists = await ConfigLogin.findOne({ 'ssoForm.strategyName': { $in: strategies } });
+            // const strategyExists = await ConfigLogin.findOne({ 'ssoForm.strategyName': { $in: strategies } });
 
-            if (strategyExists) {
-                return _messages.conflict(res, req, null)
-            }
+            // if (strategyExists) {
+            //     return _messages.conflict(res, req, null)
+            // }
 
             const namesFromTo = body.ssoForm
                 .map(info => ({ from: info.strategyNameFrom, to: info.strategyName }))

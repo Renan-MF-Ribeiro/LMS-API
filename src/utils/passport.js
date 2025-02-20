@@ -49,6 +49,9 @@ async function createOpenIdConnectStrategy(config) {
             clientID: config.clientId,
             clientSecret: config.clientSecret,
             callbackURL: config.callbackUrl,
+            authorizationParams: {
+                prompt: config.forceAuth ? 'login' : 'none',
+            },
             scope: ['openid', 'profile', config.claim],
 
         },
