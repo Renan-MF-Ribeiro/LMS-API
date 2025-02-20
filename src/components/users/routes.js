@@ -136,7 +136,7 @@ module.exports = express
         _controller.toggleCollaboratorModeration
     )
     .post('/password/reset', validateTokenRoute, isUserManager, _controller.resetUserPassword)
-    .put('/update', validateTokenRoute, isUserManager, _controller.updateUserById)
+    .put('/update', validateTokenRoute, _controller.updateUserById)
     .get('/conteudistas', validateTokenRoute, _controller.getAllConteudistas)
     .get('/details', validateTokenRoute, _controller.returnUserById)
     .get('/feedbackelegibility', validateTokenRoute, _controller.feedbackElegible)
