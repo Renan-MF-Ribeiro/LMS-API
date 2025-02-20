@@ -4,7 +4,7 @@ const rateLimit = require('express-rate-limit');
 const _controller = require('./controller');
 const multiparty = require('connect-multiparty');
 const formidable = require('express-formidable');
-const { authenticatePassportSAML, authenticatePassportOPENID, saveStrategyOnSession } = require('../../utils/passport');
+const { authenticatePassport, saveStrategyOnSession } = require('../../utils/passport');
 const {
     validateTokenRoute,
     isUserManager,
@@ -102,11 +102,11 @@ module.exports = express
     .post('/sso', _controller.singleSignOn)
     .get(
         '/sso/saml',
-        authenticatePassportSAML,
+        authenticatePassport,
     )
     .post(
         '/sso/saml/callback',
-        authenticatePassportSAML,
+        authenticatePassport,
         (req, res, next) => {
             const xmlResponse = req.body.SAMLResponse;
             const parser = new Saml2js(xmlResponse);
@@ -118,11 +118,11 @@ module.exports = express
     .get(
         '/openid',
         saveStrategyOnSession,
-        authenticatePassportOPENID,
+        authenticatePassport,
     )
     .get(
         '/openid/callback',
-        authenticatePassportOPENID,
+        authenticatePassport,
         _controller.openIdCallback
     )
     .post('/device', validateTokenRoute, _controller.updateDeviceId)
