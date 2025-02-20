@@ -15,7 +15,7 @@ async function getActiveIdpIntegrations(strategyName) {
 }
 
 async function fetchIdpProfilesFromRequestObject(req) {
-    const strategyName = getRequestStrategyName(req) ?? req.session.strategy;
+    const strategyName = getRequestStrategyName(req);
     const idpProfiles = new Set();
 
     log('fetchIdpProfilesFromRequestObject strategyName', strategyName);
