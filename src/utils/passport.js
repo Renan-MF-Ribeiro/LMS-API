@@ -1,7 +1,6 @@
 const passport = require('passport');
 const passportSaml = require('passport-saml');
 const OpenIDConnectStrategy = require('passport-openidconnect');
-const axios = require('axios');
 
 const { log } = require('./logger');
 const { getLoginConfig } = require('../components/users/business');
@@ -118,7 +117,7 @@ async function createStrategiesFromLoginConfigs() {
         }
     }
 
-    console.log('estratégias', Object.keys(passport._strategies))
+    log('createStrategiesFromLoginConfigs strategies', Object.keys(passport._strategies));
 }
 
 function removeStrategies(strategies = []) {
