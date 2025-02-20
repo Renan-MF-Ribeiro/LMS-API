@@ -1978,6 +1978,18 @@ module.exports = {
 
     async ssoCallback (req, res) {
         try {
+            await Log.create({
+                type: 'SSO_CALLBACK',
+                message: 'SSO_CALLBACK',
+                component: 'users',
+                route: 'ssoCallback',
+                dataNew: {
+                    samlObject: req.samlUserObject,
+                    user: req.user ? JSON.stringify(req.user) : null
+                },
+                dataOld: null,
+            });
+
             const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestWithSamlObject(
                 req
             );
@@ -1993,15 +2005,6 @@ module.exports = {
 
                     return deepGet(req.samlUserObject, key, null);
                 }, null) ?? req.user?.nameID;
-
-            await Log.create({
-                type: 'SSO_CALLBACK',
-                message: 'SSO_CALLBACK',
-                component: 'users',
-                route: 'ssoCallback',
-                dataNew: { samlObject: req.samlUserObject },
-                dataOld: null,
-            });
 
             if (value === undefined || value === null) {
                 console.log('ssoCallback req.samlUserObject', req.samlUserObject);
