@@ -12,21 +12,22 @@ module.exports = {
             const body = req.body
 
             body.ssoForm = processForm(body.ssoForm);
-            body.openidForm = processForm(body.openidForm);
 
-            const namesFromToSAML = body.ssoForm
-                .map(info => ({ from: info.strategyNameFrom, to: info.strategyName }))
-                .filter(info => info.from && info.to && info.from !== info.to);
+            const strategies = body.ssoForm.map(info => info.strategyName);
 
-            const namesFromToOpenId = body.openidForm
+            const strategyExists = await ConfigLogin.findOne({ 'ssoForm.strategyName': { $in: strategies } });
+
+            if (strategyExists) {
+                return _messages.conflict(res, req, null)
+            }
+
+            const namesFromTo = body.ssoForm
                 .map(info => ({ from: info.strategyNameFrom, to: info.strategyName }))
                 .filter(info => info.from && info.to && info.from !== info.to);
 
             let config = await getLoginConfig()
 
-            const strategiesToDisableSAML = getStrategiesToDisable(config?.ssoForm || [], body.ssoForm);
-
-            const strategiesToDisableOpenID = getStrategiesToDisable(config?.openidForm || [], body.openidForm);
+            const strategiesToDisable = getStrategiesToDisable(config?.ssoForm || [], body.ssoForm);
 
             if (config) {
                 config = await ConfigLogin.findByIdAndUpdate(config._id, body)
@@ -35,23 +36,13 @@ module.exports = {
             }
 
             await Promise.all(
-                namesFromToSAML.map(({ from, to }) =>
+                namesFromTo.map(({ from, to }) =>
                     IdpIntegrationModel.updateMany({ strategyName: from }, { strategyName: to })
                 )
             );
 
-            await Promise.all(
-                namesFromToOpenId.map(({ from, to }) =>
-                    IdpIntegrationModel.updateMany({ strategyName: from }, { strategyName: to })
-                )
-            );
-
-            if (strategiesToDisableSAML?.length) {
-                removeStrategies(strategiesToDisableSAML);
-            }
-
-            if (strategiesToDisableOpenID?.length) {
-                removeStrategies(strategiesToDisableOpenID);
+            if (strategiesToDisable?.length) {
+                removeStrategies(strategiesToDisable);
             }
 
             await createStrategiesFromLoginConfigs();
@@ -88,17 +79,16 @@ module.exports = {
                 fieldsToSelect = {
                     ...fieldsToSelect,
                     "ssoForm.certifier": 0,
-                    "ssoForm.callback_url": 0,
+                    "ssoForm.callbackUrl": 0,
                     "ssoForm.entrypoint": 0,
                     "ssoForm.claim": 0,
                     "ssoForm.claimKey": 0,
                     "ssoForm.issuer": 0,
-                    "openidForm.client_id": 0,
-                    "openidForm.client_secret": 0,
-                    "openidForm.tenant": 0,
-                    "openidForm.authorization_url": 0,
-                    "openidForm.claim": 0,
-                    "openidForm.callback_url": 0,
+                    "ssoForm.clientId": 0,
+                    "ssoForm.clientSecret": 0,
+                    "ssoForm.authorizationUrl": 0,
+                    "ssoForm.tokenUrl": 0,
+                    "ssoForm.userInfoUrl": 0,
                 };
             }
 
