@@ -16,6 +16,7 @@ const SectionSchema = new mongoose.Schema({
 
 const FormSchema = new mongoose.Schema({
     name: { type: String, required: true },
+    isAdmin: { type: Boolean, required: false, default: false },
     description: { type: String, required: false },
     displayType: { type: String, required: true, default: 'list' }, // list | steps
     isDefault: { type: Boolean, required: false, default: false },
