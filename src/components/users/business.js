@@ -43,28 +43,19 @@ module.exports = {
 
         const ssoForm = Array.isArray(lastConfiguration.ssoForm) ? lastConfiguration.ssoForm : [lastConfiguration.ssoForm];
 
-        const openidForm = Array.isArray(lastConfiguration.openidForm) ? lastConfiguration.openidForm : [lastConfiguration.openidForm];
-
         return {
             ...lastConfiguration,
             ssoForm: ssoForm.map(form => ({
                 ...form,
-                strategyName: form.strategyName ?? 'saml',
-            })),
-            openidForm: openidForm.map(form => ({
-                ...form,
-                strategyName: form.strategyName ?? 'openid',
-            })),
+                strategyName: form.strategyName,
+            }))
         }
     },
 
     async getLoginFormByStrategyName(strategyName) {
         const loginConfig = await module.exports.getLoginConfig();
 
-        return (
-            loginConfig.ssoForm?.find((form) => form.strategyName === strategyName) ||
-            loginConfig.openidForm?.find((form) => form.strategyName === strategyName)
-        );
+        return loginConfig.ssoForm?.find((form) => form.strategyName === strategyName)
     },
 
     async findUsers(req, { onboarding }) {
