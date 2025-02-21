@@ -1240,7 +1240,7 @@ module.exports = {
                     $or: [{ networkLogin: result.networkLogin }, { networkLogin: result.cpf }],
                 });
 
-                const processedUser = processUsersLoad(result, fieldsForElegibility);
+                const processedUser = await processUsersLoad(result, fieldsForElegibility);
                 const account = await processUserAccount(processedUser);
 
                 processedUser.password = existingUser
