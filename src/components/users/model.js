@@ -140,6 +140,8 @@ const userSchema = new mongoose.Schema(
         vacationStartDate: { type: String, required: false },
         vacationEndDate: { type: String, required: false },
         alternativeEmail: { type: String, trim: true, required: false },
+        partner: { type: String, required: false },
+        sendInBlueAccept: { type: Boolean, default: false },
 
     },
     {
