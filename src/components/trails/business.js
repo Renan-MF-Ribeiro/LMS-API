@@ -7,6 +7,7 @@ const { Trail } = require('./model');
 const { Item } = require('../items/model');
 const axios = require('axios');
 const { socialApi } = require('../social/http-adapter');
+const { getDbCurrentFeatures } = require('../../utils/features');
 
 module.exports = {
     async checkItem (item) {
