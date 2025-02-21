@@ -109,9 +109,13 @@ const {
 const { log } = require('../../utils/logger');
 const ApiError = require('../../errors/ApiError');
 const { addSASTokenToResponse } = require('../../utils/cookies');
+
 const { FormModel } = require('../forms/model');
 const { getConnectMap } = require('../../utils/connect');
 const { getFormErrorsByMapConfig, getDefaultForm } = require('../forms/business');
+
+const { getDbCurrentFeatures } = require('../../utils/features');
+
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -1276,7 +1280,7 @@ module.exports = {
                     $or: [{ networkLogin: result.networkLogin }, { networkLogin: result.cpf }],
                 });
 
-                const processedUser = processUsersLoad(result, fieldsForElegibility);
+                const processedUser = await processUsersLoad(result, fieldsForElegibility);
                 const account = await processUserAccount(processedUser);
 
                 processedUser.password = existingUser
@@ -1954,7 +1958,9 @@ module.exports = {
 
                 const { token: SAS } = addSASTokenToResponse(res);
 
-                if (req.features?.gamification) {
+                const features = await getDbCurrentFeatures(req);
+
+                if (features?.gamefication) {
                     GamificationBusiness.createClientUser(networkLogin, groupsAD);
                 }
 
