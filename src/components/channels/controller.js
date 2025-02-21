@@ -75,12 +75,21 @@ module.exports = {
             //     handleSegmentationOnQuery(req, 'owner', query)
             // }
 
+            const features = await getDbCurrentFeatures(req);
+
+            if (!features?.alura) {
+                query.$and.push({ type: { $ne: 'alura' } })
+            }
+
+            if (!features?.collaborationComponent) {
+                query.$and.push({ type: { $ne: 'collaboration' } })
+            }
+
             let channels = await Channel
                 .find(query)
                 .sort({ position: 'asc' })
                 .populate({ path: 'theme', match: { deleted: 0 }, })
 
-            const features = await getDbCurrentFeatures(req);
 
             channels = await Promise.all(channels.map(async (channel) => {
                 if (channel.type === 'alura') return channel
