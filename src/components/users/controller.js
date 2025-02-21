@@ -109,6 +109,7 @@ const {
 const { log } = require('../../utils/logger');
 const ApiError = require('../../errors/ApiError');
 const { addSASTokenToResponse } = require('../../utils/cookies');
+const { getDbCurrentFeatures } = require('../../utils/features');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -1917,7 +1918,9 @@ module.exports = {
 
                 const { token: SAS } = addSASTokenToResponse(res);
 
-                if (req.features?.gamification) {
+                const features = await getDbCurrentFeatures(req);
+
+                if (features?.gamefication) {
                     GamificationBusiness.createClientUser(networkLogin, groupsAD);
                 }
 

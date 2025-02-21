@@ -15,7 +15,6 @@ const {
     validateTokenRoute,
     isAssessmentActive,
     isShowcaseActive,
-    setCurrentFeatures,
     setSegmentation,
 } = require('./utils/middlewares');
 
@@ -140,8 +139,6 @@ initializePassport(app);
 
 app.use(socialApiMiddleware)
 
-app.use(setCurrentFeatures);
-
 app.use(setSegmentation)
 
 app.use('/items', validateTokenRoute, itemsRoutes)
@@ -194,7 +191,5 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/happplace', happplaceRoutes);
 
 app.use(errorHandler);
-
-global.globalApp = app; // TODO: É a melhor maneira?
 
 module.exports = app;
