@@ -16,22 +16,23 @@ const {
     handleInactiveOldOnboardingUsers,
     handleRemoveAutomaticEligibilityTags,
 } = require('./controller')
+const { isSuperAdmin } = require('../../utils/middlewares')
 
 router
-    .get('/last-users', LastExecuteDailyCharge)
-    .get('/last-average-courses', LastExecuteAverageCourses)
-    .get('/last-groups-ad', LastExecuteGroupsAD)
-    .get('/users', executeUsersCron)
-    .get('/average-courses', executeAverageCourses)
-    .get('/groups-ad', executeGroupsAD)
-    .get('/release', executeCourseReleaseNotification)
-    .get('/charge', executeCourseChargeNotification)
-    .get('/exam-tracking-delete', executeDeleteTrackingCron)
-    .get('/revoke-trails', executeCronRevokeTrail)
-    .get('/recommended-trails', executeRecommendedTrails)
-    .get('/update-trails-views', executeUpdateTrailsViewsCron)
-    .get('/inactive-old-onboarding-users', handleInactiveOldOnboardingUsers)
-    .get('/remove-automatic-eligibility-tags', handleRemoveAutomaticEligibilityTags)
+    .get('/last-users', isSuperAdmin, LastExecuteDailyCharge)
+    .get('/last-average-courses', isSuperAdmin, LastExecuteAverageCourses)
+    .get('/last-groups-ad', isSuperAdmin, LastExecuteGroupsAD)
+    .get('/users', isSuperAdmin, executeUsersCron)
+    .get('/average-courses', isSuperAdmin, executeAverageCourses)
+    .get('/groups-ad', isSuperAdmin, executeGroupsAD)
+    .get('/release', isSuperAdmin, executeCourseReleaseNotification)
+    .get('/charge', isSuperAdmin, executeCourseChargeNotification)
+    .get('/exam-tracking-delete', isSuperAdmin, executeDeleteTrackingCron)
+    .get('/revoke-trails', isSuperAdmin, executeCronRevokeTrail)
+    .get('/recommended-trails', isSuperAdmin, executeRecommendedTrails)
+    .get('/update-trails-views', isSuperAdmin, executeUpdateTrailsViewsCron)
+    .get('/inactive-old-onboarding-users', isSuperAdmin, handleInactiveOldOnboardingUsers)
+    .get('/remove-automatic-eligibility-tags', isSuperAdmin, handleRemoveAutomaticEligibilityTags)
 
 
 module.exports = router

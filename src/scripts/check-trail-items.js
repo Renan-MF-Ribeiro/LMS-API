@@ -1,4 +1,5 @@
 const { Trail } = require("../components/trails/model");
+const { runScript } = require("./utils");
 
 const { TINCAN_OWNER } = process.env;
 
@@ -51,5 +52,4 @@ async function run() {
     process.exit(0);
 }
 
-
-// run();
+runScript(run);

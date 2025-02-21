@@ -64,7 +64,7 @@ const ITEM_KINDS = Object.freeze({
 });
 
 const ItemController = {
-    async itemColaborativo (req, res) {
+    async itemColaborativo(req, res) {
         let payload = {};
         if (req.fields.payload) {
             try {
@@ -85,229 +85,228 @@ const ItemController = {
                 'items',
                 'multiUploadCreate'
             );
-        } else {
-            const user = await getUserByToken(req);
+        }
+        const user = await getUserByToken(req);
 
-            const verify = await Item.find({
-                title: { $eq: payload.title },
-            });
-            if (verify.length === 0) {
-                const ItemModel =
-                    ITEM_KINDS[req.body.kind || payload.kind] || Item;
+        const doesItemExist = await Item.find({
+            title: { $eq: payload.title },
+        });
+        if (doesItemExist.length === 0) {
+            const ItemModel =
+                ITEM_KINDS[req.body.kind || payload.kind] || Item;
 
-                try {
-                    const { thumb, content, banner } = req.files;
-                    let thumbPath;
-                    let contentPath;
-                    let bannerPath;
+            try {
+                const { thumb, content, banner } = req.files;
+                let thumbPath;
+                let contentPath;
+                let bannerPath;
 
-                    if (thumb) {
-                        thumbPath = await azureBlob(thumb, 'items/thumbs');
-                    }
+                if (thumb) {
+                    thumbPath = await azureBlob(thumb, 'items/thumbs');
+                }
 
-                    if (banner) {
-                        bannerPath = await azureBlob(banner, 'items/banners');
+                if (banner) {
+                    bannerPath = await azureBlob(banner, 'items/banners');
+                }
+
+                if (
+                    payload.kind !== 'MediaItem' ||
+                    payload.kind != 'SoonItem'
+                ) {
+                    if (content) {
+                        payload.fileName = content.name;
+                        contentPath = await azureBlob(
+                            content,
+                            'items/content'
+                        );
+                        contentPath =
+                            process.env.NODE_ENV === 'local'
+                                ? contentPath
+                                : contentPath.replace(
+                                    AZURE_BLOB_URL,
+                                    DOMAIN
+                                );
                     }
 
                     if (
-                        payload.kind !== 'MediaItem' ||
-                        payload.kind != 'SoonItem'
+                        !contentPath &&
+                        payload.content &&
+                        (ItemModel === MediaItem || ItemModel === AudioItem)
                     ) {
-                        if (content) {
-                            payload.fileName = content.name;
-                            contentPath = await azureBlob(
-                                content,
-                                'items/content'
-                            );
-                            contentPath =
-                                process.env.NODE_ENV === 'local'
-                                    ? contentPath
-                                    : contentPath.replace(
-                                        AZURE_BLOB_URL,
-                                        DOMAIN
-                                    );
-                        }
-
-                        if (
-                            !contentPath &&
-                            payload.content &&
-                            (ItemModel === MediaItem || ItemModel === AudioItem)
-                        ) {
-                            contentPath = payload.content;
-                            delete payload.content;
-                        }
-                    }
-
-                    if (
-                        (payload.kind !== 'SoundcloudItem' ||
-                            payload.kind !== 'MediaItem') &&
-                        payload.kind != 'SoonItem'
-                    ) {
-                        payload = {
-                            ...payload,
-                            enabled: true,
-                            thumbPath: thumbPath || undefined,
-                            bannerPath: bannerPath || undefined,
-                            contentPath: contentPath || undefined,
-                        };
-                    } else if (payload.kind == 'SoonItem') {
-                        payload = {
-                            ...payload,
-                            enabled: true,
-                            thumbPath: thumbPath || undefined,
-                        };
-                    } else {
-                        payload = {
-                            ...payload,
-                            enabled: true,
-                            thumbPath: thumbPath || undefined,
-                            bannerPath: bannerPath || undefined,
-                        };
-                    }
-
-                    if (payload.kind === 'MediaItem') {
-                        if (!content) {
-                            // payload.contentPath = payload.content;
-                        } else {
-                            payload.enabled = true;
-                            payload.contentPath = String(
-                                new Date().toISOString()
-                            );
-                            vimeoFilePathCreate(content, payload, user);
-                        }
-                    }
-
-                    if (payload.kind === 'EventItem') {
-                        delete payload.contentPath;
-                    }
-
-                    const sectionId = payload.sectionId;
-
-                    delete payload.thumb;
-                    delete payload.content;
-                    delete payload.tags;
-                    delete payload.sectionId;
-
-                    payload.author = user._id;
-
-                    const item = await ItemModel.create(payload);
-
-                    if (item._id) {
-                        const trail = await Trail.create({
-                            backgroundPath: null,
-                            bannerPath: null,
-                            completion: null,
-                            description: item.description,
-                            enabled: true,
-                            endDate: item.endDate,
-                            highlighted: false,
-                            isSequenceEnabled: 'NONE',
-                            items: [
-                                {
-                                    itemID: item._id,
-                                    urlItem: item._item,
-                                    urlTrail: item._,
-                                    mandatory: false,
-                                },
-                            ],
-                            items_new: [],
-                            mandatory: [],
-                            startDate: item.startDate,
-                            tags: [
-                                {
-                                    display: 'ELEGE_geral',
-                                    value: 'ELEGE_geral',
-                                },
-                            ],
-                            collaborative: item.collaborative,
-                            author: item.author,
-                            moderation: user.groupsAD.includes(
-                                'PERFIL_Colaborador_Livre'
-                            )
-                                ? 'approved'
-                                : 'pending',
-                            thumbPath: thumbPath,
-                            title: item.title,
-                            titleURL: item.titleURL,
-                        });
-
-                        await Section.findOneAndUpdate(
-                            { _id: sectionId },
-                            {
-                                $push: {
-                                    trails: {
-                                        _id: trail._id,
-                                    },
-                                },
-                            }
-                        );
-                    }
-
-                    // GAMIFICATION DISPATCH
-                    const collabItems = await Item.find({
-                        author: user._id,
-                        collaborative: true,
-                    });
-                    await GamificationController.dispatch(
-                        user.networkLogin,
-                        [EVENTS_CATEGORY.UPLOADED_CONTENT],
-                        {
-                            collabItemsCreatedAt: collabItems.map(
-                                ({ createdAt }) => createdAt
-                            ),
-                        }
-                    );
-
-                    //Evento novo conteúdo colaborativo
-                    _messages.success(res, req, item._id);
-                } catch (error) {
-                    if (error.message === 'Something went wrong') {
-                        _messages.internalServer(
-                            res,
-                            req,
-                            error.error,
-                            error,
-                            'itemColaborativo'
-                        );
-                    }
-
-                    if (error.name === 'ValidationError') {
-                        const messages = {};
-                        for (const k in error.errors)
-                            messages[k] = error.errors[k].message;
-                        _messages.badRequest(
-                            res,
-                            req,
-                            error,
-                            { name: error.name, messages },
-                            'items',
-                            'itemColaborativo'
-                        );
-                    } else {
-                        _messages.internalServer(
-                            res,
-                            req,
-                            error.message,
-                            'Erro interno no servidor',
-                            'items',
-                            'itemColaborativo'
-                        );
+                        contentPath = payload.content;
+                        delete payload.content;
                     }
                 }
-            } else {
-                _messages.badRequest(
-                    res,
-                    req,
-                    'Já existe um item com esse título!',
-                    'Já existe um item com esse título!',
-                    'items',
-                    'itemColaborativo'
+
+                if (
+                    (payload.kind !== 'SoundcloudItem' ||
+                        payload.kind !== 'MediaItem') &&
+                    payload.kind != 'SoonItem'
+                ) {
+                    payload = {
+                        ...payload,
+                        enabled: true,
+                        thumbPath: thumbPath || undefined,
+                        bannerPath: bannerPath || undefined,
+                        contentPath: contentPath || undefined,
+                    };
+                } else if (payload.kind == 'SoonItem') {
+                    payload = {
+                        ...payload,
+                        enabled: true,
+                        thumbPath: thumbPath || undefined,
+                    };
+                } else {
+                    payload = {
+                        ...payload,
+                        enabled: true,
+                        thumbPath: thumbPath || undefined,
+                        bannerPath: bannerPath || undefined,
+                    };
+                }
+
+                if (payload.kind === 'MediaItem') {
+                    if (!content) {
+                        // payload.contentPath = payload.content;
+                    } else {
+                        payload.enabled = true;
+                        payload.contentPath = String(
+                            new Date().toISOString()
+                        );
+                        vimeoFilePathCreate(content, payload, user);
+                    }
+                }
+
+                if (payload.kind === 'EventItem') {
+                    delete payload.contentPath;
+                }
+
+                const sectionId = payload.sectionId;
+
+                delete payload.thumb;
+                delete payload.content;
+                delete payload.tags;
+                delete payload.sectionId;
+
+                payload.author = user._id;
+
+                const item = await ItemModel.create(payload);
+
+                if (item._id) {
+                    const trail = await Trail.create({
+                        backgroundPath: null,
+                        bannerPath: null,
+                        completion: null,
+                        description: item.description,
+                        enabled: true,
+                        endDate: item.endDate,
+                        highlighted: false,
+                        isSequenceEnabled: 'NONE',
+                        items: [
+                            {
+                                itemID: item._id,
+                                urlItem: item._item,
+                                urlTrail: item._,
+                                mandatory: false,
+                            },
+                        ],
+                        items_new: [],
+                        mandatory: [],
+                        startDate: item.startDate,
+                        tags: [
+                            {
+                                display: 'ELEGE_geral',
+                                value: 'ELEGE_geral',
+                            },
+                        ],
+                        collaborative: item.collaborative,
+                        author: item.author,
+                        moderation: user.groupsAD.includes(
+                            'PERFIL_Colaborador_Livre'
+                        )
+                            ? 'approved'
+                            : 'pending',
+                        thumbPath: thumbPath,
+                        title: item.title,
+                        titleURL: item.titleURL,
+                    });
+
+                    await Section.findOneAndUpdate(
+                        { _id: sectionId },
+                        {
+                            $push: {
+                                trails: trail._id,
+                                
+                            },
+                        }
+                    );
+                }
+
+                // GAMIFICATION DISPATCH
+                const collabItems = await Item.find({
+                    author: user._id,
+                    collaborative: true,
+                });
+                await GamificationController.dispatch(
+                    user.networkLogin,
+                    [EVENTS_CATEGORY.UPLOADED_CONTENT],
+                    {
+                        collabItemsCreatedAt: collabItems.map(
+                            ({ createdAt }) => createdAt
+                        ),
+                    }
                 );
+
+                //Evento novo conteúdo colaborativo
+                _messages.success(res, req, item._id);
+            } catch (error) {
+                if (error.message === 'Something went wrong') {
+                    _messages.internalServer(
+                        res,
+                        req,
+                        error.error,
+                        error,
+                        'itemColaborativo'
+                    );
+                }
+
+                if (error.name === 'ValidationError') {
+                    const messages = {};
+                    for (const k in error.errors)
+                        messages[k] = error.errors[k].message;
+                    _messages.badRequest(
+                        res,
+                        req,
+                        error,
+                        { name: error.name, messages },
+                        'items',
+                        'itemColaborativo'
+                    );
+                } else {
+                    _messages.internalServer(
+                        res,
+                        req,
+                        error.message,
+                        'Erro interno no servidor',
+                        'items',
+                        'itemColaborativo'
+                    );
+                }
             }
+        } else {
+            _messages.badRequest(
+                res,
+                req,
+                'Já existe um item com esse título!',
+                'Já existe um item com esse título!',
+                'items',
+                'itemColaborativo'
+            );
         }
+
     },
 
-    async create (req, res) {
+    async create(req, res) {
         const ItemModel = ITEM_KINDS[req.body.kind] || Item;
 
         try {
@@ -331,7 +330,7 @@ const ItemController = {
         }
     },
 
-    async multiUploadCreate (req, res) {
+    async multiUploadCreate(req, res) {
         let payload = {};
         if (req.fields.payload) {
             try {
@@ -528,7 +527,7 @@ const ItemController = {
         }
     },
 
-    async update (req, res) {
+    async update(req, res) {
         let payload = {};
         if (req.fields.payload) {
             try {
@@ -722,7 +721,7 @@ const ItemController = {
                     item,
                     foundItem,
                     true,
-                    'UPDATE'                    
+                    'UPDATE'
                 );
             } catch (error) {
                 console.log(error)
@@ -764,7 +763,7 @@ const ItemController = {
         }
     },
 
-    async updateById (req, res) {
+    async updateById(req, res) {
         const ItemModel = ITEM_KINDS[req.body.kind] || Item;
 
         try {
@@ -783,7 +782,7 @@ const ItemController = {
         }
     },
 
-    async updateStatus (req, res) {
+    async updateStatus(req, res) {
         try {
             const { _id, enabled } = req.body;
             const item = await Item.findOne({ _id });
@@ -814,7 +813,7 @@ const ItemController = {
         }
     },
 
-    async findItemTrails (req, res) {
+    async findItemTrails(req, res) {
         try {
             const _id = req.params.itemId;
             const trails = await Trail.find(
@@ -834,11 +833,11 @@ const ItemController = {
         }
     },
 
-    async disableById (req, res) {
+    async disableById(req, res) {
         ItemController.updateById({ ...req, body: { enabled: false } }, res);
     },
 
-    async findById (req, res) {
+    async findById(req, res) {
         try {
             const findValue = req.params.itemId;
 
@@ -869,7 +868,7 @@ const ItemController = {
         }
     },
 
-    async findItemById (req, res) {
+    async findItemById(req, res) {
         try {
             const findItemValue = req.params.itemId;
             const findITrailValue = req.params.trailId;
@@ -950,27 +949,27 @@ const ItemController = {
         }
     },
 
-    async createDocument (req, res) {
+    async createDocument(req, res) {
         req.body.kind = 'DocumentItem';
         ItemController.create(req, res);
     },
 
-    async multiUploadDocument (req, res) {
+    async multiUploadDocument(req, res) {
         req.body.kind = 'DocumentItem';
         ItemController.multiUploadCreate(req, res);
     },
 
-    async createMedia (req, res) {
+    async createMedia(req, res) {
         req.body.kind = 'MediaItem';
         ItemController.create(req, res);
     },
 
-    async multiUploadMedia (req, res) {
+    async multiUploadMedia(req, res) {
         req.body.kind = 'MediaItem';
         ItemController.multiUploadCreate(req, res);
     },
 
-    async uploadSCORM (req, res) {
+    async uploadSCORM(req, res) {
         const user = await getUserByToken(req);
         if (req.method !== 'POST') {
             return res.status(httpStatus.NOT_FOUND).send();
@@ -1191,7 +1190,7 @@ const ItemController = {
         }
     },
 
-    async updateSCORM (req, res) {
+    async updateSCORM(req, res) {
 
         if (req.method !== 'PUT') {
             return res.status(httpStatus.NOT_FOUND).send();
@@ -1393,7 +1392,7 @@ const ItemController = {
         }
     },
 
-    async findAll (req, res) {
+    async findAll(req, res) {
         try {
             const { skip, limit } = _functions.pagination(req);
             const { sort, order } = _functions.ordernation(req);
@@ -1504,7 +1503,7 @@ const ItemController = {
         }
     },
 
-    async findItensActives (req, res) {
+    async findItensActives(req, res) {
         try {
             const itens = await Item.find({
                 enabled: { $eq: true },
@@ -1523,7 +1522,7 @@ const ItemController = {
         }
     },
 
-    async generateCertificate (req, res) {
+    async generateCertificate(req, res) {
         try {
             const { item } = req.params;
             const user = await _functions.getUserByToken(req);
@@ -1565,7 +1564,7 @@ const ItemController = {
         }
     },
 
-    async getItemWithTracking (req, res) {
+    async getItemWithTracking(req, res) {
         try {
             const { itemId } = req.params;
             const user = await getUserByToken(req);
@@ -1617,7 +1616,7 @@ const ItemController = {
         }
     },
 
-    async getProviders (req, res) {
+    async getProviders(req, res) {
         try {
             const items = await Item.find({});
             const providers = items
@@ -1637,7 +1636,7 @@ const ItemController = {
         }
     },
 
-    async archive (req, res) {
+    async archive(req, res) {
         const itemId = req.params.itemId;
 
         await Item.findByIdAndUpdate(itemId, { $set: { enabled: false, archive: true, archivedAt: new Date() } });
@@ -1645,7 +1644,7 @@ const ItemController = {
         res.status(204).send();
     },
 
-    async unarchive (req, res) {
+    async unarchive(req, res) {
         const itemId = req.params.itemId;
 
         await Item.findByIdAndUpdate(itemId, { $set: { archive: false, archivedAt: null } });

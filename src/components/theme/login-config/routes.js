@@ -1,7 +1,7 @@
 const express = require("express");
 const _controller = require("./controller");
-const { validateTokenRoute } = require('../../../utils/middlewares');
+const { validateTokenRoute, isSuperAdminOrEngagementManager } = require('../../../utils/middlewares');
 
 module.exports = express.Router()
-    .put('/', validateTokenRoute, _controller.createOrUpdate)
+    .put('/', validateTokenRoute, isSuperAdminOrEngagementManager, _controller.createOrUpdate)
     .get('/', _controller.getConfigLogin)

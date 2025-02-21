@@ -1,6 +1,5 @@
 const { User } = require('../users/model');
 const mongoose = require('mongoose');
-const config = require('../../../config.json');
 const {
     CourseModel,
     ClassModel,
@@ -48,6 +47,7 @@ const { canRegisterOrCancel } = require('../sections/business')
 
 const { default: axios } = require('axios');
 const ApiError = require('../../errors/ApiError');
+const { getMessengerConfig } = require('../config/business');
 
 module.exports = {
     async createCourse (req, res) {
@@ -212,6 +212,22 @@ module.exports = {
         }
     },
 
+    async getPrograms (req, res) {
+        try {
+            const programs = await ProgramModel.find().select('title');
+            success(res, req, programs);
+        } catch (error) {
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'courses',
+                '/getPrograms'
+            );
+        }
+    },
+
     async updateCourse (req, res) {
         try {
             const materials = req.fields.materials ? JSON.parse(req.fields.materials) : null;
@@ -219,10 +235,11 @@ module.exports = {
             const arrMaterials = [];
             const files = req.files;
             let flagDate = true;
-            body.tags = JSON.parse(body.tags);
-            body.dimensions = JSON.parse(body.dimensions);
-            body.mandatory = JSON.parse(body.mandatory);
-            body.certificateDue = JSON.parse(body.certificateDue);
+            if (body.tags) body.tags = JSON.parse(body.tags);
+            if (body.dimensions) body.dimensions = JSON.parse(body.dimensions);
+            if (body.mandatory) body.mandatory = JSON.parse(body.mandatory);
+            if (body.certificateDue) body.certificateDue = JSON.parse(body.certificateDue);
+
 
 
             const { thumb, banner } = req.files;
@@ -241,7 +258,7 @@ module.exports = {
             if (!body.passingScore || body.passingScore === 'null')
                 body.passingScore = null;
             if (!body.certificateLayout || body.certificateLayout === 'null')
-                body.certificateLayout = null;
+                delete body.certificateLayout;
 
             if (body.dateInitial > body.dateFinal) flagDate = false;
 
@@ -396,8 +413,14 @@ module.exports = {
     async getCourseById (req, res) {
         try {
             const { id } = req.params;
-            const course = await CourseModel.findById(id).populate('materials');
-            success(res, req, course);
+            const course = await CourseModel.findById(id)
+                .populate({
+                    path: 'materials',
+                    match: { author: 'CONTEUDISTA' },
+                }).populate('program', 'title');
+            const programs = await ProgramModel.find().select('title');
+
+            success(res, req, { course, programs });
         } catch (error) {
             internalServer(
                 res,
@@ -583,6 +606,8 @@ module.exports = {
                             await Promise.all(removalPromises);
                         }
 
+                        const messengerConfig = await getMessengerConfig();
+
                         const message = {
                             category: 'notify',
                             communication: ['notification', 'email'],
@@ -593,10 +618,10 @@ module.exports = {
                                     users: arrUserId,
                                 },
                             },
-                            text: `Você está na turma presencial ${name}!\n O local do treinamento será em: ${location}`,
-                            textHtml: `<p>Você está na turma presencial ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
-                            thumbnail: config.messenger.emailTemplate.thumbnail,
-                            title: `Treinamentos Presenciais: ${name}`,
+                            text: `Você está na turma ${name}!\n O local do treinamento será em: ${location}`,
+                            textHtml: `<p>Você está na turma ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
+                            thumbnail: messengerConfig.emailTemplate.thumbnail,
+                            title: `Treinamentos: ${name}`,
                         };
                         await createMessagesFromBackend(message);
 
@@ -813,6 +838,8 @@ module.exports = {
                         // Dispara notificações para usuários adicionados
                         const arrUserId = addedUsers.map((user) => user._id);
 
+                        const messengerConfig = await getMessengerConfig();
+
                         const message = {
                             category: 'notify',
                             communication: ['notification', 'email'],
@@ -823,10 +850,10 @@ module.exports = {
                                     users: arrUserId,
                                 },
                             },
-                            text: `Você está na turma presencial ${name}!\n O local do treinamento será em: ${location} `,
-                            textHtml: `<p>Você está na turma presencial ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
-                            thumbnail: config.messenger.emailTemplate.thumbnail,
-                            title: `Treinamentos Presenciais: ${name}`,
+                            text: `Você está na turma ${name}!\n O local do treinamento será em: ${location} `,
+                            textHtml: `<p>Você está na turma ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
+                            thumbnail: messengerConfig.emailTemplate.thumbnail,
+                            title: `Treinamentos: ${name}`,
                         };
 
                         await createMessagesFromBackend(message);
@@ -1477,6 +1504,8 @@ module.exports = {
 
             await Promise.all(removalPromises);
 
+            const messengerConfig = await getMessengerConfig();
+
             const message = {
                 category: 'notify',
                 communication: ['notification', 'email'],
@@ -1487,10 +1516,10 @@ module.exports = {
                         users: [userID],
                     },
                 },
-                text: `Você está na turma presencial ${course.name}!\n O local do treinamento será em: ${course.location}`,
-                textHtml: `<p>Você está na turma presencial ${course.name}!</p> <p>O local do treinamento será em: ${course.location}</p>`,
-                thumbnail: config.messenger.emailTemplate.thumbnail,
-                title: `Treinamentos Presenciais: ${course.name}`,
+                text: `Você está na turma ${course.name}!\n O local do treinamento será em: ${course.location}`,
+                textHtml: `<p>Você está na turma ${course.name}!</p> <p>O local do treinamento será em: ${course.location}</p>`,
+                thumbnail: messengerConfig.emailTemplate.thumbnail,
+                title: `Treinamentos: ${course.name}`,
             };
             await createMessagesFromBackend(message);
 

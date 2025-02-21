@@ -269,13 +269,17 @@ module.exports = {
         try {
             const _id = req.params.trailId;
 
-            const query = { $and: [{ _id}] }
+            const query = { $and: [{ _id }] }
 
             if (req?.segmentation) {
                 handleSegmentationOnQuery(req, 'owner', query)
             }
 
-            const trail = await Trail.findOne(query, '-innerText');
+            const trail = await Trail.findOne(query)
+                .populate({
+                    path: 'items.itemID',
+                    populate: { path: 'idEvaluation', select: ['description'], },
+                });
             _messages.success(res, req, trail);
         } catch (error) {
             _messages.internalServer(
@@ -311,7 +315,7 @@ module.exports = {
             // if (req?.segmentation) {
             //     handleSegmentationOnQuery(req, 'owner', query)
             // }
-            
+
             const trails = await populateTrails(true, query);
             if (!trails || !trails[0]) {
                 const course = await CourseModel.findById(findValue)
@@ -1290,10 +1294,12 @@ module.exports = {
 
             } else {
                 const escapedSearchBy = searchBy ? searchBy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
-                const query = { $and: [{
-                    archive: archive ? { $eq: archive === 'true' } : { $ne: true }
-                }] }
-                if(searchBy) {
+                const query = {
+                    $and: [{
+                        archive: archive ? { $eq: archive === 'true' } : { $ne: true }
+                    }]
+                }
+                if (searchBy) {
                     query.$and.push({
                         $or: [
                             {
@@ -1322,7 +1328,7 @@ module.exports = {
                 if (req?.segmentation) {
                     handleSegmentationOnQuery(req, 'owner', query)
                 }
-                
+
                 total = await Trail.find(query).countDocuments();
 
                 const trails = await Trail.find(query)
@@ -1361,9 +1367,11 @@ module.exports = {
             const { id } = req.params
             const user = await getUserByToken(req)
 
-            const query = { $and: [{
-                _id: { $eq: id }
-            }] }
+            const query = {
+                $and: [{
+                    _id: { $eq: id }
+                }]
+            }
 
             if (req?.segmentation) {
                 handleSegmentationOnQuery(req, 'owner', query)
@@ -1456,9 +1464,11 @@ module.exports = {
             //         },
             //     })
 
-            const query = { $and: [{
-                _id: { $eq: id }
-            }] }
+            const query = {
+                $and: [{
+                    _id: { $eq: id }
+                }]
+            }
 
             if (req?.segmentation) {
                 handleSegmentationOnQuery(req, 'owner', query)
@@ -1952,16 +1962,18 @@ module.exports = {
         try {
             const { userId } = req.query;
 
-            const query = { $and: [{
-                author: { $eq: userId }
-            }]}
+            const query = {
+                $and: [{
+                    author: { $eq: userId }
+                }]
+            }
 
             if (req?.segmentation) {
                 handleSegmentationOnQuery(req, 'owner', query)
             }
 
             const trails = await populateTrails(true, query);
-            
+
             _messages.success(res, req, { trails });
         } catch (error) {
             _messages.internalServer(
@@ -2098,11 +2110,13 @@ module.exports = {
         try {
             let trailId = req.params.id;
 
-            const query = { $and: [{
-                _id: { 
-                    $eq: trailId
-                }
-            }]}
+            const query = {
+                $and: [{
+                    _id: {
+                        $eq: trailId
+                    }
+                }]
+            }
 
             if (req?.segmentation) {
                 handleSegmentationOnQuery(req, 'owner', query)
@@ -2113,7 +2127,7 @@ module.exports = {
             const filteredGalleryArray = trail.gallery.filter(
                 (x) => x.deleted === false
             );
-            
+
             _messages.success(res, req, filteredGalleryArray);
         } catch (error) {
             _messages.internalServer(
@@ -2191,7 +2205,7 @@ module.exports = {
         }
     },
 
-    async archive(req, res) {
+    async archive (req, res) {
         const trailId = req.params.trailId;
 
         await Trail.findByIdAndUpdate(trailId, { $set: { enabled: false, archive: true, archivedAt: new Date() } });
@@ -2199,7 +2213,7 @@ module.exports = {
         res.status(204).send();
     },
 
-    async unarchive(req, res) {
+    async unarchive (req, res) {
         const trailId = req.params.trailId;
 
         await Trail.findByIdAndUpdate(trailId, { $set: { archive: false, archivedAt: null } });
