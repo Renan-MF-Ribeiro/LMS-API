@@ -735,6 +735,7 @@ module.exports = {
                     const profilesIDS = await returnIdProfileUser(namesProfiles);
                     const groupsIDS = await returnIdGroupUser(namesGroups);
                     const userGroups = await Group.find({ name: { $in: namesGroups } });
+
                     const eligibilities = userGroups.flatMap((group) =>
                         group.tags.flatMap((tag) => tag?.value || tag.display)
                     );
