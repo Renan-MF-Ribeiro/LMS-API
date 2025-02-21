@@ -644,6 +644,18 @@ const MenuDefault = [
                             "PERFIL_Gestor_Engajamento",
                         ],
                     },
+                    {
+                        button: "headerConfig",
+                        roles: [
+                            "PERFIL_Gestor_Engajamento"
+                        ]
+                    },
+                    {
+                        button: "welcomeConfig",
+                        roles: [
+                            "PERFIL_Gestor_Engajamento"
+                        ]
+                    }
                 ],
             },
             {

@@ -113,13 +113,13 @@ const { getDbCurrentFeatures } = require('../../utils/features');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-function hideCPFNumbers(cpf) {
+function hideCPFNumbers (cpf) {
     if (!cpf) return cpf;
 
     return String(cpf).substring(0, 3) + 'XXXXXXXX';
 }
 
-async function validateUserAndPassword(res, req, login, passwordDecripted) {
+async function validateUserAndPassword (res, req, login, passwordDecripted) {
     // Verifica se usuário existe
     const user = await User.findOne({ networkLogin: { $eq: login }, status: 'ATIVO' }).lean();
     // Verifica se a senha é válida
@@ -146,7 +146,7 @@ async function validateUserAndPassword(res, req, login, passwordDecripted) {
     return user;
 }
 // Gerencia block de usuário por tentativas de login consecutivas
-async function handleBlockUser(user) {
+async function handleBlockUser (user) {
     const countOfBlocks = await checkAmountOfLocks(user._id);
     // 5 Tentativas
     if (countOfBlocks >= 5) {
@@ -173,7 +173,7 @@ async function handleBlockUser(user) {
         }
     }
 }
-async function generateTokens(user, login, password) {
+async function generateTokens (user, login, password) {
     const groups = user.groupsAD;
     const namesProfiles = [];
     const namesGroups = [];
@@ -255,7 +255,7 @@ async function generateTokens(user, login, password) {
 }
 
 module.exports = {
-    async create(req, res) {
+    async create (req, res) {
         try {
             const { registration, cpf } = req.body;
 
@@ -318,7 +318,7 @@ module.exports = {
         }
     },
 
-    async findById(req, res) {
+    async findById (req, res) {
         try {
             const _id = req.params.userId;
 
@@ -344,7 +344,7 @@ module.exports = {
         }
     },
 
-    async signup(req, res) {
+    async signup (req, res) {
         const { token } = req.query;
         const { password, ...data } = req.body;
 
@@ -386,7 +386,7 @@ module.exports = {
                 // Busca de qual partner o usuário veio
                 const partner = await Partner.findOne(
                     { active: true, 'keys.key': token },
-                    'keys.elegibilityResult keys.defaultField keys.classGroupResult keys.key keys.endDate'
+                    'keys.elegibilityResult keys.defaultField keys.classGroupResult keys.key keys.endDate title keys.title'
                 );
                 if (!partner) {
                     _messages.unauthorized(
@@ -430,6 +430,7 @@ module.exports = {
                 partnerDays = selectedKey.classGroupResult?.days;
                 // Gera array de objetos referentes a "_id" de classGroups
                 classGroupsIDs = selectedKey.classGroupResult?.classGroups?.map((x) => x);
+                defaultFields.partner = `${partner.title} - ${selectedKey.title}`;
             }
 
             const formatedDate = formatDateWithoutHoursBrasilian(data.birthDate);
@@ -493,7 +494,7 @@ module.exports = {
         }
     },
 
-    async activateUser(req, res) {
+    async activateUser (req, res) {
         try {
             const { token, email } = req.body;
             const isUser = await bcrypt.compare(email, token);
@@ -515,7 +516,7 @@ module.exports = {
         }
     },
 
-    async ldapSignIn(req, res) {
+    async ldapSignIn (req, res) {
         let user = {};
         const { login, password } = req.body;
 
@@ -604,7 +605,7 @@ module.exports = {
         }
     },
 
-    async feedbackElegible(req, res) {
+    async feedbackElegible (req, res) {
         const user = await getUserByToken(req);
         const today = new Date();
         const uri = `${process.env.API_SURVEY}/feedback/listbyuser?userid=${user._id}`;
@@ -641,7 +642,7 @@ module.exports = {
         }
     },
 
-    async singleSignOn(req, res) {
+    async singleSignOn (req, res) {
         let user = {};
 
         const { token } = req.body;
@@ -846,7 +847,7 @@ module.exports = {
         }
     },
 
-    async acceptTerms(req, res) {
+    async acceptTerms (req, res) {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
@@ -876,7 +877,7 @@ module.exports = {
         }
     },
 
-    async watchedVideo(req, res) {
+    async watchedVideo (req, res) {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
@@ -906,7 +907,7 @@ module.exports = {
         }
     },
 
-    async acceptTermsCollaboration(req, res) {
+    async acceptTermsCollaboration (req, res) {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
@@ -936,13 +937,13 @@ module.exports = {
         }
     },
 
-    async recoveryPassword(req, res) {
+    async recoveryPassword (req, res) {
         const { body, domain, changeByEmail } = req.body;
 
         if (typeof body !== 'object' || Object.values(body).some((value) => !value?.length)) {
             throw new ApiError('Dados inválidos', 400, body, { skipDbLog: true });
         }
-        
+
         const search = buildSearchObject(body);
 
         if (search.birthDate || search.birthday) {
@@ -1018,7 +1019,7 @@ module.exports = {
         return _messages.success(res, req, password_new);
     },
 
-    async changePassword(req, res) {
+    async changePassword (req, res) {
         try {
             const { password_old, password_new, password_newConfirm } = req.body;
             const { _id } = await getUserByToken(req);
@@ -1115,7 +1116,7 @@ module.exports = {
         }
     },
 
-    async changePasswordByEmail(req, res) {
+    async changePasswordByEmail (req, res) {
         try {
             const { password_new, password_newConfirm } = req.body;
             const { data } = decodeToken(req.headers.authorization);
@@ -1207,10 +1208,10 @@ module.exports = {
         }
     },
 
-    async import(req, res) {
+    async import (req, res) {
         try {
             const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
-            
+
             var file = null;
             const newUsers = [];
             const existingUsers = [];
@@ -1345,7 +1346,7 @@ module.exports = {
         }
     },
 
-    async importOnboarding(req, res) {
+    async importOnboarding (req, res) {
         try {
             const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
 
@@ -1454,7 +1455,7 @@ module.exports = {
         }
     },
 
-    async returnUsers(req, res) {
+    async returnUsers (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1462,14 +1463,32 @@ module.exports = {
             const searchBy = req.query.searchBy;
 
             const isOnboarding = req.query.onboarding === 'true' || req.query.onboarding === true;
+            const isPartner = req.query.partner === 'true' || req.query.partner === true;
 
             const query = {
                 $and: [
                     {
                         onboarding: isOnboarding ? true : { $ne: true },
+                        partner: isPartner ? { $exists: true } : { $exists: false },
                     },
                 ],
             };
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'issuer', query);
+            }
+
+            const total = await User.countDocuments(query);
+
+            const totalActive = await User.find({
+                status: 'ATIVO',
+                ...query
+            }).countDocuments();
+
+            const totalInactive = await User.find({
+                status: 'INATIVO',
+                ...query
+            }).countDocuments();
 
             if (searchBy) {
                 query.$and.push({
@@ -1482,26 +1501,12 @@ module.exports = {
                 });
             }
 
-            if (req?.segmentation) {
-                handleSegmentationOnQuery(req, 'issuer', query);
-            }
 
             const users = await User.find(query)
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
-            const total = await User.countDocuments(query);
-
-            const totalActive = await User.find({
-                status: 'ATIVO',
-                onboarding: { $ne: true },
-            }).countDocuments();
-
-            const totalInactive = await User.find({
-                status: 'INATIVO',
-                onboarding: { $ne: true },
-            }).countDocuments();
 
             _messages.success(res, req, {
                 data: users,
@@ -1521,7 +1526,7 @@ module.exports = {
         }
     },
 
-    async returnUsersOnboarding(req, res) {
+    async returnUsersOnboarding (req, res) {
         try {
             const users = await findUsers(req, { onboarding: true });
             _messages.success(res, req, users);
@@ -1537,7 +1542,7 @@ module.exports = {
         }
     },
 
-    async returnUserById(req, res) {
+    async returnUserById (req, res) {
         try {
             const { _id } = await getUserByToken(req);
             const user = await User.findOne({ _id: _id }, { password: 0 });
@@ -1557,7 +1562,7 @@ module.exports = {
         }
     },
 
-    async updateUser(req, res) {
+    async updateUser (req, res) {
         try {
             const { _id, email, cpf, networkLogin, tags } = req.body;
             delete req.body.ip;
@@ -1631,7 +1636,7 @@ module.exports = {
         }
     },
 
-    async updateUserById(req, res) {
+    async updateUserById (req, res) {
         try {
             const { _id } = req.body;
             await User.findByIdAndUpdate(_id, req.body);
@@ -1648,7 +1653,7 @@ module.exports = {
         }
     },
 
-    async changePhoto(req, res) {
+    async changePhoto (req, res) {
         try {
             const user = await getUserByToken(req);
             const file = req.files.file;
@@ -1668,7 +1673,7 @@ module.exports = {
         }
     },
 
-    async isAuthenticated(req, res) {
+    async isAuthenticated (req, res) {
         if (await validateToken(req)) {
             await addSASTokenToResponse(res);
 
@@ -1685,7 +1690,7 @@ module.exports = {
         }
     },
 
-    async isAuthenticatedNginx(req, res) {
+    async isAuthenticatedNginx (req, res) {
         if (await validateTokenNginx(req.params.token)) {
             _messages.success(res, req, true);
         } else {
@@ -1700,7 +1705,7 @@ module.exports = {
         }
     },
 
-    async selfData(req, res) {
+    async selfData (req, res) {
         try {
             const { data } = await decodeToken(req.headers.authorization);
             const user = await User.findOne(
@@ -1720,7 +1725,7 @@ module.exports = {
         }
     },
 
-    async importUserTest(req, res) {
+    async importUserTest (req, res) {
         try {
             const usersTest = await UserTest.find();
             for (const result of usersTest) {
@@ -1778,7 +1783,7 @@ module.exports = {
         }
     },
 
-    async exportUsers(req, res) {
+    async exportUsers (req, res) {
         try {
             const users = await User.find();
             const records = [];
@@ -1804,7 +1809,7 @@ module.exports = {
         }
     },
 
-    async email(req, res) {
+    async email (req, res) {
         try {
             const error = { message: 'ERRO NA CARGA DIÁRIA', stack: 'erro' };
             await sendLogEmail('success', error, 100, 10, 40, 50, '13/01/2020', 10, 20, 30);
@@ -1815,7 +1820,7 @@ module.exports = {
         }
     },
 
-    async importUsersDisabled(req, res) {
+    async importUsersDisabled (req, res) {
         try {
             const { file } = req.files;
             const results = await _files.readCSV(file.path);
@@ -1836,7 +1841,7 @@ module.exports = {
         }
     },
 
-    async emulation(req, res) {
+    async emulation (req, res) {
         try {
             const { body } = req;
             const {
@@ -1910,7 +1915,7 @@ module.exports = {
                     clientID: CLIENT_ID,
                     filters: dashboardFilters,
                 });
-                
+
                 const { token: SAS } = addSASTokenToResponse(res);
 
                 const features = await getDbCurrentFeatures(req);
@@ -1952,7 +1957,7 @@ module.exports = {
         }
     },
 
-    async importUpdateStatusUsers(req, res, next) {
+    async importUpdateStatusUsers (req, res, next) {
         try {
             const { file } = req.files;
             const results = await _files.readCSV(file.path);
@@ -1974,7 +1979,7 @@ module.exports = {
         }
     },
 
-    async ssoCallback(req, res) {
+    async ssoCallback (req, res) {
         try {
             await Log.create({
                 type: 'SSO_CALLBACK',
@@ -2044,7 +2049,7 @@ module.exports = {
         }
     },
 
-    async updateDeviceId(req, res) {
+    async updateDeviceId (req, res) {
         try {
             const user = await getUserByToken(req);
             const { deviceId } = req.body;
@@ -2063,7 +2068,7 @@ module.exports = {
         }
     },
 
-    async returnCollaborativeUsers(req, res) {
+    async returnCollaborativeUsers (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -2072,34 +2077,34 @@ module.exports = {
             const collaborativeUsers = await User.find(
                 searchBy
                     ? {
-                          $and: [
-                              {
-                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
-                              },
-                              {
-                                  $or: [
-                                      {
-                                          name: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          registration: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          email: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                  ],
-                              },
-                          ],
-                      }
+                        $and: [
+                            {
+                                groupsAD: { $in: ['PERFIL_Colaborador'] },
+                            },
+                            {
+                                $or: [
+                                    {
+                                        name: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        registration: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        email: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                ],
+                            },
+                        ],
+                    }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             )
                 .sort({
@@ -2111,34 +2116,34 @@ module.exports = {
             const total = await User.countDocuments(
                 searchBy
                     ? {
-                          $and: [
-                              {
-                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
-                              },
-                              {
-                                  $or: [
-                                      {
-                                          name: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          registration: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          email: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                  ],
-                              },
-                          ],
-                      }
+                        $and: [
+                            {
+                                groupsAD: { $in: ['PERFIL_Colaborador'] },
+                            },
+                            {
+                                $or: [
+                                    {
+                                        name: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        registration: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        email: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                ],
+                            },
+                        ],
+                    }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             );
 
@@ -2151,7 +2156,7 @@ module.exports = {
         }
     },
 
-    async setCollaborator(req, res) {
+    async setCollaborator (req, res) {
         try {
             const { userId, moderation } = req.body;
             if (!userId) {
@@ -2184,7 +2189,7 @@ module.exports = {
         }
     },
 
-    async toggleCollaboratorModeration(req, res) {
+    async toggleCollaboratorModeration (req, res) {
         try {
             const { userId, moderation } = req.body;
 
@@ -2222,7 +2227,7 @@ module.exports = {
         }
     },
 
-    async removeCollaborator(req, res) {
+    async removeCollaborator (req, res) {
         try {
             const { userId } = req.body;
 
@@ -2253,7 +2258,7 @@ module.exports = {
         }
     },
 
-    async resetUserPassword(req, res) {
+    async resetUserPassword (req, res) {
         try {
             const { userId, password, generate } = req.body;
 
@@ -2329,7 +2334,7 @@ module.exports = {
         }
     },
 
-    async deleteGroups(req, res) {
+    async deleteGroups (req, res) {
         const { tag, userId } = req.body;
 
         const arrTags = Array.isArray(tag) ? tag : [tag];
@@ -2360,7 +2365,7 @@ module.exports = {
         }
     },
 
-    async addGroups(req, res) {
+    async addGroups (req, res) {
         const { tag, userId } = req.body;
 
         // Cuurent user é o dono da requisição
@@ -2438,7 +2443,7 @@ module.exports = {
         }
     },
 
-    async deleteClassTag(req, res) {
+    async deleteClassTag (req, res) {
         const { tag, userId } = req.body;
 
         try {
@@ -2451,7 +2456,7 @@ module.exports = {
         }
     },
 
-    async addClassTag(req, res) {
+    async addClassTag (req, res) {
         const { tag, userId } = req.body;
         try {
             await User.findByIdAndUpdate(userId, {
@@ -2471,7 +2476,7 @@ module.exports = {
         }
     },
 
-    async updateClassTag(req, res) {
+    async updateClassTag (req, res) {
         const { tag, _id } = req.body;
         try {
             const { classGroups } = await User.findOne({ _id });
@@ -2502,7 +2507,7 @@ module.exports = {
         }
     },
 
-    async evaluationProgress(req, res) {
+    async evaluationProgress (req, res) {
         try {
             const { idEvaluation } = req.params;
             const user = await getUserByToken(req);
@@ -2576,7 +2581,7 @@ module.exports = {
         }
     },
 
-    async getAllConteudistas(req, res) {
+    async getAllConteudistas (req, res) {
         try {
             const query = {
                 $and: [
@@ -2605,7 +2610,7 @@ module.exports = {
         }
     },
 
-    async handleNames(req, res) {
+    async handleNames (req, res) {
         try {
             const { networkLogins } = req.body;
             const users = await User.find({ networkLogin: { $in: networkLogins } }, [
@@ -2627,7 +2632,7 @@ module.exports = {
         }
     },
 
-    async generateMultiFactor(req, res) {
+    async generateMultiFactor (req, res) {
         try {
             const { networkLogin } = req.body;
             const user = await User.findOne({ networkLogin: networkLogin });
@@ -2656,7 +2661,7 @@ module.exports = {
         }
     },
 
-    async validateMultiFactor(req, res) {
+    async validateMultiFactor (req, res) {
         try {
             const user = await getUserByToken(req);
             const { secret, token } = req.body;
@@ -2689,7 +2694,7 @@ module.exports = {
         }
     },
 
-    async validateMfaToken(req, res) {
+    async validateMfaToken (req, res) {
         try {
             const isTokenValid = await validateMfaToken(req);
             _messages.success(res, req, isTokenValid);
@@ -2705,7 +2710,7 @@ module.exports = {
         }
     },
 
-    async updateWebPushAuthorization(req, res) {
+    async updateWebPushAuthorization (req, res) {
         try {
             const user = await getUserByToken(req);
             const webPushAuthorization = req.body;
@@ -2735,7 +2740,7 @@ module.exports = {
         }
     },
 
-    async getUserMap(req, res) {
+    async getUserMap (req, res) {
         try {
             const { data } = await axios.get(
                 `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
@@ -2767,7 +2772,7 @@ module.exports = {
         }
     },
 
-    async putUserMap(req, res) {
+    async putUserMap (req, res) {
         try {
             const { body } = req;
 
@@ -2797,7 +2802,7 @@ module.exports = {
         }
     },
 
-    async readSheetHeaders(req, res) {
+    async readSheetHeaders (req, res) {
         try {
             let file = null;
             if (req.files.file) {
