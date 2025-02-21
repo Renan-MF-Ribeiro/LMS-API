@@ -15,7 +15,6 @@ const {
     validateTokenRoute,
     isAssessmentActive,
     isShowcaseActive,
-    setCurrentFeatures,
     setSegmentation,
 } = require('./utils/middlewares');
 
@@ -139,8 +138,6 @@ app.get('/', (req, res) => {
 initializePassport(app);
 
 app.use(socialApiMiddleware)
-
-app.use(setCurrentFeatures);
 
 app.use(setSegmentation)
 

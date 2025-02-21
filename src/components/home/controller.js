@@ -37,6 +37,7 @@ const {
 const { populateTrails } = require('../trails/business');
 const { Section } = require('../sections/model');
 const { maxBy } = require('lodash');
+const { getDbCurrentFeatures } = require('../../utils/features');
 
 const HomeController = {
     async searchBy(req, res) {
@@ -206,7 +207,9 @@ const HomeController = {
 
             result.push(course);
 
-            if (req?.features?.alura) {
+            const features = await getDbCurrentFeatures(req);
+
+            if (features?.alura) {
                 const host = process.env.API_ALURA;
                 const clientId = process.env.CLIENT_ID;
                 const headers = { 'x-client-key': process.env.API_KEY_ALURA };
