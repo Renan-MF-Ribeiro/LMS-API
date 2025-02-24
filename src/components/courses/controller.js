@@ -1968,6 +1968,106 @@ module.exports = {
             );
         }
     },
+
+    async historicByUser (req, res) {
+        try {
+            const userId = req.params.userId;
+            const { skip, limit } = pagination(req);
+            const { order, sort } = ordernation(req);
+            const searchBy = req.query.searchBy;
+            const classesFromUser = await ClassModel.find({
+                $or: [
+                    { 'users.userID': userId },
+                    { 'users._id': userId },
+                    { 'users._id': mongoose.Types.ObjectId(userId) }
+                ]
+            }).select({
+                courseID: 1,
+                users: 1,
+                dateApplicationInitial: 1,
+                dateApplicationFinal: 1,
+                name: 1,
+            })
+
+            let query = {
+                deleted: { $eq: 0 },
+                status: { $eq: 1 },
+                _id: { $in: classesFromUser.map(c => c.courseID) }
+            }
+
+
+            if (searchBy) {
+                query = {
+                    ...query,
+                    $or: [
+                        {
+                            'course.title': {
+                                $regex: searchBy,
+                                $options: 'i',
+                            },
+                        },
+                    ],
+                }
+            }
+
+
+
+
+            const total = await CourseModel.find(query).countDocuments();
+
+            let data = await CourseModel.find(query)
+                .select({
+                    title: 1,
+                    passingScore: 1,
+                    certificate: 1,
+                    certificateLayout: 1,
+                    workload: 1,
+                    dateFinal: 1,
+                    dateInitial: 1
+                }).lean()
+                .sort({
+                    [order]: sort,
+                })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit));
+
+            data = data.map((course) => {
+                let classes = classesFromUser.filter(c => c.courseID.toString() == course._id.toString());
+                classes = classes.map(c => {
+                    const currentUser = c.users.find(u => u.userID == userId || u._id == userId);
+                    const userGrades = currentUser.grades
+                    const passed = userGrades >= course.passingScore;
+                    const hasCertificate = course.certificate && passed;
+                    return {
+                        name: c.name,
+                        dateApplicationFinal: c.dateApplicationFinal,
+                        dateApplicationInitial: c.dateApplicationInitial,
+                        passed,
+                        userGrades,
+                        hasCertificate
+                    }
+                })
+                return {
+                    ...course,
+                    classes
+                }
+            })
+
+
+            success(res, req, { data, total });
+
+        } catch (error) {
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'list historic courses by user',
+                '/getCourseByQrCode'
+            );
+        }
+    }
+
 };
 
 async function createMessagesFromBackend (body) {
