@@ -1,24 +1,35 @@
 const { Webhooks } = require('./model')
 const _messages = require('../../utils/messages')
 const axios = require('axios')
+import * as crypto from 'crypto';
 
 module.exports = {
-    async dispatch (action, target, data) {
+    async dispatch(action, target, data) {
         try {
-            const webhook = await Webhooks.findOne({target: target, action: action})
+            const webhook = await Webhooks.findOne({ target: target, action: action })
             if (webhook && webhook.status) {
-                console.log(data)
-                await axios.post(webhook.endpoint, data)
+
+                const secret = process.env.WEBHOOK_SECRET_KEY;
+                const payload = JSON.stringify(data);
+
+                const hmac = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+
+                await axios.post(webhook.endpoint, data, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Webhook-Signature': hmac
+                    }
+                })
                 return "Webhook dispatched"
             } else {
                 throw new Error('Webhook não encontrado ou inativo')
-            } 
+            }
         } catch (error) {
             console.log(error)
             throw new Error(error.message)
-        }                
+        }
     },
-    async update (req, res) {
+    async update(req, res) {
         try {
             const body = req.body
             let webhooks = await Webhooks.findOne({ _id: body._id }).sort({ createdAt: -1 })
@@ -43,7 +54,7 @@ module.exports = {
 
     },
 
-    async getWebhooks (req, res) {
+    async getWebhooks(req, res) {
         try {
             const data = await Webhooks.find()
             _messages.success(res, req, data);
