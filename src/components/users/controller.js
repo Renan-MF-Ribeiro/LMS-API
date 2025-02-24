@@ -112,11 +112,6 @@ const { addSASTokenToResponse } = require('../../utils/cookies');
 const { FormModel } = require('../forms/model');
 const { getConnectMap } = require('../../utils/connect');
 const { getFormErrorsByMapConfig, getDefaultForm } = require('../forms/business');
-
-const { FormModel } = require('../forms/model');
-const { getConnectMap } = require('../../utils/connect');
-const { getFormErrorsByMapConfig, getDefaultForm } = require('../forms/business');
-
 const { getDbCurrentFeatures } = require('../../utils/features');
 
 
@@ -354,7 +349,7 @@ module.exports = {
     },
 
 
-    async signup(req, res) {
+    async signup (req, res) {
         const { token, formId: queryFormId } = req.query;
         const { password, passwordConfirmation, loginField, formId: bodyFormId, ...data } = req.body;
         const formId = queryFormId || bodyFormId || null;
