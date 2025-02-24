@@ -68,7 +68,7 @@ async function createOpenIdConnectStrategy(config) {
 }
 
 function getRequestStrategyName(req) {
-    return req.query?.strategy ?? req.session.strategy;
+    return req.query?.strategy ?? req.session.strategy ?? 'saml';
 }
 
 function initializePassport(app) {
@@ -100,7 +100,7 @@ async function strategyHandler(config) {
         openid: createOpenIdConnectStrategy
     };
 
-    const createStrategy = strategyCreators[config.strategyType];
+    const createStrategy = strategyCreators[config.strategyType ?? 'saml'];
     if (!createStrategy) {
         throw new Error(`Estratégia desconhecida: ${config.strategyType}`);
     }
