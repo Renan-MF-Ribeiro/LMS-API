@@ -3,8 +3,8 @@ const { Menu } = require('./model')
 const { MenuDefault } = require('./constants')
 module.exports = {
     async validateMenuAccess (menu, req, currentGroupsAD) {
-        const features = await getDbCurrentFeatures(req);
-        return filterMenuByAccess(menu, req, currentGroupsAD, features);
+
+        return filterMenuByAccess(menu, req, currentGroupsAD);
     },
 
     async verifyDefaultItems () {
@@ -36,8 +36,8 @@ function verifyAndAddSubMenuItems (parentItem, subMenuItems) {
     return parentItem
 }
 
-async function filterMenuByAccess (menu, req, currentGroupsAD, features) {
-
+async function filterMenuByAccess (menu, req, currentGroupsAD) {
+    const features = await getDbCurrentFeatures(req);
     const filteredMenu = [];
     for (const item of menu) {
         if (item['feature'] && features?.[item['feature']] !== true) continue;
