@@ -62,6 +62,7 @@ const { Section } = require('../components/sections/model');
 const { getConfiguration, getMessengerConfig, getCronConfig, getUsersDataConfig } = require('../components/config/business');
 const { ConfigTypes } = require('../components/config/model');
 const ApiError = require('../errors/ApiError');
+const { getConnectMap, validateDataByConnectMap } = require('./connect');
 
 module.exports = {
     async cronNotifyResponsibleUsers () {
@@ -655,6 +656,27 @@ async function processUserLoadFile(directory, fileName, isProduction, hook) {
             `Iniciando Processamento de ${users.length} usuários...`
         );
 
+        const connectMap = await getConnectMap(true);
+
+        if (connectMap) {
+            const errors = [];
+
+            users.forEach((data) => {
+                const dataErrors = validateDataByConnectMap(data, connectMap);
+
+                if (dataErrors.length > 0) {
+                    errors.push({
+                        item: data.networkLogin ?? data.cpf ?? data.email,
+                        errors: dataErrors
+                    });
+                }
+            });
+
+            if (errors.length > 0) {
+                throw new ApiError('Erro ao importar usuários', 400, errors, { skipDbLog: true });
+            }
+        }
+
         for await (const [index, user] of Object.entries(users)) {
             if (Number(index) % 100 === 0) {
                 usersLoadLog(
@@ -803,7 +825,7 @@ async function processUserLoadFile(directory, fileName, isProduction, hook) {
         usersLoadLog(
             'ERROR',
             `Erro ao processar arquivo ${fileName}`,
-            error
+            JSON.stringify(error)
         );
 
         const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} teve problemas para rodar a carga! Erro: ${error.message}`;
