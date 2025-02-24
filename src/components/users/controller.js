@@ -113,6 +113,13 @@ const { FormModel } = require('../forms/model');
 const { getConnectMap } = require('../../utils/connect');
 const { getFormErrorsByMapConfig, getDefaultForm } = require('../forms/business');
 
+const { FormModel } = require('../forms/model');
+const { getConnectMap } = require('../../utils/connect');
+const { getFormErrorsByMapConfig, getDefaultForm } = require('../forms/business');
+
+const { getDbCurrentFeatures } = require('../../utils/features');
+
+
 const isProduction = process.env.NODE_ENV === 'production';
 
 function hideCPFNumbers (cpf) {
@@ -346,7 +353,8 @@ module.exports = {
         }
     },
 
-    async signup (req, res) {
+
+    async signup(req, res) {
         const { token, formId: queryFormId } = req.query;
         const { password, passwordConfirmation, loginField, formId: bodyFormId, ...data } = req.body;
         const formId = queryFormId || bodyFormId || null;
@@ -1276,7 +1284,7 @@ module.exports = {
                     $or: [{ networkLogin: result.networkLogin }, { networkLogin: result.cpf }],
                 });
 
-                const processedUser = processUsersLoad(result, fieldsForElegibility);
+                const processedUser = await processUsersLoad(result, fieldsForElegibility);
                 const account = await processUserAccount(processedUser);
 
                 processedUser.password = existingUser
@@ -1954,7 +1962,9 @@ module.exports = {
 
                 const { token: SAS } = addSASTokenToResponse(res);
 
-                if (req.features?.gamification) {
+                const features = await getDbCurrentFeatures(req);
+
+                if (features?.gamefication) {
                     GamificationBusiness.createClientUser(networkLogin, groupsAD);
                 }
 
@@ -2015,6 +2025,18 @@ module.exports = {
 
     async ssoCallback (req, res) {
         try {
+            await Log.create({
+                type: 'SSO_CALLBACK',
+                message: 'SSO_CALLBACK',
+                component: 'users',
+                route: 'ssoCallback',
+                dataNew: {
+                    samlObject: req.samlUserObject,
+                    user: req.user ? JSON.stringify(req.user) : null
+                },
+                dataOld: null,
+            });
+
             const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestWithSamlObject(
                 req
             );
@@ -2030,15 +2052,6 @@ module.exports = {
 
                     return deepGet(req.samlUserObject, key, null);
                 }, null) ?? req.user?.nameID;
-
-            await Log.create({
-                type: 'SSO_CALLBACK',
-                message: 'SSO_CALLBACK',
-                component: 'users',
-                route: 'ssoCallback',
-                dataNew: { samlObject: req.samlUserObject },
-                dataOld: null,
-            });
 
             if (value === undefined || value === null) {
                 console.log('ssoCallback req.samlUserObject', req.samlUserObject);

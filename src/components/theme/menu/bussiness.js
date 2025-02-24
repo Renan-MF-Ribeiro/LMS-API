@@ -1,8 +1,10 @@
+const { getDbCurrentFeatures } = require('../../../utils/features');
 const { Menu } = require('./model')
 const { MenuDefault } = require('./constants')
 module.exports = {
     async validateMenuAccess (menu, req, currentGroupsAD) {
-        return filterMenuByAccess(menu, req, currentGroupsAD);
+        const features = await getDbCurrentFeatures(req);
+        return filterMenuByAccess(menu, req, currentGroupsAD, features);
     },
 
     async verifyDefaultItems () {
@@ -34,11 +36,11 @@ function verifyAndAddSubMenuItems (parentItem, subMenuItems) {
     return parentItem
 }
 
+async function filterMenuByAccess (menu, req, currentGroupsAD, features) {
 
-async function filterMenuByAccess (menu, req, currentGroupsAD) {
     const filteredMenu = [];
     for (const item of menu) {
-        if (item['feature'] && req.features[item['feature']] !== true) continue;
+        if (item['feature'] && features?.[item['feature']] !== true) continue;
         const hasAccess = item['roles'].some(role => currentGroupsAD.includes(role));
         if (!hasAccess) continue;
 

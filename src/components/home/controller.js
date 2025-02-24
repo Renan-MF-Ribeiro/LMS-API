@@ -10,7 +10,7 @@ const {
     filterTrails,
     filterAlura,
     mapAlura,
-    getGroupCodesByToken
+    courseInSections
 } = require('../sections/business');
 const { User } = require('../users/model');
 const {
@@ -22,6 +22,7 @@ const {
     handleStudentTrails,
     pagination,
 } = require('../../utils/functions');
+const { extractTextFromRichText } = require('../../utils/extract-text-from-richtext')
 const {
     trailsCompletedOrInProgress,
     studentAverageCourses,
@@ -36,6 +37,7 @@ const {
 const { populateTrails } = require('../trails/business');
 const { Section } = require('../sections/model');
 const { maxBy } = require('lodash');
+const { getDbCurrentFeatures } = require('../../utils/features');
 
 const HomeController = {
     async searchBy(req, res) {
@@ -196,7 +198,18 @@ const HomeController = {
                 });
             }
 
-            if (req?.features?.alura) {
+            // Recupera Cursos presenciais
+            const course = await courseInSections(tags, user);
+            course.trails = course.trails.filter(trail => {
+                const { title, description } = trail;
+                return [title, description].some(stg => extractTextFromRichText(stg).toLowerCase().includes(searchBy.toLowerCase()));
+            });
+
+            result.push(course);
+
+            const features = await getDbCurrentFeatures(req);
+
+            if (features?.alura) {
                 const host = process.env.API_ALURA;
                 const clientId = process.env.CLIENT_ID;
                 const headers = { 'x-client-key': process.env.API_KEY_ALURA };

@@ -1,6 +1,8 @@
 const { Profile } = require("../components/profiles/model");
 const { User } = require("../components/users/model");
 
+const { runScript } = require("./utils");
+
 const currentProfiles = [
     {
         "title": "PERFIL_Conteudista",
@@ -101,4 +103,4 @@ async function run() {
     process.exit(0);
 }
 
-run();
+runScript(run);
