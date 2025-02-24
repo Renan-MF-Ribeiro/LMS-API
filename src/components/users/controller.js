@@ -70,6 +70,8 @@ const {
     getDataByToken,
 } = require('../../utils/functions');
 
+const { getActiveIdpIntegrations } = require('../idp-integration/business');
+
 const {
     sendEmailRecoveryPassword,
     sendLogEmail,
