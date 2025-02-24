@@ -109,6 +109,9 @@ const {
 const { log } = require('../../utils/logger');
 const ApiError = require('../../errors/ApiError');
 const { addSASTokenToResponse } = require('../../utils/cookies');
+const { FormModel } = require('../forms/model');
+const { getConnectMap } = require('../../utils/connect');
+const { getFormErrorsByMapConfig, getDefaultForm } = require('../forms/business');
 
 const { FormModel } = require('../forms/model');
 const { getConnectMap } = require('../../utils/connect');
@@ -350,6 +353,7 @@ module.exports = {
         }
     },
 
+
     async signup(req, res) {
         const { token, formId: queryFormId } = req.query;
         const { password, passwordConfirmation, loginField, formId: bodyFormId, ...data } = req.body;
@@ -474,7 +478,7 @@ module.exports = {
             }
 
             const formatedDate = formatDateWithoutHoursBrasilian(data.birthDate);
-            console.log(formatedDate);
+
             const userData = {
                 networkLogin,
                 // email: networkLogin,
