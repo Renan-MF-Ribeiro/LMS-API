@@ -23,7 +23,8 @@ module.exports = {
                 await axios.post(webhook.endpoint, body, {
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Webhook-Signature': hmac
+                        'X-Webhook-Signature': hmac,
+                        'clientId': process.env.CLIENT_ID
                     }
                 })
                 return "Webhook dispatched"
