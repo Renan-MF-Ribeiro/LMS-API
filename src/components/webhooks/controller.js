@@ -1,20 +1,26 @@
 const { Webhooks } = require('./model')
 const _messages = require('../../utils/messages')
 const axios = require('axios')
-import * as crypto from 'crypto';
+const crypto = require('crypto')
 
 module.exports = {
     async dispatch(action, target, data) {
         try {
-            const webhook = await Webhooks.findOne({ target: target, action: action })
+            const webhook = await Webhooks.findOne({ target: target, action: action }).lean()
+            
+            const body = {
+                data,
+                label: webhook.label,
+                target: webhook.target,
+                action: webhook.action
+            }
             if (webhook && webhook.status) {
-
                 const secret = process.env.WEBHOOK_SECRET_KEY;
-                const payload = JSON.stringify(data);
+                const payload = JSON.stringify(body);
 
                 const hmac = crypto.createHmac('sha256', secret).update(payload).digest('hex');
 
-                await axios.post(webhook.endpoint, data, {
+                await axios.post(webhook.endpoint, body, {
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Webhook-Signature': hmac
