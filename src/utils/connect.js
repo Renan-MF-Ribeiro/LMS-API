@@ -50,7 +50,7 @@ module.exports = {
                 //     data[connectKey] = moment(data[connectKey]).format('DD/MM/YYYY');
                 //     break;
                 case 'cpf':
-                    data[connectKey] = data[connectKey].replace(/\D/g, '');
+                    data[connectKey] = String(data[connectKey]).replace(/\D/g, '');
                     break;
             }
 
