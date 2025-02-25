@@ -34,6 +34,7 @@ const {
     getClassByID,
     returnProgramaID,
     processAttendanceListImport,
+    enrichCoursesWithClasses
 } = require('./business');
 
 const {
@@ -1995,13 +1996,12 @@ module.exports = {
                 _id: { $in: classesFromUser.map(c => c.courseID) }
             }
 
-
             if (searchBy) {
                 query = {
                     ...query,
                     $or: [
                         {
-                            'course.title': {
+                            title: {
                                 $regex: searchBy,
                                 $options: 'i',
                             },
@@ -2010,17 +2010,15 @@ module.exports = {
                 }
             }
 
-
-
-
             const total = await CourseModel.find(query).countDocuments();
 
-            let data = await CourseModel.find(query)
+            const data = await CourseModel.find(query)
                 .select({
                     title: 1,
                     passingScore: 1,
                     certificate: 1,
                     certificateLayout: 1,
+                    certificateDue: 1,
                     workload: 1,
                     dateFinal: 1,
                     dateInitial: 1
@@ -2031,30 +2029,11 @@ module.exports = {
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
-            data = data.map((course) => {
-                let classes = classesFromUser.filter(c => c.courseID.toString() == course._id.toString());
-                classes = classes.map(c => {
-                    const currentUser = c.users.find(u => u.userID == userId || u._id == userId);
-                    const userGrades = currentUser.grades
-                    const passed = userGrades >= course.passingScore;
-                    const hasCertificate = course.certificate && passed;
-                    return {
-                        name: c.name,
-                        dateApplicationFinal: c.dateApplicationFinal,
-                        dateApplicationInitial: c.dateApplicationInitial,
-                        passed,
-                        userGrades,
-                        hasCertificate
-                    }
-                })
-                return {
-                    ...course,
-                    classes
-                }
-            })
 
-
-            success(res, req, { data, total });
+            success(res, req, {
+                data: enrichCoursesWithClasses(data, classesFromUser, userId),
+                total
+            });
 
         } catch (error) {
             internalServer(
@@ -2064,6 +2043,33 @@ module.exports = {
                 'Erro interno no servidor',
                 'list historic courses by user',
                 '/getCourseByQrCode'
+            );
+        }
+
+    },
+
+    async removeUserClass (req, res) {
+        try {
+            const { classeId, userId } = req.params;
+            const classUpdated = await ClassModel.findOneAndUpdate(
+                { _id: classeId },
+                {
+                    $pull: {
+                        users: { _id: userId }
+                    }
+                },
+                { new: true }
+            );
+
+            success(res, req, classUpdated);
+        } catch (error) {
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'remove user from class',
+                '/removeUserClass'
             );
         }
     }
