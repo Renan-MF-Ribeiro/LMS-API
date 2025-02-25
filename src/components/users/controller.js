@@ -1301,6 +1301,8 @@ module.exports = {
                     ...user.processedUser,
                 });
 
+                await WebhooksController.dispatch('update', 'user', { ...user.processedUser, password: undefined });
+
                 await Tracking.updateMany(
                     { userLogin: user.processedUser.cpf },
                     { $set: { userLogin: user.processedUser.networkLogin } }
@@ -1325,6 +1327,8 @@ module.exports = {
                 );
 
                 await User.insertMany(newUsers);
+
+                await WebhooksController.dispatch('create', 'user', newUsers)
 
                 if (messengerConfig.sendUsersToMicrosservice) {
                     await sendAccountsToKafka(usersToSend);
