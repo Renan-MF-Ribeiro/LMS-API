@@ -148,6 +148,7 @@ const userSchema = new mongoose.Schema(
         n4: { type: String, default: null, required: false },
         n5: { type: String, default: null, required: false },
         n6: { type: String, default: null, required: false },
+        period: { type: String, default: null, required: false },
     },
     {
         ...optionsSchema,
@@ -297,6 +298,7 @@ const defaultUserMap = {
     pcd: 'PCD',
     pcdCode: 'CODIGO_PCD',
     ethnicity: 'ETNIA',
+    period: 'TURNO',
     office: 'CARGO',
     officeCode: 'CODIGO_CARGO',
     hierarchicalLevelCode: 'CODIGO_NIVEL_HIERARQUICO',
