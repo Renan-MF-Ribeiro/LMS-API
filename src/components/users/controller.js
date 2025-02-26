@@ -2035,8 +2035,8 @@ module.exports = {
     },
 
     async openIdCallback(req, res) {
-        const { strategy } = req.session;
-        const form = await getLoginFormByStrategyName(strategy);
+        const { strategyName } = req.cookies;
+        const form = await getLoginFormByStrategyName(strategyName);
         const claimValue = _.get(req.user, form.claimKey);
 
         const { idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
@@ -2052,7 +2052,7 @@ module.exports = {
 
         const token = jwt.sign({
             [form.claim]: claimValue,
-            strategyName: strategy,
+            strategyName,
             idpProfiles,
         }, process.env.PROJECT_SECRET_KEY);
 
