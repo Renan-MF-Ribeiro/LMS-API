@@ -108,7 +108,6 @@ const MenuDefault = [
                         roles: [
                             "PERFIL_Gestor_Usuario",
                         ],
-                        feature: "userPayloadMapping",
                     },
                 ],
             },
@@ -409,7 +408,6 @@ const MenuDefault = [
         roles: [
             "PERFIL_Conteudista",
         ],
-        feature: "certificateTrail",
         subMenu: [
             {
                 button: "certificatesIssued",
