@@ -96,12 +96,6 @@ async function authenticatePassport(req, res, next) {
 
 }
 
-function saveStrategyOnSession(req, res, next) {
-    const strategyName = getRequestStrategyName(req)
-    req.session.strategy = strategyName;
-    next();
-}
-
 async function strategyHandler(config) {
     const strategyCreators = {
         saml: createSamlPassportStrategy,
@@ -138,7 +132,6 @@ createStrategiesFromLoginConfigs();
 module.exports = {
     initializePassport,
     authenticatePassport,
-    saveStrategyOnSession,
     getRequestStrategyName,
     createStrategiesFromLoginConfigs,
     removeStrategies

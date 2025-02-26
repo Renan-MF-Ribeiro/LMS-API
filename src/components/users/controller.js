@@ -2056,8 +2056,6 @@ module.exports = {
             idpProfiles,
         }, process.env.PROJECT_SECRET_KEY);
 
-        req.session.strategy = null;
-
         res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
     },
 
