@@ -1,9 +1,11 @@
 const passport = require('passport');
+const session = require('express-session');
 const passportSaml = require('passport-saml');
 const OpenIDConnectStrategy = require('passport-openidconnect');
 
 const { log } = require('./logger');
 const { getLoginConfig } = require('../components/users/business');
+const { getCookieProps } = require('./cookies');
 
 passport.serializeUser((user, done) => {
     done(null, user);
@@ -54,9 +56,8 @@ async function createOpenIdConnectStrategy(config) {
             scope: ['openid', 'profile', config.claim],
 
         },
-        async (issuer, profile, accessToken, refreshToken, done) => {
+        async (issuer, profile, done) => {
 
-            profile.groups = refreshToken ? decodeJWT(refreshToken).groups || [] : [];
             profile.strategyName = strategyName;
             profile.issuer = issuer;
 
@@ -68,10 +69,17 @@ async function createOpenIdConnectStrategy(config) {
 }
 
 function getRequestStrategyName(req) {
-    return req.query?.strategy ?? req.session.strategy ?? 'saml';
+    console.log(req.query, req.cookies)
+    return req.query?.strategy ?? req.cookies.strategyName ?? 'saml';
 }
 
 function initializePassport(app) {
+    app.use(session({
+        secret: 'seuSegredoSeguro',
+        resave: false,
+        saveUninitialized: true,
+        cookie: getCookieProps()
+    }))
     app.use(passport.initialize());
     app.use(passport.session());
 }
@@ -123,19 +131,6 @@ async function createStrategiesFromLoginConfigs() {
 function removeStrategies(strategies = []) {
     log('removeStrategies strategies', strategies);
     strategies.forEach(strategy => passport.unuse(strategy));
-}
-
-function decodeJWT(token) {
-    try {
-        const [header, payload, signature] = token.split('.');
-
-        const decodedPayload = Buffer.from(payload, 'base64').toString('utf-8');
-
-        return JSON.parse(decodedPayload);
-    } catch (error) {
-        console.error('Erro ao decodificar o token JWT:', error);
-        throw new Error('Token JWT inválido.');
-    }
 }
 
 createStrategiesFromLoginConfigs();
