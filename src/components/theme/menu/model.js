@@ -16,7 +16,6 @@ const Menu = Theme.discriminator(
         roles: { type: [String] },
         subMenu: { type: [this] },
         feature: { type: String },
-        index: { type: Number },
     }, {
         ...schemaOptions,
     }))
