@@ -2859,7 +2859,7 @@ module.exports = {
 
             const data = await _files.readXLSXHeaders(file.path);
             const fields = Object.entries(defaultUserMap).map((entry) => ({
-                display: entry[1],
+                display: entry[1].label,
                 value: entry[0],
             }));
 
