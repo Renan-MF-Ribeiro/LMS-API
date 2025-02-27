@@ -18,7 +18,11 @@ module.exports = {
         const connectMaps = response.data?.user;
         const hasConnectMap = connectMaps && Object.keys(connectMaps).length > 0;
 
-        return hasConnectMap ? connectMaps : defaultUserMap;
+        return hasConnectMap
+            ? connectMaps
+            : (newFormat
+                ? defaultUserMap
+                : Object.keys(defaultUserMap).reduce((acc, key) => ({ ...acc, [key]: defaultUserMap[key].field }), {}));
     },
 
     validateDataByConnectMap(data, connectMap) {

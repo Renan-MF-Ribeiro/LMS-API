@@ -2793,27 +2793,18 @@ module.exports = {
 
     async getUserMap (req, res) {
         try {
-            const { data } = await axios.get(
-                `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
-                {
-                    headers: {
-                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
-                    },
-                    params: {
-                        newFormat: true,
-                    },
-                }
-            );
-
-            const userMap =
-                data.user && Object.keys(data.user).length > 0 ? data.user : defaultUserMap;
-
-            const fields = Object.entries(defaultUserMap).map((entry) => ({
-                display: entry[1],
-                value: entry[0],
+            const connectMap = await getConnectMap(true);
+            
+            const fields = Object.entries(connectMap).map(([key, value]) => ({
+                display: value.label,
+                value: key,
             }));
 
-            _messages.success(res, req, { map: userMap, fields });
+            _messages.success(res, req, { 
+                map: connectMap, 
+                fields,
+                exceptions: ['status', 'cpf', 'cep', 'pcd']
+            });
         } catch (error) {
             _messages.internalServer(
                 res,
