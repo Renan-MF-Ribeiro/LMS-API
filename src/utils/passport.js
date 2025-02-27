@@ -69,7 +69,6 @@ async function createOpenIdConnectStrategy(config) {
 }
 
 function getRequestStrategyName(req) {
-    console.log(req.query, req.cookies)
     return req.query?.strategy ?? req.cookies.strategyName ?? 'saml';
 }
 
