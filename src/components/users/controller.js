@@ -2803,7 +2803,7 @@ module.exports = {
             _messages.success(res, req, { 
                 map: connectMap, 
                 fields,
-                exceptions: ['status', 'cpf', 'cep', 'pcd']
+                exceptions: ['status', 'cpf', 'postalCode', 'pcd']
             });
         } catch (error) {
             _messages.internalServer(
