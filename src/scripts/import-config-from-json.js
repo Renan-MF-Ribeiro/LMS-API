@@ -7,6 +7,8 @@ const {
     CompanyConfigModel
 } = require('../components/config/model');
 
+const { runScript } = require('./utils');
+
 async function run() {
     console.log('Importing config from config.json');
 
@@ -27,4 +29,4 @@ async function run() {
     process.exit(0);
 }
 
-run();
+runScript(run);

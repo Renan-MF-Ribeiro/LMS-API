@@ -9,7 +9,6 @@ const {
     isUserManager,
     isUserManagerOrSuperAdmin,
     isUserManagerOrSuperAdminOrElegibilityManager,
-    hasElegibilityPermission,
     canListUsers,
 } = require('../../utils/middlewares');
 
@@ -71,14 +70,24 @@ module.exports = express
     .get(
         '/onboarding',
         validateTokenRoute,
-        hasElegibilityPermission,
+        canListUsers,
         (req, res, next) => {
             req.query.onboarding = true;
             return next();
         },
         _controller.returnUsers
     )
-    .put('/', validateTokenRoute, isUserManager, _controller.updateUser)
+    .get(
+        '/partners',
+        validateTokenRoute,
+        canListUsers,
+        (req, res, next) => {
+            req.query.partner = true;
+            return next();
+        },
+        _controller.returnUsers
+    )
+    .put('/', validateTokenRoute, _controller.updateUser)
     .get('/users/:userId', validateTokenRoute, _controller.findById)
     .get('/import-users-test', validateTokenRoute, _controller.importUserTest)
     .get('/export-users', validateTokenRoute, _controller.exportUsers)
@@ -132,7 +141,7 @@ module.exports = express
     .get('/details', validateTokenRoute, _controller.returnUserById)
     .get('/feedbackelegibility', validateTokenRoute, _controller.feedbackElegible)
     .post('/remove-permission', validateTokenRoute, _controller.deleteGroups)
-    .post('/add-permission', validateTokenRoute, isUserManagerOrSuperAdminOrElegibilityManager,  _controller.addGroups)
+    .post('/add-permission', validateTokenRoute, isUserManagerOrSuperAdminOrElegibilityManager, _controller.addGroups)
     .post('/remove-class-tag', validateTokenRoute, isUserManagerOrSuperAdminOrElegibilityManager, _controller.deleteClassTag)
     .post('/add-class-tag', validateTokenRoute, _controller.addClassTag)
     .post('/update-class-tag', validateTokenRoute, _controller.updateClassTag)
