@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { connect } = require('../../utils/db');
+const { FormModel } = require('../forms/model');
 
 connect();
 
@@ -21,6 +22,7 @@ const PartnerSchema = new mongoose.Schema(
                     title: { type: String, required: true },
                     initialDate: { type: Date },
                     endDate: { type: Date },
+                    form: { type: mongoose.Schema.Types.ObjectId, ref: FormModel, required: false, default: null },
                     defaultField: [
                         {
                             key: { type: String },

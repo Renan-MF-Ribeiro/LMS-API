@@ -109,6 +109,11 @@ const { fetchIdpProfilesFromRequestObject } = require('../idp-integration/busine
 const { log } = require('../../utils/logger');
 const ApiError = require('../../errors/ApiError');
 const { addSASTokenToResponse } = require('../../utils/cookies');
+const { FormModel } = require('../forms/model');
+const { getConnectMap, validateDataByConnectMap } = require('../../utils/connect');
+const { getFormErrorsByMapConfig, getDefaultForm } = require('../forms/business');
+const { getDbCurrentFeatures } = require('../../utils/features');
+
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -343,11 +348,45 @@ module.exports = {
         }
     },
 
-    async signup(req, res) {
-        const { token } = req.query;
-        const { password, ...data } = req.body;
+    async signup (req, res) {
+        const { token, formId: queryFormId } = req.query;
+        const { password, passwordConfirmation, loginField, formId: bodyFormId, ...data } = req.body;
+        const formId = queryFormId || bodyFormId || null;
 
-        const networkLogin = data.cpf;
+        if (!data.name) {
+            throw new ApiError('Nome é obrigatório', 400, { data }, { skipDbLog: true });
+        }
+
+        const form = (formId ? (await FormModel.findById(formId))?.toObject() : null) ?? await getDefaultForm();
+
+        log('using form:', form.name);
+
+        let networkLogin = data.cpf;
+
+        if (form) {
+            const connectMap = await getConnectMap(true);
+            const errors = getFormErrorsByMapConfig(connectMap, form, data);
+
+            log('errors:', errors);
+
+            if (errors.length > 0) {
+                const message = errors[0].message;
+                throw new ApiError(message, 400, { errors }, { skipDbLog: true });
+            }
+
+            networkLogin = data[form.loginField ?? 'cpf'];
+
+            log('form login field:', form.loginField ?? 'cpf');
+            log('networkLogin:', networkLogin);
+        }
+
+        if (!networkLogin) {
+            throw new ApiError('Campo de login não informado', 400, { data }, { skipDbLog: true });
+        }
+
+        if (!data.registration?.length) data.registration = networkLogin;
+
+        if (!data.admission?.length) data.admission = moment().format('DD/MM/YYYY');
 
         const today = moment(new Date());
         // Seta elegibilidades padrões
@@ -433,7 +472,7 @@ module.exports = {
             }
 
             const formatedDate = formatDateWithoutHoursBrasilian(data.birthDate);
-            console.log(formatedDate);
+
             const userData = {
                 networkLogin,
                 // email: networkLogin,
@@ -1211,140 +1250,152 @@ module.exports = {
 
     async import(req, res) {
         try {
-            const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
+        const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
 
-            var file = null;
-            const newUsers = [];
-            const existingUsers = [];
-            const usersToSend = [];
-            if (req.files.file) {
-                file = req.files.file;
-            } else {
-                file = req.files.content;
+        var file = null;
+        const newUsers = [];
+        const existingUsers = [];
+        const usersToSend = [];
+        if (req.files.file) {
+            file = req.files.file;
+        } else {
+            file = req.files.content;
+        }
+        const results = await _files.readXLSXUsers(file.path);
+
+        const elegibilityResponse = await axios.get(
+            `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+            {
+                headers: {
+                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                },
             }
-            const results = await _files.readXLSXUsers(file.path);
+        );
+        const fieldsForElegibility = elegibilityResponse.data.fields;
 
-            const elegibilityResponse = await axios.get(
-                `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
-                {
-                    headers: {
-                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
-                    },
-                }
-            );
-            const fieldsForElegibility = elegibilityResponse.data.fields;
+        const messengerConfig = await getMessengerConfig();
 
-            const messengerConfig = await getMessengerConfig();
+        const connectMap = await getConnectMap(true);
 
-            for (const result of results) {
-                const existingUser = await User.findOne({
-                    $or: [{ networkLogin: result.networkLogin }, { networkLogin: result.cpf }],
-                });
+        if (connectMap) {
+            const errors = [];
 
-                const processedUser = processUsersLoad(result, fieldsForElegibility);
-                const account = await processUserAccount(processedUser);
+            results.forEach((data) => {
+                const dataErrors = validateDataByConnectMap(data, connectMap);
 
-                processedUser.password = existingUser
-                    ? existingUser.password
-                    : processedUser.password;
-
-                if (existingUser) {
-                    const groupsAD = [
-                        ...processedUser.groupsAD,
-                        ...(existingUser.groupsAD?.filter((group) => group.startsWith('PERFIL_')) ??
-                            []),
-                    ];
-                    existingUsers.push({
-                        _id: existingUser._id,
-                        processedUser: {
-                            ...processedUser,
-                            groupsAD: [...new Set(groupsAD)],
-                            cpf: !isProduction
-                                ? hideCPFNumbers(processedUser.cpf)
-                                : processedUser.cpf,
-                        },
+                if (dataErrors.length > 0) {
+                    errors.push({
+                        item: data.networkLogin ?? data.cpf ?? data.email ?? data.name,
+                        errors: dataErrors
                     });
-                } else {
-                    usersToSend.push(account);
-                    newUsers.push({
+                }
+            });
+
+            if (errors.length > 0) {
+                throw new ApiError('Erro ao importar usuários', 400, errors, { skipDbLog: true });
+            }
+        }
+
+        console.log('results', results);
+
+        for (const result of results) {
+            const existingUser = await User.findOne({
+                $or: [{ networkLogin: result.networkLogin }, { networkLogin: result.cpf }],
+            });
+
+            const processedUser = await processUsersLoad(result, fieldsForElegibility);
+            const account = await processUserAccount(processedUser);
+
+            processedUser.password = existingUser
+                ? existingUser.password
+                : processedUser.password;
+
+            if (existingUser) {
+                const groupsAD = [
+                    ...processedUser.groupsAD,
+                    ...(existingUser.groupsAD?.filter((group) => group.startsWith('PERFIL_')) ??
+                        []),
+                ];
+                existingUsers.push({
+                    _id: existingUser._id,
+                    processedUser: {
                         ...processedUser,
-                        cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
-                    });
-                }
-            }
-
-            const automaticEligibilityConfig = await getConfiguration(
-                ConfigTypes.AutomaticEligibility.Onboard
-            );
-
-            if (automaticEligibilityConfig?.enabled) {
-                const { eligibility = [] } = automaticEligibilityConfig;
-
-                existingUsers.forEach((user) => {
-                    user.processedUser.groupsAD = [
-                        ...(user.processedUser.groupsAD ?? []),
-                        ...eligibility,
-                    ];
-                });
-
-                newUsers.forEach((user) => {
-                    user.groupsAD = [...(user.groupsAD ?? []), ...eligibility];
-                });
-            }
-
-            console.log(
-                `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
-            );
-            for (const user of existingUsers) {
-                await User.findByIdAndUpdate(user._id, {
-                    ...user.processedUser,
-                });
-
-                await Tracking.updateMany(
-                    { userLogin: user.processedUser.cpf },
-                    { $set: { userLogin: user.processedUser.networkLogin } }
-                );
-            }
-
-            if (inactivateIfNotInSpreadsheet) {
-                const data_start = new Date();
-                await User.updateMany(
-                    {
-                        ignoreLoadInactivation: { $ne: true },
-                        updatedAt: { $lt: data_start },
+                        groupsAD: [...new Set(groupsAD)],
+                        cpf: !isProduction
+                            ? hideCPFNumbers(processedUser.cpf)
+                            : processedUser.cpf,
                     },
-                    { $set: { status: 'INATIVO' } },
-                    { multi: true }
-                );
+                });
+            } else {
+                usersToSend.push(account);
+                newUsers.push({
+                    ...processedUser,
+                    cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
+                });
             }
+        }
 
-            if (newUsers.length > 0) {
-                console.log(
-                    `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
-                );
+        const automaticEligibilityConfig = await getConfiguration(
+            ConfigTypes.AutomaticEligibility.Onboard
+        );
 
-                await User.insertMany(newUsers);
+        if (automaticEligibilityConfig?.enabled) {
+            const { eligibility = [] } = automaticEligibilityConfig;
 
-                if (messengerConfig.sendUsersToMicrosservice) {
-                    await sendAccountsToKafka(usersToSend);
-                    const campaign = createWelcomeCampaign();
-                    await sendMessageToKafka(campaign, newUsers);
-                    await NewMessage.create(campaign);
-                }
-            }
+            existingUsers.forEach((user) => {
+                user.processedUser.groupsAD = [
+                    ...(user.processedUser.groupsAD ?? []),
+                    ...eligibility,
+                ];
+            });
 
-            _messages.success(res, req, 'Importado com sucesso');
-        } catch (error) {
-            console.log(error);
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'users',
-                'import'
+            newUsers.forEach((user) => {
+                user.groupsAD = [...(user.groupsAD ?? []), ...eligibility];
+            });
+        }
+
+        console.log(
+            `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
+        );
+        for (const user of existingUsers) {
+            await User.findByIdAndUpdate(user._id, {
+                ...user.processedUser,
+            });
+
+            await Tracking.updateMany(
+                { userLogin: user.processedUser.cpf },
+                { $set: { userLogin: user.processedUser.networkLogin } }
             );
         }
+
+        if (inactivateIfNotInSpreadsheet) {
+            const data_start = new Date();
+            await User.updateMany(
+                {
+                    ignoreLoadInactivation: { $ne: true },
+                    updatedAt: { $lt: data_start },
+                },
+                { $set: { status: 'INATIVO' } },
+                { multi: true }
+            );
+        }
+
+        if (newUsers.length > 0) {
+            console.log(
+                `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
+            );
+
+            await User.insertMany(newUsers);
+
+            if (messengerConfig.sendUsersToMicrosservice) {
+                await sendAccountsToKafka(usersToSend);
+                const campaign = createWelcomeCampaign();
+                await sendMessageToKafka(campaign, newUsers);
+                await NewMessage.create(campaign);
+            }
+        }
+
+        _messages.success(res, req, 'Importado com sucesso');
     },
 
     async importOnboarding(req, res) {
@@ -1919,7 +1970,9 @@ module.exports = {
 
                 const { token: SAS } = addSASTokenToResponse(res);
 
-                if (req.features?.gamification) {
+                const features = await getDbCurrentFeatures(req);
+
+                if (features?.gamefication) {
                     GamificationBusiness.createClientUser(networkLogin, groupsAD);
                 }
 
@@ -2752,24 +2805,18 @@ module.exports = {
 
     async getUserMap(req, res) {
         try {
-            const { data } = await axios.get(
-                `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
-                {
-                    headers: {
-                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
-                    },
-                }
-            );
-
-            const userMap =
-                data.user && Object.keys(data.user).length > 0 ? data.user : defaultUserMap;
-
-            const fields = Object.entries(defaultUserMap).map((entry) => ({
-                display: entry[1],
-                value: entry[0],
+            const connectMap = await getConnectMap(true);
+            
+            const fields = Object.entries(connectMap).map(([key, value]) => ({
+                display: value.label,
+                value: key,
             }));
 
-            _messages.success(res, req, { map: userMap, fields });
+            _messages.success(res, req, { 
+                map: connectMap, 
+                fields,
+                exceptions: ['status', 'cpf', 'postalCode', 'pcd']
+            });
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -2791,6 +2838,7 @@ module.exports = {
                 {
                     user: { ...body },
                     elegibility: body.elegibility,
+                    newFormat: true,
                 },
                 {
                     headers: {
@@ -2823,7 +2871,7 @@ module.exports = {
 
             const data = await _files.readXLSXHeaders(file.path);
             const fields = Object.entries(defaultUserMap).map((entry) => ({
-                display: entry[1],
+                display: entry[1].label,
                 value: entry[0],
             }));
 
