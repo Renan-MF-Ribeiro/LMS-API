@@ -4,7 +4,7 @@ const axios = require('axios')
 const crypto = require('crypto')
 
 module.exports = {
-    async dispatch(action, target, data) {
+    async dispatch(action, target, load = false, data) {
         try {
             const webhook = await Webhooks.findOne({ target: target, action: action }).lean()
 
@@ -12,7 +12,8 @@ module.exports = {
                 data,
                 label: webhook.label,
                 target: webhook.target,
-                action: webhook.action
+                action: webhook.action,
+                load
             }
             if (webhook && webhook.status) {
                 const secret = process.env.WEBHOOK_SECRET_KEY;

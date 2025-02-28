@@ -1328,7 +1328,7 @@ module.exports = {
 
                 await User.insertMany(newUsers);
 
-                await WebhooksController.dispatch('create', 'user', newUsers)
+                await WebhooksController.dispatch('create', 'user', true, newUsers)
 
                 if (messengerConfig.sendUsersToMicrosservice) {
                     await sendAccountsToKafka(usersToSend);
