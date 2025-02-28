@@ -292,7 +292,7 @@ module.exports = {
                 { networkLogin: processedUser.networkLogin },
                 { ...userProjection }
             );
-            await WebhooksController.dispatch('create', 'user', { ...processedUser, password: undefined });
+            await WebhooksController.dispatch('create', 'users', false, { ...processedUser, password: undefined });
 
             return _messages.success(res, req, created);
         } catch (error) {
@@ -451,7 +451,7 @@ module.exports = {
 
             const newUser = await User.create(userData);
 
-            await WebhooksController.dispatch('create', 'user', userData);
+            await WebhooksController.dispatch('create', 'users', userData);
 
             if (token) {
                 const DATA_INICIO = today.startOf('day');
@@ -1301,7 +1301,7 @@ module.exports = {
                     ...user.processedUser,
                 });
 
-                await WebhooksController.dispatch('update', 'user', { ...user.processedUser, password: undefined });
+                await WebhooksController.dispatch('update', 'users', { ...user.processedUser, password: undefined });
 
                 await Tracking.updateMany(
                     { userLogin: user.processedUser.cpf },
@@ -1328,7 +1328,7 @@ module.exports = {
 
                 await User.insertMany(newUsers);
 
-                await WebhooksController.dispatch('create', 'user', true, newUsers)
+                await WebhooksController.dispatch('create', 'users', true, newUsers)
 
                 if (messengerConfig.sendUsersToMicrosservice) {
                     await sendAccountsToKafka(usersToSend);
@@ -1621,7 +1621,7 @@ module.exports = {
                 projection: { ...userProjection },
             });
 
-            await WebhooksController.dispatch('update', 'user', { ...userUpdated, password: undefined });
+            await WebhooksController.dispatch('update', 'users', { ...userUpdated, password: undefined });
 
             if (userUpdated?.status) {
                 await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status);
@@ -1775,12 +1775,12 @@ module.exports = {
                     await User.findByIdAndUpdate(user._id, {
                         ...objUser,
                     });
-                    await WebhooksController.dispatch('update', 'user', { ...objUser, password: undefined });
+                    await WebhooksController.dispatch('update', 'users', { ...objUser, password: undefined });
                 } else {
                     await User.create({
                         ...objUser,
                     });
-                    await WebhooksController.dispatch('create', 'user', { ...objUser, password: undefined });
+                    await WebhooksController.dispatch('create', 'users', { ...objUser, password: undefined });
                 }
             }
 

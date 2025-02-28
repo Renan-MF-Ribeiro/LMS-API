@@ -5,38 +5,30 @@ const crypto = require('crypto')
 
 module.exports = {
     async dispatch(action, target, load = false, data) {
-        try {
-            const webhook = await Webhooks.findOne({ target: target, action: action }).lean()
+        const webhook = await Webhooks.findOne({ target: target, action: action }).lean()
+        console.log(target, action)
+        const body = {
+            data,
+            label: webhook.label,
+            target: webhook.target,
+            action: load ? 'load' : webhook.action
+        }
+        if (webhook && webhook.status) {
+            const secret = process.env.WEBHOOK_SECRET_KEY;
+            const payload = JSON.stringify(body);
 
-            const body = {
-                data,
-                label: webhook.label,
-                target: webhook.target,
-                action: load ? 'load' : webhook.action
-            }
-            if (webhook && webhook.status) {
-                const secret = process.env.WEBHOOK_SECRET_KEY;
-                const payload = JSON.stringify(body);
+            const hmac = crypto.createHmac('sha256', secret).update(payload).digest('hex');
 
-                const hmac = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+            const url = webhook.endpoint;
+            await axios.post(url, body, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Webhook-Signature': hmac,
+                    'clientId': process.env.CLIENT_ID
+                }
+            });
 
-                const url = webhook.endpoint;
-
-                await axios.post(url, body, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Webhook-Signature': hmac,
-                        'clientId': process.env.CLIENT_ID
-                    }
-                });
-
-                return "Webhook dispatched"
-            } else {
-                throw new Error('Webhook não encontrado ou inativo')
-            }
-        } catch (error) {
-            console.log(error)
-            throw new Error(error.message)
+            return 
         }
     },
     async update(req, res) {
