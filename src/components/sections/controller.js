@@ -24,7 +24,8 @@ const {
     populateSectionTrails,
     getSectionTrailId,
     isSectionTrailInfo,
-    isValidSectionTrailInfo
+    isValidSectionTrailInfo,
+    getContentEligibilityParameterByUserId
 } = require('./business');
 
 const { getStudentCourses } = require('../home/business');
@@ -268,6 +269,11 @@ module.exports = {
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
             const classGroups = await getGroupCodesByToken(req, tags);
+            const { user: userT, tags: tagT, classGroups: classGroupT } = await getContentEligibilityParameterByUserId(user._id);
+            console.log('tagT', tagT)
+            console.log('tag', tags)
+            console.log('\n\n')
+            console.log('classGroupT', classGroupT);
             const newArray = [];
             let sectionArray;
 
@@ -452,7 +458,7 @@ module.exports = {
         }
     },
 
-    async getCollaborationSectionDetail(req, res) {
+    async getCollaborationSectionDetail (req, res) {
         try {
             const sectionId = req.params.id;
 
@@ -500,11 +506,11 @@ module.exports = {
             }
 
             const arrSections = await elegiblesContents(filteredTrails);
-            
+
             const arrKeepLearningSections = await keepLearningSections(
                 filteredTrails
             );
-            
+
             const arrConcludedSections = await concludedSections(
                 filteredTrails
             );

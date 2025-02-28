@@ -19,6 +19,7 @@ const { listTrainingSectionsStatus } = require('../assessment/business');
 const { Trail } = require('../trails/model');
 const { cloneDeep } = require('lodash');
 const { ObjectId } = require('mongoose').Types
+const { User } = require('../users/model');
 
 const isSectionTrailInfo = (trail) => (trail.type === 'trail' && ObjectId.isValid(trail._id)) || ObjectId.isValid(trail);
 
@@ -26,7 +27,7 @@ const isValidSectionTrailInfo = (trail) => !ObjectId.isValid(String(trail));
 
 const getSectionTrailId = trail => ObjectId.isValid(trail) ? trail : (trail._id ?? null);
 
-async function populateSectionTrails(sections, options) {
+async function populateSectionTrails (sections, options) {
     const newSections = cloneDeep(sections);
 
     for await (const section of newSections) {
@@ -55,7 +56,7 @@ async function populateSectionTrails(sections, options) {
     return newSections;
 }
 
-async function setAssessmentHistoricOnSections(userId, sections) {
+async function setAssessmentHistoricOnSections (userId, sections) {
     const userWithTags = await UsersWithProcessedTags.findById(userId);
     const dataAssessmentHistoric = await listTrainingSectionsStatus(userId, userWithTags.userTags);
 
@@ -1031,6 +1032,51 @@ module.exports = {
             certificateDue: certificateDueObj,
             completedTrailsType,
         };
+    },
+
+    async getContentEligibilityParameterByUserId (userId) {
+        const user = await User.findOne({ _id: userId }).lean();
+        const groups = user.groupsAD;
+        const namesGroups = groups.filter(group => group.includes('ELEGE'));
+        const tagsTemp = await Promise.all(namesGroups.map(async name => {
+            const group = await Group.findOne({ name });
+            return group ? group.tags : [];
+        }));
+        const tags = tagsTemp.flat()
+
+        user.classGroups.forEach(classGroup => {
+            tags.push({
+                display: classGroup.groupCode,
+                value: classGroup.groupCode,
+            });
+        });
+
+        user.tags.forEach(tag => {
+            const diff = calculateDiffDate(
+                today,
+                formatDateWithoutHours(tag.createdAt),
+                'days'
+            );
+            if (diff <= 30) {
+                delete tag.createdAt;
+                tags.push(tag);
+            }
+        });
+
+        const classGroups = [];
+        user.classGroups.forEach(classGroup => {
+            tags.forEach(tag => {
+                if (classGroup.groupCode === tag.value) {
+                    classGroups.push(classGroup);
+                }
+            });
+        });
+
+        return {
+            user,
+            tags,
+            classGroups
+        }
     },
 
     canRegisterOrCancel,
