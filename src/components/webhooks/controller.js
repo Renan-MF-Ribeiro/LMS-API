@@ -4,7 +4,7 @@ const axios = require('axios')
 const crypto = require('crypto')
 
 module.exports = {
-    async dispatch(action, target, load = false, data) {
+    async dispatch(action, target, data) {
         try {
             const webhook = await Webhooks.findOne({ target: target, action: action }).lean()
 
