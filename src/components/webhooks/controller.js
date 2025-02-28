@@ -12,8 +12,7 @@ module.exports = {
                 data,
                 label: webhook.label,
                 target: webhook.target,
-                action: webhook.action,
-                load
+                action: load ? 'load' : webhook.action
             }
             if (webhook && webhook.status) {
                 const secret = process.env.WEBHOOK_SECRET_KEY;
