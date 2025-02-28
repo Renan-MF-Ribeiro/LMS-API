@@ -4,10 +4,10 @@ const axios = require('axios')
 const crypto = require('crypto')
 
 module.exports = {
-    async dispatch(action, target, data) {
+    async dispatch(action, target, load = false, data) {
         try {
             const webhook = await Webhooks.findOne({ target: target, action: action }).lean()
-            
+
             const body = {
                 data,
                 label: webhook.label,
@@ -19,14 +19,25 @@ module.exports = {
                 const payload = JSON.stringify(body);
 
                 const hmac = crypto.createHmac('sha256', secret).update(payload).digest('hex');
-
-                await axios.post(webhook.endpoint, body, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Webhook-Signature': hmac,
-                        'clientId': process.env.CLIENT_ID
-                    }
-                })
+                const url = load ? `${webhook.endpoint}/upsert` : webhook.endpoint
+                
+                if (load) {
+                    await axios.patch(url, body, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Webhook-Signature': hmac,
+                            'clientId': process.env.CLIENT_ID
+                        }
+                    });
+                } else {
+                    await axios.post(url, body, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Webhook-Signature': hmac,
+                            'clientId': process.env.CLIENT_ID
+                        }
+                    });
+                }
                 return "Webhook dispatched"
             } else {
                 throw new Error('Webhook não encontrado ou inativo')

@@ -1301,7 +1301,7 @@ module.exports = {
                     ...user.processedUser,
                 });
 
-                await WebhooksController.dispatch('update', 'user', { ...user.processedUser, password: undefined });
+                await WebhooksController.dispatch('update', 'user', true, { ...user.processedUser, password: undefined });
 
                 await Tracking.updateMany(
                     { userLogin: user.processedUser.cpf },
