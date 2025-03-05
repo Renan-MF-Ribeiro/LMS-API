@@ -685,6 +685,14 @@ const MenuDefault = [
                         feature: "alura",
                         index: 1
                     },
+                    {
+                        button: 'webhook',
+                        roles: [
+                            "PERFIL_Super_Admin",
+                        ],
+                        feature: "webhook",
+                        index: 2
+                    }
                 ],
                 index: 1
             },
