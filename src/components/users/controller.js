@@ -109,6 +109,11 @@ const {
 const { log } = require('../../utils/logger');
 const ApiError = require('../../errors/ApiError');
 const { addSASTokenToResponse } = require('../../utils/cookies');
+const { FormModel } = require('../forms/model');
+const { getConnectMap } = require('../../utils/connect');
+const { getFormErrorsByMapConfig, getDefaultForm } = require('../forms/business');
+const { getDbCurrentFeatures } = require('../../utils/features');
+
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -343,11 +348,46 @@ module.exports = {
         }
     },
 
-    async signup (req, res) {
-        const { token } = req.query;
-        const { password, ...data } = req.body;
 
-        const networkLogin = data.cpf;
+    async signup (req, res) {
+        const { token, formId: queryFormId } = req.query;
+        const { password, passwordConfirmation, loginField, formId: bodyFormId, ...data } = req.body;
+        const formId = queryFormId || bodyFormId || null;
+
+        if (!data.name) {
+            throw new ApiError('Nome é obrigatório', 400, { data }, { skipDbLog: true });
+        }
+
+        const form = (formId ? (await FormModel.findById(formId))?.toObject() : null) ?? await getDefaultForm();
+
+        log('using form:', form.name);
+
+        let networkLogin = data.cpf;
+
+        if (form) {
+            const connectMap = await getConnectMap(true);
+            const errors = getFormErrorsByMapConfig(connectMap, form, data);
+
+            log('errors:', errors);
+
+            if (errors.length > 0) {
+                const message = errors[0].message;
+                throw new ApiError(message, 400, { errors }, { skipDbLog: true });
+            }
+
+            networkLogin = data[form.loginField ?? 'cpf'];
+
+            log('form login field:', form.loginField ?? 'cpf');
+            log('networkLogin:', networkLogin);
+        }
+
+        if (!networkLogin) {
+            throw new ApiError('Campo de login não informado', 400, { data }, { skipDbLog: true });
+        }
+
+        if (!data.registration?.length) data.registration = networkLogin;
+
+        if (!data.admission?.length) data.admission = moment().format('DD/MM/YYYY');
 
         const today = moment(new Date());
         // Seta elegibilidades padrões
@@ -433,7 +473,7 @@ module.exports = {
             }
 
             const formatedDate = formatDateWithoutHoursBrasilian(data.birthDate);
-            console.log(formatedDate);
+
             const userData = {
                 networkLogin,
                 // email: networkLogin,
@@ -1917,7 +1957,9 @@ module.exports = {
 
                 const { token: SAS } = addSASTokenToResponse(res);
 
-                if (req.features?.gamification) {
+                const features = await getDbCurrentFeatures(req);
+
+                if (features?.gamefication) {
                     GamificationBusiness.createClientUser(networkLogin, groupsAD);
                 }
 
@@ -2745,6 +2787,9 @@ module.exports = {
                     headers: {
                         'connect-client-key': process.env.CONNECT_CLIENT_KEY,
                     },
+                    params: {
+                        newFormat: true,
+                    },
                 }
             );
 
@@ -2778,6 +2823,7 @@ module.exports = {
                 {
                     user: { ...body },
                     elegibility: body.elegibility,
+                    newFormat: true,
                 },
                 {
                     headers: {

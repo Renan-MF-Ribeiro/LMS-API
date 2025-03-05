@@ -15,7 +15,6 @@ const {
     validateTokenRoute,
     isAssessmentActive,
     isShowcaseActive,
-    setCurrentFeatures,
     setSegmentation,
     isAdmin
 } = require('./utils/middlewares');
@@ -64,6 +63,7 @@ const partnerRoutes = require('./components/partners/routes');
 const trainingRouter = require('./components/training/routes');
 const feedRoutes = require('./components/feed/routes');
 const shopRouter = require('./components/shop/routes');
+const formsRouter = require('./components/forms/routes');
 const idpIntegrationRouter = require('./components/idp-integration/routes');
 const configRouter = require('./components/config/routes');
 const avatarRoutes = require('./components/theme/avatar/routes');
@@ -142,8 +142,6 @@ initializePassport(app);
 
 app.use(socialApiMiddleware)
 
-app.use(setCurrentFeatures);
-
 app.use(setSegmentation)
 
 app.use('/items', validateTokenRoute, itemsRoutes)
@@ -184,6 +182,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/feed', feedRoutes)
     .use('/config', configRouter)
     .use('/shop', shopRouter)
+    .use('/forms', formsRouter)
     .use('/idp-integration', idpIntegrationRouter)
     .use('/avatar', avatarRoutes)
     .use(
@@ -197,7 +196,5 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/webhooks', validateTokenRoute, isAdmin, webhooksRoutes);
 
 app.use(errorHandler);
-
-global.globalApp = app; // TODO: É a melhor maneira?
 
 module.exports = app;
