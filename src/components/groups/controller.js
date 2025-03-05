@@ -551,8 +551,18 @@ module.exports = {
                 { _id: { $in: body.groups.map((doc) => doc._id) } },
                 { $push: { tags: { display: tag, value: tag } } }
             );
-
-            _messages.success(res, req, { remove, update });
+            _messages.success(
+                res,
+                req,
+                { remove, update },
+                'Atualização de grupo',
+                'groups',
+                'updateGroupsByTag',
+                body,
+                [],
+                true,
+                'UPDATE'
+            );
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -574,8 +584,20 @@ module.exports = {
                 { 'tags.display': tag },
                 { $pull: { tags: { display: tag } } }
             );
+            console.log(removeGroup)
 
-            _messages.success(res, req, { removeGroup });
+            _messages.success(
+                res,
+                req,
+                { removeGroup },
+                'Remoção de grupo',
+                'groups',
+                'removeGroupsByTag',
+                [],
+                [],
+                true,
+                'REMOVE'
+            );
         } catch (error) {
             console.log(error);
             _messages.internalServer(
