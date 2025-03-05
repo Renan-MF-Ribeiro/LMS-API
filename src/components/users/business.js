@@ -21,11 +21,10 @@ const { Group, ClassGroup } = require('../groups/model');
 const { CLIENT_ID } = process.env;
 const kafka = require('../../utils/kafka');
 const { Trail } = require('../trails/model');
-const config = require('../../../config.json');
 const { Tracking } = require('../tracking/model');
 const { ConfigLogin } = require('../theme/login-config/model');
 const ApiError = require('../../errors/ApiError');
-const emailTemplate = config.messenger.emailTemplate;
+const { getMessengerConfig } = require('../config/business');
 require('dotenv').config();
 
 module.exports = {
@@ -441,8 +440,13 @@ module.exports = {
         data.birthDate = data.birthDate ? moment(data.birthDate, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
         data.admission = data.admission ? moment(data.admission, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
         data.createDate = data.createDate ? moment(data.createDate, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
+        data.terminationDate = data.terminationDate ? moment(data.terminationDate, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
+        data.vacationStartDate = data.vacationStartDate ? moment(data.vacationStartDate, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
+        data.vacationEndDate  = data.vacationEndDate ? moment(data.vacationEndDate, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
         data.enabled = true;
         data.onboarding = onboarding;
+
+        data.pcd = ['sim', 's', '1', 'true'].includes(String(data.pcd).toLowerCase()) ? 'S' : 'N';
 
         const groupsAD =
             onboarding === true
@@ -487,10 +491,6 @@ module.exports = {
 
         const roles = data.roles ? data.roles.split(',').map((item) => item.trim()) : [];
 
-        if (roles.includes('Admin')) {
-            groupsAD.push('PERFIL_Admin');
-        }
-
         if (roles.includes('Analista')) {
             groupsAD.push('PERFIL_Analista');
         }
@@ -527,6 +527,8 @@ module.exports = {
         );
         const fieldsForElegibility = elegibilityResponse.data.fields;
 
+        const messengerConfig = await getMessengerConfig();
+
         for (const result of results) {
             if (onboarding) {
                 const processedUser = await module.exports.processUsersLoad(
@@ -544,13 +546,13 @@ module.exports = {
             }
         }
 
-        if (config.messenger.sendUsersToMicrosservice && usersToSend.length > 0) {
+        if (messengerConfig.sendUsersToMicrosservice && usersToSend.length > 0) {
             const filterUsersToSend = usersToSend.filter((u) => u.status === 'ATIVO');
             for (let i = 0; i < filterUsersToSend.length; i += 500) {
                 await sendAccountsToKafka(filterUsersToSend.slice(i, i + 500));
             }
 
-            if (config.messenger.sendWelcomeCampaign) {
+            if (messengerConfig.sendWelcomeCampaign) {
                 const campaign = createWelcomeCampaign();
                 for (let i = 0; i < newUsers.length; i += 500) {
                     await sendMessageToKafka(campaign, newUsers.slice(i, i + 500));
@@ -723,7 +725,10 @@ module.exports = {
         const communication = ['notification'];
         const mode = 'automatic';
         const category = 'notify';
-        return { title, text, communication, category, mode, ...emailTemplate };
+
+        const messengerConfig = await getMessengerConfig();
+
+        return { title, text, communication, category, mode, ...messengerConfig.emailTemplate };
     },
 
     async createClassGroup (user, groupCode, DATA_INICIO, DATA_FIM) {

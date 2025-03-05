@@ -23,9 +23,6 @@ const ssoFormSchema = new Schema({
     claimKey: { type: String, },
     enabled: { type: Number, default: 0 },
     forceAuth: { type: Boolean, default: false },
-    buttonLabel: { type: String, default: 'Entrar com SSO', required: false },
-    buttonBackground: { type: String, default: null, required: false },
-    buttonTextColor: { type: String, default: null, required: false },
     strategyName: { type: String, default: 'saml', required: false },
 });
 

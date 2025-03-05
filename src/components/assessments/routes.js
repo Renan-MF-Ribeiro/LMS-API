@@ -8,7 +8,6 @@ const _controllerAlternative = require('./alternatives/controller')
 const {
     isStudent,
     isAccountant,
-    isAdmin
 } = require('../../utils/middlewares')
 
 const formidable = require('express-formidable')
@@ -39,17 +38,17 @@ router
     // EVALUATION
     .post('/', isAccountant, _controller.createEvaluation)
     .post('/import', isAccountant, formidable(), _controller.importQuestions)
+    .put('/', isAccountant, _controller.updateEvaluation)
+    .get('/actives', isAccountant, _controller.getActivesEvaluations)
+    .get('/', isAccountant, _controller.getAllEvaluations)
+    .delete('/:id', isAccountant, _controller.deleteEvaluation)
     .post('/question-response', isStudent, _controller.questionResponse)
     .post('/countdown-evaluation', isStudent, _controller.countdownEvaluation)
     .post('/finalize-evaluation', isStudent, _controller.finalizeEvaluation)
-    .put('/', isAccountant, _controller.updateEvaluation)
     .get('/evaluation-details/:id', _controller.returnEvaluationWithDetails)
     .get('/next-question/:id', isStudent, _controller.nextQuestion)
     .get('/evaluation/:id', isStudent, _controller.returnEvaluation)
-    .get('/actives', isAccountant, _controller.getActivesEvaluations)
-    .get('/', isAccountant, _controller.getAllEvaluations)
-    .get('/:id', isAdmin, _controller.getById)
-    .delete('/:id', isAccountant, _controller.deleteEvaluation)
+    .get('/:id', isAccountant, _controller.getById)
 
     .get('/allQuestions/:idItem/:id', isStudent, _controller.getAllQuestions)
     .get('/questionById/:id', isStudent, _controller.getQuestionById)

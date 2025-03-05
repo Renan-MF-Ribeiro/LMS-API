@@ -2,12 +2,11 @@ const express = require('express')
 const router = express.Router()
 const _controller = require('./controller')
 const {
-    isAdmin,
+    isElegibilityManager,
 } = require('../../utils/middlewares')
 router
-    .post('/create', isAdmin, _controller.createMessages)
-    .get('/', isAdmin, _controller.getMessages)
-    .get('/:id', isAdmin, _controller.getMessageById)
-    .post('/webPushMessage', _controller.webPushMessage)
+    .post('/create', isElegibilityManager, _controller.createMessages)
+    .get('/', isElegibilityManager, _controller.getMessages)
+    .get('/:id', isElegibilityManager, _controller.getMessageById)
 
 module.exports = router

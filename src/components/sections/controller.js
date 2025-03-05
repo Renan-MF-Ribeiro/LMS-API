@@ -452,9 +452,99 @@ module.exports = {
         }
     },
 
+    async getCollaborationSectionDetail(req, res) {
+        try {
+            const sectionId = req.params.id;
+
+            const user = await getUserByToken(req);
+
+            const searchObj = {
+                collaborative: true,
+                $or: [{ moderation: 'approved' }, { moderation: 'denounced' }],
+                enabled: true,
+            };
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'owner', searchObj)
+            }
+
+            const trails = await populateTrails(
+                true,
+                searchObj,
+                { createdAt: -1 },
+            );
+
+            const filteredTrails = trails.filter(
+                (trail) => trail.complaints.length <= 5
+            );
+
+            const allTrackingUser = await Tracking.find({
+                userLogin: { $eq: user.networkLogin },
+                $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } },
+                ],
+            });
+
+            for (let trail of filteredTrails) {
+                const processedTrail = processTrailTracking(
+                    trail,
+                    allTrackingUser
+                );
+
+                if (trail.expirationType) {
+                    trail = processExpirationDate(trail, user);
+                }
+
+                trail = processedTrail.trail;
+            }
+
+            const arrSections = await elegiblesContents(filteredTrails);
+            
+            const arrKeepLearningSections = await keepLearningSections(
+                filteredTrails
+            );
+            
+            const arrConcludedSections = await concludedSections(
+                filteredTrails
+            );
+
+            let resultSections = arrSections
+                .concat(arrKeepLearningSections)
+                .concat(arrConcludedSections)
+                .filter((val) => {
+                    return val != null;
+                })
+                .sort((a, b) => a.position < b.position ? -1 : 1);
+
+            const responseSection = resultSections.find(
+                (e) => String(e._id) === String(sectionId)
+            );
+
+            _messages.success(res, req, responseSection);
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'trails',
+                'getColaborativo'
+            );
+        }
+    },
+
     async getSectionDetail (req, res) {
         const sectionId = req.params.id;
         const channelId = req.query?.channel ?? null;
+
+        if (channelId) {
+            const channel = await Channel.findOne({ _id: new ObjectId(channelId) });
+
+            if (channel?.type === 'collaboration') {
+                return module.exports.getCollaborationSectionDetail(req, res);
+            }
+        }
 
         const user = await getUserByToken(req);
         const tags = await getTagsElegiblesByToken(req);
