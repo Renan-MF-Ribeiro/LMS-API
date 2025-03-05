@@ -611,13 +611,12 @@ module.exports = {
 
                 trail.items = items
                 updateProgressAluraItem(OldItems)
-                const newData = await Trail.updateOne(
+                await Trail.updateOne(
                     { _id: { $eq: trail._id } },
                     trail,
                     { new: true }
                 );
-                // const newData = await Trail.find({ _id: { $eq: trail._id } });
-
+                
                 _messages.success(
                     res,
                     req,
@@ -625,7 +624,7 @@ module.exports = {
                     'Atualização de dados',
                     'trails',
                     'multiUploadCreate',
-                    newData,
+                    trail,
                     [],
                     true,
                     'UPDATE'
