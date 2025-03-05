@@ -8,6 +8,11 @@ const schemaOptions = {
     collation: { locale: 'en_US', strength: 1 },
 }
 
+const authOptions = {
+    key: { type: String },
+    type: { type: String, enum: ['api_key', 'bearer'] },
+}
+
 
 const webhooksSchema = new mongoose.Schema({
     status: { type: Boolean, default: true, },
@@ -15,6 +20,7 @@ const webhooksSchema = new mongoose.Schema({
     endpoint: { type: String },
     target: { type: String },
     action: { type: String },
+    auth: { type: authOptions },
 }, {
     ...schemaOptions,
 })

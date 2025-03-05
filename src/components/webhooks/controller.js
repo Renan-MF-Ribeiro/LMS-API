@@ -20,15 +20,27 @@ module.exports = {
             const hmac = crypto.createHmac('sha256', secret).update(payload).digest('hex');
 
             const url = webhook.endpoint;
-            await axios.post(url, body, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Webhook-Signature': hmac,
-                    'clientId': process.env.CLIENT_ID
-                }
-            });
+            if(webhook.auth.type === 'api_key') {
+                await axios.post(url, body, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Webhook-Signature': hmac,
+                        'x-api-key': webhook.auth.key,
+                        'clientId': process.env.CLIENT_ID
+                    }
+                });
+            } 
 
-            return 
+            if(webhook.auth.type === 'bearer') {
+                await axios.post(url, body, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Webhook-Signature': hmac,
+                        'Authorization': `Bearer ${webhook.auth.key}`,
+                        'clientId': process.env.CLIENT_ID
+                    }
+                });
+            }
         }
     },
     async update(req, res) {
