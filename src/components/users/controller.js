@@ -471,6 +471,8 @@ module.exports = {
                 // Gera array de objetos referentes a "_id" de classGroups
                 classGroupsIDs = selectedKey.classGroupResult?.classGroups?.map((x) => x);
                 defaultFields.partner = `${partner.title} - ${selectedKey.title}`;
+            } else {
+                groupsAD.push('ELEGE_CURSO')
             }
 
             const formatedDate = formatDateWithoutHoursBrasilian(data.birthDate);
