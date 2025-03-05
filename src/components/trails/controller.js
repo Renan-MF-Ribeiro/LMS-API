@@ -629,7 +629,7 @@ module.exports = {
                     'Atualização de dados',
                     'trails',
                     'multiUploadCreate',
-                    newData,
+                    trail,
                     [],
                     true,
                     'UPDATE'
