@@ -215,8 +215,19 @@ module.exports = {
             const findChannel = await Channel.find({ _id: channelId });
 
             if (findChannel.length) {
-                await Channel.findOneAndUpdate({ _id: channelId }, body);
-                _messages.success(res, req, 'Canal Atualizado!');
+                const channel = await Channel.findOneAndUpdate({ _id: channelId }, body, { new: true });
+                _messages.success(
+                    res,
+                    req,
+                    channel,
+                    'Atualização de dados',
+                    'channels',
+                    'update',
+                    channel,
+                    findChannel[0],
+                    true,
+                    'UPDATE'
+                );
             } else {
                 return _messages.badRequest(
                     res,
@@ -243,8 +254,19 @@ module.exports = {
         try {
             const findChannel = await Channel.find({ _id: req.params.id });
             if (findChannel.length) {
-                await Channel.findOneAndDelete({ _id: req.params.id });
-                _messages.success(res, req, 'Canal Deletado!');
+                const channel = await Channel.findOneAndDelete({ _id: req.params.id });
+                _messages.success(
+                    res,
+                    req,
+                    channel,
+                    'Canal deletado com sucesso',
+                    'channels',
+                    'delete',
+                    [],
+                    findChannel[0],
+                    true,
+                    'DELETE'
+                );
             } else {
                 return _messages.badRequest(
                     res,
