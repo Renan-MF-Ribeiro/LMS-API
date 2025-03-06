@@ -236,6 +236,7 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             try {
                 const userLastLogin = await LastLogin.find({ user: userID });
+                if (userLastLogin?.length === 0) resolve(0)
                 const userFirstLogin = userLastLogin[0].createdAt;
                 const today = new Date();
                 const firstLogin = new Date(userFirstLogin);
