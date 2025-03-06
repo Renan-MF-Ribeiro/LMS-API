@@ -328,8 +328,6 @@ module.exports = {
 
                 let trails = await populateTrails(true, query);
 
-                trails = trails.filter((trail) => checkIfTheTrackIsValid(trail));
-
                 const allTrackingUser = await Tracking.find({
                     userLogin: { $eq: user.networkLogin },
                     $or: [
@@ -358,6 +356,8 @@ module.exports = {
                         }
                     }
                 }
+
+                trails = trails.filter(checkIfTheTrackIsValid);
 
                 let arrSections = await elegiblesContents(trails);
                 const arrMandatorySections = await mandatorySections(trails, tags);
@@ -621,7 +621,6 @@ module.exports = {
 
         const trailsDb = (await populateTrails(true, query))
             ?.filter(trail => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative)
-            ?.filter((trail) => checkIfTheTrackIsValid(trail))
 
         const allTrackingUser = await Tracking.find({
             userLogin: { $eq: user.networkLogin },
@@ -667,7 +666,8 @@ module.exports = {
 
                 return sectionTrail;
             }) ?? [])
-                .filter(trail => isValidSectionTrailInfo(trail));
+                .filter(trail => isValidSectionTrailInfo(trail))
+                .filter(checkIfTheTrackIsValid);
 
         let responseSection;
 
