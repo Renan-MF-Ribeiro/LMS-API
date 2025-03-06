@@ -62,6 +62,7 @@ const userSchema = new mongoose.Schema(
             transform: (status) => String(status).toUpperCase(),
         },
         cpf: { type: String, trim: true },
+        cnpj: { type: String, trim: true },
         birthDate: { type: String, trim: true },
         genderIdentity: { type: String, trim: true },
         gender: { type: String, trim: true },
