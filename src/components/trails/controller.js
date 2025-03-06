@@ -22,6 +22,7 @@ const {
     formatDateWithoutHours,
 } = require('../../utils/functions');
 const { CourseModel } = require('../courses/model')
+const { dispatch } = require('../webhooks/controller');
 
 const { Log } = require('../logs/model');
 const mongoose = require('mongoose');
@@ -145,6 +146,10 @@ module.exports = {
                 return val != null;
             });
 
+            resultSections = resultSections.filter(section => {
+                return section.trails.some(trail => !trail.type || trail.type === 'trail');
+            });
+
             if (resultSections.length > 0) {
                 resultSections.sort((a, b) =>
                     a.position < b.position ? -1 : 1
@@ -240,6 +245,7 @@ module.exports = {
             }
 
             const trail = await Trail.create(payload)
+            await dispatch('create', 'trail', payload);
 
             _messages.success(
                 res,
@@ -592,6 +598,7 @@ module.exports = {
                 }
 
                 const trail = await Trail.create(payload);
+                await dispatch('create', 'trail', payload);
 
                 for (const item of OldItems) {
                     if (item.itemID.kind === 'AluraItem') {
@@ -1046,6 +1053,8 @@ module.exports = {
                     { _id: { $eq: payload._id } },
                     payload,
                 )
+                await dispatch('update', 'trail', payload);
+
                 const newData = await Trail.findOne({
                     _id: { $eq: payload._id },
                 })
@@ -1106,6 +1115,7 @@ module.exports = {
                             items,
                         });
                         newData = await Trail.find({ _id: { $eq: idTrail } });
+                        await dispatch('update', 'trail',  newData);
                     }
                 }
 
@@ -1157,6 +1167,7 @@ module.exports = {
                 separators,
             });
             newData = await Trail.find({ _id: { $eq: idTrail } });
+            await dispatch('update', 'trail',  newData);
 
             _messages.success(
                 res,
@@ -1200,6 +1211,7 @@ module.exports = {
                 separators: update,
             });
             newData = await Trail.find({ _id: { $eq: idTrail } });
+            await dispatch('update', 'trail',  newData);
 
             _messages.success(
                 res,
@@ -1242,6 +1254,7 @@ module.exports = {
                 separators: update,
             });
             newData = await Trail.find({ _id: { $eq: idTrail } });
+            await dispatch('update', 'trail',  newData);
 
             _messages.success(
                 res,
@@ -1543,6 +1556,7 @@ module.exports = {
                 items: arrItens,
             });
             const newData = await Trail.find({ _id: { $eq: idTrail } });
+            await dispatch('update', 'trail',  newData);
 
             _messages.success(
                 res,
@@ -1615,6 +1629,7 @@ module.exports = {
                     separators: separatorsInOrder,
                 });
                 const newData = await Trail.find({ _id: { $eq: idTrail } });
+                await dispatch('update', 'trail',  newData);
 
                 _messages.success(
                     res,
@@ -2207,7 +2222,8 @@ module.exports = {
     async archive (req, res) {
         const trailId = req.params.trailId;
 
-        await Trail.findByIdAndUpdate(trailId, { $set: { enabled: false, archive: true, archivedAt: new Date() } });
+        const trail = await Trail.findByIdAndUpdate(trailId, { $set: { enabled: false, archive: true, archivedAt: new Date() } });
+        await dispatch('update', 'trail', trail);
 
         res.status(204).send();
     },
@@ -2215,7 +2231,8 @@ module.exports = {
     async unarchive (req, res) {
         const trailId = req.params.trailId;
 
-        await Trail.findByIdAndUpdate(trailId, { $set: { archive: false, archivedAt: null } });
+        const trail = await Trail.findByIdAndUpdate(trailId, { $set: { archive: false, archivedAt: null } });
+        await dispatch('update', 'trail', trail);
 
         res.status(204).send();
     }

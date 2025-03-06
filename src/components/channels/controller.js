@@ -7,7 +7,8 @@ const { Section } = require('../sections/model');
 const { Trail } = require('../trails/model');
 const { getTagsElegiblesByToken, checkEligibilityTagsAnd, getSectionTrailId } = require('../sections/business');
 const { Theme } = require('../theme/palette/model');
-const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business')
+const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business');
+const { getDbCurrentFeatures } = require('../../utils/features');
 
 
 module.exports = {
@@ -17,12 +18,15 @@ module.exports = {
             const { skip, limit } = _functions.pagination(req);
             const searchBy = req.query.searchBy;
 
-            let OptionalChannel = [{}]
-            if (!req.features?.alura) {
+            let OptionalChannel = [{}];
+
+            const features = await getDbCurrentFeatures(req);
+
+            if (!features?.alura) {
                 OptionalChannel.push({ type: { $ne: 'alura' } })
             }
 
-            if (!req.features?.collaborationComponent) {
+            if (!features?.collaborationComponent) {
                 OptionalChannel.push({ type: { $ne: 'collaboration' } })
             }
 
@@ -71,16 +75,27 @@ module.exports = {
             //     handleSegmentationOnQuery(req, 'owner', query)
             // }
 
+            const features = await getDbCurrentFeatures(req);
+
+            if (!features?.alura) {
+                query.$and.push({ type: { $ne: 'alura' } })
+            }
+
+            if (!features?.collaborationComponent) {
+                query.$and.push({ type: { $ne: 'collaboration' } })
+            }
+
             let channels = await Channel
                 .find(query)
                 .sort({ position: 'asc' })
                 .populate({ path: 'theme', match: { deleted: 0 }, })
 
+
             channels = await Promise.all(channels.map(async (channel) => {
                 if (channel.type === 'alura') return channel
                 if (channel.type === 'feed') return channel
 
-                if (req.features?.collaborationComponent && channel.type === 'collaboration') return channel
+                if (features?.collaborationComponent && channel.type === 'collaboration') return channel
 
                 const sectionQuery = { $and: [
                     { _id: { $in: channel.idSections } }

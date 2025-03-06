@@ -15,15 +15,24 @@ const fieldSchema = new Schema({
 
 // Define the schema for the SSO form
 const ssoFormSchema = new Schema({
+    strategyType: { type: String, required: true },
     entrypoint: { type: String, },
     issuer: { type: String, },
-    callback_url: { type: String, },
+    callbackUrl: { type: String, },
     certifier: { type: String, },
     claim: { type: String, },
     claimKey: { type: String, },
     enabled: { type: Number, default: 0 },
     forceAuth: { type: Boolean, default: false },
-    strategyName: { type: String, default: 'saml', required: false },
+    buttonLabel: { type: String },
+    buttonBackground: { type: String, default: null },
+    buttonTextColor: { type: String, default: null },
+    strategyName: { type: String, required: true, unique: true },
+    clientId: { type: String },
+    clientSecret: { type: String },
+    authorizationUrl: { type: String },
+    tokenUrl: { type: String },
+    userInfoUrl: { type: String },
 });
 
 ssoFormSchema.index({ strategyName: 1 }, { unique: true });

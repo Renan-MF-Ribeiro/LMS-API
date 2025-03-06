@@ -47,17 +47,18 @@ module.exports = {
             ...lastConfiguration,
             ssoForm: ssoForm.map(form => ({
                 ...form,
-                strategyName: form.strategyName ?? 'saml',
-            })),
+                strategyName: form.strategyName,
+            }))
         }
     },
 
-    async getSsoFormByStrategyName(strategyName = 'saml') {
+    async getLoginFormByStrategyName(strategyName) {
         const loginConfig = await module.exports.getLoginConfig();
-        return loginConfig.ssoForm?.find((form) => (form.strategyName ?? 'saml') === strategyName) ?? null;
+
+        return loginConfig.ssoForm?.find((form) => form.strategyName === strategyName)
     },
 
-    async findUsers (req, { onboarding }) {
+    async findUsers(req, { onboarding }) {
         const { skip, limit } = pagination(req);
         const { order, sort } = ordernation(req);
         const searchBy = req.query.searchBy;
@@ -129,7 +130,7 @@ module.exports = {
         };
     },
 
-    checkAmountOfLocks (id) {
+    checkAmountOfLocks(id) {
         return new Promise(async (resolve, reject) => {
             try {
                 const quantity = await Block.find({
@@ -144,7 +145,7 @@ module.exports = {
         });
     },
 
-    returnLastLoginAttemp (id) {
+    returnLastLoginAttemp(id) {
         return new Promise(async (resolve, reject) => {
             try {
                 const block = await Block.find({
@@ -159,7 +160,7 @@ module.exports = {
         });
     },
 
-    checkLastAttemptTime (dateTimeBlock) {
+    checkLastAttemptTime(dateTimeBlock) {
         return new Promise(async (resolve, reject) => {
             try {
                 const lastTimeBlock = formatDate(dateTimeBlock);
@@ -175,7 +176,7 @@ module.exports = {
 
     // # Exclusivo para validação no LPAD
     // # TODO: Remover
-    signInAndReturnRole (login, password, login2) {
+    signInAndReturnRole(login, password, login2) {
         return new Promise(async (resolve, reject) => {
             try {
                 await ldapClient.bind(login, password);
@@ -232,7 +233,7 @@ module.exports = {
         });
     },
 
-    returnDateSinceFirstLogin (userID) {
+    returnDateSinceFirstLogin(userID) {
         return new Promise(async (resolve, reject) => {
             try {
                 const userLastLogin = await LastLogin.find({ user: userID });
@@ -248,7 +249,7 @@ module.exports = {
         });
     },
 
-    updateGroupsOfUser (userID, groups) {
+    updateGroupsOfUser(userID, groups) {
         return new Promise(async (resolve, reject) => {
             try {
                 await User.findByIdAndUpdate(userID, { groupsAD: groups });
@@ -259,7 +260,7 @@ module.exports = {
         });
     },
 
-    updateLastLoginUser (userID) {
+    updateLastLoginUser(userID) {
         return new Promise(async (resolve, reject) => {
             try {
                 const user = await LastLogin.findOne({ user: userID });
@@ -278,7 +279,7 @@ module.exports = {
         });
     },
 
-    lastLoggedInUsers (userID) {
+    lastLoggedInUsers(userID) {
         return new Promise(async (resolve, reject) => {
             try {
                 const arrUsers = [];
@@ -294,7 +295,7 @@ module.exports = {
         });
     },
 
-    ldapSearch (login, name) {
+    ldapSearch(login, name) {
         return new Promise(async (resolve, reject) => {
             const opts = {
                 filter: `(sAMAccountName=${login})`,
@@ -336,7 +337,7 @@ module.exports = {
         });
     },
 
-    async processDashFilters (user) {
+    async processDashFilters(user) {
         let userMap = [
             { description: 'LOGIN', value: 'networkLogin' },
             { description: 'SENHA', value: 'password' },
@@ -422,7 +423,7 @@ module.exports = {
         }
     },
 
-    processUsersLoad (data, elegibilityFields = [], onboarding = false) {
+    processUsersLoad(data, elegibilityFields = [], onboarding = false) {
         const salt = bcrypt.genSaltSync(10);
         const firstName = String(data.name.split(" ")[0]).trim().toLowerCase();
         const firstThreeCpf = sanitizeCpf(data.cpf).slice(0, 3);
@@ -438,12 +439,13 @@ module.exports = {
         ];
 
         data.clientUserKey = CLIENT_ID + '@@' + data.networkLogin;
-        data.birthDate = data.birthDate ? moment(data.birthDate, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
-        data.admission = data.admission ? moment(data.admission, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
-        data.createDate = data.createDate ? moment(data.createDate, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
-        data.terminationDate = data.terminationDate ? moment(data.terminationDate, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
-        data.vacationStartDate = data.vacationStartDate ? moment(data.vacationStartDate, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
-        data.vacationEndDate  = data.vacationEndDate ? moment(data.vacationEndDate, 'DD/MM/YYYY').format('DD/MM/YYYY') : null
+        data.birthDate = data.birthDate ? moment(data.birthDate).format('DD/MM/YYYY') : null;
+        data.admission = data.admission ? moment(data.admission).format('DD/MM/YYYY') : null;
+        data.createDate = data.createDate ? moment(data.createDate).format('DD/MM/YYYY') : null
+        data.terminationDate = data.terminationDate ? moment(data.terminationDate).format('DD/MM/YYYY') : null
+        data.vacationStartDate = data.vacationStartDate ? moment(data.vacationStartDate).format('DD/MM/YYYY') : null
+        data.vacationEndDate  = data.vacationEndDate ? moment(data.vacationEndDate).format('DD/MM/YYYY') : null
+
         data.enabled = true;
         data.onboarding = onboarding;
 
@@ -513,7 +515,7 @@ module.exports = {
         return data;
     },
 
-    async persistUsers (results, { onboarding } = { onboarding: false }) {
+    async persistUsers(results, { onboarding } = { onboarding: false }) {
         const usersToSend = [];
         const newUsers = [];
         const updatedUsers = [];
@@ -565,7 +567,7 @@ module.exports = {
         return { newUsers: newUsers.length, updatedUsers: updatedUsers.length };
     },
 
-    async processUserAccount (data) {
+    async processUserAccount(data) {
         try {
             const { groupsAD = [] } = data;
 
@@ -597,7 +599,7 @@ module.exports = {
         }
     },
 
-    async sendAccountsToKafka (accounts) {
+    async sendAccountsToKafka(accounts) {
         try {
             const producer = kafka.producer();
             await producer.connect();
@@ -613,7 +615,7 @@ module.exports = {
         }
     },
 
-    async getUsersByTrail (trailId, category) {
+    async getUsersByTrail(trailId, category) {
         try {
             const trail = await Trail.findOne({ _id: trailId });
 
@@ -666,7 +668,7 @@ module.exports = {
         }
     },
 
-    async getUsersByGroups (groups) {
+    async getUsersByGroups(groups) {
         try {
             const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin']);
             return users;
@@ -675,7 +677,7 @@ module.exports = {
         }
     },
 
-    async getUsersByTags (tags) {
+    async getUsersByTags(tags) {
         try {
             let groups = [];
 
@@ -693,7 +695,7 @@ module.exports = {
         }
     },
 
-    async getUsersByIds (ids) {
+    async getUsersByIds(ids) {
         try {
             const users = await User.find({ _id: { $in: ids } }, ['networkLogin']);
 
@@ -703,7 +705,7 @@ module.exports = {
         }
     },
 
-    async sendUpdatedDeviceIdToMessenger (device, identifier) {
+    async sendUpdatedDeviceIdToMessenger(device, identifier) {
         try {
             const producer = kafka.producer();
             await producer.connect();
@@ -720,7 +722,7 @@ module.exports = {
         }
     },
 
-    async createWelcomeCampaign () {
+    async createWelcomeCampaign() {
         const title = `Seja bem-vindo(a) à plataforma ${process.env.PROJECT_NAME}!`;
         const text = 'Venha conhecer a plataforma!';
         const communication = ['notification'];
@@ -732,7 +734,7 @@ module.exports = {
         return { title, text, communication, category, mode, ...messengerConfig.emailTemplate };
     },
 
-    async createClassGroup (user, groupCode, DATA_INICIO, DATA_FIM) {
+    async createClassGroup(user, groupCode, DATA_INICIO, DATA_FIM) {
         let classGroup = await ClassGroup.findOne({ _id: groupCode });
 
         const { startDate, limitDate } = _functions.getDates(DATA_INICIO, DATA_FIM);
@@ -748,7 +750,7 @@ module.exports = {
         });
     },
 
-    buildSearchObject (body) {
+    buildSearchObject(body) {
         let search = {};
         Object.entries(body).forEach(([k, v]) => {
             search = Object.assign(search, {
@@ -758,7 +760,7 @@ module.exports = {
         return search;
     },
 
-    generateNewPassword (user) {
+    generateNewPassword(user) {
         const password_new = Math.random()
             .toString(36)
             .replace(/\W+/g, '')
@@ -781,7 +783,7 @@ module.exports = {
         return { password_new, hashPass, newPass };
     },
 
-    maskEmail (email) {
+    maskEmail(email) {
         const emailParts = email.split('@');
         const emailName = emailParts[0];
         let maskedEmail = '';
