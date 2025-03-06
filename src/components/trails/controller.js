@@ -146,6 +146,10 @@ module.exports = {
                 return val != null;
             });
 
+            resultSections = resultSections.filter(section => {
+                return section.trails.some(trail => !trail.type || trail.type === 'trail');
+            });
+
             if (resultSections.length > 0) {
                 resultSections.sort((a, b) =>
                     a.position < b.position ? -1 : 1
@@ -614,13 +618,12 @@ module.exports = {
 
                 trail.items = items
                 updateProgressAluraItem(OldItems)
-                const newData = await Trail.updateOne(
+                await Trail.updateOne(
                     { _id: { $eq: trail._id } },
                     trail,
                     { new: true }
                 );
-                // const newData = await Trail.find({ _id: { $eq: trail._id } });
-
+                
                 _messages.success(
                     res,
                     req,
@@ -628,7 +631,7 @@ module.exports = {
                     'Atualização de dados',
                     'trails',
                     'multiUploadCreate',
-                    newData,
+                    trail,
                     [],
                     true,
                     'UPDATE'

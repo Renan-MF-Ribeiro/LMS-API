@@ -2,6 +2,7 @@ const { Webhooks } = require('./model')
 const _messages = require('../../utils/messages')
 const axios = require('axios')
 const crypto = require('crypto')
+const { WebhooksDefault } = require('./constants')
 
 module.exports = {
     async dispatch(action, target, load = false, data) {
@@ -68,9 +69,17 @@ module.exports = {
 
     },
 
-    async getWebhooks(req, res) {
+    async getWebhooks (req, res) {
         try {
+
             const data = await Webhooks.find()
+            for (const webhook of WebhooksDefault) {
+                const exists = data.some(item => item.target === webhook.target && item.action === webhook.action);
+                if (!exists) {
+                    const newWebhook = await Webhooks.create(webhook);
+                    data.push(newWebhook)
+                }
+            }
             _messages.success(res, req, data);
         }
         catch (error) {

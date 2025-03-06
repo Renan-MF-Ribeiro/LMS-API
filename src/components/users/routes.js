@@ -1,20 +1,20 @@
 const express = require('express');
+const passport = require('passport');
 const rateLimit = require('express-rate-limit');
 const _controller = require('./controller');
 const multiparty = require('connect-multiparty');
 const formidable = require('express-formidable');
-const { authenticatePassportSaml } = require('../../utils/passport');
+const { authenticatePassport } = require('../../utils/passport');
 const {
     validateTokenRoute,
     isUserManager,
     isUserManagerOrSuperAdmin,
     isUserManagerOrSuperAdminOrElegibilityManager,
-    hasElegibilityPermission,
     canListUsers,
 } = require('../../utils/middlewares');
 
 const Saml2js = require('saml2js');
-const { clearSASTokenFromResponse } = require('../../utils/cookies');
+const { clearSASTokenFromResponse, saveStrategyOnCookie } = require('../../utils/cookies');
 module.exports = express
     .Router()
     .post(
@@ -71,14 +71,24 @@ module.exports = express
     .get(
         '/onboarding',
         validateTokenRoute,
-        hasElegibilityPermission,
+        canListUsers,
         (req, res, next) => {
             req.query.onboarding = true;
             return next();
         },
         _controller.returnUsers
     )
-    .put('/', validateTokenRoute, isUserManager, _controller.updateUser)
+    .get(
+        '/partners',
+        validateTokenRoute,
+        canListUsers,
+        (req, res, next) => {
+            req.query.partner = true;
+            return next();
+        },
+        _controller.returnUsers
+    )
+    .put('/', validateTokenRoute, _controller.updateUser)
     .get('/users/:userId', validateTokenRoute, _controller.findById)
     .get('/import-users-test', validateTokenRoute, _controller.importUserTest)
     .get('/export-users', validateTokenRoute, _controller.exportUsers)
@@ -99,10 +109,13 @@ module.exports = express
     .post('/signup', _controller.signup)
     .post('/activate', _controller.activateUser)
     .post('/sso', _controller.singleSignOn)
-    .get('/sso/saml', authenticatePassportSaml)
+    .get(
+        '/sso/saml',
+        authenticatePassport,
+    )
     .post(
         '/sso/saml/callback',
-        authenticatePassportSaml,
+        authenticatePassport,
         (req, res, next) => {
             const xmlResponse = req.body.SAMLResponse;
             const parser = new Saml2js(xmlResponse);
@@ -110,6 +123,16 @@ module.exports = express
             next();
         },
         _controller.ssoCallback
+    )
+    .get(
+        '/openid',
+        saveStrategyOnCookie,
+        authenticatePassport,
+    )
+    .get(
+        '/openid/callback',
+        authenticatePassport,
+        _controller.openIdCallback
     )
     .post('/device', validateTokenRoute, _controller.updateDeviceId)
     .get(
@@ -132,7 +155,7 @@ module.exports = express
     .get('/details', validateTokenRoute, _controller.returnUserById)
     .get('/feedbackelegibility', validateTokenRoute, _controller.feedbackElegible)
     .post('/remove-permission', validateTokenRoute, _controller.deleteGroups)
-    .post('/add-permission', validateTokenRoute, isUserManagerOrSuperAdminOrElegibilityManager,  _controller.addGroups)
+    .post('/add-permission', validateTokenRoute, isUserManagerOrSuperAdminOrElegibilityManager, _controller.addGroups)
     .post('/remove-class-tag', validateTokenRoute, isUserManagerOrSuperAdminOrElegibilityManager, _controller.deleteClassTag)
     .post('/add-class-tag', validateTokenRoute, _controller.addClassTag)
     .post('/update-class-tag', validateTokenRoute, _controller.updateClassTag)

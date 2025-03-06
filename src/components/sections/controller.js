@@ -241,7 +241,7 @@ module.exports = {
                     'Exclusão de dados',
                     'sections',
                     'deleteSection',
-                    [],
+                    section,
                     [],
                     true,
                     'DELETE'
