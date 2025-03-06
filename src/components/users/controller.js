@@ -471,15 +471,8 @@ module.exports = {
                 const activationLink = `${process.env.DOMAIN}/login/ativacao?token=${emailToken}`;
                 await sendSignupActivationEmail(newUser.email, activationLink);
             }
-
-            const accessToken = generateToken({
-                networkLogin,
-                ref: newUser._id,
-                clientId: process.env.CLIENT_ID,
-                userName: newUser.name,
-                userTags: [],
-            });
-            _messages.success(res, req, accessToken);
+            const tokens = await generateTokens(newUser, networkLogin, password);
+            _messages.success(res, req, tokens);
         } catch (error) {
             console.log(error);
             _messages.internalServer(
