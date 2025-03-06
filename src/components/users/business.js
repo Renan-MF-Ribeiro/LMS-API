@@ -346,6 +346,7 @@ module.exports = {
             { description: 'MATRICULA', value: 'registration' },
             { description: 'STATUS', value: 'status' },
             { description: 'CPF', value: 'cpf' },
+            { description: 'CNPJ', value: 'cnpj' },
             { description: 'DATA_NASC', value: 'birthDate' },
             { description: 'IDENTIDADE_DE_GENERO', value: 'genderIdentity' },
             { description: 'PAIS', value: 'country' },
