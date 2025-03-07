@@ -133,7 +133,7 @@ async function validateUserAndPassword(res, req, login, passwordDecripted) {
     // Verifica se usuário existe
     const user = await User.findOne({ networkLogin: { $eq: login }, status: 'ATIVO' }).lean();
     // Verifica se a senha é válida
-    const pass = user.password.filter(function(obj) {
+    const pass = user.password.filter(function (obj) {
         return obj.valid && bcrypt.compareSync(passwordDecripted, obj.hash);
     });
     if (!user || pass.length === 0) {
@@ -198,6 +198,7 @@ async function generateTokens(user, login, password) {
     }
 
     const profilesIDS = await returnIdProfileUser(namesProfiles);
+    console.log('profilesIDS', profilesIDS);
     const groupsIDS = await returnIdGroupUser(namesGroups);
     const userGroups = await Group.find({ name: { $in: namesGroups } });
     const eligibilities = userGroups.flatMap((group) =>
@@ -235,6 +236,7 @@ async function generateTokens(user, login, password) {
         groups: groupsIDS,
         welcomeVideoWatched: user?.welcomeVideoWatched
     });
+    console.log(jwt.decode(token, String(user.networkLogin)))
 
     const mfaToken = generateMfaToken({
         ref: user._id,
@@ -1071,7 +1073,7 @@ module.exports = {
 
             // const passChecked = bcrypt.compareSync(password_old, user.password)
             if (password_old) {
-                var pass = user.password.filter(function(obj) {
+                var pass = user.password.filter(function (obj) {
                     if (obj.valid === true && bcrypt.compareSync(password_old, obj.hash)) {
                         return true;
                     }
@@ -1080,7 +1082,7 @@ module.exports = {
                 });
             }
 
-            var Oldpass = user.password.filter(function(obj) {
+            var Oldpass = user.password.filter(function (obj) {
                 if (bcrypt.compareSync(password_new, obj.hash)) {
                     return true;
                 }
@@ -1120,7 +1122,7 @@ module.exports = {
             var salt = bcrypt.genSaltSync(10);
             var hashPass = bcrypt.hashSync(password_new, salt);
 
-            var newPass = user.password.map(function(item, indice) {
+            var newPass = user.password.map(function (item, indice) {
                 item.valid = false;
                 return item;
             });
@@ -1167,7 +1169,7 @@ module.exports = {
             const { _id, password_old } = data;
             const user = await User.findOne({ _id: _id }, ['password']);
 
-            var pass = user.password.filter(function(obj) {
+            var pass = user.password.filter(function (obj) {
                 if (obj.valid === true && bcrypt.compareSync(password_old, obj.hash)) {
                     return true;
                 }
@@ -1175,7 +1177,7 @@ module.exports = {
                 return false;
             });
 
-            var Oldpass = user.password.filter(function(obj) {
+            var Oldpass = user.password.filter(function (obj) {
                 if (bcrypt.compareSync(password_new, obj.hash)) {
                     return true;
                 }
@@ -1212,7 +1214,7 @@ module.exports = {
             var salt = bcrypt.genSaltSync(10);
             var hashPass = bcrypt.hashSync(password_new, salt);
 
-            var newPass = user.password.map(function(item, indice) {
+            var newPass = user.password.map(function (item, indice) {
                 item.valid = false;
                 return item;
             });
@@ -2834,8 +2836,8 @@ module.exports = {
             const fields = Object.entries(connectMap).map(([key, value]) => ({
                 display: value.label,
                 value: key
-            }));
-
+            })).filter((field) => field.key !== 'elegibility');
+            console.log(fields)
             _messages.success(res, req, {
                 map: connectMap,
                 fields,
