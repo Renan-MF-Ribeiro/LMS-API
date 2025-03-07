@@ -145,6 +145,10 @@ module.exports = {
                 return val != null;
             });
 
+            resultSections = resultSections.filter(section => {
+                return section.trails.some(trail => !trail.type || trail.type === 'trail');
+            });
+
             if (resultSections.length > 0) {
                 resultSections.sort((a, b) =>
                     a.position < b.position ? -1 : 1
