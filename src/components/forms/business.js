@@ -114,7 +114,6 @@ function setConnectMapInForm(connectMap, form) {
 
 function getFormErrorsByMapConfig(connectMap, form, data) {
     const errors = [];
-
     if (form) {
         const formWithConnectFields = setConnectMapInForm(connectMap, form);
         const allFields = formWithConnectFields.sections.flatMap((section) => section.fields);
@@ -123,8 +122,7 @@ function getFormErrorsByMapConfig(connectMap, form, data) {
             const field = allFields.find((field) => field.key === key);
 
             if (!field) return;
-
-            if ((field.required || key === (form.loginField ?? 'cpf')) && !value?.length) {
+            if ((field.required || key === (form.loginField ?? 'cpf')) && (!value || !String(value).length) ) {
                 errors.push({ key, message: `Campo ${field.config?.label ?? key} é obrigatório` });
             }
 

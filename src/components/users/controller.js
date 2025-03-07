@@ -190,7 +190,6 @@ async function generateTokens(user, login, password) {
     const namesProfiles = [];
     const namesGroups = [];
     let tokenAnalytics, tokenHappPlace;
-
     for (const p in groups) {
         const strGroup = groups[p];
 
@@ -246,7 +245,7 @@ async function generateTokens(user, login, password) {
 
     await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
 
-    let tokenEncript = cryptoJS.AES.encrypt(token, login);
+    let tokenEncript = cryptoJS.AES.encrypt(token, String(login));
     let tk = tokenEncript.toString();
     let key = login + ':' + password;
 
@@ -382,7 +381,6 @@ module.exports = {
                 const message = errors[0].message;
                 throw new ApiError(message, 400, { errors }, { skipDbLog: true });
             }
-
             networkLogin = data[form.loginField ?? 'cpf'];
 
             log('form login field:', form.loginField ?? 'cpf');
@@ -524,7 +522,7 @@ module.exports = {
                 await sendSignupActivationEmail(newUser.email, activationLink);
             }
             const tokens = await generateTokens(newUser, networkLogin, password);
-            _messages.success(res, req, tokens);
+            return _messages.success(res, req, tokens);
         } catch (error) {
             console.log(error);
             _messages.internalServer(
