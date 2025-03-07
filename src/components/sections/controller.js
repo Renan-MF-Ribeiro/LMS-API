@@ -262,18 +262,24 @@ module.exports = {
 
     async getSectionsElegibles (req, res) {
         try {
-            const { trailLimit: queryTrailLimit = '25', channel: channelId, ...filter } = req.query;
+            const { trailLimit: queryTrailLimit = '25', channel: channelId, userId, ...filter } = req.query;
 
             const trailLimit = queryTrailLimit ? Number(queryTrailLimit) : null;
+            let user
+            let tags
+            let classGroups
 
-            const user = await getUserByToken(req);
-            const tags = await getTagsElegiblesByToken(req);
-            const classGroups = await getGroupCodesByToken(req, tags);
-            const { user: userT, tags: tagT, classGroups: classGroupT } = await getContentEligibilityParameterByUserId(user._id);
-            console.log('tagT', tagT)
-            console.log('tag', tags)
-            console.log('\n\n')
-            console.log('classGroupT', classGroupT);
+            if (userId) {
+                const { user: userAccess, tags: tagsAccess, classGroups: classGroupsAccess } = await getContentEligibilityParameterByUserId(userId);
+                user = userAccess
+                tags = tagsAccess
+                classGroups = classGroupsAccess
+            } else {
+                user = await getUserByToken(req);
+                tags = await getTagsElegiblesByToken(req);
+                classGroups = await getGroupCodesByToken(req, tags);
+            }
+            console.log(user.name)
             const newArray = [];
             let sectionArray;
 
