@@ -23,8 +23,6 @@ const {
     getUsersLoadCron,
 } = require('./src/utils/cron')
 
-const { getDbCurrentFeatures, setAppCurrentFeatures } = require('./src/utils/features')
-
 const {
     getMessengerConfig,
     getCronConfig,
@@ -33,13 +31,6 @@ const {
 } = require('./src/components/config/business')
 
 const server = app.listen(port, async () => {
-    try {
-        const dbCurrentFeatures = (await getDbCurrentFeatures()) ?? null;
-        setAppCurrentFeatures(app, dbCurrentFeatures);
-    } catch (err) {
-        error('Error setting features: ' + err);
-    }
-
     try {
         // Cria as configs caso não existam
         await getMessengerConfig();

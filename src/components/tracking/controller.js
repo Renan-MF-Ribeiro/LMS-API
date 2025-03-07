@@ -7,6 +7,7 @@ const { azureBlob } = require('../../utils/files');
 const _messages = require('../../utils/messages');
 const { User } = require('../users/model');
 const { Trail } = require('../trails/model');
+const { dispatch } = require('../webhooks/controller');
 const {
     processTrailTracking,
     isValidDate,
@@ -271,6 +272,7 @@ const TrackingController = {
                 { ...req.body, totalTime, isAllowedToSendXAPI, completionAt },
                 { upsert: true, omitUndefined: true }
             );
+            await dispatch('create', 'tracking',  { ...req.body, totalTime, isAllowedToSendXAPI, completionAt });
             //EVENTO CONCLUSAO
             await calendarEventConclusion(
                 q.userLogin,
@@ -278,7 +280,8 @@ const TrackingController = {
                     item: q.item,
                     completion: req.body?.completion,
                     lessonStatus: req.body?.lessonStatus,
-                })
+                }
+            );
 
 
             res.status(httpStatus.NO_CONTENT).send();
