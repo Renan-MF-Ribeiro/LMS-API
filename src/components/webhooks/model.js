@@ -20,7 +20,7 @@ const webhooksSchema = new mongoose.Schema({
     endpoint: { type: String },
     target: { type: String },
     action: { type: String },
-    auth: authOptions
+    auth: { type: authOptions },
 }, {
     ...schemaOptions,
 })

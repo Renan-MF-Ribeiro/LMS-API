@@ -112,6 +112,7 @@ const {
 const { ConfigTypes } = require('../config/model');
 const { fetchIdpProfilesFromRequestObject } = require('../idp-integration/business');
 const { log } = require('../../utils/logger');
+const WebhooksController = require("../webhooks/controller");
 const ApiError = require('../../errors/ApiError');
 const { addSASTokenToResponse } = require('../../utils/cookies');
 
@@ -305,6 +306,7 @@ module.exports = {
                 { networkLogin: processedUser.networkLogin },
                 { ...userProjection }
             );
+            await WebhooksController.dispatch('create', 'users', false, { ...processedUser, password: undefined });
 
             return _messages.success(res, req, created);
         } catch (error) {
@@ -499,6 +501,8 @@ module.exports = {
             };
 
             const newUser = await User.create(userData);
+
+            await WebhooksController.dispatch('create', 'users', false, userData);
 
             if (token) {
                 const DATA_INICIO = today.startOf('day');
@@ -1373,6 +1377,8 @@ module.exports = {
                     ...user.processedUser
                 });
 
+                await WebhooksController.dispatch('update', 'users', false, { ...user.processedUser, password: undefined });
+
                 await Tracking.updateMany(
                     { userLogin: user.processedUser.cpf },
                     { $set: { userLogin: user.processedUser.networkLogin } }
@@ -1397,6 +1403,8 @@ module.exports = {
                 );
 
                 await User.insertMany(newUsers);
+
+                await WebhooksController.dispatch('create', 'users', true, newUsers)
 
                 if (messengerConfig.sendUsersToMicrosservice) {
                     await sendAccountsToKafka(usersToSend);
@@ -1693,12 +1701,15 @@ module.exports = {
                 projection: { ...userProjection }
             });
 
+            await WebhooksController.dispatch('update', 'users', false, { ...userUpdated, password: undefined });
+
             if (userUpdated?.status) {
                 await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status);
             }
 
             return _messages.success(res, req, updated, 'Usuário(a) atualizado(a) com sucesso!');
         } catch (error) {
+            console.log(error)
             return _messages.internalServer(
                 res,
                 req,
@@ -1844,10 +1855,12 @@ module.exports = {
                     await User.findByIdAndUpdate(user._id, {
                         ...objUser
                     });
+                    await WebhooksController.dispatch('update', 'users', false, { ...objUser, password: undefined });
                 } else {
                     await User.create({
                         ...objUser
                     });
+                    await WebhooksController.dispatch('create', 'users', false, { ...objUser, password: undefined });
                 }
             }
 
