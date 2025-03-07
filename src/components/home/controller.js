@@ -20,9 +20,9 @@ const {
     getDateTodayWithoutHours,
     handleStudentAverage,
     handleStudentTrails,
-    pagination,
+    pagination
 } = require('../../utils/functions');
-const { extractTextFromRichText } = require('../../utils/extract-text-from-richtext')
+const { extractTextFromRichText } = require('../../utils/extract-text-from-richtext');
 const {
     trailsCompletedOrInProgress,
     studentAverageCourses,
@@ -31,7 +31,7 @@ const {
     getStudentCourses,
     returnCertificates,
     averageGroupCourses,
-    averageGroupRatings,
+    averageGroupRatings
 } = require('./business');
 
 const { populateTrails } = require('../trails/business');
@@ -41,8 +41,8 @@ const { maxBy } = require('lodash');
 const HomeController = {
     async searchBy(req, res) {
         const { searchBy, pageIndex, pageSize, ...filters } = req.query;
-        const filtersValues = Object.values(filters)
-        const hasFilters = filtersValues.some((filter) => filter === 'true')
+        const filtersValues = Object.values(filters);
+        const hasFilters = filtersValues.some((filter) => filter === 'true');
 
         if (!searchBy?.length && !hasFilters) {
             return _messages.success(res, req, {});
@@ -58,7 +58,7 @@ const HomeController = {
                     pageIndex: Number(pageIndex),
                     pageSize: Number(pageSize)
                 }
-            })
+            });
             let filteredTrails = [];
             let result = [];
 
@@ -69,7 +69,7 @@ const HomeController = {
 
             classGroups?.forEach(({ groupCode, startDate, limitDate }) => {
                 if (groupCode && startDate && limitDate && startDate <= new Date() && limitDate >= new Date()) {
-                    tags?.push({ display: groupCode, value: groupCode })
+                    tags?.push({ display: groupCode, value: groupCode });
                 }
             });
 
@@ -79,18 +79,18 @@ const HomeController = {
                     {
                         title: {
                             $regex: escapedSearchBy,
-                            $options: 'i',
+                            $options: 'i'
                         }
                     },
                     {
                         description: {
                             $regex: escapedSearchBy,
-                            $options: 'i',
+                            $options: 'i'
                         }
-                    },
+                    }
                 ],
                 enabled: true,
-                deleted: { $eq: 0 },
+                deleted: { $eq: 0 }
             });
 
             filteredTrails = await populateTrails(true, {
@@ -100,29 +100,29 @@ const HomeController = {
                             {
                                 title: {
                                     $regex: escapedSearchBy,
-                                    $options: 'i',
+                                    $options: 'i'
                                 }
                             },
                             {
                                 description: {
                                     $regex: escapedSearchBy,
-                                    $options: 'i',
+                                    $options: 'i'
                                 }
-                            },
+                            }
                         ],
                         tags: { $in: tags },
-                        enabled: true,
+                        enabled: true
                     },
                     {
                         'items.itemID': { $in: items.map((item) => item._id) },
                         $or: [{ tags: { $in: tags } }, { mandatory: { $in: tags } }],
-                        enabled: true,
-                    },
-                ],
+                        enabled: true
+                    }
+                ]
             });
 
             filteredTrails = filteredTrails.filter((trail) => {
-                return checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && checkIfTheTrackIsValid(trail)
+                return checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && checkIfTheTrackIsValid(trail);
             });
 
             const itemsIds = filteredTrails.flatMap((t) => t.items.map((i) => i.itemID._id));
@@ -131,8 +131,8 @@ const HomeController = {
                 item: { $in: itemsIds },
                 $or: [
                     { expiredCompletion: { $exists: false } },
-                    { expiredCompletion: { $eq: null } },
-                ],
+                    { expiredCompletion: { $eq: null } }
+                ]
             });
 
             for (let trail of filteredTrails) {
@@ -148,7 +148,7 @@ const HomeController = {
             const sections = await Section.find({
                 trails: { $in: result.map((t) => t._id) },
                 active: 1,
-                deleted: 0,
+                deleted: 0
             }).lean();
 
             const trailMap = new Map();
@@ -173,7 +173,7 @@ const HomeController = {
                             })
                             .map((trailId) => {
                                 return result.find(({ _id }) => _id.equals(trailId));
-                            }),
+                            })
                     };
                 }).filter((section) => section.trails.length > 0);
 
@@ -199,19 +199,22 @@ const HomeController = {
 
             // Recupera Cursos presenciais
             const course = await courseInSections(tags, user);
-            course.trails = course.trails.filter(trail => {
-                const { title, description } = trail;
-                return [title, description].some(stg => extractTextFromRichText(stg).toLowerCase().includes(searchBy.toLowerCase()));
-            });
 
-            result.push(course);
+            if (course && course.trails) {
+                course.trails = course?.trails?.filter(trail => {
+                    const { title, description } = trail;
+                    return [title, description].some(stg => extractTextFromRichText(stg).toLowerCase().includes(searchBy.toLowerCase()));
+                });
+
+                result.push(course);
+            }
 
             if (req?.features?.alura) {
                 const host = process.env.API_ALURA;
                 const clientId = process.env.CLIENT_ID;
                 const headers = { 'x-client-key': process.env.API_KEY_ALURA };
                 const email = user.email;
-                const aluraSearchBy = encodeURI(searchBy || ' ') ?? ''
+                const aluraSearchBy = encodeURI(searchBy || ' ') ?? '';
                 const uri = `${host}/courses/search/${clientId}?email=${email}&searchBy=${aluraSearchBy}`;
                 const { data } = await axios.get(uri, { headers });
 
@@ -220,7 +223,7 @@ const HomeController = {
 
             _messages.success(res, req, { data: result.slice(skip, skip + limit), total: result.length });
         } catch (error) {
-            console.log(error)
+            console.log(error);
             _messages.internalServer(
                 res,
                 req,
@@ -244,8 +247,8 @@ const HomeController = {
                 userLogin: { $eq: user.networkLogin },
                 $or: [
                     { expiredCompletion: { $exists: false } },
-                    { expiredCompletion: { $eq: null } },
-                ],
+                    { expiredCompletion: { $eq: null } }
+                ]
             });
 
             for (const tag of user.tags) {
@@ -256,10 +259,10 @@ const HomeController = {
             filterTrails = await populateTrails(true, {
                 $or: [
                     { title: new RegExp(searchBy, 'gi') },
-                    { description: new RegExp(searchBy, 'gi') },
+                    { description: new RegExp(searchBy, 'gi') }
                 ],
                 tags: { $in: tags },
-                enabled: true,
+                enabled: true
             });
 
             filterTrails = filterTrails.filter((trail) =>
@@ -270,14 +273,14 @@ const HomeController = {
             const items = await Item.find({
                 description: new RegExp(searchBy, 'gi'),
                 enabled: true,
-                deleted: { $eq: 0 },
+                deleted: { $eq: 0 }
             });
 
             for (const item of items) {
                 const itemTrail = await populateTrails(true, {
                     'items.itemID': { $in: item._id },
                     $or: [{ tags: { $in: tags } }, { mandatory: { $in: tags } }],
-                    enabled: true,
+                    enabled: true
                 });
 
                 if (itemTrail) {
@@ -327,7 +330,7 @@ const HomeController = {
                 numberOfItemsNotStarted,
                 numberOfItemsMandatoryNotStarted,
                 numberOfItemsMandatoryCompleted,
-                numberOfItemsMandatoryInProgress,
+                numberOfItemsMandatoryInProgress
             } = await getNumberOfItemsCompletedOrInProgressOrNotStarted(req);
             const { averageStudentCourses, numberTrailsCompleted, numberTrailsElegibles } =
                 await studentAverageCourses(user, req); // Não necessita de mudanças
@@ -354,13 +357,13 @@ const HomeController = {
                 tags: { $in: tags },
                 enabled: true,
                 startDate: { $lt: getDateTodayWithoutHours() },
-                endDate: { $gt: getDateTodayWithoutHours() },
+                endDate: { $gt: getDateTodayWithoutHours() }
             }).countDocuments();
 
             await User.findByIdAndUpdate(user._id, {
                 averageRating: averageStudent.toFixed(2),
                 numberTrailsCompleted,
-                numberTrailsElegibles,
+                numberTrailsElegibles
             });
 
             _messages.success(res, req, {
@@ -380,7 +383,7 @@ const HomeController = {
                 courses,
                 certificates,
                 allTrails,
-                allTrailsElegibles,
+                allTrailsElegibles
             });
         } catch (error) {
             console.log(error);
@@ -405,7 +408,7 @@ const HomeController = {
                 tags: { $in: tags },
                 enabled: true,
                 startDate: { $lt: getDateTodayWithoutHours() },
-                endDate: { $gt: getDateTodayWithoutHours() },
+                endDate: { $gt: getDateTodayWithoutHours() }
             })
                 .sort({ createdAt: -1 })
                 .populate('items.itemID');
@@ -482,7 +485,7 @@ const HomeController = {
                 enabled: true,
                 certificate: 1,
                 startDate: { $lt: getDateTodayWithoutHours() },
-                endDate: { $gt: getDateTodayWithoutHours() },
+                endDate: { $gt: getDateTodayWithoutHours() }
             }).populate('items.itemID');
             const { completedTrails } = await handleStudentTrails(user, elegibleTrails);
             let certificates = await returnCertificates(completedTrails, user);
@@ -525,7 +528,7 @@ const HomeController = {
                 enabled: true,
                 certificate: 1,
                 startDate: { $lt: getDateTodayWithoutHours() },
-                endDate: { $gt: getDateTodayWithoutHours() },
+                endDate: { $gt: getDateTodayWithoutHours() }
             }).populate('items.itemID');
             const { completedTrails } = await handleStudentTrails(user, elegibleTrails, true);
 
@@ -569,7 +572,7 @@ const HomeController = {
                 enabled: true,
                 startDate: { $lt: getDateTodayWithoutHours() },
                 endDate: { $gt: getDateTodayWithoutHours() },
-                certificate: 0,
+                certificate: 0
             }).populate('items.itemID');
             let { completedTrails } = await handleStudentTrails(user, elegibleTrails);
 
@@ -593,7 +596,7 @@ const HomeController = {
                 '/certificates/expired'
             );
         }
-    },
+    }
 };
 
 module.exports = HomeController;

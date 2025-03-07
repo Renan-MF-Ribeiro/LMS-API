@@ -497,7 +497,19 @@ const ItemController = {
                 }
 
                 const item = await ItemModel.create(payload);
-                _messages.success(res, req, item);
+                _messages.success(
+                    res,
+                    req,
+                    item,
+                    'Criação de dados',
+                    'items',
+                    'create',
+                    item,
+                    [],
+                    true,
+                    'CREATE'
+                );
+
             } catch (error) {
                 console.log(error)
                 if (error.name === 'ValidationError') {
