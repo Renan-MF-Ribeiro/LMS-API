@@ -114,9 +114,11 @@ const { fetchIdpProfilesFromRequestObject } = require('../idp-integration/busine
 const { log } = require('../../utils/logger');
 const ApiError = require('../../errors/ApiError');
 const { addSASTokenToResponse } = require('../../utils/cookies');
+
 const { FormModel } = require('../forms/model');
 const { getConnectMap, validateDataByConnectMap } = require('../../utils/connect');
 const { getFormErrorsByMapConfig, getDefaultForm } = require('../forms/business');
+
 const { getDbCurrentFeatures } = require('../../utils/features');
 
 
@@ -481,7 +483,7 @@ module.exports = {
             }
 
             const formatedDate = formatDateWithoutHoursBrasilian(data.birthDate);
-
+            console.log(formatedDate);
             const userData = {
                 networkLogin,
                 // email: networkLogin,
