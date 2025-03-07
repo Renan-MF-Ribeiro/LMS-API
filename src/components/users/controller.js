@@ -500,7 +500,7 @@ module.exports = {
 
             const newUser = await User.create(userData);
 
-            await WebhooksController.dispatch('create', 'users', userData);
+            await WebhooksController.dispatch('create', 'users', false, userData);
 
             if (token) {
                 const DATA_INICIO = today.startOf('day');
@@ -1375,7 +1375,7 @@ module.exports = {
                     ...user.processedUser
                 });
 
-                await WebhooksController.dispatch('update', 'users', { ...user.processedUser, password: undefined });
+                await WebhooksController.dispatch('update', 'users', false, { ...user.processedUser, password: undefined });
 
                 await Tracking.updateMany(
                     { userLogin: user.processedUser.cpf },
@@ -1699,7 +1699,7 @@ module.exports = {
                 projection: { ...userProjection }
             });
 
-            await WebhooksController.dispatch('update', 'users', { ...userUpdated, password: undefined });
+            await WebhooksController.dispatch('update', 'users', false, { ...userUpdated, password: undefined });
 
             if (userUpdated?.status) {
                 await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status);
@@ -1853,12 +1853,12 @@ module.exports = {
                     await User.findByIdAndUpdate(user._id, {
                         ...objUser
                     });
-                    await WebhooksController.dispatch('update', 'users', { ...objUser, password: undefined });
+                    await WebhooksController.dispatch('update', 'users', false, { ...objUser, password: undefined });
                 } else {
                     await User.create({
                         ...objUser
                     });
-                    await WebhooksController.dispatch('create', 'users', { ...objUser, password: undefined });
+                    await WebhooksController.dispatch('create', 'users', false, { ...objUser, password: undefined });
                 }
             }
 
