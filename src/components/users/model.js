@@ -344,6 +344,13 @@ const defaultUserMap = {
         type: 'cpf',
         config: null,
     },
+    cnpj: {
+        field: 'CNPJ',
+        label: 'CNPJ',
+        activeInForms: true,
+        type: 'cnpj',
+        config: null,
+    },
     birthDate: {
         field: 'DATA_NASC',
         label: 'Data de nascimento',
