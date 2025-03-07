@@ -1255,7 +1255,6 @@ module.exports = {
     },
 
     async import(req, res) {
-        try {
             const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
 
             var file = null;
@@ -1288,7 +1287,6 @@ module.exports = {
 
                 results.forEach((data) => {
                     const dataErrors = validateDataByConnectMap(data, connectMap);
-
                     if (dataErrors.length > 0) {
                         errors.push({
                             item: data.networkLogin ?? data.cpf ?? data.email ?? data.name,
@@ -1301,8 +1299,6 @@ module.exports = {
                     throw new ApiError('Erro ao importar usuários', 400, errors, { skipDbLog: true });
                 }
             }
-
-            console.log('results', results);
 
             for (const result of results) {
                 const existingUser = await User.findOne({
@@ -1406,17 +1402,7 @@ module.exports = {
             }
 
             _messages.success(res, req, 'Importado com sucesso');
-        } catch (error) {
-            console.log(error);
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'users',
-                'import'
-            );
-        }
+
     },
 
     async importOnboarding(req, res) {
