@@ -1,8 +1,10 @@
+const { getDbCurrentFeatures } = require('../../../utils/features');
 const { Menu } = require('./model')
 
 module.exports = {
     async validateMenuAccess (menu, req, currentGroupsAD) {
-        return filterMenuByAccess(menu, req, currentGroupsAD);
+        const features = await getDbCurrentFeatures(req);
+        return filterMenuByAccess(menu, req, currentGroupsAD, features);
     },
     async verifyDefaultItems () {
         const menu = await Menu.find({});
@@ -17,10 +19,11 @@ module.exports = {
     }
 }
 
-async function filterMenuByAccess (menu, req, currentGroupsAD) {
+async function filterMenuByAccess (menu, req, currentGroupsAD, features) {
+    
     const filteredMenu = [];
     for (const item of menu) {
-        if (item['feature'] && req.features[item['feature']] !== true) continue;
+        if (item['feature'] && features?.[item['feature']] !== true) continue;
         const hasAccess = item['roles'].some(role => currentGroupsAD.includes(role));
         if (!hasAccess) continue;
 

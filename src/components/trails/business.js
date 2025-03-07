@@ -7,6 +7,7 @@ const { Trail } = require('./model');
 const { Item } = require('../items/model');
 const axios = require('axios');
 const { socialApi } = require('../social/http-adapter');
+const { getDbCurrentFeatures } = require('../../utils/features');
 
 module.exports = {
     async checkItem (item) {
@@ -52,7 +53,9 @@ module.exports = {
                 let socialConfig;
                 let socialStatus = ""
                     
-                if (global.globalApp?.get('features')?.social) { // TODO: É a melhor maneira?
+                const features = await getDbCurrentFeatures();
+
+                if (features?.social) {
                     const { data } = await socialApi.get(`client-config/${process.env.CLIENT_ID}`);
                     socialConfig = data
                 }
