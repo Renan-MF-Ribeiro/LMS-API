@@ -237,6 +237,7 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             try {
                 const userLastLogin = await LastLogin.find({ user: userID });
+                if (userLastLogin?.length === 0) resolve(0)
                 const userFirstLogin = userLastLogin[0].createdAt;
                 const today = new Date();
                 const firstLogin = new Date(userFirstLogin);
@@ -347,6 +348,7 @@ module.exports = {
             { description: 'MATRICULA', value: 'registration' },
             { description: 'STATUS', value: 'status' },
             { description: 'CPF', value: 'cpf' },
+            { description: 'CNPJ', value: 'cnpj' },
             { description: 'DATA_NASC', value: 'birthDate' },
             { description: 'IDENTIDADE_DE_GENERO', value: 'genderIdentity' },
             { description: 'PAIS', value: 'country' },
