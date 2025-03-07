@@ -659,15 +659,14 @@ module.exports = {
                 if (isSectionTrailInfo(sectionTrail)) {
                     const trail = trailsDb.find(trail => String(trail._id) === String(getSectionTrailId(sectionTrail)));
 
-                    if (!trail) return sectionTrail;
+                    if (!trail) return null;
 
                     return processTrailInfo(trail);
                 }
 
                 return sectionTrail;
             }) ?? [])
-                .filter(trail => isValidSectionTrailInfo(trail))
-                .filter(checkIfTheTrackIsValid);
+                .filter(trail => trail && isValidSectionTrailInfo(trail));
 
         let responseSection;
 

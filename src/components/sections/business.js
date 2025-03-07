@@ -450,9 +450,9 @@ module.exports = {
                 sections.forEach((section) => {
                     const sectionTrails = section.trails
                         .map(trail => {
-                            return trails.find(t => String(t._id) === String(getSectionTrailId(trail))) ?? trail;
+                            return trails.find(t => String(t._id) === String(getSectionTrailId(trail))) ?? null;
                         })
-                        .filter(trail => isValidSectionTrailInfo(trail) && checkIfTheTrackIsValid(trail))
+                        .filter(trail => trail && isValidSectionTrailInfo(trail) && checkIfTheTrackIsValid(trail))
 
                     if (sectionTrails.length > 0) {
                         arrSections.push({
@@ -570,7 +570,7 @@ module.exports = {
                             };
 
                     for (const trail of trails) {
-                        if (trail.completion === 0 ?? !trail.completion) {
+                        if (trail.completion === 0 || !trail.completion) {
                             section.trails.push(trail);
                         }
                     }
