@@ -137,7 +137,7 @@ async function validateUserAndPassword(res, req, login, passwordDecripted) {
         return obj.valid && bcrypt.compareSync(passwordDecripted, obj.hash);
     });
     if (!user || pass.length === 0) {
-        _messages.forbidden(
+        return _messages.forbidden(
             res,
             req,
             'Usuário ou senha inválidos.',
@@ -563,7 +563,6 @@ module.exports = {
     async ldapSignIn(req, res) {
         let user = {};
         const { login, password } = req.body;
-
         try {
             const decrypted = cryptoJS.AES.decrypt(password, 'pass');
             const passwordDecripted = decrypted.toString(cryptoJS.enc.Utf8);
@@ -632,11 +631,12 @@ module.exports = {
                 namesProfiles.concat(namesGroups)
             );
         } catch (error) {
-            await Block.create({
-                user: user._id,
-                dateTimeBlock: getDateToday(),
-                ip: req.ip
-            });
+            if(user)
+                await Block.create({
+                    user: user._id,
+                    dateTimeBlock: getDateToday(),
+                    ip: req.ip
+                });
             return _messages.forbidden(
                 res,
                 req,
@@ -2822,8 +2822,7 @@ module.exports = {
             const fields = Object.entries(connectMap).map(([key, value]) => ({
                 display: value.label,
                 value: key
-            })).filter((field) => field.key !== 'elegibility');
-            console.log(fields)
+            })).filter((field) => field.value !== 'elegibility');
             _messages.success(res, req, {
                 map: connectMap,
                 fields,
