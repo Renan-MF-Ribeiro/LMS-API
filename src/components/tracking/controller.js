@@ -30,19 +30,14 @@ const {
     FormTracking
 } = require('./model');
 const { HistoricEvaluation, Evaluation } = require('../assessments/model');
-const {
-    getTagsElegiblesByToken,
-    checkEligibilityTagsAnd,
-} = require('../sections/business');
-const { populateTrails } = require('../trails/business');
 const cryptoJS = require('crypto-js');
 const { Item, FORM_ITEM_TYPE } = require('../items/model');
-const GamificationController = require('../gamification/controller');
-const { EVENTS_CATEGORY } = require('../gamification/model');
+const { EVENT_CATEGORY } = require('../gamification/model');
 
 const { createCompleteTracking } = require('./business')
 
 const _functions = require('../../utils/functions');
+const GamificationKafka = require('../gamification/kafka/broker');
 
 const TRACKING_KINDS = Object.freeze({
     DocumentTracking: DocumentTracking,
@@ -249,28 +244,33 @@ const TrackingController = {
                 if (req.body.completion === 1) completionAt = new Date();
             }
 
-
-            // GAMIFICATION DISPATCH
-            await GamificationController.dispatch(
-                q.userLogin,
-                [
-                    EVENTS_CATEGORY.STARTED_TRAIL,
-                    EVENTS_CATEGORY.FINISHED_ITEM,
-                    EVENTS_CATEGORY.FINISHED_TRAIL,
-                    EVENTS_CATEGORY.WATCHED_COLLAB,
-                ],
-                {
-                    item: q.item,
-                    completion: req.body?.completion,
-                    lessonStatus: req.body?.lessonStatus,
-                }
-            );
-            delete req.body.optionalItems
-            await TrackingModel.findOneAndUpdate(
+            delete req.body.optionalItems;
+            const updatedTracking = await TrackingModel.findOneAndUpdate(
                 filterQuery,
                 { ...req.body, totalTime, isAllowedToSendXAPI, completionAt },
-                { upsert: true, omitUndefined: true }
+                { new: true, upsert: true, omitUndefined: true }
             );
+
+            await GamificationKafka.publishEventRuleValidation({
+                events: [
+                    EVENT_CATEGORY.ACHIEVED_PROGRESS_PERCENTAGE,
+                    EVENT_CATEGORY.FINISHED_FAVORITE_TRAIL,
+                    EVENT_CATEGORY.FINISHED_HIGHLIGHTED_ITEM,
+                    EVENT_CATEGORY.FINISHED_ITEM,
+                    EVENT_CATEGORY.FINISHED_OPTIONAL_ITEM,
+                    EVENT_CATEGORY.FINISHED_SECTION,
+                    EVENT_CATEGORY.FINISHED_SHARED_TRAIL,
+                    EVENT_CATEGORY.FINISHED_TRAIL,
+                    EVENT_CATEGORY.STARTED_TRAIL,
+                    EVENT_CATEGORY.WATCHED_COLLAB,
+                ],
+                networkLogin: q.userLogin,
+                meta: {
+                    tracking: updatedTracking,
+                },
+            });
+            
+
             //EVENTO CONCLUSAO
             await calendarEventConclusion(
                 q.userLogin,
@@ -724,9 +724,7 @@ const TrackingController = {
             order = order === 'itemName' ? 'item.title' : order;
             order = order === 'studentName' ? 'user.name' : order;
 
-            const trackingCount = await TrackingsItems.find(
-                query
-            ).countDocuments();
+            const trackingCount = await TrackingsItems.find(query).countDocuments();
             const tracking = await TrackingsItems.find(query)
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
