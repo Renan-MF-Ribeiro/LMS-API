@@ -7,41 +7,28 @@ const { WebhooksDefault } = require('./constants')
 module.exports = {
     async dispatch(action, target, load = false, data) {
         const webhook = await Webhooks.findOne({ target: target, action: action }).lean()
-        console.log(target, action)
-        const body = {
-            data,
-            label: webhook.label,
-            target: webhook.target,
-            action: load ? 'load' : webhook.action
-        }
         if (webhook && webhook.status) {
+            const body = {
+                data,
+                label: webhook.label,
+                target: webhook.target,
+                action: load ? 'load' : webhook.action,
+                auth: webhook.auth
+            }
             const secret = process.env.WEBHOOK_SECRET_KEY;
             const payload = JSON.stringify(body);
 
             const hmac = crypto.createHmac('sha256', secret).update(payload).digest('hex');
 
-            const url = webhook.endpoint;
-            if(webhook.auth.type === 'api_key') {
+            const url = process.env.API_WEBHOOK;
                 await axios.post(url, body, {
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Webhook-Signature': hmac,
-                        'x-api-key': webhook.auth.key,
+                        'x-api-key': process.env.API_KEY_WEBHOOK,
                         'clientId': process.env.CLIENT_ID
                     }
                 });
-            } 
-
-            if(webhook.auth.type === 'bearer') {
-                await axios.post(url, body, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Webhook-Signature': hmac,
-                        'Authorization': `Bearer ${webhook.auth.key}`,
-                        'clientId': process.env.CLIENT_ID
-                    }
-                });
-            }
         }
     },
     async update(req, res) {
