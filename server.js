@@ -31,6 +31,7 @@ const {
     getUsersDataConfig,
     getCompanyConfig
 } = require('./src/components/config/business')
+const GamificationKafka = require('./src/components/gamification/kafka/broker');
 
 const server = app.listen(port, async () => {
     try {
@@ -38,6 +39,13 @@ const server = app.listen(port, async () => {
         setAppCurrentFeatures(app, dbCurrentFeatures);
     } catch (err) {
         error('Error setting features: ' + err);
+    }
+
+    try {
+        await GamificationKafka.start();
+    } catch (err) {
+        error('Error on connecting GamificationKafka: ' + err);
+        await GamificationKafka.stop();
     }
 
     try {
