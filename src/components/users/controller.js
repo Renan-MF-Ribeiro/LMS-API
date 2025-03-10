@@ -89,9 +89,8 @@ const { HistoricEvaluation, Evaluation } = require('../assessments/model');
 const { Question } = require('../assessments/questions/model');
 const { Alternative } = require('../assessments/alternatives/model');
 
-const { EVENTS_CATEGORY } = require('../gamification/model');
+const { EVENT_CATEGORY } = require('../gamification/model');
 const AssessmentController = require('../assessment/controller');
-const GamificationController = require('../gamification/controller');
 const GamificationBusiness = require('../gamification/business');
 const { Group } = require('../groups/model');
 const { handleUserEligibilitiesGamification } = require('../gamification/utils');
@@ -109,6 +108,7 @@ const {
 const { log } = require('../../utils/logger');
 const ApiError = require('../../errors/ApiError');
 const { addSASTokenToResponse } = require('../../utils/cookies');
+const GamificationKafka = require('../gamification/kafka/broker');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -553,8 +553,10 @@ module.exports = {
                 namesGroups,
             } = await generateTokens(user, login, password);
 
-            // GAMIFICATION DISPATCH
-            await GamificationController.dispatch(login, [EVENTS_CATEGORY.LOGIN]);
+            await GamificationKafka.publishEventRuleValidation({
+                events: [EVENT_CATEGORY.LOGIN],
+                networkLogin: login
+            })
 
             return _messages.success(
                 res,
@@ -661,7 +663,7 @@ module.exports = {
             const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data[ssoForm.claim];
 
             if (!claim) {
-                _messages.forbidden(
+                return _messages.forbidden(
                     res,
                     req,
                     'Usuário ou senha não informados',
@@ -674,13 +676,17 @@ module.exports = {
             if (data?.communication || data?.data?.communication) {
                 const communication = data?.communication || data?.data?.communication;
                 const communicationCategory = String(communication).toUpperCase();
-                const eventCategory = EVENTS_CATEGORY[`OPENED_FROM_${communicationCategory}`];
+                const eventCategory = EVENT_CATEGORY[`OPENED_FROM_${communicationCategory}`];
 
-                await GamificationController.dispatch(claim, [eventCategory], {
-                    trail: {
-                        title: data?.trailTitle || data?.data?.trailTitle,
-                    },
-                });
+                await GamificationKafka.publishEventRuleValidation({
+                    events: [eventCategory],
+                    networkLogin: claim,
+                    meta: {
+                        trail: {
+                            title: data?.trailTitle || data?.data?.trailTitle,
+                        }
+                    }
+                })
             }
 
             if (claim) {
