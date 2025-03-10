@@ -147,7 +147,7 @@ const forEachRow = (row, rowNumber, map, labels, users, previousHyperLink) => {
         for (const columnHeader of row.values) {
             const mapEntries = Object.entries(map);
             const labelDB = mapEntries.find(
-                (entry) => entry[1] && columnHeader && entry[1] === columnHeader
+                (entry) => entry[1]?.field && columnHeader && entry[1]?.field === columnHeader
             )?.[0];
             labels.push(labelDB);
         }
