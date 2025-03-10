@@ -520,26 +520,37 @@ module.exports = {
             .join('_')
             .toUpperCase();
     },
+    
+
+    getSortedDate(dates, order) {
+        const sortedDates = dates.sort((prev, curr) => prev.getTime() - curr.getTime())
+        return order === 'desc' ? sortedDates.slice(0)[0] : sortedDates.slice(-1)[0]
+    },
 
     processTrailTracking(trail, allTrackingUser, dashboard = false) {
         let containsACompletedItem = false;
         const completionDate = [];
         const scoreArr = [];
-        let lastTrackingUpdate;
         trail.notStarted = false;
         let duration = 0;
 
         for (const item of trail.items) {
-            const objTracking = allTrackingUser.filter((obj) => {
-                if (String(obj.item) === String(item?.itemID?._id)) {
-                    return true;
-                }
-            })[0];
-            if (dashboard && objTracking && objTracking[0] === undefined) {
+            const objTracking = allTrackingUser.find((obj) => String(obj.item) === String(item?.itemID?._id));
+
+            if (dashboard && objTracking && objTracking === undefined) {
                 trail.notStarted = true;
             }
+
+            if (objTracking?.updatedAt) {
+                const currentTime = trail?.lastTrackingUpdate ? new Date(trail.lastTrackingUpdate).getTime() : 0;
+                const newTime = new Date(objTracking.updatedAt).getTime();
+                
+                if (currentTime === 0 || newTime > currentTime) {
+                    trail.lastTrackingUpdate = objTracking.updatedAt;
+                }
+            }
+
             duration += item?.itemID?.durationHours ?? 0;
-            lastTrackingUpdate = objTracking ? objTracking.updatedAt : null;
             const score = objTracking && objTracking.score ? objTracking.score : null;
             const completionAt = objTracking ? objTracking.completionAt : null;
             const updatedAt = objTracking ? objTracking.updatedAt : null;
@@ -603,7 +614,7 @@ module.exports = {
                 })
             )
         );
-        trail.lastTrackingUpdate = lastTrackingUpdate;
+
         trail.completionAt = mostRecentDate;
         trail.completion = getTrailCompletion(trail);
         trail.duration = duration;
