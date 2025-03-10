@@ -8,16 +8,15 @@ module.exports = {
     async dispatch(action, target, load = false, data) {
         const webhook = await Webhooks.findOne({ target: target, action: action }).lean()
         console.log(target, action)
-        const body = {
-            data,
-            label: webhook.label,
-            target: webhook.target,
-            action: load ? 'load' : webhook.action
-        }
         if (webhook && webhook.status) {
             const secret = process.env.WEBHOOK_SECRET_KEY;
             const payload = JSON.stringify(body);
-
+            const body = {
+                data,
+                label: webhook.label,
+                target: webhook.target,
+                action: load ? 'load' : webhook.action
+            }
             const hmac = crypto.createHmac('sha256', secret).update(payload).digest('hex');
 
             const url = webhook.endpoint;
