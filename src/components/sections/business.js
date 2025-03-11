@@ -1197,6 +1197,7 @@ function mapAluraTrackings (items) {
 }
 
 function canRegisterOrCancel (initialDate, minutes) {
+    if (!minutes) return true;
     const currentDate = new Date()
     currentDate.setMinutes(currentDate.getMinutes() - 180);
 
