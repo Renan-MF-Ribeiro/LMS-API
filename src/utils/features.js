@@ -4,7 +4,7 @@ const { log } = require("./logger");
 async function getDbCurrentFeatures(req) {
     if (req?.features) return req.features;
 
-    log('GETTING DB CURRENT FEATURES');
+    // log('GETTING DB CURRENT FEATURES');
     const features = await Features.findOne({}, {}, {
         sort: { _id: -1 }
     }).lean();
