@@ -6,21 +6,23 @@ const { WebhooksDefault } = require('./constants')
 
 module.exports = {
     async dispatch(action, target, load = false, data) {
-        const webhook = await Webhooks.findOne({ target: target, action: action }).lean()
-        if (webhook && webhook.status) {
-            const body = {
-                data,
-                label: webhook.label,
-                target: webhook.target,
-                action: load ? 'load' : webhook.action,
-                auth: webhook.auth
-            }
-            const secret = process.env.WEBHOOK_SECRET_KEY;
-            const payload = JSON.stringify(body);
+        try {
+            const webhook = await Webhooks.findOne({ target: target, action: action }).lean()
+            if (webhook && webhook.status) {
+                const body = {
+                    data,
+                    label: webhook.label,
+                    endpoint: webhook.endpoint,
+                    target: webhook.target,
+                    action: webhook.action,
+                    auth: webhook.auth
+                }
+                const secret = process.env.WEBHOOK_SECRET_KEY;
+                const payload = JSON.stringify(body);
 
-            const hmac = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+                const hmac = crypto.createHmac('sha256', secret).update(payload).digest('hex');
 
-            const url = process.env.API_WEBHOOK;
+                const url = `${process.env.API_WEBHOOK}/webhook`;
                 await axios.post(url, body, {
                     headers: {
                         'Content-Type': 'application/json',
@@ -29,6 +31,11 @@ module.exports = {
                         'clientId': process.env.CLIENT_ID
                     }
                 });
+            }
+            return { success: true };
+        } catch (error) {
+            console.error(error);
+            return { success: false, error: error.message };
         }
     },
     async update(req, res) {
