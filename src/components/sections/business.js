@@ -570,7 +570,7 @@ module.exports = {
                             };
 
                     for (const trail of trails) {
-                        if (trail.completion === 0 || !trail.completion) {
+                        if (trail.completion === 0 ?? !trail.completion) {
                             section.trails.push(trail);
                         }
                     }
