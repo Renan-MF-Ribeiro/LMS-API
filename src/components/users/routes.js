@@ -1,9 +1,10 @@
 const express = require('express');
+const passport = require('passport');
 const rateLimit = require('express-rate-limit');
 const _controller = require('./controller');
 const multiparty = require('connect-multiparty');
 const formidable = require('express-formidable');
-const { authenticatePassportSaml } = require('../../utils/passport');
+const { authenticatePassport } = require('../../utils/passport');
 const {
     validateTokenRoute,
     isUserManager,
@@ -13,7 +14,7 @@ const {
 } = require('../../utils/middlewares');
 
 const Saml2js = require('saml2js');
-const { clearSASTokenFromResponse } = require('../../utils/cookies');
+const { clearSASTokenFromResponse, saveStrategyOnCookie } = require('../../utils/cookies');
 module.exports = express
     .Router()
     .post(
@@ -108,10 +109,13 @@ module.exports = express
     .post('/signup', _controller.signup)
     .post('/activate', _controller.activateUser)
     .post('/sso', _controller.singleSignOn)
-    .get('/sso/saml', authenticatePassportSaml)
+    .get(
+        '/sso/saml',
+        authenticatePassport,
+    )
     .post(
         '/sso/saml/callback',
-        authenticatePassportSaml,
+        authenticatePassport,
         (req, res, next) => {
             const xmlResponse = req.body.SAMLResponse;
             const parser = new Saml2js(xmlResponse);
@@ -119,6 +123,16 @@ module.exports = express
             next();
         },
         _controller.ssoCallback
+    )
+    .get(
+        '/openid',
+        saveStrategyOnCookie,
+        authenticatePassport,
+    )
+    .get(
+        '/openid/callback',
+        authenticatePassport,
+        _controller.openIdCallback
     )
     .post('/device', validateTokenRoute, _controller.updateDeviceId)
     .get(

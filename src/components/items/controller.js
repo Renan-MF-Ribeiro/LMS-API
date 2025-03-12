@@ -10,6 +10,7 @@ const unzipper = require('unzipper');
 const etl = require('etl');
 const { createWriteStream } = require('fs');
 const parseXml = require('@rgrove/parse-xml');
+const { dispatch } = require('../webhooks/controller');
 const { filter, reduce, pipe } = require('ramda');
 const { Trail } = require('../trails/model');
 const { Section } = require('../sections/model');
@@ -191,7 +192,7 @@ const ItemController = {
                 payload.author = user._id;
 
                 const item = await ItemModel.create(payload);
-
+                
                 if (item._id) {
                     const trail = await Trail.create({
                         backgroundPath: null,
@@ -306,6 +307,7 @@ const ItemController = {
             }
 
             const { _id } = await ItemModel.create(req.body);
+            await dispatch('create', 'item', { _id, ...req.body });
 
             _messages.success(res, req, { _id });
         } catch (error) {
@@ -487,7 +489,21 @@ const ItemController = {
                 }
 
                 const item = await ItemModel.create(payload);
-                _messages.success(res, req, item);
+
+                await dispatch('create', 'item', { _id: item._id, ...payload });
+                _messages.success(
+                    res,
+                    req,
+                    item,
+                    'Criação de dados',
+                    'items',
+                    'create',
+                    item,
+                    [],
+                    true,
+                    'CREATE'
+                );
+
             } catch (error) {
                 console.log(error)
                 if (error.name === 'ValidationError') {
@@ -697,8 +713,11 @@ const ItemController = {
                     item = await ItemModel.findByIdAndUpdate(payload._id, {
                         contentPath,
                     }, { new: true });
+
+                    await dispatch('update', 'item', { _id: item._id, ...payload });
                 } else {
                     item = await ItemModel.findByIdAndUpdate(payload._id, payload, { new: true });
+                    await dispatch('update', 'item', { _id: item._id, ...payload });
                 }
 
                 _messages.success(
@@ -759,6 +778,7 @@ const ItemController = {
         try {
             const _id = req.params.itemId;
             await ItemModel.findOneAndUpdate({ _id }, req.body);
+            await dispatch('update', 'item', { _id, ...req.body });
             res.status(httpStatus.NO_CONTENT).send();
         } catch (error) {
             _messages.internalServer(
@@ -782,6 +802,7 @@ const ItemController = {
                 item.kind === 'SoonItem'
             ) {
                 await Item.findByIdAndUpdate(_id, { enabled });
+                await dispatch('update', 'item', { _id, enabled });
                 _messages.success(res, req, 'Atualizado com sucesso');
             } else {
                 _messages.badRequest(
