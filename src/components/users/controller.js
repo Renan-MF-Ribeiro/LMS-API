@@ -1654,20 +1654,7 @@ module.exports = {
                         [f]: { $eq: req.body[f] }
                     })
             );
-            const found = filter.length > 0 && (await User.findOne({ $or: filter }));
-
-            if (found) {
-                const field = found.email === email ? 'E-MAIL' : 'LOGIN';
-
-                return _messages.forbidden(
-                    res,
-                    req,
-                    'Erro interno no servidor',
-                    `O ${field} informado já está sendo utilizado`,
-                    'users',
-                    'updateUser'
-                );
-            }
+            
             const userUpdated = { ...req.body };
             const account = await processUserAccount(userUpdated);
             const value = JSON.parse(account.value);
