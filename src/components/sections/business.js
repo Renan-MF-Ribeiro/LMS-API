@@ -570,7 +570,7 @@ module.exports = {
                             };
 
                     for (const trail of trails) {
-                        if (trail.completion === 0 || !trail.completion) {
+                        if (trail.completion === 0 ?? !trail.completion) {
                             section.trails.push(trail);
                         }
                     }
@@ -1197,6 +1197,7 @@ function mapAluraTrackings (items) {
 }
 
 function canRegisterOrCancel (initialDate, minutes) {
+    if (!minutes) return true;
     const currentDate = new Date()
     currentDate.setMinutes(currentDate.getMinutes() - 180);
 
