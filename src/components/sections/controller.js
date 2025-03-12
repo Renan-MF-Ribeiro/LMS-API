@@ -242,7 +242,7 @@ module.exports = {
                     'Exclusão de dados',
                     'sections',
                     'deleteSection',
-                    [],
+                    section,
                     [],
                     true,
                     'DELETE'
@@ -340,8 +340,6 @@ module.exports = {
 
                 let trails = await populateTrails(true, query);
 
-                trails = trails.filter((trail) => checkIfTheTrackIsValid(trail));
-
                 const allTrackingUser = await Tracking.find({
                     userLogin: { $eq: user.networkLogin },
                     $or: [
@@ -370,6 +368,8 @@ module.exports = {
                         }
                     }
                 }
+
+                trails = trails.filter(checkIfTheTrackIsValid);
 
                 let arrSections = await elegiblesContents(trails);
                 const arrMandatorySections = await mandatorySections(trails, tags);
@@ -633,7 +633,6 @@ module.exports = {
 
         const trailsDb = (await populateTrails(true, query))
             ?.filter(trail => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative)
-            ?.filter((trail) => checkIfTheTrackIsValid(trail))
 
         const allTrackingUser = await Tracking.find({
             userLogin: { $eq: user.networkLogin },
@@ -672,14 +671,14 @@ module.exports = {
                 if (isSectionTrailInfo(sectionTrail)) {
                     const trail = trailsDb.find(trail => String(trail._id) === String(getSectionTrailId(sectionTrail)));
 
-                    if (!trail) return sectionTrail;
+                    if (!trail) return null;
 
                     return processTrailInfo(trail);
                 }
 
                 return sectionTrail;
             }) ?? [])
-                .filter(trail => isValidSectionTrailInfo(trail));
+                .filter(trail => trail && isValidSectionTrailInfo(trail));
 
         let responseSection;
 

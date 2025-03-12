@@ -19,6 +19,8 @@ const { azureBlob, readXLSXAttendanceList } = require('../../utils/files');
 
 const { Group } = require('../groups/model');
 
+const { dispatch } = require('../webhooks/controller');
+
 const { Trail } = require('../trails/model');
 
 const { sendMessageToKafka, processTargetUsers } = require('../new-messages/business');
@@ -112,6 +114,8 @@ module.exports = {
 
                     delete body.materials;
                     const courseCreated = await CourseModel.create(body);
+
+                    await dispatch('create', 'course', courseCreated);
 
                     if (materials) {
                         const materialsArray = Array.isArray(materials)
@@ -240,8 +244,6 @@ module.exports = {
             if (body.mandatory) body.mandatory = JSON.parse(body.mandatory);
             if (body.certificateDue) body.certificateDue = JSON.parse(body.certificateDue);
 
-
-
             const { thumb, banner } = req.files;
             let thumbPath;
             if (thumb) {
@@ -322,6 +324,8 @@ module.exports = {
                     }
 
                     await CourseModel.findByIdAndUpdate(body._id, body);
+                    
+                    await dispatch('update', 'course', body);
 
                     if (body.isEvaluationAvailable == false) {
                         await ClassModel.updateMany(
@@ -345,6 +349,8 @@ module.exports = {
         try {
             const { id } = req.params;
             await CourseModel.findByIdAndUpdate(id, { deleted: 1 });
+            await dispatch('delete', 'course', { id });
+            
             success(res, req, 'Curso excluído com sucesso!');
         } catch (error) {
             internalServer(
@@ -583,6 +589,8 @@ module.exports = {
                             signup,
                         });
 
+                        await dispatch('create', 'class', createdClass);
+
                         const classesFromCourse = await ClassModel.find({ courseID });
 
                         const arrUserId = [];
@@ -802,9 +810,7 @@ module.exports = {
                                     String(user._id) === String(oldUser.userID)
                             )
                     );
-
-                    // Atualiza classe e usuários
-                    await ClassModel.findByIdAndUpdate(classID, {
+                    const classBody = {
                         courseID,
                         instructor: instructorID,
                         requester,
@@ -827,8 +833,10 @@ module.exports = {
                             acc[`users.${index}`] = user;
                             return acc;
                         }, {}),
-                    });
-
+                    }
+                    // Atualiza classe e usuários
+                    await ClassModel.findByIdAndUpdate(classID, classBody);
+                    await dispatch('update', 'class', { _id: classID, ...classBody });
                     // Adiciona usuários
                     if (addedUsers.length) {
                         await ClassModel.findByIdAndUpdate(classID, {
@@ -1362,10 +1370,11 @@ module.exports = {
                         grades: 0,
                     };
 
-                    await ClassModel.findOneAndUpdate(
+                    const foundClass = await ClassModel.findOneAndUpdate(
                         { _id: course._id },
                         { $addToSet: { users: studentRegister } }
                     );
+                    await dispatch('update', 'class', foundClass);
                     user = studentRegister;
                 }
             }
@@ -1552,9 +1561,9 @@ module.exports = {
             { $pull: { users: { userID: user._id } } },
             { new: true }
         );
+        await dispatch('update', 'class', classUpdated);
 
         success(res, req, classUpdated)
-
     },
 
     async getInstructorByInstructorGroup (req, res) {

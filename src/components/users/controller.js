@@ -1,6 +1,7 @@
 /* eslint-disable handle-callback-err */
 require('dotenv').config();
 const mongoose = require('mongoose');
+const _ = require('lodash');
 const moment = require('moment');
 const { CLIENT_ID } = process.env;
 const _messages = require('../../utils/messages');
@@ -13,7 +14,7 @@ const {
     userSchema,
     userProjection,
     defaultUserMap,
-    groups,
+    groups
 } = require('./model');
 
 const {
@@ -31,7 +32,7 @@ const {
     generateMultiFactor,
     validateMultiFactor,
     returnProfileByToken,
-    generateSASToken,
+    generateSASToken
 } = require('../../utils/auth');
 
 const {
@@ -53,7 +54,7 @@ const {
     buildSearchObject,
     generateNewPassword,
     maskEmail,
-    getSsoFormByStrategyName,
+    getLoginFormByStrategyName
 } = require('./business');
 
 const {
@@ -66,8 +67,10 @@ const {
     removeAccents,
     deepGet,
     formatDateWithoutHoursBrasilian,
-    getDataByToken,
+    getDataByToken
 } = require('../../utils/functions');
+
+const { getActiveIdpIntegrations } = require('../idp-integration/business');
 
 const {
     sendEmailRecoveryPassword,
@@ -75,7 +78,7 @@ const {
     sendSignupActivationEmail,
     sendNotificationEmail,
     sendResetedPasswordToUser,
-    sendMultiFactorToUser,
+    sendMultiFactorToUser
 } = require('../../utils/email');
 
 const axios = require('axios');
@@ -100,25 +103,35 @@ const { Features } = require('../theme/features/model');
 const { Partner } = require('../partners/model');
 const { Log } = require('../logs/model');
 const { Tracking } = require('../tracking/model');
-const { getConfiguration, handleSegmentationOnQuery, getMessengerConfig, getUsersDataConfig } = require('../config/business');
-const { ConfigTypes } = require('../config/model');
 const {
-    fetchIdpProfilesFromRequestWithSamlObject,
-    getActiveIdpIntegrations,
-} = require('../idp-integration/business');
+    getConfiguration,
+    handleSegmentationOnQuery,
+    getMessengerConfig,
+    getUsersDataConfig
+} = require('../config/business');
+const { ConfigTypes } = require('../config/model');
+const { fetchIdpProfilesFromRequestObject } = require('../idp-integration/business');
 const { log } = require('../../utils/logger');
+const WebhooksController = require("../webhooks/controller");
 const ApiError = require('../../errors/ApiError');
 const { addSASTokenToResponse } = require('../../utils/cookies');
 
+const { FormModel } = require('../forms/model');
+const { getConnectMap, validateDataByConnectMap } = require('../../utils/connect');
+const { getFormErrorsByMapConfig, getDefaultForm } = require('../forms/business');
+
+const { getDbCurrentFeatures } = require('../../utils/features');
+
+
 const isProduction = process.env.NODE_ENV === 'production';
 
-function hideCPFNumbers (cpf) {
+function hideCPFNumbers(cpf) {
     if (!cpf) return cpf;
 
     return String(cpf).substring(0, 3) + 'XXXXXXXX';
 }
 
-async function validateUserAndPassword (res, req, login, passwordDecripted) {
+async function validateUserAndPassword(res, req, login, passwordDecripted) {
     // Verifica se usuário existe
     const user = await User.findOne({ networkLogin: { $eq: login }, status: 'ATIVO' }).lean();
     // Verifica se a senha é válida
@@ -126,7 +139,7 @@ async function validateUserAndPassword (res, req, login, passwordDecripted) {
         return obj.valid && bcrypt.compareSync(passwordDecripted, obj.hash);
     });
     if (!user || pass.length === 0) {
-        _messages.forbidden(
+        return _messages.forbidden(
             res,
             req,
             'Usuário ou senha inválidos.',
@@ -144,8 +157,9 @@ async function validateUserAndPassword (res, req, login, passwordDecripted) {
 
     return user;
 }
+
 // Gerencia block de usuário por tentativas de login consecutivas
-async function handleBlockUser (user) {
+async function handleBlockUser(user) {
     const countOfBlocks = await checkAmountOfLocks(user._id);
     // 5 Tentativas
     if (countOfBlocks >= 5) {
@@ -172,12 +186,12 @@ async function handleBlockUser (user) {
         }
     }
 }
-async function generateTokens (user, login, password) {
+
+async function generateTokens(user, login, password) {
     const groups = user.groupsAD;
     const namesProfiles = [];
     const namesGroups = [];
     let tokenAnalytics, tokenHappPlace;
-
     for (const p in groups) {
         const strGroup = groups[p];
 
@@ -186,6 +200,7 @@ async function generateTokens (user, login, password) {
     }
 
     const profilesIDS = await returnIdProfileUser(namesProfiles);
+    console.log('profilesIDS', profilesIDS);
     const groupsIDS = await returnIdGroupUser(namesGroups);
     const userGroups = await Group.find({ name: { $in: namesGroups } });
     const eligibilities = userGroups.flatMap((group) =>
@@ -196,7 +211,7 @@ async function generateTokens (user, login, password) {
         tokenHappPlace = generateHappPlaceToken({
             name: user.name,
             networkLogin: user.networkLogin,
-            clientId: CLIENT_ID,
+            clientId: CLIENT_ID
         });
     }
 
@@ -205,7 +220,7 @@ async function generateTokens (user, login, password) {
         tokenAnalytics = generateTokenAnalytics({
             perfil: profilesIDS.numbers,
             clientID: CLIENT_ID,
-            filters: dashboardFilters,
+            filters: dashboardFilters
         });
     }
 
@@ -221,19 +236,20 @@ async function generateTokens (user, login, password) {
         profiles: profilesIDS.result,
         numbers: profilesIDS.numbers,
         groups: groupsIDS,
-        welcomeVideoWatched: user?.welcomeVideoWatched,
+        welcomeVideoWatched: user?.welcomeVideoWatched
     });
+    console.log(jwt.decode(token, String(user.networkLogin)))
 
     const mfaToken = generateMfaToken({
         ref: user._id,
-        mfa: false,
+        mfa: false
     });
 
     const SAS = generateSASToken();
 
     await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
 
-    let tokenEncript = cryptoJS.AES.encrypt(token, login);
+    let tokenEncript = cryptoJS.AES.encrypt(token, String(login));
     let tk = tokenEncript.toString();
     let key = login + ':' + password;
 
@@ -249,17 +265,17 @@ async function generateTokens (user, login, password) {
         authwebPush,
         profilesIDS,
         namesProfiles,
-        namesGroups,
+        namesGroups
     };
 }
 
 module.exports = {
-    async create (req, res) {
+    async create(req, res) {
         try {
             const { registration, cpf } = req.body;
 
             const userFound = await User.findOne({
-                $or: [{ registration }, { cpf }],
+                $or: [{ registration }, { cpf }]
             });
 
             if (userFound) {
@@ -277,8 +293,8 @@ module.exports = {
                 `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
                 {
                     headers: {
-                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
-                    },
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY
+                    }
                 }
             );
             const fieldsForElegibility = elegibilityResponse.data.fields;
@@ -291,6 +307,7 @@ module.exports = {
                 { networkLogin: processedUser.networkLogin },
                 { ...userProjection }
             );
+            await WebhooksController.dispatch('create', 'users', false, { ...processedUser, password: undefined });
 
             return _messages.success(res, req, created);
         } catch (error) {
@@ -300,7 +317,7 @@ module.exports = {
             if (error instanceof mongoose.Error.ValidationError) {
                 validationErrorKeys = Object.keys(error.errors);
                 validationError = validationErrorKeys.map((key) => ({
-                    [key]: error.errors[key].properties,
+                    [key]: error.errors[key].properties
                 }));
             }
 
@@ -309,7 +326,7 @@ module.exports = {
                 req,
                 !validationError ? 'Internal Server Error' : 'Validation Error',
                 {
-                    error: !validationError ? 'Internal Server Error' : validationError,
+                    error: !validationError ? 'Internal Server Error' : validationError
                 },
                 'users',
                 'create'
@@ -317,7 +334,7 @@ module.exports = {
         }
     },
 
-    async findById (req, res) {
+    async findById(req, res) {
         try {
             const _id = req.params.userId;
 
@@ -343,11 +360,44 @@ module.exports = {
         }
     },
 
-    async signup (req, res) {
-        const { token } = req.query;
-        const { password, ...data } = req.body;
+    async signup(req, res) {
+        const { token, formId: queryFormId } = req.query;
+        const { password, passwordConfirmation, loginField, formId: bodyFormId, ...data } = req.body;
+        const formId = queryFormId || bodyFormId || null;
 
-        const networkLogin = data.cpf;
+        if (!data.name) {
+            throw new ApiError('Nome é obrigatório', 400, { data }, { skipDbLog: true });
+        }
+
+        const form = (formId ? (await FormModel.findById(formId))?.toObject() : null) ?? await getDefaultForm();
+
+        log('using form:', form.name);
+
+        let networkLogin = data.cpf;
+
+        if (form) {
+            const connectMap = await getConnectMap(true);
+            const errors = getFormErrorsByMapConfig(connectMap, form, data);
+
+            log('errors:', errors);
+
+            if (errors.length > 0) {
+                const message = errors[0].message;
+                throw new ApiError(message, 400, { errors }, { skipDbLog: true });
+            }
+            networkLogin = data[form.loginField ?? 'cpf'];
+
+            log('form login field:', form.loginField ?? 'cpf');
+            log('networkLogin:', networkLogin);
+        }
+
+        if (!networkLogin) {
+            throw new ApiError('Campo de login não informado', 400, { data }, { skipDbLog: true });
+        }
+
+        if (!data.registration?.length) data.registration = networkLogin;
+
+        if (!data.admission?.length) data.admission = moment().format('DD/MM/YYYY');
 
         const today = moment(new Date());
         // Seta elegibilidades padrões
@@ -378,7 +428,7 @@ module.exports = {
             const hashPassword = {
                 hash: bcrypt.hashSync(password, salt),
                 valid: true,
-                createdAt: new Date(Date.now()),
+                createdAt: new Date(Date.now())
             };
 
             if (token) {
@@ -430,6 +480,8 @@ module.exports = {
                 // Gera array de objetos referentes a "_id" de classGroups
                 classGroupsIDs = selectedKey.classGroupResult?.classGroups?.map((x) => x);
                 defaultFields.partner = `${partner.title} - ${selectedKey.title}`;
+            } else {
+                groupsAD.push('ELEGE_CURSO')
             }
 
             const formatedDate = formatDateWithoutHoursBrasilian(data.birthDate);
@@ -445,10 +497,12 @@ module.exports = {
                 ...data,
                 birthDate: formatedDate,
                 groupsAD,
-                ...defaultFields,
+                ...defaultFields
             };
 
             const newUser = await User.create(userData);
+
+            await WebhooksController.dispatch('create', 'users', false, userData);
 
             if (token) {
                 const DATA_INICIO = today.startOf('day');
@@ -466,20 +520,13 @@ module.exports = {
                     ref: newUser._id,
                     clientId: process.env.CLIENT_ID,
                     userName: newUser.name,
-                    userTags: [],
+                    userTags: []
                 });
                 const activationLink = `${process.env.DOMAIN}/login/ativacao?token=${emailToken}`;
                 await sendSignupActivationEmail(newUser.email, activationLink);
             }
-
-            const accessToken = generateToken({
-                networkLogin,
-                ref: newUser._id,
-                clientId: process.env.CLIENT_ID,
-                userName: newUser.name,
-                userTags: [],
-            });
-            _messages.success(res, req, accessToken);
+            const tokens = await generateTokens(newUser, networkLogin, password);
+            return _messages.success(res, req, tokens);
         } catch (error) {
             console.log(error);
             _messages.internalServer(
@@ -493,7 +540,7 @@ module.exports = {
         }
     },
 
-    async activateUser (req, res) {
+    async activateUser(req, res) {
         try {
             const { token, email } = req.body;
             const isUser = await bcrypt.compare(email, token);
@@ -515,10 +562,9 @@ module.exports = {
         }
     },
 
-    async ldapSignIn (req, res) {
+    async ldapSignIn(req, res) {
         let user = {};
         const { login, password } = req.body;
-
         try {
             const decrypted = cryptoJS.AES.decrypt(password, 'pass');
             const passwordDecripted = decrypted.toString(cryptoJS.enc.Utf8);
@@ -550,7 +596,7 @@ module.exports = {
                 tk,
                 profilesIDS,
                 namesProfiles,
-                namesGroups,
+                namesGroups
             } = await generateTokens(user, login, password);
 
             // GAMIFICATION DISPATCH
@@ -575,7 +621,7 @@ module.exports = {
                     networkLogin: user.networkLogin,
                     userId: user._id,
                     authwebPush: authwebPush?.keys.auth,
-                    email: user.email,
+                    email: user.email
                 },
                 'Sucesso ao logar',
                 'users',
@@ -587,11 +633,12 @@ module.exports = {
                 namesProfiles.concat(namesGroups)
             );
         } catch (error) {
-            await Block.create({
-                user: user._id,
-                dateTimeBlock: getDateToday(),
-                ip: req.ip,
-            });
+            if(user)
+                await Block.create({
+                    user: user._id,
+                    dateTimeBlock: getDateToday(),
+                    ip: req.ip
+                });
             return _messages.forbidden(
                 res,
                 req,
@@ -604,7 +651,7 @@ module.exports = {
         }
     },
 
-    async feedbackElegible (req, res) {
+    async feedbackElegible(req, res) {
         const user = await getUserByToken(req);
         const today = new Date();
         const uri = `${process.env.API_SURVEY}/feedback/listbyuser?userid=${user._id}`;
@@ -641,7 +688,7 @@ module.exports = {
         }
     },
 
-    async singleSignOn (req, res) {
+    async singleSignOn(req, res) {
         let user = {};
 
         const { token } = req.body;
@@ -656,8 +703,7 @@ module.exports = {
             log('singleSignOn tokenStrategyName', tokenStrategyName);
             log('singleSignOn tokenIdpProfiles', tokenIdpProfiles);
 
-            const ssoForm = await getSsoFormByStrategyName(tokenStrategyName);
-
+            const ssoForm = await getLoginFormByStrategyName(tokenStrategyName);
             const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data[ssoForm.claim];
 
             if (!claim) {
@@ -678,8 +724,8 @@ module.exports = {
 
                 await GamificationController.dispatch(claim, [eventCategory], {
                     trail: {
-                        title: data?.trailTitle || data?.data?.trailTitle,
-                    },
+                        title: data?.trailTitle || data?.data?.trailTitle
+                    }
                 });
             }
 
@@ -727,7 +773,7 @@ module.exports = {
                                 tokenIdpProfiles
                                     ? group === 'PERFIL_Aluno' || !group.startsWith('PERFIL')
                                     : true
-                            ) ?? []),
+                            ) ?? [])
                         ])
                     );
 
@@ -738,6 +784,7 @@ module.exports = {
                     const profilesIDS = await returnIdProfileUser(namesProfiles);
                     const groupsIDS = await returnIdGroupUser(namesGroups);
                     const userGroups = await Group.find({ name: { $in: namesGroups } });
+
                     const eligibilities = userGroups.flatMap((group) =>
                         group.tags.flatMap((tag) => tag?.value || tag.display)
                     );
@@ -752,24 +799,24 @@ module.exports = {
                         groups: groupsIDS,
                         welcomeVideoWatched: user?.welcomeVideoWatched,
                         idpProfiles: tokenIdpProfiles,
-                        strategyName: tokenStrategyName,
+                        strategyName: tokenStrategyName
                     });
 
                     const token_mfa = generateMfaToken({
                         ref: user._id,
-                        mfa: false,
+                        mfa: false
                     });
 
                     const token_analytics = generateTokenAnalytics({
                         perfil: profilesIDS.numbers,
                         clientID: CLIENT_ID,
-                        filters: dashboardFilters,
+                        filters: dashboardFilters
                     });
 
                     const token_happplace = generateHappPlaceToken({
                         name: user.name,
                         networkLogin: user.networkLogin,
-                        clientId: CLIENT_ID,
+                        clientId: CLIENT_ID
                     });
 
                     const { token: SAS } = addSASTokenToResponse(res);
@@ -801,7 +848,7 @@ module.exports = {
                             tokenHappPlace: token_happplace,
                             networkLogin: user.networkLogin,
                             userId: user._id,
-                            email: user.email,
+                            email: user.email
                         },
                         'Sucesso ao logar',
                         'users',
@@ -846,11 +893,11 @@ module.exports = {
         }
     },
 
-    async acceptTerms (req, res) {
+    async acceptTerms(req, res) {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
-                $set: { acceptTerms: true },
+                $set: { acceptTerms: true }
             });
             _messages.success(
                 res,
@@ -876,11 +923,11 @@ module.exports = {
         }
     },
 
-    async watchedVideo (req, res) {
+    async watchedVideo(req, res) {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
-                $set: { welcomeVideoWatched: true },
+                $set: { welcomeVideoWatched: true }
             });
             _messages.success(
                 res,
@@ -906,11 +953,11 @@ module.exports = {
         }
     },
 
-    async acceptTermsCollaboration (req, res) {
+    async acceptTermsCollaboration(req, res) {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
-                acceptTermsCollaboration: true,
+                acceptTermsCollaboration: true
             });
             _messages.success(
                 res,
@@ -936,7 +983,7 @@ module.exports = {
         }
     },
 
-    async recoveryPassword (req, res) {
+    async recoveryPassword(req, res) {
         const { body, domain, changeByEmail } = req.body;
 
         if (typeof body !== 'object' || Object.values(body).some((value) => !value?.length)) {
@@ -953,7 +1000,7 @@ module.exports = {
                     { birthDate: birthDateValue },
                     { birthday: birthDateValue }
                 ]
-            }
+            };
 
             search.$or = search.$or ? [...search.$or, ...birthDateQuery.$or] : birthDateQuery.$or;
 
@@ -979,17 +1026,19 @@ module.exports = {
 
         await User.findByIdAndUpdate(user._id, {
             password: newPass,
-            passwordValid: false,
+            passwordValid: false
         });
 
         if (changeByEmail) {
             const token = generateToken({
                 networkLogin: user.networkLogin,
                 _id: user._id,
-                password_old: password_new,
+                password_old: password_new
             });
 
             const resetPasswordUrl = `${domain}/login/troca-senha?token=${token}`;
+
+            console.log(user.email, password_new, resetPasswordUrl);
 
             await sendEmailRecoveryPassword(
                 user.email,
@@ -1018,7 +1067,7 @@ module.exports = {
         return _messages.success(res, req, password_new);
     },
 
-    async changePassword (req, res) {
+    async changePassword(req, res) {
         try {
             const { password_old, password_new, password_newConfirm } = req.body;
             const { _id } = await getUserByToken(req);
@@ -1083,12 +1132,12 @@ module.exports = {
             newPass.push({
                 hash: hashPass,
                 valid: true,
-                createdAt: new Date(),
+                createdAt: new Date()
             });
 
             await User.findByIdAndUpdate(_id, {
                 password: newPass,
-                passwordValid: true,
+                passwordValid: true
             });
 
             _messages.success(
@@ -1115,7 +1164,7 @@ module.exports = {
         }
     },
 
-    async changePasswordByEmail (req, res) {
+    async changePasswordByEmail(req, res) {
         try {
             const { password_new, password_newConfirm } = req.body;
             const { data } = decodeToken(req.headers.authorization);
@@ -1175,12 +1224,12 @@ module.exports = {
             newPass.push({
                 hash: hashPass,
                 valid: true,
-                createdAt: new Date(),
+                createdAt: new Date()
             });
 
             await User.findByIdAndUpdate(_id, {
                 password: newPass,
-                passwordValid: true,
+                passwordValid: true
             });
 
             _messages.success(
@@ -1207,8 +1256,7 @@ module.exports = {
         }
     },
 
-    async import (req, res) {
-        try {
+    async import(req, res) {
             const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
 
             var file = null;
@@ -1226,17 +1274,37 @@ module.exports = {
                 `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
                 {
                     headers: {
-                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
-                    },
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY
+                    }
                 }
             );
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
             const messengerConfig = await getMessengerConfig();
 
+            const connectMap = await getConnectMap(true);
+
+            if (connectMap) {
+                const errors = [];
+
+                results.forEach((data) => {
+                    const dataErrors = validateDataByConnectMap(data, connectMap);
+                    if (dataErrors.length > 0) {
+                        errors.push({
+                            item: data.networkLogin ?? data.cpf ?? data.email ?? data.name,
+                            errors: dataErrors
+                        });
+                    }
+                });
+
+                if (errors.length > 0) {
+                    throw new ApiError('Erro ao importar usuários', 400, errors, { skipDbLog: true });
+                }
+            }
+
             for (const result of results) {
                 const existingUser = await User.findOne({
-                    $or: [{ networkLogin: result.networkLogin }, { networkLogin: result.cpf }],
+                    $or: [{ networkLogin: result.networkLogin }, { networkLogin: result.cpf }]
                 });
 
                 const processedUser = await processUsersLoad(result, fieldsForElegibility);
@@ -1250,7 +1318,7 @@ module.exports = {
                     const groupsAD = [
                         ...processedUser.groupsAD,
                         ...(existingUser.groupsAD?.filter((group) => group.startsWith('PERFIL_')) ??
-                            []),
+                            [])
                     ];
                     existingUsers.push({
                         _id: existingUser._id,
@@ -1259,14 +1327,14 @@ module.exports = {
                             groupsAD: [...new Set(groupsAD)],
                             cpf: !isProduction
                                 ? hideCPFNumbers(processedUser.cpf)
-                                : processedUser.cpf,
-                        },
+                                : processedUser.cpf
+                        }
                     });
                 } else {
                     usersToSend.push(account);
                     newUsers.push({
                         ...processedUser,
-                        cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
+                        cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf
                     });
                 }
             }
@@ -1281,7 +1349,7 @@ module.exports = {
                 existingUsers.forEach((user) => {
                     user.processedUser.groupsAD = [
                         ...(user.processedUser.groupsAD ?? []),
-                        ...eligibility,
+                        ...eligibility
                     ];
                 });
 
@@ -1295,8 +1363,10 @@ module.exports = {
             );
             for (const user of existingUsers) {
                 await User.findByIdAndUpdate(user._id, {
-                    ...user.processedUser,
+                    ...user.processedUser
                 });
+
+                await WebhooksController.dispatch('update', 'users', false, { ...user.processedUser, password: undefined });
 
                 await Tracking.updateMany(
                     { userLogin: user.processedUser.cpf },
@@ -1309,7 +1379,7 @@ module.exports = {
                 await User.updateMany(
                     {
                         ignoreLoadInactivation: { $ne: true },
-                        updatedAt: { $lt: data_start },
+                        updatedAt: { $lt: data_start }
                     },
                     { $set: { status: 'INATIVO' } },
                     { multi: true }
@@ -1323,6 +1393,8 @@ module.exports = {
 
                 await User.insertMany(newUsers);
 
+                await WebhooksController.dispatch('create', 'users', true, newUsers)
+
                 if (messengerConfig.sendUsersToMicrosservice) {
                     await sendAccountsToKafka(usersToSend);
                     const campaign = createWelcomeCampaign();
@@ -1332,20 +1404,10 @@ module.exports = {
             }
 
             _messages.success(res, req, 'Importado com sucesso');
-        } catch (error) {
-            console.log(error);
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'users',
-                'import'
-            );
-        }
+
     },
 
-    async importOnboarding (req, res) {
+    async importOnboarding(req, res) {
         try {
             const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
 
@@ -1364,19 +1426,19 @@ module.exports = {
                 `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
                 {
                     headers: {
-                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
-                    },
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY
+                    }
                 }
             );
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
             const messengerConfig = await getMessengerConfig();
 
-            const user = await getUserByToken(req)
+            const user = await getUserByToken(req);
 
             for (const result of results) {
                 const existingUser = await User.findOne({
-                    networkLogin: result.cpf,
+                    networkLogin: result.cpf
                 });
                 const processedUser = processUsersLoad(result, fieldsForElegibility, onboarding);
                 const account = await processUserAccount(processedUser);
@@ -1392,14 +1454,14 @@ module.exports = {
                             ...processedUser,
                             cpf: !isProduction
                                 ? hideCPFNumbers(processedUser.cpf)
-                                : processedUser.cpf,
-                        },
+                                : processedUser.cpf
+                        }
                     });
                 } else {
                     usersToSend.push(account);
                     newUsers.push({
                         ...processedUser,
-                        cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
+                        cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf
                     });
                 }
             }
@@ -1409,7 +1471,7 @@ module.exports = {
             );
             for (const user of existingUsers) {
                 await User.findByIdAndUpdate(user._id, {
-                    ...user.processedUser,
+                    ...user.processedUser
                 });
             }
 
@@ -1418,7 +1480,7 @@ module.exports = {
                 await User.updateMany(
                     {
                         ignoreLoadInactivation: { $ne: true },
-                        updatedAt: { $lt: data_start },
+                        updatedAt: { $lt: data_start }
                     },
                     { $set: { status: 'INATIVO' } },
                     { multi: true }
@@ -1454,7 +1516,7 @@ module.exports = {
         }
     },
 
-    async returnUsers (req, res) {
+    async returnUsers(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1468,9 +1530,9 @@ module.exports = {
                 $and: [
                     {
                         onboarding: isOnboarding ? true : { $ne: true },
-                        partner: isPartner ? { $exists: true } : { $exists: false },
-                    },
-                ],
+                        partner: isPartner ? { $exists: true } : { $exists: false }
+                    }
+                ]
             };
 
             if (req?.segmentation) {
@@ -1495,8 +1557,8 @@ module.exports = {
                         { name: { $regex: searchBy, $options: 'i' } },
                         { registration: { $regex: searchBy, $options: 'i' } },
                         { email: { $regex: searchBy, $options: 'i' } },
-                        { cpf: { $regex: searchBy, $options: 'i' } },
-                    ],
+                        { cpf: { $regex: searchBy, $options: 'i' } }
+                    ]
                 });
             }
 
@@ -1511,7 +1573,7 @@ module.exports = {
                 data: users,
                 total,
                 totalActive,
-                totalInactive,
+                totalInactive
             });
         } catch (error) {
             _messages.internalServer(
@@ -1525,7 +1587,7 @@ module.exports = {
         }
     },
 
-    async returnUsersOnboarding (req, res) {
+    async returnUsersOnboarding(req, res) {
         try {
             const users = await findUsers(req, { onboarding: true });
             _messages.success(res, req, users);
@@ -1541,13 +1603,13 @@ module.exports = {
         }
     },
 
-    async returnUserById (req, res) {
+    async returnUserById(req, res) {
         try {
             const { _id } = await getUserByToken(req);
             const user = await User.findOne({ _id: _id }, { password: 0 });
 
             _messages.success(res, req, {
-                data: user,
+                data: user
             });
         } catch (error) {
             _messages.internalServer(
@@ -1561,12 +1623,12 @@ module.exports = {
         }
     },
 
-    async updateUser (req, res) {
+    async updateUser(req, res) {
         try {
             const { _id, email, cpf, networkLogin, tags } = req.body;
             delete req.body.ip;
             const user = await User.findOne({
-                _id: { $eq: _id },
+                _id: { $eq: _id }
             });
             if (tags && tags.length > 0) {
                 for (const tag of tags) {
@@ -1589,7 +1651,7 @@ module.exports = {
                     req.body[f] &&
                     filter.push({
                         _id: { $ne: _id },
-                        [f]: { $eq: req.body[f] },
+                        [f]: { $eq: req.body[f] }
                     })
             );
             const found = filter.length > 0 && (await User.findOne({ $or: filter }));
@@ -1615,8 +1677,10 @@ module.exports = {
                 await sendAccountsToKafka([account]);
             }
             const updated = await User.findByIdAndUpdate(_id, req.body, {
-                projection: { ...userProjection },
+                projection: { ...userProjection }
             });
+
+            await WebhooksController.dispatch('update', 'users', false, { ...userUpdated, password: undefined });
 
             if (userUpdated?.status) {
                 await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status);
@@ -1624,6 +1688,7 @@ module.exports = {
 
             return _messages.success(res, req, updated, 'Usuário(a) atualizado(a) com sucesso!');
         } catch (error) {
+            console.log(error)
             return _messages.internalServer(
                 res,
                 req,
@@ -1635,7 +1700,7 @@ module.exports = {
         }
     },
 
-    async updateUserById (req, res) {
+    async updateUserById(req, res) {
         try {
             const { _id } = req.body;
             await User.findByIdAndUpdate(_id, req.body);
@@ -1652,7 +1717,7 @@ module.exports = {
         }
     },
 
-    async changePhoto (req, res) {
+    async changePhoto(req, res) {
         try {
             const user = await getUserByToken(req);
             const file = req.files.file;
@@ -1672,7 +1737,7 @@ module.exports = {
         }
     },
 
-    async isAuthenticated (req, res) {
+    async isAuthenticated(req, res) {
         if (await validateToken(req)) {
             await addSASTokenToResponse(res);
 
@@ -1689,7 +1754,7 @@ module.exports = {
         }
     },
 
-    async isAuthenticatedNginx (req, res) {
+    async isAuthenticatedNginx(req, res) {
         if (await validateTokenNginx(req.params.token)) {
             _messages.success(res, req, true);
         } else {
@@ -1704,7 +1769,7 @@ module.exports = {
         }
     },
 
-    async selfData (req, res) {
+    async selfData(req, res) {
         try {
             const { data } = await decodeToken(req.headers.authorization);
             const user = await User.findOne(
@@ -1724,12 +1789,12 @@ module.exports = {
         }
     },
 
-    async importUserTest (req, res) {
+    async importUserTest(req, res) {
         try {
             const usersTest = await UserTest.find();
             for (const result of usersTest) {
                 const user = await User.findOne({
-                    networkLogin: result.networkLogin,
+                    networkLogin: result.networkLogin
                 });
 
                 const objUser = {
@@ -1762,17 +1827,19 @@ module.exports = {
                     manager: result.manager,
                     enrollManager: result.enrollManager,
                     loginManager: result.loginManager,
-                    nameManager: result.nameManager,
+                    nameManager: result.nameManager
                 };
 
                 if (user) {
                     await User.findByIdAndUpdate(user._id, {
-                        ...objUser,
+                        ...objUser
                     });
+                    await WebhooksController.dispatch('update', 'users', false, { ...objUser, password: undefined });
                 } else {
                     await User.create({
-                        ...objUser,
+                        ...objUser
                     });
+                    await WebhooksController.dispatch('create', 'users', false, { ...objUser, password: undefined });
                 }
             }
 
@@ -1782,7 +1849,7 @@ module.exports = {
         }
     },
 
-    async exportUsers (req, res) {
+    async exportUsers(req, res) {
         try {
             const users = await User.find();
             const records = [];
@@ -1791,14 +1858,14 @@ module.exports = {
                 records.push({
                     nome: user.name,
                     login: user.networkLogin,
-                    matricula: user.registration,
+                    matricula: user.registration
                 });
             }
 
             const header = [
                 { id: 'nome', title: 'NOME' },
                 { id: 'login', title: 'LOGIN' },
-                { id: 'matricula', title: 'MATRICULA' },
+                { id: 'matricula', title: 'MATRICULA' }
             ];
 
             await _files.writeFile(header, records);
@@ -1808,7 +1875,7 @@ module.exports = {
         }
     },
 
-    async email (req, res) {
+    async email(req, res) {
         try {
             const error = { message: 'ERRO NA CARGA DIÁRIA', stack: 'erro' };
             await sendLogEmail('success', error, 100, 10, 40, 50, '13/01/2020', 10, 20, 30);
@@ -1819,18 +1886,18 @@ module.exports = {
         }
     },
 
-    async importUsersDisabled (req, res) {
+    async importUsersDisabled(req, res) {
         try {
             const { file } = req.files;
             const results = await _files.readCSV(file.path);
             for (const result of results) {
                 const user = await User.findOne({
-                    networkLogin: { $eq: result.LOGIN },
+                    networkLogin: { $eq: result.LOGIN }
                 });
 
                 if (user) {
                     await User.findByIdAndUpdate(user._id, {
-                        status: result.STATUS,
+                        status: result.STATUS
                     });
                 }
             }
@@ -1840,7 +1907,7 @@ module.exports = {
         }
     },
 
-    async emulation (req, res) {
+    async emulation(req, res) {
         try {
             const { body } = req;
             const {
@@ -1900,24 +1967,26 @@ module.exports = {
                         profiles: profilesIDS.result,
                         numbers: profilesIDS.numbers,
                         groups: groupsIDS,
-                        welcomeVideoWatched: user?.welcomeVideoWatched,
+                        welcomeVideoWatched: user?.welcomeVideoWatched
                     },
-                    names: namesProfiles.concat(namesGroups),
+                    names: namesProfiles.concat(namesGroups)
                 };
                 const dataToken = result.token;
                 const token = generateToken({
                     ref: body._id,
-                    ...dataToken,
+                    ...dataToken
                 });
                 const token_analytics = generateTokenAnalytics({
                     perfil: profilesIDS.numbers,
                     clientID: CLIENT_ID,
-                    filters: dashboardFilters,
+                    filters: dashboardFilters
                 });
 
                 const { token: SAS } = addSASTokenToResponse(res);
 
-                if (req.features?.gamification) {
+                const features = await getDbCurrentFeatures(req);
+
+                if (features?.gamefication) {
                     GamificationBusiness.createClientUser(networkLogin, groupsAD);
                 }
 
@@ -1930,7 +1999,7 @@ module.exports = {
                     networkLogin,
                     name,
                     profilePhoto,
-                    tokenAnalytics: token_analytics,
+                    tokenAnalytics: token_analytics
                 });
             } else {
                 _messages.badRequest(
@@ -1954,19 +2023,19 @@ module.exports = {
         }
     },
 
-    async importUpdateStatusUsers (req, res, next) {
+    async importUpdateStatusUsers(req, res, next) {
         try {
             const { file } = req.files;
             const results = await _files.readCSV(file.path);
             for (const r of results) {
                 const user = await User.find({
-                    networkLogin: { $eq: r.LOGIN_REDE },
+                    networkLogin: { $eq: r.LOGIN_REDE }
                 });
 
                 if (user[0]) {
                     await User.findByIdAndUpdate(user[0].id, {
                         status: 'INATIVO',
-                        reasonCode: r.CODIGO_MOTIVO,
+                        reasonCode: r.CODIGO_MOTIVO
                     });
                 }
             }
@@ -1976,25 +2045,11 @@ module.exports = {
         }
     },
 
-    async ssoCallback (req, res) {
+    async ssoCallback(req, res) {
         try {
-            await Log.create({
-                type: 'SSO_CALLBACK',
-                message: 'SSO_CALLBACK',
-                component: 'users',
-                route: 'ssoCallback',
-                dataNew: {
-                    samlObject: req.samlUserObject,
-                    user: req.user ? JSON.stringify(req.user) : null
-                },
-                dataOld: null,
-            });
+            const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
 
-            const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestWithSamlObject(
-                req
-            );
-
-            const ssoForm = await getSsoFormByStrategyName(strategyName);
+            const ssoForm = await getLoginFormByStrategyName(strategyName);
 
             const claim = ssoForm?.claim ?? 'networkLogin';
             const claimKey = ssoForm?.claimKey ?? 'no-claim-key-value';
@@ -2017,7 +2072,7 @@ module.exports = {
                         message: 'SSO não retornou o valor esperado',
                         claim,
                         claimKey,
-                        samlUserObject: req.samlUserObject,
+                        samlUserObject: req.samlUserObject
                     },
                     'users',
                     'ssoCallback'
@@ -2028,7 +2083,7 @@ module.exports = {
                 {
                     [claim]: value,
                     strategyName,
-                    idpProfiles,
+                    idpProfiles
                 },
                 process.env.PROJECT_SECRET_KEY
             );
@@ -2046,7 +2101,32 @@ module.exports = {
         }
     },
 
-    async updateDeviceId (req, res) {
+    async openIdCallback(req, res) {
+        const { strategyName } = req.cookies;
+        const form = await getLoginFormByStrategyName(strategyName);
+        const claimValue = _.get(req.user, form.claimKey);
+
+        const { idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
+
+        await Log.create({
+            type: 'OPENID_CALLBACK',
+            message: 'OPENID_CALLBACK',
+            component: 'users',
+            route: 'openidCallback',
+            dataNew: { openidObject: req.user },
+            dataOld: null
+        });
+
+        const token = jwt.sign({
+            [form.claim]: claimValue,
+            strategyName,
+            idpProfiles
+        }, process.env.PROJECT_SECRET_KEY);
+
+        res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
+    },
+
+    async updateDeviceId(req, res) {
         try {
             const user = await getUserByToken(req);
             const { deviceId } = req.body;
@@ -2065,7 +2145,7 @@ module.exports = {
         }
     },
 
-    async returnCollaborativeUsers (req, res) {
+    async returnCollaborativeUsers(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -2076,36 +2156,36 @@ module.exports = {
                     ? {
                         $and: [
                             {
-                                groupsAD: { $in: ['PERFIL_Colaborador'] },
+                                groupsAD: { $in: ['PERFIL_Colaborador'] }
                             },
                             {
                                 $or: [
                                     {
                                         name: {
                                             $regex: searchBy,
-                                            $options: 'i',
-                                        },
+                                            $options: 'i'
+                                        }
                                     },
                                     {
                                         registration: {
                                             $regex: searchBy,
-                                            $options: 'i',
-                                        },
+                                            $options: 'i'
+                                        }
                                     },
                                     {
                                         email: {
                                             $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                ],
-                            },
-                        ],
+                                            $options: 'i'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
                     }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             )
                 .sort({
-                    [order]: sort,
+                    [order]: sort
                 })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
@@ -2115,50 +2195,50 @@ module.exports = {
                     ? {
                         $and: [
                             {
-                                groupsAD: { $in: ['PERFIL_Colaborador'] },
+                                groupsAD: { $in: ['PERFIL_Colaborador'] }
                             },
                             {
                                 $or: [
                                     {
                                         name: {
                                             $regex: searchBy,
-                                            $options: 'i',
-                                        },
+                                            $options: 'i'
+                                        }
                                     },
                                     {
                                         registration: {
                                             $regex: searchBy,
-                                            $options: 'i',
-                                        },
+                                            $options: 'i'
+                                        }
                                     },
                                     {
                                         email: {
                                             $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                ],
-                            },
-                        ],
+                                            $options: 'i'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
                     }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             );
 
             _messages.success(res, req, {
                 data: collaborativeUsers,
-                total,
+                total
             });
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor');
         }
     },
 
-    async setCollaborator (req, res) {
+    async setCollaborator(req, res) {
         try {
             const { userId, moderation } = req.body;
             if (!userId) {
                 _messages.badRequest(res, req, 'Payload inválido', {
-                    message: 'Payload inválido',
+                    message: 'Payload inválido'
                 });
                 return;
             }
@@ -2168,11 +2248,11 @@ module.exports = {
                 : ['PERFIL_Colaborador'];
 
             await User.findByIdAndUpdate(userId, {
-                $addToSet: { groupsAD: profiles },
+                $addToSet: { groupsAD: profiles }
             });
 
             _messages.success(res, req, {
-                message: 'Usuário adicionado ao grupo de colaboradores',
+                message: 'Usuário adicionado ao grupo de colaboradores'
             });
         } catch (error) {
             _messages.internalServer(
@@ -2186,30 +2266,30 @@ module.exports = {
         }
     },
 
-    async toggleCollaboratorModeration (req, res) {
+    async toggleCollaboratorModeration(req, res) {
         try {
             const { userId, moderation } = req.body;
 
             if (!userId) {
                 _messages.badRequest(res, req, 'Payload inválido', {
-                    message: 'Payload inválido',
+                    message: 'Payload inválido'
                 });
             }
 
             const profiles = ['PERFIL_Colaborador_Livre'];
             if (!moderation) {
                 await User.findByIdAndUpdate(userId, {
-                    $pullAll: { groupsAD: profiles },
+                    $pullAll: { groupsAD: profiles }
                 });
                 _messages.success(res, req, {
-                    message: 'Usuário removido do grupo de colaboradores livres',
+                    message: 'Usuário removido do grupo de colaboradores livres'
                 });
             } else {
                 await User.findByIdAndUpdate(userId, {
-                    $addToSet: { groupsAD: profiles },
+                    $addToSet: { groupsAD: profiles }
                 });
                 _messages.success(res, req, {
-                    message: 'Usuário adicionado ao grupo de colaboradores livres',
+                    message: 'Usuário adicionado ao grupo de colaboradores livres'
                 });
             }
         } catch (error) {
@@ -2224,24 +2304,24 @@ module.exports = {
         }
     },
 
-    async removeCollaborator (req, res) {
+    async removeCollaborator(req, res) {
         try {
             const { userId } = req.body;
 
             if (!userId) {
                 _messages.badRequest(res, req, 'Payload inválido', {
-                    message: 'Payload inválido',
+                    message: 'Payload inválido'
                 });
             }
 
             const profiles = ['PERFIL_Colaborador', 'PERFIL_Colaborador_Livre'];
 
             await User.findByIdAndUpdate(userId, {
-                $pullAll: { groupsAD: profiles },
+                $pullAll: { groupsAD: profiles }
             });
 
             _messages.success(res, req, {
-                message: 'Usuário removido do grupo de colaboradores',
+                message: 'Usuário removido do grupo de colaboradores'
             });
         } catch (error) {
             _messages.internalServer(
@@ -2255,13 +2335,13 @@ module.exports = {
         }
     },
 
-    async resetUserPassword (req, res) {
+    async resetUserPassword(req, res) {
         try {
             const { userId, password, generate } = req.body;
 
             if (!userId || generate === null) {
                 _messages.badRequest(res, req, 'Payload inválido', {
-                    message: 'Payload inválido',
+                    message: 'Payload inválido'
                 });
             }
 
@@ -2272,7 +2352,7 @@ module.exports = {
                 hashPassword = {
                     hash: bcrypt.hashSync(password, 10),
                     valid: true,
-                    createdAt: new Date(Date.now()),
+                    createdAt: new Date(Date.now())
                 };
             } else {
                 generatedPassword = Math.random()
@@ -2282,7 +2362,7 @@ module.exports = {
                 hashPassword = {
                     hash: bcrypt.hashSync(generatedPassword, 10),
                     valid: true,
-                    createdAt: new Date(Date.now()),
+                    createdAt: new Date(Date.now())
                 };
             }
 
@@ -2306,16 +2386,16 @@ module.exports = {
                     user
                 );
                 _messages.success(res, req, {
-                    message: 'Senha alterada e enviada para o usuário.',
+                    message: 'Senha alterada e enviada para o usuário.'
                 });
             } else if (user && user.email && !generate && password) {
                 await sendResetedPasswordToUser(user.email, password, process.env.DOMAIN, user);
                 _messages.success(res, req, {
-                    message: 'Senha alterada e enviada para o usuário.',
+                    message: 'Senha alterada e enviada para o usuário.'
                 });
             } else {
                 _messages.success(res, req, {
-                    message: 'Senha alterada, porém o usuário não possui email. ',
+                    message: 'Senha alterada, porém o usuário não possui email. '
                 });
             }
         } catch (error) {
@@ -2331,7 +2411,7 @@ module.exports = {
         }
     },
 
-    async deleteGroups (req, res) {
+    async deleteGroups(req, res) {
         const { tag, userId } = req.body;
 
         const arrTags = Array.isArray(tag) ? tag : [tag];
@@ -2351,18 +2431,18 @@ module.exports = {
             const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD);
 
             GamificationBusiness.updateClientUser(user.networkLogin, {
-                eligibilities,
+                eligibilities
             });
 
             _messages.success(res, req, {
-                message: 'Tag de permissão removida',
+                message: 'Tag de permissão removida'
             });
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users');
         }
     },
 
-    async addGroups (req, res) {
+    async addGroups(req, res) {
         const { tag, userId } = req.body;
 
         // Cuurent user é o dono da requisição
@@ -2412,22 +2492,22 @@ module.exports = {
             for (const groupName of normalizedTags) {
                 const findGroup = await Group.findOne({
                     name: groupName,
-                    deleted: 0,
+                    deleted: 0
                 });
                 if (!findGroup) {
                     await Group.create({
-                        name: groupName,
+                        name: groupName
                     });
                 }
             }
 
             const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD);
             GamificationBusiness.updateClientUser(user.networkLogin, {
-                eligibilities,
+                eligibilities
             });
 
             return _messages.success(res, req, {
-                message: 'Tag de permissão adicionada ao usuário',
+                message: 'Tag de permissão adicionada ao usuário'
             });
         } catch (error) {
             return _messages.internalServer(
@@ -2440,12 +2520,12 @@ module.exports = {
         }
     },
 
-    async deleteClassTag (req, res) {
+    async deleteClassTag(req, res) {
         const { tag, userId } = req.body;
 
         try {
             await User.findByIdAndUpdate(userId, {
-                $pull: { classGroups: { groupCode: tag } },
+                $pull: { classGroups: { groupCode: tag } }
             });
             _messages.success(res, req, { message: 'Tag de curso removida' });
         } catch (error) {
@@ -2453,7 +2533,7 @@ module.exports = {
         }
     },
 
-    async addClassTag (req, res) {
+    async addClassTag(req, res) {
         const { tag, userId } = req.body;
         try {
             await User.findByIdAndUpdate(userId, {
@@ -2461,19 +2541,19 @@ module.exports = {
                     classGroups: {
                         ...tag,
                         startDate: new Date(tag.startDate),
-                        limitDate: new Date(tag.limitDate),
-                    },
-                },
+                        limitDate: new Date(tag.limitDate)
+                    }
+                }
             });
             _messages.success(res, req, {
-                message: 'Tag de curso adicionada ao usuário',
+                message: 'Tag de curso adicionada ao usuário'
             });
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users');
         }
     },
 
-    async updateClassTag (req, res) {
+    async updateClassTag(req, res) {
         const { tag, _id } = req.body;
         try {
             const { classGroups } = await User.findOne({ _id });
@@ -2484,36 +2564,36 @@ module.exports = {
                     newTags.push({
                         ...group,
                         startDate: new Date(group.startDate),
-                        limitDate: new Date(group.limitDate),
+                        limitDate: new Date(group.limitDate)
                     });
                 } else {
                     newTags.push({
                         ...group,
                         startDate: new Date(group.startDate),
-                        limitDate: new Date(group.limitDate),
+                        limitDate: new Date(group.limitDate)
                     });
                 }
             }
             await User.findByIdAndUpdate(_id, { classGroups: newTags });
 
             _messages.success(res, req, {
-                message: 'Tag de curso atualizada no usuário',
+                message: 'Tag de curso atualizada no usuário'
             });
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users');
         }
     },
 
-    async evaluationProgress (req, res) {
+    async evaluationProgress(req, res) {
         try {
             const { idEvaluation } = req.params;
             const user = await getUserByToken(req);
             const evaluation = await Evaluation.findOne({
-                _id: { $eq: idEvaluation },
+                _id: { $eq: idEvaluation }
             });
             const evaluationsHistoric = await HistoricEvaluation.find({
                 idEvaluation: { $eq: evaluation._id },
-                user: { $eq: user._id },
+                user: { $eq: user._id }
             });
 
             if (!evaluationsHistoric.length) {
@@ -2525,23 +2605,23 @@ module.exports = {
                         const questionResponse = await Promise.all(
                             evaluationHistoric.answers.map(async (answer) => {
                                 const question = await Question.findOne({
-                                    _id: { $eq: answer.idQuestion },
+                                    _id: { $eq: answer.idQuestion }
                                 });
                                 const alternative = await Alternative.findOne({
-                                    _id: { $eq: answer.idAlternative },
+                                    _id: { $eq: answer.idAlternative }
                                 });
 
                                 return {
                                     question: {
                                         _id: question._id,
-                                        description: question.description,
+                                        description: question.description
                                     },
                                     alternative: {
                                         _id: alternative._id,
-                                        description: alternative.description,
+                                        description: alternative.description
                                     },
                                     correct: answer.correct,
-                                    createdAt: answer.createdAt,
+                                    createdAt: answer.createdAt
                                 };
                             })
                         );
@@ -2553,7 +2633,7 @@ module.exports = {
                                 evaluationHistoric.amountQuestionsCorrect /
                                 evaluationHistoric.amountOfQuestions,
                             startedAt: evaluationHistoric.createdAt,
-                            finishedAt: evaluationHistoric.updatedAt,
+                            finishedAt: evaluationHistoric.updatedAt
                         };
                     })
                 );
@@ -2561,7 +2641,7 @@ module.exports = {
                 const evaluationProgress = {
                     _id: evaluation._id,
                     description: evaluation.description,
-                    userAttempts,
+                    userAttempts
                 };
 
                 _messages.success(res, req, evaluationProgress);
@@ -2578,14 +2658,14 @@ module.exports = {
         }
     },
 
-    async getAllConteudistas (req, res) {
+    async getAllConteudistas(req, res) {
         try {
             const query = {
                 $and: [
                     {
-                        groupsAD: { $in: ['PERFIL_Conteudista'] },
-                    },
-                ],
+                        groupsAD: { $in: ['PERFIL_Conteudista'] }
+                    }
+                ]
             };
 
             if (req?.segmentation) {
@@ -2607,13 +2687,13 @@ module.exports = {
         }
     },
 
-    async handleNames (req, res) {
+    async handleNames(req, res) {
         try {
             const { networkLogins } = req.body;
             const users = await User.find({ networkLogin: { $in: networkLogins } }, [
                 'name',
                 'networkLogin',
-                'profilePhoto',
+                'profilePhoto'
             ]);
 
             return _messages.success(res, req, users);
@@ -2629,7 +2709,7 @@ module.exports = {
         }
     },
 
-    async generateMultiFactor (req, res) {
+    async generateMultiFactor(req, res) {
         try {
             const { networkLogin } = req.body;
             const user = await User.findOne({ networkLogin: networkLogin });
@@ -2658,7 +2738,7 @@ module.exports = {
         }
     },
 
-    async validateMultiFactor (req, res) {
+    async validateMultiFactor(req, res) {
         try {
             const user = await getUserByToken(req);
             const { secret, token } = req.body;
@@ -2691,7 +2771,7 @@ module.exports = {
         }
     },
 
-    async validateMfaToken (req, res) {
+    async validateMfaToken(req, res) {
         try {
             const isTokenValid = await validateMfaToken(req);
             _messages.success(res, req, isTokenValid);
@@ -2707,7 +2787,7 @@ module.exports = {
         }
     },
 
-    async updateWebPushAuthorization (req, res) {
+    async updateWebPushAuthorization(req, res) {
         try {
             const user = await getUserByToken(req);
             const webPushAuthorization = req.body;
@@ -2737,26 +2817,19 @@ module.exports = {
         }
     },
 
-    async getUserMap (req, res) {
+    async getUserMap(req, res) {
         try {
-            const { data } = await axios.get(
-                `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
-                {
-                    headers: {
-                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
-                    },
-                }
-            );
+            const connectMap = await getConnectMap(true);
 
-            const userMap =
-                data.user && Object.keys(data.user).length > 0 ? data.user : defaultUserMap;
-
-            const fields = Object.entries(defaultUserMap).map((entry) => ({
-                display: entry[1],
-                value: entry[0],
-            }));
-
-            _messages.success(res, req, { map: userMap, fields });
+            const fields = Object.entries(connectMap).map(([key, value]) => ({
+                display: value.label,
+                value: key
+            })).filter((field) => field.value !== 'elegibility');
+            _messages.success(res, req, {
+                map: connectMap,
+                fields,
+                exceptions: ['status', 'cpf', 'postalCode', 'pcd']
+            });
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -2769,7 +2842,7 @@ module.exports = {
         }
     },
 
-    async putUserMap (req, res) {
+    async putUserMap(req, res) {
         try {
             const { body } = req;
 
@@ -2778,11 +2851,12 @@ module.exports = {
                 {
                     user: { ...body },
                     elegibility: body.elegibility,
+                    newFormat: true
                 },
                 {
                     headers: {
-                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
-                    },
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY
+                    }
                 }
             );
 
@@ -2799,7 +2873,7 @@ module.exports = {
         }
     },
 
-    async readSheetHeaders (req, res) {
+    async readSheetHeaders(req, res) {
         try {
             let file = null;
             if (req.files.file) {
@@ -2810,8 +2884,8 @@ module.exports = {
 
             const data = await _files.readXLSXHeaders(file.path);
             const fields = Object.entries(defaultUserMap).map((entry) => ({
-                display: entry[1],
-                value: entry[0],
+                display: entry[1].label,
+                value: entry[0]
             }));
 
             _messages.success(res, req, { headers: data, fields });
@@ -2825,5 +2899,5 @@ module.exports = {
                 'readSheetHeaders'
             );
         }
-    },
+    }
 };

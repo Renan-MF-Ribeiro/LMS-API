@@ -1,10 +1,10 @@
 const { Features } = require('./model')
 const _messages = require('../../../utils/messages')
-const { getDbCurrentFeatures, setAppCurrentFeatures, getAppCurrentFeatures } = require('../../../utils/features')
+const { getDbCurrentFeatures } = require('../../../utils/features')
 
 module.exports = {
     async update(req, res) {
-        let features = getAppCurrentFeatures(req.app) ?? await getDbCurrentFeatures();
+        let features = await getDbCurrentFeatures(req);
 
         if (features?._id) {
             features = await Features.findByIdAndUpdate(features._id, req.body, { new: true })
@@ -12,13 +12,11 @@ module.exports = {
             features = await Features.create(req.body)
         }
 
-        setAppCurrentFeatures(req.app, features);
-
         return _messages.success(res, req, features)
     },
 
     async getFeatures(req, res) {
-        const features = getAppCurrentFeatures(req.app) ?? await getDbCurrentFeatures();
+        const features = await getDbCurrentFeatures(req);
 
         _messages.success(res, req, features);
     }
