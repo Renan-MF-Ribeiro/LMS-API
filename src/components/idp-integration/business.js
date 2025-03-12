@@ -41,7 +41,8 @@ async function fetchIdpProfilesFromRequestObject(req) {
         log('fetchIdpProfilesFromRequestObject idpIntegration', idpIntegration.name);
         const samlValue = idpIntegration.keyField.split(',').reduce((acc, key) => {
             if (acc !== null && acc !== undefined && acc !== '') return acc;
-            const value = _.get(req.user ?? req.samlUserObject, key, null);
+            const value = _.get(req.samlUserObject ?? {}, key, null) ?? _.get(req.user ?? {}, key, null);
+            
             if (value) {
                 matchedKeysAndValues.push({ key, value });
             }

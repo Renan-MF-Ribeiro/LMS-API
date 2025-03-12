@@ -19,7 +19,6 @@ module.exports = {
                 }
                 const secret = process.env.WEBHOOK_SECRET_KEY;
                 const payload = JSON.stringify(body);
-
                 const hmac = crypto.createHmac('sha256', secret).update(payload).digest('hex');
 
                 const url = `${process.env.API_WEBHOOK}/webhook`;

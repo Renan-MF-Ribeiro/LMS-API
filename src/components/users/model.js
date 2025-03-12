@@ -62,6 +62,7 @@ const userSchema = new mongoose.Schema(
             transform: (status) => String(status).toUpperCase(),
         },
         cpf: { type: String, trim: true },
+        cnpj: { type: String, trim: true },
         birthDate: { type: String, trim: true },
         genderIdentity: { type: String, trim: true },
         gender: { type: String, trim: true },
@@ -341,6 +342,13 @@ const defaultUserMap = {
         label: 'CPF',
         activeInForms: true,
         type: 'cpf',
+        config: null,
+    },
+    cnpj: {
+        field: 'CNPJ',
+        label: 'CNPJ',
+        activeInForms: true,
+        type: 'cnpj',
         config: null,
     },
     birthDate: {

@@ -115,9 +115,11 @@ const { log } = require('../../utils/logger');
 const WebhooksController = require("../webhooks/controller");
 const ApiError = require('../../errors/ApiError');
 const { addSASTokenToResponse } = require('../../utils/cookies');
+
 const { FormModel } = require('../forms/model');
 const { getConnectMap, validateDataByConnectMap } = require('../../utils/connect');
 const { getFormErrorsByMapConfig, getDefaultForm } = require('../forms/business');
+
 const { getDbCurrentFeatures } = require('../../utils/features');
 
 
@@ -133,11 +135,11 @@ async function validateUserAndPassword(res, req, login, passwordDecripted) {
     // Verifica se usuário existe
     const user = await User.findOne({ networkLogin: { $eq: login }, status: 'ATIVO' }).lean();
     // Verifica se a senha é válida
-    const pass = user.password.filter(function(obj) {
+    const pass = user.password.filter(function (obj) {
         return obj.valid && bcrypt.compareSync(passwordDecripted, obj.hash);
     });
     if (!user || pass.length === 0) {
-        _messages.forbidden(
+        return _messages.forbidden(
             res,
             req,
             'Usuário ou senha inválidos.',
@@ -190,7 +192,6 @@ async function generateTokens(user, login, password) {
     const namesProfiles = [];
     const namesGroups = [];
     let tokenAnalytics, tokenHappPlace;
-
     for (const p in groups) {
         const strGroup = groups[p];
 
@@ -199,6 +200,7 @@ async function generateTokens(user, login, password) {
     }
 
     const profilesIDS = await returnIdProfileUser(namesProfiles);
+    console.log('profilesIDS', profilesIDS);
     const groupsIDS = await returnIdGroupUser(namesGroups);
     const userGroups = await Group.find({ name: { $in: namesGroups } });
     const eligibilities = userGroups.flatMap((group) =>
@@ -236,6 +238,7 @@ async function generateTokens(user, login, password) {
         groups: groupsIDS,
         welcomeVideoWatched: user?.welcomeVideoWatched
     });
+    console.log(jwt.decode(token, String(user.networkLogin)))
 
     const mfaToken = generateMfaToken({
         ref: user._id,
@@ -246,7 +249,7 @@ async function generateTokens(user, login, password) {
 
     await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
 
-    let tokenEncript = cryptoJS.AES.encrypt(token, login);
+    let tokenEncript = cryptoJS.AES.encrypt(token, String(login));
     let tk = tokenEncript.toString();
     let key = login + ':' + password;
 
@@ -382,7 +385,6 @@ module.exports = {
                 const message = errors[0].message;
                 throw new ApiError(message, 400, { errors }, { skipDbLog: true });
             }
-
             networkLogin = data[form.loginField ?? 'cpf'];
 
             log('form login field:', form.loginField ?? 'cpf');
@@ -483,7 +485,7 @@ module.exports = {
             }
 
             const formatedDate = formatDateWithoutHoursBrasilian(data.birthDate);
-
+            console.log(formatedDate);
             const userData = {
                 networkLogin,
                 // email: networkLogin,
@@ -523,15 +525,8 @@ module.exports = {
                 const activationLink = `${process.env.DOMAIN}/login/ativacao?token=${emailToken}`;
                 await sendSignupActivationEmail(newUser.email, activationLink);
             }
-
-            const accessToken = generateToken({
-                networkLogin,
-                ref: newUser._id,
-                clientId: process.env.CLIENT_ID,
-                userName: newUser.name,
-                userTags: []
-            });
-            _messages.success(res, req, accessToken);
+            const tokens = await generateTokens(newUser, networkLogin, password);
+            return _messages.success(res, req, tokens);
         } catch (error) {
             console.log(error);
             _messages.internalServer(
@@ -570,7 +565,6 @@ module.exports = {
     async ldapSignIn(req, res) {
         let user = {};
         const { login, password } = req.body;
-
         try {
             const decrypted = cryptoJS.AES.decrypt(password, 'pass');
             const passwordDecripted = decrypted.toString(cryptoJS.enc.Utf8);
@@ -639,11 +633,12 @@ module.exports = {
                 namesProfiles.concat(namesGroups)
             );
         } catch (error) {
-            await Block.create({
-                user: user._id,
-                dateTimeBlock: getDateToday(),
-                ip: req.ip
-            });
+            if(user)
+                await Block.create({
+                    user: user._id,
+                    dateTimeBlock: getDateToday(),
+                    ip: req.ip
+                });
             return _messages.forbidden(
                 res,
                 req,
@@ -1080,7 +1075,7 @@ module.exports = {
 
             // const passChecked = bcrypt.compareSync(password_old, user.password)
             if (password_old) {
-                var pass = user.password.filter(function(obj) {
+                var pass = user.password.filter(function (obj) {
                     if (obj.valid === true && bcrypt.compareSync(password_old, obj.hash)) {
                         return true;
                     }
@@ -1089,7 +1084,7 @@ module.exports = {
                 });
             }
 
-            var Oldpass = user.password.filter(function(obj) {
+            var Oldpass = user.password.filter(function (obj) {
                 if (bcrypt.compareSync(password_new, obj.hash)) {
                     return true;
                 }
@@ -1129,7 +1124,7 @@ module.exports = {
             var salt = bcrypt.genSaltSync(10);
             var hashPass = bcrypt.hashSync(password_new, salt);
 
-            var newPass = user.password.map(function(item, indice) {
+            var newPass = user.password.map(function (item, indice) {
                 item.valid = false;
                 return item;
             });
@@ -1176,7 +1171,7 @@ module.exports = {
             const { _id, password_old } = data;
             const user = await User.findOne({ _id: _id }, ['password']);
 
-            var pass = user.password.filter(function(obj) {
+            var pass = user.password.filter(function (obj) {
                 if (obj.valid === true && bcrypt.compareSync(password_old, obj.hash)) {
                     return true;
                 }
@@ -1184,7 +1179,7 @@ module.exports = {
                 return false;
             });
 
-            var Oldpass = user.password.filter(function(obj) {
+            var Oldpass = user.password.filter(function (obj) {
                 if (bcrypt.compareSync(password_new, obj.hash)) {
                     return true;
                 }
@@ -1221,7 +1216,7 @@ module.exports = {
             var salt = bcrypt.genSaltSync(10);
             var hashPass = bcrypt.hashSync(password_new, salt);
 
-            var newPass = user.password.map(function(item, indice) {
+            var newPass = user.password.map(function (item, indice) {
                 item.valid = false;
                 return item;
             });
@@ -1262,7 +1257,6 @@ module.exports = {
     },
 
     async import(req, res) {
-        try {
             const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
 
             var file = null;
@@ -1295,7 +1289,6 @@ module.exports = {
 
                 results.forEach((data) => {
                     const dataErrors = validateDataByConnectMap(data, connectMap);
-
                     if (dataErrors.length > 0) {
                         errors.push({
                             item: data.networkLogin ?? data.cpf ?? data.email ?? data.name,
@@ -1308,8 +1301,6 @@ module.exports = {
                     throw new ApiError('Erro ao importar usuários', 400, errors, { skipDbLog: true });
                 }
             }
-
-            console.log('results', results);
 
             for (const result of results) {
                 const existingUser = await User.findOne({
@@ -1413,17 +1404,7 @@ module.exports = {
             }
 
             _messages.success(res, req, 'Importado com sucesso');
-        } catch (error) {
-            console.log(error);
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'users',
-                'import'
-            );
-        }
+
     },
 
     async importOnboarding(req, res) {
@@ -2843,8 +2824,7 @@ module.exports = {
             const fields = Object.entries(connectMap).map(([key, value]) => ({
                 display: value.label,
                 value: key
-            }));
-
+            })).filter((field) => field.value !== 'elegibility');
             _messages.success(res, req, {
                 map: connectMap,
                 fields,
