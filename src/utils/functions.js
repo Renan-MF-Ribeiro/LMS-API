@@ -709,6 +709,14 @@ module.exports = {
             return hasTags || hasTagsAnd;
         });
     },
+
+    isDateOutOfRange(initialDate, finalDate) {
+        const initial = moment(new Date(initialDate)).subtract(3, 'hours').startOf('day').toDate().getTime(); 
+        const final = moment(new Date(finalDate)).subtract(3, 'hours').endOf('day').toDate().getTime(); 
+        const today = new Date().getTime();
+
+        return initial > today || final < today;
+    }
 };
 
 function nameMonth(month) {
