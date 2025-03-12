@@ -2822,7 +2822,7 @@ module.exports = {
             const connectMap = await getConnectMap(true);
 
             const fields = Object.entries(connectMap).map(([key, value]) => ({
-                display: value.label,
+                display: value?.label ?? key,
                 value: key
             })).filter((field) => field.value !== 'elegibility');
             _messages.success(res, req, {
