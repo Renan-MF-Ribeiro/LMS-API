@@ -20,6 +20,7 @@ const FormSchema = new mongoose.Schema({
     description: { type: String, required: false },
     displayType: { type: String, required: true, default: 'list' }, // list | steps
     isDefault: { type: Boolean, required: false, default: false },
+    autoLogin: { type: Boolean, required: false, default: false },
     sections: { type: [SectionSchema], required: false, default: [] },
     deletedAt: { type: Date, required: false, default: null },
     loginField: { type: String, required: true, default: 'cpf' },
