@@ -716,10 +716,11 @@ const TrackingController = {
 
                 userIds = users.map(user => user.networkLogin);
 
-                const items = await Item.find({ title: { $regex: searchBy, $options: "i" } })
-                    .select("_id title")
+                const trails = await Trail.find({ title: { $regex: searchBy, $options: "i" } })
+                    .select("_id items")
                     .lean();
-                itemIds = items.map(item => item._id);
+                itemIds = trails.map(trail => trail.items.map(item => item.itemID)).flat();
+
             }
 
             // **Montar a query principal**
