@@ -29,7 +29,8 @@ const { Readable } = require('stream');
 const { Welcome } = require('../components/theme/welcome/model');
 const { Log } = require('../components/logs/model');
 const ApiError = require('../errors/ApiError');
-const formidable = require('express-formidable')
+const formidable = require('express-formidable');
+const { getConnectMap } = require('./connect');
 const bucket = process.env.BUCKET;
 aws.config = {
     accessKeyId: process.env.ACCESSKEY,
@@ -86,7 +87,7 @@ const forEachRowCSV = (
         for (const columnHeader of row.values) {
             const mapEntries = Object.entries(map);
             const labelDB = mapEntries.find(
-                (entry) => entry[1] && columnHeader && entry[1] === columnHeader
+                (entry) => entry[1]?.field && columnHeader && entry[1]?.field === columnHeader
             )?.[0];
             labels.push(labelDB);
         }
@@ -821,22 +822,8 @@ module.exports = {
     },
 
     async readXLSXUsers (file, onboarding = false) {
-        const getMapsResponse = await axios.get(
-            `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
-            {
-                headers: {
-                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
-                },
-            }
-        );
-        const connectMaps = getMapsResponse.data;
-
-        const map =
-            connectMaps.user &&
-                Object.keys(connectMaps.user).length > 0 &&
-                onboarding == false
-                ? connectMaps.user
-                : defaultUserMap;
+        const map = await getConnectMap(true);
+        
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.readFile(file).then(function () {
@@ -865,21 +852,8 @@ module.exports = {
     },
 
     async readCSVUsersBuffer (file, onboarding = false) {
-        const getMapsResponse = await axios.get(
-            `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
-            {
-                headers: {
-                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
-                },
-            }
-        );
-        const connectMaps = getMapsResponse.data;
-
-        const map =
-            connectMaps.user && Object.keys(connectMaps.user).length > 0
-                ? connectMaps.user
-                : defaultUserMap;
-
+        const map = await getConnectMap(true);
+        
         const workbook = new ExcelJS.Workbook();
 
         const worksheet = await workbook.csv.read(file, {
@@ -906,20 +880,7 @@ module.exports = {
     },
 
     async readXLSXUsersBuffer (file) {
-        const getMapsResponse = await axios.get(
-            `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
-            {
-                headers: {
-                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
-                },
-            }
-        );
-        const connectMaps = getMapsResponse.data;
-
-        const map =
-            connectMaps.user && Object.keys(connectMaps.user).length > 0
-                ? connectMaps.user
-                : defaultUserMap;
+        const map = await getConnectMap(true);
 
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
