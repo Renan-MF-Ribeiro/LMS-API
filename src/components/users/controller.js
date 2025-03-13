@@ -2479,9 +2479,8 @@ module.exports = {
 
         try {
             const normalizedTags = tag.map((t) => removeAccents(t));
-
-            const user = await User.findByIdAndUpdate(
-                userId,
+            const user = await User.findOneAndUpdate(
+                { _id: userId },
                 { $addToSet: { groupsAD: normalizedTags } },
                 { new: true }
             );
