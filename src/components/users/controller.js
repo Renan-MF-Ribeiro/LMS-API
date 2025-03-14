@@ -728,9 +728,7 @@ module.exports = {
                     events: [eventCategory],
                     networkLogin: claim,
                     meta: {
-                        trail: {
-                            title: data?.trailTitle || data?.data?.trailTitle,
-                        }
+                        trailTitle: data?.trailTitle || data?.data?.trailTitle,
                     }
                 })
             }
