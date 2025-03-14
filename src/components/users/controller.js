@@ -118,7 +118,7 @@ const { addSASTokenToResponse } = require('../../utils/cookies');
 
 const { FormModel } = require('../forms/model');
 const { getConnectMap, validateDataByConnectMap } = require('../../utils/connect');
-const { getFormErrorsByMapConfig, getDefaultForm } = require('../forms/business');
+const { getFormErrorsByMapConfig, getDefaultForm, getAdminForm, getFormErrorsByFormValidation } = require('../forms/business');
 
 const { getDbCurrentFeatures } = require('../../utils/features');
 
@@ -272,13 +272,52 @@ async function generateTokens(user, login, password) {
 module.exports = {
     async create(req, res) {
         try {
-            const { registration, cpf } = req.body;
+            const form = await getAdminForm();
 
-            const userFound = await User.findOne({
-                $or: [{ registration }, { cpf }]
+            const errors = getFormErrorsByFormValidation(form, req.body);
+
+            if (errors.length > 0) {
+                return _messages.forbidden(
+                    res,
+                    req,
+                    'Existem campos obrigatórios não preenchidos',
+                    { message: 'Existem campos obrigatórios não preenchidos', errors },
+                    'users',
+                    'create'
+                );
+            }
+
+            const { loginField } = form;
+
+            if (!req.body[loginField]) {
+                return _messages.forbidden(
+                    res,
+                    req,
+                    'Campo de login não informado',
+                    { error: 'Campo de login não informado' },
+                    'users',
+                    'create'
+                );
+            }
+
+            if (!req.body.name) {
+                return _messages.forbidden(
+                    res,
+                    req,
+                    'Nome é obrigatório',
+                    { error: 'Nome é obrigatório' },
+                    'users',
+                    'create'
+                );
+            }
+
+            const userExists = await User.findOne({
+                $or: [
+                    { networkLogin: req.body[loginField] },
+                ]
             });
 
-            if (userFound) {
+            if (userExists) {
                 return _messages.forbidden(
                     res,
                     req,
@@ -297,20 +336,42 @@ module.exports = {
                     }
                 }
             );
+
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
-            const processedUser = processUsersLoad(req.body, fieldsForElegibility);
+            const processedUser = await processUsersLoad({
+                networkLogin: req.body[loginField],
+                ...req.body
+            }, fieldsForElegibility);
 
-            await User.create(processedUser);
+            await User.create({
+                ...processedUser,
+                networkLogin: req.body[loginField],
+            });
 
             const created = await User.findOne(
                 { networkLogin: processedUser.networkLogin },
                 { ...userProjection }
             );
-            await WebhooksController.dispatch('create', 'users', false, { ...processedUser, password: undefined });
+            
+            try {
+                await WebhooksController.dispatch('create', 'users', false, { ...processedUser, password: undefined });
+            } catch (e) {
+                console.log('Erro ao enviar webhook', e);
+                await Log.create({
+                    type: 'WEBHOOK_DISPATCH_ERROR',
+                    message: 'Erro ao enviar webhook',
+                    component: 'users',
+                    route: 'create',
+                    dataNew: { ...processedUser, password: undefined },
+                    ip: req.ip
+                })
+            }
 
             return _messages.success(res, req, created);
         } catch (error) {
+            console.log('error', error);
+
             let validationErrorKeys;
             let validationError;
 

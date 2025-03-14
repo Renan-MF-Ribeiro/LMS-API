@@ -122,7 +122,7 @@ function getFormErrorsByMapConfig(connectMap, form, data) {
             const field = allFields.find((field) => field.key === key);
 
             if (!field) return;
-            if ((field.required || key === (form.loginField ?? 'cpf')) && (!value || !String(value).length) ) {
+            if ((field.required || key === (form.loginField ?? 'cpf')) && (!value || !String(value).length)) {
                 errors.push({ key, message: `Campo ${field.config?.label ?? key} é obrigatório` });
             }
 
@@ -200,9 +200,30 @@ async function getAdminForm() {
     return adminForm;
 }
 
+async function getFormErrorsByFormValidation(form, data) {
+    const { loginField, sections } = form;
+
+    const fields = sections.flatMap((section) => section.fields);
+
+    const requiredFields = fields.filter((field) => field.required || field.key === loginField);
+
+    const errors = [];
+
+    requiredFields.forEach((field) => {
+        const value = data[field.key];
+
+        if (!value || !String(value).length) {
+            errors.push({ key: field.key, message: `Campo ${field.key} é obrigatório` });
+        }
+    });
+
+    return errors;
+}
+
 module.exports = {
     setConnectMapInForm,
     getFormErrorsByMapConfig,
+    getFormErrorsByFormValidation,
     getDefaultForm,
     getAdminForm,
 };
