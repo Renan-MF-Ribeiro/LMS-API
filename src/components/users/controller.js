@@ -292,7 +292,7 @@ module.exports = {
                 { networkLogin: processedUser.networkLogin },
                 { ...userProjection }
             );
-            await WebhooksController.dispatch('create', 'users', false, { created, password: undefined });
+            WebhooksController.dispatch('create', 'users', false, { created, password: undefined });
 
             return _messages.success(res, req, created);
         } catch (error) {
@@ -494,7 +494,7 @@ module.exports = {
 
             const newUser = await User.create(userData);
 
-            await WebhooksController.dispatch('create', 'users', false, newUser);
+            WebhooksController.dispatch('create', 'users', false, newUser);
 
             if (token) {
                 const DATA_INICIO = today.startOf('day');
@@ -1346,7 +1346,7 @@ module.exports = {
                 ...user.processedUser,
             });
 
-            await WebhooksController.dispatch('update', 'users', false, {
+            WebhooksController.dispatch('update', 'users', false, {
                 ...user.processedUser,
                 password: undefined,
             });
@@ -1376,7 +1376,7 @@ module.exports = {
 
             await User.insertMany(newUsers);
 
-            await WebhooksController.dispatch('create', 'users', true, newUsers);
+            WebhooksController.dispatch('create', 'users', true, newUsers);
 
             if (messengerConfig.sendUsersToMicrosservice) {
                 await sendAccountsToKafka(usersToSend);
@@ -1806,7 +1806,7 @@ module.exports = {
                     await User.findByIdAndUpdate(user._id, {
                         ...objUser,
                     });
-                    await WebhooksController.dispatch('update', 'users', false, {
+                    WebhooksController.dispatch('update', 'users', false, {
                         ...objUser,
                         password: undefined,
                     });
@@ -1814,7 +1814,7 @@ module.exports = {
                     await User.create({
                         ...objUser,
                     });
-                    await WebhooksController.dispatch('create', 'users', false, {
+                    WebhooksController.dispatch('create', 'users', false, {
                         ...objUser,
                         password: undefined,
                     });
