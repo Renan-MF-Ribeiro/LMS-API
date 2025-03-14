@@ -1097,13 +1097,25 @@ module.exports = {
             console.log('COMEÇA AQUI OS LOGS');
 
             // Buscar o curso e pegar os valores de tags e mandatory
-            const course = await CourseModel.findById(id).lean();
-            const tags = course.tags.map(t => t.value);
-            const mandatory = course.mandatory.map(m => m.value);
+            const course = await CourseModel.findOne(
+                { _id: id },
+                { title: 1, tags: "$tags.value", mandatory: "$mandatory.value" }
+            );
 
             // Buscar os grupos correspondentes às tags e obrigatoriedades
-            const tagGroups = await Group.find({ "tags.value": { $in: tags } }).distinct("name");
-            const mandatoryGroups = await Group.find({ "tags.value": { $in: mandatory } }).distinct("name");
+            const [tagGroups, mandatoryGroups] = await Promise.all([
+                Group.find(
+                    { "tags.value": { $in: course.tags } },
+                    { name: 1 }
+                ),
+                Group.find(
+                    { "tags.value": { $in: course.mandatory } },
+                    { name: 1 }
+                )
+            ]);
+
+            const tagGroupNames = tagGroups.map(group => group.name);
+            const mandatoryGroupNames = mandatoryGroups.map(group => group.name);
 
             // Buscar usuários ativos que não estão na lista de usersInClass
             let query = {
@@ -1119,47 +1131,45 @@ module.exports = {
                 ];
             }
 
-            // Filtrar os usuários conforme a lógica da interseção dos grupos e tags
+            const currentDate = new Date()
+
+            // Busca todos os usuários que correspondem aos critérios básicos, com classificação, pular e limitar aplicados
             const users = await User.find(query)
+                .sort({ name: 1 })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
-                .sort({ name: 1 })
                 .lean();
 
-            // Filtrar os usuários com base nos grupos e tags, incluindo a lógica de status do grupo e datas
-            const filteredUsers = users.filter(user => {
-                const userGroups = [
-                    ...(user.groupsAD || []),
-                    ...(user.classGroups || []).map(cg => cg.groupCode)
-                ];
+            const total = await User.countDocuments(query);
 
-                // Lógica para verificar se o grupo do usuário está ativo e dentro do intervalo de datas
-                const classGroupCodes = (user.classGroups || []).map(classGroup => {
-                    const currentDate = new Date();
-                    if (
+            // Filtrar apenas usuários qualificados com base em tags e grupos
+            const eligibleUsers = users.filter(user => {
+                const classGroupCodes = (user.classGroups || [])
+                    .filter(classGroup =>
                         classGroup.status === 2 &&
                         new Date(classGroup.startDate) <= currentDate &&
                         new Date(classGroup.limitDate) >= currentDate
-                    ) {
-                        return classGroup.groupCode;
-                    }
-                    return null;
-                }).filter(Boolean); // Filtra valores nulos
+                    )
+                    .map(classGroup => classGroup.groupCode);
 
-                // Verifica se o usuário pertence aos grupos obrigatórios ou tags
-                const hasMandatory = mandatory.length > 0 &&
-                    userGroups.some(ug => mandatory.includes(ug) || mandatoryGroups.includes(ug));
+                const allGroupCodes = [...(user.groupsAD || []), ...classGroupCodes];
 
-                const hasTags = userGroups.some(ug => tags.includes(ug) || tagGroups.includes(ug));
+                const mandatoryIntersection = allGroupCodes.filter(code =>
+                    course.mandatory.includes(code) || mandatoryGroupNames.includes(code)
+                );
 
-                const hasValidClassGroup = classGroupCodes.length > 0;
+                const tagsIntersection = allGroupCodes.filter(code =>
+                    course.tags.includes(code) || tagGroupNames.includes(code)
+                );
 
-                return (hasMandatory || hasTags) && hasValidClassGroup;
+                if (mandatoryIntersection.length > 0) {
+                    return mandatoryIntersection.length >= course.mandatory.length;
+                } else {
+                    return tagsIntersection.length > 0;
+                }
             });
 
-            const total = filteredUsers.length;
-
-            success(res, req, { data: filteredUsers, total });
+            success(res, req, { data: eligibleUsers, total });
         } catch (error) {
             console.error(error);
             internalServer(
