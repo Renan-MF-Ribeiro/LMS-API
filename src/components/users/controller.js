@@ -14,7 +14,7 @@ const {
     userSchema,
     userProjection,
     defaultUserMap,
-    groups
+    groups,
 } = require('./model');
 
 const {
@@ -32,7 +32,7 @@ const {
     generateMultiFactor,
     validateMultiFactor,
     returnProfileByToken,
-    generateSASToken
+    generateSASToken,
 } = require('../../utils/auth');
 
 const {
@@ -54,7 +54,7 @@ const {
     buildSearchObject,
     generateNewPassword,
     maskEmail,
-    getLoginFormByStrategyName
+    getLoginFormByStrategyName,
 } = require('./business');
 
 const {
@@ -67,7 +67,7 @@ const {
     removeAccents,
     deepGet,
     formatDateWithoutHoursBrasilian,
-    getDataByToken
+    getDataByToken,
 } = require('../../utils/functions');
 
 const { getActiveIdpIntegrations } = require('../idp-integration/business');
@@ -78,7 +78,7 @@ const {
     sendSignupActivationEmail,
     sendNotificationEmail,
     sendResetedPasswordToUser,
-    sendMultiFactorToUser
+    sendMultiFactorToUser,
 } = require('../../utils/email');
 
 const axios = require('axios');
@@ -107,12 +107,12 @@ const {
     getConfiguration,
     handleSegmentationOnQuery,
     getMessengerConfig,
-    getUsersDataConfig
+    getUsersDataConfig,
 } = require('../config/business');
 const { ConfigTypes } = require('../config/model');
 const { fetchIdpProfilesFromRequestObject } = require('../idp-integration/business');
 const { log } = require('../../utils/logger');
-const WebhooksController = require("../webhooks/controller");
+const WebhooksController = require('../webhooks/controller');
 const ApiError = require('../../errors/ApiError');
 const { addSASTokenToResponse } = require('../../utils/cookies');
 
@@ -121,7 +121,6 @@ const { getConnectMap, validateDataByConnectMap } = require('../../utils/connect
 const { getFormErrorsByMapConfig, getDefaultForm } = require('../forms/business');
 
 const { getDbCurrentFeatures } = require('../../utils/features');
-
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -135,18 +134,11 @@ async function validateUserAndPassword(res, req, login, passwordDecripted) {
     // Verifica se usuário existe
     const user = await User.findOne({ networkLogin: { $eq: login }, status: 'ATIVO' }).lean();
     // Verifica se a senha é válida
-    const pass = user.password.filter(function (obj) {
+    const pass = user?.password?.filter(function (obj) {
         return obj.valid && bcrypt.compareSync(passwordDecripted, obj.hash);
     });
-    if (!user || pass.length === 0) {
-        return _messages.forbidden(
-            res,
-            req,
-            'Usuário ou senha inválidos.',
-            'Usuário ou senha inválidos.',
-            'users',
-            'ldapSignIn'
-        );
+    if (!user || pass?.length === 0) {
+        return 'Usuário ou senha inválidos.';
     }
 
     await handleBlockUser(user);
@@ -175,14 +167,7 @@ async function handleBlockUser(user) {
                 'Conta bloqueada',
                 `Olá ${user.name}, uma nova tentativa de acesso a sua conta não foi permita pois sua conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
             );
-            return _messages.forbidden(
-                res,
-                req,
-                'Usuário bloqueado temporariamente',
-                'Por favor tente novamente mais tarde!',
-                'users',
-                'ldapSignIn'
-            );
+            return 'Usuário bloqueado temporariamente';
         }
     }
 }
@@ -211,7 +196,7 @@ async function generateTokens(user, login, password) {
         tokenHappPlace = generateHappPlaceToken({
             name: user.name,
             networkLogin: user.networkLogin,
-            clientId: CLIENT_ID
+            clientId: CLIENT_ID,
         });
     }
 
@@ -220,7 +205,7 @@ async function generateTokens(user, login, password) {
         tokenAnalytics = generateTokenAnalytics({
             perfil: profilesIDS.numbers,
             clientID: CLIENT_ID,
-            filters: dashboardFilters
+            filters: dashboardFilters,
         });
     }
 
@@ -236,13 +221,13 @@ async function generateTokens(user, login, password) {
         profiles: profilesIDS.result,
         numbers: profilesIDS.numbers,
         groups: groupsIDS,
-        welcomeVideoWatched: user?.welcomeVideoWatched
+        welcomeVideoWatched: user?.welcomeVideoWatched,
     });
-    console.log(jwt.decode(token, String(user.networkLogin)))
+    console.log(jwt.decode(token, String(user.networkLogin)));
 
     const mfaToken = generateMfaToken({
         ref: user._id,
-        mfa: false
+        mfa: false,
     });
 
     const SAS = generateSASToken();
@@ -265,7 +250,7 @@ async function generateTokens(user, login, password) {
         authwebPush,
         profilesIDS,
         namesProfiles,
-        namesGroups
+        namesGroups,
     };
 }
 
@@ -275,7 +260,7 @@ module.exports = {
             const { registration, cpf } = req.body;
 
             const userFound = await User.findOne({
-                $or: [{ registration }, { cpf }]
+                $or: [{ registration }, { cpf }],
             });
 
             if (userFound) {
@@ -293,8 +278,8 @@ module.exports = {
                 `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
                 {
                     headers: {
-                        'connect-client-key': process.env.CONNECT_CLIENT_KEY
-                    }
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                    },
                 }
             );
             const fieldsForElegibility = elegibilityResponse.data.fields;
@@ -317,7 +302,7 @@ module.exports = {
             if (error instanceof mongoose.Error.ValidationError) {
                 validationErrorKeys = Object.keys(error.errors);
                 validationError = validationErrorKeys.map((key) => ({
-                    [key]: error.errors[key].properties
+                    [key]: error.errors[key].properties,
                 }));
             }
 
@@ -326,7 +311,7 @@ module.exports = {
                 req,
                 !validationError ? 'Internal Server Error' : 'Validation Error',
                 {
-                    error: !validationError ? 'Internal Server Error' : validationError
+                    error: !validationError ? 'Internal Server Error' : validationError,
                 },
                 'users',
                 'create'
@@ -362,14 +347,22 @@ module.exports = {
 
     async signup(req, res) {
         const { token, formId: queryFormId } = req.query;
-        const { password, passwordConfirmation, loginField, formId: bodyFormId, ...data } = req.body;
+        const {
+            password,
+            passwordConfirmation,
+            loginField,
+            formId: bodyFormId,
+            ...data
+        } = req.body;
         const formId = queryFormId || bodyFormId || null;
 
         if (!data.name) {
             throw new ApiError('Nome é obrigatório', 400, { data }, { skipDbLog: true });
         }
 
-        const form = (formId ? (await FormModel.findById(formId))?.toObject() : null) ?? await getDefaultForm();
+        const form =
+            (formId ? (await FormModel.findById(formId))?.toObject() : null) ??
+            (await getDefaultForm());
 
         log('using form:', form.name);
 
@@ -428,7 +421,7 @@ module.exports = {
             const hashPassword = {
                 hash: bcrypt.hashSync(password, salt),
                 valid: true,
-                createdAt: new Date(Date.now())
+                createdAt: new Date(Date.now()),
             };
 
             if (token) {
@@ -481,7 +474,7 @@ module.exports = {
                 classGroupsIDs = selectedKey.classGroupResult?.classGroups?.map((x) => x);
                 defaultFields.partner = `${partner.title} - ${selectedKey.title}`;
             } else {
-                groupsAD.push('ELEGE_CURSO')
+                groupsAD.push('ELEGE_CURSO');
             }
 
             const formatedDate = formatDateWithoutHoursBrasilian(data.birthDate);
@@ -496,7 +489,7 @@ module.exports = {
                 ...data,
                 birthDate: formatedDate,
                 groupsAD,
-                ...defaultFields
+                ...defaultFields,
             };
 
             const newUser = await User.create(userData);
@@ -519,7 +512,7 @@ module.exports = {
                     ref: newUser._id,
                     clientId: process.env.CLIENT_ID,
                     userName: newUser.name,
-                    userTags: []
+                    userTags: [],
                 });
                 const activationLink = `${process.env.DOMAIN}/login/ativacao?token=${emailToken}`;
                 await sendSignupActivationEmail(newUser.email, activationLink);
@@ -582,7 +575,7 @@ module.exports = {
 
             // Valida usuário e senha
             user = await validateUserAndPassword(res, req, login, passwordDecripted);
-            await updateLastLoginUser(user._id);
+            await updateLastLoginUser(user?._id);
 
             // Gera todos os tokens necessários
             const {
@@ -595,7 +588,7 @@ module.exports = {
                 tk,
                 profilesIDS,
                 namesProfiles,
-                namesGroups
+                namesGroups,
             } = await generateTokens(user, login, password);
 
             // GAMIFICATION DISPATCH
@@ -620,7 +613,7 @@ module.exports = {
                     networkLogin: user.networkLogin,
                     userId: user._id,
                     authwebPush: authwebPush?.keys.auth,
-                    email: user.email
+                    email: user.email,
                 },
                 'Sucesso ao logar',
                 'users',
@@ -632,11 +625,12 @@ module.exports = {
                 namesProfiles.concat(namesGroups)
             );
         } catch (error) {
-            if(user)
+            console.log({ error });
+            if (user.id)
                 await Block.create({
                     user: user._id,
                     dateTimeBlock: getDateToday(),
-                    ip: req.ip
+                    ip: req.ip,
                 });
             return _messages.forbidden(
                 res,
@@ -723,8 +717,8 @@ module.exports = {
 
                 await GamificationController.dispatch(claim, [eventCategory], {
                     trail: {
-                        title: data?.trailTitle || data?.data?.trailTitle
-                    }
+                        title: data?.trailTitle || data?.data?.trailTitle,
+                    },
                 });
             }
 
@@ -772,7 +766,7 @@ module.exports = {
                                 tokenIdpProfiles
                                     ? group === 'PERFIL_Aluno' || !group.startsWith('PERFIL')
                                     : true
-                            ) ?? [])
+                            ) ?? []),
                         ])
                     );
 
@@ -798,24 +792,24 @@ module.exports = {
                         groups: groupsIDS,
                         welcomeVideoWatched: user?.welcomeVideoWatched,
                         idpProfiles: tokenIdpProfiles,
-                        strategyName: tokenStrategyName
+                        strategyName: tokenStrategyName,
                     });
 
                     const token_mfa = generateMfaToken({
                         ref: user._id,
-                        mfa: false
+                        mfa: false,
                     });
 
                     const token_analytics = generateTokenAnalytics({
                         perfil: profilesIDS.numbers,
                         clientID: CLIENT_ID,
-                        filters: dashboardFilters
+                        filters: dashboardFilters,
                     });
 
                     const token_happplace = generateHappPlaceToken({
                         name: user.name,
                         networkLogin: user.networkLogin,
-                        clientId: CLIENT_ID
+                        clientId: CLIENT_ID,
                     });
 
                     const { token: SAS } = addSASTokenToResponse(res);
@@ -847,7 +841,7 @@ module.exports = {
                             tokenHappPlace: token_happplace,
                             networkLogin: user.networkLogin,
                             userId: user._id,
-                            email: user.email
+                            email: user.email,
                         },
                         'Sucesso ao logar',
                         'users',
@@ -896,7 +890,7 @@ module.exports = {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
-                $set: { acceptTerms: true }
+                $set: { acceptTerms: true },
             });
             _messages.success(
                 res,
@@ -926,7 +920,7 @@ module.exports = {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
-                $set: { welcomeVideoWatched: true }
+                $set: { welcomeVideoWatched: true },
             });
             _messages.success(
                 res,
@@ -956,7 +950,7 @@ module.exports = {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
-                acceptTermsCollaboration: true
+                acceptTermsCollaboration: true,
             });
             _messages.success(
                 res,
@@ -995,10 +989,7 @@ module.exports = {
             const birthDateValue = search.birthDate || search.birthday;
 
             const birthDateQuery = {
-                $or: [
-                    { birthDate: birthDateValue },
-                    { birthday: birthDateValue }
-                ]
+                $or: [{ birthDate: birthDateValue }, { birthday: birthDateValue }],
             };
 
             search.$or = search.$or ? [...search.$or, ...birthDateQuery.$or] : birthDateQuery.$or;
@@ -1025,27 +1016,21 @@ module.exports = {
 
         await User.findByIdAndUpdate(user._id, {
             password: newPass,
-            passwordValid: false
+            passwordValid: false,
         });
 
         if (changeByEmail) {
             const token = generateToken({
                 networkLogin: user.networkLogin,
                 _id: user._id,
-                password_old: password_new
+                password_old: password_new,
             });
 
             const resetPasswordUrl = `${domain}/login/troca-senha?token=${token}`;
 
             console.log(user.email, password_new, resetPasswordUrl);
 
-            await sendEmailRecoveryPassword(
-                user.email,
-                true,
-                password_new,
-                resetPasswordUrl,
-                user
-            );
+            await sendEmailRecoveryPassword(user.email, true, password_new, resetPasswordUrl, user);
 
             const userEmail = maskEmail(user.email);
 
@@ -1131,12 +1116,12 @@ module.exports = {
             newPass.push({
                 hash: hashPass,
                 valid: true,
-                createdAt: new Date()
+                createdAt: new Date(),
             });
 
             await User.findByIdAndUpdate(_id, {
                 password: newPass,
-                passwordValid: true
+                passwordValid: true,
             });
 
             _messages.success(
@@ -1223,12 +1208,12 @@ module.exports = {
             newPass.push({
                 hash: hashPass,
                 valid: true,
-                createdAt: new Date()
+                createdAt: new Date(),
             });
 
             await User.findByIdAndUpdate(_id, {
                 password: newPass,
-                passwordValid: true
+                passwordValid: true,
             });
 
             _messages.success(
@@ -1256,154 +1241,152 @@ module.exports = {
     },
 
     async import(req, res) {
-            const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
+        const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
 
-            var file = null;
-            const newUsers = [];
-            const existingUsers = [];
-            const usersToSend = [];
-            if (req.files.file) {
-                file = req.files.file;
-            } else {
-                file = req.files.content;
+        var file = null;
+        const newUsers = [];
+        const existingUsers = [];
+        const usersToSend = [];
+        if (req.files.file) {
+            file = req.files.file;
+        } else {
+            file = req.files.content;
+        }
+        const results = await _files.readXLSXUsers(file.path);
+
+        const elegibilityResponse = await axios.get(
+            `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+            {
+                headers: {
+                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                },
             }
-            const results = await _files.readXLSXUsers(file.path);
+        );
+        const fieldsForElegibility = elegibilityResponse.data.fields;
 
-            const elegibilityResponse = await axios.get(
-                `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
-                {
-                    headers: {
-                        'connect-client-key': process.env.CONNECT_CLIENT_KEY
-                    }
-                }
-            );
-            const fieldsForElegibility = elegibilityResponse.data.fields;
+        const messengerConfig = await getMessengerConfig();
 
-            const messengerConfig = await getMessengerConfig();
+        const connectMap = await getConnectMap(true);
 
-            const connectMap = await getConnectMap(true);
+        if (connectMap) {
+            const errors = [];
 
-            if (connectMap) {
-                const errors = [];
-
-                results.forEach((data) => {
-                    const dataErrors = validateDataByConnectMap(data, connectMap);
-                    if (dataErrors.length > 0) {
-                        errors.push({
-                            item: data.networkLogin ?? data.cpf ?? data.email ?? data.name,
-                            errors: dataErrors
-                        });
-                    }
-                });
-
-                if (errors.length > 0) {
-                    throw new ApiError('Erro ao importar usuários', 400, errors, { skipDbLog: true });
-                }
-            }
-
-            for (const result of results) {
-                const existingUser = await User.findOne({
-                    $or: [{ networkLogin: result.networkLogin }, { networkLogin: result.cpf }]
-                });
-
-                const processedUser = await processUsersLoad(result, fieldsForElegibility);
-                const account = await processUserAccount(processedUser);
-
-                processedUser.password = existingUser
-                    ? existingUser.password
-                    : processedUser.password;
-
-                if (existingUser) {
-                    const groupsAD = [
-                        ...processedUser.groupsAD,
-                        ...(existingUser.groupsAD?.filter((group) => group.startsWith('PERFIL_')) ??
-                            [])
-                    ];
-                    existingUsers.push({
-                        _id: existingUser._id,
-                        processedUser: {
-                            ...processedUser,
-                            groupsAD: [...new Set(groupsAD)],
-                            cpf: !isProduction
-                                ? hideCPFNumbers(processedUser.cpf)
-                                : processedUser.cpf
-                        }
+            results.forEach((data) => {
+                const dataErrors = validateDataByConnectMap(data, connectMap);
+                if (dataErrors.length > 0) {
+                    errors.push({
+                        item: data.networkLogin ?? data.cpf ?? data.email ?? data.name,
+                        errors: dataErrors,
                     });
-                } else {
-                    usersToSend.push(account);
-                    newUsers.push({
+                }
+            });
+
+            if (errors.length > 0) {
+                throw new ApiError('Erro ao importar usuários', 400, errors, { skipDbLog: true });
+            }
+        }
+
+        for (const result of results) {
+            const existingUser = await User.findOne({
+                $or: [{ networkLogin: result.networkLogin }, { networkLogin: result.cpf }],
+            });
+
+            const processedUser = await processUsersLoad(result, fieldsForElegibility);
+            const account = await processUserAccount(processedUser);
+
+            processedUser.password = existingUser ? existingUser.password : processedUser.password;
+
+            if (existingUser) {
+                const groupsAD = [
+                    ...processedUser.groupsAD,
+                    ...(existingUser.groupsAD?.filter((group) => group.startsWith('PERFIL_')) ??
+                        []),
+                ];
+                existingUsers.push({
+                    _id: existingUser._id,
+                    processedUser: {
                         ...processedUser,
-                        cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf
-                    });
-                }
-            }
-
-            const automaticEligibilityConfig = await getConfiguration(
-                ConfigTypes.AutomaticEligibility.Onboard
-            );
-
-            if (automaticEligibilityConfig?.enabled) {
-                const { eligibility = [] } = automaticEligibilityConfig;
-
-                existingUsers.forEach((user) => {
-                    user.processedUser.groupsAD = [
-                        ...(user.processedUser.groupsAD ?? []),
-                        ...eligibility
-                    ];
-                });
-
-                newUsers.forEach((user) => {
-                    user.groupsAD = [...(user.groupsAD ?? []), ...eligibility];
-                });
-            }
-
-            console.log(
-                `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
-            );
-            for (const user of existingUsers) {
-                await User.findByIdAndUpdate(user._id, {
-                    ...user.processedUser
-                });
-
-                await WebhooksController.dispatch('update', 'users', false, { ...user.processedUser, password: undefined });
-
-                await Tracking.updateMany(
-                    { userLogin: user.processedUser.cpf },
-                    { $set: { userLogin: user.processedUser.networkLogin } }
-                );
-            }
-
-            if (inactivateIfNotInSpreadsheet) {
-                const data_start = new Date();
-                await User.updateMany(
-                    {
-                        ignoreLoadInactivation: { $ne: true },
-                        updatedAt: { $lt: data_start }
+                        groupsAD: [...new Set(groupsAD)],
+                        cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
                     },
-                    { $set: { status: 'INATIVO' } },
-                    { multi: true }
-                );
+                });
+            } else {
+                usersToSend.push(account);
+                newUsers.push({
+                    ...processedUser,
+                    cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
+                });
             }
+        }
 
-            if (newUsers.length > 0) {
-                console.log(
-                    `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
-                );
+        const automaticEligibilityConfig = await getConfiguration(
+            ConfigTypes.AutomaticEligibility.Onboard
+        );
 
-                await User.insertMany(newUsers);
+        if (automaticEligibilityConfig?.enabled) {
+            const { eligibility = [] } = automaticEligibilityConfig;
 
-                await WebhooksController.dispatch('create', 'users', true, newUsers)
+            existingUsers.forEach((user) => {
+                user.processedUser.groupsAD = [
+                    ...(user.processedUser.groupsAD ?? []),
+                    ...eligibility,
+                ];
+            });
 
-                if (messengerConfig.sendUsersToMicrosservice) {
-                    await sendAccountsToKafka(usersToSend);
-                    const campaign = createWelcomeCampaign();
-                    await sendMessageToKafka(campaign, newUsers);
-                    await NewMessage.create(campaign);
-                }
+            newUsers.forEach((user) => {
+                user.groupsAD = [...(user.groupsAD ?? []), ...eligibility];
+            });
+        }
+
+        console.log(
+            `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
+        );
+        for (const user of existingUsers) {
+            await User.findByIdAndUpdate(user._id, {
+                ...user.processedUser,
+            });
+
+            await WebhooksController.dispatch('update', 'users', false, {
+                ...user.processedUser,
+                password: undefined,
+            });
+
+            await Tracking.updateMany(
+                { userLogin: user.processedUser.cpf },
+                { $set: { userLogin: user.processedUser.networkLogin } }
+            );
+        }
+
+        if (inactivateIfNotInSpreadsheet) {
+            const data_start = new Date();
+            await User.updateMany(
+                {
+                    ignoreLoadInactivation: { $ne: true },
+                    updatedAt: { $lt: data_start },
+                },
+                { $set: { status: 'INATIVO' } },
+                { multi: true }
+            );
+        }
+
+        if (newUsers.length > 0) {
+            console.log(
+                `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
+            );
+
+            await User.insertMany(newUsers);
+
+            await WebhooksController.dispatch('create', 'users', true, newUsers);
+
+            if (messengerConfig.sendUsersToMicrosservice) {
+                await sendAccountsToKafka(usersToSend);
+                const campaign = createWelcomeCampaign();
+                await sendMessageToKafka(campaign, newUsers);
+                await NewMessage.create(campaign);
             }
+        }
 
-            _messages.success(res, req, 'Importado com sucesso');
-
+        _messages.success(res, req, 'Importado com sucesso');
     },
 
     async importOnboarding(req, res) {
@@ -1425,8 +1408,8 @@ module.exports = {
                 `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
                 {
                     headers: {
-                        'connect-client-key': process.env.CONNECT_CLIENT_KEY
-                    }
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                    },
                 }
             );
             const fieldsForElegibility = elegibilityResponse.data.fields;
@@ -1437,7 +1420,7 @@ module.exports = {
 
             for (const result of results) {
                 const existingUser = await User.findOne({
-                    networkLogin: result.cpf
+                    networkLogin: result.cpf,
                 });
                 const processedUser = processUsersLoad(result, fieldsForElegibility, onboarding);
                 const account = await processUserAccount(processedUser);
@@ -1453,14 +1436,14 @@ module.exports = {
                             ...processedUser,
                             cpf: !isProduction
                                 ? hideCPFNumbers(processedUser.cpf)
-                                : processedUser.cpf
-                        }
+                                : processedUser.cpf,
+                        },
                     });
                 } else {
                     usersToSend.push(account);
                     newUsers.push({
                         ...processedUser,
-                        cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf
+                        cpf: !isProduction ? hideCPFNumbers(processedUser.cpf) : processedUser.cpf,
                     });
                 }
             }
@@ -1470,7 +1453,7 @@ module.exports = {
             );
             for (const user of existingUsers) {
                 await User.findByIdAndUpdate(user._id, {
-                    ...user.processedUser
+                    ...user.processedUser,
                 });
             }
 
@@ -1479,7 +1462,7 @@ module.exports = {
                 await User.updateMany(
                     {
                         ignoreLoadInactivation: { $ne: true },
-                        updatedAt: { $lt: data_start }
+                        updatedAt: { $lt: data_start },
                     },
                     { $set: { status: 'INATIVO' } },
                     { multi: true }
@@ -1529,9 +1512,9 @@ module.exports = {
                 $and: [
                     {
                         onboarding: isOnboarding ? true : { $ne: true },
-                        partner: isPartner ? { $exists: true } : { $exists: false }
-                    }
-                ]
+                        partner: isPartner ? { $exists: true } : { $exists: false },
+                    },
+                ],
             };
 
             if (req?.segmentation) {
@@ -1542,12 +1525,12 @@ module.exports = {
 
             const totalActive = await User.find({
                 status: 'ATIVO',
-                ...query
+                ...query,
             }).countDocuments();
 
             const totalInactive = await User.find({
                 status: 'INATIVO',
-                ...query
+                ...query,
             }).countDocuments();
 
             if (searchBy) {
@@ -1556,23 +1539,21 @@ module.exports = {
                         { name: { $regex: searchBy, $options: 'i' } },
                         { registration: { $regex: searchBy, $options: 'i' } },
                         { email: { $regex: searchBy, $options: 'i' } },
-                        { cpf: { $regex: searchBy, $options: 'i' } }
-                    ]
+                        { cpf: { $regex: searchBy, $options: 'i' } },
+                    ],
                 });
             }
-
 
             const users = await User.find(query)
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
-
             _messages.success(res, req, {
                 data: users,
                 total,
                 totalActive,
-                totalInactive
+                totalInactive,
             });
         } catch (error) {
             _messages.internalServer(
@@ -1608,7 +1589,7 @@ module.exports = {
             const user = await User.findOne({ _id: _id }, { password: 0 });
 
             _messages.success(res, req, {
-                data: user
+                data: user,
             });
         } catch (error) {
             _messages.internalServer(
@@ -1627,7 +1608,7 @@ module.exports = {
             const { _id, email, cpf, networkLogin, tags } = req.body;
             delete req.body.ip;
             const user = await User.findOne({
-                _id: { $eq: _id }
+                _id: { $eq: _id },
             });
             if (tags && tags.length > 0) {
                 for (const tag of tags) {
@@ -1650,23 +1631,10 @@ module.exports = {
                     req.body[f] &&
                     filter.push({
                         _id: { $ne: _id },
-                        [f]: { $eq: req.body[f] }
+                        [f]: { $eq: req.body[f] },
                     })
             );
-            const found = filter.length > 0 && (await User.findOne({ $or: filter }));
-
-            if (found) {
-                const field = found.email === email ? 'E-MAIL' : 'LOGIN';
-
-                return _messages.forbidden(
-                    res,
-                    req,
-                    'Erro interno no servidor',
-                    `O ${field} informado já está sendo utilizado`,
-                    'users',
-                    'updateUser'
-                );
-            }
+            
             const userUpdated = { ...req.body };
             const account = await processUserAccount(userUpdated);
             const value = JSON.parse(account.value);
@@ -1676,10 +1644,13 @@ module.exports = {
                 await sendAccountsToKafka([account]);
             }
             const updated = await User.findByIdAndUpdate(_id, req.body, {
-                projection: { ...userProjection }
+                projection: { ...userProjection },
             });
 
-            await WebhooksController.dispatch('update', 'users', false, { ...userUpdated, password: undefined });
+            await WebhooksController.dispatch('update', 'users', false, {
+                ...userUpdated,
+                password: undefined,
+            });
 
             if (userUpdated?.status) {
                 await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status);
@@ -1687,7 +1658,7 @@ module.exports = {
 
             return _messages.success(res, req, updated, 'Usuário(a) atualizado(a) com sucesso!');
         } catch (error) {
-            console.log(error)
+            console.log(error);
             return _messages.internalServer(
                 res,
                 req,
@@ -1793,7 +1764,7 @@ module.exports = {
             const usersTest = await UserTest.find();
             for (const result of usersTest) {
                 const user = await User.findOne({
-                    networkLogin: result.networkLogin
+                    networkLogin: result.networkLogin,
                 });
 
                 const objUser = {
@@ -1826,19 +1797,25 @@ module.exports = {
                     manager: result.manager,
                     enrollManager: result.enrollManager,
                     loginManager: result.loginManager,
-                    nameManager: result.nameManager
+                    nameManager: result.nameManager,
                 };
 
                 if (user) {
                     await User.findByIdAndUpdate(user._id, {
-                        ...objUser
+                        ...objUser,
                     });
-                    await WebhooksController.dispatch('update', 'users', false, { ...objUser, password: undefined });
+                    await WebhooksController.dispatch('update', 'users', false, {
+                        ...objUser,
+                        password: undefined,
+                    });
                 } else {
                     await User.create({
-                        ...objUser
+                        ...objUser,
                     });
-                    await WebhooksController.dispatch('create', 'users', false, { ...objUser, password: undefined });
+                    await WebhooksController.dispatch('create', 'users', false, {
+                        ...objUser,
+                        password: undefined,
+                    });
                 }
             }
 
@@ -1857,14 +1834,14 @@ module.exports = {
                 records.push({
                     nome: user.name,
                     login: user.networkLogin,
-                    matricula: user.registration
+                    matricula: user.registration,
                 });
             }
 
             const header = [
                 { id: 'nome', title: 'NOME' },
                 { id: 'login', title: 'LOGIN' },
-                { id: 'matricula', title: 'MATRICULA' }
+                { id: 'matricula', title: 'MATRICULA' },
             ];
 
             await _files.writeFile(header, records);
@@ -1891,12 +1868,12 @@ module.exports = {
             const results = await _files.readCSV(file.path);
             for (const result of results) {
                 const user = await User.findOne({
-                    networkLogin: { $eq: result.LOGIN }
+                    networkLogin: { $eq: result.LOGIN },
                 });
 
                 if (user) {
                     await User.findByIdAndUpdate(user._id, {
-                        status: result.STATUS
+                        status: result.STATUS,
                     });
                 }
             }
@@ -1966,19 +1943,19 @@ module.exports = {
                         profiles: profilesIDS.result,
                         numbers: profilesIDS.numbers,
                         groups: groupsIDS,
-                        welcomeVideoWatched: user?.welcomeVideoWatched
+                        welcomeVideoWatched: user?.welcomeVideoWatched,
                     },
-                    names: namesProfiles.concat(namesGroups)
+                    names: namesProfiles.concat(namesGroups),
                 };
                 const dataToken = result.token;
                 const token = generateToken({
                     ref: body._id,
-                    ...dataToken
+                    ...dataToken,
                 });
                 const token_analytics = generateTokenAnalytics({
                     perfil: profilesIDS.numbers,
                     clientID: CLIENT_ID,
-                    filters: dashboardFilters
+                    filters: dashboardFilters,
                 });
 
                 const { token: SAS } = addSASTokenToResponse(res);
@@ -1998,7 +1975,7 @@ module.exports = {
                     networkLogin,
                     name,
                     profilePhoto,
-                    tokenAnalytics: token_analytics
+                    tokenAnalytics: token_analytics,
                 });
             } else {
                 _messages.badRequest(
@@ -2028,13 +2005,13 @@ module.exports = {
             const results = await _files.readCSV(file.path);
             for (const r of results) {
                 const user = await User.find({
-                    networkLogin: { $eq: r.LOGIN_REDE }
+                    networkLogin: { $eq: r.LOGIN_REDE },
                 });
 
                 if (user[0]) {
                     await User.findByIdAndUpdate(user[0].id, {
                         status: 'INATIVO',
-                        reasonCode: r.CODIGO_MOTIVO
+                        reasonCode: r.CODIGO_MOTIVO,
                     });
                 }
             }
@@ -2071,7 +2048,7 @@ module.exports = {
                         message: 'SSO não retornou o valor esperado',
                         claim,
                         claimKey,
-                        samlUserObject: req.samlUserObject
+                        samlUserObject: req.samlUserObject,
                     },
                     'users',
                     'ssoCallback'
@@ -2082,7 +2059,7 @@ module.exports = {
                 {
                     [claim]: value,
                     strategyName,
-                    idpProfiles
+                    idpProfiles,
                 },
                 process.env.PROJECT_SECRET_KEY
             );
@@ -2113,14 +2090,17 @@ module.exports = {
             component: 'users',
             route: 'openidCallback',
             dataNew: { openidObject: req.user },
-            dataOld: null
+            dataOld: null,
         });
 
-        const token = jwt.sign({
-            [form.claim]: claimValue,
-            strategyName,
-            idpProfiles
-        }, process.env.PROJECT_SECRET_KEY);
+        const token = jwt.sign(
+            {
+                [form.claim]: claimValue,
+                strategyName,
+                idpProfiles,
+            },
+            process.env.PROJECT_SECRET_KEY
+        );
 
         res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
     },
@@ -2153,38 +2133,38 @@ module.exports = {
             const collaborativeUsers = await User.find(
                 searchBy
                     ? {
-                        $and: [
-                            {
-                                groupsAD: { $in: ['PERFIL_Colaborador'] }
-                            },
-                            {
-                                $or: [
-                                    {
-                                        name: {
-                                            $regex: searchBy,
-                                            $options: 'i'
-                                        }
-                                    },
-                                    {
-                                        registration: {
-                                            $regex: searchBy,
-                                            $options: 'i'
-                                        }
-                                    },
-                                    {
-                                        email: {
-                                            $regex: searchBy,
-                                            $options: 'i'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    }
+                          $and: [
+                              {
+                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
+                              },
+                              {
+                                  $or: [
+                                      {
+                                          name: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          registration: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          email: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                  ],
+                              },
+                          ],
+                      }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             )
                 .sort({
-                    [order]: sort
+                    [order]: sort,
                 })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
@@ -2192,40 +2172,40 @@ module.exports = {
             const total = await User.countDocuments(
                 searchBy
                     ? {
-                        $and: [
-                            {
-                                groupsAD: { $in: ['PERFIL_Colaborador'] }
-                            },
-                            {
-                                $or: [
-                                    {
-                                        name: {
-                                            $regex: searchBy,
-                                            $options: 'i'
-                                        }
-                                    },
-                                    {
-                                        registration: {
-                                            $regex: searchBy,
-                                            $options: 'i'
-                                        }
-                                    },
-                                    {
-                                        email: {
-                                            $regex: searchBy,
-                                            $options: 'i'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    }
+                          $and: [
+                              {
+                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
+                              },
+                              {
+                                  $or: [
+                                      {
+                                          name: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          registration: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          email: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                  ],
+                              },
+                          ],
+                      }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             );
 
             _messages.success(res, req, {
                 data: collaborativeUsers,
-                total
+                total,
             });
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor');
@@ -2237,7 +2217,7 @@ module.exports = {
             const { userId, moderation } = req.body;
             if (!userId) {
                 _messages.badRequest(res, req, 'Payload inválido', {
-                    message: 'Payload inválido'
+                    message: 'Payload inválido',
                 });
                 return;
             }
@@ -2247,11 +2227,11 @@ module.exports = {
                 : ['PERFIL_Colaborador'];
 
             await User.findByIdAndUpdate(userId, {
-                $addToSet: { groupsAD: profiles }
+                $addToSet: { groupsAD: profiles },
             });
 
             _messages.success(res, req, {
-                message: 'Usuário adicionado ao grupo de colaboradores'
+                message: 'Usuário adicionado ao grupo de colaboradores',
             });
         } catch (error) {
             _messages.internalServer(
@@ -2271,24 +2251,24 @@ module.exports = {
 
             if (!userId) {
                 _messages.badRequest(res, req, 'Payload inválido', {
-                    message: 'Payload inválido'
+                    message: 'Payload inválido',
                 });
             }
 
             const profiles = ['PERFIL_Colaborador_Livre'];
             if (!moderation) {
                 await User.findByIdAndUpdate(userId, {
-                    $pullAll: { groupsAD: profiles }
+                    $pullAll: { groupsAD: profiles },
                 });
                 _messages.success(res, req, {
-                    message: 'Usuário removido do grupo de colaboradores livres'
+                    message: 'Usuário removido do grupo de colaboradores livres',
                 });
             } else {
                 await User.findByIdAndUpdate(userId, {
-                    $addToSet: { groupsAD: profiles }
+                    $addToSet: { groupsAD: profiles },
                 });
                 _messages.success(res, req, {
-                    message: 'Usuário adicionado ao grupo de colaboradores livres'
+                    message: 'Usuário adicionado ao grupo de colaboradores livres',
                 });
             }
         } catch (error) {
@@ -2309,18 +2289,18 @@ module.exports = {
 
             if (!userId) {
                 _messages.badRequest(res, req, 'Payload inválido', {
-                    message: 'Payload inválido'
+                    message: 'Payload inválido',
                 });
             }
 
             const profiles = ['PERFIL_Colaborador', 'PERFIL_Colaborador_Livre'];
 
             await User.findByIdAndUpdate(userId, {
-                $pullAll: { groupsAD: profiles }
+                $pullAll: { groupsAD: profiles },
             });
 
             _messages.success(res, req, {
-                message: 'Usuário removido do grupo de colaboradores'
+                message: 'Usuário removido do grupo de colaboradores',
             });
         } catch (error) {
             _messages.internalServer(
@@ -2340,7 +2320,7 @@ module.exports = {
 
             if (!userId || generate === null) {
                 _messages.badRequest(res, req, 'Payload inválido', {
-                    message: 'Payload inválido'
+                    message: 'Payload inválido',
                 });
             }
 
@@ -2351,7 +2331,7 @@ module.exports = {
                 hashPassword = {
                     hash: bcrypt.hashSync(password, 10),
                     valid: true,
-                    createdAt: new Date(Date.now())
+                    createdAt: new Date(Date.now()),
                 };
             } else {
                 generatedPassword = Math.random()
@@ -2361,7 +2341,7 @@ module.exports = {
                 hashPassword = {
                     hash: bcrypt.hashSync(generatedPassword, 10),
                     valid: true,
-                    createdAt: new Date(Date.now())
+                    createdAt: new Date(Date.now()),
                 };
             }
 
@@ -2385,16 +2365,16 @@ module.exports = {
                     user
                 );
                 _messages.success(res, req, {
-                    message: 'Senha alterada e enviada para o usuário.'
+                    message: 'Senha alterada e enviada para o usuário.',
                 });
             } else if (user && user.email && !generate && password) {
                 await sendResetedPasswordToUser(user.email, password, process.env.DOMAIN, user);
                 _messages.success(res, req, {
-                    message: 'Senha alterada e enviada para o usuário.'
+                    message: 'Senha alterada e enviada para o usuário.',
                 });
             } else {
                 _messages.success(res, req, {
-                    message: 'Senha alterada, porém o usuário não possui email. '
+                    message: 'Senha alterada, porém o usuário não possui email. ',
                 });
             }
         } catch (error) {
@@ -2430,11 +2410,11 @@ module.exports = {
             const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD);
 
             GamificationBusiness.updateClientUser(user.networkLogin, {
-                eligibilities
+                eligibilities,
             });
 
             _messages.success(res, req, {
-                message: 'Tag de permissão removida'
+                message: 'Tag de permissão removida',
             });
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users');
@@ -2482,31 +2462,30 @@ module.exports = {
 
         try {
             const normalizedTags = tag.map((t) => removeAccents(t));
-
-            const user = await User.findByIdAndUpdate(
-                userId,
+            const user = await User.findOneAndUpdate(
+                { _id: userId },
                 { $addToSet: { groupsAD: normalizedTags } },
                 { new: true }
             );
             for (const groupName of normalizedTags) {
                 const findGroup = await Group.findOne({
                     name: groupName,
-                    deleted: 0
+                    deleted: 0,
                 });
                 if (!findGroup) {
                     await Group.create({
-                        name: groupName
+                        name: groupName,
                     });
                 }
             }
 
             const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD);
             GamificationBusiness.updateClientUser(user.networkLogin, {
-                eligibilities
+                eligibilities,
             });
 
             return _messages.success(res, req, {
-                message: 'Tag de permissão adicionada ao usuário'
+                message: 'Tag de permissão adicionada ao usuário',
             });
         } catch (error) {
             return _messages.internalServer(
@@ -2524,7 +2503,7 @@ module.exports = {
 
         try {
             await User.findByIdAndUpdate(userId, {
-                $pull: { classGroups: { groupCode: tag } }
+                $pull: { classGroups: { groupCode: tag } },
             });
             _messages.success(res, req, { message: 'Tag de curso removida' });
         } catch (error) {
@@ -2540,12 +2519,12 @@ module.exports = {
                     classGroups: {
                         ...tag,
                         startDate: new Date(tag.startDate),
-                        limitDate: new Date(tag.limitDate)
-                    }
-                }
+                        limitDate: new Date(tag.limitDate),
+                    },
+                },
             });
             _messages.success(res, req, {
-                message: 'Tag de curso adicionada ao usuário'
+                message: 'Tag de curso adicionada ao usuário',
             });
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users');
@@ -2563,20 +2542,20 @@ module.exports = {
                     newTags.push({
                         ...group,
                         startDate: new Date(group.startDate),
-                        limitDate: new Date(group.limitDate)
+                        limitDate: new Date(group.limitDate),
                     });
                 } else {
                     newTags.push({
                         ...group,
                         startDate: new Date(group.startDate),
-                        limitDate: new Date(group.limitDate)
+                        limitDate: new Date(group.limitDate),
                     });
                 }
             }
             await User.findByIdAndUpdate(_id, { classGroups: newTags });
 
             _messages.success(res, req, {
-                message: 'Tag de curso atualizada no usuário'
+                message: 'Tag de curso atualizada no usuário',
             });
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users');
@@ -2588,11 +2567,11 @@ module.exports = {
             const { idEvaluation } = req.params;
             const user = await getUserByToken(req);
             const evaluation = await Evaluation.findOne({
-                _id: { $eq: idEvaluation }
+                _id: { $eq: idEvaluation },
             });
             const evaluationsHistoric = await HistoricEvaluation.find({
                 idEvaluation: { $eq: evaluation._id },
-                user: { $eq: user._id }
+                user: { $eq: user._id },
             });
 
             if (!evaluationsHistoric.length) {
@@ -2604,23 +2583,23 @@ module.exports = {
                         const questionResponse = await Promise.all(
                             evaluationHistoric.answers.map(async (answer) => {
                                 const question = await Question.findOne({
-                                    _id: { $eq: answer.idQuestion }
+                                    _id: { $eq: answer.idQuestion },
                                 });
                                 const alternative = await Alternative.findOne({
-                                    _id: { $eq: answer.idAlternative }
+                                    _id: { $eq: answer.idAlternative },
                                 });
 
                                 return {
                                     question: {
                                         _id: question._id,
-                                        description: question.description
+                                        description: question.description,
                                     },
                                     alternative: {
                                         _id: alternative._id,
-                                        description: alternative.description
+                                        description: alternative.description,
                                     },
                                     correct: answer.correct,
-                                    createdAt: answer.createdAt
+                                    createdAt: answer.createdAt,
                                 };
                             })
                         );
@@ -2632,7 +2611,7 @@ module.exports = {
                                 evaluationHistoric.amountQuestionsCorrect /
                                 evaluationHistoric.amountOfQuestions,
                             startedAt: evaluationHistoric.createdAt,
-                            finishedAt: evaluationHistoric.updatedAt
+                            finishedAt: evaluationHistoric.updatedAt,
                         };
                     })
                 );
@@ -2640,7 +2619,7 @@ module.exports = {
                 const evaluationProgress = {
                     _id: evaluation._id,
                     description: evaluation.description,
-                    userAttempts
+                    userAttempts,
                 };
 
                 _messages.success(res, req, evaluationProgress);
@@ -2662,9 +2641,9 @@ module.exports = {
             const query = {
                 $and: [
                     {
-                        groupsAD: { $in: ['PERFIL_Conteudista'] }
-                    }
-                ]
+                        groupsAD: { $in: ['PERFIL_Conteudista'] },
+                    },
+                ],
             };
 
             if (req?.segmentation) {
@@ -2692,7 +2671,7 @@ module.exports = {
             const users = await User.find({ networkLogin: { $in: networkLogins } }, [
                 'name',
                 'networkLogin',
-                'profilePhoto'
+                'profilePhoto',
             ]);
 
             return _messages.success(res, req, users);
@@ -2850,12 +2829,12 @@ module.exports = {
                 {
                     user: { ...body },
                     elegibility: body.elegibility,
-                    newFormat: true
+                    newFormat: true,
                 },
                 {
                     headers: {
-                        'connect-client-key': process.env.CONNECT_CLIENT_KEY
-                    }
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                    },
                 }
             );
 
@@ -2884,7 +2863,7 @@ module.exports = {
             const data = await _files.readXLSXHeaders(file.path);
             const fields = Object.entries(defaultUserMap).map((entry) => ({
                 display: entry[1].label,
-                value: entry[0]
+                value: entry[0],
             }));
 
             _messages.success(res, req, { headers: data, fields });
@@ -2898,5 +2877,5 @@ module.exports = {
                 'readSheetHeaders'
             );
         }
-    }
+    },
 };
