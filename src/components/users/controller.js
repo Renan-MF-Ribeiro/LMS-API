@@ -335,8 +335,7 @@ module.exports = {
             });
 
             const created = await User.findOne(
-                { networkLogin: processedUser.networkLogin },
-                { ...userProjection }
+                { networkLogin: processedUser.networkLogin }
             );
           
             WebhooksController.dispatch('create', 'users', false, { ...created, password: undefined });
