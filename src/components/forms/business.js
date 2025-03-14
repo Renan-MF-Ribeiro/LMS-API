@@ -162,9 +162,9 @@ function getFormErrorsByMapConfig(connectMap, form, data) {
     return errors;
 }
 
-async function getDefaultForm() {
+async function getDefaultForm(isAdmin = false) {
     const defaultForm = await FormModel.findOne({
-        isDefault: true,
+        ...(isAdmin ? { isAdmin: true } : { isDefault: true }),
         $or: [
             { deletedAt: null },
             { deletedAt: { $exists: false } },
@@ -172,7 +172,11 @@ async function getDefaultForm() {
     }).lean();
 
     if (!defaultForm) {
-        const createdForm = await FormModel.create(appDefaultForm);
+        const createdForm = await FormModel.create({
+            ...appDefaultForm,
+            isDefault: !isAdmin,
+            isAdmin,
+        });
 
         return createdForm.toObject();
     }
@@ -190,7 +194,7 @@ async function getAdminForm() {
     }).lean();
 
     if (!adminForm) {
-        return getDefaultForm();
+        return getDefaultForm(true);
     }
 
     return adminForm;

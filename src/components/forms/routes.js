@@ -229,7 +229,7 @@ formsRouter.post('/:id/duplicate', async (req, res) => {
         return res.status(404).json({ message: `Form '${id}' not found` });
     }
 
-    const newForm = { ...currentForm, _id: undefined, name: `${currentForm.name} - Cópia`, default: false };
+    const newForm = { ...currentForm, _id: undefined, name: `${currentForm.name} - Cópia`, isDefault: false };
 
     const form = await FormModel.create(newForm);
 
