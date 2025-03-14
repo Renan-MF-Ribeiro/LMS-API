@@ -169,7 +169,7 @@ async function getDefaultForm(isAdmin = false) {
             { deletedAt: null },
             { deletedAt: { $exists: false } },
         ]
-    }).lean();
+    }).sort({ _id: -1 }).lean();
 
     if (!defaultForm) {
         const createdForm = await FormModel.create({
