@@ -27,7 +27,6 @@ const {
     SCORMLessonStatus,
     EventTracking,
     ActivityTracking,
-    TrackingsItems,
     FormTracking
 } = require('./model');
 const { HistoricEvaluation, Evaluation } = require('../assessments/model');
