@@ -292,10 +292,7 @@ module.exports = {
                 { networkLogin: processedUser.networkLogin },
                 { ...userProjection }
             );
-            await WebhooksController.dispatch('create', 'users', false, {
-                ...processedUser,
-                password: undefined,
-            });
+            await WebhooksController.dispatch('create', 'users', false, { created, password: undefined });
 
             return _messages.success(res, req, created);
         } catch (error) {
@@ -481,7 +478,6 @@ module.exports = {
             }
 
             const formatedDate = formatDateWithoutHoursBrasilian(data.birthDate);
-            console.log(formatedDate);
             const userData = {
                 networkLogin,
                 // email: networkLogin,
@@ -498,7 +494,7 @@ module.exports = {
 
             const newUser = await User.create(userData);
 
-            await WebhooksController.dispatch('create', 'users', false, userData);
+            await WebhooksController.dispatch('create', 'users', false, newUser);
 
             if (token) {
                 const DATA_INICIO = today.startOf('day');
@@ -2810,7 +2806,7 @@ module.exports = {
             _messages.success(res, req, {
                 map: connectMap,
                 fields,
-                exceptions: ['status', 'cpf', 'postalCode', 'pcd'],
+                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd'] // Campos que não devem ser alterados
             });
         } catch (error) {
             _messages.internalServer(
