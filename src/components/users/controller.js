@@ -1646,11 +1646,13 @@ module.exports = {
             const updated = await User.findByIdAndUpdate(_id, req.body, {
                 projection: { ...userProjection },
             });
-
-            await WebhooksController.dispatch('update', 'users', false, {
+            console.time('dispatch');
+            WebhooksController.dispatch('update', 'users', false, {
                 ...userUpdated,
                 password: undefined,
-            });
+            })
+            console.timeEnd('dispatch');
+
 
             if (userUpdated?.status) {
                 await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status);

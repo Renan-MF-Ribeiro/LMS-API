@@ -31,6 +31,7 @@ module.exports = {
                     }
                 });
             }
+            console.log('Webhook dispatched')
             return { success: true };
         } catch (error) {
             return { success: false, error: error.message };
