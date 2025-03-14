@@ -122,7 +122,7 @@ function getFormErrorsByMapConfig(connectMap, form, data) {
             const field = allFields.find((field) => field.key === key);
 
             if (!field) return;
-            if ((field.required || key === (form.loginField ?? 'cpf')) && (!value || !String(value).length) ) {
+            if ((field.required || key === (form.loginField ?? 'cpf')) && (!value || !String(value).length)) {
                 errors.push({ key, message: `Campo ${field.config?.label ?? key} é obrigatório` });
             }
 
@@ -162,17 +162,21 @@ function getFormErrorsByMapConfig(connectMap, form, data) {
     return errors;
 }
 
-async function getDefaultForm() {
+async function getDefaultForm(isAdmin = false) {
     const defaultForm = await FormModel.findOne({
-        isDefault: true,
+        ...(isAdmin ? { isAdmin: true } : { isDefault: true }),
         $or: [
             { deletedAt: null },
             { deletedAt: { $exists: false } },
         ]
-    }).lean();
+    }).sort({ _id: -1 }).lean();
 
     if (!defaultForm) {
-        const createdForm = await FormModel.create(appDefaultForm);
+        const createdForm = await FormModel.create({
+            ...appDefaultForm,
+            isDefault: !isAdmin,
+            isAdmin,
+        });
 
         return createdForm.toObject();
     }
@@ -190,15 +194,36 @@ async function getAdminForm() {
     }).lean();
 
     if (!adminForm) {
-        return getDefaultForm();
+        return getDefaultForm(true);
     }
 
     return adminForm;
 }
 
+async function getFormErrorsByFormValidation(form, data) {
+    const { loginField, sections } = form;
+
+    const fields = sections.flatMap((section) => section.fields);
+
+    const requiredFields = fields.filter((field) => field.required || field.key === loginField);
+
+    const errors = [];
+
+    requiredFields.forEach((field) => {
+        const value = data[field.key];
+
+        if (!value || !String(value).length) {
+            errors.push({ key: field.key, message: `Campo ${field.key} é obrigatório` });
+        }
+    });
+
+    return errors;
+}
+
 module.exports = {
     setConnectMapInForm,
     getFormErrorsByMapConfig,
+    getFormErrorsByFormValidation,
     getDefaultForm,
     getAdminForm,
 };
