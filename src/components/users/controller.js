@@ -2832,7 +2832,7 @@ module.exports = {
             _messages.success(res, req, {
                 map: connectMap,
                 fields,
-                exceptions: ['status', 'cpf', 'postalCode', 'pcd']
+                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd'] // Campos que não devem ser alterados
             });
         } catch (error) {
             _messages.internalServer(
