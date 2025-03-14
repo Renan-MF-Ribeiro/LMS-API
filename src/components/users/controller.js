@@ -339,7 +339,7 @@ module.exports = {
                 { ...userProjection }
             );
           
-            WebhooksController.dispatch('create', 'users', false, { created, password: undefined });
+            WebhooksController.dispatch('create', 'users', false, { ...created, password: undefined });
 
             return _messages.success(res, req, created);
         } catch (error) {
