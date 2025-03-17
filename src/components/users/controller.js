@@ -1446,12 +1446,15 @@ module.exports = {
             const newUsers = [];
             const existingUsers = [];
             const usersToSend = [];
+
             if (req.files.file) {
                 file = req.files.file;
             } else {
                 file = req.files.content;
             }
+
             const results = await _files.readXLSXUsers(file.path, onboarding);
+
             const elegibilityResponse = await axios.get(
                 `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
                 {
@@ -1460,17 +1463,18 @@ module.exports = {
                     },
                 }
             );
+
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
             const messengerConfig = await getMessengerConfig();
-
-            const user = await getUserByToken(req);
 
             for (const result of results) {
                 const existingUser = await User.findOne({
                     networkLogin: result.cpf,
                 });
-                const processedUser = processUsersLoad(result, fieldsForElegibility, onboarding);
+
+                const processedUser = await processUsersLoad(result, fieldsForElegibility, onboarding);
+
                 const account = await processUserAccount(processedUser);
 
                 processedUser.password = existingUser
@@ -1499,6 +1503,7 @@ module.exports = {
             console.log(
                 `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
             );
+
             for (const user of existingUsers) {
                 await User.findByIdAndUpdate(user._id, {
                     ...user.processedUser,
