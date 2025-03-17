@@ -19,7 +19,7 @@ const momentz = require('moment-timezone');
 const ExcelJS = require('exceljs');
 const axios = require('axios');
 const _functions = require('./functions');
-const { mapUserOld, defaultUserMap } = require('./../components/users/model');
+const { mapUserOld, defaultUserMap, defaultOnboardingUserMap } = require('./../components/users/model');
 const { Item, MediaItem } = require('../components/items/model');
 const { sleep } = require('./functions');
 const {
@@ -822,7 +822,7 @@ module.exports = {
     },
 
     async readXLSXUsers (file, onboarding = false) {
-        const map = await getConnectMap(true);
+        const map = onboarding ? defaultOnboardingUserMap : (await getConnectMap(true));
         
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
