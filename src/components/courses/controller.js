@@ -6,7 +6,6 @@ const {
     MaterialModel,
     ProgramModel,
     CourseEvaluationModel,
-    CoursesWithTagsAndUsers,
     WaitListsByUser,
     WaitListsByCourses,
     UsersWithProcessedTags,
@@ -1093,8 +1092,6 @@ module.exports = {
             const { skip, limit } = pagination(req);
             const { id } = req.params;
             usersInClass = usersInClass.map((userID) => mongoose.Types.ObjectId(userID));
-
-            console.log('COMEÇA AQUI OS LOGS');
 
             // Buscar o curso e pegar os valores de tags e mandatory
             const course = await CourseModel.findOne(
