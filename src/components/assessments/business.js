@@ -98,13 +98,13 @@ module.exports = {
         })
     },
 
-    returnQuestionsByCategory(categories) {
+    returnQuestionsByCategory (categories) {
         return new Promise(async (resolve, reject) => {
             try {
                 const questionsOfEvaluations = []
-                let amountOfQuestions = 0
 
                 for (const category of categories) {
+                    let amountOfQuestions = 0
 
                     const questionsOfCategory = await Question
                         .find(
@@ -120,7 +120,6 @@ module.exports = {
                         amountOfQuestions += questionsOfCategory.length
 
                     }
-
                     const questions =
                         (category.randomQuestions
                             ? returnSliceDataRandom(questionsOfCategory, 0, amountOfQuestions)
@@ -135,11 +134,10 @@ module.exports = {
                     questionsOfEvaluations.push(questions)
 
                 }
+                const questions = questionsOfEvaluations.filter((q) => q.length)
+                const amount = questions.flat().length
 
-                resolve({
-                    questions: questionsOfEvaluations,
-                    amount: amountOfQuestions,
-                })
+                resolve({ questions, amount })
             } catch (error) {
                 reject(error)
             }
