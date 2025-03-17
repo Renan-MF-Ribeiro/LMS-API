@@ -203,8 +203,14 @@ const HomeController = {
 
             if (course && course.trails) {
                 course.trails = course?.trails?.filter(trail => {
+                    // recupera o nome de todas as turmas do curso
+                    const classNames = (trail?.classes || []).map(c => c.name);
+
+                    // recupera titulo e descrição do curso
                     const { title, description } = trail;
-                    return [title, description].some(stg => extractTextFromRichText(stg).toLowerCase().includes(searchBy.toLowerCase()));
+
+                    // retorna TRUE caso algum dos itens corresponda a pesquisa
+                    return [title, description, ...classNames].some(stg => extractTextFromRichText(stg).toLowerCase().includes(searchBy.toLowerCase()));
                 });
 
                 result.push(course);
