@@ -54,7 +54,7 @@ module.exports = {
 
     async getLoginFormByStrategyName(strategyName = 'saml') {
         const loginConfig = await module.exports.getLoginConfig();
-        console.log(strategyName, loginConfig.ssoForm)
+
         return loginConfig.ssoForm?.find((form) => form.strategyName === strategyName)
     },
 
