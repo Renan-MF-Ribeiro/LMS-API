@@ -47,6 +47,9 @@ const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../co
 
 const ObjectId = require("mongoose").Types.ObjectId;
 
+const GamificationKafka = require('../gamification/kafka/broker');
+const { EVENT_CATEGORY } = require('../gamification/model');
+
 module.exports = {
     async getCollaborative (req, res) {
         try {
@@ -2022,6 +2025,13 @@ module.exports = {
                     moderation === 'approved' ? 'aprovado' : 'recusado'
                 );
                 createMessagesFromBackend()
+            }
+
+            if (moderation === 'approved') {
+                await GamificationKafka.publishEventRuleValidation({
+                    networkLogin: user.networkLogin,
+                    events: [EVENT_CATEGORY.UPLOADED_CONTENT],
+                });
             }
 
             _messages.success(res, req, { message: 'Trilha atualizada' });
