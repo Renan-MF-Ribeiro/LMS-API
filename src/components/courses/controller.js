@@ -466,7 +466,7 @@ module.exports = {
                 dateApplicationFinal,
                 minister,
                 requester,
-                qrCode,
+                qrcode,
                 qrCodeSelfRegistration,
                 isSelfRegistrationEnabled,
                 limit,
@@ -571,14 +571,14 @@ module.exports = {
                             instructor: instructorID,
                             requester,
                             minister,
-                            qrcode: req.body.qrCode,
+                            qrcode: req.body.qrcode,
                             materials: arrMaterials,
                             registrationDeadline: !registrationDeadline ? 0 : registrationDeadline,
                             cancellationDeadline: !cancellationDeadline ? 0 : cancellationDeadline,
                             dateApplicationInitial,
                             dateApplicationFinal,
                             canCreateClass,
-                            qrcode: qrCode,
+                            qrcode: qrcode,
                             qrCodeSelfRegistration: qrCodeSelfRegistration,
                             isSelfRegistrationEnabled: isSelfRegistrationEnabled,
                             limit,
@@ -666,7 +666,7 @@ module.exports = {
                 courseID,
                 users,
                 classID,
-                qrCode,
+                qrcode,
                 minister,
                 requester,
                 registrationDeadline,
@@ -815,7 +815,7 @@ module.exports = {
                         requester,
                         minister,
                         materials: arrMaterials,
-                        qrcode: qrCode,
+                        qrcode,
                         qrCodeSelfRegistration: qrCodeSelfRegistration,
                         isSelfRegistrationEnabled: isSelfRegistrationEnabled,
                         registrationDeadline: !registrationDeadline ? 0 : registrationDeadline,
@@ -1437,7 +1437,7 @@ module.exports = {
         try {
             const { body } = req;
             const course = await CourseModel.findOne({
-                qrCode: { $eq: body.qrcode },
+                qrcode: { $eq: body.qrcode },
             });
 
             success(res, req, course);
