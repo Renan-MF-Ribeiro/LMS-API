@@ -251,6 +251,26 @@ const TrackingController = {
                 { ...req.body, totalTime, isAllowedToSendXAPI, completionAt },
                 { new: true, upsert: true, omitUndefined: true }
             );
+
+            await GamificationKafka.publishEventRuleValidation({
+                events: [
+                    EVENT_CATEGORY.ACHIEVED_PROGRESS_PERCENTAGE,
+                    EVENT_CATEGORY.FINISHED_FAVORITE_TRAIL,
+                    EVENT_CATEGORY.FINISHED_HIGHLIGHTED_ITEM,
+                    EVENT_CATEGORY.FINISHED_ITEM,
+                    EVENT_CATEGORY.FINISHED_OPTIONAL_ITEM,
+                    EVENT_CATEGORY.FINISHED_SECTION,
+                    EVENT_CATEGORY.FINISHED_SHARED_TRAIL,
+                    EVENT_CATEGORY.FINISHED_TRAIL,
+                    EVENT_CATEGORY.STARTED_TRAIL,
+                    EVENT_CATEGORY.WATCHED_COLLAB,
+                ],
+                networkLogin: q.userLogin,
+                meta: {
+                    tracking: updatedTracking,
+                },
+            });
+
             await dispatch('create', 'tracking',  { ...req.body, totalTime, isAllowedToSendXAPI, completionAt });
             //EVENTO CONCLUSAO
             await calendarEventConclusion(
