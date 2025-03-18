@@ -2233,7 +2233,7 @@ module.exports = {
         const trailId = req.params.trailId;
 
         const trail = await Trail.findByIdAndUpdate(trailId, { $set: { enabled: false, archive: true, archivedAt: new Date() } });
-        await dispatch('update', 'trail', trail);
+        await dispatch('update', 'trail', false, trail);
 
         res.status(204).send();
     },
@@ -2242,7 +2242,7 @@ module.exports = {
         const trailId = req.params.trailId;
 
         const trail = await Trail.findByIdAndUpdate(trailId, { $set: { archive: false, archivedAt: null } });
-        await dispatch('update', 'trail', trail);
+        await dispatch('update', 'trail', false, trail);
 
         res.status(204).send();
     }

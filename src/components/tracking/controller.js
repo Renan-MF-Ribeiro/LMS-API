@@ -27,7 +27,6 @@ const {
     SCORMLessonStatus,
     EventTracking,
     ActivityTracking,
-    TrackingsItems,
     FormTracking
 } = require('./model');
 const { HistoricEvaluation, Evaluation } = require('../assessments/model');
@@ -603,89 +602,89 @@ const TrackingController = {
             let { order, sort } = ordernation(req);
             const searchBy = req.query.searchBy;
 
-            const query = searchBy
-                ? {
-                    $and: [
-                        {
-                            $or: [
-                                {
-                                    'item.title': {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    'user.name': {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    reviewer: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                            ],
-                        },
-                        {
-                            $or: [
-                                { lessonStatus: 'failed' },
-                                { lessonStatus: 'passed' },
-                            ],
-                            kind: 'ActivityTracking',
-                        },
-                    ],
-                }
-                : {
+            // Montar a query principal com base no searchBy
+            const query = {
+                kind: 'ActivityTracking',
+                $or: [
+                    { lessonStatus: 'failed' },
+                    { lessonStatus: 'passed' },
+                ]
+            };
+
+            // Adicionar filtro de busca se fornecido
+            if (searchBy) {
+                query.$and = [{
                     $or: [
-                        { lessonStatus: 'failed' },
-                        { lessonStatus: 'passed' },
-                    ],
-                    kind: 'ActivityTracking',
-                };
+                        { 'item.title': { $regex: searchBy, $options: 'i' } },
+                        { 'user.name': { $regex: searchBy, $options: 'i' } },
+                        { reviewer: { $regex: searchBy, $options: 'i' } }
+                    ]
+                }];
+            }
 
-            order = order === 'maxCorrectedAt' ? 'correctedAt' : order;
-            order = order === 'itemName' ? 'item.title' : order;
-            order = order === 'studentName' ? 'user.name' : order;
-            order = order === 'maxSentAt' ? 'sentAt' : order;
+            // Mapear campos de ordenação para nomes reais no banco de dados
+            const orderMapping = {
+                'maxCorrectedAt': 'correctedAt',
+                'itemName': 'item.title',
+                'studentName': 'user.name',
+                'maxSentAt': 'sentAt'
+            };
+            order = orderMapping[order] || order;
 
-            const trackingCount = await TrackingsItems.find(
-                query
-            ).countDocuments();
-            const tracking = await TrackingsItems.find(query)
-                .skip(parseInt(skip))
+            // **Buscar os Trackings**
+            const trackingCount = await Tracking.find(query).countDocuments();
+            const tracking = await Tracking.find(query).skip(parseInt(skip))
                 .limit(parseInt(limit))
-                .sort({ [order]: sort })
+                .sort({ [orderMapping]: sort })
                 .lean();
 
-            const activities = [];
-            for (const activity of tracking) {
-                const user = await User.findOne({
-                    networkLogin: activity.userLogin,
-                });
+            // Extrair todos os userLogins e itemIDs para consultas em massa
+            const userLogins = tracking.map(a => a.userLogin);
+            const itemIds = tracking.map(a => a.item?._id).filter(id => id);
 
-                const trails = await Trail.find({
-                    "items.itemID": activity.item._id
-                });
+            // Buscar todos os usuários e criar um mapa por networkLogin
+            const usersMap = await User.find({ networkLogin: { $in: userLogins } })
+                .select("networkLogin name email")
+                .lean()
+                .then(users => Object.fromEntries(users.map(user => [user.networkLogin, user])));
 
-                const activityObj = {
+            // Buscar todas as trilhas que contêm os itens em uma única consulta
+            const trails = await Trail.find({ "items.itemID": { $in: itemIds } })
+                .select("title items.itemID")
+                .lean();
+
+            // Criar um mapa de trilhas por itemID
+            const trailsByItem = {};
+            trails.forEach(trail => {
+                trail.items.forEach(item => {
+                    if (!trailsByItem[item.itemID]) {
+                        trailsByItem[item.itemID] = [];
+                    }
+                    trailsByItem[item.itemID].push(trail.title);
+                });
+            });
+
+            // Montar o array de atividades usando os mapas, sem consultas adicionais
+            const activities = tracking.map(activity => {
+                const itemId = activity.item?._id;
+
+                return {
                     trackingId: activity._id,
-                    itemId: activity.item ? activity.item._id : null,
+                    itemId: itemId || null,
                     itemName: activity.item ? activity.item.title : null,
-                    studentName: user.name,
-                    studentEmail: user.email,
+                    studentName: usersMap[activity.userLogin]?.name || null,
+                    studentEmail: usersMap[activity.userLogin]?.email || null,
                     sentAt: activity.sentAt,
                     reviewer: activity.reviewer,
                     correctedAt: activity.correctedAt,
                     contentPath: activity.contentPath,
-                    passingScore: activity.item.passingScore,
+                    passingScore: activity.item?.passingScore || null,
                     score: activity.score,
                     reviewerComment: activity.reviewerComment,
-                    trails: trails.map(trail => trail.title).join()
+                    trails: (trailsByItem[itemId] || []).join(", ")
                 };
-                activities.push(activityObj);
-            }
+            });
+
             _messages.success(res, req, { activities, total: trackingCount });
         } catch (error) {
             console.log(error);

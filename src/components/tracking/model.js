@@ -152,19 +152,6 @@ const ActivityTracking = Tracking.discriminator('ActivityTracking', new mongoose
     ...schemaOptions
 }))
 
-const vwTrackingsItems = new mongoose.Schema({
-    item: { type: 'Object', ref: 'Item' },
-    sessionTime: { type: Number, required: true },
-    totalTime: { type: Number, required: true, defaultValue: 0 },
-    userLogin: { type: String, required: true },
-    lastState: { type: String, required: true },
-    isAllowedToSendXAPI: { type: Boolean, required: false },
-    isXAPICompleteSent: { type: Boolean, required: false },
-    completionAt: { type: Date, required: true, default: null },
-})
-
-const TrackingsItems = mongoose.model('vwTrackingsItems', vwTrackingsItems, 'vwTrackingsItems')
-
 const FormTracking = Tracking.discriminator(
     "FormTracking",
     new mongoose.Schema(
@@ -183,7 +170,6 @@ module.exports = {
     Tracking,
     DocumentTracking,
     MediaTracking,
-    TrackingsItems,
     SCORMLessonStatus,
     SCORMTracking,
     SCORMTrackingHistory,
