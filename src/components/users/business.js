@@ -47,12 +47,12 @@ module.exports = {
             ...lastConfiguration,
             ssoForm: ssoForm.map(form => ({
                 ...form,
-                strategyName: form.strategyName,
+                strategyName: form.strategyName || 'saml',
             }))
         }
     },
 
-    async getLoginFormByStrategyName(strategyName) {
+    async getLoginFormByStrategyName(strategyName = 'saml') {
         const loginConfig = await module.exports.getLoginConfig();
 
         return loginConfig.ssoForm?.find((form) => form.strategyName === strategyName)
