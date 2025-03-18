@@ -5,7 +5,7 @@ const { azureBlob } = require('../../utils/files');
 const { DOMAIN, AZURE_BLOB_URL } = process.env;
 const { Section } = require('../sections/model');
 const { Trail } = require('../trails/model');
-const { getTagsElegiblesByToken, checkEligibilityTagsAnd, getSectionTrailId } = require('../sections/business');
+const { getTagsElegiblesByToken, checkEligibilityTagsAnd, getSectionTrailId, getContentEligibilityParameterByUserId } = require('../sections/business');
 const { Theme } = require('../theme/palette/model');
 const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business');
 const { getDbCurrentFeatures } = require('../../utils/features');
@@ -30,9 +30,11 @@ module.exports = {
                 OptionalChannel.push({ type: { $ne: 'collaboration' } })
             }
 
-            const query = { $and: [
-                ...OptionalChannel
-            ] }
+            const query = {
+                $and: [
+                    ...OptionalChannel
+                ]
+            }
 
             if (searchBy) {
                 query.$and.push({
@@ -64,12 +66,23 @@ module.exports = {
         }
     },
     async getChannelsElegibles (req, res) {
-        const tags = await getTagsElegiblesByToken(req);
+        const { userId } = req.query;
+        let tags
+        if (userId) {
+            const { tags: newTags } = await getContentEligibilityParameterByUserId(userId)
+            tags = newTags
+        }
+        else {
+            tags = await getTagsElegiblesByToken(req);
+        }
+        console.log('tags', tags)
         try {
-            const query = { $and: [
-                { tags: { $in: tags.map((tag) => tag.value) } },
-                { enabled: true }
-            ]}
+            const query = {
+                $and: [
+                    { tags: { $in: tags.map((tag) => tag.value) } },
+                    { enabled: true }
+                ]
+            }
 
             // if (req?.segmentation) {
             //     handleSegmentationOnQuery(req, 'owner', query)
@@ -88,9 +101,11 @@ module.exports = {
 
                 if (features?.collaborationComponent && channel.type === 'collaboration') return channel
 
-                const sectionQuery = { $and: [
-                    { _id: { $in: channel.idSections } }
-                ] }
+                const sectionQuery = {
+                    $and: [
+                        { _id: { $in: channel.idSections } }
+                    ]
+                }
 
                 // if (req?.segmentation) {
                 //     handleSegmentationOnQuery(req, 'owner', sectionQuery)
@@ -104,9 +119,11 @@ module.exports = {
                         .filter(Boolean)
                 );
 
-                const trailQuery = { $and: [
-                    { _id: { $in: trailsIds } }
-                ] }
+                const trailQuery = {
+                    $and: [
+                        { _id: { $in: trailsIds } }
+                    ]
+                }
 
                 // if (req?.segmentation) {
                 //     handleSegmentationOnQuery(req, 'owner', trailQuery)
