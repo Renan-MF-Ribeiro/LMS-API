@@ -416,6 +416,9 @@ module.exports = {
 
         let networkLogin = data.cpf;
 
+        if (data.email) data.email = String(data.email).toLowerCase();
+        if (data.alternativeEmail) data.alternativeEmail = String(data.alternativeEmail).toLowerCase();
+
         if (form) {
             const connectMap = await getConnectMap(true);
             const errors = getFormErrorsByMapConfig(connectMap, form, data);
