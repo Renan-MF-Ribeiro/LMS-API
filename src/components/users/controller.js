@@ -416,6 +416,8 @@ module.exports = {
 
         let networkLogin = data.cpf;
 
+        if (data.email) data.email = String(data.email).toLowerCase();
+
         if (form) {
             const connectMap = await getConnectMap(true);
             const errors = getFormErrorsByMapConfig(connectMap, form, data);
@@ -439,8 +441,6 @@ module.exports = {
         if (!data.registration?.length) data.registration = networkLogin;
 
         if (!data.admission?.length) data.admission = moment().format('DD/MM/YYYY');
-
-        if (data.email) data.email = String(data.email).toLowerCase();
 
         const today = moment(new Date());
         // Seta elegibilidades padrões
