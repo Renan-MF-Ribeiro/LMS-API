@@ -440,6 +440,8 @@ module.exports = {
 
         if (!data.admission?.length) data.admission = moment().format('DD/MM/YYYY');
 
+        if (data.email) data.email = String(data.email).toLowerCase();
+
         const today = moment(new Date());
         // Seta elegibilidades padrões
         let groupsAD = ['PERFIL_Aluno'];
