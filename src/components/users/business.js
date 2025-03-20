@@ -366,6 +366,7 @@ module.exports = {
             { description: 'IDENTIFICACAO_LOJA', value: 'storeCode' },
             { description: 'GRUPO_LOJA', value: 'storeGroup' },
             { description: 'GRUPO_LOJA_DESCRICAO', value: 'storeGroupDescription' },
+            { description: 'SITUACAO', value: 'situation' },
             { description: 'DISTRITAL', value: 'plant' },
             { description: 'GESTOR', value: 'manager' },
             { description: 'MATRICULA_GESTOR', value: 'managerRegistration' },

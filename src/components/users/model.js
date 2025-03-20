@@ -109,6 +109,7 @@ const userSchema = new mongoose.Schema(
         storeCode: { type: String, trim: true },
         storeGroup: { type: String, trim: true },
         storeGroupDescription: { type: String, trim: true },
+        situation: { type: String, trim: true },
         plant: { type: String, trim: true },
         managerRegistration: { type: String, trim: true },
         managerName: { type: String, trim: true },
@@ -559,6 +560,13 @@ const defaultUserMap = {
     storeGroupDescription: {
         field: 'GRUPO_LOJA_DESCRICAO',
         label: 'Descrição do grupo da loja',
+        activeInForms: true,
+        type: 'string',
+        config: null,
+    },
+    situation: {
+        field: 'SITUACAO',
+        label: 'situation',
         activeInForms: true,
         type: 'string',
         config: null,
