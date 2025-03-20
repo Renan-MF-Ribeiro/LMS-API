@@ -626,6 +626,9 @@ module.exports = {
 
             // Valida usuário e senha
             user = await validateUserAndPassword(res, req, login, passwordDecripted);
+            const entryRecord = await returnDateSinceFirstLogin(user?._id);
+            const firstLogin = !user.passwordValid && !entryRecord
+
             await updateLastLoginUser(user?._id);
 
             // Gera todos os tokens necessários
@@ -652,6 +655,7 @@ module.exports = {
                     SAS,
                     tk,
                     key,
+                    firstLogin,
                     accept: user.acceptTerms,
                     acceptCollaboration: user.acceptTermsCollaboration,
                     passwordValid: user.passwordValid,
