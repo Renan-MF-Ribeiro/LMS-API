@@ -40,6 +40,7 @@ const {
     isSCORMSchemaFile,
     vimeoFilePathCreate,
     vimeoFilePathUpdate,
+    getAppMaxFileSize,
 } = require('../../utils/files');
 
 const {
@@ -192,7 +193,7 @@ const ItemController = {
                 payload.author = user._id;
 
                 const item = await ItemModel.create(payload);
-                
+
                 if (item._id) {
                     const trail = await Trail.create({
                         backgroundPath: null,
@@ -237,7 +238,7 @@ const ItemController = {
                         {
                             $push: {
                                 trails: trail._id,
-                                
+
                             },
                         }
                     );
@@ -1671,6 +1672,11 @@ const ItemController = {
         await Item.findByIdAndUpdate(itemId, { $set: { archive: false, archivedAt: null } });
 
         res.status(204).send();
+    },
+
+    getItemMaxFileSize(req, res) {
+        const maxFileSize = getAppMaxFileSize();
+        _messages.success(res, req, maxFileSize);
     }
 };
 
