@@ -421,7 +421,7 @@ module.exports = {
 
                     const trailItems = trail.items.filter((item) => item.itemID?.enabled === true);
 
-                    if (trailItems.every(({ itemID }) => itemID?.completion === 1)) {
+                    if (trailItems.every(({ itemID }) => itemID?.completion === 1) && trailItems.length) {
                         completedTrails.push(trail);
                     } else {
                         let nextItem;
