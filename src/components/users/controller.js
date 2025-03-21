@@ -185,7 +185,6 @@ async function generateTokens(user, login, password) {
     }
 
     const profilesIDS = await returnIdProfileUser(namesProfiles);
-    console.log('profilesIDS', profilesIDS);
     const groupsIDS = await returnIdGroupUser(namesGroups);
     const userGroups = await Group.find({ name: { $in: namesGroups } });
     const eligibilities = userGroups.flatMap((group) =>
@@ -223,7 +222,6 @@ async function generateTokens(user, login, password) {
         groups: groupsIDS,
         welcomeVideoWatched: user?.welcomeVideoWatched,
     });
-    console.log(jwt.decode(token, String(user.networkLogin)));
 
     const mfaToken = generateMfaToken({
         ref: user._id,
@@ -337,7 +335,7 @@ module.exports = {
             const created = await User.findOne(
                 { networkLogin: processedUser.networkLogin }
             );
-          
+
             WebhooksController.dispatch('create', 'users', false, { ...created, password: undefined });
 
             return _messages.success(res, req, created);
@@ -623,7 +621,6 @@ module.exports = {
 
             // Valida usuário e senha
             user = await validateUserAndPassword(res, req, login, passwordDecripted);
-            await updateLastLoginUser(user?._id);
 
             // Gera todos os tokens necessários
             const {
@@ -639,8 +636,14 @@ module.exports = {
                 namesGroups,
             } = await generateTokens(user, login, password);
 
-            // GAMIFICATION DISPATCH
-            await GamificationController.dispatch(login, [EVENTS_CATEGORY.LOGIN]);
+            await Promise.all([
+                GamificationController.dispatch(login, [EVENTS_CATEGORY.LOGIN]),
+                WebhooksController.dispatch('APASlogin', 'users', false, {
+                    ...user,
+                    password: undefined,
+                }),
+                updateLastLoginUser(user?._id)
+            ]);
 
             return _messages.success(
                 res,
@@ -1682,7 +1685,7 @@ module.exports = {
                         [f]: { $eq: req.body[f] },
                     })
             );
-            
+
             const userUpdated = { ...req.body };
             const account = await processUserAccount(userUpdated);
             const value = JSON.parse(account.value);
@@ -2183,34 +2186,34 @@ module.exports = {
             const collaborativeUsers = await User.find(
                 searchBy
                     ? {
-                          $and: [
-                              {
-                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
-                              },
-                              {
-                                  $or: [
-                                      {
-                                          name: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          registration: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          email: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                  ],
-                              },
-                          ],
-                      }
+                        $and: [
+                            {
+                                groupsAD: { $in: ['PERFIL_Colaborador'] },
+                            },
+                            {
+                                $or: [
+                                    {
+                                        name: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        registration: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        email: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                ],
+                            },
+                        ],
+                    }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             )
                 .sort({
@@ -2222,34 +2225,34 @@ module.exports = {
             const total = await User.countDocuments(
                 searchBy
                     ? {
-                          $and: [
-                              {
-                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
-                              },
-                              {
-                                  $or: [
-                                      {
-                                          name: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          registration: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          email: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                  ],
-                              },
-                          ],
-                      }
+                        $and: [
+                            {
+                                groupsAD: { $in: ['PERFIL_Colaborador'] },
+                            },
+                            {
+                                $or: [
+                                    {
+                                        name: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        registration: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        email: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                ],
+                            },
+                        ],
+                    }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             );
 
@@ -2742,7 +2745,6 @@ module.exports = {
             const { networkLogin } = req.body;
             const user = await User.findOne({ networkLogin: networkLogin });
             const tokenAndSecret = await generateMultiFactor(user.name, networkLogin);
-            console.log(tokenAndSecret);
             if (user.alternativeEmail) {
                 await sendMultiFactorToUser(user.email, user, tokenAndSecret.newToken.token);
                 await sendMultiFactorToUser(
