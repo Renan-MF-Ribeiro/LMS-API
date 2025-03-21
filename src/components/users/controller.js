@@ -2089,7 +2089,7 @@ module.exports = {
             message: 'SSO_CALLBACK',
             component: 'users',
             route: 'ssoCallback',
-            dataNew: { samlObj: req.samlUserObject, samlUser: req.user },
+            dataNew: JSON.stringify({ samlObj: req.samlUserObject, samlUser: req.user }),
         });
 
         const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
@@ -2111,14 +2111,14 @@ module.exports = {
             message: 'SSO_CALLBACK',
             component: 'users',
             route: 'ssoCallback',
-            dataNew: {
+            dataNew: JSON.stringify({
                 strategyName,
                 idpProfiles,
                 ssoForm,
                 claim,
                 claimKey,
                 value
-            },
+            }),
         });
 
         if (value === undefined || value === null) {
