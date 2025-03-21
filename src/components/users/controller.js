@@ -643,12 +643,13 @@ module.exports = {
 
             await Promise.all([
                 GamificationController.dispatch(login, [EVENTS_CATEGORY.LOGIN]),
-                WebhooksController.dispatch('APASlogin', 'users', false, {
-                    ...user,
-                    password: undefined,
-                }),
                 updateLastLoginUser(user?._id)
             ]);
+
+            WebhooksController.dispatch('APASlogin', 'users', false, {
+                ...user,
+                password: undefined,
+            })
 
             return _messages.success(
                 res,
