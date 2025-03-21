@@ -2114,7 +2114,7 @@ module.exports = {
             dataNew: JSON.stringify({
                 strategyName,
                 idpProfiles,
-                ssoForm,
+                ssoForm: ssoForm ? { ...ssoForm, certifier: undefined } : 'FORM NOT FOUND',
                 claim,
                 claimKey,
                 value
