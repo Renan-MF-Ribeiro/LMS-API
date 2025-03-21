@@ -90,6 +90,17 @@ async function actionUsers() {
         const newGroupAD = user.groupsAD.map(group => profileMap[group] || group);
         await User.findByIdAndUpdate(user._id, { $set: { groupsAD: newGroupAD } });
     }
+
+
+    await User.updateMany(
+        { groupsAD: 'PERFIL_Gestor_Elegibilidade' },
+        {
+            $addToSet: {
+                groupsAD: { $each: ['PERFIL_Gestor_Engajamento', 'PERFIL_Gestor_Usuario'] }
+            }
+        }
+    );
+    
     console.timeEnd('actionUsers');
 }
 

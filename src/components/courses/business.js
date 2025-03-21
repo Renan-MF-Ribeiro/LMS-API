@@ -114,19 +114,24 @@ module.exports = {
                     {} : {
                         instructor: { $eq: instructor },
                     }
-                let courses = await ClassModel.find(query,
+
+                if (searchBy) {
+                    const possibleCourse = await CourseModel.find({
+                        title: { $regex: searchBy, $options: 'i' }
+                    }, ['_id']);
+
+                    query.$or = [
+                        { courseID: { $in: possibleCourse.map((course) => course._id) } },
+                        { name: { $regex: searchBy, $options: 'i' } },
+                    ]
+                }
+
+                const courses = await ClassModel.find(query,
                     ['users', 'createdAt', 'name', 'dateApplicationInitial', 'dateApplicationFinal']
                 )
                     .populate({
                         path: 'courseID',
                         select: ['title',],
-                        match: searchBy
-                            ? {
-                                $text: {
-                                    $search: `"${searchBy}"`,
-                                },
-                            }
-                            : {},
                     })
                     .sort({ [order]: sort })
                     .skip(parseInt(skip))
@@ -135,12 +140,6 @@ module.exports = {
                 const total = await ClassModel.find(query,
                     ['users', 'createdAt']
                 ).countDocuments();
-
-                if (searchBy) {
-                    courses = courses.filter(
-                        (course) => course.courseID !== null
-                    );
-                }
 
                 resolve({
                     courses,

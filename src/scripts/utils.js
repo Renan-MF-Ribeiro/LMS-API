@@ -78,8 +78,39 @@ async function runScript(functionToRun) {
     process.exit(0);
 }
 
+async function readSheet(fileName, worksheetName) {
+    const workbook = new ExcelJS.Workbook();
+    const headers = [];
+    const rows = [];
+
+    await workbook.xlsx.readFile(fileName, { map: value => value });
+
+    const worksheet = workbook.getWorksheet(worksheetName ?? workbook.worksheets[0].name);
+
+    worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+        if (rowNumber === 1) {
+            headers.push(...row.values);
+        } else {
+            rows.push(row.values);
+        }
+    });
+
+    const rowsObj = rows.map(row => {
+        const item = row.reduce((acc, value, index) => {
+            acc[headers[index]] = value;
+
+            return acc;
+        }, {});
+
+        return item;
+    });
+
+    return rowsObj;
+}
+
 module.exports = {
     runScript,
     writeDebugJson,
     generateReport,
+    readSheet,
 };
