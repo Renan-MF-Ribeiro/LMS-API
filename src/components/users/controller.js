@@ -543,7 +543,7 @@ module.exports = {
 
             const newUser = await User.create(userData);
 
-            WebhooksController.dispatch('create', 'users', false, newUser);
+            WebhooksController.dispatch('create', 'users', false, { ...newUser, password: undefined });
 
             if (token) {
                 const DATA_INICIO = today.startOf('day');
