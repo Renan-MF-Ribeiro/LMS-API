@@ -333,8 +333,8 @@ module.exports = {
             });
 
             const created = await User.findOne(
-                { networkLogin: processedUser.networkLogin }
-            );
+                { networkLogin: processedUser.networkLogin },
+            ).lean();
 
             WebhooksController.dispatch('create', 'users', false, { ...created, password: undefined });
 
@@ -1709,13 +1709,11 @@ module.exports = {
             const updated = await User.findByIdAndUpdate(_id, req.body, {
                 projection: { ...userProjection },
             });
-            console.time('dispatch');
+
             WebhooksController.dispatch('update', 'users', false, {
                 ...updated,
                 password: undefined,
             })
-            console.timeEnd('dispatch');
-
 
             if (userUpdated?.status) {
                 await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status);
