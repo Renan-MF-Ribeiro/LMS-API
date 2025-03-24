@@ -333,8 +333,8 @@ module.exports = {
             });
 
             const created = await User.findOne(
-                { networkLogin: processedUser.networkLogin }
-            );
+                { networkLogin: processedUser.networkLogin },
+            ).lean();
 
             WebhooksController.dispatch('create', 'users', false, { ...created, password: undefined });
 
@@ -543,7 +543,7 @@ module.exports = {
 
             const newUser = await User.create(userData);
 
-            WebhooksController.dispatch('create', 'users', false, newUser);
+            WebhooksController.dispatch('create', 'users', false, { ...newUser, password: undefined });
 
             if (token) {
                 const DATA_INICIO = today.startOf('day');
@@ -1706,22 +1706,20 @@ module.exports = {
             if (userUpdated?.networkLogin) {
                 await sendAccountsToKafka([account]);
             }
-            const updated = await User.findByIdAndUpdate(_id, req.body, {
-                projection: { ...userProjection },
-            });
-            console.time('dispatch');
-            WebhooksController.dispatch('update', 'users', false, {
-                ...updated,
-                password: undefined,
-            })
-            console.timeEnd('dispatch');
+            await User.findByIdAndUpdate(_id, req.body);
 
+            const foundUser = await User.findById(_id).lean();
+
+            WebhooksController.dispatch('update', 'users', false, {
+                ...foundUser,
+                password: undefined,
+            });
 
             if (userUpdated?.status) {
                 await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status);
             }
 
-            return _messages.success(res, req, updated, 'Usuário(a) atualizado(a) com sucesso!');
+            return _messages.success(res, req, foundUser, 'Usuário(a) atualizado(a) com sucesso!');
         } catch (error) {
             console.log(error);
             return _messages.internalServer(
