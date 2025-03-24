@@ -1711,7 +1711,7 @@ module.exports = {
             });
             console.time('dispatch');
             WebhooksController.dispatch('update', 'users', false, {
-                ...userUpdated,
+                ...updated,
                 password: undefined,
             })
             console.timeEnd('dispatch');
