@@ -1706,12 +1706,10 @@ module.exports = {
             if (userUpdated?.networkLogin) {
                 await sendAccountsToKafka([account]);
             }
-            User.findByIdAndUpdate(_id, req.body, {
-                projection: { ...userProjection },
-            });
+            await User.findByIdAndUpdate(_id, req.body);
 
             const foundUser = await User.findById(_id).lean();
-
+            console.log("foundUser", foundUser);    
             WebhooksController.dispatch('update', 'users', false, {
                 ...foundUser,
                 password: undefined,
