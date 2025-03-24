@@ -185,7 +185,6 @@ async function generateTokens(user, login, password) {
     }
 
     const profilesIDS = await returnIdProfileUser(namesProfiles);
-    console.log('profilesIDS', profilesIDS);
     const groupsIDS = await returnIdGroupUser(namesGroups);
     const userGroups = await Group.find({ name: { $in: namesGroups } });
     const eligibilities = userGroups.flatMap((group) =>
@@ -223,7 +222,6 @@ async function generateTokens(user, login, password) {
         groups: groupsIDS,
         welcomeVideoWatched: user?.welcomeVideoWatched,
     });
-    console.log(jwt.decode(token, String(user.networkLogin)));
 
     const mfaToken = generateMfaToken({
         ref: user._id,
@@ -337,7 +335,7 @@ module.exports = {
             const created = await User.findOne(
                 { networkLogin: processedUser.networkLogin }
             );
-          
+
             WebhooksController.dispatch('create', 'users', false, { ...created, password: undefined });
 
             return _messages.success(res, req, created);
@@ -415,6 +413,9 @@ module.exports = {
         log('using form:', form.name);
 
         let networkLogin = data.cpf;
+
+        if (data.email) data.email = String(data.email).toLowerCase();
+        if (data.alternativeEmail) data.alternativeEmail = String(data.alternativeEmail).toLowerCase();
 
         if (form) {
             const connectMap = await getConnectMap(true);
@@ -623,7 +624,8 @@ module.exports = {
 
             // Valida usuário e senha
             user = await validateUserAndPassword(res, req, login, passwordDecripted);
-            await updateLastLoginUser(user?._id);
+            const entryRecord = await returnDateSinceFirstLogin(user?._id);
+            const firstLogin = !user.passwordValid && !entryRecord
 
             // Gera todos os tokens necessários
             const {
@@ -639,8 +641,15 @@ module.exports = {
                 namesGroups,
             } = await generateTokens(user, login, password);
 
-            // GAMIFICATION DISPATCH
-            await GamificationController.dispatch(login, [EVENTS_CATEGORY.LOGIN]);
+            await Promise.all([
+                GamificationController.dispatch(login, [EVENTS_CATEGORY.LOGIN]),
+                updateLastLoginUser(user?._id)
+            ]);
+
+            WebhooksController.dispatch('APASlogin', 'users', false, {
+                ...user,
+                password: undefined,
+            })
 
             return _messages.success(
                 res,
@@ -649,6 +658,7 @@ module.exports = {
                     SAS,
                     tk,
                     key,
+                    firstLogin,
                     accept: user.acceptTerms,
                     acceptCollaboration: user.acceptTermsCollaboration,
                     passwordValid: user.passwordValid,
@@ -1446,12 +1456,15 @@ module.exports = {
             const newUsers = [];
             const existingUsers = [];
             const usersToSend = [];
+
             if (req.files.file) {
                 file = req.files.file;
             } else {
                 file = req.files.content;
             }
+
             const results = await _files.readXLSXUsers(file.path, onboarding);
+
             const elegibilityResponse = await axios.get(
                 `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
                 {
@@ -1460,17 +1473,18 @@ module.exports = {
                     },
                 }
             );
+
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
             const messengerConfig = await getMessengerConfig();
-
-            const user = await getUserByToken(req);
 
             for (const result of results) {
                 const existingUser = await User.findOne({
                     networkLogin: result.cpf,
                 });
-                const processedUser = processUsersLoad(result, fieldsForElegibility, onboarding);
+
+                const processedUser = await processUsersLoad(result, fieldsForElegibility, onboarding);
+
                 const account = await processUserAccount(processedUser);
 
                 processedUser.password = existingUser
@@ -1499,6 +1513,7 @@ module.exports = {
             console.log(
                 `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
             );
+
             for (const user of existingUsers) {
                 await User.findByIdAndUpdate(user._id, {
                     ...user.processedUser,
@@ -1682,7 +1697,7 @@ module.exports = {
                         [f]: { $eq: req.body[f] },
                     })
             );
-            
+
             const userUpdated = { ...req.body };
             const account = await processUserAccount(userUpdated);
             const value = JSON.parse(account.value);
@@ -2072,68 +2087,74 @@ module.exports = {
     },
 
     async ssoCallback(req, res) {
-        try {
-            const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
+        await Log.create({
+            type: 'SSO_CALLBACK',
+            message: 'SSO_CALLBACK',
+            component: 'users',
+            route: 'ssoCallback',
+            dataNew: JSON.stringify({ samlObj: req.samlUserObject, samlUser: req.user }),
+        });
 
-            const ssoForm = await getLoginFormByStrategyName(strategyName);
+        const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
 
-            const claim = ssoForm?.claim ?? 'networkLogin';
-            const claimKey = ssoForm?.claimKey ?? 'no-claim-key-value';
+        const ssoForm = await getLoginFormByStrategyName(strategyName);
 
-            const value =
-                claimKey.split(',').reduce((acc, key) => {
-                    if (acc !== null && acc !== undefined && acc !== '') return acc;
+        const claim = ssoForm?.claim ?? 'networkLogin';
+        const claimKey = ssoForm?.claimKey ?? 'no-claim-key-value';
 
-                    return deepGet(req.samlUserObject, key, null);
-                }, null) ?? req.user?.nameID;
+        const value =
+            claimKey.split(',').reduce((acc, key) => {
+                if (acc !== null && acc !== undefined && acc !== '') return acc;
 
-            if (value === undefined || value === null) {
-                console.log('ssoCallback req.samlUserObject', req.samlUserObject);
+                return deepGet(req.samlUserObject, key, null);
+            }, null) ?? req.user?.nameID;
 
-                return _messages.internalServer(
-                    res,
-                    req,
-                    'SSO não retornou o valor esperado',
-                    {
-                        message: 'SSO não retornou o valor esperado',
-                        claim,
-                        claimKey,
-                        samlUserObject: req.samlUserObject,
-                    },
-                    'users',
-                    'ssoCallback'
-                );
-            }
+        await Log.create({
+            type: 'SSO_CALLBACK_INFOS',
+            message: 'SSO_CALLBACK',
+            component: 'users',
+            route: 'ssoCallback',
+            dataNew: JSON.stringify({
+                strategyName,
+                idpProfiles,
+                ssoForm: ssoForm ? { ...ssoForm, certifier: undefined } : 'FORM NOT FOUND',
+                claim,
+                claimKey,
+                value
+            }),
+        });
 
-            const token = jwt.sign(
-                {
-                    [claim]: value,
-                    strategyName,
-                    idpProfiles,
-                },
-                process.env.PROJECT_SECRET_KEY
-            );
-            res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
-        } catch (error) {
-            console.log(error);
-            _messages.internalServer(
+        if (value === undefined || value === null) {
+            console.log('ssoCallback req.samlUserObject', req.samlUserObject);
+
+            return _messages.internalServer(
                 res,
                 req,
-                error.message,
-                'Erro interno no servidor',
+                'SSO não retornou o valor esperado',
+                {
+                    message: 'SSO não retornou o valor esperado',
+                    claim,
+                    claimKey,
+                    samlUserObject: req.samlUserObject,
+                },
                 'users',
-                'device'
+                'ssoCallback'
             );
         }
+
+        const token = jwt.sign(
+            {
+                [claim]: value,
+                strategyName,
+                idpProfiles,
+            },
+            process.env.PROJECT_SECRET_KEY
+        );
+
+        res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
     },
 
     async openIdCallback(req, res) {
-        const { strategyName } = req.cookies;
-        const form = await getLoginFormByStrategyName(strategyName);
-        const claimValue = _.get(req.user, form.claimKey);
-
-        const { idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
-
         await Log.create({
             type: 'OPENID_CALLBACK',
             message: 'OPENID_CALLBACK',
@@ -2141,6 +2162,26 @@ module.exports = {
             route: 'openidCallback',
             dataNew: { openidObject: req.user },
             dataOld: null,
+        });
+
+        const { strategyName } = req.cookies;
+        const form = await getLoginFormByStrategyName(strategyName);
+        const claimValue = _.get(req.user, form.claimKey);
+
+        const { idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
+
+        await Log.create({
+            type: 'SSO_CALLBACK_INFOS',
+            message: 'SSO_CALLBACK',
+            component: 'users',
+            route: 'ssoCallback',
+            dataNew: {
+                strategyName,
+                idpProfiles,
+                form,
+                claimKey: form?.claimKey,
+                value: claimValue,
+            },
         });
 
         const token = jwt.sign(
@@ -2183,34 +2224,34 @@ module.exports = {
             const collaborativeUsers = await User.find(
                 searchBy
                     ? {
-                          $and: [
-                              {
-                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
-                              },
-                              {
-                                  $or: [
-                                      {
-                                          name: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          registration: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          email: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                  ],
-                              },
-                          ],
-                      }
+                        $and: [
+                            {
+                                groupsAD: { $in: ['PERFIL_Colaborador'] },
+                            },
+                            {
+                                $or: [
+                                    {
+                                        name: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        registration: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        email: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                ],
+                            },
+                        ],
+                    }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             )
                 .sort({
@@ -2222,34 +2263,34 @@ module.exports = {
             const total = await User.countDocuments(
                 searchBy
                     ? {
-                          $and: [
-                              {
-                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
-                              },
-                              {
-                                  $or: [
-                                      {
-                                          name: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          registration: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          email: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                  ],
-                              },
-                          ],
-                      }
+                        $and: [
+                            {
+                                groupsAD: { $in: ['PERFIL_Colaborador'] },
+                            },
+                            {
+                                $or: [
+                                    {
+                                        name: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        registration: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        email: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                ],
+                            },
+                        ],
+                    }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             );
 
@@ -2742,7 +2783,6 @@ module.exports = {
             const { networkLogin } = req.body;
             const user = await User.findOne({ networkLogin: networkLogin });
             const tokenAndSecret = await generateMultiFactor(user.name, networkLogin);
-            console.log(tokenAndSecret);
             if (user.alternativeEmail) {
                 await sendMultiFactorToUser(user.email, user, tokenAndSecret.newToken.token);
                 await sendMultiFactorToUser(
