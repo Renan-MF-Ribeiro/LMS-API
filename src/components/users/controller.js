@@ -1706,12 +1706,14 @@ module.exports = {
             if (userUpdated?.networkLogin) {
                 await sendAccountsToKafka([account]);
             }
-            const updated = await User.findByIdAndUpdate(_id, req.body, {
+            User.findByIdAndUpdate(_id, req.body, {
                 projection: { ...userProjection },
             });
 
+            const foundUser = await User.findById(_id).lean();
+
             WebhooksController.dispatch('update', 'users', false, {
-                ...updated,
+                ...foundUser,
                 password: undefined,
             })
 
@@ -1719,7 +1721,7 @@ module.exports = {
                 await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status);
             }
 
-            return _messages.success(res, req, updated, 'Usuário(a) atualizado(a) com sucesso!');
+            return _messages.success(res, req, foundUser, 'Usuário(a) atualizado(a) com sucesso!');
         } catch (error) {
             console.log(error);
             return _messages.internalServer(
