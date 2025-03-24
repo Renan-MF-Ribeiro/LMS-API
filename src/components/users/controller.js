@@ -1709,11 +1709,11 @@ module.exports = {
             await User.findByIdAndUpdate(_id, req.body);
 
             const foundUser = await User.findById(_id).lean();
-            console.log("foundUser", foundUser);    
+
             WebhooksController.dispatch('update', 'users', false, {
                 ...foundUser,
                 password: undefined,
-            })
+            });
 
             if (userUpdated?.status) {
                 await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status);
