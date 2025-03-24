@@ -71,6 +71,7 @@ async function setAssessmentHistoricOnSections(userId, sections) {
             const isBlocked = trainingSectionInfo.isBlocked ?? false;
             const hasHistoric = trainingSectionInfo?.hasHistoric ?? false;
             const hasActiveCycle = trainingSectionInfo.hasActiveCycle ?? false;
+            const hasWaitingCycle = trainingSectionInfo.hasWaitingCycle ?? false;
             const cycleMessage = trainingSectionInfo.cycleMessage ?? null;
             const cycleImage = trainingSectionInfo.cycleImage ?? null;
             const exceptionTrainingTrails = trainingSectionInfo.exceptionTrainingTrails ?? [];
@@ -121,13 +122,25 @@ async function setAssessmentHistoricOnSections(userId, sections) {
             section.cycleShowTrailResults = cycleShowTrailResults;
             section.exceptionTrainingTrails = exceptionTrainingTrails;
             section.messages = messages;
+            section.hasWaitingCycle = hasWaitingCycle
         }
         else {
             const isCompleted = section.trails
                 ?.filter(
-                    trail => !['default', 'assessment', 'separator', 'certificate'].includes(trail.type)
+                    (trail) => {
+                        const includes = ![
+                            'default',
+                            'assessment',
+                            'separator',
+                            'certificate',
+                        ].includes(trail.type);
+                        
+                        const completion = trail?.completion === 1;
+
+                        return includes && completion;
+                    } 
                 )
-                ?.every(trail => trail.completion === 1);
+                ?.length > 0
 
             section.hasAssessment = false;
             section.isBlocked = false;
@@ -165,8 +178,9 @@ module.exports = {
 
         if (trail.classGroup) {
             const startGroup = formatDateWithoutHours(trail.classGroup.startDate);
+            const limitGroup = formatDateWithoutHours(trail.classGroup.limitDate);
 
-            if (!(startGroup <= today)) {
+            if (!(startGroup <= today && limitGroup >= today)) {
                 return false;
             }
         }
@@ -436,9 +450,9 @@ module.exports = {
                 sections.forEach((section) => {
                     const sectionTrails = section.trails
                         .map(trail => {
-                            return trails.find(t => String(t._id) === String(getSectionTrailId(trail))) ?? trail;
+                            return trails.find(t => String(t._id) === String(getSectionTrailId(trail))) ?? null;
                         })
-                        .filter(trail => isValidSectionTrailInfo(trail) && checkIfTheTrackIsValid(trail))
+                        .filter(trail => trail && isValidSectionTrailInfo(trail) && checkIfTheTrackIsValid(trail))
 
                     if (sectionTrails.length > 0) {
                         arrSections.push({
@@ -556,7 +570,7 @@ module.exports = {
                             };
 
                     for (const trail of trails) {
-                        if (trail.completion === 0 || !trail.completion) {
+                        if (trail.completion === 0 ?? !trail.completion) {
                             section.trails.push(trail);
                         }
                     }
@@ -1183,6 +1197,7 @@ function mapAluraTrackings (items) {
 }
 
 function canRegisterOrCancel (initialDate, minutes) {
+    if (!minutes) return true;
     const currentDate = new Date()
     currentDate.setMinutes(currentDate.getMinutes() - 180);
 
