@@ -61,8 +61,14 @@ module.exports = {
                     break;
             }
 
+            const positiveValues = ['sim', 's', '1', 'true', 'ativo', 'a', 'yes', 'y'];
+
             if (connectKey === 'status') {
-                data.status = ['sim', 's', '1', 'true', 'ativo'].includes(String(data.status).toLowerCase()) ? 'ATIVO' : 'INATIVO';
+                data.status = positiveValues.includes(String(data.status).toLowerCase()) ? 'ATIVO' : 'INATIVO';
+            }
+
+            if (connectKey === 'pcd') {
+                data.pcd = positiveValues.includes(String(data.pcd).toLowerCase()) ? 'SIM' : 'NAO';
             }
 
             const dataValue = data[connectKey];

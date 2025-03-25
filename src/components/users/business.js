@@ -465,10 +465,6 @@ module.exports = {
         data.enabled = true;
         data.onboarding = onboarding;
 
-        data.pcd = ['sim', 's', '1', 'true'].includes(String(data.pcd).toLowerCase()) ? 'S' : 'N';
-
-        data.status = ['ativo', 'a', '1', 'true', 'sim', 's'].includes(String(data.status).toLowerCase()) ? 'ATIVO' : 'INATIVO';
-
         const groupsAD =
             onboarding === true
                 ? ['PERFIL_Aluno', 'ELEGE_ONBOARDING']
