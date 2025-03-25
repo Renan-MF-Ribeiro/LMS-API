@@ -62,11 +62,17 @@ module.exports = {
             const _field = field === 'issuer' ? req.segmentation.rule.issuer : 'owner'
             
             queries.forEach((query) => {
-                if(!query?.$and) {
-                    query.$and = []
+                if (!query?.$or) {
+                    query.$or = [
+                        {
+                            [_field]: {
+                                $exists: false,
+                            },
+                        },
+                    ];
                 }
-                
-                query.$and.push({
+
+                query.$or.push({
                     [_field]: {
                         $eq: req.segmentation.owner,
                     },
