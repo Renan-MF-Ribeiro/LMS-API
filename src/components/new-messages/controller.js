@@ -37,7 +37,6 @@ module.exports = {
         let listId = null;
         let messageList = new MessageList();
 
-
         try {
             const user = await getUserByToken(req);
 
@@ -274,6 +273,10 @@ module.exports = {
             });
 
             await sendMessageToKafka(campaign, targetUsers);
+
+            console.log('------------------------------------');
+            console.log(campaign);
+            console.log(targetUsers);
 
             const urlUpdate = `${API_MESSENGER}/updatesendinglist`;
 
