@@ -439,18 +439,35 @@ module.exports = {
             },
         ];
 
+        function parseDate(date) {
+            if (!date) return null;
+
+            let parsedDate = moment(date);
+
+            if (!parsedDate.isValid()) {
+                parsedDate = moment(date, 'DD/MM/YYYY');
+            }
+
+            console.log(date, parsedDate.format('DD/MM/YYYY'));
+
+            return parsedDate.format('DD/MM/YYYY');
+        }
+
         data.clientUserKey = CLIENT_ID + '@@' + data.networkLogin;
-        data.birthDate = data.birthDate ? moment(data.birthDate).format('DD/MM/YYYY') : null;
-        data.admission = data.admission ? moment(data.admission).format('DD/MM/YYYY') : null;
-        data.createDate = data.createDate ? moment(data.createDate).format('DD/MM/YYYY') : null
-        data.terminationDate = data.terminationDate ? moment(data.terminationDate).format('DD/MM/YYYY') : null
-        data.vacationStartDate = data.vacationStartDate ? moment(data.vacationStartDate).format('DD/MM/YYYY') : null
-        data.vacationEndDate  = data.vacationEndDate ? moment(data.vacationEndDate).format('DD/MM/YYYY') : null
+
+        data.birthDate = parseDate(data.birthDate);
+        data.admission = parseDate(data.admission);
+        data.createDate = parseDate(data.createDate);
+        data.terminationDate = parseDate(data.terminationDate);
+        data.vacationStartDate = parseDate(data.vacationStartDate);
+        data.vacationEndDate = parseDate(data.vacationEndDate);
 
         data.enabled = true;
         data.onboarding = onboarding;
 
         data.pcd = ['sim', 's', '1', 'true'].includes(String(data.pcd).toLowerCase()) ? 'S' : 'N';
+
+        data.status = ['ativo', 'a', '1', 'true', 'sim', 's'].includes(String(data.status).toLowerCase()) ? 'ATIVO' : 'INATIVO';
 
         const groupsAD =
             onboarding === true
