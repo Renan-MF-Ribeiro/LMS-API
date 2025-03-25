@@ -51,7 +51,7 @@ module.exports = {
     async handleSegmentationOnCreate(req, payload) {
         const user = await getUserByToken(req);
         const issuer = req.segmentation.rule.issuer;
-        
+
         if (user?.[issuer]) {
             (payload || req.body).owner = user[issuer];
         }
@@ -59,20 +59,23 @@ module.exports = {
 
     handleSegmentationOnQuery(req, field, ...queries) {
         if (!req?.segmentation.isException) {
-            const _field = field === 'issuer' ? req.segmentation.rule.issuer : 'owner'
-            
+            const _field = field === 'issuer' ? req.segmentation.rule.issuer : 'owner';
+
             queries.forEach((query) => {
-                if(!query?.$or) {
-                    query.$or = []
+                if (!query?.$or) {
+                    query.$or = [
+                        {
+                            [_field]: {
+                                $exists: false,
+                            },
+                        },
+                    ];
                 }
-                
+
                 query.$or.push({
                     [_field]: {
                         $eq: req.segmentation.owner,
                     },
-                    [_field]: {
-                        $exists: false
-                    }
                 });
             });
         }
@@ -84,7 +87,7 @@ module.exports = {
         if (config) return config.value;
 
         console.log('Creating messenger config');
-        return (await MessengerConfigModel.create({}))?.value
+        return (await MessengerConfigModel.create({}))?.value;
     },
 
     async getCronConfig() {
@@ -112,5 +115,5 @@ module.exports = {
 
         console.log('Creating company config');
         return (await CompanyConfigModel.create({}))?.value;
-    }
+    },
 };
