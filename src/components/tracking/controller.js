@@ -618,11 +618,11 @@ const TrackingController = {
                 'maxCorrectedAt': 'correctedAt',
                 'maxSentAt': 'sentAt',
                 'itemName': 'itemId',
-                'studentName': 'studentName'
+                'studentName': 'studentName',
             };
             order = orderMapping[order] || order;
 
-            // **Buscar os Trackings**
+            // Buscar os Trackings
             const trackingCount = await Tracking.find(query).countDocuments();
             let tracking = await Tracking.find(query)
                 .skip(parseInt(skip))
@@ -650,7 +650,6 @@ const TrackingController = {
                 .lean();
 
             const titles = {};
-
             itemsTitle.forEach(item => {
                 titles[item._id] = item.title;
             })
@@ -686,19 +685,19 @@ const TrackingController = {
                 };
             });
 
-            // **Aplicar o `searchBy` antes da ordenação manual**
+            // Aplicar o `searchBy` antes da ordenação manual
             if (searchBy) {
                 const searchTerm = searchBy.trim().toLowerCase();
-                console.log('estoy aqui', activities);
 
                 activities = activities.filter(activity =>
-                    (activity.studentName && activity.studentName.toLowerCase().includes(searchTerm)) ||
-                    (activity.itemName && activity.itemName.toLowerCase().includes(searchTerm)) ||
-                    (activity.reviewer && activity.reviewer.toLowerCase().includes(searchTerm))
+                    activity.studentName?.toLowerCase().includes(searchTerm) ||
+                    activity.itemName?.toLowerCase().includes(searchTerm) ||
+                    activity.reviewer?.toLowerCase().includes(searchTerm) ||
+                    (trailsByItem[activity.itemId] || []).join(", ").toLowerCase().includes(searchTerm)
                 );
             }
 
-            // **Ordenar os resultados manualmente se necessário**
+            // Ordenar os resultados manualmente se necessário
             if (order === 'studentName') {
                 activities.sort((a, b) => {
                     const nameA = a.studentName?.toLowerCase() || '';
