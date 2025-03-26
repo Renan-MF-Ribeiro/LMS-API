@@ -755,16 +755,16 @@ module.exports = {
             log('singleSignOn tokenIdpProfiles', tokenIdpProfiles);
 
             const ssoForm = await getLoginFormByStrategyName(tokenStrategyName);
-            const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data[ssoForm.claim];
+            const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data?.[ssoForm.claim];
 
             if (!claim) {
                 _messages.forbidden(
                     res,
                     req,
-                    'Usuário ou senha não informados',
-                    'Erro de validação',
+                    'Claim inválido',
+                    'Claim inválido',
                     'users',
-                    'ldapSignIn'
+                    'singleSignOn'
                 );
             }
 
@@ -811,7 +811,7 @@ module.exports = {
                                 'Usuário bloqueado temporariamente',
                                 'Por favor tente novamente mais tarde!',
                                 'users',
-                                'ldapSignIn'
+                                'singleSignOn'
                             );
                             return;
                         }
@@ -903,7 +903,7 @@ module.exports = {
                         },
                         'Sucesso ao logar',
                         'users',
-                        'ldapSignIn',
+                        'singleSignOn',
                         [],
                         [],
                         true,
@@ -918,17 +918,17 @@ module.exports = {
                         'Usuário ou senha inválidos.',
                         { claim, claimKey: ssoForm?.claim ?? '' },
                         'users',
-                        'ldapSignIn'
+                        'singleSignOn'
                     );
                 }
             } else {
                 _messages.forbidden(
                     res,
                     req,
-                    'Usuário ou senha não informados',
-                    'Erro de validação',
+                    'Claim inválido',
+                    'Claim inválido',
                     'users',
-                    'ldapSignIn'
+                    'singleSignOn'
                 );
             }
         } catch (error) {
@@ -2822,7 +2822,7 @@ module.exports = {
                     'Token inválido',
                     'Token inválido!',
                     'users',
-                    'ldapSignIn'
+                    'validateMultiFactor'
                 );
             }
         } catch (error) {
