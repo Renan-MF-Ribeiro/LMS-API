@@ -566,7 +566,7 @@ const defaultUserMap = {
     },
     situation: {
         field: 'SITUACAO',
-        label: 'situation',
+        label: 'Situação',
         activeInForms: true,
         type: 'string',
         config: null,
