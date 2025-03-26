@@ -117,7 +117,7 @@ const ApiError = require('../../errors/ApiError');
 const { addSASTokenToResponse } = require('../../utils/cookies');
 
 const { FormModel } = require('../forms/model');
-const { getConnectMap, validateDataByConnectMap } = require('../../utils/connect');
+const { getConnectMap, validateDataByConnectMap, getConnectEligibilities } = require('../../utils/connect');
 const { getFormErrorsByMapConfig, getDefaultForm, getAdminForm, getFormErrorsByFormValidation } = require('../forms/business');
 
 const { getDbCurrentFeatures } = require('../../utils/features');
@@ -2888,13 +2888,19 @@ module.exports = {
             const connectMap = await getConnectMap(true);
 
             const fields = Object.entries(connectMap).map(([key, value]) => ({
-                display: value?.label ?? key,
+                display: defaultUserMap[key]?.label ?? key ?? value?.label,
                 value: key
             })).filter((field) => field.value !== 'elegibility');
+
+            const eligibilityData = await getConnectEligibilities();
+
+            const eligibility = eligibilityData?.fields ?? [];
+
             _messages.success(res, req, {
                 map: connectMap,
                 fields,
-                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd'] // Campos que não devem ser alterados
+                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd'],  // Campos que não devem ser alterados
+                eligibility,
             });
         } catch (error) {
             _messages.internalServer(
