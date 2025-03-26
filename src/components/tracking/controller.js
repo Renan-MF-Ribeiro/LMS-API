@@ -699,23 +699,11 @@ const TrackingController = {
             }
 
             // Ordenar os resultados manualmente se necessário
-            if (order === 'studentName') {
+            if (['studentName', 'itemName', 'trails'].includes(order)) {
                 activities.sort((a, b) => {
-                    const nameA = a.studentName?.toLowerCase() || '';
-                    const nameB = b.studentName?.toLowerCase() || '';
-                    return sort === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
-                });
-            } else if (order === 'itemName') {
-                activities.sort((a, b) => {
-                    const nameA = a.itemName?.toLowerCase() || '';
-                    const nameB = b.itemName?.toLowerCase() || '';
-                    return sort === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
-                });
-            } else if (order === 'trails') {
-                activities.sort((a, b) => {
-                    const trailsA = (trailsByItem[a.itemId] || []).join(", ").toLowerCase();
-                    const trailsB = (trailsByItem[b.itemId] || []).join(", ").toLowerCase();
-                    return sort === 'asc' ? trailsA.localeCompare(trailsB) : trailsB.localeCompare(trailsA);
+                    const valueA = getSortableValue(a, order, trailsByItem);
+                    const valueB = getSortableValue(b, order, trailsByItem);
+                    return sort === 'asc' ? valueA.localeCompare(valueB) : valueB.localeCompare(valueA);
                 });
             }
 
@@ -1028,6 +1016,13 @@ function processTrackingType(item) {
         default:
             break
     }
+}
+
+function getSortableValue(activity, key, trails) {
+    if (key === 'trails') {
+        return (trails[activity.itemId] || []).join(", ").toLowerCase();
+    }
+    return activity[key]?.toLowerCase() || '';
 }
 
 module.exports = TrackingController;
