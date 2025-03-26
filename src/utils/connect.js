@@ -28,6 +28,19 @@ module.exports = {
         }, {});
     },
 
+    async getConnectEligibilities() {
+        const response = await axios.get(
+            `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+            {
+                headers: {
+                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                },
+            }
+        );
+
+        return response.data;
+    },
+
     validateDataByConnectMap(data, connectMap) {
         const errors = [];
 
