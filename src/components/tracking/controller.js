@@ -617,8 +617,9 @@ const TrackingController = {
             const orderMapping = {
                 'maxCorrectedAt': 'correctedAt',
                 'maxSentAt': 'sentAt',
-                'itemName': 'itemId',
+                'itemName': 'itemName',
                 'studentName': 'studentName',
+                'trails': 'trails',
             };
             order = orderMapping[order] || order;
 
@@ -709,6 +710,12 @@ const TrackingController = {
                     const nameA = a.itemName?.toLowerCase() || '';
                     const nameB = b.itemName?.toLowerCase() || '';
                     return sort === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+                });
+            } else if (order === 'trails') {
+                activities.sort((a, b) => {
+                    const trailsA = (trailsByItem[a.itemId] || []).join(", ").toLowerCase();
+                    const trailsB = (trailsByItem[b.itemId] || []).join(", ").toLowerCase();
+                    return sort === 'asc' ? trailsA.localeCompare(trailsB) : trailsB.localeCompare(trailsA);
                 });
             }
 
