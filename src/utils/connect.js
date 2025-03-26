@@ -62,7 +62,7 @@ module.exports = {
             }
 
             if (connectKey === 'status') {
-                data[connectKey] = ['sim', 's', '1', 'true', 'ativo'].includes(String(data.pcd).toLowerCase()) ? 'ATIVO' : 'INATIVO';
+                data.status = ['sim', 's', '1', 'true', 'ativo'].includes(String(data.status).toLowerCase()) ? 'ATIVO' : 'INATIVO';
             }
 
             const dataValue = data[connectKey];
