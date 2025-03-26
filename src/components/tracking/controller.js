@@ -613,6 +613,8 @@ const TrackingController = {
                 ]
             };
 
+            order = order === 'createdAt' ? 'maxSentAt' : order;
+
             // Mapear campos de ordenação para nomes reais no banco de dados
             const orderMapping = {
                 'maxCorrectedAt': 'correctedAt',
