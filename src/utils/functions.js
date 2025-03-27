@@ -11,7 +11,8 @@ const { HistoricEvaluation } = require('../components/assessments/model');
 const { Tracking } = require('../components/tracking/model');
 const { Trail } = require('../components/trails/model');
 const { Item } = require('../components/items/model');
-
+const { htmlToText } = require('html-to-text');
+const tlds = require('tlds');
 
 module.exports = {
     getDateToday() {
@@ -709,6 +710,75 @@ module.exports = {
             return hasTags || hasTagsAnd;
         });
     },
+
+    /**
+     * Converte o HTML (texto rico) de uma notificação para um HTML mais limpo
+     * Preserva os LINKS originais (tags <a>) e adiciona LINKS em URLS
+     */
+    htmlToMessage(html) {
+        // remove estilo e preserva apenas tags <a>
+        const preserveLinks = (html) => {
+            const options = {
+                formatters: {
+                    // Formatter personalizado para tags <a>
+                    anchorFormatter: (elem, walk, builder) => {
+                        // Obtém o conteúdo interno da tag diretamente do elemento
+                        const innerContent = elem.children && elem.children[0] ?
+                            elem.children[0].data ||
+                            (elem.children[0].children && elem.children[0].children[0] ?
+                                elem.children[0].children[0].data :
+                                '') :
+                            '';
+
+                        // Reconstroe a tag <a> original
+                        const href = elem.attribs.href ? ` href="${elem.attribs.href}"` : '';
+                        const className = elem.attribs.class ? ` class="${elem.attribs.class}"` : '';
+                        const otherAttrs = Object.entries(elem.attribs)
+                            .filter(([key]) => !['href', 'class'].includes(key))
+                            .map(([key, value]) => ` ${key}="${value}"`)
+                            .join('');
+
+                        // Reconstrói a tag <a> completa
+                        builder.addInline(`<a${href}${className}${otherAttrs} style="color: #2563eb; text-decoration: none;">${innerContent}</a>`);
+                    }
+                },
+                selectors: [
+                    {
+                        selector: 'a',
+                        format: 'anchorFormatter'
+                    }
+                ],
+                preserveNewlines: true,
+                wordwrap: 130
+            };
+
+            return htmlToText(html, options);
+        }
+
+        // realça links implicitos no texto
+        const addLinksText = (text) => {
+            const tldsRegex = tlds.join('|');
+
+            const urlRegex = new RegExp(
+                `(\\[)?((https?:\/\/)?(([a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*\\.(?:${tldsRegex}))([a-zA-Z0-9-/]+(?:\\.(?!\\s)[a-zA-Z0-9-/]+)?)?))(?=[.,;:\\s\\n\\$\\]]|$)(\\])?`,
+                'gi'
+            );
+            return text?.replace(urlRegex, (fullMatch, _, url) => {
+                const cleanMatch = url?.replace(/^\[|\]$/g, '').trim();
+
+                const formattedUrl = /^http?/i.test(cleanMatch)
+                    ? cleanMatch
+                    : `https://${cleanMatch}`;
+
+                return !!cleanMatch
+                    ? `<a href="${formattedUrl}" style="color: #2563eb; text-decoration: none;" target="_blank">${cleanMatch}</a>`
+                    : ' ';
+            });
+        }
+
+        return preserveLinks(html);
+    }
+
 };
 
 function nameMonth(month) {
