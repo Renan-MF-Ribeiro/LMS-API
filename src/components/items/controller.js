@@ -40,7 +40,6 @@ const {
     isSCORMSchemaFile,
     vimeoFilePathCreate,
     vimeoFilePathUpdate,
-    getAppMaxFileSize,
 } = require('../../utils/files');
 
 const {
@@ -1673,11 +1672,6 @@ const ItemController = {
 
         res.status(204).send();
     },
-
-    getItemMaxFileSize(req, res) {
-        const maxFileSize = getAppMaxFileSize();
-        _messages.success(res, req, maxFileSize);
-    }
 };
 
 module.exports = ItemController;
