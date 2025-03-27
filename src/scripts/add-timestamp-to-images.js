@@ -4,6 +4,7 @@ const { Channel } = require("../components/channels/model");
 const { Item } = require("../components/items/model");
 const { Trail } = require("../components/trails/model");
 const { User } = require("../components/users/model");
+const { CourseModel } = require("../components/courses/model");
 
 async function run() {
     const trails = await Trail.find({
@@ -22,10 +23,15 @@ async function run() {
         profilePhoto: { $exists: true }
     }).lean();
 
+    const courses = await CourseModel.find({
+        thumbPath: { $exists: true }
+    })
+
     console.log('Trails:', trails.length);
     console.log('Items:', items.length);
     console.log('Channels:', channels.length);
     console.log('Users:', users.length);
+    console.log('Courses:', courses.length);
 
     console.log('Updating Trails...');
 
@@ -72,6 +78,17 @@ async function run() {
         await User.updateOne({ _id: user._id }, {
             $set: {
                 profilePhoto: `${user.profilePhoto}?v=${Date.now()}`
+            }
+        });
+    }
+
+    console.log('Updating Courses...');
+
+    // Courses
+    for await (const course of courses) {
+        await CourseModel.updateOne({ _id: course._id }, {
+            $set: {
+                thumbPath: `${course.thumbPath}?v=${Date.now()}`
             }
         });
     }
