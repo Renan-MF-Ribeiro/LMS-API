@@ -2922,7 +2922,7 @@ module.exports = {
                 `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
                 {
                     user: { ...body },
-                    elegibility: body.elegibility,
+                    elegibility: body.eligibility,
                     newFormat: true,
                 },
                 {
