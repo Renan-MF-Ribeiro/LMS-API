@@ -6,7 +6,6 @@ const {
     MaterialModel,
     ProgramModel,
     CourseEvaluationModel,
-    CoursesWithTagsAndUsers,
     WaitListsByUser,
     WaitListsByCourses,
     UsersWithProcessedTags,
@@ -18,6 +17,8 @@ const { DOMAIN, AZURE_BLOB_URL } = process.env;
 const { azureBlob, readXLSXAttendanceList } = require('../../utils/files');
 
 const { Group } = require('../groups/model');
+
+const { dispatch } = require('../webhooks/controller');
 
 const { Trail } = require('../trails/model');
 
@@ -51,7 +52,7 @@ const ApiError = require('../../errors/ApiError');
 const { getMessengerConfig } = require('../config/business');
 
 module.exports = {
-    async createCourse (req, res) {
+    async createCourse(req, res) {
         try {
             const materials = JSON.parse(req.fields.materials);
             const files = req.files;
@@ -114,6 +115,8 @@ module.exports = {
                     delete body.materials;
                     const courseCreated = await CourseModel.create(body);
 
+                    await dispatch('create', 'course', courseCreated);
+
                     if (materials) {
                         const materialsArray = Array.isArray(materials)
                             ? [...materials]
@@ -156,7 +159,7 @@ module.exports = {
         }
     },
 
-    async allCourses (req, res) {
+    async allCourses(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -213,7 +216,7 @@ module.exports = {
         }
     },
 
-    async getPrograms (req, res) {
+    async getPrograms(req, res) {
         try {
             const programs = await ProgramModel.find().select('title');
             success(res, req, programs);
@@ -229,7 +232,7 @@ module.exports = {
         }
     },
 
-    async updateCourse (req, res) {
+    async updateCourse(req, res) {
         try {
             const materials = req.fields.materials ? JSON.parse(req.fields.materials) : null;
             const body = req.fields;
@@ -240,8 +243,6 @@ module.exports = {
             if (body.dimensions) body.dimensions = JSON.parse(body.dimensions);
             if (body.mandatory) body.mandatory = JSON.parse(body.mandatory);
             if (body.certificateDue) body.certificateDue = JSON.parse(body.certificateDue);
-
-
 
             const { thumb, banner } = req.files;
             let thumbPath;
@@ -324,6 +325,8 @@ module.exports = {
 
                     await CourseModel.findByIdAndUpdate(body._id, body);
 
+                    await dispatch('update', 'course', body);
+
                     if (body.isEvaluationAvailable == false) {
                         await ClassModel.updateMany(
                             { courseID: body._id },
@@ -342,10 +345,12 @@ module.exports = {
         }
     },
 
-    async deleteCourse (req, res) {
+    async deleteCourse(req, res) {
         try {
             const { id } = req.params;
             await CourseModel.findByIdAndUpdate(id, { deleted: 1 });
+            await dispatch('delete', 'course', { id });
+
             success(res, req, 'Curso excluído com sucesso!');
         } catch (error) {
             internalServer(
@@ -359,7 +364,7 @@ module.exports = {
         }
     },
 
-    async instructorAllCourses (req, res) {
+    async instructorAllCourses(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -411,7 +416,7 @@ module.exports = {
         }
     },
 
-    async getCourseById (req, res) {
+    async getCourseById(req, res) {
         try {
             const { id } = req.params;
             const course = await CourseModel.findById(id)
@@ -434,7 +439,7 @@ module.exports = {
         }
     },
 
-    async getUsers (req, res) {
+    async getUsers(req, res) {
         try {
             const user = await getUserByToken(req);
             const storeUsers = await getStoreUSers(user.store);
@@ -451,7 +456,7 @@ module.exports = {
         }
     },
 
-    async createClass (req, res) {
+    async createClass(req, res) {
         try {
             let {
                 courseID,
@@ -462,7 +467,7 @@ module.exports = {
                 dateApplicationFinal,
                 minister,
                 requester,
-                qrCode,
+                qrcode,
                 qrCodeSelfRegistration,
                 isSelfRegistrationEnabled,
                 limit,
@@ -567,14 +572,14 @@ module.exports = {
                             instructor: instructorID,
                             requester,
                             minister,
-                            qrcode: req.body.qrCode,
+                            qrcode: req.body.qrcode,
                             materials: arrMaterials,
                             registrationDeadline: !registrationDeadline ? 0 : registrationDeadline,
                             cancellationDeadline: !cancellationDeadline ? 0 : cancellationDeadline,
                             dateApplicationInitial,
                             dateApplicationFinal,
                             canCreateClass,
-                            qrcode: qrCode,
+                            qrcode: qrcode,
                             qrCodeSelfRegistration: qrCodeSelfRegistration,
                             isSelfRegistrationEnabled: isSelfRegistrationEnabled,
                             limit,
@@ -583,6 +588,8 @@ module.exports = {
                             name,
                             signup,
                         });
+
+                        await dispatch('create', 'class', createdClass);
 
                         const classesFromCourse = await ClassModel.find({ courseID });
 
@@ -654,13 +661,13 @@ module.exports = {
         }
     },
 
-    async updateClass (req, res) {
+    async updateClass(req, res) {
         try {
             let {
                 courseID,
                 users,
                 classID,
-                qrCode,
+                qrcode,
                 minister,
                 requester,
                 registrationDeadline,
@@ -803,15 +810,13 @@ module.exports = {
                                     String(user._id) === String(oldUser.userID)
                             )
                     );
-
-                    // Atualiza classe e usuários
-                    await ClassModel.findByIdAndUpdate(classID, {
+                    const classBody = {
                         courseID,
                         instructor: instructorID,
                         requester,
                         minister,
                         materials: arrMaterials,
-                        qrcode: qrCode,
+                        qrcode,
                         qrCodeSelfRegistration: qrCodeSelfRegistration,
                         isSelfRegistrationEnabled: isSelfRegistrationEnabled,
                         registrationDeadline: !registrationDeadline ? 0 : registrationDeadline,
@@ -828,8 +833,10 @@ module.exports = {
                             acc[`users.${index}`] = user;
                             return acc;
                         }, {}),
-                    });
-
+                    }
+                    // Atualiza classe e usuários
+                    await ClassModel.findByIdAndUpdate(classID, classBody);
+                    await dispatch('update', 'class', { _id: classID, ...classBody });
                     // Adiciona usuários
                     if (addedUsers.length) {
                         await ClassModel.findByIdAndUpdate(classID, {
@@ -897,7 +904,7 @@ module.exports = {
         }
     },
 
-    async appliedCourses (req, res) {
+    async appliedCourses(req, res) {
         try {
             const user = await getUserByToken(req);
             const { skip, limit } = pagination(req);
@@ -929,7 +936,7 @@ module.exports = {
         }
     },
 
-    async appliedCourse (req, res) {
+    async appliedCourse(req, res) {
         try {
             const { courseID, classID } = req.params;
             const course = await CourseModel.findById(courseID)
@@ -954,7 +961,7 @@ module.exports = {
         }
     },
 
-    async printAttendanceList (req, res) {
+    async printAttendanceList(req, res) {
         try {
             const { courseId, classId } = req.params;
             const onlyPresenceFlag = req.query?.onlyPresence !== undefined;
@@ -1019,7 +1026,7 @@ module.exports = {
         }
     },
 
-    async deleteMaterial (req, res) {
+    async deleteMaterial(req, res) {
         try {
             const arrMaterials = [];
             const { materialID, classID } = req.params;
@@ -1049,7 +1056,7 @@ module.exports = {
         }
     },
 
-    async deleteMaterialCourse (req, res) {
+    async deleteMaterialCourse(req, res) {
         try {
             const arrMaterials = [];
             const { materialID, courseID } = req.params;
@@ -1079,50 +1086,88 @@ module.exports = {
         }
     },
 
-    async searchUser (req, res) {
+    async searchUser(req, res) {
         try {
             const { searchBy } = req.query;
             let { usersInClass } = req.body;
             const { skip, limit } = pagination(req);
             const { id } = req.params;
             usersInClass = usersInClass.map((userID) => mongoose.Types.ObjectId(userID));
-            const query = {
-                $and: [
-                    { _id: id },
-                    { 'user.status': { $regex: 'ATIVO', $options: 'i' } },
-                    { 'user._id': { $nin: usersInClass } },
-                ],
+
+            // Buscar o curso e pegar os valores de tags e mandatory
+            const course = await CourseModel.findOne(
+                { _id: id },
+                { title: 1, tags: "$tags.value", mandatory: "$mandatory.value" }
+            );
+
+            // Buscar os grupos correspondentes às tags e obrigatoriedades
+            const [tagGroups, mandatoryGroups] = await Promise.all([
+                Group.find(
+                    { "tags.value": { $in: course.tags } },
+                    { name: 1 }
+                ),
+                Group.find(
+                    { "tags.value": { $in: course.mandatory } },
+                    { name: 1 }
+                )
+            ]);
+
+            const tagGroupNames = tagGroups.map(group => group.name);
+            const mandatoryGroupNames = mandatoryGroups.map(group => group.name);
+
+            // Buscar usuários ativos que não estão na lista de usersInClass
+            let query = {
+                status: { $regex: "ATIVO", $options: "i" },
+                _id: { $nin: usersInClass }
             };
+
             if (searchBy) {
-                query.$and.push({
-                    $or: [
-                        { 'user.name': { $regex: searchBy, $options: 'i' } },
-                        {
-                            'user.networkLogin': {
-                                $regex: searchBy,
-                                $options: 'i',
-                            },
-                        },
-                        {
-                            'user.registration': {
-                                $regex: searchBy,
-                                $options: 'i',
-                            },
-                        },
-                    ],
-                });
+                query.$or = [
+                    { name: { $regex: searchBy, $options: "i" } },
+                    { networkLogin: { $regex: searchBy, $options: "i" } },
+                    { registration: { $regex: searchBy, $options: "i" } }
+                ];
             }
 
-            const users = (
-                await CoursesWithTagsAndUsers.find(query)
-                    .skip(parseInt(skip))
-                    .limit(parseInt(limit))
-                    .sort({ 'user.name': 1 })
-            ).map((result) => result.user);
+            const currentDate = new Date()
 
-            const total = await CoursesWithTagsAndUsers.find(query).countDocuments();
+            // Busca todos os usuários que correspondem aos critérios básicos, com classificação, pular e limitar aplicados
+            const users = await User.find(query)
+                .sort({ name: 1 })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit))
+                .lean();
 
-            success(res, req, { data: users, total });
+            const total = await User.countDocuments(query);
+
+            // Filtrar apenas usuários qualificados com base em tags e grupos
+            const eligibleUsers = users.filter(user => {
+                const classGroupCodes = (user.classGroups || [])
+                    .filter(classGroup =>
+                        classGroup.status === 2 &&
+                        new Date(classGroup.startDate) <= currentDate &&
+                        new Date(classGroup.limitDate) >= currentDate
+                    )
+                    .map(classGroup => classGroup.groupCode);
+
+                const allGroupCodes = [...(user.groupsAD || []), ...classGroupCodes];
+
+                const mandatoryIntersection = allGroupCodes.filter(code =>
+                    course.mandatory.includes(code) || mandatoryGroupNames.includes(code)
+                );
+
+                const tagsIntersection = allGroupCodes.filter(code =>
+                    course.tags.includes(code) || tagGroupNames.includes(code)
+                );
+
+                if (mandatoryIntersection.length > 0) {
+                    return mandatoryIntersection.length >= course.mandatory.length;
+                } else {
+                    return tagsIntersection.length > 0;
+                }
+            });
+
+            success(res, req, { data: eligibleUsers, total });
         } catch (error) {
             console.error(error);
             internalServer(
@@ -1136,7 +1181,7 @@ module.exports = {
         }
     },
 
-    async deleteClass (req, res) {
+    async deleteClass(req, res) {
         try {
             const { classID } = req.params;
             const { materials } = await ClassModel.findById(classID);
@@ -1158,7 +1203,7 @@ module.exports = {
         }
     },
 
-    async courseEvaluation (req, res) {
+    async courseEvaluation(req, res) {
         try {
             const { classID, answers } = req.body;
             const student = await getUserByToken(req);
@@ -1200,7 +1245,7 @@ module.exports = {
         }
     },
 
-    async verifyCourseEvaluation (req, res) {
+    async verifyCourseEvaluation(req, res) {
         try {
             const { classID } = req.params;
             const student = await getUserByToken(req);
@@ -1253,7 +1298,7 @@ module.exports = {
         }
     },
 
-    async getCourseEvaluations (req, res) {
+    async getCourseEvaluations(req, res) {
         try {
             const { classID } = req.params;
             const student = await getUserByToken(req);
@@ -1275,7 +1320,7 @@ module.exports = {
         }
     },
 
-    async getCourseByQrCode (req, res) {
+    async getCourseByQrCode(req, res) {
         try {
             const body = req.body;
             const course = await ClassModel.findOne({
@@ -1295,7 +1340,7 @@ module.exports = {
         }
     },
 
-    async getCourseByQrCodeSelfRegistration (req, res) {
+    async getCourseByQrCodeSelfRegistration(req, res) {
         try {
             const { body } = req;
             const { _id } = await getUserByToken(req);
@@ -1363,10 +1408,11 @@ module.exports = {
                         grades: 0,
                     };
 
-                    await ClassModel.findOneAndUpdate(
+                    const foundClass = await ClassModel.findOneAndUpdate(
                         { _id: course._id },
                         { $addToSet: { users: studentRegister } }
                     );
+                    await dispatch('update', 'class', foundClass);
                     user = studentRegister;
                 }
             }
@@ -1388,11 +1434,11 @@ module.exports = {
         }
     },
 
-    async getCourseDetailByQrCode (req, res) {
+    async getCourseDetailByQrCode(req, res) {
         try {
             const { body } = req;
             const course = await CourseModel.findOne({
-                qrCode: { $eq: body.qrcode },
+                qrcode: { $eq: body.qrcode },
             });
 
             success(res, req, course);
@@ -1408,7 +1454,7 @@ module.exports = {
         }
     },
 
-    async selfRegistration (req, res) {
+    async selfRegistration(req, res) {
         try {
             const { body } = req;
             const user = await getUserByToken(req);
@@ -1448,7 +1494,7 @@ module.exports = {
         }
     },
 
-    async listJoin (req, res) {
+    async listJoin(req, res) {
         try {
             const { body } = req;
             const user = await getUserByToken(req);
@@ -1537,7 +1583,7 @@ module.exports = {
         }
     },
 
-    async listLeave (req, res) {
+    async listLeave(req, res) {
         const { classesID } = req.body;
         const user = await getUserByToken(req);
 
@@ -1553,12 +1599,12 @@ module.exports = {
             { $pull: { users: { userID: user._id } } },
             { new: true }
         );
+        await dispatch('update', 'class', classUpdated);
 
         success(res, req, classUpdated)
-
     },
 
-    async getInstructorByInstructorGroup (req, res) {
+    async getInstructorByInstructorGroup(req, res) {
         try {
             const { params } = req;
             const tags = [];
@@ -1616,7 +1662,7 @@ module.exports = {
         }
     },
 
-    async verifyInstructor (req, res) {
+    async verifyInstructor(req, res) {
         try {
             const { params } = req;
             const trails = [];
@@ -1714,7 +1760,7 @@ module.exports = {
         }
     },
 
-    async joinWaitList (req, res) {
+    async joinWaitList(req, res) {
         try {
             let { body } = req;
             const alreadyJoined = await WaitListModel.findOne({
@@ -1750,7 +1796,7 @@ module.exports = {
         }
     },
 
-    async getWaitListByUser (req, res) {
+    async getWaitListByUser(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1793,7 +1839,7 @@ module.exports = {
         }
     },
 
-    async getWaitListByCourse (req, res) {
+    async getWaitListByCourse(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1834,7 +1880,7 @@ module.exports = {
         }
     },
 
-    async getWaitlistAndElegibleUsersByCourse (req, res) {
+    async getWaitlistAndElegibleUsersByCourse(req, res) {
         try {
             const courseId = req.query.courseId;
             const elegibleUsers = [];
@@ -1907,7 +1953,7 @@ module.exports = {
      * @param {Express.Request} req
      * @param {Express.Response} res
      */
-    async importAttendanceList (req, res) {
+    async importAttendanceList(req, res) {
         const file = req.files?.file;
         const { courseId, classId } = req.params;
 
@@ -2076,7 +2122,7 @@ module.exports = {
 
 };
 
-async function createMessagesFromBackend (body) {
+async function createMessagesFromBackend(body) {
     try {
         const campaign = body;
         const target = campaign.target;

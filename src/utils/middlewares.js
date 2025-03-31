@@ -6,12 +6,11 @@ const _auth = require('./auth');
 const { validateToken, validateMonitoringToken } = require('./auth');
 const {
     getDbCurrentFeatures,
-    setAppCurrentFeatures,
-    getAppCurrentFeatures,
 } = require('./features');
 const { getSegmentation, isSegmentationException } = require('../components/config/business');
 const { getUserByToken } = require('./functions');
 const ApiError = require('../errors/ApiError');
+const { log } = require('./logger');
 
 const Profiles = {
     ADMIN: 'PERFIL_Admin',
@@ -30,6 +29,7 @@ const Profiles = {
 
 const validateProfile = async (req, res, next, expectedProfiles) => {
     const profiles = await _auth.returnProfileByToken(req.headers?.authorization);
+    // Descomente para ver os perfis do usuário / o que era esperado para ele ter acesso a rota
     //console.log(profiles, expectedProfiles)
     const doesUserHasProfile = profiles.some(
         (profile) =>
@@ -207,48 +207,26 @@ module.exports = {
     },
 
     isShowcaseActive: (req, res, next) => {
-        if (!req.features?.showcaseComponent) {
-            return _messages.successEmpty(res, req, 'Feature "Showcase" não está ativa');
-        }
-        next();
+        return module.exports.hasFeature('showcaseComponent')(req, res, next);
     },
 
     isAluraActive: (req, res, next) => {
-        if (!req.features?.alura) {
-            return _messages.successEmpty(res, req, 'Feature "Alura" não está ativa');
-        }
-        next();
+        return module.exports.hasFeature('alura')(req, res, next);
     },
 
     isAssessmentActive: (req, res, next) => {
-        if (!req.features?.assessement) {
-            return _messages.successEmpty(res, req, 'Feature "Assessment" não está ativa');
-        }
-        next();
-    },
-
-    async setCurrentFeatures(req, res, next) {
-        const appCurrentFeatures = getAppCurrentFeatures(req.app);
-
-        if (appCurrentFeatures) {
-            req.features = appCurrentFeatures;
-            return next();
-        }
-
-        const dbCurrentFeatures = (await getDbCurrentFeatures()) ?? null;
-
-        setAppCurrentFeatures(req.app, dbCurrentFeatures);
-
-        req.features = dbCurrentFeatures;
-
-        next();
+        return module.exports.hasFeature('assessement')(req, res, next);
     },
 
     hasFeature(features) {
         const parsedFeatures = Array.isArray(features) ? features : [features];
 
+        log('Checking features', parsedFeatures);
+        
         return async function hasFeatureMiddleware(req, res, next) {
-            if (parsedFeatures.every((feature) => req.features?.[feature])) {
+            const features = await getDbCurrentFeatures(req);
+            
+            if (parsedFeatures.every((feature) => features?.[feature])) {
                 return next();
             }
 
@@ -257,7 +235,9 @@ module.exports = {
     },
 
     async setSegmentation(req, res, next) {
-        if (req.features?.segmentation) {
+        const features = await getDbCurrentFeatures(req);
+        
+        if (features?.segmentation) {
             const segmentation = await getSegmentation();
 
             if (segmentation.value?.rule) {

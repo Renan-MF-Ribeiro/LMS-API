@@ -7,6 +7,7 @@ const { azureBlob } = require('../../utils/files');
 const _messages = require('../../utils/messages');
 const { User } = require('../users/model');
 const { Trail } = require('../trails/model');
+const { dispatch } = require('../webhooks/controller');
 const {
     processTrailTracking,
     isValidDate,
@@ -26,7 +27,6 @@ const {
     SCORMLessonStatus,
     EventTracking,
     ActivityTracking,
-    TrackingsItems,
     FormTracking
 } = require('./model');
 const { HistoricEvaluation, Evaluation } = require('../assessments/model');
@@ -56,7 +56,7 @@ const TRACKING_KINDS = Object.freeze({
 });
 
 const TrackingController = {
-    async createOrUpdate (req, res) {
+    async createOrUpdate(req, res) {
         const TrackingModel = TRACKING_KINDS[req.body.kind] || Tracking;
 
         try {
@@ -271,6 +271,7 @@ const TrackingController = {
                 { ...req.body, totalTime, isAllowedToSendXAPI, completionAt },
                 { upsert: true, omitUndefined: true }
             );
+            await dispatch('create', 'tracking', { ...req.body, totalTime, isAllowedToSendXAPI, completionAt });
             //EVENTO CONCLUSAO
             await calendarEventConclusion(
                 q.userLogin,
@@ -278,7 +279,8 @@ const TrackingController = {
                     item: q.item,
                     completion: req.body?.completion,
                     lessonStatus: req.body?.lessonStatus,
-                })
+                }
+            );
 
 
             res.status(httpStatus.NO_CONTENT).send();
@@ -308,7 +310,7 @@ const TrackingController = {
         }
     },
 
-    async findOrCreate (req, res) {
+    async findOrCreate(req, res) {
         try {
             const { item, trailId, chief } = req.query;
             const { data } = await decodeToken(req.headers.authorization);
@@ -391,7 +393,7 @@ const TrackingController = {
         }
     },
 
-    async list (req, res) {
+    async list(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -530,7 +532,7 @@ const TrackingController = {
         }
     },
 
-    async deleteQuery (req, res) {
+    async deleteQuery(req, res) {
         try {
             const { item, userLogin } = req.query;
             var networkLogin = userLogin;
@@ -573,17 +575,17 @@ const TrackingController = {
     },
 
 
-    async createOrUpdateDocument (req, res) {
+    async createOrUpdateDocument(req, res) {
         req.body.kind = 'DocumentTracking';
         return TrackingController.createOrUpdate(req, res);
     },
 
-    async createOrUpdateMedia (req, res) {
+    async createOrUpdateMedia(req, res) {
         req.body.kind = 'MediaTracking';
         return TrackingController.createOrUpdate(req, res);
     },
 
-    async createOrUpdateSCORM (req, res) {
+    async createOrUpdateSCORM(req, res) {
         var decrypted = cryptoJS.AES.decrypt(req.headers.tokendata, 'commit');
         const tmpStatus = decrypted.toString(cryptoJS.enc.Utf8);
 
@@ -595,95 +597,95 @@ const TrackingController = {
         req.body.kind = 'SCORMTracking';
         return TrackingController.createOrUpdate(req, res);
     },
-    async listActivitiesHistoric (req, res) {
+    async listActivitiesHistoric(req, res) {
         try {
             const { skip, limit } = pagination(req);
             let { order, sort } = ordernation(req);
             const searchBy = req.query.searchBy;
 
-            const query = searchBy
-                ? {
-                    $and: [
-                        {
-                            $or: [
-                                {
-                                    'item.title': {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    'user.name': {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                                {
-                                    reviewer: {
-                                        $regex: searchBy,
-                                        $options: 'i',
-                                    },
-                                },
-                            ],
-                        },
-                        {
-                            $or: [
-                                { lessonStatus: 'failed' },
-                                { lessonStatus: 'passed' },
-                            ],
-                            kind: 'ActivityTracking',
-                        },
-                    ],
-                }
-                : {
+            // Montar a query principal com base no searchBy
+            const query = {
+                kind: 'ActivityTracking',
+                $or: [
+                    { lessonStatus: 'failed' },
+                    { lessonStatus: 'passed' },
+                ]
+            };
+
+            // Adicionar filtro de busca se fornecido
+            if (searchBy) {
+                query.$and = [{
                     $or: [
-                        { lessonStatus: 'failed' },
-                        { lessonStatus: 'passed' },
-                    ],
-                    kind: 'ActivityTracking',
-                };
+                        { 'item.title': { $regex: searchBy, $options: 'i' } },
+                        { 'user.name': { $regex: searchBy, $options: 'i' } },
+                        { reviewer: { $regex: searchBy, $options: 'i' } }
+                    ]
+                }];
+            }
 
-            order = order === 'maxCorrectedAt' ? 'correctedAt' : order;
-            order = order === 'itemName' ? 'item.title' : order;
-            order = order === 'studentName' ? 'user.name' : order;
-            order = order === 'maxSentAt' ? 'sentAt' : order;
+            // Mapear campos de ordenação para nomes reais no banco de dados
+            const orderMapping = {
+                'maxCorrectedAt': 'correctedAt',
+                'itemName': 'item.title',
+                'studentName': 'user.name',
+                'maxSentAt': 'sentAt'
+            };
+            order = orderMapping[order] || order;
 
-            const trackingCount = await TrackingsItems.find(
-                query
-            ).countDocuments();
-            const tracking = await TrackingsItems.find(query)
-                .skip(parseInt(skip))
+            // **Buscar os Trackings**
+            const trackingCount = await Tracking.find(query).countDocuments();
+            const tracking = await Tracking.find(query).skip(parseInt(skip))
                 .limit(parseInt(limit))
-                .sort({ [order]: sort })
+                .sort({ [orderMapping]: sort })
                 .lean();
 
-            const activities = [];
-            for (const activity of tracking) {
-                const user = await User.findOne({
-                    networkLogin: activity.userLogin,
-                });
+            // Extrair todos os userLogins e itemIDs para consultas em massa
+            const userLogins = tracking.map(a => a.userLogin);
+            const itemIds = tracking.map(a => a.item?._id).filter(id => id);
 
-                const trails = await Trail.find({
-                    "items.itemID": activity.item._id
-                });
+            // Buscar todos os usuários e criar um mapa por networkLogin
+            const usersMap = await User.find({ networkLogin: { $in: userLogins } })
+                .select("networkLogin name email")
+                .lean()
+                .then(users => Object.fromEntries(users.map(user => [user.networkLogin, user])));
 
-                const activityObj = {
+            // Buscar todas as trilhas que contêm os itens em uma única consulta
+            const trails = await Trail.find({ "items.itemID": { $in: itemIds } })
+                .select("title items.itemID")
+                .lean();
+
+            // Criar um mapa de trilhas por itemID
+            const trailsByItem = {};
+            trails.forEach(trail => {
+                trail.items.forEach(item => {
+                    if (!trailsByItem[item.itemID]) {
+                        trailsByItem[item.itemID] = [];
+                    }
+                    trailsByItem[item.itemID].push(trail.title);
+                });
+            });
+
+            // Montar o array de atividades usando os mapas, sem consultas adicionais
+            const activities = tracking.map(activity => {
+                const itemId = activity.item?._id;
+
+                return {
                     trackingId: activity._id,
-                    itemId: activity.item ? activity.item._id : null,
+                    itemId: itemId || null,
                     itemName: activity.item ? activity.item.title : null,
-                    studentName: user.name,
-                    studentEmail: user.email,
+                    studentName: usersMap[activity.userLogin]?.name || null,
+                    studentEmail: usersMap[activity.userLogin]?.email || null,
                     sentAt: activity.sentAt,
                     reviewer: activity.reviewer,
                     correctedAt: activity.correctedAt,
                     contentPath: activity.contentPath,
-                    passingScore: activity.item.passingScore,
+                    passingScore: activity.item?.passingScore || null,
                     score: activity.score,
                     reviewerComment: activity.reviewerComment,
-                    trails: trails.map(trail => trail.title).join()
+                    trails: (trailsByItem[itemId] || []).join(", ")
                 };
-                activities.push(activityObj);
-            }
+            });
+
             _messages.success(res, req, { activities, total: trackingCount });
         } catch (error) {
             console.log(error);
@@ -697,67 +699,108 @@ const TrackingController = {
         }
     },
 
-    async listActivitiesForCorrection (req, res) {
+    async listActivitiesForCorrection(req, res) {
         try {
             const { skip, limit } = pagination(req);
             let { order, sort } = ordernation(req);
-
             const searchBy = req.query.searchBy;
 
-            const query = searchBy
-                ? {
-                    $or: [
-                        { 'item.title': { $regex: searchBy, $options: 'i' } },
-                        { 'user.name': { $regex: searchBy, $options: 'i' } },
-                    ],
-                    kind: 'ActivityTracking',
-                    lessonStatus: 'incomplete',
-                    sentAt: { $exists: true, $not: { $size: 0 } },
-                }
-                : {
-                    lessonStatus: 'incomplete',
-                    kind: 'ActivityTracking',
-                    sentAt: { $exists: true, $not: { $size: 0 } },
-                };
+            let userIds = [];
+            let itemIds = [];
 
-            order = order === 'maxSentAt' ? 'sentAt' : order;
-            order = order === 'itemName' ? 'item.title' : order;
-            order = order === 'studentName' ? 'user.name' : order;
+            if (searchBy) {
+                const users = await User.find({ name: { $regex: searchBy, $options: "i" } })
+                    .select("_id networkLogin")
+                    .lean();
 
-            const trackingCount = await TrackingsItems.find(
-                query
-            ).countDocuments();
-            const tracking = await TrackingsItems.find(query)
+                userIds = users.map(user => user.networkLogin);
+
+                const trails = await Trail.find({ title: { $regex: searchBy, $options: "i" } })
+                    .select("_id items")
+                    .lean();
+                itemIds = trails.map(trail => trail.items.map(item => item.itemID)).flat();
+
+            }
+
+            // **Montar a query principal**
+            const query = {
+                lessonStatus: "incomplete",
+                kind: "ActivityTracking",
+                sentAt: { $exists: true, $not: { $size: 0 } },
+            };
+
+            if (searchBy) {
+                query.$or = [];
+                if (userIds.length > 0) query.$or.push({ userLogin: { $in: userIds } });
+                if (itemIds.length > 0) query.$or.push({ item: { $in: itemIds } });
+
+                // Se não houver resultados nos filtros, a query deve retornar vazia
+                if (query.$or.length === 0) query.$or.push({ _id: null });
+            }
+
+            // **Normalizar os campos de ordenação**
+            const orderMapping = {
+                maxSentAt: "sentAt",
+                itemName: "item.title",
+                studentName: "user.name",
+            };
+            order = orderMapping[order] || order;
+
+            // **Buscar os Trackings**
+            const countTracking = await Tracking.find(query).countDocuments();
+            const tracking = await Tracking.find(query)
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
                 .sort({ [order]: sort })
                 .lean();
 
-            const activities = [];
-            for (const activity of tracking) {
-                const user = await User.findOne({
-                    networkLogin: activity.userLogin,
+            // **Mapear User e Item para evitar múltiplas queries dentro do loop**
+            const userLogins = tracking.map(t => t.userLogin);
+            const itemIdsInTracking = tracking.map(t => t.item);
+
+            const usersMap = await User.find({ networkLogin: { $in: userLogins } })
+                .select("networkLogin name email")
+                .lean()
+                .then(users => Object.fromEntries(users.map(user => [user.networkLogin, user])));
+
+            const itemsMap = await Item.find({ _id: { $in: itemIdsInTracking } })
+                .select("_id title")
+                .lean()
+                .then(items => Object.fromEntries(items.map(item => [item._id.toString(), item])));
+
+            // **Buscar trilhas de uma vez**
+            const trailsMap = await Trail.find({ "items.itemID": { $in: itemIdsInTracking } })
+                .select("title items.itemID")
+                .lean();
+
+            // **Criar um mapa de trilhas por itemID**
+            const trailsByItem = {};
+            trailsMap.forEach(trail => {
+                trail.items.forEach(item => {
+                    if (!trailsByItem[item.itemID]) {
+                        trailsByItem[item.itemID] = [];
+                    }
+                    trailsByItem[item.itemID].push(trail.title);
                 });
-                const trails = await Trail.find({
-                    "items.itemID": activity.item._id
-                });
-                const activityObj = {
-                    trackingId: activity._id,
-                    itemId: activity.item ? activity.item._id : null,
-                    itemName: activity.item ? activity.item.title : null,
-                    studentName: user.name,
-                    studentEmail: user.email,
-                    sentAt: activity.sentAt,
-                    correctedAt: activity.correctedAt,
-                    contentPath: activity.contentPath,
-                    passingScore: activity.passingScore,
-                    score: activity.score,
-                    reviewerComment: activity.reviewerComment,
-                    trails: trails.map(trail => trail.title).join()
-                };
-                activities.push(activityObj);
-            }
-            _messages.success(res, req, { activities, total: trackingCount });
+            });
+
+            // **Montar a resposta final**
+            const activities = tracking.map(activity => ({
+                trackingId: activity._id,
+                itemId: activity.item || null,
+                itemName: itemsMap[activity.item]?.title || null,
+                studentName: usersMap[activity.userLogin]?.name || null,
+                studentEmail: usersMap[activity.userLogin]?.email || null,
+                sentAt: activity.sentAt,
+                correctedAt: activity.correctedAt,
+                contentPath: activity.contentPath,
+                passingScore: activity.passingScore,
+                score: activity.score,
+                reviewerComment: activity.reviewerComment,
+                trails: (trailsByItem[activity.item] || []).join(", "),
+            }));
+
+            _messages.success(res, req, { activities, total: countTracking });
         } catch (error) {
             console.log(error);
             _messages.internalServer(
@@ -770,7 +813,7 @@ const TrackingController = {
         }
     },
 
-    async updateActivityAdmin (req, res) {
+    async updateActivityAdmin(req, res) {
         try {
             const { trackingId } = req.query;
             const todayDate = new Date();
@@ -844,7 +887,7 @@ const TrackingController = {
         }
     },
 
-    async updateActivityUser (req, res) {
+    async updateActivityUser(req, res) {
         try {
             const { item, userLogin } = req.query;
             const todayDate = new Date();
@@ -895,7 +938,7 @@ const TrackingController = {
         }
     },
 
-    async registerViewPost (req, res) {
+    async registerViewPost(req, res) {
         try {
             const { _id } = req.body;
             const user = await getUserByToken(req);
@@ -931,7 +974,7 @@ const TrackingController = {
     }
 };
 
-function processTrackingType (item) {
+function processTrackingType(item) {
     switch (item.kind) {
         case "MediaItem":
             return "MediaTracking";
