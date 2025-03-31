@@ -191,7 +191,7 @@ module.exports = {
         });
     },
 
-    getCoursesByUserID(userID) {
+    getCoursesByUserID (userID) {
         return new Promise(async (resolve, reject) => {
             try {
                 const classes = await ClassModel.find(
@@ -271,7 +271,7 @@ module.exports = {
      * @param {Record<string, string>[]} items
      * @returns {Promise<Record<string, string>[]>}
      */
-    async processAttendanceListImport(courseId, classId, items) {
+    async processAttendanceListImport (courseId, classId, items) {
         const nowDate = new Date();
 
         const courseInfo = await CourseModel.findById(courseId);
@@ -373,12 +373,12 @@ module.exports = {
             const presenceDate = isPresence
                 ? item.presenceAt
                     ? moment(item.presenceAt)
-                          .add(3, 'hours')
-                          .set({
-                              hour: nowDate.getHours(),
-                              minute: nowDate.getMinutes(),
-                          })
-                          .toDate()
+                        .add(3, 'hours')
+                        .set({
+                            hour: nowDate.getHours(),
+                            minute: nowDate.getMinutes(),
+                        })
+                        .toDate()
                     : nowDate
                 : null;
             const grade = Number(item.grades ?? 0) > 100 ? 100 : Number(item.grades ?? 0);
@@ -456,4 +456,37 @@ module.exports = {
 
         return { results, classInfo, courseInfo };
     },
+
+    /**
+     * @param {Array} data
+     * @param {Array} classesFromUser
+     * @param {string} userId
+     * @returns {Array}
+     */
+    enrichCoursesWithClasses (data, classesFromUser, userId) {
+        return data.map((course) => {
+            let classes = classesFromUser.filter(c => c.courseID.toString() == course._id.toString());
+            classes = classes.map(c => {
+                const currentUser = c.users.find(u => u.userID == userId || u._id == userId);
+                const userGrades = currentUser.grades;
+                const passed = userGrades >= course.passingScore;
+                const hasCertificate = course.certificate && passed;
+                return {
+                    _id: c._id,
+                    course,
+                    name: c.name,
+                    dateApplicationFinal: c.dateApplicationFinal,
+                    dateApplicationInitial: c.dateApplicationInitial,
+                    passed: currentUser.presence ? passed : null,
+                    userGrades: currentUser.presence ? userGrades : null,
+                    hasCertificate,
+                    presenceAt: currentUser.presenceAt,
+                };
+            });
+            return {
+                ...course,
+                classes
+            };
+        });
+    }
 };

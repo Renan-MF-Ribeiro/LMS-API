@@ -8,6 +8,7 @@ const {
     isAccountant,
     isInstructor,
     isAccountantOrInstructor,
+    canListUsers
 } = require('../../utils/middlewares');
 
 router
@@ -93,5 +94,7 @@ router
         formidable(),
         _controller.importAttendanceList
     )
+    .get('/historicByUser/:userId', canListUsers, _controller.historicByUser)
+    .delete('/remove-user-class/:classeId/:userId', canListUsers, _controller.removeUserClass)
     ;
 module.exports = router;

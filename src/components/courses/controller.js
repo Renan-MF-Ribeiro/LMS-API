@@ -35,6 +35,7 @@ const {
     getClassByID,
     returnProgramaID,
     processAttendanceListImport,
+    enrichCoursesWithClasses
 } = require('./business');
 
 const {
@@ -2024,6 +2025,111 @@ module.exports = {
             );
         }
     },
+
+    async historicByUser (req, res) {
+        try {
+            const userId = req.params.userId;
+            const { skip, limit } = pagination(req);
+            const { order, sort } = ordernation(req);
+            const searchBy = req.query.searchBy;
+            const classesFromUser = await ClassModel.find({
+                $or: [
+                    { 'users.userID': userId },
+                    { 'users._id': userId },
+                    { 'users._id': mongoose.Types.ObjectId(userId) }
+                ]
+            }).select({
+                courseID: 1,
+                users: 1,
+                dateApplicationInitial: 1,
+                dateApplicationFinal: 1,
+                name: 1,
+            })
+
+            let query = {
+                deleted: { $eq: 0 },
+                status: { $eq: 1 },
+                _id: { $in: classesFromUser.map(c => c.courseID) }
+            }
+
+            if (searchBy) {
+                query = {
+                    ...query,
+                    $or: [
+                        {
+                            title: {
+                                $regex: searchBy,
+                                $options: 'i',
+                            },
+                        },
+                    ],
+                }
+            }
+
+            const total = await CourseModel.find(query).countDocuments();
+
+            const data = await CourseModel.find(query)
+                .select({
+                    title: 1,
+                    passingScore: 1,
+                    certificate: 1,
+                    certificateLayout: 1,
+                    certificateDue: 1,
+                    workload: 1,
+                    dateFinal: 1,
+                    dateInitial: 1
+                }).lean()
+                .sort({
+                    [order]: sort,
+                })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit));
+
+
+            success(res, req, {
+                data: enrichCoursesWithClasses(data, classesFromUser, userId),
+                total
+            });
+
+        } catch (error) {
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'list historic courses by user',
+                '/getCourseByQrCode'
+            );
+        }
+
+    },
+
+    async removeUserClass (req, res) {
+        try {
+            const { classeId, userId } = req.params;
+            const classUpdated = await ClassModel.findOneAndUpdate(
+                { _id: classeId },
+                {
+                    $pull: {
+                        users: { _id: userId }
+                    }
+                },
+                { new: true }
+            );
+
+            success(res, req, classUpdated);
+        } catch (error) {
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'remove user from class',
+                '/removeUserClass'
+            );
+        }
+    }
+
 };
 
 async function createMessagesFromBackend(body) {
