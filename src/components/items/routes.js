@@ -30,7 +30,6 @@ module.exports = express.Router()
     .get('/', isAccountant, _controller.findAll)
     .get('/generate-certificate/:item', _controller.generateCertificate)
     .delete('/:itemId', isAccountant, _controller.disableById)
-
     .put('/doc', isAccountantOrCollaborator, getFormMiddleware(), _controller.multiUploadDocument)
     .put('/media', isAccountantOrCollaborator, getFormMiddleware(), _controller.multiUploadMedia)
     .post('/scorm', isAccountant, [], _controller.uploadSCORM)
