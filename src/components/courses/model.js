@@ -30,6 +30,7 @@ const CourseSChema = new mongoose.Schema(
         isEvaluationAvailable: { type: Boolean, required: true, default: true },
         tags: { type: Array, required: false },
         mandatory: { type: Array, required: false },
+        obligatory: { type: Array, required: false },
         dimensions: { type: Array, required: false },
         completion: { type: Date, required: false },
         completionAt: { type: Date, required: false },
