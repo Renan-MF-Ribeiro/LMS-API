@@ -7,7 +7,7 @@ const {
     returnListOfIds,
     sendMessageToKafka,
     processTargetUsers,
-    sendCustomMessageToKafka,
+    sendCustomMessageToKafka
 } = require('./business');
 const { Item } = require('../items/model');
 const _messages = require('../../utils/messages');
@@ -15,12 +15,12 @@ const {
     pagination,
     ordernation,
     getUserByToken,
-    getDateTodayWithoutHours,
+    getDateTodayWithoutHours, htmlToMessage
 } = require('../../utils/functions');
 const {
     WaitListsByCourses,
     WaitListModel,
-    CourseModel,
+    CourseModel
 } = require('../courses/model');
 const { createCSVString } = require('../../utils/files');
 const { getMessengerConfig, getCronConfig } = require('../config/business');
@@ -32,7 +32,7 @@ const getHeaders = (req) => ({
 });
 
 module.exports = {
-    async createMessagingList (req, res) {
+    async createMessagingList(req, res) {
         const { name, trailFilters, userFilter } = req.body;
         let listId = null;
         let messageList = new MessageList();
@@ -59,7 +59,7 @@ module.exports = {
                 registrationInitialDate: userFilter.filters?.[0].registrationInitialDate,
                 registrationFinalDate: userFilter.filters?.[0].registrationFinalDate,
                 accessInitialDate: userFilter.filters?.[0].accessInitialDate,
-                accessFinalDate: userFilter.filters?.[0].accessFinalDate,
+                accessFinalDate: userFilter.filters?.[0].accessFinalDate
             };
 
             sendCustomMessageToKafka(messageList, process.env.TOPIC_MSG_LIST);
@@ -70,12 +70,12 @@ module.exports = {
                 target: {
                     type: 'users',
                     value: {
-                        users: [`${user._id}`],
-                    },
+                        users: [`${user._id}`]
+                    }
                 },
                 text: `Sua lista de contatos está sendo processada\n`,
                 texthtml: `<p>Sua lista de contatos está sendo processada<p>`,
-                title: `Sua lista está sendo processada!`,
+                title: `Sua lista está sendo processada!`
             };
 
             _messages.success(res, req, notification);
@@ -93,7 +93,7 @@ module.exports = {
         }
     },
 
-    async downloadListFile (req, res) {
+    async downloadListFile(req, res) {
         const { listId } = req.query;
         const today = getDateTodayWithoutHours();
         const urlFetch = `${API_MESSENGER}/fetchsendinglist/${listId}`;
@@ -102,7 +102,7 @@ module.exports = {
 
         const header = [
             { id: 'name', title: 'NOME' },
-            { id: 'email', title: 'EMAIL' },
+            { id: 'email', title: 'EMAIL' }
         ];
 
         const str = createCSVString(header, response.data.users);
@@ -112,7 +112,7 @@ module.exports = {
         res.status(200).send(str);
     },
 
-    async getMessages (req, res) {
+    async getMessages(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -124,8 +124,8 @@ module.exports = {
                         $or: [
                             { title: { $regex: searchBy, $options: 'i' } },
                             { text: { $regex: searchBy, $options: 'i' } },
-                            { category: { $regex: searchBy, $options: 'i' } },
-                        ],
+                            { category: { $regex: searchBy, $options: 'i' } }
+                        ]
                     }
                     : {}
             )
@@ -139,8 +139,8 @@ module.exports = {
                         $or: [
                             { title: { $regex: searchBy, $options: 'i' } },
                             { text: { $regex: searchBy, $options: 'i' } },
-                            { category: { $regex: searchBy, $options: 'i' } },
-                        ],
+                            { category: { $regex: searchBy, $options: 'i' } }
+                        ]
                     }
                     : {}
             ).count();
@@ -158,7 +158,7 @@ module.exports = {
         }
     },
 
-    async getMessageById (req, res) {
+    async getMessageById(req, res) {
         try {
             const { id } = req.params;
             const message = await NewMessage.findOne({ _id: id });
@@ -175,14 +175,14 @@ module.exports = {
         }
     },
 
-    async sendListToSendInBlue (req, res) {
+    async sendListToSendInBlue(req, res) {
         try {
             const { listId } = req.body;
             const urlFetch = `${API_MESSENGER}/fetchsendinglist/${listId}`;
             const response = await axios.get(urlFetch);
             const header = [
                 { id: 'name', title: 'NOME' },
-                { id: 'email', title: 'EMAIL' },
+                { id: 'email', title: 'EMAIL' }
             ];
 
             const fileBody = createCSVString(header, response.data.users);
@@ -200,7 +200,7 @@ module.exports = {
             createList.folderId = Number(SENDINBLUE_FOLDER_ID);
 
             apiInstance.createList(createList).then(
-                function (data) {
+                function(data) {
                     let requestContactImport =
                         new SibApiV3Sdk.RequestContactImport();
                     requestContactImport.fileBody = fileBody;
@@ -210,14 +210,14 @@ module.exports = {
                     requestContactImport.updateExistingContacts = true;
 
                     apiInstance.importContacts(requestContactImport).then(
-                        function (data) {
+                        function(data) {
                             _messages.success(
                                 res,
                                 req,
                                 `Lista de contatos criada no Sendinblue com nome: "homologacao-${response.data.name}"`
                             );
                         },
-                        function (error) {
+                        function(error) {
                             _messages.internalServer(
                                 res,
                                 req,
@@ -229,7 +229,7 @@ module.exports = {
                         }
                     );
                 },
-                function (error) {
+                function(error) {
                     _messages.internalServer(
                         res,
                         req,
@@ -252,7 +252,7 @@ module.exports = {
         }
     },
 
-    async createMessages (req, res) {
+    async createMessages(req, res) {
         const { sendingListId } = req.body;
         const campaign = req.body;
 
@@ -264,13 +264,11 @@ module.exports = {
             const target = {
                 type: 'users',
                 value: {
-                    users: targetUsers,
-                },
+                    users: targetUsers
+                }
             };
             campaign.target = target;
-            campaign.text = htmlToText(campaign.textHtml, {
-                wordwrap: 130,
-            });
+            campaign.text = htmlToMessage(campaign.textHtml);
 
             await sendMessageToKafka(campaign, targetUsers);
 
@@ -285,7 +283,7 @@ module.exports = {
                 status: 'SENT',
                 title: campaign.title,
                 text: campaign.text,
-                textHtml: campaign.textHtml,
+                textHtml: campaign.textHtml
             });
 
             _messages.success(res, req, sendingListId);
@@ -301,12 +299,12 @@ module.exports = {
             const urlUpdate = `${API_MESSENGER}/updatesendinglist`;
             await axios.put(urlUpdate, {
                 id: sendingListId,
-                status: 'FAILED',
+                status: 'FAILED'
             });
         }
     },
 
-    async notifyResponsibleUsers () {
+    async notifyResponsibleUsers() {
         const today = new Date();
         const items = await Item.find({ expirationDate: { $exists: true } });
 
@@ -328,13 +326,13 @@ module.exports = {
                         target: {
                             type: 'users',
                             value: {
-                                users: [item.responsible],
-                            },
+                                users: [item.responsible]
+                            }
                         },
                         text: `O item ${item.title} perderá a validade em ${diffDays} dias!\n`,
                         texthtml: `<p>O item ${item.title} perderá a validade em ${diffDays} dias!<p>`,
                         thumbnail: messengerConfig.emailTemplate.thumbnail,
-                        title: `${item.title}`,
+                        title: `${item.title}`
                     };
 
                     createMessagesFromBackend(message);
@@ -343,7 +341,7 @@ module.exports = {
         }
     },
 
-    async sendWaitingListMessage (req, res) {
+    async sendWaitingListMessage(req, res) {
         try {
             const {
                 waitlistUsersArray,
@@ -351,7 +349,7 @@ module.exports = {
                 courseId,
                 date,
                 type,
-                place,
+                place
             } = req.body;
 
             const course = await CourseModel.findOne({ _id: courseId });
@@ -382,13 +380,13 @@ module.exports = {
                     target: {
                         type: 'users',
                         value: {
-                            users: waitlistUsersIdList,
-                        },
+                            users: waitlistUsersIdList
+                        }
                     },
                     text: text,
                     texthtml: texthtml,
                     thumbnail: messengerConfig.emailTemplate.thumbnail,
-                    title: `Aviso Happlearning`,
+                    title: `Aviso Happlearning`
                 };
                 createMessagesFromBackend(message);
 
@@ -408,13 +406,13 @@ module.exports = {
                     target: {
                         type: 'users',
                         value: {
-                            users: elegibleUsersArray,
-                        },
+                            users: elegibleUsersArray
+                        }
                     },
                     text: text,
                     texthtml: texthtml,
                     thumbnail: messengerConfig.emailTemplate.thumbnail,
-                    title: `Aviso Happlearning`,
+                    title: `Aviso Happlearning`
                 };
                 createMessagesFromBackend(message);
             }
@@ -433,7 +431,7 @@ module.exports = {
         }
     },
 
-    async getListsSendingLists (req, res) {
+    async getListsSendingLists(req, res) {
         try {
             const urlFetch = `${API_MESSENGER}/listsendinglists/`;
             const response = await axios.get(urlFetch, { headers: getHeaders(req), params: { ...req.query, clientId: CLIENT_ID } });
@@ -452,11 +450,11 @@ module.exports = {
         }
     },
 
-    async getListMessage (req, res) {
+    async getListMessage(req, res) {
         try {
             const urlFetch = `${API_MESSENGER}/listmessage`;
             const params = { skip: req.query.skip, limit: req.query.limit, clientid: +CLIENT_ID, identifier: req.query.identifier };
-            console.log(params)
+            console.log(params);
             const response = await axios.get(urlFetch, { headers: getHeaders(req), params });
 
             return _messages.success(res, req, response.data);
@@ -473,7 +471,7 @@ module.exports = {
         }
     },
 
-    async getById (req, res) {
+    async getById(req, res) {
         try {
             const urlFetch = `${API_MESSENGER}/messages/v2/${req.params.id}`;
             const response = await axios.get(urlFetch, { headers: getHeaders(req) });
@@ -492,7 +490,7 @@ module.exports = {
         }
     },
 
-    async updateViewed (req, res) {
+    async updateViewed(req, res) {
         try {
             const urlFetch = `${API_MESSENGER}/updateviewed`;
             const response = await axios.post(urlFetch, req.body, { headers: getHeaders(req) });
@@ -512,7 +510,7 @@ module.exports = {
     }
 };
 
-async function createMessagesFromBackend (body) {
+async function createMessagesFromBackend(body) {
     try {
         const campaign = body;
         const target = campaign.target;
