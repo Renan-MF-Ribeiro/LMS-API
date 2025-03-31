@@ -366,6 +366,7 @@ module.exports = {
             { description: 'IDENTIFICACAO_LOJA', value: 'storeCode' },
             { description: 'GRUPO_LOJA', value: 'storeGroup' },
             { description: 'GRUPO_LOJA_DESCRICAO', value: 'storeGroupDescription' },
+            { description: 'SITUACAO', value: 'situation' },
             { description: 'DISTRITAL', value: 'plant' },
             { description: 'GESTOR', value: 'manager' },
             { description: 'MATRICULA_GESTOR', value: 'managerRegistration' },
@@ -464,10 +465,6 @@ module.exports = {
 
         data.enabled = true;
         data.onboarding = onboarding;
-
-        data.pcd = ['sim', 's', '1', 'true'].includes(String(data.pcd).toLowerCase()) ? 'S' : 'N';
-
-        data.status = ['ativo', 'a', '1', 'true', 'sim', 's'].includes(String(data.status).toLowerCase()) ? 'ATIVO' : 'INATIVO';
 
         const groupsAD =
             onboarding === true

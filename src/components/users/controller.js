@@ -755,16 +755,16 @@ module.exports = {
             log('singleSignOn tokenIdpProfiles', tokenIdpProfiles);
 
             const ssoForm = await getLoginFormByStrategyName(tokenStrategyName);
-            const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data[ssoForm.claim];
+            const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data?.[ssoForm.claim];
 
             if (!claim) {
                 _messages.forbidden(
                     res,
                     req,
-                    'Usuário ou senha não informados',
-                    'Erro de validação',
+                    'Claim inválido',
+                    'Claim inválido',
                     'users',
-                    'ldapSignIn'
+                    'singleSignOn'
                 );
             }
 
@@ -811,7 +811,7 @@ module.exports = {
                                 'Usuário bloqueado temporariamente',
                                 'Por favor tente novamente mais tarde!',
                                 'users',
-                                'ldapSignIn'
+                                'singleSignOn'
                             );
                             return;
                         }
@@ -903,7 +903,7 @@ module.exports = {
                         },
                         'Sucesso ao logar',
                         'users',
-                        'ldapSignIn',
+                        'singleSignOn',
                         [],
                         [],
                         true,
@@ -918,17 +918,17 @@ module.exports = {
                         'Usuário ou senha inválidos.',
                         { claim, claimKey: ssoForm?.claim ?? '' },
                         'users',
-                        'ldapSignIn'
+                        'singleSignOn'
                     );
                 }
             } else {
                 _messages.forbidden(
                     res,
                     req,
-                    'Usuário ou senha não informados',
-                    'Erro de validação',
+                    'Claim inválido',
+                    'Claim inválido',
                     'users',
-                    'ldapSignIn'
+                    'singleSignOn'
                 );
             }
         } catch (error) {
@@ -1299,8 +1299,6 @@ module.exports = {
     },
 
     async import(req, res) {
-        const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
-
         var file = null;
         const newUsers = [];
         const existingUsers = [];
@@ -1415,12 +1413,15 @@ module.exports = {
             );
         }
 
-        if (inactivateIfNotInSpreadsheet) {
-            const data_start = new Date();
+        const usersDataConfig = await getUsersDataConfig();
+
+        if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
+            console.log('Inativando usuários não presentes na planilha');
+
             await User.updateMany(
                 {
+                    onboarding: { $ne: true },
                     ignoreLoadInactivation: { $ne: true },
-                    updatedAt: { $lt: data_start },
                 },
                 { $set: { status: 'INATIVO' } },
                 { multi: true }
@@ -1449,8 +1450,6 @@ module.exports = {
 
     async importOnboarding(req, res) {
         try {
-            const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
-
             const onboarding = true;
             var file = null;
             const newUsers = [];
@@ -1518,18 +1517,6 @@ module.exports = {
                 await User.findByIdAndUpdate(user._id, {
                     ...user.processedUser,
                 });
-            }
-
-            if (inactivateIfNotInSpreadsheet) {
-                const data_start = new Date();
-                await User.updateMany(
-                    {
-                        ignoreLoadInactivation: { $ne: true },
-                        updatedAt: { $lt: data_start },
-                    },
-                    { $set: { status: 'INATIVO' } },
-                    { multi: true }
-                );
             }
 
             if (newUsers.length > 0) {
@@ -2822,7 +2809,7 @@ module.exports = {
                     'Token inválido',
                     'Token inválido!',
                     'users',
-                    'ldapSignIn'
+                    'validateMultiFactor'
                 );
             }
         } catch (error) {
