@@ -128,19 +128,16 @@ async function setAssessmentHistoricOnSections(userId, sections) {
             const isCompleted = section.trails
                 ?.filter(
                     (trail) => {
-                        const includes = ![
+                        const includes = [
                             'default',
                             'assessment',
                             'separator',
                             'certificate',
                         ].includes(trail.type);
-
-                        const completion = trail?.completion === 1;
-
-                        return includes && completion;
+                        return !includes;
                     }
                 )
-                ?.length > 0
+                ?.every((trail) => trail.completion === 1);
 
             section.hasAssessment = false;
             section.isBlocked = false;
