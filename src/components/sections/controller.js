@@ -731,7 +731,18 @@ module.exports = {
             ).filter(Boolean);
         }
 
-        res.json(responseSection);
+
+        const filteredTrails = {
+            ...responseSection,
+            trails: Array.isArray(responseSection?.trails)
+                ? responseSection.trails.filter(trail => {
+                    if (!trail) return false; // Ignora entradas inválidas
+                    return checkIfTheTrackIsValid(trail);
+                })
+                : []
+        }
+
+        res.json(filteredTrails);
     },
 
     async getSectionsFormation (req, res) {
