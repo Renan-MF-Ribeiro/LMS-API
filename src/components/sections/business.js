@@ -669,10 +669,12 @@ module.exports = {
                     defaultType: DEFAULT_TYPES.COURSES,
                     active: 1,
                 }).lean();
+
                 let elegibleCourses = await CourseModel.find({
                     tags: { $in: tags },
                     deleted: { $eq: 0 },
                     status: { $eq: 1 },
+                    dateFinal: { $gte: new Date().toISOString() }
                 })
                     .select({
                         title: 1,

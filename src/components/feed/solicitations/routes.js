@@ -9,7 +9,7 @@ module.exports = express
     .get('/user', _controller.getUserSolicitations)
     .post('/', _controller.createSolicitation)
     // Rotas de admin
-    .post('/user/accept/:solicitationId', _controller.acceptUserSolicitation)
+    .post('/user/accept/:solicitationId', isEngagementManager, _controller.acceptUserSolicitation)
     .post('/user/decline/:solicitationId', _controller.declineUserSolicitation)
     // Deprecated
     .post('/group/accept/:groupId', isEngagementManager, _controller.acceptGroupSolicitation)
