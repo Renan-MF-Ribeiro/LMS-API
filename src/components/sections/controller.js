@@ -388,14 +388,18 @@ module.exports = {
                     };
                 }
 
-                resultSections = arrSections
-                    .concat(limitArray(arrMandatorySections))
-                    .concat(limitArray(arrRecentsSections))
-                    .concat(limitArray(arrKeepLearningSections))
-                    .concat(limitArray(arrConcludedSections))
-                    .concat(limitArray(arrCoursesSections))
-                    .concat(limitArray(arrFavoriteSections))
-                    .concat(limitArray(arrMostSeenSections));
+                const allSections = [
+                    arrSections,
+                    arrMandatorySections,
+                    arrRecentsSections,
+                    arrKeepLearningSections,
+                    arrConcludedSections,
+                    arrCoursesSections,
+                    arrFavoriteSections,
+                    arrMostSeenSections
+                ];
+
+                resultSections = allSections.flatMap(limitArray);
 
                 if (channelId) {
                     const filteredArray = resultSections.filter((obj) =>
