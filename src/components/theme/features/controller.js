@@ -1,6 +1,5 @@
 const { Features } = require('./model')
 const _messages = require('../../../utils/messages')
-const { getAppMaxFileSize } = require('../../../utils/files')
 const { getDbCurrentFeatures } = require('../../../utils/features')
 
 module.exports = {
@@ -18,9 +17,7 @@ module.exports = {
 
     async getFeatures(req, res) {
         const features = await getDbCurrentFeatures(req);
-        const maxFileSize = getAppMaxFileSize();
-        features.maxFileSize = maxFileSize.size;
-        features.maxFileSizeBytes = maxFileSize.bytes;
+
         _messages.success(res, req, features);
     }
 }
