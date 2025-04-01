@@ -192,7 +192,7 @@ const ItemController = {
                 payload.author = user._id;
 
                 const item = await ItemModel.create(payload);
-                
+
                 if (item._id) {
                     const trail = await Trail.create({
                         backgroundPath: null,
@@ -1649,7 +1649,7 @@ const ItemController = {
         await Item.findByIdAndUpdate(itemId, { $set: { archive: false, archivedAt: null } });
 
         res.status(204).send();
-    }
+    },
 };
 
 module.exports = ItemController;
