@@ -65,7 +65,7 @@ const ITEM_KINDS = Object.freeze({
 });
 
 const ItemController = {
-    async itemColaborativo(req, res) {
+    async itemColaborativo (req, res) {
         let payload = {};
         if (req.fields.payload) {
             try {
@@ -237,7 +237,7 @@ const ItemController = {
                         {
                             $push: {
                                 trails: trail._id,
-                                
+
                             },
                         }
                     );
@@ -307,7 +307,7 @@ const ItemController = {
 
     },
 
-    async create(req, res) {
+    async create (req, res) {
         const ItemModel = ITEM_KINDS[req.body.kind] || Item;
 
         try {
@@ -332,7 +332,7 @@ const ItemController = {
         }
     },
 
-    async multiUploadCreate(req, res) {
+    async multiUploadCreate (req, res) {
         let payload = {};
         if (req.fields.payload) {
             try {
@@ -543,7 +543,7 @@ const ItemController = {
         }
     },
 
-    async update(req, res) {
+    async update (req, res) {
         let payload = {};
         if (req.fields.payload) {
             try {
@@ -782,7 +782,7 @@ const ItemController = {
         }
     },
 
-    async updateById(req, res) {
+    async updateById (req, res) {
         const ItemModel = ITEM_KINDS[req.body.kind] || Item;
 
         try {
@@ -802,7 +802,7 @@ const ItemController = {
         }
     },
 
-    async updateStatus(req, res) {
+    async updateStatus (req, res) {
         try {
             const { _id, enabled } = req.body;
             const item = await Item.findOne({ _id });
@@ -834,7 +834,7 @@ const ItemController = {
         }
     },
 
-    async findItemTrails(req, res) {
+    async findItemTrails (req, res) {
         try {
             const _id = req.params.itemId;
             const trails = await Trail.find(
@@ -854,11 +854,11 @@ const ItemController = {
         }
     },
 
-    async disableById(req, res) {
+    async disableById (req, res) {
         ItemController.updateById({ ...req, body: { enabled: false } }, res);
     },
 
-    async findById(req, res) {
+    async findById (req, res) {
         try {
             const findValue = req.params.itemId;
 
@@ -889,7 +889,7 @@ const ItemController = {
         }
     },
 
-    async findItemById(req, res) {
+    async findItemById (req, res) {
         try {
             const findItemValue = req.params.itemId;
             const findITrailValue = req.params.trailId;
@@ -970,27 +970,27 @@ const ItemController = {
         }
     },
 
-    async createDocument(req, res) {
+    async createDocument (req, res) {
         req.body.kind = 'DocumentItem';
         ItemController.create(req, res);
     },
 
-    async multiUploadDocument(req, res) {
+    async multiUploadDocument (req, res) {
         req.body.kind = 'DocumentItem';
         ItemController.multiUploadCreate(req, res);
     },
 
-    async createMedia(req, res) {
+    async createMedia (req, res) {
         req.body.kind = 'MediaItem';
         ItemController.create(req, res);
     },
 
-    async multiUploadMedia(req, res) {
+    async multiUploadMedia (req, res) {
         req.body.kind = 'MediaItem';
         ItemController.multiUploadCreate(req, res);
     },
 
-    async uploadSCORM(req, res) {
+    async uploadSCORM (req, res) {
         const user = await getUserByToken(req);
         if (req.method !== 'POST') {
             return res.status(httpStatus.NOT_FOUND).send();
@@ -1211,7 +1211,7 @@ const ItemController = {
         }
     },
 
-    async updateSCORM(req, res) {
+    async updateSCORM (req, res) {
 
         if (req.method !== 'PUT') {
             return res.status(httpStatus.NOT_FOUND).send();
@@ -1413,7 +1413,7 @@ const ItemController = {
         }
     },
 
-    async findAll(req, res) {
+    async findAll (req, res) {
         try {
             const { skip, limit } = _functions.pagination(req);
             const { sort, order } = _functions.ordernation(req);
@@ -1465,23 +1465,7 @@ const ItemController = {
                 .limit(parseInt(limit))
                 .sort({ [order]: sort });
 
-            if (req.query.activityItemFilter === 'true') {
-                const dataItens = [];
-                const filterItens = await Item.find(query);
 
-                await Promise.all(
-                    filterItens.reverse().map(async (item) => {
-                        if (item.kind != 'ActivityItem') {
-                            dataItens.push(item);
-                        }
-                    })
-                );
-
-                total = dataItens.length;
-                itens = dataItens
-                    .slice(parseInt(skip))
-                    .slice(0, parseInt(limit));
-            }
             if (req.query.filterNotRelated === 'true') {
                 const dataItens = [];
                 const filterItens = await Item.find(query);
@@ -1492,13 +1476,7 @@ const ItemController = {
                             'items.itemID': { $in: item._id },
                         }).countDocuments();
 
-                        if (req.query.activityItemFilter === 'true') {
-                            if (item.kind != 'ActivityItem') {
-                                if (trail === 0) dataItens.push(item);
-                            }
-                        } else {
-                            if (trail === 0) dataItens.push(item);
-                        }
+                        if (trail === 0) dataItens.push(item);
                     })
                 );
                 total = dataItens.length;
@@ -1524,7 +1502,7 @@ const ItemController = {
         }
     },
 
-    async findItensActives(req, res) {
+    async findItensActives (req, res) {
         try {
             const itens = await Item.find({
                 enabled: { $eq: true },
@@ -1543,7 +1521,7 @@ const ItemController = {
         }
     },
 
-    async generateCertificate(req, res) {
+    async generateCertificate (req, res) {
         try {
             const { item } = req.params;
             const user = await _functions.getUserByToken(req);
@@ -1585,7 +1563,7 @@ const ItemController = {
         }
     },
 
-    async getItemWithTracking(req, res) {
+    async getItemWithTracking (req, res) {
         try {
             const { itemId } = req.params;
             const user = await getUserByToken(req);
@@ -1637,7 +1615,7 @@ const ItemController = {
         }
     },
 
-    async getProviders(req, res) {
+    async getProviders (req, res) {
         try {
             const items = await Item.find({});
             const providers = items
@@ -1657,7 +1635,7 @@ const ItemController = {
         }
     },
 
-    async archive(req, res) {
+    async archive (req, res) {
         const itemId = req.params.itemId;
 
         await Item.findByIdAndUpdate(itemId, { $set: { enabled: false, archive: true, archivedAt: new Date() } });
@@ -1665,7 +1643,7 @@ const ItemController = {
         res.status(204).send();
     },
 
-    async unarchive(req, res) {
+    async unarchive (req, res) {
         const itemId = req.params.itemId;
 
         await Item.findByIdAndUpdate(itemId, { $set: { archive: false, archivedAt: null } });

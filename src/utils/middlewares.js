@@ -29,6 +29,7 @@ const Profiles = {
 
 const validateProfile = async (req, res, next, expectedProfiles) => {
     const profiles = await _auth.returnProfileByToken(req.headers?.authorization);
+    // Descomente para ver os perfis do usuário / o que era esperado para ele ter acesso a rota
     //console.log(profiles, expectedProfiles)
     const doesUserHasProfile = profiles.some(
         (profile) =>

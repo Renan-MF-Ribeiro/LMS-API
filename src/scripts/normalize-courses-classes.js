@@ -12,7 +12,9 @@ async function run() {
     const allClasses = await ClassModel.find({
         users: { $exists: true, $ne: [] },
         'users.registration': { $exists: false },
-    }).select('_id name users courseID');
+    }).select('_id name users courseID dateApplicationFinal');
+
+    console.log('Classes:', allClasses.length);
 
     const allUsersFromClasses = new Set(
         allClasses.flatMap(cl => cl.users).map(u => Types.ObjectId(u.userID))
@@ -38,6 +40,7 @@ async function run() {
             if (!userInformation) {
                 return {
                     ...classUser,
+                    presenceAt: classUser.presence ? (classUser.presenceAt || cl.dateApplicationFinal || null) : null,
                     userID: classUser.userID,
                 };
             }
@@ -51,6 +54,7 @@ async function run() {
                 email,
                 networkLogin,
                 registration,
+                presenceAt: classUser.presence ? (classUser.presenceAt || cl.dateApplicationFinal || null) : null,
                 userID: _id,
             };
         }) ?? [];

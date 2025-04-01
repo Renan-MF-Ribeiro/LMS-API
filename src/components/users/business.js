@@ -42,17 +42,17 @@ module.exports = {
         }
 
         const ssoForm = Array.isArray(lastConfiguration.ssoForm) ? lastConfiguration.ssoForm : [lastConfiguration.ssoForm];
-
+        
         return {
             ...lastConfiguration,
             ssoForm: ssoForm.map(form => ({
                 ...form,
-                strategyName: form.strategyName,
+                strategyName: form.strategyName || 'saml',
             }))
         }
     },
 
-    async getLoginFormByStrategyName(strategyName) {
+    async getLoginFormByStrategyName(strategyName = 'saml') {
         const loginConfig = await module.exports.getLoginConfig();
 
         return loginConfig.ssoForm?.find((form) => form.strategyName === strategyName)
@@ -366,6 +366,7 @@ module.exports = {
             { description: 'IDENTIFICACAO_LOJA', value: 'storeCode' },
             { description: 'GRUPO_LOJA', value: 'storeGroup' },
             { description: 'GRUPO_LOJA_DESCRICAO', value: 'storeGroupDescription' },
+            { description: 'SITUACAO', value: 'situation' },
             { description: 'DISTRITAL', value: 'plant' },
             { description: 'GESTOR', value: 'manager' },
             { description: 'MATRICULA_GESTOR', value: 'managerRegistration' },
@@ -439,18 +440,31 @@ module.exports = {
             },
         ];
 
+        function parseDate(date) {
+            if (!date) return null;
+
+            let parsedDate = moment(date);
+
+            if (!parsedDate.isValid()) {
+                parsedDate = moment(date, 'DD/MM/YYYY');
+            }
+
+            console.log(date, parsedDate.format('DD/MM/YYYY'));
+
+            return parsedDate.format('DD/MM/YYYY');
+        }
+
         data.clientUserKey = CLIENT_ID + '@@' + data.networkLogin;
-        data.birthDate = data.birthDate ? moment(data.birthDate).format('DD/MM/YYYY') : null;
-        data.admission = data.admission ? moment(data.admission).format('DD/MM/YYYY') : null;
-        data.createDate = data.createDate ? moment(data.createDate).format('DD/MM/YYYY') : null
-        data.terminationDate = data.terminationDate ? moment(data.terminationDate).format('DD/MM/YYYY') : null
-        data.vacationStartDate = data.vacationStartDate ? moment(data.vacationStartDate).format('DD/MM/YYYY') : null
-        data.vacationEndDate  = data.vacationEndDate ? moment(data.vacationEndDate).format('DD/MM/YYYY') : null
+
+        data.birthDate = parseDate(data.birthDate);
+        data.admission = parseDate(data.admission);
+        data.createDate = parseDate(data.createDate);
+        data.terminationDate = parseDate(data.terminationDate);
+        data.vacationStartDate = parseDate(data.vacationStartDate);
+        data.vacationEndDate = parseDate(data.vacationEndDate);
 
         data.enabled = true;
         data.onboarding = onboarding;
-
-        data.pcd = ['sim', 's', '1', 'true'].includes(String(data.pcd).toLowerCase()) ? 'S' : 'N';
 
         const groupsAD =
             onboarding === true

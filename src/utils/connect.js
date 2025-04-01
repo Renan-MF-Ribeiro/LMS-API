@@ -18,11 +18,27 @@ module.exports = {
         const connectMaps = response.data?.user;
         const hasConnectMap = connectMaps && Object.keys(connectMaps).length > 0;
 
-        return hasConnectMap
-            ? connectMaps
-            : (newFormat
-                ? defaultUserMap
-                : Object.keys(defaultUserMap).reduce((acc, key) => ({ ...acc, [key]: defaultUserMap[key].field }), {}));
+        if (!hasConnectMap) {
+            return newFormat ? defaultUserMap : Object.keys(defaultUserMap).reduce((acc, key) => ({ ...acc, [key]: defaultUserMap[key].field }), {});
+        }
+
+        return Object.keys(defaultUserMap).reduce((acc, key) => {
+            acc[key] = connectMaps[key] || defaultUserMap[key];
+            return acc;
+        }, {});
+    },
+
+    async getConnectEligibilities() {
+        const response = await axios.get(
+            `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+            {
+                headers: {
+                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                },
+            }
+        );
+
+        return response.data;
     },
 
     validateDataByConnectMap(data, connectMap) {
@@ -50,12 +66,22 @@ module.exports = {
                 case 'boolean':
                     data[connectKey] = ['sim', 's', '1', 'true'].includes(String(data[connectKey]).toLowerCase());
                     break;
-                // case 'date':
-                //     data[connectKey] = moment(data[connectKey]).format('DD/MM/YYYY');
-                //     break;
                 case 'cpf':
                     data[connectKey] = String(data[connectKey]).replace(/\D/g, '');
                     break;
+                case 'cnpj':
+                    data[connectKey] = String(data[connectKey]).replace(/\D/g, '');
+                    break;
+            }
+
+            const positiveValues = ['sim', 's', '1', 'true', 'ativo', 'a', 'yes', 'y'];
+
+            if (connectKey === 'status') {
+                data.status = positiveValues.includes(String(data.status).toLowerCase()) ? 'ATIVO' : 'INATIVO';
+            }
+
+            if (connectKey === 'pcd') {
+                data.pcd = positiveValues.includes(String(data.pcd).toLowerCase()) ? 'SIM' : 'NAO';
             }
 
             const dataValue = data[connectKey];
@@ -118,6 +144,14 @@ module.exports = {
                         errors.push({
                             field: connectKey,
                             message: `O campo ${connectKeyValue.label} deve ter 11 caracteres.`,
+                        })
+                    }
+                    break;
+                case 'cnpj':
+                    if (String(dataValue).length !== 14) {
+                        errors.push({
+                            field: connectKey,
+                            message: `O campo ${connectKeyValue.label} deve ter 14 caracteres.`,
                         })
                     }
                     break;

@@ -109,6 +109,7 @@ const userSchema = new mongoose.Schema(
         storeCode: { type: String, trim: true },
         storeGroup: { type: String, trim: true },
         storeGroupDescription: { type: String, trim: true },
+        situation: { type: String, trim: true },
         plant: { type: String, trim: true },
         managerRegistration: { type: String, trim: true },
         managerName: { type: String, trim: true },
@@ -563,6 +564,13 @@ const defaultUserMap = {
         type: 'string',
         config: null,
     },
+    situation: {
+        field: 'SITUACAO',
+        label: 'Situação',
+        activeInForms: true,
+        type: 'string',
+        config: null,
+    },
     manager: {
         field: 'GESTOR',
         label: 'É gestor?',
@@ -714,6 +722,125 @@ const defaultUserMap = {
     },
 };
 
+const defaultOnboardingUserMap = {
+    name: {
+        activeInForms: true,
+        field: 'NOME',
+        label: 'NOME',
+        type: 'string'
+    },
+    admission: {
+        field: 'ADMISSAO',
+        label: 'Data de admissão',
+        activeInForms: true,
+        type: 'date',
+        config: null,
+    },
+    managerName: {
+        field: 'NOME_GESTOR',
+        label: 'Nome do gestor',
+        activeInForms: true,
+        type: 'string',
+        config: null,
+    },
+    email: {
+        activeInForms: true,
+        field: 'EMAIL',
+        label: 'EMAIL',
+        type: 'string'
+    },
+    registration: {
+        activeInForms: true,
+        field: 'MATRICULA',
+        label: 'MATRICULA',
+        type: 'string'
+    },
+    status: {
+        activeInForms: true,
+        field: 'STATUS',
+        label: 'STATUS',
+        type: 'string'
+    },
+    cpf: {
+        activeInForms: true,
+        field: 'CPF',
+        label: 'CPF',
+        type: 'string'
+    },
+    phone: {
+        field: 'CELULAR',
+        label: 'CELULAR',
+        activeInForms: true,
+        type: 'string',
+    },
+    office: {
+        activeInForms: true,
+        field: 'CARGO',
+        label: 'CARGO',
+        type: 'string'
+    },
+    costCenter: {
+        activeInForms: true,
+        field: 'CENTRO_DE_CUSTO',
+        label: 'CENTRO_DE_CUSTO',
+        type: 'string'
+    },
+    department: {
+        activeInForms: false,
+        field: 'DEPARTAMENTO',
+        label: 'DEPARTAMENTO',
+        type: 'string'
+    },
+    university: {
+        field: 'UNIVERSIDADE',
+        label: 'UNIVERSIDADE',
+        activeInForms: true,
+        type: 'string',
+    },
+    specialization: {
+        field: 'NIVEL_ESCOLARIDADE',
+        label: 'NIVEL_ESCOLARIDADE',
+        activeInForms: true,
+        type: 'string',
+    },
+    optionalEligibility1: {
+        activeInForms: false,
+        field: 'OPCIONAL_ELEGIBILIDADE1',
+        label: 'OPCIONAL_ELEGIBILIDADE1',
+        type: 'string'
+    },
+    optionalEligibility2: {
+        activeInForms: false,
+        field: 'OPCIONAL_ELEGIBILIDADE2',
+        label: 'OPCIONAL_ELEGIBILIDADE2',
+        type: 'string'
+    },
+    optionalEligibility3: {
+        activeInForms: false,
+        field: 'OPCIONAL_ELEGIBILIDADE3',
+        label: 'OPCIONAL_ELEGIBILIDADE3',
+        type: 'string'
+    },
+    optionalEligibility4: {
+        activeInForms: false,
+        field: 'OPCIONAL_ELEGIBILIDADE4',
+        label: 'OPCIONAL_ELEGIBILIDADE4',
+        type: 'string'
+    },
+    optionalEligibility5: {
+        activeInForms: false,
+        field: 'OPCIONAL_ELEGIBILIDADE5',
+        label: 'OPCIONAL_ELEGIBILIDADE5',
+        type: 'string'
+    },
+    optionalEligibility6: {
+        activeInForms: false,
+        field: 'OPCIONAL_ELEGIBILIDADE6',
+        label: 'OPCIONAL_ELEGIBILIDADE6',
+        type: 'string'
+    },
+};
+
 const userProjection = {
     name: 1,
     cpf: 1,
@@ -745,6 +872,7 @@ module.exports = {
     User,
     UserTest,
     defaultUserMap,
+    defaultOnboardingUserMap,
     mapUserOld,
     Block,
     LastLogin,
