@@ -558,10 +558,6 @@ module.exports = {
             }]
         }
 
-        if (req?.segmentation) {
-            handleSegmentationOnQuery(req, 'owner', sectionQuery)
-        }
-
         const section = await Section.findOne(sectionQuery).lean();
 
         if (!section) {
@@ -570,10 +566,6 @@ module.exports = {
         }
 
         const query = { enabled: true };
-
-        if (req?.segmentation) {
-            handleSegmentationOnQuery(req, 'owner', query)
-        }
 
         const isDefaultSection = Object.values(DEFAULT_TYPES).includes(section.defaultType);
 
