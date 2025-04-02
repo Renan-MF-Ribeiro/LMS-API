@@ -750,8 +750,8 @@ async function processUserLoadFile(directory, fileName, isProduction, hook) {
 
             await User.updateMany(
                 {
+                    onboarding: { $ne: true },
                     ignoreLoadInactivation: { $ne: true },
-                    updatedAt: { $lt: new Date() }
                 },
                 { $set: { status: 'INATIVO' } },
                 { multi: true }

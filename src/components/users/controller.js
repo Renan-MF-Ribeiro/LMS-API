@@ -117,7 +117,7 @@ const { addSASTokenToResponse } = require('../../utils/cookies');
 const GamificationKafka = require('../gamification/kafka/broker');
 
 const { FormModel } = require('../forms/model');
-const { getConnectMap, validateDataByConnectMap } = require('../../utils/connect');
+const { getConnectMap, validateDataByConnectMap, getConnectEligibilities } = require('../../utils/connect');
 const { getFormErrorsByMapConfig, getDefaultForm, getAdminForm, getFormErrorsByFormValidation } = require('../forms/business');
 
 const { getDbCurrentFeatures } = require('../../utils/features');
@@ -185,7 +185,6 @@ async function generateTokens(user, login, password) {
     }
 
     const profilesIDS = await returnIdProfileUser(namesProfiles);
-    console.log('profilesIDS', profilesIDS);
     const groupsIDS = await returnIdGroupUser(namesGroups);
     const userGroups = await Group.find({ name: { $in: namesGroups } });
     const eligibilities = userGroups.flatMap((group) =>
@@ -223,7 +222,6 @@ async function generateTokens(user, login, password) {
         groups: groupsIDS,
         welcomeVideoWatched: user?.welcomeVideoWatched,
     });
-    console.log(jwt.decode(token, String(user.networkLogin)));
 
     const mfaToken = generateMfaToken({
         ref: user._id,
@@ -335,9 +333,9 @@ module.exports = {
             });
 
             const created = await User.findOne(
-                { networkLogin: processedUser.networkLogin }
-            );
-          
+                { networkLogin: processedUser.networkLogin },
+            ).lean();
+
             WebhooksController.dispatch('create', 'users', false, { ...created, password: undefined });
 
             return _messages.success(res, req, created);
@@ -415,6 +413,9 @@ module.exports = {
         log('using form:', form.name);
 
         let networkLogin = data.cpf;
+
+        if (data.email) data.email = String(data.email).toLowerCase();
+        if (data.alternativeEmail) data.alternativeEmail = String(data.alternativeEmail).toLowerCase();
 
         if (form) {
             const connectMap = await getConnectMap(true);
@@ -542,7 +543,7 @@ module.exports = {
 
             const newUser = await User.create(userData);
 
-            WebhooksController.dispatch('create', 'users', false, newUser);
+            WebhooksController.dispatch('create', 'users', false, { ...newUser, password: undefined });
 
             if (token) {
                 const DATA_INICIO = today.startOf('day');
@@ -623,7 +624,8 @@ module.exports = {
 
             // Valida usuário e senha
             user = await validateUserAndPassword(res, req, login, passwordDecripted);
-            await updateLastLoginUser(user?._id);
+            const entryRecord = await returnDateSinceFirstLogin(user?._id);
+            const firstLogin = !user.passwordValid && !entryRecord
 
             // Gera todos os tokens necessários
             const {
@@ -644,6 +646,13 @@ module.exports = {
                 identifier: login
             })
 
+            await updateLastLoginUser(user?._id)
+
+            WebhooksController.dispatch('APASlogin', 'users', false, {
+                ...user,
+                password: undefined,
+            })
+
             return _messages.success(
                 res,
                 req,
@@ -651,6 +660,7 @@ module.exports = {
                     SAS,
                     tk,
                     key,
+                    firstLogin,
                     accept: user.acceptTerms,
                     acceptCollaboration: user.acceptTermsCollaboration,
                     passwordValid: user.passwordValid,
@@ -747,16 +757,16 @@ module.exports = {
             log('singleSignOn tokenIdpProfiles', tokenIdpProfiles);
 
             const ssoForm = await getLoginFormByStrategyName(tokenStrategyName);
-            const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data[ssoForm.claim];
+            const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data?.[ssoForm.claim];
 
             if (!claim) {
                 return _messages.forbidden(
                     res,
                     req,
-                    'Usuário ou senha não informados',
-                    'Erro de validação',
+                    'Claim inválido',
+                    'Claim inválido',
                     'users',
-                    'ldapSignIn'
+                    'singleSignOn'
                 );
             }
 
@@ -805,7 +815,7 @@ module.exports = {
                                 'Usuário bloqueado temporariamente',
                                 'Por favor tente novamente mais tarde!',
                                 'users',
-                                'ldapSignIn'
+                                'singleSignOn'
                             );
                             return;
                         }
@@ -897,7 +907,7 @@ module.exports = {
                         },
                         'Sucesso ao logar',
                         'users',
-                        'ldapSignIn',
+                        'singleSignOn',
                         [],
                         [],
                         true,
@@ -912,17 +922,17 @@ module.exports = {
                         'Usuário ou senha inválidos.',
                         { claim, claimKey: ssoForm?.claim ?? '' },
                         'users',
-                        'ldapSignIn'
+                        'singleSignOn'
                     );
                 }
             } else {
                 _messages.forbidden(
                     res,
                     req,
-                    'Usuário ou senha não informados',
-                    'Erro de validação',
+                    'Claim inválido',
+                    'Claim inválido',
                     'users',
-                    'ldapSignIn'
+                    'singleSignOn'
                 );
             }
         } catch (error) {
@@ -1293,8 +1303,6 @@ module.exports = {
     },
 
     async import(req, res) {
-        const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
-
         var file = null;
         const newUsers = [];
         const existingUsers = [];
@@ -1409,12 +1417,15 @@ module.exports = {
             );
         }
 
-        if (inactivateIfNotInSpreadsheet) {
-            const data_start = new Date();
+        const usersDataConfig = await getUsersDataConfig();
+
+        if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
+            console.log('Inativando usuários não presentes na planilha');
+
             await User.updateMany(
                 {
+                    onboarding: { $ne: true },
                     ignoreLoadInactivation: { $ne: true },
-                    updatedAt: { $lt: data_start },
                 },
                 { $set: { status: 'INATIVO' } },
                 { multi: true }
@@ -1443,8 +1454,6 @@ module.exports = {
 
     async importOnboarding(req, res) {
         try {
-            const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
-
             const onboarding = true;
             var file = null;
             const newUsers = [];
@@ -1512,18 +1521,6 @@ module.exports = {
                 await User.findByIdAndUpdate(user._id, {
                     ...user.processedUser,
                 });
-            }
-
-            if (inactivateIfNotInSpreadsheet) {
-                const data_start = new Date();
-                await User.updateMany(
-                    {
-                        ignoreLoadInactivation: { $ne: true },
-                        updatedAt: { $lt: data_start },
-                    },
-                    { $set: { status: 'INATIVO' } },
-                    { multi: true }
-                );
             }
 
             if (newUsers.length > 0) {
@@ -1691,7 +1688,7 @@ module.exports = {
                         [f]: { $eq: req.body[f] },
                     })
             );
-            
+
             const userUpdated = { ...req.body };
             const account = await processUserAccount(userUpdated);
             const value = JSON.parse(account.value);
@@ -1700,22 +1697,20 @@ module.exports = {
             if (userUpdated?.networkLogin) {
                 await sendAccountsToKafka([account]);
             }
-            const updated = await User.findByIdAndUpdate(_id, req.body, {
-                projection: { ...userProjection },
-            });
-            console.time('dispatch');
-            WebhooksController.dispatch('update', 'users', false, {
-                ...userUpdated,
-                password: undefined,
-            })
-            console.timeEnd('dispatch');
+            await User.findByIdAndUpdate(_id, req.body);
 
+            const foundUser = await User.findById(_id).lean();
+
+            WebhooksController.dispatch('update', 'users', false, {
+                ...foundUser,
+                password: undefined,
+            });
 
             if (userUpdated?.status) {
                 await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status);
             }
 
-            return _messages.success(res, req, updated, 'Usuário(a) atualizado(a) com sucesso!');
+            return _messages.success(res, req, foundUser, 'Usuário(a) atualizado(a) com sucesso!');
         } catch (error) {
             console.log(error);
             return _messages.internalServer(
@@ -2081,68 +2076,74 @@ module.exports = {
     },
 
     async ssoCallback(req, res) {
-        try {
-            const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
+        await Log.create({
+            type: 'SSO_CALLBACK',
+            message: 'SSO_CALLBACK',
+            component: 'users',
+            route: 'ssoCallback',
+            dataNew: JSON.stringify({ samlObj: req.samlUserObject, samlUser: req.user }),
+        });
 
-            const ssoForm = await getLoginFormByStrategyName(strategyName);
+        const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
 
-            const claim = ssoForm?.claim ?? 'networkLogin';
-            const claimKey = ssoForm?.claimKey ?? 'no-claim-key-value';
+        const ssoForm = await getLoginFormByStrategyName(strategyName);
 
-            const value =
-                claimKey.split(',').reduce((acc, key) => {
-                    if (acc !== null && acc !== undefined && acc !== '') return acc;
+        const claim = ssoForm?.claim ?? 'networkLogin';
+        const claimKey = ssoForm?.claimKey ?? 'no-claim-key-value';
 
-                    return deepGet(req.samlUserObject, key, null);
-                }, null) ?? req.user?.nameID;
+        const value =
+            claimKey.split(',').reduce((acc, key) => {
+                if (acc !== null && acc !== undefined && acc !== '') return acc;
 
-            if (value === undefined || value === null) {
-                console.log('ssoCallback req.samlUserObject', req.samlUserObject);
+                return deepGet(req.samlUserObject, key, null);
+            }, null) ?? req.user?.nameID;
 
-                return _messages.internalServer(
-                    res,
-                    req,
-                    'SSO não retornou o valor esperado',
-                    {
-                        message: 'SSO não retornou o valor esperado',
-                        claim,
-                        claimKey,
-                        samlUserObject: req.samlUserObject,
-                    },
-                    'users',
-                    'ssoCallback'
-                );
-            }
+        await Log.create({
+            type: 'SSO_CALLBACK_INFOS',
+            message: 'SSO_CALLBACK',
+            component: 'users',
+            route: 'ssoCallback',
+            dataNew: JSON.stringify({
+                strategyName,
+                idpProfiles,
+                ssoForm: ssoForm ? { ...ssoForm, certifier: undefined } : 'FORM NOT FOUND',
+                claim,
+                claimKey,
+                value
+            }),
+        });
 
-            const token = jwt.sign(
-                {
-                    [claim]: value,
-                    strategyName,
-                    idpProfiles,
-                },
-                process.env.PROJECT_SECRET_KEY
-            );
-            res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
-        } catch (error) {
-            console.log(error);
-            _messages.internalServer(
+        if (value === undefined || value === null) {
+            console.log('ssoCallback req.samlUserObject', req.samlUserObject);
+
+            return _messages.internalServer(
                 res,
                 req,
-                error.message,
-                'Erro interno no servidor',
+                'SSO não retornou o valor esperado',
+                {
+                    message: 'SSO não retornou o valor esperado',
+                    claim,
+                    claimKey,
+                    samlUserObject: req.samlUserObject,
+                },
                 'users',
-                'device'
+                'ssoCallback'
             );
         }
+
+        const token = jwt.sign(
+            {
+                [claim]: value,
+                strategyName,
+                idpProfiles,
+            },
+            process.env.PROJECT_SECRET_KEY
+        );
+
+        res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
     },
 
     async openIdCallback(req, res) {
-        const { strategyName } = req.cookies;
-        const form = await getLoginFormByStrategyName(strategyName);
-        const claimValue = _.get(req.user, form.claimKey);
-
-        const { idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
-
         await Log.create({
             type: 'OPENID_CALLBACK',
             message: 'OPENID_CALLBACK',
@@ -2150,6 +2151,26 @@ module.exports = {
             route: 'openidCallback',
             dataNew: { openidObject: req.user },
             dataOld: null,
+        });
+
+        const { strategyName } = req.cookies;
+        const form = await getLoginFormByStrategyName(strategyName);
+        const claimValue = _.get(req.user, form.claimKey);
+
+        const { idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
+
+        await Log.create({
+            type: 'SSO_CALLBACK_INFOS',
+            message: 'SSO_CALLBACK',
+            component: 'users',
+            route: 'ssoCallback',
+            dataNew: {
+                strategyName,
+                idpProfiles,
+                form,
+                claimKey: form?.claimKey,
+                value: claimValue,
+            },
         });
 
         const token = jwt.sign(
@@ -2192,34 +2213,34 @@ module.exports = {
             const collaborativeUsers = await User.find(
                 searchBy
                     ? {
-                          $and: [
-                              {
-                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
-                              },
-                              {
-                                  $or: [
-                                      {
-                                          name: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          registration: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          email: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                  ],
-                              },
-                          ],
-                      }
+                        $and: [
+                            {
+                                groupsAD: { $in: ['PERFIL_Colaborador'] },
+                            },
+                            {
+                                $or: [
+                                    {
+                                        name: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        registration: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        email: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                ],
+                            },
+                        ],
+                    }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             )
                 .sort({
@@ -2231,34 +2252,34 @@ module.exports = {
             const total = await User.countDocuments(
                 searchBy
                     ? {
-                          $and: [
-                              {
-                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
-                              },
-                              {
-                                  $or: [
-                                      {
-                                          name: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          registration: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          email: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                  ],
-                              },
-                          ],
-                      }
+                        $and: [
+                            {
+                                groupsAD: { $in: ['PERFIL_Colaborador'] },
+                            },
+                            {
+                                $or: [
+                                    {
+                                        name: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        registration: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        email: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                ],
+                            },
+                        ],
+                    }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             );
 
@@ -2751,7 +2772,6 @@ module.exports = {
             const { networkLogin } = req.body;
             const user = await User.findOne({ networkLogin: networkLogin });
             const tokenAndSecret = await generateMultiFactor(user.name, networkLogin);
-            console.log(tokenAndSecret);
             if (user.alternativeEmail) {
                 await sendMultiFactorToUser(user.email, user, tokenAndSecret.newToken.token);
                 await sendMultiFactorToUser(
@@ -2793,7 +2813,7 @@ module.exports = {
                     'Token inválido',
                     'Token inválido!',
                     'users',
-                    'ldapSignIn'
+                    'validateMultiFactor'
                 );
             }
         } catch (error) {
@@ -2859,13 +2879,19 @@ module.exports = {
             const connectMap = await getConnectMap(true);
 
             const fields = Object.entries(connectMap).map(([key, value]) => ({
-                display: value?.label ?? key,
+                display: defaultUserMap[key]?.label ?? key ?? value?.label,
                 value: key
             })).filter((field) => field.value !== 'elegibility');
+
+            const eligibilityData = await getConnectEligibilities();
+
+            const eligibility = eligibilityData?.fields ?? [];
+
             _messages.success(res, req, {
                 map: connectMap,
                 fields,
-                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd'] // Campos que não devem ser alterados
+                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd'],  // Campos que não devem ser alterados
+                eligibility,
             });
         } catch (error) {
             _messages.internalServer(
@@ -2887,7 +2913,7 @@ module.exports = {
                 `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
                 {
                     user: { ...body },
-                    elegibility: body.elegibility,
+                    elegibility: body.eligibility,
                     newFormat: true,
                 },
                 {

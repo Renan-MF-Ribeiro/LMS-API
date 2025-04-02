@@ -7,8 +7,9 @@ const { WebhooksDefault } = require('./constants')
 module.exports = {
     async dispatch(action, target, load = false, data) {
         try {
-            const webhook = await Webhooks.findOne({ target: target, action: action }).lean()
-            if (webhook && webhook.status) {
+            const webhook = await Webhooks.findOne({ target, action }).lean()
+            if (webhook?.status) {
+                console.log('DISPARANDO WEBHOOK')
                 const body = {
                     data,
                     label: webhook.label,

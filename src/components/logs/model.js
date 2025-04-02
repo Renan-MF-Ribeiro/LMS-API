@@ -4,7 +4,7 @@ const { connect } = require('../../utils/db')
 connect()
 
 const optionsSchema = {
-    strict: 'throw',
+    strict: false,
     timestamps: true,
     collation: { locale: 'en_US', strength: 1 },
 }
