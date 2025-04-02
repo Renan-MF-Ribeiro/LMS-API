@@ -641,7 +641,7 @@ module.exports = {
 
             await GamificationKafka.publishEventRuleValidation({
                 events: [EVENT_CATEGORY.LOGIN],
-                networkLogin: login
+                identifier: login
             })
 
             return _messages.success(
@@ -767,7 +767,7 @@ module.exports = {
 
                 await GamificationKafka.publishEventRuleValidation({
                     events: [eventCategory],
-                    networkLogin: claim,
+                    identifier: claim,
                     meta: {
                         trailTitle: data?.trailTitle || data?.data?.trailTitle,
                     }

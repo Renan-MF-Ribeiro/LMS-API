@@ -243,11 +243,6 @@ const ItemController = {
                     );
                 }
 
-                await GamificationKafka.publishEventRuleValidation({
-                    networkLogin: user.networkLogin,
-                    events: [EVENT_CATEGORY.UPLOADED_CONTENT],
-                })
-
                 //Evento novo conteúdo colaborativo
                 _messages.success(res, req, item._id);
             } catch (error) {

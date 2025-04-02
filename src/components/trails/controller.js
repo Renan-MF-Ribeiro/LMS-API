@@ -2029,7 +2029,7 @@ module.exports = {
 
             if (moderation === 'approved') {
                 await GamificationKafka.publishEventRuleValidation({
-                    networkLogin: user.networkLogin,
+                    identifier: user.networkLogin,
                     events: [EVENT_CATEGORY.UPLOADED_CONTENT],
                 });
             }
