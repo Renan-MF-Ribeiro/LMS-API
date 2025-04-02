@@ -106,7 +106,6 @@ class GamificationKafkaSingleton {
                 ],
             });
         } catch (error) {
-            console.error(error);
             await GamificationLogger.update(log._id, {
                 status: GAMIFICATION_LOG_STATUS.SYSTEM_ERROR,
                 error,
@@ -123,12 +122,12 @@ class GamificationKafkaSingleton {
                 }
 
                 try {
-                    const { events, networkLogin, meta } = JSON.parse(message.value.toString());
+                    const { events, identifier, meta } = JSON.parse(message.value.toString());
 
-                    const isMongoId = Types.ObjectId.isValid(networkLogin);
+                    const isMongoId = Types.ObjectId.isValid(identifier);
                     const userQueryField = isMongoId ? '_id' : 'networkLogin';
 
-                    const user = await User.findOne({ [userQueryField]: networkLogin });
+                    const user = await User.findOne({ [userQueryField]: identifier });
                     const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD);
 
                     for (const category of events) {
@@ -175,8 +174,8 @@ const GamificationKafka = {
         await gamificationKafka.stop();
     },
 
-    async publishEventRuleValidation({ events, networkLogin, meta }) {
-        await gamificationKafka.publishEventRuleValidation({ events, networkLogin, meta });
+    async publishEventRuleValidation({ events, identifier, meta }) {
+        await gamificationKafka.publishEventRuleValidation({ events, identifier, meta });
     },
 };
 
