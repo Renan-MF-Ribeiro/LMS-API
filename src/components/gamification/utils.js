@@ -37,7 +37,7 @@ async function getTrailsGamification(tracking) {
     return trails;
 }
 
-async function getUserTrackingsGamificaiton(user) {
+async function getUserTrackingsGamification(user) {
     const allTrackingUser = await Tracking.find({
         userLogin: user.networkLogin,
         $or: [
@@ -56,17 +56,26 @@ async function getUserTrackingsGamificaiton(user) {
 async function getTrailsAndUserTrackingsGamification(user, tracking) {
     const trails = await getTrailsGamification(tracking);
 
-    const allTrackingUser = await getUserTrackingsGamificaiton(user);
+    const allTrackingUser = await getUserTrackingsGamification(user);
 
     return { trails, allTrackingUser };
 }
 
-function isValidCompletedTrailGamification(trail, allTrackingUser) {
-    const { trail: processedTrail } = processTrailTracking(trail, allTrackingUser);
+async function getProcessedTrailsGamification(user, tracking) {
+    const { trails, allTrackingUser } = await getTrailsAndUserTrackingsGamification(user, tracking);
+
+    return trails.map((trail) => processTrailTracking(trail, allTrackingUser).trail);
+}
+
+function isValidCompletedTrailGamification(processedTrail) {
+    if (!processedTrail?.completionAt || !processedTrail?.lastTrackingUpdate) {
+        return false;
+    }
+
     const completionAt = moment(processedTrail.completionAt).startOf('second');
     const updatedAt = moment(processedTrail.lastTrackingUpdate).startOf('second');
 
-    return processedTrail.completion === 1 && completionAt.isSame(updatedAt);
+    return processedTrail?.completion === 1 && completionAt.isSame(updatedAt);
 }
 
 function isValidCompletedItemGamification(tracking) {
@@ -135,7 +144,8 @@ module.exports = {
     handleUserEligibilitiesGamification,
     handleGroupTagsGamification,
     getTrailsGamification,
-    getUserTrackingsGamificaiton,
+    getProcessedTrailsGamification,
+    getUserTrackingsGamification,
     getTrailsAndUserTrackingsGamification,
     isValidCompletedTrailGamification,
     isValidCompletedItemGamification,
