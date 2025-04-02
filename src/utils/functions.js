@@ -522,7 +522,7 @@ module.exports = {
     },
     
 
-    getSortedDate(dates, order) {
+    getSortedDate(dates = [], order = 'asc') {
         const sortedDates = dates.sort((prev, curr) => prev.getTime() - curr.getTime())
         return order === 'desc' ? sortedDates.slice(0)[0] : sortedDates.slice(-1)[0]
     },
