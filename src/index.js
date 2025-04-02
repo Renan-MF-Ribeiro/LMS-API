@@ -71,6 +71,7 @@ const { socialApiMiddleware } = require('./components/social/http-adapter');
 const feedbackRoutes = require('./components/feedback/routes');
 const happplaceRoutes = require('./components/happplace/routes');
 const webhooksRoutes = require('./components/webhooks/routes');
+const mentoringRoutes = require('./components/mentoring/routes');
 
 const environment = require('./environment');
 
@@ -193,7 +194,8 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     )
     .use('/feedback', validateTokenRoute, feedbackRoutes)
     .use('/happplace', happplaceRoutes)
-    .use('/webhooks', validateTokenRoute, isAdmin, webhooksRoutes);
+    .use('/webhooks', validateTokenRoute, isAdmin, webhooksRoutes)
+    .use('/mentoring', mentoringRoutes);
 
 app.use(errorHandler);
 
