@@ -43,15 +43,17 @@ module.exports = {
                 `${API_SURVEY}/listbyuser`,
                 { headers: getHeaders(req), params: { ...req.query, clientid: CLIENT_ID } }
             );
-            
-            await GamificationKafka.publishEventRuleValidation({
-                events: [EVENT_CATEGORY.SURVEY, EVENT_CATEGORY.OPTIONAL_SURVEY],
-                networkLogin: req.query.userid,
-                meta: {
-                    itemId: req.query.item,
-                    survey: data,
-                },
-            });
+
+            if (req?.query?.userid && req?.query?.item) {
+                await GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.SURVEY, EVENT_CATEGORY.OPTIONAL_SURVEY],
+                    identifier: req.query.userid,
+                    meta: {
+                        itemId: req.query.item,
+                        survey: data,
+                    },
+                });
+            }
 
             _messages.success(res, req, data, 'ok', 'survey', 'listByUser');
         } catch (error) {

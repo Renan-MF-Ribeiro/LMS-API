@@ -12,6 +12,8 @@ const { processExamTracking } = require('../tracking/business')
 const { User } = require('../users/model')
 const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business')
 const { orderBy } = require('lodash')
+const GamificationKafka = require('../gamification/kafka/broker')
+const { EVENT_CATEGORY } = require('../gamification/model')
 
 
 module.exports = {
@@ -525,7 +527,16 @@ module.exports = {
                     { expiredCompletion: { $eq: null } },
                 ]
             });
-            await processExamTracking(historic, passingScore, attempts, tracking)
+            const evaluationResult = await processExamTracking(historic, passingScore, attempts, tracking)
+
+            await GamificationKafka.publishEventRuleValidation({
+                events: [EVENT_CATEGORY.FINISHED_EXAM_ITEM],
+                identifier: user.networkLogin,
+                meta: {
+                    tracking,
+                    evaluationResult,
+                },
+            });
 
             _messages.success(res, req, result)
         } catch (error) {
