@@ -1,4 +1,4 @@
-const GamificationEventBusiness = require('./events/business');
+const GamificationBusiness = require('./business');
 const { User } = require('../users/model');
 const { Trail } = require('../trails/model');
 const _messages = require('../../utils/messages');
