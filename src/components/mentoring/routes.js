@@ -8,4 +8,4 @@ module.exports = express
     .Router()
     .use('/mentors', mentorRoutes)
     //.use('/meetings', meetingRoutes)
-    //.use('/config', configRoutes)
+    .use('/config', configRoutes)
