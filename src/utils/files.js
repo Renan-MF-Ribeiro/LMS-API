@@ -981,7 +981,7 @@ module.exports = {
 
         const decodedFile = iconv.decode(
             downloadBlobResponse,
-            'iso88591'
+            'utf-8'
         );
 
         const decodedReadStream = bufferToStream(decodedFile);
