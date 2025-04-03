@@ -443,10 +443,14 @@ module.exports = {
         function parseDate(date) {
             if (!date) return null;
 
-            let parsedDate = moment(date);
+            let parsedDate = moment(date, 'DD/MM/YYYY');
 
             if (!parsedDate.isValid()) {
-                parsedDate = moment(date, 'DD/MM/YYYY');
+                parsedDate = moment(date, 'MM/DD/YYYY');
+
+                if (!parsedDate.isValid()) {
+                    parsedDate = moment(date);
+                }
             }
 
             console.log(date, parsedDate.format('DD/MM/YYYY'));
