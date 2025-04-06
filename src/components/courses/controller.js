@@ -1133,14 +1133,8 @@ module.exports = {
 
             const currentDate = new Date()
 
-            // Busca todos os usuários que correspondem aos critérios básicos, com classificação, pular e limitar aplicados
-            const users = await User.find(query)
-                .sort({ name: 1 })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit))
-                .lean();
-
-            const total = await User.countDocuments(query);
+            // Busca todos os usuários que correspondem aos critérios básicos
+            const users = await User.find(query).sort({ name: 1 }).lean();
 
             // Filtrar apenas usuários qualificados com base em tags e grupos
             const eligibleUsers = users.filter(user => {
@@ -1168,8 +1162,11 @@ module.exports = {
                     return tagsIntersection.length > 0;
                 }
             });
+            
+            const data = eligibleUsers.slice(skip, skip + limit)
+            const total = eligibleUsers.length
 
-            success(res, req, { data: eligibleUsers, total });
+            success(res, req, { data, total });
         } catch (error) {
             console.error(error);
             internalServer(
