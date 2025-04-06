@@ -315,10 +315,18 @@ module.exports = {
 
                 if (user.classGroups.length > 0) {
                     for (const classGroup of user.classGroups) {
-                        tags.push({
-                            display: classGroup.groupCode,
-                            value: classGroup.groupCode,
-                        });
+                        const currentDate = new Date();                        
+
+                        if (
+                            classGroup.status === 2 &&
+                            new Date(classGroup.startDate) <= currentDate &&
+                            new Date(classGroup.limitDate) >= currentDate
+                        ) {
+                            tags.push({
+                                display: classGroup.groupCode,
+                                value: classGroup.groupCode,
+                            });
+                        }
                     }
                 }
 
