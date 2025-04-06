@@ -228,7 +228,7 @@ function validateFileSize (file) {
     if (fileSize > bytes) {
         throw new ApiError(
             `O arquivo ${file.name ?? ''} excede o tamanho máximo permitido de ${maxFileSize}`,
-            400
+            413
         );
     }
 }
