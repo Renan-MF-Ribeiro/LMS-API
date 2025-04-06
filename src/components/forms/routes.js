@@ -7,7 +7,7 @@ const { pagination, ordernation } = require('../../utils/functions');
 const { setConnectMapInForm, getDefaultForm, getAdminForm } = require('./business');
 
 const { FormModel } = require('./model');
-const { validateTokenRoute } = require('../../utils/middlewares');
+const { validateTokenRoute, isAdmin } = require('../../utils/middlewares');
 
 const formsRouter = express.Router();
 
@@ -229,7 +229,7 @@ formsRouter.post('/:id/duplicate', async (req, res) => {
         return res.status(404).json({ message: `Form '${id}' not found` });
     }
 
-    const newForm = { ...currentForm, _id: undefined, name: `${currentForm.name} - Cópia`, default: false };
+    const newForm = { ...currentForm, _id: undefined, name: `${currentForm.name} - Cópia`, isDefault: false, isAdmin: false };
 
     const form = await FormModel.create(newForm);
 

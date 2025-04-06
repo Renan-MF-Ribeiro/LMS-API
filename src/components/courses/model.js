@@ -143,23 +143,6 @@ const CourseEvaluationModel = mongoose.model(
     CourseEvaluationSchema
 );
 
-const vwCoursesWithTagsAndUsers = new mongoose.Schema({
-    title: { type: String, required: true, trim: true },
-    tags: { type: Array },
-    mandatory: { type: Array },
-    tagGroups: { type: Array },
-    mandatoryGroups: { type: Array },
-    user: {
-        type: {
-            name: { type: String, required: true },
-            networkLogin: { type: String, required: false, default: null },
-            email: { type: String, required: true },
-            createdAt: { type: Date },
-        },
-        required: true,
-    },
-});
-
 const vwWaitListsByCourses = new mongoose.Schema({
     title: { type: String, required: true, trim: true },
     users: { type: Array, required: true },
@@ -180,12 +163,6 @@ const vwCoursesWithUsers = new mongoose.Schema({
 const vwUsersWithProcessedTags = new mongoose.Schema({
     userTags: { type: Array, required: true },
 });
-
-const CoursesWithTagsAndUsers = mongoose.model(
-    'vwCoursesWithTagsAndUsers',
-    vwCoursesWithTagsAndUsers,
-    'vwCoursesWithTagsAndUsers'
-);
 
 const WaitListsByCourses = mongoose.model(
     'vwWaitListsByCourses',
@@ -219,7 +196,6 @@ module.exports = {
     ProgramModel,
     WaitListModel,
     CourseEvaluationModel,
-    CoursesWithTagsAndUsers,
     WaitListsByCourses,
     WaitListsByUser,
     CoursesWithUsers,

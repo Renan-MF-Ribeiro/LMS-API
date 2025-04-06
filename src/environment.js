@@ -53,6 +53,11 @@ const environmentSchema = z.object({
     API_CERTIFIER: z.string(),
     API_PDF_PRINTER: z.string(),
     API_HAPPPLACE: z.string(),
+    
+    // Webhooks
+    API_WEBHOOK: z.string(),
+    API_KEY_WEBHOOK: z.string(),
+    WEBHOOK_SECRET_KEY: z.string(),
 
     // SFTP
     SFTP_HOST: z.string().optional().default('172.30.1.45'),
