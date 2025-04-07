@@ -216,6 +216,7 @@ async function generateTokens(user, login, password) {
         ref: user._id,
         clientId: process.env.CLIENT_ID,
         userName: user.name,
+        email: user.email,
         userTags: eligibilities,
         profiles: profilesIDS.result,
         numbers: profilesIDS.numbers,

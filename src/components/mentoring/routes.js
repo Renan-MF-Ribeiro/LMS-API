@@ -7,5 +7,5 @@ const configRoutes = require('./config/routes')
 module.exports = express
     .Router()
     .use('/mentors', mentorRoutes)
-    //.use('/meetings', meetingRoutes)
+    .use('/meetings', meetingRoutes)
     .use('/config', configRoutes)
