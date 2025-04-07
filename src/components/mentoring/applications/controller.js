@@ -1,0 +1,62 @@
+const applicationsService = require('./applications.service');
+const mentoringApi = require('../http-adapter');
+const _messages = require('../../../utils/messages');
+const clientId = process.env.CLIENT_ID;
+
+module.exports = {
+  async sendApplication(req, res) {
+    const body = req.body;
+    try {
+      const { data } = await mentoringApi.post(`/applications/send`, body);
+      return _messages.success(res, req, data, 'ok', 'mentoring', 'application submitted successfully');
+    } catch (error) {
+      return _messages.internalServer(
+        res,
+        req,
+        JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+        error.response?.data?.message ?? error.message,
+        'mentoria',
+        'findMyProfile'
+      );
+    }
+  },
+
+  async getApplicationByUserId(req, res) {
+    try {
+      const { userId } = req.params;
+      const { data } = await mentoringApi.get(`/applications/user/${userId}`);
+      return _messages.success(res, req, data, 'ok', 'mentoring');
+    } catch (error) {
+      console.error('Error fetching applications by user ID:', error);
+      res.status(500).json({ message: 'Failed to fetch applications', error: error.message });
+    }
+  },
+
+  async getApplicationsByStatus(req, res) {
+    try {
+      const { status } = req.params;
+      const { data } = await mentoringApi.get(`/applications/status/${status}`);
+      return _messages.success(res, req, data, 'ok', 'mentoring');
+    } catch (error) {
+      console.error('Error fetching applications by status:', error);
+      res.status(500).json({ message: 'Failed to fetch applications', error: error.message });
+    }
+  },
+
+  async sendFeedback(req, res) {
+    const body = req.body;
+    try {
+      const { data } = await mentoringApi.post(`/applications/feedback`, body);
+      return _messages.success(res, req, data, 'ok', 'mentoring', 'feedback sent successfully');
+    } catch (error) {
+      return _messages.internalServer(
+        res,
+        req,
+        JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+        error.response?.data?.message ?? error.message,
+        'mentoria',
+        'findMyProfile'
+      );
+    }
+  },
+};
