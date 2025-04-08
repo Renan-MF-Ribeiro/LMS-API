@@ -46,12 +46,15 @@ function getTrackingInfoByItem(item, { userLogin, completionAt }) {
 }
 
 function parseUserNetworkLogin(networkLogin) {
-    return String(networkLogin).replace(/\D/g, '').padStart(11, '0');
+    // return String(networkLogin).replace(/\D/g, '').padStart(11, '0');
+    return String(networkLogin).trim();
 }
 
-async function run() {
-    const sheetData = await readSheet(XLSX_FILE, XLSX_SHEET)
+function foundTrackingKey(tracking) {
+    return `${tracking.userLogin}-${tracking.item}`;
+}
 
+async function getDatabaseInformation(sheetData) {
     const groupedByTrail = groupBy(sheetData, 'TRILHA');
 
     const dbTrails = await Trail
@@ -65,7 +68,7 @@ async function run() {
         .lean();
 
     const mappedTrails = Object.entries(groupedByTrail).map(([trailTitle, trailUsers]) => {
-        const trail = dbTrails.find(t => t.title === trailTitle);
+        const trail = dbTrails.find(t => String(t.title).trim() === String(trailTitle).trim());
 
         return {
             title: trailTitle,
@@ -82,12 +85,15 @@ async function run() {
         .select('_id networkLogin')
         .lean();
 
-    console.log('Total de usuários', dbUsers.length);
+    return {
+        dbUsers,
+        dbTrails,
+        mappedTrails,
+        groupedByTrail,
+    }
+}
 
-    console.log('Total de trilhas', mappedTrails.length);
-
-    console.log('Total de trilhas sem informações', mappedTrails.filter(t => !t.trail).length);
-
+async function processSheetData(mappedTrails, dbUsers) {
     const notFoundTrails = [];
     const notFoundUsers = new Set();
     const trackings = [];
@@ -118,7 +124,55 @@ async function run() {
         }
     }
 
-    const formattedDate = moment().format('YYYY-MM-DD');
+    return {
+        notFoundTrails,
+        notFoundUsers,
+        trackings,
+    }
+}
+
+async function getFoundTrackings(trackings) {
+    const foundTrackings = new Map();
+    const batchSize = 5000;
+    const totalBatches = Math.ceil(trackings.length / batchSize);
+
+    for (let i = 0; i < totalBatches; i++) {
+        const start = i * batchSize;
+        const end = start + batchSize;
+        const batch = trackings.slice(start, end);
+
+        const existingTrackings = await Tracking.find({
+            userLogin: { $in: batch.map(t => t.userLogin) },
+            item: { $in: batch.map(t => t.item) },
+        }).lean();
+
+        existingTrackings.forEach(existingTracking => {
+            const trackingKey = foundTrackingKey(existingTracking); //`${existingTracking.userLogin}-${existingTracking.item}`;
+            foundTrackings.set(trackingKey, existingTracking);
+        });
+    }
+
+    return foundTrackings;
+}
+
+async function run() {
+    const sheetData = await readSheet(XLSX_FILE, XLSX_SHEET)
+
+    const { dbUsers, mappedTrails } = await getDatabaseInformation(sheetData);
+
+    console.log('Total de usuários', dbUsers.length);
+
+    console.log('Total de trilhas', mappedTrails.length);
+
+    console.log('Total de trilhas sem informações', mappedTrails.filter(t => !t.trail).length);
+
+    const { notFoundTrails, notFoundUsers, trackings } = await processSheetData(mappedTrails, dbUsers);
+
+    const foundTrackings = await getFoundTrackings(trackings);
+
+    console.log('Total de trackings', trackings.length);
+
+    console.log('Total de trackings encontrados', foundTrackings.size);
 
     await generateReport(
         notFoundTrails,
@@ -146,19 +200,50 @@ async function run() {
         { fileName: `trackings_${formattedDate}` }
     );
 
-    console.log('Total de trackings', trackings.length);
+    await generateReport(
+        [...foundTrackings.values()],
+        [
+            { header: 'Usuário', key: 'userLogin' },
+            { header: 'Tipo', key: 'kind' },
+            { header: 'Item', key: 'item' },
+            { header: 'Conclusão', key: 'completion' },
+            { header: 'Conclusão em', key: 'completionAt' },
+            { header: 'Status da lição', key: 'lessonStatus' },
+            { header: 'Migracao', key: 'migration' },
+        ],
+        { fileName: `trackings_encontrados_${formattedDate}` }
+    );
 
-    if (SAVE_TRACKINGS) {
-        const batchSize = 1000;
-        const totalBatches = Math.ceil(trackings.length / batchSize);
+    const batchSize = 1000;
+    const totalBatches = Math.ceil(trackings.length / batchSize);
 
-        for (let i = 0; i < totalBatches; i++) {
-            const start = i * batchSize;
-            const end = start + batchSize;
-            const batch = trackings.slice(start, end);
+    for (let i = 0; i < totalBatches; i++) {
+        const start = i * batchSize;
+        const end = start + batchSize;
+        const batch = trackings.slice(start, end);
 
-            console.log(`Salvando batch ${i + 1} de ${totalBatches}`);
-            await Tracking.insertMany(batch);
+        console.log(`\nProcessando batch ${i + 1} de ${totalBatches}`);
+
+        const trackingsToCreate = batch.filter(t => !foundTrackings.has(foundTrackingKey(t)));
+        const trackingsToUpdate = batch.filter(t => foundTrackings.has(foundTrackingKey(t)));
+
+        console.log(`Total de trackings a serem criados: ${trackingsToCreate.length}`);
+        console.log(`Total de trackings a serem atualizados: ${trackingsToUpdate.length}`);
+
+        if (SAVE_TRACKINGS) {
+            console.log('Salvando trackings...');
+
+            await Tracking.insertMany(trackingsToCreate);
+
+            for (const tracking of trackingsToUpdate) {
+                const existingTracking = foundTrackings.get(foundTrackingKey(tracking));
+
+                if (existingTracking) await Tracking.updateOne(
+                    { _id: existingTracking._id },
+                    { $set: { ...tracking, migration: migrationTag } }
+                );
+            }
+
         }
 
         console.log('Trackings salvos com sucesso! Migration:', migrationTag);
