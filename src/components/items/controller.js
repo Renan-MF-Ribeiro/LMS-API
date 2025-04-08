@@ -192,7 +192,7 @@ const ItemController = {
                 payload.author = user._id;
 
                 const item = await ItemModel.create(payload);
-                
+
                 if (item._id) {
                     const trail = await Trail.create({
                         backgroundPath: null,
@@ -280,6 +280,15 @@ const ItemController = {
                         req,
                         error,
                         { name: error.name, messages },
+                        'items',
+                        'itemColaborativo'
+                    );
+                } else if (error.statusCode === 413) {
+                    _messages.internalServer(
+                        res,
+                        req,
+                        error.message,
+                        'O arquivo excede o tamanho máximo permitido.',
                         'items',
                         'itemColaborativo'
                     );
@@ -515,7 +524,6 @@ const ItemController = {
                 );
 
             } catch (error) {
-                console.log(error)
                 if (error.name === 'ValidationError') {
                     const messages = {};
                     for (const k in error.errors)
