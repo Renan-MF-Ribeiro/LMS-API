@@ -156,23 +156,24 @@ async function getFoundTrackings(trackings) {
 }
 
 async function run() {
+    console.log('Iniciando o processamento...');
+    console.log('Arquivo:', XLSX_FILE);
+    console.log('Planilha:', XLSX_SHEET);
+    console.log('SAVE_TRACKINGS:', SAVE_TRACKINGS);
+
+    console.log('Lendo a planilha...');
     const sheetData = await readSheet(XLSX_FILE, XLSX_SHEET)
 
+    console.log('Buscando infos...');
     const { dbUsers, mappedTrails } = await getDatabaseInformation(sheetData);
 
-    console.log('Total de usuários', dbUsers.length);
-
-    console.log('Total de trilhas', mappedTrails.length);
-
-    console.log('Total de trilhas sem informações', mappedTrails.filter(t => !t.trail).length);
-
+    console.log('Processando dados...');
     const { notFoundTrails, notFoundUsers, trackings } = await processSheetData(mappedTrails, dbUsers);
 
+    console.log('Buscando trackings existentes...');
     const foundTrackings = await getFoundTrackings(trackings);
 
-    console.log('Total de trackings', trackings.length);
-
-    console.log('Total de trackings encontrados', foundTrackings.size);
+    console.log('Gerando relatórios...');
 
     await generateReport(
         notFoundTrails,
@@ -217,6 +218,8 @@ async function run() {
     const batchSize = 1000;
     const totalBatches = Math.ceil(trackings.length / batchSize);
 
+    console.log('Processando trackings...');
+
     for (let i = 0; i < totalBatches; i++) {
         const start = i * batchSize;
         const end = start + batchSize;
@@ -244,10 +247,20 @@ async function run() {
                 );
             }
 
+            console.log('Trackings salvos com sucesso! Migration:', migrationTag);
         }
-
-        console.log('Trackings salvos com sucesso! Migration:', migrationTag);
     }
+
+    console.log('Total de usuários', dbUsers.length);
+    console.log('Total de usuários não encontrados', notFoundUsers.size);
+
+    console.log('Total de trilhas', mappedTrails.length);
+    console.log('Total de trilhas não encontradas', notFoundTrails.length);
+
+    console.log('Total de trackings', trackings.length);
+    console.log('Total de trackings existentes', foundTrackings.size);
+
+    console.log('Processamento concluído!');
 
     process.exit(0);
 }
