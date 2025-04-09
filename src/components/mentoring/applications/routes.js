@@ -6,4 +6,4 @@ module.exports = express
     .post('/send', controller.sendApplication)
     .get('/user/:userId', controller.getApplicationByUserId)
     .get('/status/:status', controller.getApplicationsByStatus)
-    .post('/feedback', controller.sendFeedback)
+    .put('/update/:id', controller.update)

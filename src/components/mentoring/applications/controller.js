@@ -43,10 +43,11 @@ module.exports = {
     }
   },
 
-  async sendFeedback(req, res) {
+  async update(req, res) {
+    const { id } = req.params;
     const body = req.body;
     try {
-      const { data } = await mentoringApi.post(`/applications/feedback`, body);
+      const { data } = await mentoringApi.post(`/applications/update/${id}`, body);
       return _messages.success(res, req, data, 'ok', 'mentoring', 'feedback sent successfully');
     } catch (error) {
       return _messages.internalServer(
