@@ -16,7 +16,7 @@ const XLSX_SHEET = "";
 const formattedDate = moment().format('YYYY-MM-DD');
 const migrationTag = `migration-${formattedDate}`;
 
-function getTrackingInfoByItem(item, { userLogin, completionAt }) {
+function getTrackingInfoByItem(item, { userLogin, completionAt, score }) {
     return {
         userLogin,
         kind: item.kind.replace('Item', 'Tracking'),
@@ -34,7 +34,7 @@ function getTrackingInfoByItem(item, { userLogin, completionAt }) {
 
         ...(item.kind === 'ExamItem' && {
             remainingAttempts: 0,
-            score: 100,
+            score: Number(score || 100),
             expiredCompletion: null
         }),
 
@@ -119,7 +119,7 @@ async function processSheetData(mappedTrails, dbUsers) {
 
             const userTrackings = trail.items
                 ?.filter(item => item.kind !== 'SoonItem')
-                .map(item => getTrackingInfoByItem(item, { userLogin: foundUser.networkLogin, completionAt: user.DATA_DE_CONCLUSAO }));
+                .map(item => getTrackingInfoByItem(item, { userLogin: foundUser.networkLogin, completionAt: user.DATA_DE_CONCLUSAO, score: user.APROVEITAMENTO }));
 
             trackings.push(...userTrackings);
         }
@@ -198,6 +198,7 @@ async function run() {
             { header: 'Conclusão', key: 'completion' },
             { header: 'Conclusão em', key: 'completionAt' },
             { header: 'Status da lição', key: 'lessonStatus' },
+            { header: 'Pontuação', key: 'score' },
             { header: 'Migracao', key: 'migration' },
         ],
         { fileName: `trackings_${formattedDate}` }
