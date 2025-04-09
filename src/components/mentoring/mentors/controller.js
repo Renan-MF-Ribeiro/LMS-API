@@ -3,9 +3,27 @@ const { mentoringApi } = require('../http-adapter');
 const { populateUserFields } = require('./business');
 
 const mentorController = {
+    async findMentorProfile(req, res) {
+        try {
+            const { param } = req.params;
+            console.log(param)
+            const { data } = await mentoringApi.get(`/mentor/profile/${param ? param : ''}`);
+            const populatedData = await populateUserFields('user', 'mentorId', data);
+            return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'findMyProfile');
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                error.response?.data?.error?.internalMessage ?? error.message,
+                'mentoria',
+                'find mentor profile'
+            );
+        }
+    },
     async findMyProfile(req, res) {
         try {
-            const { data } = await mentoringApi.get('/mentor/me');
+            const { data } = await mentoringApi.get('/mentor/profile');
             const populatedData = await populateUserFields('user', 'mentorId', data);
             return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'findMyProfile');
         } catch (error) {
@@ -22,8 +40,8 @@ const mentorController = {
 
     async getMentorCalendar(req, res) {
         const { mentorId } = req.params;
-        const { month } = req.query
-        const url = `/mentor/calendar/${mentorId}`
+        const { month } = req.query;
+        const url = `/mentor/calendar/${mentorId}`;
 
         try {
             const { data } = await mentoringApi.get(url, { params: { month } });
