@@ -81,8 +81,7 @@ const mentorController = {
 
     async findAll(req, res) {
         try {
-            const { options } = req.query;
-
+            const options = { ...req.query };
             const { data } = await mentoringApi.get('/mentor', { params: options });
 
             return _messages.success(res, req, data, 'ok', 'mentoring', 'findMentors');
