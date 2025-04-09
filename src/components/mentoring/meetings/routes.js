@@ -7,3 +7,4 @@ module.exports = express
     .post('/feedback/:id', _controller.sendFeedback)
     .patch('/:id', _controller.update)
     .get('/', _controller.list)
+    .get('/:id', _controller.findMeetingById)

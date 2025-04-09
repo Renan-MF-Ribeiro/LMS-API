@@ -5,7 +5,14 @@ const mentorConfigController = {
     async findByClientId(req, res) {
         try {
             const { data } = await mentoringApi.get(`/config/${process.env.CLIENT_ID}`);
-            return _messages.success(res, req, data, 'ok', 'mentoring', 'find config by client id');
+            return _messages.success(
+                res,
+                req,
+                data.data,
+                'ok',
+                'mentoring',
+                'find config by client id'
+            );
         } catch (error) {
             return _messages.internalServer(
                 res,
@@ -22,7 +29,14 @@ const mentorConfigController = {
         const body = req.body;
         try {
             const { data } = await mentoringApi.post(`/config/`, body);
-            return _messages.success(res, req, data, 'ok', 'mentoring', 'find config by client id');
+            return _messages.success(
+                res,
+                req,
+                data.data,
+                'ok',
+                'mentoring',
+                'find config by client id'
+            );
         } catch (error) {
             return _messages.internalServer(
                 res,
