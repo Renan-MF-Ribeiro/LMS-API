@@ -8,7 +8,8 @@ const { Item } = require("../components/items/model");
 const { User } = require("../components/users/model");
 const { Tracking } = require("../components/tracking/model");
 
-const SAVE_TRACKINGS = false;
+const CREATE_TRACKINGS = false;
+const UPDATE_TRACKINGS = false;
 const XLSX_FILE = "";
 const XLSX_SHEET = "";
 
@@ -159,7 +160,8 @@ async function run() {
     console.log('Iniciando o processamento...');
     console.log('Arquivo:', XLSX_FILE);
     console.log('Planilha:', XLSX_SHEET);
-    console.log('SAVE_TRACKINGS:', SAVE_TRACKINGS);
+    console.log('CREATE_TRACKINGS:', CREATE_TRACKINGS);
+    console.log('UPDATE_TRACKINGS:', UPDATE_TRACKINGS);
 
     console.log('Lendo a planilha...');
     const sheetData = await readSheet(XLSX_FILE, XLSX_SHEET)
@@ -227,28 +229,36 @@ async function run() {
 
         console.log(`\nProcessando batch ${i + 1} de ${totalBatches}`);
 
-        const trackingsToCreate = batch.filter(t => !foundTrackings.has(foundTrackingKey(t)));
-        const trackingsToUpdate = batch.filter(t => foundTrackings.has(foundTrackingKey(t)));
-
-        console.log(`Total de trackings a serem criados: ${trackingsToCreate.length}`);
-        console.log(`Total de trackings a serem atualizados: ${trackingsToUpdate.length}`);
-
-        if (SAVE_TRACKINGS) {
-            console.log('Salvando trackings...');
+        if (CREATE_TRACKINGS) {
+            const trackingsToCreate = batch.filter(t => !foundTrackings.has(foundTrackingKey(t)));
+            console.log(`Total de trackings a serem criados: ${trackingsToCreate.length}`);
 
             await Tracking.insertMany(trackingsToCreate);
 
-            for (const tracking of trackingsToUpdate) {
+            console.log('Trackings criados com sucesso!');
+        }
+
+        if (UPDATE_TRACKINGS) {
+            const trackingsToUpdate = batch.filter(t => foundTrackings.has(foundTrackingKey(t)));
+            console.log(`Total de trackings a serem atualizados: ${trackingsToUpdate.length}`);
+
+            for (const [index, tracking] of Object.entries(trackingsToUpdate)) {
                 const existingTracking = foundTrackings.get(foundTrackingKey(tracking));
 
-                if (existingTracking) await Tracking.updateOne(
-                    { _id: existingTracking._id },
-                    { $set: { ...tracking, migration: migrationTag } }
-                );
+                if (existingTracking) {
+                    console.log(`Atualizando tracking ${Number(index) + 1} de ${trackingsToUpdate.length}`, tracking.userLogin, tracking.item);
+
+                    await Tracking.updateOne(
+                        { _id: existingTracking._id },
+                        { $set: { ...tracking, migration: migrationTag } }
+                    );
+                }
             }
 
-            console.log('Trackings salvos com sucesso! Migration:', migrationTag);
+            console.log('Trackings atualizados com sucesso!');
         }
+
+        console.log('Trackings salvos com sucesso! Migration:', migrationTag);
     }
 
     console.log('Total de usuários', dbUsers.length);
