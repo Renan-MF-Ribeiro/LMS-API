@@ -75,6 +75,26 @@ const mentorController = {
             );
         }
     },
+
+    async searchMentors(req, res) {
+        try {
+            const { name, weekdays, date, topics, options } = req.query;
+
+            const params = { name, weekdays, date, topics, options };
+            const { data } = await mentoringApi.get('/mentor/search', { params });
+
+            return _messages.success(res, req, data, 'ok', 'mentoring', 'searchMentors');
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                error.response?.data?.error?.internalMessage ?? error.message,
+                'mentoria',
+                'search mentors'
+            );
+        }
+    }
 };
 
 module.exports = mentorController;

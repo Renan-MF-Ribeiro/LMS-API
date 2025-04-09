@@ -7,3 +7,4 @@ module.exports = express
     .get('/profile/:param', _controller.findMentorProfile)
     .get('/calendar/:mentorId', _controller.getMentorCalendar)
     .post('/', _controller.create)
+    .get('search', _controller.searchMentors)
