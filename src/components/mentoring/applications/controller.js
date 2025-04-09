@@ -31,7 +31,7 @@ module.exports = {
         try {
             const { userId } = req.params;
             const { data } = await mentoringApi.get(`/applications/user/${userId}`);
-            return _messages.success(res, req, data, 'ok', 'mentoring');
+            return _messages.success(res, req, data.data, 'ok', 'mentoring');
         } catch (error) {
             console.error('Error fetching applications by user ID:', error);
             return _messages.internalServer(
