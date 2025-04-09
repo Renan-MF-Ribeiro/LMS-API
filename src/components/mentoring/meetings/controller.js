@@ -35,6 +35,24 @@ const meetingController = {
                 'list of meetings'
             );
         }
+    },
+
+    async update(req, res) {
+        const { id } = req.params;
+        const body = req.body;
+        try {
+            const { data } = await mentoringApi.patch(`/meetings/${id}`, body);
+            return _messages.success(res, req, data, 'ok', 'mentoring', 'update meeting successfully');
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                error.response?.data?.error?.internalMessage ?? error.message,
+                'mentoria',
+                'update meeting'
+            );
+        }
     }
 };
 
