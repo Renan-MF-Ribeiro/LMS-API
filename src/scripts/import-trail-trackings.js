@@ -175,6 +175,9 @@ async function run() {
     console.log('Buscando trackings existentes...');
     const foundTrackings = await getFoundTrackings(trackings);
 
+    const trackingsToCreate = trackings.filter(t => !foundTrackings.has(foundTrackingKey(t)));
+    const trackingsToUpdate = trackings.filter(t => foundTrackings.has(foundTrackingKey(t)));
+
     console.log('Gerando relatórios...');
 
     await generateReport(
@@ -190,7 +193,7 @@ async function run() {
     );
 
     await generateReport(
-        trackings,
+        trackingsToCreate,
         [
             { header: 'Usuário', key: 'userLogin' },
             { header: 'Tipo', key: 'kind' },
@@ -199,13 +202,15 @@ async function run() {
             { header: 'Conclusão em', key: 'completionAt' },
             { header: 'Status da lição', key: 'lessonStatus' },
             { header: 'Pontuação', key: 'score' },
-            { header: 'Migracao', key: 'migration' },
         ],
-        { fileName: `trackings_${formattedDate}` }
+        { fileName: `created_trackings_${formattedDate}` }
     );
 
     await generateReport(
-        [...foundTrackings.values()],
+        trackingsToUpdate.map(tracking => ({
+            ...tracking,
+            databaseId: foundTrackings.get(foundTrackingKey(tracking))?._id,
+        })),
         [
             { header: 'Usuário', key: 'userLogin' },
             { header: 'Tipo', key: 'kind' },
@@ -213,41 +218,48 @@ async function run() {
             { header: 'Conclusão', key: 'completion' },
             { header: 'Conclusão em', key: 'completionAt' },
             { header: 'Status da lição', key: 'lessonStatus' },
-            { header: 'Migracao', key: 'migration' },
+            { header: 'Pontuação', key: 'score' },
+            { header: 'ID no banco', key: 'databaseId' },
         ],
-        { fileName: `trackings_encontrados_${formattedDate}` }
+        { fileName: `updated_trackings_${formattedDate}` }
     );
 
     const batchSize = 1000;
-    const totalBatches = Math.ceil(trackings.length / batchSize);
+    const totalCreateBatches = Math.ceil(trackingsToCreate.length / batchSize);
+    const totalUpdateBatches = Math.ceil(trackingsToUpdate.length / batchSize);
 
     console.log('Processando trackings...');
 
-    for (let i = 0; i < totalBatches; i++) {
-        const start = i * batchSize;
-        const end = start + batchSize;
-        const batch = trackings.slice(start, end);
+    if (CREATE_TRACKINGS) {
+        console.log(`Total de batches para criação: ${totalCreateBatches}`);
 
-        console.log(`\nProcessando batch ${i + 1} de ${totalBatches}`);
+        for (let i = 0; i < totalCreateBatches; i++) {
+            const start = i * batchSize;
+            const end = start + batchSize;
+            const batch = trackingsToCreate.slice(start, end);
 
-        if (CREATE_TRACKINGS) {
-            const trackingsToCreate = batch.filter(t => !foundTrackings.has(foundTrackingKey(t)));
-            console.log(`Total de trackings a serem criados: ${trackingsToCreate.length}`);
-
-            await Tracking.insertMany(trackingsToCreate);
-
-            console.log('Trackings criados com sucesso!');
+            console.log(`\nCriando batch ${i + 1} de ${totalCreateBatches}`);
+            await Tracking.insertMany(batch);
         }
 
-        if (UPDATE_TRACKINGS) {
-            const trackingsToUpdate = batch.filter(t => foundTrackings.has(foundTrackingKey(t)));
-            console.log(`Total de trackings a serem atualizados: ${trackingsToUpdate.length}`);
+        console.log('Trackings criados com sucesso!');
+    }
 
-            for (const [index, tracking] of Object.entries(trackingsToUpdate)) {
+    if (UPDATE_TRACKINGS) {
+        console.log(`Total de batches para atualização: ${totalUpdateBatches}`);
+
+        for (let i = 0; i < totalUpdateBatches; i++) {
+            const start = i * batchSize;
+            const end = start + batchSize;
+            const batch = trackingsToUpdate.slice(start, end);
+
+            console.log(`\nAtualizando batch ${i + 1} de ${totalUpdateBatches}`);
+
+            for (const [index, tracking] of Object.entries(batch)) {
                 const existingTracking = foundTrackings.get(foundTrackingKey(tracking));
 
                 if (existingTracking) {
-                    console.log(`Atualizando tracking ${Number(index) + 1} de ${trackingsToUpdate.length}`, tracking.userLogin, tracking.item);
+                    console.log(`Atualizando tracking ${Number(index) + 1} de ${batch.length}`, tracking.userLogin, tracking.item);
 
                     await Tracking.updateOne(
                         { _id: existingTracking._id },
@@ -255,11 +267,9 @@ async function run() {
                     );
                 }
             }
-
-            console.log('Trackings atualizados com sucesso!');
         }
 
-        console.log('Trackings salvos com sucesso! Migration:', migrationTag);
+        console.log('Trackings atualizados com sucesso!');
     }
 
     console.log('Total de usuários', dbUsers.length);
@@ -268,8 +278,9 @@ async function run() {
     console.log('Total de trilhas', mappedTrails.length);
     console.log('Total de trilhas não encontradas', notFoundTrails.length);
 
-    console.log('Total de trackings', trackings.length);
-    console.log('Total de trackings existentes', foundTrackings.size);
+    console.log(`Total de trackings: ${trackings.length}`);
+    console.log(`Total de trackings a serem criados: ${trackingsToCreate.length}`);
+    console.log(`Total de trackings a serem atualizados: ${trackingsToUpdate.length}`);
 
     console.log('Processamento concluído!');
 
