@@ -56,7 +56,7 @@ module.exports = {
 
   async list(req, res) {
     try {
-      const options = req.query;
+      const options = { ...req.query };
       const { data } = await mentoringApi.get(`/programs`, { params: options });
       return _messages.success(res, req, data.data, 'ok', 'mentoring', 'program list retrieved successfully');
     } catch (error) {
