@@ -8,3 +8,4 @@ module.exports = express
     .get('/calendar/:mentorId', _controller.getMentorCalendar)
     .post('/', _controller.create)
     .get('search', _controller.searchMentors)
+    .get('', _controller.findAll)

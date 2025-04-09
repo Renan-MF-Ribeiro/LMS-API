@@ -94,6 +94,25 @@ const mentorController = {
                 'search mentors'
             );
         }
+    },
+
+    async findAll(req, res) {
+        try {
+            const { options } = req.query;
+
+            const { data } = await mentoringApi.get('/mentor', { params: options });
+
+            return _messages.success(res, req, data, 'ok', 'mentoring', 'findMentors');
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                error.response?.data?.error?.internalMessage ?? error.message,
+                'mentoria',
+                'search mentors'
+            );
+        }
     }
 };
 
