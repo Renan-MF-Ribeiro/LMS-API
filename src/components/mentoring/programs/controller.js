@@ -1,4 +1,4 @@
-const mentoringApi = require('../http-adapter');
+const { mentoringApi } = require('../http-adapter');
 const _messages = require('../../../utils/messages');
 const clientId = process.env.CLIENT_ID;
 
