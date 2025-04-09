@@ -4,3 +4,4 @@ const _controller = require('./controller');
 module.exports = express
     .Router()
     .post('/', _controller.create)
+    .get('/', _controller.list)

@@ -20,6 +20,22 @@ const meetingController = {
             );
         }
     },
+
+    async list(req, res) {
+        try {
+            const options = req.query;
+            const { data } = await mentoringApi.get(`/meetings/`, { params: options });
+            return _messages.success(res, req, data, 'ok', 'mentoring', 'list of meetings');
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                'mentoria',
+                'list of meetings'
+            );
+        }
+    }
 };
 
 module.exports = meetingController;
