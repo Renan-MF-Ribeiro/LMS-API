@@ -13,7 +13,7 @@ const mentorController = {
                 res,
                 req,
                 JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
-                error.response?.data?.message ?? error.message,
+                error.response?.data?.error?.internalMessage ?? error.message,
                 'mentoria',
                 'findMyProfile'
             );
@@ -21,20 +21,21 @@ const mentorController = {
     },
 
     async getMentorCalendar(req, res) {
-        const { mentorId, date } = req.params;
+        const { mentorId } = req.params;
+        const { month } = req.query
         const url = `/mentor/calendar/${mentorId}`
 
         try {
-            const { data } = await mentoringApi.get(url, { params: { date } });
+            const { data } = await mentoringApi.get(url, { params: { month } });
             return _messages.success(res, req, data, 'ok', 'mentoring', 'getMentorCalendar');
         } catch (error) {
             return _messages.internalServer(
                 res,
                 req,
                 JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
-                error.response?.data?.message ?? error.message,
+                error.response?.data?.error?.internalMessage ?? error.message,
                 'mentoria',
-                'findMyProfile'
+                'get mentor`s calendar'
             );
         }
     },
@@ -50,9 +51,9 @@ const mentorController = {
                 res,
                 req,
                 JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
-                error.response?.data?.message ?? error.message,
+                error.response?.data?.error?.internalMessage ?? error.message,
                 'mentoria',
-                'findMyProfile'
+                'create new mentor'
             );
         }
     },
