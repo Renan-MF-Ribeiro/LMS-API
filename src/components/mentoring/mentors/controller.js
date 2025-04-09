@@ -6,7 +6,6 @@ const mentorController = {
     async findMentorProfile(req, res) {
         try {
             const { param } = req.params;
-            console.log(param)
             const { data } = await mentoringApi.get(`/mentor/profile/${param ? param : ''}`);
             const populatedData = await populateUserFields('user', 'mentorId', data);
             return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'findMyProfile');
@@ -18,22 +17,6 @@ const mentorController = {
                 error.response?.data?.error?.internalMessage ?? error.message,
                 'mentoria',
                 'find mentor profile'
-            );
-        }
-    },
-    async findMyProfile(req, res) {
-        try {
-            const { data } = await mentoringApi.get('/mentor/profile');
-            const populatedData = await populateUserFields('user', 'mentorId', data);
-            return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'findMyProfile');
-        } catch (error) {
-            return _messages.internalServer(
-                res,
-                req,
-                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
-                error.response?.data?.error?.internalMessage ?? error.message,
-                'mentoria',
-                'findMyProfile'
             );
         }
     },
@@ -110,10 +93,40 @@ const mentorController = {
                 JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
                 error.response?.data?.error?.internalMessage ?? error.message,
                 'mentoria',
-                'search mentors'
+                'find mentors'
             );
         }
-    }
+    },
+
+    async findMyProfile(req, res) {
+        // Não excluir essa função vazia!!!
+        // Sem ela, não é possivel utilizar a rota "/mentoring/mentors/profile"
+    },
+
+    async findCompletedMentorings(req, res) {
+        // Não excluir essa função vazia!!!
+        // Sem ela, não é possivel utilizar a rota "/mentoring/mentors/historic"
+    },
+
+    async findCompletedMentorings(req, res) {
+        try {
+            const { param } = req.params;
+            const { data } = await mentoringApi.get(
+                `/meetings/mentor/historic/${param ? param : ''}`
+            );
+            const populatedData = await populateUserFields('user', 'mentorId', data);
+            return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'findMyProfile');
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                error.response?.data?.error?.internalMessage ?? error.message,
+                'mentoria',
+                'find mentor historic'
+            );
+        }
+    },
 };
 
 module.exports = mentorController;

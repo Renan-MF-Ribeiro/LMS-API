@@ -2,21 +2,38 @@ const _messages = require('../../../utils/messages');
 const { mentoringApi } = require('../http-adapter');
 
 const meetingController = {
-
     async create(req, res) {
         const body = req.body;
         try {
             const { data } = await mentoringApi.post(`/meetings/`, body);
             return _messages.success(res, req, data, 'ok', 'mentoring', 'create new mentoring');
-
         } catch (error) {
             return _messages.internalServer(
                 res,
                 req,
                 JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
-                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                error.response?.data?.error?.internalMessage ?? error.message,
                 'mentoria',
                 'create new mentoring'
+            );
+        }
+    },
+
+    async sendFeedback(req, res) {
+        const body = req.body;
+        const { id } = req.params;
+        console.log(id)
+        try {
+            const { data } = await mentoringApi.post(`/meetings/feedback/${id}`, body);
+            return _messages.success(res, req, data, 'ok', 'mentoring', 'create new mentoring');
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                error.response?.data?.error?.internalMessage ?? error.message,
+                'mentoria',
+                'send mentoring feedback'
             );
         }
     },
@@ -42,7 +59,14 @@ const meetingController = {
         const body = req.body;
         try {
             const { data } = await mentoringApi.patch(`/meetings/${id}`, body);
-            return _messages.success(res, req, data, 'ok', 'mentoring', 'update meeting successfully');
+            return _messages.success(
+                res,
+                req,
+                data,
+                'ok',
+                'mentoring',
+                'update meeting successfully'
+            );
         } catch (error) {
             return _messages.internalServer(
                 res,
@@ -53,7 +77,7 @@ const meetingController = {
                 'update meeting'
             );
         }
-    }
+    },
 };
 
 module.exports = meetingController;
