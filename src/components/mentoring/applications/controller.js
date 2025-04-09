@@ -48,7 +48,9 @@ module.exports = {
     async getApplicationsByStatus(req, res) {
         try {
             const { status } = req.params;
-            const { data } = await mentoringApi.get(`/applications/status/${status}`);
+            const options = { ...req.query };
+
+            const { data } = await mentoringApi.get(`/applications/status/${status}`, { params: options });
             return _messages.success(res, req, data, 'ok', 'mentoring');
         } catch (error) {
             console.error('Error fetching applications by status:', error);
