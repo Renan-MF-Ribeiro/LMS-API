@@ -27,7 +27,7 @@ function getTrackingInfoByItem(item, { userLogin, completionAt, score }) {
 
         ...(item.kind === 'SCORMItem' && {
             interactions: [],
-            score: 100,
+            score: Number(score || 100),
             suspendData: '',
             expiredCompletion: null
         }),
@@ -281,6 +281,8 @@ async function run() {
     console.log(`Total de trackings: ${trackings.length}`);
     console.log(`Total de trackings a serem criados: ${trackingsToCreate.length}`);
     console.log(`Total de trackings a serem atualizados: ${trackingsToUpdate.length}`);
+
+    console.log('TAG DE MIGRAÇÃO:', migrationTag);
 
     console.log('Processamento concluído!');
 
