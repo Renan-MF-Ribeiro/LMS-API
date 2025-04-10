@@ -6,8 +6,9 @@ const mentorController = {
     async findMentorProfile(req, res) {
         try {
             const { param } = req.params;
-            const { data } = await mentoringApi.get(`/mentor/profile/${param ? param : ''}`);
-            const populatedData = await populateUserFields('user', 'mentorId', data);
+            const { data } = await mentoringApi.get(`/mentor/profile/${param || ''}`);
+            const populatedData = await populateUserFields('user', 'mentorId', data.data);
+            
             return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'findMyProfile');
         } catch (error) {
             return _messages.internalServer(
@@ -29,6 +30,25 @@ const mentorController = {
         try {
             const { data } = await mentoringApi.get(url, { params: { month } });
             return _messages.success(res, req, data, 'ok', 'mentoring', 'getMentorCalendar');
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                error.response?.data?.error?.internalMessage ?? error.message,
+                'mentoria',
+                'get mentor`s calendar'
+            );
+        }
+    },
+
+    async getMentorsByAcessorId(req, res) {
+        const { acessorId } = req.params;
+        const url = `/mentor/acessor/${acessorId}`;
+
+        try {
+            const { data } = await mentoringApi.get(url);
+            return _messages.success(res, req, data.data, 'ok', 'mentoring', 'getMentorCalendar');
         } catch (error) {
             return _messages.internalServer(
                 res,
@@ -83,8 +103,9 @@ const mentorController = {
         try {
             const options = { ...req.query };
             const { data } = await mentoringApi.get('/mentor', { params: options });
-
-            return _messages.success(res, req, data, 'ok', 'mentoring', 'findMentors');
+            console.log(data)
+            const populatedData = await populateUserFields('user', 'userId', data);
+            return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'findMentors');
         } catch (error) {
             return _messages.internalServer(
                 res,

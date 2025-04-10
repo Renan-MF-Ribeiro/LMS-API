@@ -26,7 +26,7 @@ const mentorConfigController = {
     },
 
     async createConfig(req, res) {
-        const body = req.body;
+        const body = JSON.parse(req.fields.payload) ?? null;
         try {
             const { data } = await mentoringApi.post(`/config/`, body);
             return _messages.success(

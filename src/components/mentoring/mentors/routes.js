@@ -10,6 +10,7 @@ module.exports = express
     .get('/historic/:param', _controller.findCompletedMentorings)
 
     .get('/calendar/:mentorId', _controller.getMentorCalendar)
+    .get('/acessor/:acessorId', _controller.getMentorsByAcessorId)
     .post('/', _controller.create)
     .get('/search', _controller.searchMentors)
     .get('/', _controller.findAll)
