@@ -7,3 +7,4 @@ module.exports = express
     .patch('/update/:id', controller.updateTopic)
     .delete('/delete/:id', controller.deleteTopic)
     .get('/list', controller.list)
+    .get('/all', controller.all)

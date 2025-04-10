@@ -70,4 +70,21 @@ module.exports = {
       );
     }
   },
+
+  async all(req, res) {
+    try {
+      const options = { ...req.query };
+      const { data } = await mentoringApi.get(`/topics/all`, { params: options });
+      return _messages.success(res, req, data, 'ok', 'mentoring', 'Topic list retrieved successfully');
+    } catch (error) {
+      return _messages.internalServer(
+        res,
+        req,
+        JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+        error.response?.data?.message ?? error.message,
+        'mentoring',
+        'listTopics'
+      );
+    }
+  },
 };
