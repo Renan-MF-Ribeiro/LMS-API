@@ -6,4 +6,4 @@ module.exports = express
     .post('/create', controller.createProgram)
     .patch('/update/:id', controller.updateProgram)
     .delete('/delete/:id', controller.deleteProgram)
-    .get('/list', controller.list)
+    .get('/', controller.list)

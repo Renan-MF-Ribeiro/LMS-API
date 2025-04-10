@@ -6,7 +6,7 @@ const meetingRoutes = require('./meetings/routes')
 const configRoutes = require('./config/routes')
 const applicationRoutes = require('./applications/routes')
 const topicsRoutes = require('./topics/routes')
-const programsRoutes = require('./config/routes')
+const programsRoutes = require('./programs/routes')
 
 module.exports = express
     .Router()
