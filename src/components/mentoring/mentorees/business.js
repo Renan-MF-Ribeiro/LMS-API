@@ -26,7 +26,7 @@ async function populateUserFields(fieldName, reference, data) {
         : [data[reference]].filter(Boolean);
 
     // Consultar usuários e avatares no banco
-    const users = await User.find({ _id: { $in: ids } }, '_id name profilePhoto').lean();
+    const users = await User.find({ _id: { $in: ids } }, '_id name profilePhoto email offic').lean();
     const userMap = Object.fromEntries(users.map((user) => [user._id.toString(), user]));
 
     const populateItem = (item) => {
