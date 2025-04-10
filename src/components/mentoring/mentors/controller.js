@@ -53,15 +53,9 @@ const mentorController = {
     async updateMentor (req, res) {
         try {
             const { mentorId } = req.params;
-            const { data } = await mentoringApi.put(`/mentor/update/${mentorId}`);
-            const populatedData = await populateUserFields(
-                [
-                    { fieldName: 'user', reference: 'userId' },
-                    { fieldName: 'assistant', reference: 'assistantId' },
-                ],
-                data
-            );
-            return _messages.success(res, req, populatedData.data, 'ok', 'mentoring', 'updateMentor');
+            const { data } = await mentoringApi.put(`/mentor/${mentorId}`);
+
+            return _messages.success(res, req, data, 'ok', 'mentoring', 'updateMentor');
         } catch (error) {
             return _messages.internalServer(
                 res,
