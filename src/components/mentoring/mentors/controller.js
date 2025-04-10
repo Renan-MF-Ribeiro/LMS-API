@@ -3,7 +3,7 @@ const { mentoringApi } = require('../http-adapter');
 const { populateUserFields } = require('./business');
 
 const mentorController = {
-    async findMentorProfile(req, res) {
+    async findMentorProfile (req, res) {
         try {
             const { param } = req.params;
             const { data } = await mentoringApi.get(`/mentor/profile/${param || ''}`);
@@ -26,7 +26,7 @@ const mentorController = {
         }
     },
 
-    async findMentor(req, res) {
+    async findMentor (req, res) {
         try {
             const { mentorId } = req.params;
             const { data } = await mentoringApi.get(`/mentor/find/${mentorId}`);
@@ -50,10 +50,10 @@ const mentorController = {
         }
     },
 
-    async updateMentor(req, res) {
+    async updateMentor (req, res) {
         try {
             const { mentorId } = req.params;
-            const { data } = await mentoringApi.put(`/mentor/find/${mentorId}`);
+            const { data } = await mentoringApi.put(`/mentor/update/${mentorId}`);
             const populatedData = await populateUserFields(
                 [
                     { fieldName: 'user', reference: 'userId' },
@@ -74,7 +74,7 @@ const mentorController = {
         }
     },
 
-    async getMentorCalendar(req, res) {
+    async getMentorCalendar (req, res) {
         const { mentorId } = req.params;
         const { month } = req.query;
         const url = `/mentor/calendar/${mentorId}`;
@@ -94,7 +94,7 @@ const mentorController = {
         }
     },
 
-    async getMentorsByAcessorId(req, res) {
+    async getMentorsByAcessorId (req, res) {
         const { acessorId } = req.params;
         const url = `/mentor/acessor/${acessorId}`;
 
@@ -127,7 +127,7 @@ const mentorController = {
         }
     },
 
-    async create(req, res) {
+    async create (req, res) {
         try {
             const dto = req.body;
             const { data } = await mentoringApi.post('/mentor', dto);
@@ -145,9 +145,9 @@ const mentorController = {
         }
     },
 
-    async searchMentors(req, res) {
+    async searchMentors (req, res) {
         try {
-            const { name, weekdays, date, topics, options } = req.query;   
+            const { name, weekdays, date, topics, options } = req.query;
 
             const params = { name, weekdays, date, topics, options };
             const { data } = await mentoringApi.get('/mentor/search', { params });
@@ -172,7 +172,7 @@ const mentorController = {
         }
     },
 
-    async findAll(req, res) {
+    async findAll (req, res) {
         try {
             const options = { ...req.query };
             const { data } = await mentoringApi.get('/mentor', { params: options });
@@ -197,17 +197,17 @@ const mentorController = {
         }
     },
 
-    async findMyProfile(req, res) {
+    async findMyProfile (req, res) {
         // Não excluir essa função vazia!!!
         // Sem ela, não é possivel utilizar a rota "/mentoring/mentors/profile"
     },
 
-    async findCompletedMentorings(req, res) {
+    async findCompletedMentorings (req, res) {
         // Não excluir essa função vazia!!!
         // Sem ela, não é possivel utilizar a rota "/mentoring/mentors/historic"
     },
 
-    async findCompletedMentorings(req, res) {
+    async findCompletedMentorings (req, res) {
         try {
             const { param } = req.params;
             const { data } = await mentoringApi.get(
