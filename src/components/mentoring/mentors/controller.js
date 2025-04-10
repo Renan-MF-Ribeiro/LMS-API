@@ -48,7 +48,13 @@ const mentorController = {
 
         try {
             const { data } = await mentoringApi.get(url);
-            const populatedData = await populateUserFields('mentor', 'userId', data);
+            const populatedData = await populateUserFields(
+                [
+                    { fieldName: 'user', reference: 'userId' },
+                    { fieldName: 'assistant', reference: 'assistantId' }
+                ],
+                data
+            );
             return _messages.success(
                 res,
                 req,
