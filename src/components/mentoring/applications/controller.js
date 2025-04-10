@@ -1,5 +1,6 @@
 const _messages = require('../../../utils/messages');
 const { mentoringApi } = require('../http-adapter');
+const { populateUserFields } = require('../mentors/business');
 const clientId = process.env.CLIENT_ID;
 
 module.exports = {
@@ -49,8 +50,19 @@ module.exports = {
             const { status } = req.params;
             const options = { ...req.query };
 
-            const { data } = await mentoringApi.get(`/applications/status/${status}`, { params: options });
-            return _messages.success(res, req, data, 'ok', 'mentoring');
+            const { data } = await mentoringApi.get(`/applications/status/${status}`, {
+                params: options,
+            });
+
+            const populatedData = await populateUserFields(
+                [
+                    { fieldName: 'user', reference: 'userId' },
+                    { fieldName: 'assistant', reference: 'assistantId' },
+                ],
+                data
+            );
+
+            return _messages.success(res, req, populatedData.data, 'ok', 'mentoring');
         } catch (error) {
             console.error('Error fetching applications by status:', error);
             res.status(500).json({ message: 'Failed to fetch applications', error: error.message });
