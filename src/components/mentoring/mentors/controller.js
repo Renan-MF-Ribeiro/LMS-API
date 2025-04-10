@@ -58,7 +58,7 @@ const mentorController = {
             return _messages.success(
                 res,
                 req,
-                populatedData,
+                populatedData.data,
                 'ok',
                 'mentoring',
                 'getMentorCalendar'
