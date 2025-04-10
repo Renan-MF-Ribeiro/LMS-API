@@ -60,7 +60,7 @@ module.exports = {
                 data
             );
 
-            return _messages.success(res, req, populatedData.data, 'ok', 'mentoring');
+            return _messages.success(res, req, populatedData, 'ok', 'mentoring');
         } catch (error) {
             console.error('Error fetching applications by status:', error);
             res.status(500).json({ message: 'Failed to fetch applications', error: error.message });
