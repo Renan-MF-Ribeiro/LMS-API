@@ -29,8 +29,7 @@ module.exports = {
 
     async getApplicationByUserId(req, res) {
         try {
-            const { userId } = req.params;
-            const { data } = await mentoringApi.get(`/applications/user/${userId}`);
+            const { data } = await mentoringApi.get(`/applications/user`);
             return _messages.success(res, req, data.data, 'ok', 'mentoring');
         } catch (error) {
             console.error('Error fetching applications by user ID:', error);
