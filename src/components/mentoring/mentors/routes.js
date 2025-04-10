@@ -14,3 +14,5 @@ module.exports = express
     .post('/', _controller.create)
     .get('/search', _controller.searchMentors)
     .get('/', _controller.findAll)
+
+    .get('/find/:mentorId', _controller.findMentor)

@@ -22,6 +22,30 @@ const mentorController = {
         }
     },
 
+    async findMentor(req, res) {
+        try {
+            const { mentorId } = req.params;
+            const { data } = await mentoringApi.get(`/mentor/find/${mentorId}`);
+            const populatedData = await populateUserFields(
+                [
+                    { fieldName: 'user', reference: 'userId' },
+                ],
+                data
+            );
+            console.log(populatedData)
+            return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'findMyProfile');
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                error.response?.data?.error?.internalMessage ?? error.message,
+                'mentoria',
+                'find mentor profile'
+            );
+        }
+    },
+
     async getMentorCalendar(req, res) {
         const { mentorId } = req.params;
         const { month } = req.query;
@@ -95,7 +119,7 @@ const mentorController = {
 
     async searchMentors(req, res) {
         try {
-            const { name, weekdays, date, topics, options } = req.query;
+            const { name, weekdays, date, topics, options } = req.query;   
 
             const params = { name, weekdays, date, topics, options };
             const { data } = await mentoringApi.get('/mentor/search', { params });
@@ -117,8 +141,8 @@ const mentorController = {
         try {
             const options = { ...req.query };
             const { data } = await mentoringApi.get('/mentor', { params: options });
-            console.log(data);
             const populatedData = await populateUserFields('user', 'userId', data);
+            console.log(populatedData)
             return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'findMentors');
         } catch (error) {
             return _messages.internalServer(
