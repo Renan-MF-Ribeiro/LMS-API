@@ -1,6 +1,10 @@
 const _messages = require('../../../utils/messages');
 const { mentoringApi } = require('../http-adapter');
 
+const {
+    azureBlob,
+} = require('../../../utils/files');
+
 const mentorConfigController = {
     async findByClientId(req, res) {
         try {
@@ -26,7 +30,11 @@ const mentorConfigController = {
     },
 
     async createConfig(req, res) {
+        const { banner } = req.files;
         const body = JSON.parse(req.fields.payload) ?? null;
+        if (banner) {
+            body.banner = await azureBlob(banner, 'mentoring/banners');
+        } 
         try {
             const { data } = await mentoringApi.post(`/config/`, body);
             return _messages.success(
