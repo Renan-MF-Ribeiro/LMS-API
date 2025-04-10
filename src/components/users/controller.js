@@ -1945,6 +1945,7 @@ module.exports = {
                 profilePhoto,
                 networkLogin,
                 profiles,
+                email,
                 ...user
             } = await User.findById(body._id).lean();
 
@@ -1988,8 +1989,10 @@ module.exports = {
 
                 const result = {
                     token: {
+                        ref: user._id,
                         clientId: process.env.CLIENT_ID,
                         userName: name,
+                        email: email,
                         userTags: eligibilities,
                         profiles: profilesIDS.result,
                         numbers: profilesIDS.numbers,
@@ -1998,6 +2001,7 @@ module.exports = {
                     },
                     names: namesProfiles.concat(namesGroups),
                 };
+
                 const dataToken = result.token;
                 const token = generateToken({
                     ref: body._id,
