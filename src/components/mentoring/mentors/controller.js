@@ -13,7 +13,7 @@ const mentorController = {
                 ],
                 data
             );
-            return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'findMyProfile');
+            return _messages.success(res, req, populatedData.data, 'ok', 'mentoring', 'findMyProfile');
         } catch (error) {
             return _messages.internalServer(
                 res,
