@@ -8,3 +8,5 @@ module.exports = express
     .patch('/:id', _controller.update)
     .get('/', _controller.list)
     .get('/:id', _controller.findMeetingById)
+    .get('/mentor/:id/futuremeetings', _controller.findFutureMeetingsByMentorId)
+    .get('/mentee/me/futuremeetings', _controller.findMyMenteeFutureMeetings)

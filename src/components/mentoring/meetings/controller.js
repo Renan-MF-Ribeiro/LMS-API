@@ -1,12 +1,20 @@
 const _messages = require('../../../utils/messages');
 const { mentoringApi } = require('../http-adapter');
+const { populateUserFields } = require('../mentors/business');
 
 const meetingController = {
     async create(req, res) {
         const body = req.body;
         try {
             const { data } = await mentoringApi.post(`/meetings/`, body);
-            return _messages.success(res, req, data.data, 'ok', 'mentoring', 'create new mentoring');
+            return _messages.success(
+                res,
+                req,
+                data.data,
+                'ok',
+                'mentoring',
+                'create new mentoring'
+            );
         } catch (error) {
             return _messages.internalServer(
                 res,
@@ -22,10 +30,17 @@ const meetingController = {
     async sendFeedback(req, res) {
         const body = req.body;
         const { id } = req.params;
-        console.log(id)
+        console.log(id);
         try {
             const { data } = await mentoringApi.post(`/meetings/feedback/${id}`, body);
-            return _messages.success(res, req, data.data, 'ok', 'mentoring', 'create new mentoring');
+            return _messages.success(
+                res,
+                req,
+                data.data,
+                'ok',
+                'mentoring',
+                'create new mentoring'
+            );
         } catch (error) {
             return _messages.internalServer(
                 res,
@@ -59,7 +74,68 @@ const meetingController = {
             const options = req.query;
             const { data } = await mentoringApi.get(`/meetings/`, { params: options });
             const populatedData = await populateUserFields('user', 'mentorId', data.data);
-            return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'list of meetings');
+            return _messages.success(
+                res,
+                req,
+                populatedData,
+                'ok',
+                'mentoring',
+                'list of meetings'
+            );
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                'mentoria',
+                'list of meetings'
+            );
+        }
+    },
+
+    async findFutureMeetingsByMentorId(req, res) {
+        const { id } = req.params;
+        try {
+            const { data } = await mentoringApi.get(`/meetings/mentor/futuremeetings/${id}`);
+            const populatedData = await populateUserFields(
+                [{ fieldName: 'user', reference: 'mentorId' }],
+                data
+            );
+            return _messages.success(
+                res,
+                req,
+                populatedData.data,
+                'ok',
+                'mentoring',
+                'list of meetings'
+            );
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                'mentoria',
+                'list of meetings'
+            );
+        }
+    },
+
+    async findMyMenteeFutureMeetings(req, res) {
+        try {
+            const { data } = await mentoringApi.get(`/meetings/mentee/futuremeetings`,);
+
+            const populatedData = await populateUserFields(
+                [{ fieldName: 'user', reference: 'mentorId' }],
+                data
+            );
+            return _messages.success(
+                res,
+                req,
+                populatedData.data,
+                'ok',
+                'mentoring',
+                'list of meetings'
+            );
         } catch (error) {
             return _messages.internalServer(
                 res,
