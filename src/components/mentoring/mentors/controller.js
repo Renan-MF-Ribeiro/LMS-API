@@ -7,8 +7,12 @@ const mentorController = {
         try {
             const { param } = req.params;
             const { data } = await mentoringApi.get(`/mentor/profile/${param || ''}`);
-            const populatedData = await populateUserFields('user', 'mentorId', data.data);
-
+            const populatedData = await populateUserFields(
+                [
+                    { fieldName: 'user', reference: 'mentorId' },
+                ],
+                data
+            );
             return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'findMyProfile');
         } catch (error) {
             return _messages.internalServer(
@@ -141,8 +145,14 @@ const mentorController = {
         try {
             const options = { ...req.query };
             const { data } = await mentoringApi.get('/mentor', { params: options });
-            const populatedData = await populateUserFields('user', 'userId', data);
-            console.log(populatedData)
+
+            const populatedData = await populateUserFields(
+                [
+                    { fieldName: 'user', reference: 'userId' },
+                    { fieldName: 'assistant', reference: 'assistantId' }
+                ],
+                data
+            );
             return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'findMentors');
         } catch (error) {
             return _messages.internalServer(
@@ -172,7 +182,13 @@ const mentorController = {
             const { data } = await mentoringApi.get(
                 `/meetings/mentor/historic/${param ? param : ''}`
             );
-            const populatedData = await populateUserFields('user', 'mentorId', data);
+            const populatedData = await populateUserFields(
+                [
+                    { fieldName: 'user', reference: 'mentorId' },
+                    { fieldName: 'mentee', reference: 'menteeId' }
+                ],
+                data
+            );
             return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'findMyProfile');
         } catch (error) {
             return _messages.internalServer(

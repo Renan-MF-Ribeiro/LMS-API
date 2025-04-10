@@ -30,6 +30,8 @@ async function populateUserFields(mappings, data) {
         '_id name profilePhoto email office'
     ).lean();
 
+    console.log(users)
+
     const usersWithStringIds = users.map((user) => ({
         ...user,
         _id: user._id.toString(), // Convert MongoDB ObjectID to string
@@ -79,7 +81,7 @@ async function processData(data, mappings, userMap) {
             return Promise.all(obj.map(process));
         } else if (obj && typeof obj === 'object') {
             const newObj = { ...obj };
-
+            
             // Converter ObjectID para string se existir
             if (newObj._id && newObj._id._bsontype === 'ObjectID') {
                 newObj._id = newObj._id.toString();
