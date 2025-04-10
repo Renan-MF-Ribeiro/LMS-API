@@ -127,8 +127,15 @@ const mentorController = {
 
             const params = { name, weekdays, date, topics, options };
             const { data } = await mentoringApi.get('/mentor/search', { params });
+            const populatedData = await populateUserFields(
+                [
+                    { fieldName: 'user', reference: 'userId' },
+                    { fieldName: 'assistant', reference: 'assistantId' }
+                ],
+                data.data
+            );
 
-            return _messages.success(res, req, data.data, 'ok', 'mentoring', 'searchMentors');
+            return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'searchMentors');
         } catch (error) {
             return _messages.internalServer(
                 res,
