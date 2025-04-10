@@ -33,11 +33,11 @@ const mentorController = {
             const populatedData = await populateUserFields(
                 [
                     { fieldName: 'user', reference: 'userId' },
+                    { fieldName: 'assistant', reference: 'assistantId' },
                 ],
                 data
             );
-            console.log(populatedData)
-            return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'findMyProfile');
+            return _messages.success(res, req, populatedData.data, 'ok', 'mentoring', 'findMyProfile');
         } catch (error) {
             return _messages.internalServer(
                 res,

@@ -69,11 +69,30 @@ const meetingController = {
         }
     },
 
+    async findMeetingsByMentorId(req, res) {
+        try {
+            const { id } = req.params;
+            const { data } = await mentoringApi.get(`/meetings/mentor/${id}`);
+            return _messages.success(res, req, data.data, 'ok', 'mentoring', 'list of meetings');
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                'mentoria',
+                'list of meetings'
+            );
+        }
+    },
+
     async findMeetingById(req, res) {
         try {
             const options = req.query;
             const { data } = await mentoringApi.get(`/meetings/`, { params: options });
-            const populatedData = await populateUserFields('user', 'mentorId', data.data);
+            const populatedData = await populateUserFields(
+                [{ fieldName: 'user', reference: 'mentorId' }],
+                data
+            );
             return _messages.success(
                 res,
                 req,
@@ -122,7 +141,7 @@ const meetingController = {
 
     async findMyMenteeFutureMeetings(req, res) {
         try {
-            const { data } = await mentoringApi.get(`/meetings/mentee/futuremeetings`,);
+            const { data } = await mentoringApi.get(`/meetings/mentee/futuremeetings`);
 
             const populatedData = await populateUserFields(
                 [{ fieldName: 'user', reference: 'mentorId' }],
