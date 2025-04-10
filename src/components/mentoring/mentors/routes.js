@@ -16,3 +16,4 @@ module.exports = express
     .get('/', _controller.findAll)
 
     .get('/find/:mentorId', _controller.findMentor)
+    .put('/update/:mentorId', _controller.updateMentor)

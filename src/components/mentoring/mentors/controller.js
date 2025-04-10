@@ -50,6 +50,30 @@ const mentorController = {
         }
     },
 
+    async updateMentor(req, res) {
+        try {
+            const { mentorId } = req.params;
+            const { data } = await mentoringApi.put(`/mentor/find/${mentorId}`);
+            const populatedData = await populateUserFields(
+                [
+                    { fieldName: 'user', reference: 'userId' },
+                    { fieldName: 'assistant', reference: 'assistantId' },
+                ],
+                data
+            );
+            return _messages.success(res, req, populatedData.data, 'ok', 'mentoring', 'updateMentor');
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                error.response?.data?.error?.internalMessage ?? error.message,
+                'mentoria',
+                'find mentor profile'
+            );
+        }
+    },
+
     async getMentorCalendar(req, res) {
         const { mentorId } = req.params;
         const { month } = req.query;
