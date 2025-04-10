@@ -73,7 +73,22 @@ const meetingController = {
         try {
             const { id } = req.params;
             const { data } = await mentoringApi.get(`/meetings/mentor/${id}`);
-            return _messages.success(res, req, data.data, 'ok', 'mentoring', 'list of meetings');
+
+            const populatedData = await populateUserFields(
+                [
+                    { fieldName: 'user', reference: 'mentorId' },
+                    { fieldName: 'mentee', reference: 'menteeId' },
+                ],
+                data.data
+            );
+            return _messages.success(
+                res,
+                req,
+                populatedData,
+                'ok',
+                'mentoring',
+                'list of meetings'
+            );
         } catch (error) {
             return _messages.internalServer(
                 res,
