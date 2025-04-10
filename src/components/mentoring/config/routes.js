@@ -6,3 +6,4 @@ module.exports = express
     .Router()
     .get('/', _controller.findByClientId)
     .post('/', formidable(), _controller.createConfig)
+    .get('/home', _controller.home)

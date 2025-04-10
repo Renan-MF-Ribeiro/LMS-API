@@ -56,6 +56,30 @@ const mentorConfigController = {
             );
         }
     },
+
+    async home(req, res) {
+        try {
+            const { data } = await mentoringApi.get(`/config/home`);
+            console.log(data)
+            return _messages.success(
+                res,
+                req,
+                data.data,
+                'ok',
+                'mentoring',
+                'find config by client id'
+            );
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                error.response?.data?.message ?? error.message,
+                'mentoria',
+                'findMyProfile'
+            );
+        }
+    }
 };
 
 module.exports = mentorConfigController;

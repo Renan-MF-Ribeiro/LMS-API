@@ -71,7 +71,7 @@ module.exports = {
         const { id } = req.params;
         const body = req.body;
         try {
-            const { data } = await mentoringApi.post(`/applications/update/${id}`, body);
+            const { data } = await mentoringApi.put(`/applications/update/${id}`, body);
             return _messages.success(
                 res,
                 req,
