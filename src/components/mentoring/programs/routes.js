@@ -7,4 +7,6 @@ module.exports = express
     .post('/create', formidable(), controller.createProgram)
     .patch('/update/:id', formidable(), controller.updateProgram)
     .delete('/delete/:id', controller.deleteProgram)
+    .get('/details/:id', controller.getById)
     .get('/', controller.list)
+    .get('/home', controller.home)

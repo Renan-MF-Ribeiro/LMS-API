@@ -91,4 +91,48 @@ module.exports = {
       );
     }
   },
+
+  async home(req, res) {
+    try {
+      const options = { ...req.query };
+      const { data } = (await mentoringApi.get(`/programs/home`, { params: options }));
+
+      return _messages.success(res, req, data, 'ok', 'mentoring', 'program list retrieved successfully');
+    } catch (error) {
+      return _messages.internalServer(
+        res,
+        req,
+        JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+        error.response?.data?.message ?? error.message,
+        'mentoring',
+        'listPrograms'
+      );
+    }
+  },
+
+  async getById(req, res) {
+    try {
+      const id = req.params.id;
+      const { data } = (await mentoringApi.get(`/programs/details/${id}`));
+
+      const populatedData = await populateUserFields(
+        [
+          { fieldName: 'users', reference: 'mentees' },
+          { fieldName: 'user', reference: 'menteeId' },
+        ],
+        data
+      );
+
+      return _messages.success(res, req, populatedData.data, 'ok', 'mentoring', 'program details retrieved successfully');
+    } catch (error) {
+      return _messages.internalServer(
+        res,
+        req,
+        JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+        error.response?.data?.message ?? error.message,
+        'mentoring',
+        'listPrograms'
+      );
+    }
+  },
 };
