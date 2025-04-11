@@ -3,6 +3,8 @@ const _messages = require('../../../utils/messages');
 const {
   azureBlob,
 } = require('../../../utils/files');
+const { populateUserFields } = require('../business');
+
 
 module.exports = {
   async createProgram(req, res) {
@@ -28,7 +30,11 @@ module.exports = {
   },
 
   async updateProgram(req, res) {
-    const body = req.body;
+    const body = JSON.parse(req.fields.payload) ?? null;
+    const { banner } = req.files;
+    if (banner) {
+      body.banner = await azureBlob(banner, 'mentoring/banners');
+    }
     try {
       const { data } = await mentoringApi.patch(`/programs/${req.params.id}`, body);
       return _messages.success(res, req, data, 'ok', 'mentoring', 'program updated successfully');
@@ -64,8 +70,16 @@ module.exports = {
   async list(req, res) {
     try {
       const options = { ...req.query };
-      const { data } = await mentoringApi.get(`/programs`, { params: options });
-      return _messages.success(res, req, data, 'ok', 'mentoring', 'program list retrieved successfully');
+      const { data } = (await mentoringApi.get(`/programs`, { params: options }));
+      const populatedData = await populateUserFields(
+        [
+          { fieldName: 'users', reference: 'mentees' },
+          { fieldName: 'user', reference: 'menteeId' },
+        ],
+        data
+      );
+
+      return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'program list retrieved successfully');
     } catch (error) {
       return _messages.internalServer(
         res,
