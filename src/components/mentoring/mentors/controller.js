@@ -167,6 +167,33 @@ const mentorController = {
         }
     },
 
+    async searchAdmin (req, res) {
+        try {
+            const { name } = req.query;
+
+            const params = { name };
+            const { data } = await mentoringApi.get('/mentor/admin', { params });
+            const populatedData = await populateUserFields(
+                [
+                    { fieldName: 'user', reference: 'userId' },
+                    { fieldName: 'assistant', reference: 'assistantId' }
+                ],
+                data.data
+            );
+
+            return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'searchAdmin');
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                error.response?.data?.error?.internalMessage ?? error.message,
+                'mentoria',
+                'search mentors'
+            );
+        }
+    },
+
     async findAll (req, res) {
         try {
             const options = { ...req.query };

@@ -9,7 +9,13 @@ const {
 const mentorConfigController = {
     async findByClientId(req, res) {
         try {
+            //tá muito feio, melhorar isso aqui depois
             const { data } = await mentoringApi.get(`/config/${process.env.CLIENT_ID}`);
+            const populatedMentorTrails = await populateTrailFields(data.data.mentorRecommendations.trails);
+            const populatedMenteeTrails = await populateTrailFields(data.data.menteeRecommendations.trails);
+
+            data.data.mentorRecommendations.trails = populatedMentorTrails;
+            data.data.menteeRecommendations.trails = populatedMenteeTrails;
             return _messages.success(
                 res,
                 req,

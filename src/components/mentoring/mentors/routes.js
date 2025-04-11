@@ -13,6 +13,7 @@ module.exports = express
     .get('/acessor/:acessorId', _controller.getMentorsByAcessorId)
     .post('/', _controller.create)
     .get('/search', _controller.searchMentors)
+    .get('/admin', _controller.searchAdmin)
     .get('/', _controller.findAll)
 
     .get('/find/:mentorId', _controller.findMentor)

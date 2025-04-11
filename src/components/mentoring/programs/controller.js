@@ -1,10 +1,17 @@
 const { mentoringApi } = require('../http-adapter');
 const _messages = require('../../../utils/messages');
-const clientId = process.env.CLIENT_ID;
+const {
+  azureBlob,
+} = require('../../../utils/files');
 
 module.exports = {
   async createProgram(req, res) {
-    const body = req.body;
+    const { banner } = req.files;
+    const body = JSON.parse(req.fields.payload) ?? null;
+
+    if (banner) {
+      body.banner = await azureBlob(banner, 'mentoring/banners');
+    }
     try {
       const { data } = await mentoringApi.post(`/programs`, body);
       return _messages.success(res, req, data, 'ok', 'mentoring', 'program created successfully');
