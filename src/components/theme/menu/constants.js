@@ -758,7 +758,8 @@ const MenuDefault = [
                         roles: [
                             "PERFIL_Super_Admin",
                         ],
-                        index: 1
+                        index: 1,
+                        feature: "segmentation",
                     },
                     {
                         button: "configLogin",
