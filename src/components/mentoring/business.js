@@ -1,4 +1,4 @@
-const { User } = require('../../users/model');
+const { User } = require('../users/model');
 
 async function populateTrailFields(data) {
     const trails = await Trail.findOne({ _id: { $in: data } }, 'title titleURL thumbPath').lean();
@@ -79,7 +79,7 @@ async function processData(data, mappings, userMap) {
             return Promise.all(obj.map(process));
         } else if (obj && typeof obj === 'object') {
             const newObj = { ...obj };
-            
+
             // Converter ObjectID para string se existir
             if (newObj._id && newObj._id._bsontype === 'ObjectID') {
                 newObj._id = newObj._id.toString();
@@ -102,7 +102,8 @@ async function processData(data, mappings, userMap) {
             }
 
             return newObj;
-        } else {
+        }
+        else {
             return obj;
         }
     };

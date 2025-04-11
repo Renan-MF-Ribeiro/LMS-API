@@ -1,6 +1,6 @@
 const _messages = require('../../../utils/messages');
 const { mentoringApi } = require('../http-adapter');
-const { populateUserFields } = require('../mentors/business');
+const { populateUserFields } = require('../business');
 
 module.exports = {
     async sendApplication(req, res) {

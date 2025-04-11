@@ -1,6 +1,6 @@
 const _messages = require('../../../utils/messages');
 const { mentoringApi } = require('../http-adapter');
-const { populateUserFields } = require('./business');
+const { populateUserFields } = require('../business');
 
 const mentorController = {
     async findMentorProfile (req, res) {
@@ -10,6 +10,7 @@ const mentorController = {
             const populatedData = await populateUserFields(
                 [
                     { fieldName: 'user', reference: 'mentorId' },
+                    { fieldName: 'mentee', reference: 'menteeId' },
                 ],
                 data
             );

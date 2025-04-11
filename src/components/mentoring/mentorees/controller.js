@@ -1,6 +1,6 @@
 const _messages = require('../../../utils/messages');
 const { mentoringApi } = require('../http-adapter');
-const { populateUserFields } = require('./business');
+const { populateUserFields } = require('../business');
 
 const mentorController = {
 
