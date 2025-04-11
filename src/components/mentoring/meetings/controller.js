@@ -181,6 +181,36 @@ const meetingController = {
         }
     },
 
+    async getRecordMentee(req, res) {
+        const { menteeId, mentorId } = req.params;
+        try {
+            const { data } = await mentoringApi.get(`/meetings/recordMentee`, {
+                params: { menteeId, mentorId },
+            });
+
+            const populatedData = await populateUserFields(
+                [{ fieldName: 'user', reference: 'mentorId' }, { fieldName: 'mentee', reference: 'menteeId' }],
+                data
+            );
+            return _messages.success(
+                res,
+                req,
+                populatedData.data,
+                'ok',
+                'mentoring',
+                'list of meetings'
+            );
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                'mentoria',
+                'list of meetings'
+            );
+        }
+    },
+
     async update(req, res) {
         const { id } = req.params;
         const body = req.body;
