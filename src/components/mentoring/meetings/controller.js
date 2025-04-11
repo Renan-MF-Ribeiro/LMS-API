@@ -1,6 +1,7 @@
 const _messages = require('../../../utils/messages');
 const { mentoringApi } = require('../http-adapter');
 const { populateUserFields } = require('../business');
+const { User } = require('../../users/model');
 
 const meetingController = {
     async create(req, res) {
@@ -58,10 +59,14 @@ const meetingController = {
         const { id } = req.params;
         try {
             const { data } = await mentoringApi.post(`/comments/${id}`, body);
+            const PopulatedData = await populateUserFields(
+                [{ fieldName: 'user', reference: 'userId' }],
+                data
+            );
             return _messages.success(
                 res,
                 req,
-                data.data,
+                PopulatedData.data,
                 'ok',
                 'mentoring',
                 'create new mentoring'
@@ -110,6 +115,7 @@ const meetingController = {
     async list(req, res) {
         try {
             const options = req.query;
+
             const { data } = await mentoringApi.get(`/meetings/`, { params: options });
             return _messages.success(res, req, data.data, 'ok', 'mentoring', 'list of meetings');
         } catch (error) {
@@ -127,6 +133,16 @@ const meetingController = {
         try {
             const { id } = req.params;
             const options = req.query
+            let searchIds = [];
+
+            if (options.searchBy) {
+                const searchRegex = new RegExp(options.searchBy, 'i');
+                const user = await User.find({ name: searchRegex, email: searchRegex }).select('_id').lean();
+                searchIds = user.map((user) => user._id.toString());
+
+                options.searchBy = searchIds;
+            }
+
             const { data } = await mentoringApi.get(`/meetings/mentor/${id}`, { params: options });
 
             const populatedData = await populateUserFields(
@@ -149,7 +165,7 @@ const meetingController = {
                 res,
                 req,
                 JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
-                'mentoria',
+                error.response?.data?.error?.internalMessage ?? error.message,
                 'list of meetings'
             );
         }
