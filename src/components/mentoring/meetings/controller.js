@@ -59,10 +59,14 @@ const meetingController = {
         const { id } = req.params;
         try {
             const { data } = await mentoringApi.post(`/comments/${id}`, body);
+            const PopulatedData = await populateUserFields(
+                [{ fieldName: 'user', reference: 'userId' }],
+                data
+            );
             return _messages.success(
                 res,
                 req,
-                data.data,
+                PopulatedData.data,
                 'ok',
                 'mentoring',
                 'create new mentoring'
@@ -139,7 +143,6 @@ const meetingController = {
                 options.searchBy = searchIds;
             }
 
-            console.log(options)
             const { data } = await mentoringApi.get(`/meetings/mentor/${id}`, { params: options });
 
             const populatedData = await populateUserFields(
