@@ -178,10 +178,10 @@ const mentorController = {
                     { fieldName: 'user', reference: 'userId' },
                     { fieldName: 'assistant', reference: 'assistantId' }
                 ],
-                data.data
+                data
             );
 
-            return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'searchAdmin');
+            return _messages.success(res, req, populatedData.data, 'ok', 'mentoring', 'searchAdmin');
         } catch (error) {
             return _messages.internalServer(
                 res,
