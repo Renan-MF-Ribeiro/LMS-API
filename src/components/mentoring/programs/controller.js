@@ -4,7 +4,10 @@ const clientId = process.env.CLIENT_ID;
 
 module.exports = {
   async createProgram(req, res) {
-    const body = req.body;
+    const body = JSON.parse(req.fields.payload) ?? null;
+    if (banner) {
+      body.banner = await azureBlob(banner, 'mentoring/banners');
+    }
     try {
       const { data } = await mentoringApi.post(`/programs`, body);
       return _messages.success(res, req, data, 'ok', 'mentoring', 'program created successfully');
