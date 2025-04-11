@@ -10,4 +10,5 @@ module.exports = express
     .post('/feedback/:id', _controller.sendFeedback)
     .get('/mentor/:id', _controller.findMeetingsByMentorId)
     .get('/mentor/:id/futuremeetings', _controller.findFutureMeetingsByMentorId)
-    .get('/mentee/me/futuremeetings', _controller.findMyMenteeFutureMeetings);
+    .get('/mentee/me/futuremeetings', _controller.findMyMenteeFutureMeetings)
+    .get('/recordMentee/:mentorId/:menteeId', _controller.getRecordMentee);
