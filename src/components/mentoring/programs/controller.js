@@ -28,7 +28,11 @@ module.exports = {
   },
 
   async updateProgram(req, res) {
-    const body = req.body;
+    const body = JSON.parse(req.fields.payload) ?? null;
+    const { banner } = req.files;
+    if (banner) {
+      body.banner = await azureBlob(banner, 'mentoring/banners');
+    }
     try {
       const { data } = await mentoringApi.patch(`/programs/${req.params.id}`, body);
       return _messages.success(res, req, data, 'ok', 'mentoring', 'program updated successfully');
