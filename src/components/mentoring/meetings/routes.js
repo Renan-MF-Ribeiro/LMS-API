@@ -8,6 +8,8 @@ module.exports = express
     .get('/', _controller.list)
     .get('/:id', _controller.findMeetingById)
     .post('/feedback/:id', _controller.sendFeedback)
+    .post('/comment/:id', _controller.sendComment)
+    .get('/comment/:id', _controller.listCommentsByMeeting)
     .get('/mentor/:id', _controller.findMeetingsByMentorId)
     .get('/mentor/:id/futuremeetings', _controller.findFutureMeetingsByMentorId)
     .get('/mentee/me/futuremeetings', _controller.findMyMenteeFutureMeetings)

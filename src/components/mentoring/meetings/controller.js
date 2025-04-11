@@ -53,6 +53,60 @@ const meetingController = {
         }
     },
 
+    async sendComment(req, res) {
+        const body = req.body;
+        const { id } = req.params;
+        try {
+            const { data } = await mentoringApi.post(`/comments/${id}`, body);
+            return _messages.success(
+                res,
+                req,
+                data.data,
+                'ok',
+                'mentoring',
+                'create new mentoring'
+            );
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                error.response?.data?.error?.internalMessage ?? error.message,
+                'mentoria',
+                'send mentoring feedback'
+            );
+        }
+    },
+
+    async listCommentsByMeeting(req, res) {
+        const body = req.body;
+        const { id } = req.params;
+        try {
+            const { data } = await mentoringApi.get(`/comments/meetings/${id}`, body);
+            const populatedData = await populateUserFields(
+                [{ fieldName: 'user', reference: 'userId' }],
+                data
+            );
+            return _messages.success(
+                res,
+                req,
+                populatedData.data,
+                'ok',
+                'mentoring',
+                'create new mentoring'
+            );
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                error.response?.data?.error?.internalMessage ?? error.message,
+                'mentoria',
+                'send mentoring feedback'
+            );
+        }
+    },
+
     async list(req, res) {
         try {
             const options = req.query;
