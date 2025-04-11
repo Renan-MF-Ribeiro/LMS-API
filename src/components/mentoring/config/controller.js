@@ -1,5 +1,6 @@
 const _messages = require('../../../utils/messages');
 const { mentoringApi } = require('../http-adapter');
+const { populateTrailFields } = require('./business');
 
 const {
     azureBlob,
@@ -59,12 +60,18 @@ const mentorConfigController = {
 
     async home(req, res) {
         try {
-            const { data } = await mentoringApi.get(`/config/home`);
-            console.log(data)
+            const { data } = (await mentoringApi.get(`/config/home`)).data;
+
+            const populatedMentorTrails = await populateTrailFields(data.mentorRecommendations.trails);
+            const populatedMenteeTrails = await populateTrailFields(data.menteeRecommendations.trails);
+
+            data.mentorRecommendations.trails = populatedMentorTrails;
+            data.menteeRecommendations.trails = populatedMenteeTrails;
+
             return _messages.success(
                 res,
                 req,
-                data.data,
+                data,
                 'ok',
                 'mentoring',
                 'find config by client id'
