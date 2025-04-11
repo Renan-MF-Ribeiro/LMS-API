@@ -188,14 +188,10 @@ const meetingController = {
                 params: { menteeId, mentorId },
             });
 
-            const populatedData = await populateUserFields(
-                [{ fieldName: 'user', reference: 'mentorId' }, { fieldName: 'mentee', reference: 'menteeId' }],
-                data
-            );
             return _messages.success(
                 res,
                 req,
-                populatedData.data,
+                data.data,
                 'ok',
                 'mentoring',
                 'list of meetings'
