@@ -1,7 +1,11 @@
-const { Trail } = require('../trails/model');
+const { Trail } = require('../../trails/model');
 
 async function populateTrailFields(data) {
-    const trails = await Trail.findOne({ _id: { $in: data } }, 'title titleURL thumbPath').lean();
+    const trails = await Trail.find({ _id: { $in: data } }, 'title titleURL thumbPath').lean();
 
-    return [trails] || undefined;
+    return trails.length ? trails : undefined;
 }
+
+module.exports = {
+  populateTrailFields,
+};
