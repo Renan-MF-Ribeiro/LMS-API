@@ -6,12 +6,12 @@ const {
 
 module.exports = {
   async createProgram(req, res) {
-    const { banner } = req.files;
     const body = JSON.parse(req.fields.payload) ?? null;
-
+    const { banner } = req.files;
     if (banner) {
       body.banner = await azureBlob(banner, 'mentoring/banners');
     }
+
     try {
       const { data } = await mentoringApi.post(`/programs`, body);
       return _messages.success(res, req, data, 'ok', 'mentoring', 'program created successfully');
