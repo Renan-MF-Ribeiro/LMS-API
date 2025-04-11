@@ -119,6 +119,7 @@ module.exports = {
         [
           { fieldName: 'users', reference: 'mentees' },
           { fieldName: 'user', reference: 'menteeId' },
+          { fieldName: 'user', reference: 'userId' },
         ],
         data
       );
