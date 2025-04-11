@@ -126,7 +126,8 @@ const meetingController = {
     async findMeetingsByMentorId(req, res) {
         try {
             const { id } = req.params;
-            const { data } = await mentoringApi.get(`/meetings/mentor/${id}`);
+            const options = req.query
+            const { data } = await mentoringApi.get(`/meetings/mentor/${id}`, { params: options });
 
             const populatedData = await populateUserFields(
                 [
