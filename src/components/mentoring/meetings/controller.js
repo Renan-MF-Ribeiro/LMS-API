@@ -102,16 +102,16 @@ const meetingController = {
 
     async findMeetingById(req, res) {
         try {
-            const options = req.query;
-            const { data } = await mentoringApi.get(`/meetings/`, { params: options });
+            const { id } = req.params;
+            const { data } = await mentoringApi.get(`/meetings/${id}`,);
             const populatedData = await populateUserFields(
-                [{ fieldName: 'user', reference: 'mentorId' }],
+                [{ fieldName: 'user', reference: 'mentorId' }, { fieldName: 'mentee', reference: 'menteeId' }],
                 data
             );
             return _messages.success(
                 res,
                 req,
-                populatedData,
+                populatedData.data,
                 'ok',
                 'mentoring',
                 'list of meetings'
