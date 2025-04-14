@@ -714,10 +714,11 @@ async function* handleStartedTrail({ user, meta }) {
         const createdAt = moment(trackings?.[0]?.createdAt);
         const updatedAt = moment(tracking?.updatedAt);
         const isValidTracking = createdAt.isSame(updatedAt);
-        const isSameDay = updatedAt.isSame(moment(trail.startDate), 'day');
+        const isSameDay = updatedAt.subtract(3, 'hours').isSame(moment(trail.startDate), 'day');
 
         yield {
             validated: hasOne && isValidTracking && isSameDay,
+            sameDayRelease: updatedAt.subtract(3, 'hours').toDate(),
             meta: {
                 trailId: trail._id,
                 trailTitle: trail.title,
