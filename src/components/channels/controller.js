@@ -9,6 +9,7 @@ const { getTagsElegiblesByToken, checkEligibilityTagsAnd, getSectionTrailId } = 
 const { Theme } = require('../theme/palette/model');
 const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business');
 const { getDbCurrentFeatures } = require('../../utils/features');
+const mentorConfigController = require('../mentoring/config/controller');
 
 
 module.exports = {
@@ -65,11 +66,18 @@ module.exports = {
     },
     async getChannelsElegibles (req, res) {
         const tags = await getTagsElegiblesByToken(req);
+        const user = await _functions.getUserByToken(req);
+        const mentoringBlocked = await mentorConfigController.isBlocked(user._id);
+
         try {
             const query = { $and: [
                 { tags: { $in: tags.map((tag) => tag.value) } },
                 { enabled: true }
             ]}
+
+            if (mentoringBlocked) {
+                query.$and.push({ type: { $ne: 'mentoring' } });
+            }
 
             // if (req?.segmentation) {
             //     handleSegmentationOnQuery(req, 'owner', query)
