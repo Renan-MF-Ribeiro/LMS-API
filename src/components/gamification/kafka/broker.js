@@ -8,8 +8,8 @@ const { getDbCurrentFeatures } = require('../../../utils/features');
 const { Types } = require('mongoose');
 
 const GAMIFICATION_KAFKA_EVENTS = Object.freeze({
-    PENDING: 'gamification.events.pending',
-    VALIDATED: 'gamification.events.validated',
+    PENDING: 'gamification-events-pending',
+    VALIDATED: 'gamification-events-validated',
 });
 
 class GamificationKafkaSingleton {
