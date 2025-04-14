@@ -530,7 +530,7 @@ module.exports = {
             const evaluationResult = await processExamTracking(historic, passingScore, attempts, tracking)
 
             await GamificationKafka.publishEventRuleValidation({
-                events: [EVENT_CATEGORY.FINISHED_EXAM_ITEM],
+                events: [EVENT_CATEGORY.FINISHED_ITEM, EVENT_CATEGORY.FINISHED_EXAM_ITEM],
                 identifier: user.networkLogin,
                 meta: {
                     tracking,
