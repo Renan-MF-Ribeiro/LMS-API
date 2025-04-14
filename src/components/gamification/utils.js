@@ -83,8 +83,8 @@ function isValidCompletedItemGamification(tracking) {
     const completion = tracking?.completion === 1;
     const completedLesson = ['passed', 'completed'].includes(lessonStatus);
     const isCompleted = completion || completedLesson;
-    const completionAt = moment(tracking?.completionAt);
-    const updatedAt = moment(tracking?.updatedAt);
+    const completionAt = moment(tracking?.completionAt).startOf('second');
+    const updatedAt = moment(tracking?.updatedAt).startOf('second');
 
     return isCompleted && completionAt.isSame(updatedAt);
 }
