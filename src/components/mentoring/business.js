@@ -23,7 +23,6 @@ async function populateUserFields(mappings, data) {
     // Coletar todos os IDs das referências em todos os níveis
     const ids = collectIds(dataToProcess, mappings);
     if (ids.length === 0) return data;
-
     // Buscar usuários de uma só vez
     const users = await User.find(
         { _id: { $in: ids } },
@@ -44,6 +43,41 @@ async function populateUserFields(mappings, data) {
         ...data,
         data: isArray ? processedData : processedData[0],
     };
+}
+
+async function populateBlockedUserFields(mappings, data) {
+    const isArray = Array.isArray(data.data);
+    const dataToProcess = isArray ? data.data : [data.data];
+
+    const ids = collectBlockedIds(dataToProcess, mappings);
+
+    if (ids.length === 0) return data;
+
+    const users = await User.find(
+        { _id: { $in: ids } },
+        '_id name profilePhoto email office'
+    ).lean();
+
+    const usersWithBlockedAt = users.map((user) => {
+        const blockedUser = dataToProcess.find((item) => {
+            return item.blockedMentees?.some((blocked) => {
+                const isMatch = blocked._id.toString() === user._id.toString();
+                return isMatch;
+            });
+        });
+        const blockedAt = blockedUser?.blockedMentees?.find((blocked) => {
+            const isMatch = blocked._id.toString() === user._id.toString();
+            console.log(blocked.blockedAt, isMatch)
+            return isMatch;
+        })?.blockedAt || null;
+
+        return {
+            ...user,
+            blockedAt,
+        };
+    });
+
+    return usersWithBlockedAt;
 }
 
 // Função para coletar IDs de todas as referências na estrutura de dados
@@ -71,7 +105,29 @@ function collectIds(data, mappings) {
     return [...new Set(ids)];
 }
 
-// Função para processar os dados e substituir as referências
+function collectBlockedIds(data) {
+    const ids = [];
+
+    const traverse = (obj) => {
+        if (Array.isArray(obj)) {
+            obj.forEach(traverse);
+        } else if (obj && typeof obj === 'object') {
+            if (obj.blockedMentees && Array.isArray(obj.blockedMentees)) {
+                obj.blockedMentees.forEach((blockedMentee) => {
+                    if (blockedMentee._id) {
+                        ids.push(blockedMentee._id.toString());
+                    }
+                });
+            }
+
+            Object.values(obj).forEach(traverse);
+        }
+    };
+
+    traverse(data);
+    return [...new Set(ids)];
+}
+
 async function processData(data, mappings, userMap) {
     const process = async (obj) => {
         if (Array.isArray(obj)) {
@@ -79,12 +135,10 @@ async function processData(data, mappings, userMap) {
         } else if (obj && typeof obj === 'object') {
             const newObj = { ...obj };
 
-            // Converter ObjectID para string se existir
             if (newObj._id && newObj._id._bsontype === 'ObjectID') {
                 newObj._id = newObj._id.toString();
             }
 
-            // Aplicar cada mapeamento
             mappings.forEach(({ fieldName, reference }) => {
                 const val = newObj[reference];
                 if (val != null) {
@@ -98,7 +152,6 @@ async function processData(data, mappings, userMap) {
                 }
             });
 
-            // Processar recursivamente propriedades aninhadas
             for (const key of Object.keys(newObj)) {
                 newObj[key] = await process(newObj[key]);
             }
@@ -115,4 +168,5 @@ async function processData(data, mappings, userMap) {
 
 module.exports = {
     populateUserFields,
+    populateBlockedUserFields
 };
