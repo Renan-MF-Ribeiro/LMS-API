@@ -9,7 +9,7 @@ const mentorController = {
             const { param } = req.params;
             const { data } = await mentoringApi.get(`/meetings/mentoree/historic/${param ? param : ''}`);
             const PopulatedData = await populateUserFields(
-                [{ fieldName: 'mentor', reference: 'mentorId' }],
+                [{ fieldName: 'user', reference: 'userId' }],
                 data
             );
 

@@ -50,7 +50,7 @@ async function populateBlockedUserFields(mappings, data) {
     const dataToProcess = isArray ? data.data : [data.data];
 
     const ids = collectBlockedIds(dataToProcess, mappings);
-
+    console.log(ids)
     if (ids.length === 0) return data;
 
     const users = await User.find(

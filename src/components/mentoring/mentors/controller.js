@@ -238,7 +238,7 @@ const mentorController = {
             );
             const populatedData = await populateUserFields(
                 [
-                    { fieldName: 'user', reference: 'mentorId' },
+                    { fieldName: 'user', reference: 'userId' },
                     { fieldName: 'mentee', reference: 'menteeId' }
                 ],
                 data
