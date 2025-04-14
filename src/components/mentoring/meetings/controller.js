@@ -203,7 +203,7 @@ const meetingController = {
         try {
             const { data } = await mentoringApi.get(`/meetings/mentor/futuremeetings/${id}`);
             const populatedData = await populateUserFields(
-                [{ fieldName: 'user', reference: 'mentorId' }],
+                [{ fieldName: 'user', reference: 'userId' }],
                 data
             );
             return _messages.success(
