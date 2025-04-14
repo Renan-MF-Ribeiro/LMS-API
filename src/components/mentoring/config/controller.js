@@ -1,6 +1,7 @@
 const _messages = require('../../../utils/messages');
 const { mentoringApi } = require('../http-adapter');
 const { populateTrailFields } = require('./business');
+const { populateBlockedUserFields } = require('../business');
 
 const {
     azureBlob,
@@ -9,13 +10,19 @@ const {
 const mentorConfigController = {
     async findByClientId(req, res) {
         try {
-            //tá muito feio, melhorar isso aqui depois
             const { data } = await mentoringApi.get(`/config/${process.env.CLIENT_ID}`);
             const populatedMentorTrails = await populateTrailFields(data.data.mentorRecommendations.trails);
             const populatedMenteeTrails = await populateTrailFields(data.data.menteeRecommendations.trails);
+            const populatedUsers = await populateBlockedUserFields(
+                [{ fieldName: 'users', reference: 'blockedMentees' }],
+                data
+            );
 
             data.data.mentorRecommendations.trails = populatedMentorTrails;
             data.data.menteeRecommendations.trails = populatedMenteeTrails;
+
+            data.data.blockedMentees = populatedUsers;
+
             return _messages.success(
                 res,
                 req,
