@@ -49,7 +49,6 @@ async function populateUserFields(mappings, data) {
 // Função para coletar IDs de todas as referências na estrutura de dados
 function collectIds(data, mappings) {
     const ids = [];
-
     const traverse = (obj) => {
         if (Array.isArray(obj)) {
             obj.forEach(traverse);
@@ -92,6 +91,9 @@ async function processData(data, mappings, userMap) {
                     newObj[fieldName] = Array.isArray(val)
                         ? val.map((id) => userMap.get(id.toString()) || null)
                         : userMap.get(val.toString()) || null;
+
+                }
+                if (reference !== fieldName) {
                     delete newObj[reference];
                 }
             });
