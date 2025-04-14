@@ -227,7 +227,10 @@ const meetingController = {
 
     async findMyMenteeFutureMeetings(req, res) {
         try {
-            const { data } = await mentoringApi.get(`/meetings/mentee/futuremeetings`);
+            const programId = req.query.programId;
+            const { data } = await mentoringApi.get(`/meetings/mentee/futuremeetings`, {
+                params: { programId: programId }
+            });
 
             const populatedData = await populateUserFields(
                 [{ fieldName: 'user', reference: 'userId' }],
