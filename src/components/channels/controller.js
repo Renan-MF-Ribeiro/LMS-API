@@ -82,9 +82,25 @@ module.exports = {
 
             const features = await getDbCurrentFeatures(req);
 
+            const existingMentoringChannel = await Channel.findOne({ type: 'mentoring' });
+
+            if (!existingMentoringChannel) {
+                await Channel.create({
+                    enabled: true,
+                    tags: ['ELEGE_geral'],
+                    banners: [],
+                    idSections: [],
+                    title: 'Mentorias',
+                    position: 4,
+                    type: 'mentoring'
+                });
+            }
+
             channels = await Promise.all(channels.map(async (channel) => {
                 if (channel.type === 'alura') return channel
                 if (channel.type === 'feed') return channel
+
+                if(features?.mentoring && channel.type === 'mentoring') return channel
 
                 if (features?.collaborationComponent && channel.type === 'collaboration') return channel
 
@@ -125,6 +141,7 @@ module.exports = {
 
             _messages.success(res, req, channels);
         } catch (error) {
+            console.log(error)
             _messages.internalServer(
                 res,
                 req,
