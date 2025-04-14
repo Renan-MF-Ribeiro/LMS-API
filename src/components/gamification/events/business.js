@@ -589,8 +589,6 @@ async function* handleFinishedSharedTrail({ user, meta }) {
                 };
             }
         }
-
-        yield payload;
     }
 }
 
