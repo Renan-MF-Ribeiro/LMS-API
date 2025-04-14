@@ -8,9 +8,12 @@ const mentorController = {
         try {
             const { param } = req.params;
             const { data } = await mentoringApi.get(`/meetings/mentoree/historic/${param ? param : ''}`);
-            const populatedData = await populateUserFields('user', 'mentorId', data);
-            
-            return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'find mentoree`s historic');
+            const PopulatedData = await populateUserFields(
+                [{ fieldName: 'mentor', reference: 'mentorId' }],
+                data
+            );
+
+            return _messages.success(res, req, PopulatedData.data, 'ok', 'mentoring', 'find mentoree`s historic');
         } catch (error) {
             return _messages.internalServer(
                 res,
