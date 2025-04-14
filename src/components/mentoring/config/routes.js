@@ -7,3 +7,5 @@ module.exports = express
     .get('/', _controller.findByClientId)
     .post('/', formidable(), _controller.createConfig)
     .get('/home', _controller.home)
+    .get('/blocked-users', _controller.getBlockedUsers)
+    .get('/blocked', _controller.isBlocked)

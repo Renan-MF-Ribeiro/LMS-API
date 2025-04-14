@@ -92,6 +92,54 @@ const mentorConfigController = {
                 'findMyProfile'
             );
         }
+    },
+
+    async getBlockedUsers(req, res) {
+        try {
+            const { data } = (await mentoringApi.get(`/config/blocked-users`)).data;
+
+            return _messages.success(
+                res,
+                req,
+                data,
+                'ok',
+                'mentoring',
+                'find config by client id'
+            );
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                error.response?.data?.message ?? error.message,
+                'mentoria',
+                'findMyProfile'
+            );
+        }
+    },
+
+    async isBlocked(req, res){
+        try {
+            const { data } = (await mentoringApi.get(`/config/blocked`)).data;
+
+            return _messages.success(
+                res,
+                req,
+                data,
+                'ok',
+                'mentoring',
+                'check if user is blocked'
+            );
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                error.response?.data?.message ?? error.message,
+                'mentoria',
+                'isBlocked'
+            );
+        }
     }
 };
 
