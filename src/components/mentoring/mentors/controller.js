@@ -52,9 +52,10 @@ const mentorController = {
     },
 
     async updateMentor (req, res) {
+        const body = req.body
         try {
             const { mentorId } = req.params;
-            const { data } = await mentoringApi.put(`/mentor/${mentorId}`);
+            const { data } = await mentoringApi.put(`/mentor/${mentorId}`, body);
 
             return _messages.success(res, req, data, 'ok', 'mentoring', 'updateMentor');
         } catch (error) {
