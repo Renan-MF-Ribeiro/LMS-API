@@ -72,11 +72,11 @@ const mentorController = {
 
     async getMentorCalendar (req, res) {
         const { mentorId } = req.params;
-        const { month } = req.query;
+        const { month, mentoringDeadline } = req.query;
         const url = `/mentor/calendar/${mentorId}`;
 
         try {
-            const { data } = await mentoringApi.get(url, { params: { month } });
+            const { data } = await mentoringApi.get(url, { params: { month, mentoringDeadline } });
             return _messages.success(res, req, data.data, 'ok', 'mentoring', 'getMentorCalendar');
         } catch (error) {
             return _messages.internalServer(
