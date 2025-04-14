@@ -118,27 +118,12 @@ const mentorConfigController = {
         }
     },
 
-    async isBlocked(req, res){
+    async isBlocked(id){
         try {
-            const { data } = (await mentoringApi.get(`/config/blocked`)).data;
-
-            return _messages.success(
-                res,
-                req,
-                data,
-                'ok',
-                'mentoring',
-                'check if user is blocked'
-            );
+            const { data } = await mentoringApi.get(`/config/blocked/${id}`);
+            return data.data;
         } catch (error) {
-            return _messages.internalServer(
-                res,
-                req,
-                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
-                error.response?.data?.message ?? error.message,
-                'mentoria',
-                'isBlocked'
-            );
+            console.log(error)
         }
     }
 };
