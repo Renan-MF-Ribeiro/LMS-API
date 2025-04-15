@@ -6,6 +6,10 @@ const { User } = require('../../users/model');
 const meetingController = {
     async create(req, res) {
         const body = req.body;
+        if(body.menteeId) {
+            const user = User.findOne({ _id: body.menteeId });
+            body.menteeEmail = user.email;
+        }
         try {
             const { data } = await mentoringApi.post(`/meetings/`, body);
             return _messages.success(
