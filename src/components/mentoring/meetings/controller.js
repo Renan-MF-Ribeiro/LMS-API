@@ -57,7 +57,7 @@ const meetingController = {
     async deleteMeeting(req, res) {
         const { id } = req.params;
         try {
-            const { data } = await mentoringApi.post(`/meetings/delete/${id}`);
+            const { data } = await mentoringApi.delete(`/meetings/delete/${id}`);
             return _messages.success(
                 res,
                 req,
