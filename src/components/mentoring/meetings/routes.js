@@ -9,8 +9,9 @@ module.exports = express
     .get('/:id', _controller.findMeetingById)
     .post('/feedback/:id', _controller.sendFeedback)
     .post('/comment/:id', _controller.sendComment)
+    .delete('/:id', _controller.deleteMeeting)
     .get('/comment/:id', _controller.listCommentsByMeeting)
     .get('/mentor/:id', _controller.findMeetingsByMentorId)
     .get('/mentor/:id/futuremeetings', _controller.findFutureMeetingsByMentorId)
     .get('/mentee/me/futuremeetings', _controller.findMyMenteeFutureMeetings)
-    .get('/recordMentee/:mentorId/:menteeId', _controller.getRecordMentee);
+    .get('/recordMentee/:mentorId/:menteeId', _controller.getRecordMentee); 

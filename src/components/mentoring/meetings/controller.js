@@ -58,6 +58,30 @@ const meetingController = {
         }
     },
 
+    async deleteMeeting(req, res) {
+        const { id } = req.params;
+        try {
+            const { data } = await mentoringApi.delete(`/meetings/${id}`);
+            return _messages.success(
+                res,
+                req,
+                data.data,
+                'ok',
+                'mentoring',
+                'delete mentoring'
+            );
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                error.response?.data?.error?.internalMessage ?? error.message,
+                'mentoria',
+                'create new mentoring'
+            );
+        }
+    },
+
     async sendComment(req, res) {
         const body = req.body;
         const { id } = req.params;
