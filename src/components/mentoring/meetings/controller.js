@@ -2,12 +2,13 @@ const _messages = require('../../../utils/messages');
 const { mentoringApi } = require('../http-adapter');
 const { populateUserFields } = require('../business');
 const { User } = require('../../users/model');
+const { Types } = require('mongoose');
 
 const meetingController = {
     async create(req, res) {
         const body = req.body;
-        if(body.menteeId) {
-            const user = User.findOne({ _id: body.menteeId });
+        if (body.menteeId) {
+            const user = await User.findOne({ _id: new Types.ObjectId(body.menteeId) }).lean();
             body.menteeEmail = user.email;
         }
         try {
@@ -312,7 +313,13 @@ const meetingController = {
     async update(req, res) {
         const { id } = req.params;
         const body = req.body;
+
         try {
+            if (body.menteeId) {
+                const user = await User.findOne({ _id: new Types.ObjectId(body.menteeId) });
+                body.menteeEmail = user.email;
+            }
+
             const { data } = await mentoringApi.patch(`/meetings/${id}`, body);
             return _messages.success(
                 res,
