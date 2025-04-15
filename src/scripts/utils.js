@@ -16,10 +16,10 @@ async function generateReport(
 ) {
     let reportData = [];
 
-    if(Array.isArray(data)) {
+    if (Array.isArray(data)) {
         reportData = data;
     }
-    else if(typeof data === 'function') {
+    else if (typeof data === 'function') {
         reportData = await data();
     }
 
@@ -50,7 +50,12 @@ async function generateReport(
 async function runScript(functionToRun) {
     console.time('Total time');
     console.log('Running script...', functionToRun.name);
-    console.log('DATABASE', process.env.DB_HOST);
+
+    console.log('DB_HOST', process.env.DB_HOST);
+    console.log('AZURE_BLOBNAME', process.env.AZURE_BLOBNAME);
+    console.log('AZURE_BLOB_URL', process.env.AZURE_BLOB_URL);
+    console.log('DOMAIN', process.env.DOMAIN);
+    console.log('CLIENT_ID', process.env.CLIENT_ID);
 
     try {
         await fs.access('./src/scripts/debug');

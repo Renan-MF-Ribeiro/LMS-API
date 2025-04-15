@@ -74,74 +74,6 @@ function bufferToStream (binary) {
     return readableInstanceStream;
 }
 
-const forEachRowCSV = (
-    row,
-    rowNumber,
-    map,
-    labels,
-    users,
-    previousHyperLink
-) => {
-    if (rowNumber === 1) {
-        // rowNumber === 1 means its headers
-        for (const columnHeader of row.values) {
-            const mapEntries = Object.entries(map);
-            const labelDB = mapEntries.find(
-                (entry) => entry[1]?.field && columnHeader && entry[1]?.field === columnHeader
-            )?.[0];
-            labels.push(labelDB);
-        }
-    } else {
-        const tmpUser = {};
-        previousHyperLink.index = -1;
-
-        for (const value of row.values) {
-            if (!value) continue;
-
-            let labelIndex;
-            if (value.text) {
-                row.values.find((findValue, findIndex) => {
-                    if (!findValue?.text) return false;
-                    labelIndex = findIndex;
-                    return (
-                        findValue &&
-                        value &&
-                        findValue.text &&
-                        value.text &&
-                        findValue.text === value.text &&
-                        (previousHyperLink.index === -1 ||
-                            findIndex > previousHyperLink.index)
-                    );
-                });
-                previousHyperLink.index = labelIndex;
-            } else {
-                row.values.find((findValue, findIndex) => {
-                    if (findValue?.text) return false;
-                    if (
-                        tmpUser[labels[findIndex]] &&
-                        tmpUser[labels[findIndex]] === findValue
-                    )
-                        return false;
-
-                    labelIndex = findIndex;
-                    return findValue === value;
-                });
-            }
-
-            if (labels[labelIndex] && row.values[labelIndex]) {
-                let tmpValue =
-                    row.values[labelIndex].text ?? row.values[labelIndex] ?? '';
-
-                if (typeof tmpValue === 'string') {
-                    tmpValue = tmpValue.trim()
-                }
-                tmpUser[labels[labelIndex]] = tmpValue;
-            }
-        }
-        users.push(tmpUser);
-    }
-};
-
 const forEachRow = (row, rowNumber, map, labels, users, previousHyperLink) => {
     if (rowNumber === 1) {
         // rowNumber === 1 means its headers
@@ -229,7 +161,7 @@ function validateFileSize (file) {
     if (fileSize > bytes) {
         throw new ApiError(
             `O arquivo ${file.name ?? ''} excede o tamanho máximo permitido de ${maxFileSize}`,
-            400
+            413
         );
     }
 }
@@ -851,9 +783,9 @@ module.exports = {
         });
     },
 
-    async readCSVUsersBuffer (file, onboarding = false) {
+    async readCSVUsersBuffer(file) {
         const map = await getConnectMap(true);
-        
+
         const workbook = new ExcelJS.Workbook();
 
         const worksheet = await workbook.csv.read(file, {
@@ -861,19 +793,29 @@ module.exports = {
             map: (value) => value
         });
 
-        const labels = [];
+        const headers = [];
         const users = [];
-        let previousHyperLink = { index: -1 };
 
         worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-            return forEachRowCSV(
-                row,
-                rowNumber,
-                map,
-                labels,
-                users,
-                previousHyperLink
-            );
+            if (rowNumber === 1) {
+                return headers.push(...row.values);
+            }
+
+            const user = row.values.reduce((acc, rowValue, index) => {
+                const header = headers[index];
+
+                const mapInfo = Object.entries(map)
+                    .map(([key, mapValue]) => ({ key, mapValue }))
+                    .find(({ mapValue }) => header && String(header).trim() === String(mapValue?.field).trim());
+
+                if (!mapInfo) return acc;
+
+                acc[mapInfo.key] = rowValue?.text || rowValue || null;
+
+                return acc;
+            }, {});
+
+            return users.push(user);
         });
 
         return users;
@@ -1039,7 +981,7 @@ module.exports = {
 
         const decodedFile = iconv.decode(
             downloadBlobResponse,
-            'iso88591'
+            'utf-8'
         );
 
         const decodedReadStream = bufferToStream(decodedFile);
