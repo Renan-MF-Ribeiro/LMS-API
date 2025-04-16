@@ -566,7 +566,27 @@ module.exports = {
                 const activationLink = `${process.env.DOMAIN}/login/ativacao?token=${emailToken}`;
                 await sendSignupActivationEmail(newUser.email, activationLink);
             }
+            
             const tokens = await generateTokens(newUser, networkLogin, password);
+
+            if (newUser && form?.autoLogin) {
+                await Log.create({
+                    dataNew: [],
+                    dataOld: [],
+                    groups: groupsAD ?? [],
+                    user: newUser._id,
+                    type: "LOGIN",
+                    message: "Sucesso ao se cadastrar",
+                    component: "users",
+                    route: "signup",
+                    ip: req.ip,
+                    login: newUser.networkLogin,
+                    browserDetails: req.headers['user-agent'],
+                });
+
+                await updateLastLoginUser(newUser._id);
+            }
+
             return _messages.success(res, req, tokens);
         } catch (error) {
             console.log(error);
