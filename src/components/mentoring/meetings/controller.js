@@ -254,6 +254,36 @@ const meetingController = {
         }
     },
 
+    async findMyMenteePendingMeetings(req, res) {
+        try {
+            const programId = req.query.programId;
+            const { data } = await mentoringApi.get(`/meetings/mentee/pendingmeetings`, {
+                params: { programId: programId }
+            });
+
+            const populatedData = await populateUserFields(
+                [{ fieldName: 'user', reference: 'userId' }],
+                data
+            );
+            return _messages.success(
+                res,
+                req,
+                populatedData.data,
+                'ok',
+                'mentoring',
+                'list of meetings'
+            );
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
+                'mentoria',
+                'list of meetings'
+            );
+        }
+    },
+    
     async findMyMenteeFutureMeetings(req, res) {
         try {
             const programId = req.query.programId;

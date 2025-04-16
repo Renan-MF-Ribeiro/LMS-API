@@ -14,4 +14,5 @@ module.exports = express
     .get('/mentor/:id', _controller.findMeetingsByMentorId)
     .get('/mentor/:id/futuremeetings', _controller.findFutureMeetingsByMentorId)
     .get('/mentee/me/futuremeetings', _controller.findMyMenteeFutureMeetings)
+    .get('/mentee/me/peedingmeetings', _controller.findMyMenteePendingMeetings)
     .get('/recordMentee/:mentorId/:menteeId', _controller.getRecordMentee); 
