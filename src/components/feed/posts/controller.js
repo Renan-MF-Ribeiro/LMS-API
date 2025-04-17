@@ -12,6 +12,9 @@ const mime = require('mime-types');
 const FormData = require('form-data');
 const { getSegmentation, isSegmentationException, getMessengerConfig } = require('../../config/business');
 
+const GamificationKafka = require('../../gamification/kafka/broker');
+const { EVENT_CATEGORY } = require('../../gamification/model');
+
 module.exports = {
     async create(req, res) {
         const userCustomElegeFields = await getSegFieldsFromUser(req);
@@ -380,7 +383,7 @@ module.exports = {
         const isReplyingPost = req.body?.postId;
 
         try {
-            const { name, _id } = await getUserByToken(req);
+            const { name, _id, networkLogin } = await getUserByToken(req);
 
             const uri = 'posts/comments';
             const { data } = await socialApi.put(uri, req.body);
@@ -411,6 +414,17 @@ module.exports = {
                     contentType: isReplyingPost ? 'post' : 'comentário',
                 };
                 await createNotification(config, postOwnerId);
+            }
+
+            if(!isReplyingOwnPost) {
+                await GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.FEED_COMMENT, EVENT_CATEGORY.FEED_COMMENT_OWNER],
+                    identifier: networkLogin,
+                    meta: {
+                        postId: req.body.postId,
+                        comment: req.body.comment
+                    }
+                })
             }
 
             return _messages.success(res, req, response);
@@ -453,6 +467,18 @@ module.exports = {
             const uri = 'posts/likes';
             const { data } = await socialApi.put(uri, req.body);
 
+            if (req?.body?.target && req?.body?.postId) {
+                const user = await getUserByToken(req)
+
+                await GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.FEED_LIKE, EVENT_CATEGORY.FEED_LIKE_OWNER],
+                    identifier: user.networkLogin,
+                    meta: {
+                        postId: req.body.postId
+                    }
+                })
+            }
+
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
@@ -489,6 +515,15 @@ module.exports = {
                     contentId: data.postId,
                 };
                 await createNotification(config, users);
+
+                await GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.FEED_SHARE, EVENT_CATEGORY.FEED_SHARE_OWNER],
+                    identifier: networkLogin,
+                    meta: {
+                        postId: req.body.postId,
+                        usersWhoShared: users
+                    }
+                })
             }
 
             return _messages.success(res, req, data);
