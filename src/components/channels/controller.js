@@ -9,6 +9,7 @@ const { getTagsElegiblesByToken, checkEligibilityTagsAnd, getSectionTrailId } = 
 const { Theme } = require('../theme/palette/model');
 const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business');
 const { getDbCurrentFeatures } = require('../../utils/features');
+const mentorConfigController = require('../mentoring/config/controller');
 
 
 module.exports = {
@@ -65,11 +66,18 @@ module.exports = {
     },
     async getChannelsElegibles (req, res) {
         const tags = await getTagsElegiblesByToken(req);
+        const user = await _functions.getUserByToken(req);
+        const mentoringBlocked = await mentorConfigController.isBlocked(user._id);
+
         try {
             const query = { $and: [
                 { tags: { $in: tags.map((tag) => tag.value) } },
                 { enabled: true }
             ]}
+
+            if (mentoringBlocked) {
+                query.$and.push({ type: { $ne: 'mentoring' } });
+            }
 
             // if (req?.segmentation) {
             //     handleSegmentationOnQuery(req, 'owner', query)
@@ -82,9 +90,25 @@ module.exports = {
 
             const features = await getDbCurrentFeatures(req);
 
+            const existingMentoringChannel = await Channel.findOne({ type: 'mentoring' });
+
+            if (!existingMentoringChannel) {
+                await Channel.create({
+                    enabled: true,
+                    tags: ['ELEGE_geral'],
+                    banners: [],
+                    idSections: [],
+                    title: 'Mentorias',
+                    position: 4,
+                    type: 'mentoring'
+                });
+            }
+
             channels = await Promise.all(channels.map(async (channel) => {
                 if (channel.type === 'alura') return channel
                 if (channel.type === 'feed') return channel
+
+                if(features?.mentoring && channel.type === 'mentoring') return channel
 
                 if (features?.collaborationComponent && channel.type === 'collaboration') return channel
 
@@ -125,6 +149,7 @@ module.exports = {
 
             _messages.success(res, req, channels);
         } catch (error) {
+            console.log(error)
             _messages.internalServer(
                 res,
                 req,
