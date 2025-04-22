@@ -47,11 +47,11 @@ const {
     checkEligibilityTagsAnd,
 } = require('../sections/business');
 const { getUserByToken } = require('../../utils/functions');
-const GamificationController = require('../gamification/controller');
-const { EVENTS_CATEGORY } = require('../gamification/model');
+const { EVENT_CATEGORY } = require('../gamification/model');
 const { User } = require('../users/model');
 const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business');
 const ApiError = require('../../errors/ApiError');
+const GamificationKafka = require('../gamification/kafka/broker');
 const ITEM_KINDS = Object.freeze({
     DocumentItem: DocumentItem,
     MediaItem: MediaItem,
@@ -242,21 +242,6 @@ const ItemController = {
                         }
                     );
                 }
-
-                // GAMIFICATION DISPATCH
-                const collabItems = await Item.find({
-                    author: user._id,
-                    collaborative: true,
-                });
-                await GamificationController.dispatch(
-                    user.networkLogin,
-                    [EVENTS_CATEGORY.UPLOADED_CONTENT],
-                    {
-                        collabItemsCreatedAt: collabItems.map(
-                            ({ createdAt }) => createdAt
-                        ),
-                    }
-                );
 
                 //Evento novo conteúdo colaborativo
                 _messages.success(res, req, item._id);

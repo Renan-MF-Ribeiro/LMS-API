@@ -1,4 +1,6 @@
 const _messages = require('../../../utils/messages');
+const GamificationKafka = require('../../gamification/kafka/broker');
+const { EVENT_CATEGORY } = require('../../gamification/model');
 const { socialApi } = require('../../social/http-adapter');
 const { populateUserFields } = require('../buisiness');
 
@@ -25,6 +27,17 @@ module.exports = {
         try {
             const uri = `solicitations/user/accept/${solicitationId}`;
             const { data } = await socialApi.post(uri);
+
+            if (data?.solicitation?.status === 'ACCEPTED') {
+                await GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.FEED_GROUP_JOIN, EVENT_CATEGORY.FEED_GROUP_PARTICIPANT],
+                    identifier: data?.solicitation?.userId,
+                    meta: {
+                        groupId: data?.solicitation?.groupId
+                    }
+                })
+            }
+
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(

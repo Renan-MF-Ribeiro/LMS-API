@@ -1,6 +1,8 @@
 const { getElegibleUsers, getUserByToken } = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
 const { getSegmentation, isSegmentationException } = require('../../config/business');
+const GamificationKafka = require('../../gamification/kafka/broker');
+const { EVENT_CATEGORY } = require('../../gamification/model');
 const { socialApi } = require('../../social/http-adapter');
 const { populateUserFields, populateMembers, getSegFieldsFromUser } = require('../buisiness');
 const FormData = require('form-data');
@@ -230,6 +232,16 @@ const GroupController = {
                     headers: {
                         'Content-Type': 'multipart/form-data',
                         ...formData.getHeaders(),
+                    },
+                });
+            }
+
+            if (body?.status === 'ACTIVE') {
+                await GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.FEED_GROUP_CREATE],
+                    identifier: data?.data?.ownerId,
+                    meta: {
+                        groupId,
                     },
                 });
             }

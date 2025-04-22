@@ -485,7 +485,7 @@ const HomeController = {
     async listCertificates(req, res) {
         try {
             const { searchBy } = req.query;
-            req.query = { ...req.query, pageSize: req.query.pageSize ?? 5 };
+            req.query = { ...req.query, pageSize: req.query.pageSize ?? 10, pageIndex: req.query.pageIndex ?? 0 };
             const { skip, limit } = pagination(req);
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
@@ -510,7 +510,7 @@ const HomeController = {
                 return currConcludedAt - prevConcludedAt;
             });
 
-            certificates = certificates.slice(skip, skip + limit);
+            certificates = certificates.slice(Number(skip), Number(skip) + Number(limit));
 
             _messages.success(res, req, certificates);
         } catch (error) {

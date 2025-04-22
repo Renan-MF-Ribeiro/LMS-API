@@ -92,9 +92,8 @@ const { HistoricEvaluation, Evaluation } = require('../assessments/model');
 const { Question } = require('../assessments/questions/model');
 const { Alternative } = require('../assessments/alternatives/model');
 
-const { EVENTS_CATEGORY } = require('../gamification/model');
+const { EVENT_CATEGORY } = require('../gamification/model');
 const AssessmentController = require('../assessment/controller');
-const GamificationController = require('../gamification/controller');
 const GamificationBusiness = require('../gamification/business');
 const { Group } = require('../groups/model');
 const { handleUserEligibilitiesGamification } = require('../gamification/utils');
@@ -115,6 +114,7 @@ const { log } = require('../../utils/logger');
 const WebhooksController = require('../webhooks/controller');
 const ApiError = require('../../errors/ApiError');
 const { addSASTokenToResponse } = require('../../utils/cookies');
+const GamificationKafka = require('../gamification/kafka/broker');
 
 const { FormModel } = require('../forms/model');
 const { getConnectMap, validateDataByConnectMap, getConnectEligibilities } = require('../../utils/connect');
@@ -566,7 +566,27 @@ module.exports = {
                 const activationLink = `${process.env.DOMAIN}/login/ativacao?token=${emailToken}`;
                 await sendSignupActivationEmail(newUser.email, activationLink);
             }
+            
             const tokens = await generateTokens(newUser, networkLogin, password);
+
+            if (newUser && form?.autoLogin) {
+                await Log.create({
+                    dataNew: [],
+                    dataOld: [],
+                    groups: groupsAD ?? [],
+                    user: newUser._id,
+                    type: "LOGIN",
+                    message: "Sucesso ao se cadastrar",
+                    component: "users",
+                    route: "signup",
+                    ip: req.ip,
+                    login: newUser.networkLogin,
+                    browserDetails: req.headers['user-agent'],
+                });
+
+                await updateLastLoginUser(newUser._id);
+            }
+
             return _messages.success(res, req, tokens);
         } catch (error) {
             console.log(error);
@@ -641,10 +661,12 @@ module.exports = {
                 namesGroups,
             } = await generateTokens(user, login, password);
 
-            await Promise.all([
-                GamificationController.dispatch(login, [EVENTS_CATEGORY.LOGIN]),
-                updateLastLoginUser(user?._id)
-            ]);
+            await GamificationKafka.publishEventRuleValidation({
+                events: [EVENT_CATEGORY.LOGIN],
+                identifier: login
+            })
+
+            await updateLastLoginUser(user?._id)
 
             WebhooksController.dispatch('APASlogin', 'users', false, {
                 ...user,
@@ -758,7 +780,7 @@ module.exports = {
             const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data?.[ssoForm.claim];
 
             if (!claim) {
-                _messages.forbidden(
+                return _messages.forbidden(
                     res,
                     req,
                     'Claim inválido',
@@ -771,13 +793,15 @@ module.exports = {
             if (data?.communication || data?.data?.communication) {
                 const communication = data?.communication || data?.data?.communication;
                 const communicationCategory = String(communication).toUpperCase();
-                const eventCategory = EVENTS_CATEGORY[`OPENED_FROM_${communicationCategory}`];
+                const eventCategory = EVENT_CATEGORY[`OPENED_FROM_${communicationCategory}`];
 
-                await GamificationController.dispatch(claim, [eventCategory], {
-                    trail: {
-                        title: data?.trailTitle || data?.data?.trailTitle,
-                    },
-                });
+                await GamificationKafka.publishEventRuleValidation({
+                    events: [eventCategory],
+                    identifier: claim,
+                    meta: {
+                        trailTitle: data?.trailTitle || data?.data?.trailTitle,
+                    }
+                })
             }
 
             if (claim) {
