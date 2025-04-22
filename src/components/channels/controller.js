@@ -121,10 +121,9 @@ module.exports = {
                 // }
 
                 const sections = await Section.find(sectionQuery).select('trails');
-
                 const trailsIds = sections.flatMap(
                     (section) => section.trails
-                        .map(trail => getSectionTrailId(trail))
+                        ?.map(trail => getSectionTrailId(trail))
                         .filter(Boolean)
                 );
 
