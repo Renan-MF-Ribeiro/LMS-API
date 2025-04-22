@@ -618,6 +618,62 @@ const MenuDefault = [
         index: 13
     },
     {
+        roles: [
+            "PERFIL_Gestor_Usuario",
+            "PERFIL_Gestor_Elegibilidade",
+            "PERFIL_Gestor_Engajamento",
+            "PERFIL_Super_Admin"
+        ],
+        subMenu: [
+            {
+                button: "mentors",
+                roles: [
+                    "PERFIL_Super_Admin",
+                    "PERFIL_Gestor_Elegibilidade",
+                    "PERFIL_Gestor_Usuario"
+                ],
+                index: 0
+            },
+            {
+                button: "requestMentors",
+                roles: [
+                    "PERFIL_Super_Admin",
+                    "PERFIL_Gestor_Elegibilidade",
+                    "PERFIL_Gestor_Usuario"
+                ],
+                index: 1
+            },
+            {
+                button: "mentoringProgram",
+                roles: [
+                    "PERFIL_Super_Admin",
+                    "PERFIL_Gestor_Elegibilidade",
+                    "PERFIL_Gestor_Usuario"
+                ],
+                index: 2
+            },
+            {
+                button: "topics",
+                roles: [
+                    "PERFIL_Super_Admin",
+                    "PERFIL_Gestor_Elegibilidade",
+                    "PERFIL_Gestor_Usuario"
+                ],
+                index: 3
+            },
+            {
+                button: "configMentoring",
+                roles: [
+                    "PERFIL_Super_Admin",
+                    "PERFIL_Gestor_Elegibilidade",
+                    "PERFIL_Gestor_Usuario"
+                ],
+                index: 4
+            }
+        ],
+        index: 14
+    },
+    {
         button: "dashboard",
         roles: [
             "PERFIL_Analista",
@@ -639,14 +695,14 @@ const MenuDefault = [
                 index: 1
             },
         ],
-        index: 14
+        index: 15
     },
     {
         button: "internalGallery",
         roles: [
             "PERFIL_Conteudista",
         ],
-        index: 15
+        index: 16
     },
     {
         button: "system",
@@ -793,8 +849,9 @@ const MenuDefault = [
                 index: 3
             },
         ],
-        index: 16
+        index: 17
     },
+
 ]
 
 module.exports = { MenuDefault };
