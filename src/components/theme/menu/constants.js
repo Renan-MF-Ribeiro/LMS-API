@@ -618,6 +618,8 @@ const MenuDefault = [
         index: 13
     },
     {
+        button: "mentoring",
+        feature: "mentoring",
         roles: [
             "PERFIL_Gestor_Usuario",
             "PERFIL_Gestor_Elegibilidade",
@@ -791,6 +793,7 @@ const MenuDefault = [
                         roles: [
                             "PERFIL_Gestor_Engajamento"
                         ],
+                        feature: "welcomeComponent",
                         index: 4
                     }
                 ],
