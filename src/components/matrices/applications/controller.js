@@ -1,4 +1,5 @@
 const { matricesApi } = require('../http-adapter');
+const { getUsersByTags, getUsersByGroups } = require('../../users/business');
 
 const ApplicationsController = {
     findAll: async (req, res) => {
@@ -21,6 +22,33 @@ const ApplicationsController = {
         } catch (error) {
             const statusCode = error.response?.data?.statusCode ?? 500;
             const errorMessage = error.response?.data?.message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    preview: async (req, res) => {
+        try {
+            const dto = req.body;
+            const eligibilities = dto.eligibilities;
+
+            const [{ data: matrice }, users] = await Promise.all([
+                matricesApi.get(`/matrices/${dto.matrixId}`),
+                getUsersByGroups(eligibilities),
+            ]);
+            const response = {
+                matrice: matrice.data.title,
+                users: users.map((user) => ({
+                    name: user.name,
+                    networkLogin: user.networkLogin,
+                    office: user.office,
+                    categories: matrice.data.categories.map((category) => category.title),
+                })),
+            };
+
+            res.status(200).json(response);
+        } catch (error) {
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = error.response?.data?.message ?? error.message;
             res.status(statusCode).json(errorMessage);
         }
     },

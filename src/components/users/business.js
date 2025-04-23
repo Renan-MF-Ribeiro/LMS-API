@@ -652,7 +652,7 @@ module.exports = {
 
     async getUsersByGroups(groups) {
         try {
-            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin']);
+            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin', 'name', 'office']).lean();
             return users;
         } catch (error) {
             return error;
