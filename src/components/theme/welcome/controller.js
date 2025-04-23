@@ -18,7 +18,11 @@ module.exports = {
         const welcome = (await Welcome.findOne({ __t: 'welcome', deleted: { $ne: true } }))
             ?? (await Welcome.create({ ...body, __t: 'welcome', deleted: false }));
 
-        welcome.welcomeVideo = await uploadVimeoAsync(fileArray[welcomeVideoIndex]);
+        if (body.welcomeVideo.startsWith('http')) {
+            welcome.welcomeVideo = body.welcomeVideo;
+        } else {
+            welcome.welcomeVideo = await uploadVimeoAsync(fileArray[welcomeVideoIndex]);
+        }
 
         await welcome.save();
 
