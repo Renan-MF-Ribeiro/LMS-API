@@ -13,15 +13,15 @@ const mentorConfigController = {
             const { data } = await mentoringApi.get(`/config/${process.env.CLIENT_ID}`);
             const populatedMentorTrails = await populateTrailFields(data.data.mentorRecommendations.trails);
             const populatedMenteeTrails = await populateTrailFields(data.data.menteeRecommendations.trails);
-            const populatedUsers = await populateBlockedUserFields(
-                [{ fieldName: 'users', reference: 'blockedMentees' }],
-                data
-            );
+
+            if (data.data.blockedMentees.length > 0) {
+                const populatedUsers = await populateBlockedUserFields(data.data.blockedMentees);
+                data.data.blockedMentees = populatedUsers || [];
+            }
 
             data.data.mentorRecommendations.trails = populatedMentorTrails;
             data.data.menteeRecommendations.trails = populatedMenteeTrails;
 
-            data.data.blockedMentees = populatedUsers;
 
             return _messages.success(
                 res,
