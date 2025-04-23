@@ -703,8 +703,8 @@ const TrackingController = {
             // Ordenar os resultados manualmente se necessário
             if (['studentName', 'itemName', 'trails'].includes(order)) {
                 activities.sort((a, b) => {
-                    const valueA = getSortableValue(a, order, trailsByItem);
-                    const valueB = getSortableValue(b, order, trailsByItem);
+                    const valueA = getSortableKey(a, order, trailsByItem);
+                    const valueB = getSortableKey(b, order, trailsByItem);
                     return sort === 'asc' ? valueA.localeCompare(valueB) : valueB.localeCompare(valueA);
                 });
             }
@@ -1006,6 +1006,13 @@ function processTrackingType(item) {
         default:
             break
     }
+}
+
+function getSortableKey(activity, key, trails) {
+    if (key === 'trails') {
+        return (trails[activity.itemId] || []).join(", ").toLowerCase();
+    }
+    return activity[key]?.toLowerCase() || '';
 }
 
 module.exports = TrackingController;
