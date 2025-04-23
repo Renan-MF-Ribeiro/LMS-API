@@ -1,60 +1,27 @@
-const { Welcome } = require('./model')
 const _messages = require('../../../utils/messages')
-const { uploadVimeo } = require('../../../utils/files')
+const { uploadVimeoAsync } = require('../../../utils/files')
+const { Welcome } = require('./model')
 
 module.exports = {
-    async getConfig (req, res) {
-        try {
-            const welcome = await Welcome.findOne({ deleted: { $ne: true } }).select('-createdAt -updatedAt -__v ')
-            return _messages.success(res, req, welcome)
-        } catch (error) {
-            console.error(error)
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'welcome',
-                'getConfig',
-            )
-        }
+    async getConfig(req, res) {
+        const welcome = await Welcome.findOne({ __t: 'welcome', deleted: { $ne: true } })
+            .select('-createdAt -updatedAt -__v ')
+
+        return _messages.success(res, req, welcome)
     },
 
-    async CreateOrUpdate (req, res) {
-        try {
-            const body = JSON.parse(req.fields.body)
-            const fileArray = Object.keys(req.files).map(key => req.files[key])
-            const welcome = await Welcome.findOne({ deleted: { $ne: true } })
-            if (welcome) {
-                const welcomeVideo = fileArray.findIndex(el => el.name === body.welcomeVideo)
-                if (welcomeVideo >= 0) {
-                    let welcomeVideoPath = await uploadVimeo(fileArray[welcomeVideo], body._id)
-                    body.welcomeVideo = welcomeVideoPath
-                }
-                await Welcome.findByIdAndUpdate(welcome._id, welcome)
-            } else {
-                const newWelcome = await Welcome.create(req.body)
-                console.log(newWelcome)
-                const welcomeVideo = fileArray.findIndex(el => el.name === body.welcomeVideo)
-                if (welcomeVideo >= 0) {
-                    let welcomeVideoPath = await uploadVimeo(fileArray[welcomeVideo], newWelcome._id)
-                    body.welcomeVideo = welcomeVideoPath
-                }
-            }
+    async createOrUpdate(req, res) {
+        const body = JSON.parse(req.fields.body);
+        const fileArray = Object.keys(req.files).map(key => req.files[key]);
+        const welcomeVideoIndex = fileArray.findIndex(el => el.name === body.welcomeVideo);
 
-            return _messages.success(res, req, welcome)
+        const welcome = (await Welcome.findOne({ __t: 'welcome', deleted: { $ne: true } }))
+            ?? (await Welcome.create({ ...body, __t: 'welcome', deleted: false }));
 
-        }
-        catch (error) {
-            console.error(error)
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'welcome',
-                'createOrUpdate',
-            )
-        }
+        welcome.welcomeVideo = await uploadVimeoAsync(fileArray[welcomeVideoIndex]);
+
+        await welcome.save();
+
+        return _messages.success(res, req, welcome);
     }
 }
