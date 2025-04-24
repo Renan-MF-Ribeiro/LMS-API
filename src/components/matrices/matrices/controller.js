@@ -14,6 +14,21 @@ const matricesController = {
         }
     },
 
+    findAllWithCategories: async (req, res) => {
+        try {
+            const options = req.query;
+            const { data } = await matricesApi.get('/matrices/evaluation-matrices', {
+                params: options,
+            });
+
+            res.status(data.statusCode).json(data.data);
+        } catch (error) {
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = error.response?.data?.message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
     findOne: async (req, res) => {
         try {
             const { id } = req.params;
