@@ -727,66 +727,53 @@ const TrackingController = {
             const { skip, limit } = pagination(req);
             let { order, sort } = ordernation(req);
             const searchBy = req.query.searchBy;
-
-            let userIds = [];
-            let itemIds = [];
-
-            if (searchBy) {
-                const users = await User.find({ name: { $regex: searchBy, $options: "i" } })
-                    .select("_id networkLogin")
-                    .lean();
-
-                userIds = users.map(user => user.networkLogin);
-
-                const trails = await Trail.find({ title: { $regex: searchBy, $options: "i" } })
-                    .select("_id items")
-                    .lean();
-                itemIds = trails.map(trail => trail.items.map(item => item.itemID)).flat();
-
-            }
-
-            // **Montar a query principal**
+    
             const query = {
                 lessonStatus: "incomplete",
                 kind: "ActivityTracking",
                 sentAt: { $exists: true, $not: { $size: 0 } },
             };
-
-            order = order === 'maxSentAt' ? 'sentAt' : order;
-            order = order === 'itemName' ? 'item.title' : order;
-            order = order === 'studentName' ? 'user.name' : order;
-
-            const trackingCount = await TrackingsItems.find(
-                query
-            ).countDocuments();
-            const tracking = await TrackingsItems.find(query)
+    
+            order = order === 'createdAt' ? 'sentAt' : order;
+    
+            const orderMapping = {
+                'sentAt': 'sentAt',
+                'itemName': 'itemName',
+                'studentName': 'studentName',
+                'trails': 'trails',
+            };
+            order = orderMapping[order] || order;
+    
+            const trackingCount = await Tracking.find(query).countDocuments();
+            let tracking = await Tracking.find(query)
                 .skip(parseInt(skip))
                 .limit(parseInt(limit))
-                .sort({ [order]: sort })
+                .sort({ [order]: sort === 'asc' ? 1 : -1 })
                 .lean();
-
-            // **Mapear User e Item para evitar múltiplas queries dentro do loop**
-            const userLogins = tracking.map(t => t.userLogin);
-            const itemIdsInTracking = tracking.map(t => t.item);
-
-            const usersMap = await User.find({ networkLogin: { $in: userLogins } })
+    
+            const userLogins = tracking.map(a => a.userLogin);
+            const itemIds = tracking.map(a => a.item?._id).filter(id => id);
+    
+            const users = await User.find({ networkLogin: { $in: userLogins } })
                 .select("networkLogin name email")
-                .lean()
-                .then(users => Object.fromEntries(users.map(user => [user.networkLogin, user])));
-
-            const itemsMap = await Item.find({ _id: { $in: itemIdsInTracking } })
-                .select("_id title")
-                .lean()
-                .then(items => Object.fromEntries(items.map(item => [item._id.toString(), item])));
-
-            // **Buscar trilhas de uma vez**
-            const trailsMap = await Trail.find({ "items.itemID": { $in: itemIdsInTracking } })
+                .lean();
+            const usersMap = Object.fromEntries(users.map(user => [user.networkLogin, user]));
+    
+            const trails = await Trail.find({ "items.itemID": { $in: itemIds } })
                 .select("title items.itemID")
                 .lean();
-
-            // **Criar um mapa de trilhas por itemID**
+    
+            const itemsTitle = await Item.find({ _id: { $in: itemIds } })
+                .select("title _id")
+                .lean();
+    
+            const titles = {};
+            itemsTitle.forEach(item => {
+                titles[item._id] = item.title;
+            });
+    
             const trailsByItem = {};
-            trailsMap.forEach(trail => {
+            trails.forEach(trail => {
                 trail.items.forEach(item => {
                     if (!trailsByItem[item.itemID]) {
                         trailsByItem[item.itemID] = [];
@@ -794,24 +781,42 @@ const TrackingController = {
                     trailsByItem[item.itemID].push(trail.title);
                 });
             });
+    
+            let activities = tracking.map(activity => {
+                const itemId = activity.item?._id;
+                return {
+                    trackingId: activity._id,
+                    itemId: itemId || null,
+                    itemName: titles[itemId] || null,
+                    studentName: usersMap[activity.userLogin]?.name || null,
+                    studentEmail: usersMap[activity.userLogin]?.email || null,
+                    sentAt: activity.sentAt,
+                    passingScore: activity.item?.passingScore || null,
+                    score: activity.score,
+                    trails: (trailsByItem[itemId] || []).join(", ")
+                };
+            });
+    
+            // Aplicar o `searchBy` antes da ordenação manual
+            if (searchBy) {
+                const searchTerm = searchBy.trim().toLowerCase();
 
-            // **Montar a resposta final**
-            const activities = tracking.map(activity => ({
-                trackingId: activity._id,
-                itemId: activity.item || null,
-                itemName: itemsMap[activity.item]?.title || null,
-                studentName: usersMap[activity.userLogin]?.name || null,
-                studentEmail: usersMap[activity.userLogin]?.email || null,
-                sentAt: activity.sentAt,
-                correctedAt: activity.correctedAt,
-                contentPath: activity.contentPath,
-                passingScore: activity.passingScore,
-                score: activity.score,
-                reviewerComment: activity.reviewerComment,
-                trails: (trailsByItem[activity.item] || []).join(", "),
-            }));
-
-            _messages.success(res, req, { activities, total: countTracking });
+                activities = activities.filter(activity =>
+                    activity.studentName?.toLowerCase().includes(searchTerm) ||
+                    activity.itemName?.toLowerCase().includes(searchTerm) ||
+                    (trailsByItem[activity.itemId] || []).join(", ").toLowerCase().includes(searchTerm)
+                );
+            }
+    
+            if (['studentName', 'itemName', 'trails'].includes(order)) {
+                activities.sort((a, b) => {
+                    const valueA = getSortableKey(a, order, trailsByItem);
+                    const valueB = getSortableKey(b, order, trailsByItem);
+                    return sort === 'asc' ? valueA.localeCompare(valueB) : valueB.localeCompare(valueA);
+                });
+            }
+    
+            _messages.success(res, req, { activities, total: trackingCount });
         } catch (error) {
             console.log(error);
             _messages.internalServer(
@@ -819,11 +824,11 @@ const TrackingController = {
                 req,
                 error.message,
                 'Erro interno no servidor',
-                'listActivities'
+                'listActivitiesForCorrection'
             );
         }
     },
-
+    
     async updateActivityAdmin(req, res) {
         try {
             const { trackingId } = req.query;
