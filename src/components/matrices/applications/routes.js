@@ -4,6 +4,7 @@ const _controller = require('./controller');
 module.exports = express
     .Router()
     .get('/', _controller.findAll)
+    .get('/search-content/:type', _controller.searchContent)
     .post('/preview', _controller.preview)
     .get('/:id', _controller.findOne)
     .post('/', _controller.create)

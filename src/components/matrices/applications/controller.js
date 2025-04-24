@@ -1,5 +1,7 @@
 const { matricesApi } = require('../http-adapter');
 const { getFirstTenUsersByGroup } = require('../../users/business');
+const { searchTrailBy } = require('../../trails/business');
+const { searchCourseBy } = require('../../courses/business');
 
 const ApplicationsController = {
     findAll: async (req, res) => {
@@ -8,6 +10,34 @@ const ApplicationsController = {
             const { data } = await matricesApi.get('/applications', { params: options });
             res.status(data.statusCode).json(data.data);
         } catch (error) {
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = error.response?.data?.message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    searchContent: async (req, res) => {
+        try {
+            const type = req.params?.type;
+            const searchBy = req.query?.searchBy;
+
+            let response = [];
+
+            switch (type) {
+                case 'trails':
+                    response = await searchTrailBy(searchBy);
+                    break;
+                case 'courses':
+                    response = await searchCourseBy(searchBy);
+                    break;
+                default:
+                    response = "Insira um tipo de busca válido: 'trails' ou 'courses'";
+                    break;
+            }
+
+            res.status(200).json(response);
+        } catch (error) {
+            console.log({ERRO: error.message})
             const statusCode = error.response?.data?.statusCode ?? 500;
             const errorMessage = error.response?.data?.message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
