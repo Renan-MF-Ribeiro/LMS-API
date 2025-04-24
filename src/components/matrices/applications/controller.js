@@ -1,5 +1,5 @@
 const { matricesApi } = require('../http-adapter');
-const { getUsersByTags, getUsersByGroups } = require('../../users/business');
+const { getFirstTenUsersByGroup } = require('../../users/business');
 
 const ApplicationsController = {
     findAll: async (req, res) => {
@@ -33,15 +33,17 @@ const ApplicationsController = {
 
             const [{ data: matrice }, users] = await Promise.all([
                 matricesApi.get(`/matrices/${dto.matrixId}`),
-                getUsersByGroups(eligibilities),
+                getFirstTenUsersByGroup(eligibilities),
             ]);
             const response = {
-                matrice: matrice.data.title,
+                matriceTitle: matrice.data.title,
+                matriceCategories: matrice.data.categories.map((category) => {
+                    return { category: category.title, skills: category.skills };
+                }),
                 users: users.map((user) => ({
                     name: user.name,
                     networkLogin: user.networkLogin,
                     office: user.office,
-                    categories: matrice.data.categories.map((category) => category.title),
                 })),
             };
 

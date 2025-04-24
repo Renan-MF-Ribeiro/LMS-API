@@ -659,6 +659,15 @@ module.exports = {
         }
     },
 
+    async getFirstTenUsersByGroup(groups) {
+        try {
+            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin', 'name', 'office']).limit(10).lean();
+            return users;
+        } catch (error) {
+            return error;
+        }
+    },
+
     async getUsersByTags(tags) {
         try {
             let groups = [];
