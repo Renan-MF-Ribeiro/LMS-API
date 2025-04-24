@@ -5,6 +5,7 @@ const matricesController = {
         try {
             const options = req.query;
             const { data } = await matricesApi.get('/matrices', { params: options });
+
             res.status(data.statusCode).json(data.data);
         } catch (error) {
             const statusCode = error.response?.data?.statusCode ?? 500;

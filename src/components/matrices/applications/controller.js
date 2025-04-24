@@ -37,7 +37,22 @@ const ApplicationsController = {
 
             res.status(200).json(response);
         } catch (error) {
-            console.log({ERRO: error.message})
+            console.log({ ERRO: error.message });
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = error.response?.data?.message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    getLastApplications: async (req, res) => {
+        try {
+            const options = req.query;
+            const { data } = await matricesApi.get('/applications/last', { params: options });
+            res.status(data.statusCode).json(data.data);
+
+            res.status(200).json(response);
+        } catch (error) {
+            console.log({ ERRO: error.message });
             const statusCode = error.response?.data?.statusCode ?? 500;
             const errorMessage = error.response?.data?.message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
