@@ -2,6 +2,8 @@ const { matricesApi } = require('../http-adapter');
 const { getFirstTenUsersByGroup } = require('../../users/business');
 const { searchTrailBy } = require('../../trails/business');
 const { searchCourseBy } = require('../../courses/business');
+const { User } = require('../../users/model');
+const { Group } = require('../../groups/model');
 
 const ApplicationsController = {
     findAll: async (req, res) => {
@@ -10,6 +12,30 @@ const ApplicationsController = {
             const { data } = await matricesApi.get('/applications', { params: options });
             res.status(data.statusCode).json(data.data);
         } catch (error) {
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = error.response?.data?.message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    findApplicationsPerUser: async (req, res) => {
+        try {
+            const id = req.params.id;
+            const options = req.query;
+
+            const user = await User.findOne({ _id: id });
+            
+            if (!user) {
+                return res.status(404).json("Usuário não encontrado");
+            }
+
+            const userGroups = await Group.find({ name: { $in: user?.groupsAD } }, 'name tags') || [];
+            const tags = userGroups?.flatMap((group) => group?.tags?.map((tag) => tag?.value)).join(',') || [];
+
+            const { data } = await matricesApi.get(`/applications/elegible/${id}`, { params: { tags, options } });
+            res.status(data.statusCode).json(data.data);
+        } catch (error) {
+            console.log({ ERRO: error.message });
             const statusCode = error.response?.data?.statusCode ?? 500;
             const errorMessage = error.response?.data?.message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
