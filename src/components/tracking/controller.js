@@ -791,6 +791,7 @@ const TrackingController = {
                     studentName: usersMap[activity.userLogin]?.name || null,
                     studentEmail: usersMap[activity.userLogin]?.email || null,
                     sentAt: activity.sentAt,
+                    contentPath: activity.contentPath,
                     passingScore: activity.item?.passingScore || null,
                     score: activity.score,
                     trails: (trailsByItem[itemId] || []).join(", ")
