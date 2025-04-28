@@ -41,7 +41,9 @@ const GamificationController = {
 
     async updateClient(req, res) {
         try {
-            const data = await GamificationBusiness.updateClient(req.body)
+            const requestUserLogin = await getUserByToken(req);
+
+            const data = await GamificationBusiness.updateClient(req.body, requestUserLogin?.networkLogin)
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -194,7 +196,9 @@ const GamificationController = {
                 req.body.eligibilities = await handleGroupTagsGamification(eligibilities)
             }
 
-            const data = await GamificationBusiness.updateClientRankings(_id, req.body);
+            const requestUserLogin = await getUserByToken(req);
+
+            const data = await GamificationBusiness.updateClientRankings(_id, req.body, requestUserLogin?.networkLogin);
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -259,7 +263,10 @@ const GamificationController = {
         try {
             const { _id } = req.params;
             const body = await returnBodyUpdate(req);
-            const data = await GamificationBusiness.updateClientRewards(_id, body);
+
+            const requestUserLogin = await getUserByToken(req);
+
+            const data = await GamificationBusiness.updateClientRewards(_id, body, requestUserLogin?.networkLogin);
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.badRequest(
