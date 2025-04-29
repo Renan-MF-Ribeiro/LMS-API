@@ -750,6 +750,11 @@ const MenuDefault = [
                         ],
                         feature: "webhook",
                         index: 2
+                    },
+                    {
+                        button: 'calendar',
+                        roles: ["PERFIL_Super_Admin"],
+                        index: 3
                     }
                 ],
                 index: 1
