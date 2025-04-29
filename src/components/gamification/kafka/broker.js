@@ -7,11 +7,6 @@ const GamificationEventBusiness = require('../events/business');
 const { getDbCurrentFeatures } = require('../../../utils/features');
 const { Types } = require('mongoose');
 
-const GAMIFICATION_KAFKA_EVENTS = Object.freeze({
-    PENDING: 'gamification-events-pending',
-    VALIDATED: 'gamification-events-validated',
-});
-
 class GamificationKafkaSingleton {
     static instance;
 
@@ -24,7 +19,7 @@ class GamificationKafkaSingleton {
         if (!GamificationKafkaSingleton.instance) {
             this.#isConnected = false;
             this.#producer = kafka.producer();
-            this.#consumer = kafka.consumer({ groupId: GAMIFICATION_KAFKA_EVENTS.PENDING });
+            this.#consumer = kafka.consumer({ groupId: process.env.KAFKA_GAMIFICATION_EVENTS_PENDING });
             GamificationKafkaSingleton.instance = this;
         }
 
@@ -37,7 +32,7 @@ class GamificationKafkaSingleton {
 
     async #setupConsumer() {
         await this.#consumer.connect();
-        await this.#consumer.subscribe({ topic: GAMIFICATION_KAFKA_EVENTS.PENDING });
+        await this.#consumer.subscribe({ topic: process.env.KAFKA_GAMIFICATION_EVENTS_PENDING });
         await this.#consumeEventRuleValidation();
     }
 
@@ -95,7 +90,7 @@ class GamificationKafkaSingleton {
 
         try {
             await this.#producer.send({
-                topic: GAMIFICATION_KAFKA_EVENTS.PENDING,
+                topic: process.env.KAFKA_GAMIFICATION_EVENTS_PENDING,
                 messages: [
                     {
                         value: JSON.stringify({
@@ -143,7 +138,7 @@ class GamificationKafkaSingleton {
                         for await (const { validated, ...processedEvent } of validator) {
                             if (validated) {
                                 await this.#producer.send({
-                                    topic: GAMIFICATION_KAFKA_EVENTS.VALIDATED,
+                                    topic: process.env.KAFKA_GAMIFICATION_EVENTS_VALIDATED,
                                     messages: [
                                         {
                                             value: JSON.stringify({
