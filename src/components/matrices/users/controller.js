@@ -1,3 +1,5 @@
+const { default: axios } = require('axios');
+const { User } = require('../../users/model');
 const { matricesApi } = require('../http-adapter');
 
 const usersController = {
@@ -32,6 +34,29 @@ const usersController = {
             const { id } = req.params;
             const { data } = await matricesApi.get(`/users/${id}/matrices`);
             res.status(data.statusCode).json(data.data);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    findUserCertifiers: async (req, res) => {
+        try {
+            const { id } = req.params;
+
+            const user = await User.findOne({ _id: id });
+            const uri = `${
+                process.env.API_CERTIFIER
+            }/certificates/find/${user.networkLogin?.toLowerCase()}?clientId=${
+                process.env.CLIENT_ID
+            }`;
+
+            const { data } = await axios.get(uri, {
+                headers: { Authorization: req.headers.authorization },
+            });
+            res.status(data.statusCode).json(data);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
