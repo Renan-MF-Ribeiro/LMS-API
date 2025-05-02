@@ -1,6 +1,9 @@
 const { default: axios } = require('axios');
 const { User } = require('../../users/model');
 const { matricesApi } = require('../http-adapter');
+const { getCoursesByUserID } = require('../../courses/business'); 
+const { buildCoursesResponse } = require('../business');
+
 
 const usersController = {
     findAll: async (req, res) => {
@@ -47,16 +50,30 @@ const usersController = {
             const { id } = req.params;
 
             const user = await User.findOne({ _id: id });
-            const uri = `${
-                process.env.API_CERTIFIER
-            }/certificates/find/${user.networkLogin?.toLowerCase()}?clientId=${
-                process.env.CLIENT_ID
-            }`;
+            const uri = `${process.env.API_CERTIFIER
+                }/certificates/find/${user.networkLogin?.toLowerCase()}?clientId=${process.env.CLIENT_ID
+                }`;
 
             const { data } = await axios.get(uri, {
                 headers: { Authorization: req.headers.authorization },
             });
             res.status(data.statusCode).json(data);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    findUsersConcluedCourses: async (req, res) => {
+        try {
+            const { id } = req.params;
+
+            const courses = await getCoursesByUserID(id).then((courses) =>
+                buildCoursesResponse(courses));
+
+            res.status(200).json(courses);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;

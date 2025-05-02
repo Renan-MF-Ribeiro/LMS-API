@@ -216,6 +216,7 @@ module.exports = {
                         'dateApplicationFinal',
                         'name',
                         'createdAt',
+                        'location',
                         'minister',
                     ],
                     { sort: { createdAt: -1 } }
