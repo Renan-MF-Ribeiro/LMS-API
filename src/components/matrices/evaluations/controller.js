@@ -9,7 +9,7 @@ const matricesController = {
 
             res.status(data.statusCode).json(data.data);
         } catch (error) {
-            const message = error.response?.data?.message ?? error.message
+            const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
             const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
@@ -22,7 +22,7 @@ const matricesController = {
             const { data } = await matricesApi.get(`/evaluations/${id}`);
             res.status(data.statusCode).json(data.data);
         } catch (error) {
-            const message = error.response?.data?.message ?? error.message
+            const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
             const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
@@ -38,7 +38,7 @@ const matricesController = {
             const { data } = await matricesApi.post('/evaluations', req.body);
             res.status(data.statusCode).json(data.data);
         } catch (error) {
-            const message = error.response?.data?.message ?? error.message
+            const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
             const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
@@ -52,7 +52,7 @@ const matricesController = {
             const { data } = await matricesApi.patch(`/evaluations/${id}`, req.body);
             res.status(data.statusCode).json(data.data);
         } catch (error) {
-            const message = error.response?.data?.message ?? error.message
+            const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
             const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
@@ -66,7 +66,7 @@ const matricesController = {
             const { data } = await matricesApi.delete(`/evaluations/${id}`, req.body);
             res.status(data.statusCode).json(data.data);
         } catch (error) {
-            const message = error.response?.data?.message ?? error.message
+            const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
             const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);

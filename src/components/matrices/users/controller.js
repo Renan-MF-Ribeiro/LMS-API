@@ -13,8 +13,9 @@ const usersController = {
 
             res.status(data.statusCode).json(data.data);
         } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = error.response?.data?.message ?? 'Internal server error';
+            const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
         }
     },
