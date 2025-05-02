@@ -4,6 +4,7 @@ const { searchTrailBy } = require('../../trails/business');
 const { searchCourseBy } = require('../../courses/business');
 const { User } = require('../../users/model');
 const { Group } = require('../../groups/model');
+const { populateCoursesAndTrails } = require('../business');
 
 const ApplicationsController = {
     findAll: async (req, res) => {
@@ -12,8 +13,9 @@ const ApplicationsController = {
             const { data } = await matricesApi.get('/applications', { params: options });
             res.status(data.statusCode).json(data.data);
         } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = error.response?.data?.message ?? 'Internal server error';
+            const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
         }
     },
@@ -35,9 +37,9 @@ const ApplicationsController = {
             const { data } = await matricesApi.get(`/applications/elegible/${id}`, { params: { tags, options } });
             res.status(data.statusCode).json(data.data);
         } catch (error) {
-            console.log({ ERRO: error.message });
+            const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = error.response?.data?.message ?? 'Internal server error';
+            const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
         }
     },
@@ -63,9 +65,9 @@ const ApplicationsController = {
 
             res.status(200).json(response);
         } catch (error) {
-            console.log({ ERRO: error.message });
+            const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = error.response?.data?.message ?? 'Internal server error';
+            const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
         }
     },
@@ -74,10 +76,14 @@ const ApplicationsController = {
         try {
             const { id } = req.params;
             const { data } = await matricesApi.get(`/applications/${id}`);
-            res.status(data.statusCode).json(data.data);
+            
+            const responsePopulated = await populateCoursesAndTrails(data.data);
+
+            res.status(data.statusCode).json(responsePopulated);
         } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = error.response?.data?.message ?? 'Internal server error';
+            const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
         }
     },
@@ -105,8 +111,9 @@ const ApplicationsController = {
 
             res.status(200).json(response);
         } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = error.response?.data?.message ?? error.message;
+            const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
         }
     },
@@ -116,8 +123,9 @@ const ApplicationsController = {
             const { data } = await matricesApi.post('/applications', req.body);
             res.status(data.statusCode).json(data.data);
         } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = error.response?.data?.message ?? 'Internal server error';
+            const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
         }
     },
@@ -129,8 +137,9 @@ const ApplicationsController = {
             const { data } = await matricesApi.patch(`/applications/${id}`, req.body);
             res.status(data.statusCode).json(data.data);
         } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = error.response?.data?.message ?? 'Internal server error';
+            const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
         }
     },
@@ -142,8 +151,9 @@ const ApplicationsController = {
             const { data } = await matricesApi.delete(`/applications/${id}`, req.body);
             res.status(data.statusCode).json(data.data);
         } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = error.response?.data?.message ?? 'Internal server error';
+            const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
         }
     },
