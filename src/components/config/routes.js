@@ -12,6 +12,7 @@ router
     .patch('/segmentation/rule/:ruleId', isSuperAdmin, _controller.updateRule)
     .post('/segmentation/exceptions', isSuperAdmin, _controller.createException)
     .patch('/segmentation/exceptions/:exceptionId', isSuperAdmin, _controller.updateException)
-    .delete('/segmentation/exceptions/:exceptionId', isSuperAdmin, _controller.deleteException);
+    .delete('/segmentation/exceptions/:exceptionId', isSuperAdmin, _controller.deleteException)
+    .patch('/matrices/user-visibility', isSuperAdmin, _controller.updateMatrixUserVisibility);
 
 module.exports = router;
