@@ -5,4 +5,4 @@ const { validateTokenRoute, isAdmin } = require('../../../utils/middlewares');
 
 module.exports = express.Router()
     .get('/', validateTokenRoute, isAdmin, _controller.getConfig)
-    .post('/', formidable(), validateTokenRoute, isAdmin, _controller.CreateOrUpdate)
+    .post('/', formidable(), validateTokenRoute, isAdmin, _controller.createOrUpdate)
