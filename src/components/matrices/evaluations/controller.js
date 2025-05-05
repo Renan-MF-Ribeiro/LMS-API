@@ -1,4 +1,5 @@
 const { User } = require('../../users/model');
+const { populateUserFields } = require('../business');
 const { matricesApi } = require('../http-adapter');
 
 const matricesController = {
@@ -6,8 +7,13 @@ const matricesController = {
         try {
             const options = req.query;
             const { data } = await matricesApi.get('/evaluations', { params: options });
-
-            res.status(data.statusCode).json(data.data);
+            const response = await populateUserFields(
+                [
+                    { fieldName: 'user', reference: 'userId' },
+                ],
+                data
+            );
+            res.status(data.statusCode).json(response.data);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
