@@ -9,8 +9,13 @@ const getHeaders = (req) => ({
 });
 
 module.exports = {
-    async saveSurvey (req, res) {
+    async saveSurvey(req, res) {
         try {
+            const answer = req.body.feedbacks[0].answer;
+            if (!answer) {
+                return _messages.badRequest(res, req, 'Campo "answer" é obrigatório', 'Campo "answer" é obrigatório', 'survey', 'saveSurvey');
+            }
+
             const { data } = await axios.post(
                 `${API_SURVEY}/feedback/save`,
                 { ...req.body, clientid: CLIENT_ID },
@@ -23,7 +28,7 @@ module.exports = {
         }
     },
 
-    async updateSurvey (req, res) {
+    async updateSurvey(req, res) {
         try {
             const { data } = await axios.post(
                 `${API_SURVEY}/updatesurvey`,
@@ -37,7 +42,7 @@ module.exports = {
         }
     },
 
-    async listByUser (req, res) {
+    async listByUser(req, res) {
         try {
             const { data } = await axios.get(
                 `${API_SURVEY}/listbyuser`,

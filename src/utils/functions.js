@@ -138,8 +138,8 @@ module.exports = {
 
     pagination(req) {
         const { pageSize, pageIndex } = req.query;
-        let skip = pageIndex || 0;
-        const limit = pageSize || 10;
+        let skip = Number(pageIndex) || 0;
+        const limit = Number(pageSize) || 10;
 
         if (skip > 0) {
             skip = limit * pageIndex;
