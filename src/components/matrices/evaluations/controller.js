@@ -32,8 +32,15 @@ const matricesController = {
     create: async (req, res) => {
         try {
             const user = await User.findOne({ _id: req.body.userId })
+            if (!user) {
+                return res.status(404).json({ message: 'Usuáriuo não encontrado' });
+            }
+
             req.body.userOffice = user?.office
 
+            if (!req.body.userOffice) {
+                return res.status(404).json({ message: 'O usuário informado não possui um campo "office" válido.' });
+            }
 
             const { data } = await matricesApi.post('/evaluations', req.body);
             res.status(data.statusCode).json(data.data);

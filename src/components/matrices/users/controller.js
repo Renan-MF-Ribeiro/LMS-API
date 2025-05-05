@@ -1,7 +1,7 @@
 const { default: axios } = require('axios');
 const { User } = require('../../users/model');
 const { matricesApi } = require('../http-adapter');
-const { getCoursesByUserID } = require('../../courses/business'); 
+const { getCoursesByUserID } = require('../../courses/business');
 const { buildCoursesResponse } = require('../business');
 
 
@@ -12,6 +12,25 @@ const usersController = {
             const { data } = await matricesApi.get('/users', { params: options });
 
             res.status(data.statusCode).json(data.data);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    findByRegistrationOrName: async (req, res) => {
+        try {
+            const { searchBy } = req.query;
+            const users = await User.find({
+                $or: [
+                    { registration: { $regex: searchBy, $options: 'i' } },
+                    { name: { $regex: searchBy, $options: 'i' } },
+                ],
+            }, 'name _id registration').limit(10);
+
+            res.status(200).json(users);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
@@ -86,6 +105,18 @@ const usersController = {
     create: async (req, res) => {
         try {
             const { data } = await matricesApi.post('/users', req.body);
+            res.status(data.statusCode).json(data.data);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    suggestContent: async (req, res) => {
+        try {
+            const { data } = await matricesApi.post('/users/suggest-content', req.body);
             res.status(data.statusCode).json(data.data);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
