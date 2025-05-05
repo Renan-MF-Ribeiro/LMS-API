@@ -113,8 +113,8 @@ module.exports = {
                 const query = isAdmin
                     ? {}
                     : {
-                          instructor: { $eq: instructor },
-                      };
+                        instructor: { $eq: instructor },
+                    };
 
                 if (searchBy) {
                     const possibleCourse = await CourseModel.find(
@@ -187,8 +187,8 @@ module.exports = {
                 program
                     ? (programID = program._id)
                     : (programID = await ProgramModel.create({
-                          title: programTitle,
-                      }));
+                        title: programTitle,
+                    }));
 
                 resolve(programID);
             } catch (error) {
@@ -216,6 +216,7 @@ module.exports = {
                         'dateApplicationFinal',
                         'name',
                         'createdAt',
+                        'location',
                         'minister',
                     ],
                     { sort: { createdAt: -1 } }
@@ -380,12 +381,12 @@ module.exports = {
             const presenceDate = isPresence
                 ? item.presenceAt
                     ? moment(item.presenceAt)
-                          .add(3, 'hours')
-                          .set({
-                              hour: nowDate.getHours(),
-                              minute: nowDate.getMinutes(),
-                          })
-                          .toDate()
+                        .add(3, 'hours')
+                        .set({
+                            hour: nowDate.getHours(),
+                            minute: nowDate.getMinutes(),
+                        })
+                        .toDate()
                     : nowDate
                 : null;
             const grade = Number(item.grades ?? 0) > 100 ? 100 : Number(item.grades ?? 0);
@@ -479,4 +480,17 @@ module.exports = {
         }
         return await CourseModel.find(query).limit(10);
     },
+
+    async getCoursesByIds(courseIds) {
+        const query = {
+            deleted: 0,
+            $or: [{ datefinal: { $gte: new Date() }, datefinal: null }],
+        };
+
+        if (courseIds) {
+            query._id = { $in: courseIds };
+        }
+
+        return await CourseModel.find(query, 'title thumbPath banner');
+    }
 };

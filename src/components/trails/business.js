@@ -57,13 +57,13 @@ module.exports = {
 
                 const matchObj = filterEnabled
                     ? {
-                          ...match,
-                          enabled: true,
-                          deleted: 0,
-                      }
+                        ...match,
+                        enabled: true,
+                        deleted: 0,
+                    }
                     : {
-                          deleted: 0,
-                      };
+                        deleted: 0,
+                    };
                 matchObj['kind'] = { $ne: 'PostItem' };
                 if (skip !== null) {
                     trails = await Trail.find(findObj)
@@ -364,4 +364,8 @@ module.exports = {
         }
         return await Trail.find(query).limit(10);
     },
+
+    async getTrailByIds(trailIds) {
+        return await Trail.find({ _id: { $in: trailIds } }, 'title thumbPath _id')
+    }
 };
