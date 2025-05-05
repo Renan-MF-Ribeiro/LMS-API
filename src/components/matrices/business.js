@@ -1,6 +1,9 @@
 const { getCoursesByIds } = require('../courses/business');
+const { Tracking } = require('../tracking/model');
 const { getTrailByIds } = require('../trails/business');
 const { User } = require('../users/model');
+const { Trail } = require('../trails/model');
+const { processTrailTracking } = require('../../utils/functions');
 
 const business = {
     populateCoursesAndTrails: async (data) => {
@@ -31,7 +34,6 @@ const business = {
 
     buildCoursesResponse: async (courses) => {
 
-        const urlRegex = /^(?:https?:\/\/)?(?:www\.)?[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.(?:com|net|org|io|gov|edu)(?:\/\S*)?$/i;
         const response = courses.map((course) => {
             return {
                 _id: course.courseID?.id,
@@ -39,11 +41,19 @@ const business = {
                 description: course.courseID?.description,
                 concludedAt: course.users?.[0]?.presenceAt,
                 location: course.location,
-                type: urlRegex.test(course.location) ? 'Online' : 'Presencial'
+                type: 'Presencial'
             }
         })
 
         return response
+    },
+
+    sortCoursesByConcludedAt: async (courses) => {
+        return courses.sort((a, b) => {
+            const dateA = new Date(a.concludedAt).getTime();
+            const dateB = new Date(b.concludedAt).getTime();
+            return dateB - dateA; // Ordena do mais recente para o mais antigo
+        });
     },
 
     populateUserFields: async (mappings, data) => {

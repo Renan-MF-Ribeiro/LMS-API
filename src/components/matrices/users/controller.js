@@ -2,7 +2,8 @@ const { default: axios } = require('axios');
 const { User } = require('../../users/model');
 const { matricesApi } = require('../http-adapter');
 const { getCoursesByUserID } = require('../../courses/business');
-const { buildCoursesResponse } = require('../business');
+const { buildCoursesResponse, sortCoursesByConcludedAt } = require('../business');
+const { getCompletedTrails } = require('../../tracking/business');
 
 
 const usersController = {
@@ -27,8 +28,9 @@ const usersController = {
                 $or: [
                     { registration: { $regex: searchBy, $options: 'i' } },
                     { name: { $regex: searchBy, $options: 'i' } },
+                    { networkLogin: { $regex: searchBy, $options: 'i' } },
                 ],
-            }, 'name _id registration').limit(10);
+            }, 'name _id registration networkLogin').limit(10);
 
             res.status(200).json(users);
         } catch (error) {
@@ -89,11 +91,21 @@ const usersController = {
     findUsersConcluedCourses: async (req, res) => {
         try {
             const { id } = req.params;
+            const user = await User.findOne({ _id: id });
 
-            const courses = await getCoursesByUserID(id).then((courses) =>
-                buildCoursesResponse(courses));
+            if (!user) {
+                return res.status(404).json({ message: 'Usuário não encontrado' });
+            }
 
-            res.status(200).json(courses);
+
+            const [courses, trails] = await Promise.all([
+                getCoursesByUserID(id).then((courses) =>
+                    buildCoursesResponse(courses)),
+
+                getCompletedTrails(user.networkLogin)
+            ]);
+            const sortedCourses = await sortCoursesByConcludedAt([courses, trails].flat());
+            res.status(200).json(sortedCourses);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
