@@ -98,10 +98,28 @@ async function getInitialDate (req) {
     return trail?.startDate ?? null;
 }
 
+function getCertificateFileName({ userName, trailName, itemName } = {}) {
+    try {
+        const parsed = `certificado ${userName} ${trailName ? trailName : itemName}`
+            .normalize('NFKD')
+            .toLowerCase()
+            .trim()
+            .replace(/\s+/g, '-')
+            .replace(/[^\w\-]+/g, '')
+            .replace(/\-\-+/g, '-');
+
+        return parsed;
+    } catch (error) {
+        console.error('Error generating file name:', error);
+        return `certificado-${userName}-${trailName ? trailName : itemName}`;
+    }
+}
+
 module.exports = {
     certificateClient,
     getHeaders,
     prepareFormData,
     updateCertificateExpirationDate,
-    getInitialDate
+    getInitialDate,
+    getCertificateFileName,
 };
