@@ -9,6 +9,7 @@ const { matricesApi } = require('../http-adapter');
 const { ClassModel } = require('../../courses/model.js');
 const { Trail } = require('../../trails/model.js');
 const { Tracking } = require('../../tracking/model.js');
+const httpStatus = require('http-status-codes');
 
 const managersController = {
     pendingActions: async (req, res) => {
@@ -17,6 +18,10 @@ const managersController = {
 
             const applier = await getUserByToken(req);
             const users = await findUsersByMatrixConfig(applier);
+
+            if (users.length === 0) {
+                return res.status(httpStatus.OK).json(users)
+            }
 
             const { data } = await matricesApi.get('/users/detailed-info', {
                 params: {
@@ -78,7 +83,9 @@ const managersController = {
             }
 
             const { skip, limit } = pagination(req);
-            const { sort, order } = ordernation({ query: { orderBy: 'lastRegister' } });
+
+            const { orderBy = 'lastRegister' } = req?.query;
+            const { sort, order } = ordernation({ query: { orderBy } });
 
             const sortedUsers = [...finalUsers].sort((a, b) => {
                 const fieldA = a[order] ?? a.user?.[order];
@@ -110,6 +117,10 @@ const managersController = {
             const applier = await getUserByToken(req);
             const users = await findUsersByMatrixConfig(applier);
 
+            if (users.length === 0) {
+                return res.status(httpStatus.OK).json(users)
+            }
+
             const { data } = await matricesApi.get('/users/detailed-info', {
                 params: {
                     ...req.query,
@@ -136,7 +147,7 @@ const managersController = {
 
             const { skip, limit } = pagination(req);
 
-            const { orderBy = 'name', direction = 'asc'} = req?.query
+            const { orderBy = 'name', direction = 'asc' } = req?.query;
             const { sort, order } = ordernation({ query: { orderBy, direction } });
 
             const sortedUsers = [...detailedUsers].sort((a, b) => {
@@ -146,7 +157,6 @@ const managersController = {
                 if (typeof fieldA === 'string' && typeof fieldB === 'string') {
                     return sort === 'desc'
                         ? fieldB.localeCompare(fieldA)
-                        
                         : fieldA.localeCompare(fieldB);
                 }
 
@@ -196,7 +206,7 @@ async function isUserInProgressTraining(user) {
         });
         const { trail } = processTrailTracking(foundTrail, foundTrackings);
 
-        if (trail?.completion < 1) {
+        if (trail?.completion && trail.completion < 1) {
             isInProgress = true;
         }
     }
