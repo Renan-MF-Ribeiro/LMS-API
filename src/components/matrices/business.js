@@ -1,36 +1,40 @@
+const { Types } = require('mongoose');
 const { getCoursesByIds } = require('../courses/business');
-const { Tracking } = require('../tracking/model');
 const { getTrailByIds } = require('../trails/business');
 const { User } = require('../users/model');
-const { Trail } = require('../trails/model');
-const { processTrailTracking } = require('../../utils/functions');
 
 const business = {
     populateCoursesAndTrails: async (data) => {
-        const ids = data.skill_recommendations?.flatMap(skill => [
-            ...(skill.trailIds || []),
-            ...(skill.courseIds || [])
-        ]) || [];
 
+        const ids = data.skill_recommendations?.flatMap(skill => [
+          ...(skill.trailIds || []),
+          ...(skill.courseIds || [])
+        ]) || [];
+      
         const trails = await getTrailByIds(ids);
         const courses = await getCoursesByIds(ids);
-
+      
+        const trailMap = new Map(trails.map(t => [t._id.toString(), t]));
+        const courseMap = new Map(courses.map(c => [c._id.toString(), c]));
+      
         const response = {
-            ...data,
-            skill_recommendations: data.skill_recommendations?.map(skill => {
-                return {
-                    ...skill,
-                    trails,
-                    courses,
-                    trailIds: undefined,
-                    courseIds: undefined,
-                }
-            })
-
-
-        }
+          ...data,
+          skill_recommendations: data.skill_recommendations?.map(skill => ({
+            ...skill,
+            trails: (skill.trailIds || [])
+              .map(id => trailMap.get(id.toString()))
+              .filter(Boolean),
+            courses: (skill.courseIds || [])
+              .map(id => courseMap.get(id.toString()))
+              .filter(Boolean),
+            trailIds: undefined,
+            courseIds: undefined,
+          }))
+        };
+      
         return response;
-    },
+      },
+      
 
     buildCoursesResponse: async (courses) => {
 
