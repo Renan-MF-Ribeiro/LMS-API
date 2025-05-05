@@ -20,7 +20,7 @@ const managersController = {
             const users = await findUsersByMatrixConfig(applier);
 
             if (users.length === 0) {
-                return res.send(httpStatus.OK).json(users)
+                return res.status(httpStatus.OK).json(users)
             }
 
             const { data } = await matricesApi.get('/users/detailed-info', {
@@ -118,7 +118,7 @@ const managersController = {
             const users = await findUsersByMatrixConfig(applier);
 
             if (users.length === 0) {
-                return res.send(httpStatus.OK).json(users)
+                return res.status(httpStatus.OK).json(users)
             }
 
             const { data } = await matricesApi.get('/users/detailed-info', {
