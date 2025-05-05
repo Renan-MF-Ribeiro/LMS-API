@@ -62,6 +62,12 @@ async function runScript(functionToRun) {
     } catch (error) {
         await fs.mkdir('./src/scripts/debug');
     }
+    
+    try {
+        await fs.access('./src/scripts/data');
+    } catch (error) {
+        await fs.mkdir('./src/scripts/data');
+    }
 
     await new Promise((resolve) => {
         let count = 5;
