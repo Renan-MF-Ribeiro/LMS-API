@@ -2,7 +2,7 @@ const { default: axios } = require('axios');
 const { User } = require('../../users/model');
 const { matricesApi } = require('../http-adapter');
 const { getCoursesByUserID } = require('../../courses/business');
-const { buildCoursesResponse, sortCoursesByConcludedAt } = require('../business');
+const { buildCoursesResponse, sortCoursesByConcludedAt, populateCoursesAndTrails, buildRecommendations } = require('../business');
 const { getCompletedTrails } = require('../../tracking/business');
 const { Group } = require('../../groups/model');
 
@@ -117,7 +117,9 @@ const usersController = {
         try {
             const { id } = req.params;
             const { data } = await matricesApi.get(`/users/${id}/recommended-content`);
-            res.status(data.statusCode).json(data.data);
+            const populatedData = await buildRecommendations(data.data);
+
+            res.status(data.statusCode).json(populatedData);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;

@@ -491,6 +491,6 @@ module.exports = {
             query._id = { $in: courseIds };
         }
 
-        return await CourseModel.find(query, 'title thumbPath banner');
+        return await CourseModel.find(query, 'title thumbPath banner').lean();
     }
 };
