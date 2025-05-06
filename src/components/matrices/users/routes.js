@@ -6,6 +6,7 @@ module.exports = express
     .get('/', _controller.findAll)
     .get('/find', _controller.findByRegistrationOrName)
     .get('/:id/matrices', _controller.findUsersMatrices)
+    .get('/:userId/matrix/:matrixId', _controller.findCategoriesToRelease)
     .get('/:id/certifiers', _controller.findUserCertifiers)
     .get('/:id/recommended-content', _controller.findUsersRecommendedContent)
     .get('/:id/concluded-courses', _controller.findUsersConcluedCourses)
