@@ -88,6 +88,19 @@ const usersController = {
         }
     },
 
+    findUsersRecommendedContent: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { data } = await matricesApi.get(`/users/${id}/recommended-content`);
+            res.status(data.statusCode).json(data.data);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
     findUsersConcluedCourses: async (req, res) => {
         try {
             const { id } = req.params;
