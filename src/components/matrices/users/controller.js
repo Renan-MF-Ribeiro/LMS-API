@@ -68,7 +68,7 @@ const usersController = {
             const tags = userGroups?.flatMap((group) => group?.tags?.map((tag) => tag?.value)).join(',') || [];
 
             const { data } = await matricesApi.get(`/users/${id}/matrices`, {
-                params: {tags}
+                params: { tags }
             });
             res.status(data.statusCode).json(data.data);
         } catch (error) {
@@ -101,10 +101,15 @@ const usersController = {
                 }/certificates/find/${user.networkLogin?.toLowerCase()}?clientId=${process.env.CLIENT_ID
                 }`;
 
+            let token = req.headers.authorization;
+            if (!token?.startsWith('Bearer')) {
+                token = `Bearer ${token}`;
+            }
+
             const { data } = await axios.get(uri, {
-                headers: { Authorization: req.headers.authorization },
+                headers: { Authorization: token },
             });
-            res.status(data.statusCode).json(data);
+            res.status(200).json(data);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
