@@ -567,7 +567,7 @@ module.exports = {
                 const activationLink = `${process.env.DOMAIN}/login/ativacao?token=${emailToken}`;
                 await sendSignupActivationEmail(newUser.email, activationLink);
             }
-            
+
             const tokens = await generateTokens(newUser, networkLogin, password);
 
             if (newUser && form?.autoLogin) {
@@ -1596,8 +1596,6 @@ module.exports = {
                 handleSegmentationOnQuery(req, 'issuer', query);
             }
 
-            const total = await User.countDocuments(query);
-
             const totalActive = await User.find({
                 status: 'ATIVO',
                 ...query,
@@ -1619,6 +1617,7 @@ module.exports = {
                 });
             }
 
+            const total = await User.countDocuments(query);
             const users = await User.find(query)
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
