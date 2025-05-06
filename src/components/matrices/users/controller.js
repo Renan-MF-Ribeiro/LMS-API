@@ -109,7 +109,7 @@ const usersController = {
             const { data } = await axios.get(uri, {
                 headers: { Authorization: token },
             });
-            res.status(data.statusCode).json(data);
+            res.status(200).json(data);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
