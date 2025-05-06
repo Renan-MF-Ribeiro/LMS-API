@@ -366,6 +366,6 @@ module.exports = {
     },
 
     async getTrailByIds(trailIds) {
-        return await Trail.find({ _id: { $in: trailIds } }, 'title thumbPath _id')
+        return await Trail.find({ _id: { $in: trailIds } }, 'title thumbPath _id').lean()
     }
 };

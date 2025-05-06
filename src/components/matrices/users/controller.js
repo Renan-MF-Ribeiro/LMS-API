@@ -2,7 +2,7 @@ const { default: axios } = require('axios');
 const { User } = require('../../users/model');
 const { matricesApi } = require('../http-adapter');
 const { getCoursesByUserID } = require('../../courses/business');
-const { buildCoursesResponse, sortCoursesByConcludedAt } = require('../business');
+const { buildCoursesResponse, sortCoursesByConcludedAt, populateCoursesAndTrails, buildRecommendations } = require('../business');
 const { getCompletedTrails } = require('../../tracking/business');
 const { Group } = require('../../groups/model');
 
@@ -110,6 +110,21 @@ const usersController = {
                 headers: { Authorization: token },
             });
             res.status(200).json(data);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    findUsersRecommendedContent: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { data } = await matricesApi.get(`/users/${id}/recommended-content`);
+            const populatedData = await buildRecommendations(data.data);
+
+            res.status(data.statusCode).json(populatedData);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;

@@ -8,6 +8,7 @@ module.exports = express
     .get('/:id/matrices', _controller.findUsersMatrices)
     .get('/:userId/matrix/:matrixId', _controller.findCategoriesToRelease)
     .get('/:id/certifiers', _controller.findUserCertifiers)
+    .get('/:id/recommended-content', _controller.findUsersRecommendedContent)
     .get('/:id/concluded-courses', _controller.findUsersConcluedCourses)
     .get('/:id', _controller.findOne)
     .post('/', _controller.create)
