@@ -4,6 +4,7 @@ const { matricesApi } = require('../http-adapter');
 const { getCoursesByUserID } = require('../../courses/business');
 const { buildCoursesResponse, sortCoursesByConcludedAt } = require('../business');
 const { getCompletedTrails } = require('../../tracking/business');
+const { Group } = require('../../groups/model');
 
 
 const usersController = {
@@ -57,7 +58,18 @@ const usersController = {
     findUsersMatrices: async (req, res) => {
         try {
             const { id } = req.params;
-            const { data } = await matricesApi.get(`/users/${id}/matrices`);
+            const user = await User.findOne({ _id: id });
+
+            if (!user) {
+                return res.status(404).json({ message: 'Usuário não encontrado' });
+            }
+
+            const userGroups = await Group.find({ name: { $in: user?.groupsAD } }, 'name tags') || [];
+            const tags = userGroups?.flatMap((group) => group?.tags?.map((tag) => tag?.value)).join(',') || [];
+
+            const { data } = await matricesApi.get(`/users/${id}/matrices`, {
+                params: {tags}
+            });
             res.status(data.statusCode).json(data.data);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
