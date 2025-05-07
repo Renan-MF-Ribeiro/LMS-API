@@ -34,7 +34,7 @@ const ApplicationsController = {
             const userGroups = await Group.find({ name: { $in: user?.groupsAD } }, 'name tags') || [];
             const tags = userGroups?.flatMap((group) => group?.tags?.map((tag) => tag?.value)).join(',') || [];
 
-            const { data } = await matricesApi.get(`/applications/elegible/${id}`, { params: { tags, options } });
+            const { data } = await matricesApi.get(`/applications/elegible/${id}`, { params: { tags, options, office: user?.office } });
             res.status(data.statusCode).json(data.data);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
