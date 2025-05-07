@@ -10,6 +10,8 @@ const {
 } = require('../business');
 const { getCompletedTrails } = require('../../tracking/business');
 const { Group } = require('../../groups/model');
+const courseBusiness = require('../../courses/business')
+
 const usersController = {
     findAll: async (req, res) => {
         try {
