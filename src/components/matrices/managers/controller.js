@@ -196,7 +196,7 @@ const managersController = {
                 },
             });
 
-            res.status(data.statusCode).json(data);
+            res.status(data.statusCode).json(data.data);
         } catch (error) {
             const statusCode = error.response?.data?.statusCode ?? 500;
             const errorMessage = error.response?.data?.message ?? 'Internal server error';
