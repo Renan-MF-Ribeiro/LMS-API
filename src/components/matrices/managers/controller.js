@@ -73,7 +73,7 @@ const managersController = {
             let finalUsers = detailedUsers;
 
             if (req?.query?.searchBy) {
-                const search = req.query.searchBy.toString().toLowerCase();
+                const search = req.query?.searchBy?.toString().toLowerCase();
 
                 finalUsers = detailedUsers.filter(({ user }) => {
                     return (
@@ -107,8 +107,10 @@ const managersController = {
 
             res.status(data.statusCode).json(paginatedUsers);
         } catch (error) {
+            console.log(error)
+            const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = error.response?.data?.message ?? 'Internal server error';
+            const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
         }
     },
@@ -170,8 +172,9 @@ const managersController = {
 
             res.status(data.statusCode).json(paginatedUsers);
         } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = error.response?.data?.message ?? 'Internal server error';
+            const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
         }
     },
@@ -198,8 +201,9 @@ const managersController = {
 
             res.status(data.statusCode).json(data.data);
         } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = error.response?.data?.message ?? 'Internal server error';
+            const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
         }
     },
@@ -216,8 +220,9 @@ const managersController = {
 
             res.status(httpStatus.OK).send()
         } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = error.response?.data?.message ?? 'Internal server error';
+            const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
         }
     },
@@ -245,11 +250,10 @@ async function isUserInProgressTraining(user) {
         if (isInProgress) {
             break;
         }
-
         const foundTrail = await Trail.findOne({ _id: recommendedTrail });
         const foundTrackings = await Tracking.find({
             userLogin: user.networkLogin,
-            item: { $in: foundTrail.items.map((item) => item.itemID) },
+            item: { $in: foundTrail?.items?.map((item) => item.itemID) },
         });
         const { trail } = processTrailTracking(foundTrail, foundTrackings);
 
