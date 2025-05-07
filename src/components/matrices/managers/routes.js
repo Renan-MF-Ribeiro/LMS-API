@@ -5,4 +5,5 @@ module.exports = express
     .Router()
     .get('/pending-actions/:target', _controller.pendingActions)
     .get('/users', _controller.findUsers)
+    .get('/users/:id', _controller.getUser)
     .get('/overview', _controller.getOverview)
