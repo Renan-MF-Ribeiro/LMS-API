@@ -496,5 +496,59 @@ module.exports = {
         }
 
         return await CourseModel.find(query, 'title thumbPath banner').lean();
-    }
+    },
+
+    async listJoin(user, classId) {
+        let course = null;
+        course = await ClassModel.findOneAndUpdate(
+            {
+                _id: classId,
+                'users._id': { $ne: user._id },
+                'users.userID': { $ne: user._id },
+            },
+            {
+                $addToSet: {
+                    users: {
+                        _id: user._id,
+                        userID: mongoose.Types.ObjectId(user._id),
+                        presence: false,
+                        grades: 0,
+                        name: user.name,
+                        registration: user.registration,
+                        createdAt: moment().utc().format(),
+                        origin: 'user',
+                    },
+                },
+            },
+            { new: true }
+        );
+
+        if (!course) {
+            course = await ClassModel.findOne({ _id: classId });
+        }
+
+        const classesFromCourse = await ClassModel.find({
+            courseID: course.courseID,
+        });
+
+        const removalPromises = classesFromCourse.map((classFromCourse) => {
+            const inClass = classFromCourse.users.some(
+                (u) => u._id == user._id || u.userID == user._id
+            );
+
+            if (classFromCourse._id.equals(classId) || !inClass) {
+                return Promise.resolve();
+            }
+            //SÓ REMOVER SE PRESENCE FOR FALSE
+
+            return ClassModel.findOneAndUpdate(
+                { _id: classFromCourse._id },
+                { $pull: { users: { _id: user._id, presence: false } } }
+            );
+        });
+
+        await Promise.all(removalPromises);
+
+        return course;
+    },
 };
