@@ -5,38 +5,37 @@ const { User } = require('../users/model');
 
 const business = {
     populateCoursesAndTrails: async (data) => {
-        const ids = data.skill_recommendations?.flatMap(skill => [
-            ...(skill.trailIds || []),
-            ...(skill.courseIds || [])
-        ]) || [];
+        const ids =
+            data.skill_recommendations?.flatMap((skill) => [
+                ...(skill.trailIds || []),
+                ...(skill.courseIds || []),
+            ]) || [];
 
         const trails = await getTrailByIds(ids);
         const courses = await getCoursesByIds(ids);
 
-        const trailMap = new Map(trails.map(t => [t._id.toString(), t]));
-        const courseMap = new Map(courses.map(c => [c._id.toString(), c]));
+        const trailMap = new Map(trails.map((t) => [t._id.toString(), t]));
+        const courseMap = new Map(courses.map((c) => [c._id.toString(), c]));
 
         const response = {
             ...data,
-            skill_recommendations: data.skill_recommendations?.map(skill => ({
+            skill_recommendations: data.skill_recommendations?.map((skill) => ({
                 ...skill,
                 trails: (skill.trailIds || [])
-                    .map(id => trailMap.get(id.toString()))
+                    .map((id) => trailMap.get(id.toString()))
                     .filter(Boolean),
                 courses: (skill.courseIds || [])
-                    .map(id => courseMap.get(id.toString()))
+                    .map((id) => courseMap.get(id.toString()))
                     .filter(Boolean),
                 trailIds: undefined,
                 courseIds: undefined,
-            }))
+            })),
         };
 
         return response;
     },
 
-
     buildCoursesResponse: async (courses) => {
-
         const response = courses.map((course) => {
             return {
                 _id: course.courseID?.id,
@@ -44,11 +43,11 @@ const business = {
                 description: course.courseID?.description,
                 concludedAt: course.users?.[0]?.presenceAt,
                 location: course.location,
-                type: 'Presencial'
-            }
-        })
+                type: 'Presencial',
+            };
+        });
 
-        return response
+        return response;
     },
 
     sortCoursesByConcludedAt: async (courses) => {
@@ -90,26 +89,32 @@ const business = {
 
     buildEvaluationsResultSuggestions: async (data) => {
         const populated = async () => {
-            const ids = data.skill_recommendations?.flatMap(skill => [
-                ...(skill.trailIds || []),
-                ...(skill.courseIds || [])
-            ]) || [];
+            const ids =
+                data.skill_recommendations?.flatMap((skill) => [
+                    ...(skill.trailIds || []),
+                    ...(skill.courseIds || []),
+                ]) || [];
 
-            const [trails, courses] = await Promise.all([
-                getTrailByIds(ids),
-                getCoursesByIds(ids)
-            ]);
+            const [trails, courses] = await Promise.all([getTrailByIds(ids), getCoursesByIds(ids)]);
 
-            const trailMap = new Map(trails.map(t => [t._id.toString(), { ...t, status: "concluded" }]));
-            const courseMap = new Map(courses.map(c => [c._id.toString(), { ...c, status: "concluded" }]));
+            const trailMap = new Map(
+                trails.map((t) => [t._id.toString(), { ...t, status: 'concluded' }])
+            );
+            const courseMap = new Map(
+                courses.map((c) => [c._id.toString(), { ...c, status: 'concluded' }])
+            );
 
             return {
                 ...data,
-                skill_recommendations: data.skill_recommendations?.map(skill => ({
+                skill_recommendations: data.skill_recommendations?.map((skill) => ({
                     ...skill,
-                    trails: (skill.trailIds || []).map(id => trailMap.get(id.toString())).filter(Boolean),
-                    courses: (skill.courseIds || []).map(id => courseMap.get(id.toString())).filter(Boolean)
-                }))
+                    trails: (skill.trailIds || [])
+                        .map((id) => trailMap.get(id.toString()))
+                        .filter(Boolean),
+                    courses: (skill.courseIds || [])
+                        .map((id) => courseMap.get(id.toString()))
+                        .filter(Boolean),
+                })),
             };
         };
 
@@ -121,37 +126,42 @@ const business = {
             content: {
                 trails: skill.trails || [],
                 courses: skill.courses || [],
-            }
+            },
         }));
     },
     buildSuggestions: async (data) => {
         const populated = async () => {
             const ids = data
+                .flatMap((item) => [
+                    ...(item.recommendedTrails) || [],
+                    ...(item.recommendedCourses?.flatMap((c) => c.courseId)) || [],
+                ])
+                .filter(Boolean);
 
-            const [trails, courses] = await Promise.all([
-                getTrailByIds(ids),
-                getCoursesByIds(ids)
-            ]);
+            const [trails, courses] = await Promise.all([getTrailByIds(ids), getCoursesByIds(ids)]);
 
-            return [...trails.map((trail) => {
-                return {
-                    ...trail,
-                    type: "Online",
-                }
-            }), ...courses.map((course) => {
-                return {
-                    ...course,
-                    type: "Presencial",
-                    date: new Date(0)
-                }
-            })]
+            return [
+                ...trails.map((trail) => {
+                    return {
+                        ...trail,
+                        type: 'Online',
+                    };
+                }),
+                ...courses.map((course) => {
+                    return {
+                        ...course,
+                        type: 'Presencial',
+                        date: new Date(0),
+                    };
+                }),
+            ];
         };
 
         const populatedData = await populated();
 
-        return populatedData
-    }
-}
+        return populatedData;
+    },
+};
 const collectIds = (data, mappings) => {
     const ids = [];
     const traverse = (obj) => {
@@ -174,7 +184,7 @@ const collectIds = (data, mappings) => {
 
     traverse(data);
     return [...new Set(ids)];
-}
+};
 
 const processData = async (data, mappings, userMap) => {
     const process = async (obj) => {
@@ -193,7 +203,6 @@ const processData = async (data, mappings, userMap) => {
                     newObj[fieldName] = Array.isArray(val)
                         ? val.map((id) => userMap.get(id.toString()) || null)
                         : userMap.get(val.toString()) || null;
-
                 }
                 if (reference !== fieldName) {
                     delete newObj[reference];
@@ -205,12 +214,11 @@ const processData = async (data, mappings, userMap) => {
             }
 
             return newObj;
-        }
-        else {
+        } else {
             return obj;
         }
     };
 
     return process(data);
-}
-module.exports = business
+};
+module.exports = business;
