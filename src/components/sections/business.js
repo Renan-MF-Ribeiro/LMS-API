@@ -940,7 +940,7 @@ module.exports = {
         }
     },
 
-    async recommendedCoursesSections(recommendedCourses) {
+    async recommendedCoursesSections(userId, recommendedCourses) {
         try {
             const section = await Section.findOne({
                 defaultType: DEFAULT_TYPES.RECOMMENDED_COURSES,
@@ -951,7 +951,111 @@ module.exports = {
                 return []
             }
 
-            return []
+            let elegibleCourses = await CourseModel.find({
+                _id: { $in: recommendedCourses.map((rc) => rc.courseId) }
+            })
+                .select({
+                    title: 1,
+                    thumbPath: 1,
+                    _id: 1,
+                    description: 1,
+                    passingScore: 1,
+                    certificate: 1,
+                    certificateLayout: 1,
+                    workload: 1,
+                    instructor: 1,
+                    banner: 1,
+                    startDate: 1,
+                    endDate: 1,
+                    highlighted: 1,
+                    certificateDateType: 1,
+                })
+                .lean();
+
+            const coursePromises = elegibleCourses.map(async (course) => {
+                const alreadyJoined = await WaitListModel.findOne({
+                    userID: userId,
+                    courseID: course._id,
+                    sent: false,
+                });
+
+                const today = new Date()
+                const classesFromCourse = await ClassModel.find({
+                    courseID: course._id
+                }).populate({
+                    path: 'materials',
+                    match: { author: 'INSTRUTOR' },
+                })
+                    .populate('instructor', ['name']);
+
+                let inWaitList = false;
+                if (alreadyJoined) {
+                    inWaitList = true;
+                }
+                let certificateElegible = false
+                let certificateData = null
+
+                classesFromCourse.forEach((e) => {
+                    if (String(e.courseID._id) === String(course._id)) {
+                        const userInClass = e.users.find((user) => user._id?.toString() == userId || user.userID == userId)
+                        let grade = 0
+                        let presence = false
+                        if (userInClass) {
+                            presence = userInClass.presence;
+                            grade = userInClass.grades ? userInClass.grades : 0;
+                            const passingScore = course.passingScore ? course.passingScore : 0;
+                            certificateElegible = grade >= passingScore;
+
+                        }
+                        if (certificateElegible && presence)
+                            certificateData = {
+                                completionAt: course.certificateDateType == 2 ? userInClass?.presenceAt : e.dateApplicationFinal,
+                                qrcode: e.qrcode,
+                                certificate: course.certificate,
+                                certificateLayout: course.certificateLayout,
+                                studentMaterials: e.materials,
+                                workload: course.workload,
+                                instructor: e.instructor,
+                                grade: grade,
+                                status: certificateElegible,
+                            };
+
+                        course.presence = presence;
+                        course.completionAt = e.dateApplicationFinal;
+                        course.instructor = e.instructor;
+
+                    }
+                });
+                const classes = certificateData ? [] : classesFromCourse.map((classFromCourse) => {
+                    const inClass = classFromCourse.users.some((user) => user._id == userId || user.userID == userId)
+
+
+
+                    return classFromCourse.dateApplicationFinal <= today ? null : {
+                        _id: classFromCourse._id,
+                        name: classFromCourse.name,
+                        registrationDeadline: classFromCourse.registrationDeadline,
+                        cancellationDeadline: classFromCourse.cancellationDeadline,
+                        dateApplicationInitial: classFromCourse.dateApplicationInitial,
+                        dateApplicationFinal: classFromCourse.dateApplicationFinal,
+                        location: classFromCourse.location,
+                        status: getClassStatus(classFromCourse, inClass),
+                    };
+                }).filter((classCourse) => classCourse)
+
+
+                course.certificateElegible = certificateData;
+                course.inWaitList = inWaitList;
+                course.classes = classes;
+                course.hasClasses = classes.length > 0;
+                return course;
+            });
+
+            elegibleCourses = await Promise.all(coursePromises);
+
+            section.trails.push(...elegibleCourses)
+
+            return section
 
         } catch (error) {
             console.log(error);
