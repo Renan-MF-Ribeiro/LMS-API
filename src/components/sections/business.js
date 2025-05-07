@@ -913,6 +913,50 @@ module.exports = {
             }
         });
     },
+    async recommendedTrailsSections(trails, recommendedTrails) {
+        try {
+            const section = await Section.findOne({
+                defaultType: DEFAULT_TYPES.RECOMMENDED_TRAILS,
+                active: 1,
+            }).lean();
+
+            if (!section) {
+                return []
+            }
+
+            for (const trail of trails) {
+                const isRecommended = recommendedTrails.some((recommendedTrail) => {
+                    return trail._id.toString() === recommendedTrail.toString();
+                })
+
+                if (isRecommended) {
+                    section.trails.push(trail)
+                }
+            }
+
+            return section;
+        } catch (error) {
+            console.log(error);
+        }
+    },
+
+    async recommendedCoursesSections(recommendedCourses) {
+        try {
+            const section = await Section.findOne({
+                defaultType: DEFAULT_TYPES.RECOMMENDED_COURSES,
+                active: 1,
+            }).lean();
+
+            if (!section) {
+                return []
+            }
+
+            return []
+
+        } catch (error) {
+            console.log(error);
+        }
+    },
 
     /**
      * Verifica se o usuário é elegível conforme as tags

@@ -73,8 +73,10 @@ const feedbackRoutes = require('./components/feedback/routes');
 const happplaceRoutes = require('./components/happplace/routes');
 const webhooksRoutes = require('./components/webhooks/routes');
 const mentoringRoutes = require('./components/mentoring/routes');
+const matricesRoutes = require('./components/matrices/routes');
 
 const environment = require('./environment');
+const { matricesApiMiddleware } = require('./components/matrices/http-adapter');
 
 const corsOptions = {
     origin: [environment.DOMAIN, 'https://monitoring.happlearning.com.br'],
@@ -135,6 +137,7 @@ initializePassport(app);
 app.use('/social', socialApiMiddleware);
 app.use('/feed', socialApiMiddleware);
 app.use('/mentoring', mentoringApiMiddleware);
+app.use('/matrices', matricesApiMiddleware);
 
 app.use(setSegmentation);
 
@@ -183,7 +186,8 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/feedback', validateTokenRoute, feedbackRoutes)
     .use('/happplace', happplaceRoutes)
     .use('/webhooks', validateTokenRoute, isAdmin, webhooksRoutes)
-    .use('/mentoring', mentoringRoutes);
+    .use('/mentoring', mentoringRoutes)
+    .use('/matrices', matricesRoutes);
 
 app.use(errorHandler);
 
