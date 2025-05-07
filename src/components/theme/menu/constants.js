@@ -854,7 +854,30 @@ const MenuDefault = [
         ],
         index: 17
     },
-
+    {
+        button: 'matrix',
+        feature: 'matrix',
+        roles: [
+            'PERFIL_Super_Admin'
+        ],
+        subMenu: [
+            {
+                button: 'matrixList',
+                roles: [
+                    'PERFIL_Super_Admin'
+                ],
+                index: 0
+            },
+            {
+                button: 'matrixApplication',
+                roles: [
+                    'PERFIL_Super_Admin'
+                ],
+                index: 1
+            }
+        ],
+        index: 99
+    }
 ]
 
 module.exports = { MenuDefault };
