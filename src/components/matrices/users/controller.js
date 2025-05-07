@@ -5,7 +5,7 @@ const { getCoursesByUserID } = require('../../courses/business');
 const { buildCoursesResponse, sortCoursesByConcludedAt, buildEvaluationsResultSuggestions, buildSuggestions } = require('../business');
 const { getCompletedTrails } = require('../../tracking/business');
 const { Group } = require('../../groups/model');
-
+const courseBusiness = require('../../courses/business');
 
 const usersController = {
     findAll: async (req, res) => {
@@ -189,6 +189,13 @@ const usersController = {
     suggestContent: async (req, res) => {
         try {
             const { data } = await matricesApi.post('/users/suggest-content', req.body);
+
+            if (req?.body?.recommendedCourses?.length > 0) {
+                for (const recommendedCourse of req.body.recommendedCourses) {
+                    await courseBusiness.listJoin(req.body.userId, recommendedCourse.classId)
+                }
+            }
+
             res.status(data.statusCode).json(data.data);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
