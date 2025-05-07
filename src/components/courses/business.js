@@ -488,13 +488,12 @@ module.exports = {
     async getCoursesByIds(courseIds) {
         const query = {
             deleted: 0,
-            $or: [{ datefinal: { $gte: new Date() }, datefinal: null }],
+            $or: [{ datefinal: null }, {datefinal: { $gte: new Date() }}],
         };
 
         if (courseIds) {
             query._id = { $in: courseIds };
         }
-
         return await CourseModel.find(query, 'title thumbPath banner').lean();
     },
 
