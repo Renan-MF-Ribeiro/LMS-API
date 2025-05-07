@@ -17,6 +17,8 @@ const {
     addHours,
 } = require('../../utils/functions');
 const { checkEligibilityTagsAnd } = require('../sections/business');
+const eventsController = require('../calendar/events/controller');
+
 
 module.exports = {
     uploadMaterial(material, author, folder) {
@@ -465,24 +467,22 @@ module.exports = {
         return { results, classInfo, courseInfo };
     },
 
-    async searchCourseBy(searchBy, tags) {
-        const query = {
-            deleted: 0,
-            $or: [{ datefinal: { $gte: new Date() }, datefinal: null }],
-            //owner:
-        };
-
-        if (searchBy) {
-            query.$or = [
-                { title: { $regex: searchBy, $options: 'i' } },
-                { description: { $regex: searchBy, $options: 'i' } },
-            ];
+    async searchCourseBy(user, tags, start, end, courseId) {
+        if(!user) {
+            return []
         }
 
-        if (tags.length > 0) {
-            query['tags.value'] = { $in: tags };
+        const events = await eventsController.getCalendarEventsByDate(start, end, user, tags)        
+
+        let calendarEvents = events;
+
+        if (courseId) {
+            calendarEvents = events.filter((event) => {
+                return event?.content?.courseID?.toString() === courseId?.toString()
+            })
         }
-        return await CourseModel.find(query).limit(10);
+
+        return calendarEvents
     },
 
     async getCoursesByIds(courseIds) {
