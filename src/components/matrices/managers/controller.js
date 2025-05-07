@@ -250,7 +250,7 @@ async function isUserInProgressTraining(user) {
         if (isInProgress) {
             break;
         }
-        const foundTrail = await Trail.findOne({ _id: recommendedTrail });
+        const foundTrail = await Trail.findOne({ _id: recommendedTrail.map((rt) => rt.id) });
         const foundTrackings = await Tracking.find({
             userLogin: user.networkLogin,
             item: { $in: foundTrail?.items?.map((item) => item.itemID) },
