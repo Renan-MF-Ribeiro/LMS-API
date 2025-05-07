@@ -107,7 +107,6 @@ const managersController = {
 
             res.status(data.statusCode).json(paginatedUsers);
         } catch (error) {
-            console.log(error)
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
             const errorMessage = message ?? 'Internal server error';
@@ -207,25 +206,6 @@ const managersController = {
             res.status(statusCode).json(errorMessage);
         }
     },
-
-    recommendContent: async (req, res) => {
-        try {
-            const { userId, target } = req.params;
-            
-            switch (target) {
-                case 'trails': {
-
-                }
-            }
-
-            res.status(httpStatus.OK).send()
-        } catch (error) {
-            const message = error.response?.data?.message ?? error.message;
-            const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = message ?? 'Internal server error';
-            res.status(statusCode).json(errorMessage);
-        }
-    },
 };
 
 async function isUserInProgressTraining(user) {
@@ -250,7 +230,13 @@ async function isUserInProgressTraining(user) {
         if (isInProgress) {
             break;
         }
+
         const foundTrail = await Trail.findOne({ _id: recommendedTrail.id });
+
+        if (!foundTrail) {
+            break;
+        }
+
         const foundTrackings = await Tracking.find({
             userLogin: user.networkLogin,
             item: { $in: foundTrail?.items?.map((item) => item.itemID) },
