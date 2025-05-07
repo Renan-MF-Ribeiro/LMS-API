@@ -10,6 +10,7 @@ const { ClassModel } = require('../../courses/model.js');
 const { Trail } = require('../../trails/model.js');
 const { Tracking } = require('../../tracking/model.js');
 const httpStatus = require('http-status-codes');
+const { Group } = require('../../groups/model.js');
 
 const managersController = {
     pendingActions: async (req, res) => {
@@ -20,7 +21,7 @@ const managersController = {
             const users = await findUsersByMatrixConfig(applier);
 
             if (users.length === 0) {
-                return res.status(httpStatus.OK).json(users)
+                return res.status(httpStatus.OK).json(users);
             }
 
             const { data } = await matricesApi.get('/users/detailed-info', {
@@ -118,7 +119,7 @@ const managersController = {
             const users = await findUsersByMatrixConfig(applier);
 
             if (users.length === 0) {
-                return res.status(httpStatus.OK).json(users)
+                return res.status(httpStatus.OK).json(users);
             }
 
             const { data } = await matricesApi.get('/users/detailed-info', {
@@ -168,6 +169,52 @@ const managersController = {
             const paginatedUsers = sortedUsers.slice(skip, skip + limit);
 
             res.status(data.statusCode).json(paginatedUsers);
+        } catch (error) {
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = error.response?.data?.message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    getOverview: async (req, res) => {
+        try {
+            const applier = await getUserByToken(req);
+            const users = await findUsersByMatrixConfig(applier);
+
+            if (users.length === 0) {
+                return res.status(httpStatus.OK).json(users);
+            }
+
+            const usersTags = users.flatMap((user) => user.groupsAD);
+            const usersGroups = (await Group.find({ name: { $in: usersTags } }, 'name tags')) || [];
+            const tags =
+                usersGroups?.flatMap((group) => group?.tags?.map((tag) => tag?.value)) || [];
+
+            const { data } = await matricesApi.get('/applications/overview', {
+                params: {
+                    tags: tags.join(','),
+                },
+            });
+
+            res.status(data.statusCode).json(data);
+        } catch (error) {
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = error.response?.data?.message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    recommendContent: async (req, res) => {
+        try {
+            const { userId, target } = req.params;
+            
+            switch (target) {
+                case 'trails': {
+
+                }
+            }
+
+            res.status(httpStatus.OK).send()
         } catch (error) {
             const statusCode = error.response?.data?.statusCode ?? 500;
             const errorMessage = error.response?.data?.message ?? 'Internal server error';
