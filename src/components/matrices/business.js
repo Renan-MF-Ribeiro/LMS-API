@@ -88,7 +88,7 @@ const business = {
         };
     },
 
-    buildRecommendations: async (data) => {
+    buildEvaluationsResultSuggestions: async (data) => {
         const populated = async () => {
             const ids = data.skill_recommendations?.flatMap(skill => [
                 ...(skill.trailIds || []),
@@ -123,6 +123,33 @@ const business = {
                 courses: skill.courses || [],
             }
         }));
+    },
+    buildSuggestions: async (data) => {
+        const populated = async () => {
+            const ids = data
+
+            const [trails, courses] = await Promise.all([
+                getTrailByIds(ids),
+                getCoursesByIds(ids)
+            ]);
+
+            return [...trails.map((trail) => {
+                return {
+                    ...trail,
+                    type: "Online",
+                }
+            }), ...courses.map((course) => {
+                return {
+                    ...course,
+                    type: "Presencial",
+                    date: new Date(0)
+                }
+            })]
+        };
+
+        const populatedData = await populated();
+
+        return populatedData
     }
 }
 const collectIds = (data, mappings) => {

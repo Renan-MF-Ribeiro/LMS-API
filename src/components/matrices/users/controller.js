@@ -2,7 +2,7 @@ const { default: axios } = require('axios');
 const { User } = require('../../users/model');
 const { matricesApi } = require('../http-adapter');
 const { getCoursesByUserID } = require('../../courses/business');
-const { buildCoursesResponse, sortCoursesByConcludedAt, populateCoursesAndTrails, buildRecommendations } = require('../business');
+const { buildCoursesResponse, sortCoursesByConcludedAt, buildEvaluationsResultSuggestions, buildSuggestions } = require('../business');
 const { getCompletedTrails } = require('../../tracking/business');
 const { Group } = require('../../groups/model');
 
@@ -118,12 +118,27 @@ const usersController = {
         }
     },
 
-    findUsersRecommendedContent: async (req, res) => {
+    findUsersEvaluationsResultSuggestions: async (req, res) => {
         try {
             const { id } = req.params;
-            const { data } = await matricesApi.get(`/users/${id}/recommended-content`);
-            const populatedData = await buildRecommendations(data.data);
+            const { data } = await matricesApi.get(`/users/${id}/evaluations-result`);
+            const populatedData = await buildEvaluationsResultSuggestions(data.data);
 
+            res.status(data.statusCode).json(populatedData);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    findSuggestedContent: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { data } = await matricesApi.get(`/users/${id}/suggestions`);
+            
+            const populatedData = await buildSuggestions(data.data);
             res.status(data.statusCode).json(populatedData);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
