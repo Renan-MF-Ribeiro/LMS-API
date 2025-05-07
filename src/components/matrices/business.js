@@ -2,6 +2,7 @@ const { Types } = require('mongoose');
 const { getCoursesByIds } = require('../courses/business');
 const { getTrailByIds } = require('../trails/business');
 const { User } = require('../users/model');
+const { string } = require('zod');
 
 const business = {
     populateCoursesAndTrails: async (data) => {
@@ -130,36 +131,34 @@ const business = {
         }));
     },
     buildSuggestions: async (data) => {
-        const populated = async () => {
-            const ids = data
-                .flatMap((item) => [
-                    ...(item.recommendedTrails) || [],
-                    ...(item.recommendedCourses?.flatMap((c) => c.courseId)) || [],
-                ])
-                .filter(Boolean);
+        const idToDateMap = new Map();
+        data.forEach((item) => {
+            console.log(item);
+            item.recommendedTrails?.forEach((trail) => {
+                idToDateMap.set(trail.id, trail.createdAt);
+            });
 
-            const [trails, courses] = await Promise.all([getTrailByIds(ids), getCoursesByIds(ids)]);
+            item.recommendedCourses?.forEach((course) => {
+                idToDateMap.set(course.courseId, course.createdAt);
+            });
+        });
 
-            return [
-                ...trails.map((trail) => {
-                    return {
-                        ...trail,
-                        type: 'Online',
-                    };
-                }),
-                ...courses.map((course) => {
-                    return {
-                        ...course,
-                        type: 'Presencial',
-                        date: new Date(0),
-                    };
-                }),
-            ];
-        };
+        const ids = Array.from(idToDateMap.keys()).flat();
 
-        const populatedData = await populated();
+        const [trails, courses] = await Promise.all([getTrailByIds(ids), getCoursesByIds(ids)]);
 
-        return populatedData;
+        return [
+            ...trails.map((trail) => ({
+                ...trail,
+                type: 'Online',
+                createdAt: idToDateMap.get(trail._id.toString()),
+            })),
+            ...courses.map((course) => ({
+                ...course,
+                type: 'Presencial',
+                createdAt: idToDateMap.get(course.id) || new Date(0),
+            })),
+        ];
     },
 };
 const collectIds = (data, mappings) => {
