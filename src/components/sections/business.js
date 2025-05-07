@@ -926,7 +926,7 @@ module.exports = {
 
             for (const trail of trails) {
                 const isRecommended = recommendedTrails.some((recommendedTrail) => {
-                    return trail._id.toString() === recommendedTrail.toString();
+                    return trail._id.toString() === recommendedTrail.id.toString();
                 })
 
                 if (isRecommended) {
