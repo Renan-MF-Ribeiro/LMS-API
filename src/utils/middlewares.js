@@ -25,6 +25,8 @@ const Profiles = {
     SUPER_ADMIN: 'PERFIL_Super_Admin',
     USER_MANAGER: 'PERFIL_Gestor_Usuario',
     ENGAGEMENT_MANAGER: 'PERFIL_Gestor_Engajamento',
+    MATRICES_MANAGER: 'PERFIL_Gestor_Matriz',
+    MATRICES_APPLIER: 'PERFIL_Aplicador_Matriz',
 };
 
 const validateProfile = async (req, res, next, expectedProfiles) => {
@@ -196,6 +198,9 @@ module.exports = {
         validateProfile(req, res, next, [Profiles.USER_MANAGER, Profiles.ELEGIBILITY_MANAGER]);
     },
 
+    isMatricesManager: async (req, res, next) => {
+        validateProfile(req, res, next, [Profiles.MATRICES_MANAGER])
+    },
 
     validateMonitoringToken: async (req, res, next) => {
         const token = req.headers.authorization;
