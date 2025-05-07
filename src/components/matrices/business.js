@@ -90,12 +90,13 @@ const business = {
 
     buildEvaluationsResultSuggestions: async (data) => {
         const populated = async () => {
+            if(data.skill_recommendations?.length === 0) return data;
+            
             const ids =
                 data.skill_recommendations?.flatMap((skill) => [
                     ...(skill.trailIds || []),
                     ...(skill.courseIds || []),
                 ]) || [];
-
             const [trails, courses] = await Promise.all([getTrailByIds(ids), getCoursesByIds(ids)]);
 
             const trailMap = new Map(
