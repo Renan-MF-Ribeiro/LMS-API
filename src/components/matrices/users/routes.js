@@ -13,6 +13,6 @@ module.exports = express
     .get('/:id/concluded-courses', _controller.findUsersConcluedCourses)
     .get('/:id', _controller.findOne)
     .post('/', _controller.create)
-    .post('/:id/suggest-content', _controller.suggestContent)
+    .post('/suggest-content', _controller.suggestContent)
     .put('/:id', _controller.update)
     .delete('/:id', _controller.delete);
