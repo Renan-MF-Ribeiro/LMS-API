@@ -49,16 +49,19 @@ const ApplicationsController = {
             const type = req.params?.type;
             const searchBy = req.query?.searchBy;
             const userId = req.query?.userId;
-            const start = req.query?.userId;
-            const end = req.query?.userId;
+            const start = req.query?.start;
+            const end = req.query?.end;
+            const courseId = req.query?.courseId;
             
             let user;
+            let userGroupsTags = []
             let tags = []
 
             if (userId) {
                 user = await User.findOne({ _id: userId })
 
                 const userGroups = await Group.find({ name: { $in: user?.groupsAD } }, 'name tags') || [];
+                userGroupsTags = userGroups.flatMap((group) => group.tags)
                 tags = userGroups?.flatMap((group) => group?.tags?.map((tag) => tag?.value)) || [];
             }
             let response = [];
@@ -68,7 +71,7 @@ const ApplicationsController = {
                     response = await searchTrailBy(searchBy, tags);
                     break;
                 case 'courses':
-                    response = await searchCourseBy(user, tags, start, end);
+                    response = await searchCourseBy(user, userGroupsTags, start, end, courseId);
                     break;
                 default:
                     response = "Insira um tipo de busca válido: 'trails' ou 'courses'";

@@ -472,7 +472,7 @@ module.exports = {
             return []
         }
 
-        const events = await eventsController.getCalendarEventsByDate(start, end, user, tags)        
+        const events = await eventsController.getCalendarEventsByDate(start, end, user, tags)
 
         let calendarEvents = events;
 
