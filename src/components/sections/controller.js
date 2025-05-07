@@ -24,7 +24,9 @@ const {
     populateSectionTrails,
     getSectionTrailId,
     isSectionTrailInfo,
-    isValidSectionTrailInfo
+    isValidSectionTrailInfo,
+    recommendedTrailsSections,
+    recommendedCoursesSections
 } = require('./business');
 
 const { getStudentCourses } = require('../home/business');
@@ -37,6 +39,7 @@ const {
 const { TrailsUsersProgress, Trail } = require('../trails/model');
 const { handleSegmentationOnQuery, handleSegmentationOnCreate } = require('../config/business');
 const ApiError = require('../../errors/ApiError');
+const { matricesApi } = require('../matrices/http-adapter');
 
 const { ObjectId } = require('mongoose').Types;
 
@@ -267,6 +270,7 @@ module.exports = {
 
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
+            console.log({tags})
             const classGroups = await getGroupCodesByToken(req, tags);
             const newArray = [];
             let sectionArray;
@@ -342,7 +346,7 @@ module.exports = {
                     if (trail.expirationType) {
                         trail = processExpirationDate(trail, user);
                     }
-
+                    
                     trail = processedTrail.trail;
 
                     for (const tag of trail.tags) {
@@ -367,6 +371,25 @@ module.exports = {
                 const arrFavoriteSections = await favoriteSections(trails, user._id);
                 const arrMostSeenSections = await mostSeenSections(trails);
                 const arrCoursesSections = await courseInSections(tags, user._id);
+
+                const recommendedTrails = [];
+                const recommendedCourses = [];
+
+                if (req?.features?.matrices) {
+                    try {
+                        const { data } = await matricesApi.get(`/users/${user._id}`, {
+                            headers: {
+                                authorization: `Bearer ${req.headers.authorization}`,
+                            },
+                        });
+                    
+                        recommendedTrails.push(...data.data.recommendedTrails);
+                        recommendedCourses.push(...data.data.recommendedCourses);
+                    } catch {}
+                }
+
+                const arrRecommendedTrailsSections = await recommendedTrailsSections(trails, recommendedTrails);
+                const arrRecommendedCoursesSections = await recommendedCoursesSections(recommendedCourses);
 
                 function limitArray(section) {
                     if (!section) return [];
@@ -395,7 +418,9 @@ module.exports = {
                     .concat(limitArray(arrConcludedSections))
                     .concat(limitArray(arrCoursesSections))
                     .concat(limitArray(arrFavoriteSections))
-                    .concat(limitArray(arrMostSeenSections));
+                    .concat(limitArray(arrMostSeenSections))
+                    .concat(limitArray(arrRecommendedTrailsSections))
+                    .concat(limitArray(arrRecommendedCoursesSections))
 
                 if (channelId) {
                     const filteredArray = resultSections.filter((obj) =>
