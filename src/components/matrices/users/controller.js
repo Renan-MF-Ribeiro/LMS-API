@@ -2,10 +2,14 @@ const { default: axios } = require('axios');
 const { User } = require('../../users/model');
 const { matricesApi } = require('../http-adapter');
 const { getCoursesByUserID } = require('../../courses/business');
-const { buildCoursesResponse, sortCoursesByConcludedAt, buildEvaluationsResultSuggestions, buildSuggestions } = require('../business');
+const {
+    buildCoursesResponse,
+    sortCoursesByConcludedAt,
+    buildEvaluationsResultSuggestions,
+    buildSuggestions,
+} = require('../business');
 const { getCompletedTrails } = require('../../tracking/business');
 const { Group } = require('../../groups/model');
-
 
 const usersController = {
     findAll: async (req, res) => {
@@ -25,13 +29,16 @@ const usersController = {
     findByRegistrationOrName: async (req, res) => {
         try {
             const { searchBy } = req.query;
-            const users = await User.find({
-                $or: [
-                    { registration: { $regex: searchBy, $options: 'i' } },
-                    { name: { $regex: searchBy, $options: 'i' } },
-                    { networkLogin: { $regex: searchBy, $options: 'i' } },
-                ],
-            }, 'name _id registration networkLogin').limit(10);
+            const users = await User.find(
+                {
+                    $or: [
+                        { registration: { $regex: searchBy, $options: 'i' } },
+                        { name: { $regex: searchBy, $options: 'i' } },
+                        { networkLogin: { $regex: searchBy, $options: 'i' } },
+                    ],
+                },
+                'name _id registration networkLogin'
+            ).limit(10);
 
             res.status(200).json(users);
         } catch (error) {
@@ -64,11 +71,13 @@ const usersController = {
                 return res.status(404).json({ message: 'Usuário não encontrado' });
             }
 
-            const userGroups = await Group.find({ name: { $in: user?.groupsAD } }, 'name tags') || [];
-            const tags = userGroups?.flatMap((group) => group?.tags?.map((tag) => tag?.value)).join(',') || [];
-
+            const userGroups =
+                (await Group.find({ name: { $in: user?.groupsAD } }, 'name tags')) || [];
+            const tags =
+                userGroups?.flatMap((group) => group?.tags?.map((tag) => tag?.value)).join(',') ||
+                [];
             const { data } = await matricesApi.get(`/users/${id}/matrices`, {
-                params: { tags }
+                params: { tags, office: user?.office },
             });
             res.status(data.statusCode).json(data.data);
         } catch (error) {
@@ -97,9 +106,11 @@ const usersController = {
             const { id } = req.params;
 
             const user = await User.findOne({ _id: id });
-            const uri = `${process.env.API_CERTIFIER
-                }/certificates/find/${user.networkLogin?.toLowerCase()}?clientId=${process.env.CLIENT_ID
-                }`;
+            const uri = `${
+                process.env.API_CERTIFIER
+            }/certificates/find/${user.networkLogin?.toLowerCase()}?clientId=${
+                process.env.CLIENT_ID
+            }`;
 
             let token = req.headers.authorization;
             if (!token?.startsWith('Bearer')) {
@@ -137,7 +148,7 @@ const usersController = {
         try {
             const { id } = req.params;
             const { data } = await matricesApi.get(`/users/${id}/suggestions`);
-            
+
             const populatedData = await buildSuggestions(data.data);
             res.status(data.statusCode).json(populatedData);
         } catch (error) {
@@ -157,12 +168,10 @@ const usersController = {
                 return res.status(404).json({ message: 'Usuário não encontrado' });
             }
 
-
             const [courses, trails] = await Promise.all([
-                getCoursesByUserID(id).then((courses) =>
-                    buildCoursesResponse(courses)),
+                getCoursesByUserID(id).then((courses) => buildCoursesResponse(courses)),
 
-                getCompletedTrails(user.networkLogin)
+                getCompletedTrails(user.networkLogin),
             ]);
             const sortedCourses = await sortCoursesByConcludedAt([courses, trails].flat());
             res.status(200).json(sortedCourses);
