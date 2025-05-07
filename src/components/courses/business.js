@@ -465,7 +465,7 @@ module.exports = {
         return { results, classInfo, courseInfo };
     },
 
-    async searchCourseBy(searchBy) {
+    async searchCourseBy(searchBy, tags) {
         const query = {
             deleted: 0,
             $or: [{ datefinal: { $gte: new Date() }, datefinal: null }],
@@ -477,6 +477,10 @@ module.exports = {
                 { title: { $regex: searchBy, $options: 'i' } },
                 { description: { $regex: searchBy, $options: 'i' } },
             ];
+        }
+
+        if (tags.length > 0) {
+            query['tags.value'] = { $in: tags };
         }
         return await CourseModel.find(query).limit(10);
     },
@@ -491,6 +495,6 @@ module.exports = {
             query._id = { $in: courseIds };
         }
 
-        return await CourseModel.find(query, 'title thumbPath banner');
+        return await CourseModel.find(query, 'title thumbPath banner').lean();
     }
 };

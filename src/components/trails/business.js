@@ -349,7 +349,7 @@ module.exports = {
         }
     },
 
-    async searchTrailBy(searchBy) {
+    async searchTrailBy(searchBy, tags) {
         const query = {
             enabled: true,
             archive: false,
@@ -362,10 +362,15 @@ module.exports = {
                 { description: { $regex: searchBy, $options: 'i' } },
             ];
         }
+
+        if (tags.length > 0) {
+            query['tags.value'] = { $in: tags };
+        }
+
         return await Trail.find(query).limit(10);
     },
 
     async getTrailByIds(trailIds) {
-        return await Trail.find({ _id: { $in: trailIds } }, 'title thumbPath _id')
+        return await Trail.find({ _id: { $in: trailIds } }, 'title thumbPath _id').lean()
     }
 };
