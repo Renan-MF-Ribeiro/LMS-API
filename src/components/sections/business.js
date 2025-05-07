@@ -688,6 +688,7 @@ module.exports = {
                         startDate: 1,
                         endDate: 1,
                         highlighted: 1,
+                        certificateDateType: 1,
                     })
                     .lean();
 
@@ -728,7 +729,7 @@ module.exports = {
                             }
                             if (certificateElegible && presence)
                                 certificateData = {
-                                    completionAt: e.dateApplicationFinal,
+                                    completionAt: course.certificateDateType == 2 ? userInClass?.presenceAt : e.dateApplicationFinal,
                                     qrcode: e.qrcode,
                                     certificate: course.certificate,
                                     certificateLayout: course.certificateLayout,

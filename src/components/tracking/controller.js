@@ -626,10 +626,7 @@ const TrackingController = {
             order = orderMapping[order] || order;
 
             // Buscar os Trackings
-            const trackingCount = await Tracking.find(query).countDocuments();
             let tracking = await Tracking.find(query)
-                .skip(parseInt(skip))
-                .limit(parseInt(limit))
                 .sort({ [order]: sort === 'asc' ? 1 : -1 })
                 .lean();
 
@@ -709,6 +706,9 @@ const TrackingController = {
                 });
             }
 
+            const trackingCount = activities.length;
+            activities = activities.slice(parseInt(skip), parseInt(skip) + parseInt(limit));
+
             _messages.success(res, req, { activities, total: trackingCount });
         } catch (error) {
             console.log(error);
@@ -744,10 +744,8 @@ const TrackingController = {
             };
             order = orderMapping[order] || order;
 
-            const trackingCount = await Tracking.find(query).countDocuments();
+
             let tracking = await Tracking.find(query)
-                .skip(parseInt(skip))
-                .limit(parseInt(limit))
                 .sort({ [order]: sort === 'asc' ? 1 : -1 })
                 .lean();
 
@@ -816,6 +814,9 @@ const TrackingController = {
                     return sort === 'asc' ? valueA.localeCompare(valueB) : valueB.localeCompare(valueA);
                 });
             }
+
+            const trackingCount = activities.length;
+            activities = activities.slice(parseInt(skip), parseInt(skip) + parseInt(limit));
 
             _messages.success(res, req, { activities, total: trackingCount });
         } catch (error) {
