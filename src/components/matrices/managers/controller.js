@@ -3,6 +3,8 @@ const {
     pagination,
     ordernation,
     processTrailTracking,
+    handleStudentTrails,
+    getSortedDate,
 } = require('../../../utils/functions');
 const { findUsersByMatrixConfig } = require('../../config/business');
 const { matricesApi } = require('../http-adapter');
@@ -11,6 +13,8 @@ const { Trail } = require('../../trails/model.js');
 const { Tracking } = require('../../tracking/model.js');
 const httpStatus = require('http-status-codes');
 const { Group } = require('../../groups/model.js');
+const { User, LastLogin } = require('../../users/model.js');
+const { populateTrails } = require('../../trails/business.js');
 
 const managersController = {
     pendingActions: async (req, res) => {
@@ -181,9 +185,67 @@ const managersController = {
     getUser: async (req, res) => {
         try {
             const userId = req.params.id;
-            const { data } = await matricesApi.get(`/users/${userId}`);
-            
-            console.log({ data });
+            const { data } = await matricesApi.get(`/users/detailed-info/${userId}`);
+
+            const user = await User.findById(userId);
+            const groupsAD = user?.groupsAD || [];
+
+            const groups = await Group.find({ name: { $in: groupsAD } });
+
+            const tags = groups.flatMap((group) => group.tags);
+
+            if (user.classGroups.length > 0) {
+                const mappedUserClassGroups = user.classGroups.map((classGroup) => ({
+                    display: classGroup.groupCode,
+                    value: classGroup.groupCode,
+                }));
+
+                tags.push(...mappedUserClassGroups);
+            }
+
+            const eligibleTrails = await populateTrails(true, {
+                tags: { $in: tags },
+                enabled: true,
+            });
+
+            const userLastLogin = await LastLogin.findOne({ user: user._id });
+
+            const { completedTrails } = await handleStudentTrails(user, eligibleTrails);
+
+            const sortedCompletedTrails = completedTrails
+                .map((completedTrail) => {
+                    return completedTrail.completionAt;
+                })
+                .sort((prev, curr) => curr.getTime() - prev.getTime());
+
+            const classes = await ClassModel.find({
+                'users.userID': user._id,
+                'users.presenceAt': { $ne: null },
+            });
+
+            const userClasses = classes.flatMap((c) => {
+                return c.users.filter((u) => u._id.toString() === user._id.toString());
+            });
+
+            const sortedPresenceAt = userClasses
+                .map((userClass) => {
+                    return userClass.presenceAt;
+                })
+                .sort((prev, curr) => curr.getTime() - prev.getTime());
+
+            const lastAccessAt = userLastLogin?.lastLogin;
+            const lastApplicationAt = data?.data?.lastApplicationAt;
+            const lastConclusionAt = sortedCompletedTrails?.[0];
+            const lastPresenceInCourseAt = sortedPresenceAt?.[0];
+
+            const payload = {
+                lastAccessAt,
+                lastApplicationAt,
+                lastConclusionAt,
+                lastPresenceInCourseAt,
+            };
+
+            res.status(httpStatus.OK).send(payload);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
