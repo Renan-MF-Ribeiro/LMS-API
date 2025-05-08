@@ -90,33 +90,41 @@ const business = {
 
     buildEvaluationsResultSuggestions: async (data) => {
         if (!data?.skill_recommendations?.length) return [];
-    
+
         const trailIds = new Set();
         const courseIds = new Set();
         for (const skill of data.skill_recommendations) {
-            (skill.trailIds || []).forEach(t => trailIds.add(t.trailId));
-            (skill.coursesIds || []).forEach(c => courseIds.add(c.courseId));
+            (skill.trailIds || []).forEach((t) => trailIds.add(t.trailId));
+            (skill.coursesIds || []).forEach((c) => courseIds.add(c.courseId));
         }
-    
+
         const [trails, courses] = await Promise.all([
             getTrailByIds(Array.from(trailIds)),
             getCoursesByIds(Array.from(courseIds)),
         ]);
-    
-        const trailMap = new Map(trails.map(t => [t._id.toString(), { ...t, status: 'concluded' }]));
-        const courseMap = new Map(courses.map(c => [c._id.toString(), { ...c, status: 'concluded' }]));
-    
-        return data.skill_recommendations.map(skill => {
-            const skillTrails = (skill.trailIds || []).map(({ trailId, released }) => {
-                const trail = trailMap.get(trailId);
-                return trail ? { ...trail, released } : null;
-            }).filter(Boolean);
-    
-            const skillCourses = (skill.coursesIds || []).map(({ courseId, released }) => {
-                const course = courseMap.get(courseId);
-                return course ? { ...course, released } : null;
-            }).filter(Boolean);
-    
+
+        const trailMap = new Map(
+            trails.map((t) => [t._id.toString(), { ...t, status: 'concluded' }])
+        );
+        const courseMap = new Map(
+            courses.map((c) => [c._id.toString(), { ...c, status: 'concluded' }])
+        );
+
+        return data.skill_recommendations.map((skill) => {
+            const skillTrails = (skill.trailIds || [])
+                .map(({ trailId, released }) => {
+                    const trail = trailMap.get(trailId);
+                    return trail ? { ...trail, released } : null;
+                })
+                .filter(Boolean);
+
+            const skillCourses = (skill.coursesIds || [])
+                .map(({ courseId, released }) => {
+                    const course = courseMap.get(courseId);
+                    return course ? { ...course, released } : null;
+                })
+                .filter(Boolean);
+
             return {
                 skillName: skill.skillName,
                 skillId: skill.skillId,
@@ -130,15 +138,13 @@ const business = {
 
     buildSuggestions: async (data) => {
         const idToDateMap = new Map();
-        data.forEach((item) => {
-            console.log(item);
-            item.recommendedTrails?.forEach((trail) => {
-                idToDateMap.set(trail.id, trail.createdAt);
-            });
 
-            item.recommendedCourses?.forEach((course) => {
-                idToDateMap.set(course.courseId, course.createdAt);
-            });
+        data.recommendedTrails?.forEach((trail) => {
+            idToDateMap.set(trail.id, trail.createdAt);
+        });
+
+        data.recommendedCourses?.forEach((course) => {
+            idToDateMap.set(course.courseId, course.createdAt);
         });
 
         const ids = Array.from(idToDateMap.keys()).flat();
