@@ -9,7 +9,7 @@ const business = {
         const ids =
             data.skill_recommendations?.flatMap((skill) => [
                 ...(skill.trailIds || []),
-                ...(skill.courseIds || []),
+                ...(skill.coursesIds || []),
             ]) || [];
 
         const trails = await getTrailByIds(ids);
@@ -25,11 +25,11 @@ const business = {
                 trails: (skill.trailIds || [])
                     .map((id) => trailMap.get(id.toString()))
                     .filter(Boolean),
-                courses: (skill.courseIds || [])
+                courses: (skill.coursesIds || [])
                     .map((id) => courseMap.get(id.toString()))
                     .filter(Boolean),
                 trailIds: undefined,
-                courseIds: undefined,
+                coursesIds: undefined,
             })),
         };
 
