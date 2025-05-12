@@ -1,8 +1,33 @@
 const { Trail } = require('../../trails/model');
 
+const { getUserByToken } = require('../../../utils/functions');
+
 const { getDbCurrentFeatures } = require('../../../utils/features');
 const { socialApi } = require('../../social/http-adapter');
 
+async function processElegibility(req, elegibilites) {
+        const user = await getUserByToken(req)
+        try {
+            if (elegibilites.length > 0) {
+                for (let elegibility of elegibilites) {
+                    const userHasValidFieldValue =
+                        user[elegibility.field] === elegibility.value &&
+                        user[elegibility.field] != undefined &&
+                        user[elegibility.field] != 'undefined' &&
+                        user[elegibility.field] != null &&
+                        user[elegibility.field] != 'null' &&
+                        user[elegibility.field] != '';
+                    if(userHasValidFieldValue){
+                      return true
+                    }
+                }
+                return false
+            }
+        } catch (error) {
+            console.log(error);
+            return error;
+        }
+    }
 
 async function populateTrailFields(data) {
   const arrTrails = []
@@ -139,4 +164,5 @@ async function populateTrailFields(data) {
 
 module.exports = {
   populateTrailFields,
+  processElegibility
 };
