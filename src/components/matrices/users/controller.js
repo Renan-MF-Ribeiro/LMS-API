@@ -133,8 +133,14 @@ const usersController = {
     findUsersEvaluationsResultSuggestions: async (req, res) => {
         try {
             const { id } = req.params;
+
+            const user = await User.findOne({ _id: id });
+            if (!user) {
+                return res.status(404).json({ message: 'Usuário não encontrado' });
+            }
+
             const { data } = await matricesApi.get(`/users/${id}/evaluations-result`);
-            const populatedData = await buildEvaluationsResultSuggestions(data.data);
+            const populatedData = await buildEvaluationsResultSuggestions(data.data, user.networkLogin);
 
             res.status(data.statusCode).json(populatedData);
         } catch (error) {

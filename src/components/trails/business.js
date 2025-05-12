@@ -1,10 +1,11 @@
-const { formatDateWithoutHours, getDateTodayWithoutHours } = require('../../utils/functions');
+const { formatDateWithoutHours, getDateTodayWithoutHours, processTrailTracking } = require('../../utils/functions');
 
 const { Trail } = require('./model');
 const { Item } = require('../items/model');
 const axios = require('axios');
 const { socialApi } = require('../social/http-adapter');
 const { getDbCurrentFeatures } = require('../../utils/features');
+const { Tracking } = require('../tracking/model');
 
 module.exports = {
     async checkItem(item) {
@@ -372,5 +373,41 @@ module.exports = {
 
     async getTrailByIds(trailIds) {
         return await Trail.find({ _id: { $in: trailIds } }, 'title thumbPath _id').lean()
+    },
+
+    async getTrailsWithTrackings(trailIds, userNetworkLogin) {
+        const trails = await Trail.find({ _id: { $in: trailIds } }, 'title thumbPath _id items').lean()
+
+        const query = {
+            userLogin: userNetworkLogin,
+            item: { $in: trails?.flatMap((trail) => trail.items?.map((item) => item.itemID)) },
+        };
+
+        const allTrackings = await Tracking.find(query);
+
+        for (const trail of trails) {
+            processTrailTracking(trail, allTrackings);
+        }
+
+        return trails.map((t) => {
+            let status = 'pending';
+            switch (t.completion) {
+                case 1:
+                    status = 'completed';
+                    break;
+                case 0:
+                    status = 'pending';
+                    break;
+                default:
+                    status = 'inProgress';
+                    break;
+            }
+            return {
+                _id: t._id,
+                title: t.title,
+                thumbPath: t.thumbPath,
+                status,
+            }
+        })
     }
 };
