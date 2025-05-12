@@ -134,11 +134,11 @@ async function setAssessmentHistoricOnSections(userId, sections) {
                             'separator',
                             'certificate',
                         ].includes(trail.type);
-                        
+
                         const completion = trail?.completion === 1;
 
                         return includes && completion;
-                    } 
+                    }
                 )
                 ?.length > 0
 
@@ -173,7 +173,7 @@ async function setAssessmentHistoricOnSections(userId, sections) {
 }
 
 module.exports = {
-    checkIfTheTrackIsValid (trail) {
+    checkIfTheTrackIsValid(trail) {
         const today = getDateTodayWithoutHours();
 
         if (trail.classGroup) {
@@ -196,7 +196,7 @@ module.exports = {
         return moment().isBetween(startDate, endDate, null, '[]');
     },
 
-    calculateDiffDateTrail (trail) {
+    calculateDiffDateTrail(trail) {
         const today = getDateTodayWithoutHours();
         const diffCreate = calculateDiffDate(
             today,
@@ -213,7 +213,7 @@ module.exports = {
         return false;
     },
 
-    checkIfUserCanSeeTheTrail (trail, userTags) {
+    checkIfUserCanSeeTheTrail(trail, userTags) {
         const trailTags = trail.tags;
         let flag = false;
 
@@ -228,7 +228,7 @@ module.exports = {
         if (flag) return true;
         return false;
     },
-    getTrailCompletion (trail) {
+    getTrailCompletion(trail) {
         const completed = trail.items.find((val) => {
             return val.completion === 1;
         });
@@ -249,7 +249,7 @@ module.exports = {
             return null;
         }
     },
-    filterTrails (filter, trails, elegibleTags) {
+    filterTrails(filter, trails, elegibleTags) {
         const filteredTrails = [];
         for (const i in trails) {
             let completed = false;
@@ -282,7 +282,7 @@ module.exports = {
         }
         return filteredTrails;
     },
-    setTrailMandatory (trail, tags) {
+    setTrailMandatory(trail, tags) {
         const mandatoryTags = trail.mandatory;
 
         if (!mandatoryTags || !mandatoryTags.length) {
@@ -306,7 +306,7 @@ module.exports = {
             });
         }
     },
-    getTagsElegiblesByToken (req) {
+    getTagsElegiblesByToken(req) {
         return new Promise(async (resolve, reject) => {
             try {
                 const user = await getUserByToken(req);
@@ -340,7 +340,7 @@ module.exports = {
         });
     },
 
-    getGroupCodesByToken (req, tags) {
+    getGroupCodesByToken(req, tags) {
         return new Promise(async (resolve, reject) => {
             try {
                 const user = await getUserByToken(req);
@@ -363,7 +363,7 @@ module.exports = {
         });
     },
 
-    getTagsElegibles (user) {
+    getTagsElegibles(user) {
         return new Promise(async (resolve, reject) => {
             try {
                 const namesGroups = user.groupsAD;
@@ -384,7 +384,7 @@ module.exports = {
         });
     },
 
-    checkItemCompleted (item, user) {
+    checkItemCompleted(item, user) {
         return new Promise(async (resolve, reject) => {
             try {
                 let completion = null;
@@ -437,7 +437,7 @@ module.exports = {
         });
     },
 
-    async elegiblesContents (trails) {
+    async elegiblesContents(trails) {
         return new Promise(async (resolve, reject) => {
             try {
                 const arrSections = [];
@@ -468,7 +468,7 @@ module.exports = {
         });
     },
 
-    async mandatorySections (trails, tags) {
+    async mandatorySections(trails, tags) {
         return new Promise(async (resolve, reject) => {
             try {
                 const section = await Section.findOne({
@@ -517,7 +517,7 @@ module.exports = {
         });
     },
 
-    async recentsSections (trails) {
+    async recentsSections(trails) {
         return new Promise(async (resolve, reject) => {
             try {
                 const section = await Section.findOne({
@@ -551,7 +551,7 @@ module.exports = {
         });
     },
 
-    async keepLearningSections (trails) {
+    async keepLearningSections(trails) {
         return new Promise(async (resolve, reject) => {
             try {
                 const section = await Section.findOne({
@@ -586,7 +586,7 @@ module.exports = {
         });
     },
 
-    async favoriteSections (trails, userId) {
+    async favoriteSections(trails, userId) {
         return new Promise(async (resolve, reject) => {
             try {
                 const section = await Section.findOne({
@@ -627,7 +627,7 @@ module.exports = {
         });
     },
 
-    async concludedSections (trails) {
+    async concludedSections(trails) {
         return new Promise(async (resolve, reject) => {
             try {
                 const section = await Section.findOne({
@@ -662,7 +662,7 @@ module.exports = {
         });
     },
 
-    async courseInSections (tags, userId) {
+    async courseInSections(tags, userId) {
         return new Promise(async (resolve, reject) => {
             try {
                 const section = await Section.findOne({
@@ -797,7 +797,7 @@ module.exports = {
         });
     },
 
-    async mostSeenSections (trails) {
+    async mostSeenSections(trails) {
         return new Promise(async (resolve, reject) => {
             try {
                 const section = await Section.findOne({
@@ -925,14 +925,14 @@ module.exports = {
      * @param {Tag[]|undefined} tagsOr   Tags que são opcionais (OR)
      * @returns {boolean}
      */
-    checkEligibilityTagsAnd (tagsUser, tagsAnd, tagsOr) {
+    checkEligibilityTagsAnd(tagsUser, tagsAnd, tagsOr) {
         if (!tagsUser?.length || (!tagsAnd?.length && !tagsOr?.length)) return false;
 
         /**
          * @param {Tag} tag
          * @returns {string}
          */
-        function parseTagValue (tag) {
+        function parseTagValue(tag) {
             if (typeof tag === 'string') return tag.toLowerCase();
             if (!tag.value) throw new Error('Tag sem valor');
             return tag.value.toLowerCase();
@@ -953,7 +953,7 @@ module.exports = {
         return isEligibleByTagsAnd;
     },
 
-    filterAlura (filters, data) {
+    filterAlura(filters, data) {
         const aluraFilters = ['completed', 'incompleted', 'uninitiated'];
         if (
             Object.keys(filters).length === 0 ||
@@ -994,7 +994,7 @@ module.exports = {
         return results;
     },
 
-    mapAlura (results) {
+    mapAlura(results) {
         const data = [];
 
         results.forEach((result) => {
@@ -1024,7 +1024,7 @@ module.exports = {
         return data;
     },
 
-    getTrainingDataFromBody (body) {
+    getTrainingDataFromBody(body) {
         const { isTraining = false, certificateLayout, certificateDue, completedTrailsType = 'optional' } = body;
 
         if (!isTraining) return { isTraining, certificateLayout: null, certificateDue: null, completedTrailsType: null };
@@ -1056,7 +1056,7 @@ module.exports = {
     setAssessmentHistoricOnSections,
 };
 
-function isNecessary (trail, tags) {
+function isNecessary(trail, tags) {
     const mandatoryTags = trail.mandatory;
 
     if (mandatoryTags.length === 0) {
@@ -1094,7 +1094,7 @@ function isNecessary (trail, tags) {
     return hasMandatory && hasMandatoryItems;
 }
 
-function isCompleted (trail) {
+function isCompleted(trail) {
     if (trail.completion === 1) {
         return true;
     } else {
@@ -1102,7 +1102,7 @@ function isCompleted (trail) {
     }
 }
 
-function isIncomplete (trail) {
+function isIncomplete(trail) {
     if (trail.completion >= 0 && trail.completion < 1 && trail.completion !== null) {
         return true;
     } else {
@@ -1110,7 +1110,7 @@ function isIncomplete (trail) {
     }
 }
 
-function isHighlight (trail) {
+function isHighlight(trail) {
     let flag = false;
     const today = getDateTodayWithoutHours();
 
@@ -1127,7 +1127,7 @@ function isHighlight (trail) {
     return flag;
 }
 
-function isNotStarted (trail) {
+function isNotStarted(trail) {
     if (trail.completion === null) {
         return true;
     } else {
@@ -1135,7 +1135,7 @@ function isNotStarted (trail) {
     }
 }
 
-function isMostRecent (trail) {
+function isMostRecent(trail) {
     const today = getDateTodayWithoutHours();
     const diffCreate = calculateDiffDate(today, formatDateWithoutHours(trail.createdAt), 'days');
     const diffUpdate = calculateDiffDate(today, formatDateWithoutHours(trail.updatedAt), 'days');
@@ -1153,7 +1153,7 @@ function isMostRecent (trail) {
     }
 }
 
-function checkIfTheTrackIsValid (trail) {
+function checkIfTheTrackIsValid(trail) {
     const today = getDateTodayWithoutHours();
 
     if (trail.classGroup) {
@@ -1175,7 +1175,7 @@ function checkIfTheTrackIsValid (trail) {
     return true;
 }
 
-function calculateDiffDateTrail (trail) {
+function calculateDiffDateTrail(trail) {
     const today = getDateTodayWithoutHours();
     const diffCreate = calculateDiffDate(today, formatDateWithoutHours(trail.createdAt), 'days');
     const diffUpdate = calculateDiffDate(today, formatDateWithoutHours(trail.updatedAt), 'days');
@@ -1184,7 +1184,7 @@ function calculateDiffDateTrail (trail) {
     return false;
 }
 
-function mapAluraTrackings (items) {
+function mapAluraTrackings(items) {
     if (items.every((item) => !item?.tracking)) {
         return null;
     }
@@ -1197,7 +1197,7 @@ function mapAluraTrackings (items) {
     };
 }
 
-function canRegisterOrCancel (initialDate, minutes) {
+function canRegisterOrCancel(initialDate, minutes) {
     if (!minutes) return true;
     const currentDate = new Date()
     currentDate.setMinutes(currentDate.getMinutes() - 180);
@@ -1208,7 +1208,7 @@ function canRegisterOrCancel (initialDate, minutes) {
     return deadline >= currentDate;
 }
 
-function getClassStatus (classFromCourse, inClass) {
+function getClassStatus(classFromCourse, inClass) {
     try {
         const { dateApplicationInitial, dateApplicationFinal, registrationDeadline, cancellationDeadline } = classFromCourse;
         const today = new Date()
