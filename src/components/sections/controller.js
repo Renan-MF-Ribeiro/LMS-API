@@ -464,6 +464,210 @@ module.exports = {
         }
     },
 
+    async getUserAccessibleContent (req, res) {
+        try {
+            const { trailLimit: queryTrailLimit = '25', channel: channelId, userId, ...filter } = req.query;
+
+            const trailLimit = queryTrailLimit ? Number(queryTrailLimit) : null;
+            let user
+            let tags
+            let classGroups
+
+            if (userId) {
+                const { user: userAccess, tags: tagsAccess, classGroups: classGroupsAccess } = await getContentEligibilityParameterByUserId(userId);
+                user = userAccess
+                tags = tagsAccess
+                classGroups = classGroupsAccess
+            } else {
+                user = await getUserByToken(req);
+                tags = await getTagsElegiblesByToken(req);
+                classGroups = await getGroupCodesByToken(req, tags);
+            }
+            console.log(user.name)
+            const newArray = [];
+            let sectionArray;
+
+            if (channelId) {
+                let { idSections } = await Channel.findById(channelId).select('idSections -_id');
+
+                const dbSections = await Section
+                    .find({ _id: { $in: idSections } })
+                    .select('trails -_id');
+
+                const sectionInfos = await populateSectionTrails(
+                    dbSections,
+                    { select: 'tags tagsAnd _id collaborative' }
+                );
+
+                const trailsInSections = sectionInfos.map(({ trails }) => {
+                    return {
+                        trails: trails.filter(
+                            (trail) => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative
+                        ).map(trail => trail._id)
+                    }
+                });
+
+                newArray.push(
+                    ...trailsInSections
+                        .map((e) => {
+                            return e.trails;
+                        })
+                        .flat(2)
+                );
+
+                delete req.query.channel;
+                sectionArray = idSections;
+            }
+
+            let resultSections = [];
+
+            if (tags.length > 0) {
+                const query = {
+                    enabled: true,
+                    $or: [
+                        {
+                            tags: {
+                                $in: tags,
+                            },
+                        },
+                        {
+                            tagsAnd: {
+                                $in: tags,
+                            },
+                        },
+                    ],
+                };
+
+                if (channelId) {
+                    query['_id'] = { $in: newArray };
+                }
+
+                let trails = await populateTrails(true, query);
+
+                const allTrackingUser = await Tracking.find({
+                    userLogin: { $eq: user.networkLogin },
+                    $or: [
+                        { expiredCompletion: { $exists: false } },
+                        { expiredCompletion: { $eq: null } },
+                    ],
+                });
+
+                for (let trail of trails) {
+                    const processedTrail = processTrailTracking(trail, allTrackingUser);
+
+                    if (trail.expirationType) {
+                        trail = processExpirationDate(trail, user);
+                    }
+
+                    trail = processedTrail.trail;
+
+                    for (const tag of trail.tags) {
+                        for (const classGroup of classGroups) {
+                            if (classGroup.groupCode === tag.value) {
+                                trail.classGroup = findObjectInRange(
+                                    classGroups.filter((e) => e.groupCode == tag.value),
+                                    new Date()
+                                );
+                            }
+                        }
+                    }
+                }
+
+                trails = trails.filter(checkIfTheTrackIsValid);
+
+                let arrSections = await elegiblesContents(trails);
+                const arrMandatorySections = await mandatorySections(trails, tags);
+                const arrRecentsSections = await recentsSections(trails);
+                const arrKeepLearningSections = await keepLearningSections(trails);
+                const arrConcludedSections = await concludedSections(trails);
+                const arrFavoriteSections = await favoriteSections(trails, user._id);
+                const arrMostSeenSections = await mostSeenSections(trails);
+                const arrCoursesSections = await courseInSections(tags, user._id);
+
+                function limitArray (section) {
+                    if (!section) return [];
+
+                    if (!trailLimit) return section;
+
+                    if (Array.isArray(section) && section.length > 0) {
+                        return section.map((section) => {
+                            return {
+                                ...section,
+                                trails: section.trails?.slice(0, trailLimit) ?? []
+                            };
+                        })
+                    }
+
+                    return {
+                        ...section,
+                        trails: section.trails?.slice(0, trailLimit) ?? []
+                    };
+                }
+
+                resultSections = arrSections
+                    .concat(limitArray(arrMandatorySections))
+                    .concat(limitArray(arrRecentsSections))
+                    .concat(limitArray(arrKeepLearningSections))
+                    .concat(limitArray(arrConcludedSections))
+                    .concat(limitArray(arrCoursesSections))
+                    .concat(limitArray(arrFavoriteSections))
+                    .concat(limitArray(arrMostSeenSections));
+
+                if (channelId) {
+                    const filteredArray = resultSections.filter((obj) =>
+                        obj ? sectionArray.includes(obj._id) : false
+                    );
+                    resultSections = filteredArray;
+                }
+
+                resultSections = resultSections.filter((val) => {
+                    return val != null;
+                });
+
+                if (resultSections.length > 0) {
+                    resultSections.sort((a, b) => (a.position < b.position ? -1 : 1));
+                }
+
+                if (filter && Object.values(filter).length > 0) {
+                    const arrResultSections = [];
+                    for (const section of resultSections) {
+                        section.trails = filterTrails(filter, section.trails, tags);
+                        if (section.trails.length > 0) {
+                            // Verifica a obrigatoriedade da trilha.
+                            arrResultSections.push(section);
+                        }
+                    }
+
+                    resultSections = arrResultSections;
+                }
+
+                for (const section of resultSections) {
+                    for (const trail of section.trails) {
+                        setTrailMandatory(trail, tags);
+                    }
+                }
+            }
+
+            const hasSomeTrainingSection = resultSections.some(section => section.isTraining);
+
+            if (hasSomeTrainingSection) {
+                resultSections = await setAssessmentHistoricOnSections(user._id, resultSections);
+            }
+
+            _messages.success(res, req, resultSections);
+        } catch (error) {
+            console.log(error);
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'sections',
+                '/elegiblesContents'
+            );
+        }
+    },
+
     async getCollaborationSectionDetail (req, res) {
         try {
             const sectionId = req.params.id;
