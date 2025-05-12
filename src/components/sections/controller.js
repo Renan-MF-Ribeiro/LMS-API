@@ -339,7 +339,9 @@ module.exports = {
                 }
 
                 let trails = await populateTrails(true, query);
-
+                trails = trails.filter(
+                    (trail) => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative
+                )
                 const allTrackingUser = await Tracking.find({
                     userLogin: { $eq: user.networkLogin },
                     $or: [
