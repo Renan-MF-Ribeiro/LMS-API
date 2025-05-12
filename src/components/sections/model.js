@@ -62,8 +62,9 @@ const SectionSchema = new mongoose.Schema(
         exceptionCertificateTrails: { type: [{ type: 'ObjectId', ref: 'trails' }], required: false, default: [] },
         defaultType: {
             type: String,
-            enum: Object.values(DEFAULT_TYPES),
+            enum: Object.values(DEFAULT_TYPES).concat([null]),
             required: false,
+            default: null,
         },
         cardType: {
             type: Number,

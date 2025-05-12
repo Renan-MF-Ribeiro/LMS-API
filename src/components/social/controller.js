@@ -9,6 +9,9 @@ const { getTagsElegiblesByToken, checkEligibilityTagsAnd } = require('../section
 const { ConfigModel, ConfigTypes } = require('../config/model');
 const { Group } = require('../groups/model');
 const { createNotification } = require('../feed/buisiness');
+const GamificationKafka = require('../gamification/kafka/broker');
+const { EVENT_CATEGORY } = require('../gamification/model');
+const { COMMENT_STATUS } = require('./model');
 
 module.exports = {
     async getConfig(req, res) {
@@ -283,6 +286,15 @@ module.exports = {
         try {
             const uri = 'comments';
             const { data } = await socialApi.post(uri, req.body);
+
+            await GamificationKafka.publishEventRuleValidation({
+                events: [EVENT_CATEGORY.COMMENT],
+                identifier: req.body.userId,
+                meta: {
+                    trailId: req.body.trailId,
+                    commentId: data._id
+                }
+            })
 
             _messages.success(res, req, data, 'ok', 'social', 'createComment');
             return;
@@ -597,6 +609,17 @@ module.exports = {
 
             const { data } = await socialApi.patch(uri, body);
 
+            if(data?.status === COMMENT_STATUS.APPROVED) {
+                await GamificationKafka.publishEventRuleValidation({
+                    events:[EVENT_CATEGORY.COMMENT],
+                    identifier: data.userId,
+                    meta: {
+                        commentId,
+                        trailId: data.trailId
+                    }
+                })
+            }
+
             _messages.success(res, req, data, 'ok', 'social', 'updateCommentStatus');
             return;
         } catch (error) {
@@ -618,6 +641,16 @@ module.exports = {
             const uri = `home/like/${process.env.CLIENT_ID}`;
             const body = req.body;
             const { data } = await socialApi.post(uri, body);
+
+            if (data.target) {
+                await GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.LIKE],
+                    identifier: data.userId,
+                    meta: {
+                        trailId: data.trailId,
+                    },
+                });
+            }
 
             _messages.success(res, req, data, 'ok', 'social', 'createLike');
             return;
@@ -798,6 +831,16 @@ module.exports = {
                     userName: networkLogin,
                 },
             });
+
+            if (data?.users?.length > 0) {
+                await GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.SHARE, EVENT_CATEGORY.SHARED_CONTENT],
+                    identifier: data.sharedBy.userId,
+                    meta: {
+                        trailId: data.trailId,
+                    },
+                });
+            }
 
             _messages.success(res, req, data, 'ok', 'social', 'shareSocialContent');
             return;

@@ -92,9 +92,8 @@ const { HistoricEvaluation, Evaluation } = require('../assessments/model');
 const { Question } = require('../assessments/questions/model');
 const { Alternative } = require('../assessments/alternatives/model');
 
-const { EVENTS_CATEGORY } = require('../gamification/model');
+const { EVENT_CATEGORY } = require('../gamification/model');
 const AssessmentController = require('../assessment/controller');
-const GamificationController = require('../gamification/controller');
 const GamificationBusiness = require('../gamification/business');
 const { Group } = require('../groups/model');
 const { handleUserEligibilitiesGamification } = require('../gamification/utils');
@@ -115,9 +114,10 @@ const { log } = require('../../utils/logger');
 const WebhooksController = require('../webhooks/controller');
 const ApiError = require('../../errors/ApiError');
 const { addSASTokenToResponse } = require('../../utils/cookies');
+const GamificationKafka = require('../gamification/kafka/broker');
 
 const { FormModel } = require('../forms/model');
-const { getConnectMap, validateDataByConnectMap } = require('../../utils/connect');
+const { getConnectMap, validateDataByConnectMap, getConnectEligibilities } = require('../../utils/connect');
 const { getFormErrorsByMapConfig, getDefaultForm, getAdminForm, getFormErrorsByFormValidation } = require('../forms/business');
 
 const { getDbCurrentFeatures } = require('../../utils/features');
@@ -216,6 +216,7 @@ async function generateTokens(user, login, password) {
         ref: user._id,
         clientId: process.env.CLIENT_ID,
         userName: user.name,
+        email: user.email,
         userTags: eligibilities,
         profiles: profilesIDS.result,
         numbers: profilesIDS.numbers,
@@ -333,8 +334,8 @@ module.exports = {
             });
 
             const created = await User.findOne(
-                { networkLogin: processedUser.networkLogin }
-            );
+                { networkLogin: processedUser.networkLogin },
+            ).lean();
 
             WebhooksController.dispatch('create', 'users', false, { ...created, password: undefined });
 
@@ -543,7 +544,7 @@ module.exports = {
 
             const newUser = await User.create(userData);
 
-            WebhooksController.dispatch('create', 'users', false, newUser);
+            WebhooksController.dispatch('create', 'users', false, { ...newUser, password: undefined });
 
             if (token) {
                 const DATA_INICIO = today.startOf('day');
@@ -566,7 +567,27 @@ module.exports = {
                 const activationLink = `${process.env.DOMAIN}/login/ativacao?token=${emailToken}`;
                 await sendSignupActivationEmail(newUser.email, activationLink);
             }
+
             const tokens = await generateTokens(newUser, networkLogin, password);
+
+            if (newUser && form?.autoLogin) {
+                await Log.create({
+                    dataNew: [],
+                    dataOld: [],
+                    groups: groupsAD ?? [],
+                    user: newUser._id,
+                    type: "LOGIN",
+                    message: "Sucesso ao se cadastrar",
+                    component: "users",
+                    route: "signup",
+                    ip: req.ip,
+                    login: newUser.networkLogin,
+                    browserDetails: req.headers['user-agent'],
+                });
+
+                await updateLastLoginUser(newUser._id);
+            }
+
             return _messages.success(res, req, tokens);
         } catch (error) {
             console.log(error);
@@ -641,10 +662,12 @@ module.exports = {
                 namesGroups,
             } = await generateTokens(user, login, password);
 
-            await Promise.all([
-                GamificationController.dispatch(login, [EVENTS_CATEGORY.LOGIN]),
-                updateLastLoginUser(user?._id)
-            ]);
+            await GamificationKafka.publishEventRuleValidation({
+                events: [EVENT_CATEGORY.LOGIN],
+                identifier: login
+            })
+
+            await updateLastLoginUser(user?._id)
 
             WebhooksController.dispatch('APASlogin', 'users', false, {
                 ...user,
@@ -755,29 +778,31 @@ module.exports = {
             log('singleSignOn tokenIdpProfiles', tokenIdpProfiles);
 
             const ssoForm = await getLoginFormByStrategyName(tokenStrategyName);
-            const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data[ssoForm.claim];
+            const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data?.[ssoForm.claim];
 
             if (!claim) {
-                _messages.forbidden(
+                return _messages.forbidden(
                     res,
                     req,
-                    'Usuário ou senha não informados',
-                    'Erro de validação',
+                    'Claim inválido',
+                    'Claim inválido',
                     'users',
-                    'ldapSignIn'
+                    'singleSignOn'
                 );
             }
 
             if (data?.communication || data?.data?.communication) {
                 const communication = data?.communication || data?.data?.communication;
                 const communicationCategory = String(communication).toUpperCase();
-                const eventCategory = EVENTS_CATEGORY[`OPENED_FROM_${communicationCategory}`];
+                const eventCategory = EVENT_CATEGORY[`OPENED_FROM_${communicationCategory}`];
 
-                await GamificationController.dispatch(claim, [eventCategory], {
-                    trail: {
-                        title: data?.trailTitle || data?.data?.trailTitle,
-                    },
-                });
+                await GamificationKafka.publishEventRuleValidation({
+                    events: [eventCategory],
+                    identifier: claim,
+                    meta: {
+                        trailTitle: data?.trailTitle || data?.data?.trailTitle,
+                    }
+                })
             }
 
             if (claim) {
@@ -811,7 +836,7 @@ module.exports = {
                                 'Usuário bloqueado temporariamente',
                                 'Por favor tente novamente mais tarde!',
                                 'users',
-                                'ldapSignIn'
+                                'singleSignOn'
                             );
                             return;
                         }
@@ -903,7 +928,7 @@ module.exports = {
                         },
                         'Sucesso ao logar',
                         'users',
-                        'ldapSignIn',
+                        'singleSignOn',
                         [],
                         [],
                         true,
@@ -918,17 +943,17 @@ module.exports = {
                         'Usuário ou senha inválidos.',
                         { claim, claimKey: ssoForm?.claim ?? '' },
                         'users',
-                        'ldapSignIn'
+                        'singleSignOn'
                     );
                 }
             } else {
                 _messages.forbidden(
                     res,
                     req,
-                    'Usuário ou senha não informados',
-                    'Erro de validação',
+                    'Claim inválido',
+                    'Claim inválido',
                     'users',
-                    'ldapSignIn'
+                    'singleSignOn'
                 );
             }
         } catch (error) {
@@ -1299,8 +1324,6 @@ module.exports = {
     },
 
     async import(req, res) {
-        const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
-
         var file = null;
         const newUsers = [];
         const existingUsers = [];
@@ -1415,12 +1438,15 @@ module.exports = {
             );
         }
 
-        if (inactivateIfNotInSpreadsheet) {
-            const data_start = new Date();
+        const usersDataConfig = await getUsersDataConfig();
+
+        if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
+            console.log('Inativando usuários não presentes na planilha');
+
             await User.updateMany(
                 {
+                    onboarding: { $ne: true },
                     ignoreLoadInactivation: { $ne: true },
-                    updatedAt: { $lt: data_start },
                 },
                 { $set: { status: 'INATIVO' } },
                 { multi: true }
@@ -1449,8 +1475,6 @@ module.exports = {
 
     async importOnboarding(req, res) {
         try {
-            const { inactivateIfNotInSpreadsheet } = await getUsersDataConfig();
-
             const onboarding = true;
             var file = null;
             const newUsers = [];
@@ -1520,18 +1544,6 @@ module.exports = {
                 });
             }
 
-            if (inactivateIfNotInSpreadsheet) {
-                const data_start = new Date();
-                await User.updateMany(
-                    {
-                        ignoreLoadInactivation: { $ne: true },
-                        updatedAt: { $lt: data_start },
-                    },
-                    { $set: { status: 'INATIVO' } },
-                    { multi: true }
-                );
-            }
-
             if (newUsers.length > 0) {
                 console.log(
                     `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
@@ -1584,8 +1596,6 @@ module.exports = {
                 handleSegmentationOnQuery(req, 'issuer', query);
             }
 
-            const total = await User.countDocuments(query);
-
             const totalActive = await User.find({
                 status: 'ATIVO',
                 ...query,
@@ -1607,6 +1617,7 @@ module.exports = {
                 });
             }
 
+            const total = await User.countDocuments(query);
             const users = await User.find(query)
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
@@ -1706,22 +1717,20 @@ module.exports = {
             if (userUpdated?.networkLogin) {
                 await sendAccountsToKafka([account]);
             }
-            const updated = await User.findByIdAndUpdate(_id, req.body, {
-                projection: { ...userProjection },
-            });
-            console.time('dispatch');
-            WebhooksController.dispatch('update', 'users', false, {
-                ...userUpdated,
-                password: undefined,
-            })
-            console.timeEnd('dispatch');
+            await User.findByIdAndUpdate(_id, req.body);
 
+            const foundUser = await User.findById(_id).lean();
+
+            WebhooksController.dispatch('update', 'users', false, {
+                ...foundUser,
+                password: undefined,
+            });
 
             if (userUpdated?.status) {
                 await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status);
             }
 
-            return _messages.success(res, req, updated, 'Usuário(a) atualizado(a) com sucesso!');
+            return _messages.success(res, req, foundUser, 'Usuário(a) atualizado(a) com sucesso!');
         } catch (error) {
             console.log(error);
             return _messages.internalServer(
@@ -1959,6 +1968,7 @@ module.exports = {
                 profilePhoto,
                 networkLogin,
                 profiles,
+                email,
                 ...user
             } = await User.findById(body._id).lean();
 
@@ -2002,8 +2012,10 @@ module.exports = {
 
                 const result = {
                     token: {
+                        ref: user._id,
                         clientId: process.env.CLIENT_ID,
                         userName: name,
+                        email: email,
                         userTags: eligibilities,
                         profiles: profilesIDS.result,
                         numbers: profilesIDS.numbers,
@@ -2012,6 +2024,7 @@ module.exports = {
                     },
                     names: namesProfiles.concat(namesGroups),
                 };
+
                 const dataToken = result.token;
                 const token = generateToken({
                     ref: body._id,
@@ -2824,7 +2837,7 @@ module.exports = {
                     'Token inválido',
                     'Token inválido!',
                     'users',
-                    'ldapSignIn'
+                    'validateMultiFactor'
                 );
             }
         } catch (error) {
@@ -2890,13 +2903,19 @@ module.exports = {
             const connectMap = await getConnectMap(true);
 
             const fields = Object.entries(connectMap).map(([key, value]) => ({
-                display: value?.label ?? key,
+                display: defaultUserMap[key]?.label ?? key ?? value?.label,
                 value: key
             })).filter((field) => field.value !== 'elegibility');
+
+            const eligibilityData = await getConnectEligibilities();
+
+            const eligibility = eligibilityData?.fields ?? [];
+
             _messages.success(res, req, {
                 map: connectMap,
                 fields,
-                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd'] // Campos que não devem ser alterados
+                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd'],  // Campos que não devem ser alterados
+                eligibility,
             });
         } catch (error) {
             _messages.internalServer(
@@ -2918,7 +2937,7 @@ module.exports = {
                 `${process.env.API_CONNECT}/maps/${process.env.CLIENT_ID}`,
                 {
                     user: { ...body },
-                    elegibility: body.elegibility,
+                    elegibility: body.eligibility,
                     newFormat: true,
                 },
                 {

@@ -89,6 +89,8 @@ const environmentSchema = z.object({
     TOPIC_MSG: z.string(),
     TOPIC_DEVICER: z.string(),
     TOPIC_MSG_LIST: z.string(),
+    KAFKA_GAMIFICATION_EVENTS_PENDING: z.string(),
+    KAFKA_GAMIFICATION_EVENTS_VALIDATED: z.string(),
 
     // Vimeo
     VIMEO_CLIENTID: z.string(),

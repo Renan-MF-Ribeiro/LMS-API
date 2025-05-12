@@ -1,5 +1,7 @@
 const axios = require('axios');
 const _messages = require('../../utils/messages');
+const GamificationKafka = require('../gamification/kafka/broker');
+const { EVENT_CATEGORY } = require('../gamification/model');
 const { CLIENT_ID, API_SURVEY } = process.env;
 
 const getHeaders = (req) => ({
@@ -7,11 +9,16 @@ const getHeaders = (req) => ({
 });
 
 module.exports = {
-    async saveSurvey (req, res) {
+    async saveSurvey(req, res) {
         try {
+            const answer = req.body.feedbacks[0].answer;
+            if (!answer) {
+                return _messages.badRequest(res, req, 'Campo "answer" é obrigatório', 'Campo "answer" é obrigatório', 'survey', 'saveSurvey');
+            }
+
             const { data } = await axios.post(
                 `${API_SURVEY}/feedback/save`,
-                { ...req.body, clientId: CLIENT_ID },
+                { ...req.body, clientid: CLIENT_ID },
                 { headers: getHeaders(req) }
             );
 
@@ -21,11 +28,11 @@ module.exports = {
         }
     },
 
-    async updateSurvey (req, res) {
+    async updateSurvey(req, res) {
         try {
             const { data } = await axios.post(
-                `${API_SURVEY}/updateSurvey`,
-                { ...req.body, clientId: CLIENT_ID },
+                `${API_SURVEY}/updatesurvey`,
+                { ...req.body, clientid: CLIENT_ID },
                 { headers: getHeaders(req) }
             );
 
@@ -35,12 +42,23 @@ module.exports = {
         }
     },
 
-    async listByUser (req, res) {
+    async listByUser(req, res) {
         try {
             const { data } = await axios.get(
                 `${API_SURVEY}/listbyuser`,
-                { headers: getHeaders(req), params: { ...req.query, clientId: CLIENT_ID } }
+                { headers: getHeaders(req), params: { ...req.query, clientid: CLIENT_ID } }
             );
+
+            if (req?.query?.userid && req?.query?.item) {
+                await GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.SURVEY, EVENT_CATEGORY.OPTIONAL_SURVEY],
+                    identifier: req.query.userid,
+                    meta: {
+                        itemId: req.query.item,
+                        survey: data,
+                    },
+                });
+            }
 
             _messages.success(res, req, data, 'ok', 'survey', 'listByUser');
         } catch (error) {

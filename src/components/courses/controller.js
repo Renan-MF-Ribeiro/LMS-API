@@ -62,6 +62,7 @@ module.exports = {
             body.tags = JSON.parse(body.tags);
             body.mandatory = JSON.parse(body.mandatory);
             body.certificateDue = JSON.parse(body.certificateDue);
+            body.certificateDateType = JSON.parse(body.certificateDateType);
 
             let thumbPath;
             const { thumb, banner } = req.files;
@@ -242,7 +243,7 @@ module.exports = {
             if (body.dimensions) body.dimensions = JSON.parse(body.dimensions);
             if (body.mandatory) body.mandatory = JSON.parse(body.mandatory);
             if (body.certificateDue) body.certificateDue = JSON.parse(body.certificateDue);
-
+            if (body.certificateDateType) body.certificateDateType = JSON.parse(body.certificateDateType);
             const { thumb, banner } = req.files;
             let thumbPath;
             if (thumb) {
@@ -1128,19 +1129,15 @@ module.exports = {
                 ];
             }
 
-            const currentDate = new Date()
+            const currentDate = new Date();
 
-            // Busca todos os usuários que correspondem aos critérios básicos, com classificação, pular e limitar aplicados
-            const users = await User.find(query)
-                .sort({ name: 1 })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit))
-                .lean();
-
-            const total = await User.countDocuments(query);
+            // ETAPA 1: Buscar todos os usuários que correspondem aos critérios básicos
+            const allUsers = await User.find(query).lean();
 
             // Filtrar apenas usuários qualificados com base em tags e grupos
-            const eligibleUsers = users.filter(user => {
+            const eligibleUserIds = [];
+
+            for (const user of allUsers) {
                 const classGroupCodes = (user.classGroups || [])
                     .filter(classGroup =>
                         classGroup.status === 2 &&
@@ -1159,12 +1156,25 @@ module.exports = {
                     course.tags.includes(code) || tagGroupNames.includes(code)
                 );
 
+                // Aplicar a lógica de filtro e salvar apenas os IDs elegíveis
                 if (mandatoryIntersection.length > 0) {
-                    return mandatoryIntersection.length >= course.mandatory.length;
-                } else {
-                    return tagsIntersection.length > 0;
+                    if (mandatoryIntersection.length >= course.mandatory.length) {
+                        eligibleUserIds.push(user._id);
+                    }
+                } else if (tagsIntersection.length > 0) {
+                    eligibleUserIds.push(user._id);
                 }
-            });
+            }
+
+            // Total de usuários elegíveis
+            const total = eligibleUserIds.length;
+
+            // ETAPA 2: Fazer uma segunda consulta apenas com os usuários elegíveis
+            const eligibleUsers = await User.find({ _id: { $in: eligibleUserIds } })
+                .sort({ name: 1 })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit))
+                .lean();
 
             success(res, req, { data: eligibleUsers, total });
         } catch (error) {

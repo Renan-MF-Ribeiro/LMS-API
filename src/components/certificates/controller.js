@@ -1,7 +1,7 @@
 const { stripHtmlTags } = require('../../utils/functions');
 const _messages = require('../../utils/messages');
 const { Trail } = require('../trails/model');
-const { certificateClient, getHeaders, prepareFormData, getInitialDate } = require('./business');
+const { certificateClient, getHeaders, prepareFormData, getInitialDate, getCertificateFileName } = require('./business');
 
 module.exports = {
     async getCertificates (req, res) {
@@ -87,7 +87,7 @@ module.exports = {
             const file = Buffer.from(data, 'binary');
 
             res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `attachment; filename="certificado-${userName}-${trailName || itemName}.pdf"`);
+            res.setHeader('Content-Disposition', `attachment; filename="${getCertificateFileName({ trailName, itemName, userName })}.pdf"`);
             res.send(file);
         } catch (error) {
             console.log(error)

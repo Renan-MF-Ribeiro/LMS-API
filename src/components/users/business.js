@@ -25,6 +25,7 @@ const { Tracking } = require('../tracking/model');
 const { ConfigLogin } = require('../theme/login-config/model');
 const ApiError = require('../../errors/ApiError');
 const { getMessengerConfig } = require('../config/business');
+const { getConnectMap } = require('../../utils/connect');
 require('dotenv').config();
 
 module.exports = {
@@ -339,52 +340,17 @@ module.exports = {
     },
 
     async processDashFilters(user) {
-        let userMap = [
-            { description: 'LOGIN', value: 'networkLogin' },
-            { description: 'SENHA', value: 'password' },
-            { description: 'DATA_CRIACAO', value: 'createDate' },
-            { description: 'NOME', value: 'name' },
-            { description: 'EMAIL', value: 'email' },
-            { description: 'MATRICULA', value: 'registration' },
-            { description: 'STATUS', value: 'status' },
-            { description: 'CPF', value: 'cpf' },
-            { description: 'CNPJ', value: 'cnpj' },
-            { description: 'DATA_NASC', value: 'birthDate' },
-            { description: 'IDENTIDADE_DE_GENERO', value: 'genderIdentity' },
-            { description: 'PAIS', value: 'country' },
-            { description: 'CIDADE', value: 'city' },
-            { description: 'ESTADO', value: 'state' },
-            { description: 'EMPRESA', value: 'company' },
-            { description: 'ADMISSAO', value: 'admission' },
-            { description: 'LOCALIDADE', value: 'locality' },
-            { description: 'CARGO', value: 'office' },
-            { description: 'NIVEL_HIERARQUICO', value: 'hierarchicalLevel' },
-            { description: 'TAREFA', value: 'task' },
-            { description: 'CENTRO_DE_CUSTO', value: 'costCenter' },
-            { description: 'DESCRICAO_CENTRO_DE_CUSTO', value: 'costCenterDescription' },
-            { description: 'LOJA', value: 'store' },
-            { description: 'IDENTIFICACAO_LOJA', value: 'storeCode' },
-            { description: 'GRUPO_LOJA', value: 'storeGroup' },
-            { description: 'GRUPO_LOJA_DESCRICAO', value: 'storeGroupDescription' },
-            { description: 'DISTRITAL', value: 'plant' },
-            { description: 'GESTOR', value: 'manager' },
-            { description: 'MATRICULA_GESTOR', value: 'managerRegistration' },
-            { description: 'NOME_GESTOR', value: 'managerName' },
-            { description: 'AREA', value: 'area' },
-            { description: 'DEPARTAMENTO', value: 'department' },
-            { description: 'VP', value: 'vp' },
-            { description: 'NEGOCIO', value: 'business' },
-            { description: 'UNIVERSIDADE', value: 'university' },
-            { description: 'NIVEL_ESCOLARIDADE', value: 'specialization' },
-            { description: 'OPCIONAL_ELEGIBILIDADE1', value: 'optionalEligibility1' },
-            { description: 'OPCIONAL_ELEGIBILIDADE2', value: 'optionalEligibility2' },
-            { description: 'OPCIONAL_ELEGIBILIDADE3', value: 'optionalEligibility3' },
-            { description: 'OPCIONAL_ELEGIBILIDADE4', value: 'optionalEligibility4' },
-            { description: 'OPCIONAL_ELEGIBILIDADE5', value: 'optionalEligibility5' },
-            { description: 'OPCIONAL_ELEGIBILIDADE6', value: 'optionalEligibility6' },
-        ];
+        const connectMap = await getConnectMap(true);
+
+        const userMap = Object.entries(connectMap).map(([key, value]) => {
+            return { value: key, description: value.label, field: value.field };
+        });
         const dashboardFilters = [];
         const dashConfig = await DashConfig.find();
+        function isSameField(userField, mapItem) {
+            return mapItem.description === userField || mapItem.field === userField || mapItem.value === userField;
+        }
+
         try {
             if (dashConfig) {
                 let dashFilters = dashConfig.map((x) => {
@@ -393,14 +359,12 @@ module.exports = {
                 dashFilters = dashFilters.flat(2);
                 for (let filter of dashFilters) {
                     for (const map of userMap) {
-                        filter.userField =
-                            map.description == filter.userField ? map.value : filter.userField;
-                        filter.dashFilter =
-                            map.description == filter.dashFilter ? map.value : filter.dashFilter;
+                        filter.userField = isSameField(filter.userField, map) ? map.value : filter.userField;
+                        filter.dashFilter = isSameField(filter.dashFilter, map) ? map.value : filter.dashFilter;
                     }
 
                     const userHasValidFieldValue =
-                        user[filter.userField] == filter.fieldValue &&
+                        user[filter.userField] === filter.fieldValue &&
                         user[filter.dashFilter] != undefined &&
                         user[filter.dashFilter] != 'undefined' &&
                         user[filter.dashFilter] != null &&
@@ -439,18 +403,35 @@ module.exports = {
             },
         ];
 
+        function parseDate(date) {
+            if (!date) return null;
+
+            let parsedDate = moment(date, 'DD/MM/YYYY');
+
+            if (!parsedDate.isValid()) {
+                parsedDate = moment(date, 'MM/DD/YYYY');
+
+                if (!parsedDate.isValid()) {
+                    parsedDate = moment(date);
+                }
+            }
+
+            console.log(date, parsedDate.format('DD/MM/YYYY'));
+
+            return parsedDate.format('DD/MM/YYYY');
+        }
+
         data.clientUserKey = CLIENT_ID + '@@' + data.networkLogin;
-        data.birthDate = data.birthDate ? moment(data.birthDate).format('DD/MM/YYYY') : null;
-        data.admission = data.admission ? moment(data.admission).format('DD/MM/YYYY') : null;
-        data.createDate = data.createDate ? moment(data.createDate).format('DD/MM/YYYY') : null
-        data.terminationDate = data.terminationDate ? moment(data.terminationDate).format('DD/MM/YYYY') : null
-        data.vacationStartDate = data.vacationStartDate ? moment(data.vacationStartDate).format('DD/MM/YYYY') : null
-        data.vacationEndDate  = data.vacationEndDate ? moment(data.vacationEndDate).format('DD/MM/YYYY') : null
+
+        data.birthDate = parseDate(data.birthDate);
+        data.admission = parseDate(data.admission);
+        data.createDate = parseDate(data.createDate);
+        data.terminationDate = parseDate(data.terminationDate);
+        data.vacationStartDate = parseDate(data.vacationStartDate);
+        data.vacationEndDate = parseDate(data.vacationEndDate);
 
         data.enabled = true;
         data.onboarding = onboarding;
-
-        data.pcd = ['sim', 's', '1', 'true'].includes(String(data.pcd).toLowerCase()) ? 'S' : 'N';
 
         const groupsAD =
             onboarding === true

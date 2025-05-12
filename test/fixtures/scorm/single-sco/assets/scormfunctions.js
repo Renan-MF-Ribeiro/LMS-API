@@ -1,5 +1,5 @@
 /*
-Source code created by Rustici Software, LLC is licensed under a 
+Source code created by Rustici Software, LLC is licensed under a
 Creative Commons Attribution 3.0 United States License
 (http://creativecommons.org/licenses/by/3.0/us/)
 
@@ -60,7 +60,7 @@ function getAPI()
         (window.opener != null) &&
         (typeof(window.opener) != "undefined") )
    {
-      // try to find the API in the current window’s opener
+      // try to find the API in the current windowï¿½s opener
       theAPI = findAPI(window.opener);
    }
    // if the API has not been found
@@ -76,8 +76,8 @@ function getAPI()
 ///////////////////////////////////////////
 //End ADL-provided API discovery algorithm
 ///////////////////////////////////////////
-  
-  
+
+
 //Create function handlers for the loading and unloading of the page
 
 
@@ -96,48 +96,53 @@ var API = null;
 
 function ScormProcessInitialize(){
     var result;
-    
+
+    if (initialized == false || finishCalled == true){
+        console.log('LMSFinish already called');
+        return;
+    }
+
     API = getAPI();
-    
+
     if (API == null){
         alert("ERROR - Could not establish a connection with the LMS.\n\nYour results may not be recorded.");
         return;
     }
-    
+
     result = API.LMSInitialize("");
-    
+
     if (result == SCORM_FALSE){
         var errorNumber = API.LMSGetLastError();
         var errorString = API.LMSGetErrorString(errorNumber);
         var diagnostic = API.LMSGetDiagnostic(errorNumber);
-        
+
         var errorDescription = "Number: " + errorNumber + "\nDescription: " + errorString + "\nDiagnostic: " + diagnostic;
-        
+
         alert("Error - Could not initialize communication with the LMS.\n\nYour results may not be recorded.\n\n" + errorDescription);
         return;
     }
-    
+
     initialized = true;
 }
 
 function ScormProcessFinish(){
-    
+
     var result;
-    
+
     //Don't terminate if we haven't initialized or if we've already terminated
     if (initialized == false || finishCalled == true){return;}
-    
+
     result = API.LMSFinish("");
-    
+
     finishCalled = true;
-    
+
     if (result == SCORM_FALSE){
         var errorNumber = API.LMSGetLastError();
         var errorString = API.LMSGetErrorString(errorNumber);
         var diagnostic = API.LMSGetDiagnostic(errorNumber);
-        
+
         var errorDescription = "Number: " + errorNumber + "\nDescription: " + errorString + "\nDiagnostic: " + diagnostic;
-        
+
         alert("Error - Could not terminate communication with the LMS.\n\nYour results may not be recorded.\n\n" + errorDescription);
         return;
     }
@@ -146,8 +151,8 @@ function ScormProcessFinish(){
 
 /*
 Assign the processing functions to the page's load and unload
-events. The onbeforeunload event is included because it can be 
-more reliable than the onunload event and we want to make sure 
+events. The onbeforeunload event is included because it can be
+more reliable than the onunload event and we want to make sure
 that Terminate is ALWAYS called.
 */
 window.onload = ScormProcessInitialize;

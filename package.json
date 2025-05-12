@@ -79,6 +79,7 @@
         "shelljs": "^0.8.5",
         "ssh2-sftp-client": "^4.3.1",
         "tincanjs": "^0.50.0",
+        "tlds": "^1.256.0",
         "unzipper": "^0.10.11",
         "vimeo": "^2.1.1",
         "web-push": "^3.6.6",
