@@ -5,18 +5,18 @@ const { getUserByToken } = require('../../../utils/functions');
 const { getDbCurrentFeatures } = require('../../../utils/features');
 const { socialApi } = require('../../social/http-adapter');
 
-async function processElegibility(req, elegibilites) {
+async function processEligibility(req, eligibilities) {
         const user = await getUserByToken(req)
         try {
-            if (elegibilites.length > 0) {
-                for (let elegibility of elegibilites) {
+            if (eligibilities.length > 0) {
+                for (let eligibility of eligibilities) {
                     const userHasValidFieldValue =
-                        user[elegibility.field] === elegibility.value &&
-                        user[elegibility.field] != undefined &&
-                        user[elegibility.field] != 'undefined' &&
-                        user[elegibility.field] != null &&
-                        user[elegibility.field] != 'null' &&
-                        user[elegibility.field] != '';
+                        user[eligibility.field] === eligibility.value &&
+                        user[eligibility.field] != undefined &&
+                        user[eligibility.field] != 'undefined' &&
+                        user[eligibility.field] != null &&
+                        user[eligibility.field] != 'null' &&
+                        user[eligibility.field] != '';
                     if(userHasValidFieldValue){
                       return true
                     }
@@ -164,5 +164,5 @@ async function populateTrailFields(data) {
 
 module.exports = {
   populateTrailFields,
-  processElegibility
+  processEligibility
 };

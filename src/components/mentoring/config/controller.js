@@ -1,6 +1,6 @@
 const _messages = require('../../../utils/messages');
 const { mentoringApi } = require('../http-adapter');
-const { populateTrailFields, processElegibility } = require('./business');
+const { populateTrailFields, processEligibility } = require('./business');
 const { populateBlockedUserFields } = require('../business');
 
 const {
@@ -124,12 +124,12 @@ const mentorConfigController = {
             const { data } = (await mentoringApi.get(`/config/home`)).data;
             const populatedMentorTrails = await populateTrailFields(data.mentorRecommendations.trails);
             const populatedMenteeTrails = await populateTrailFields(data.menteeRecommendations.trails);
-            data.isElegible = await processElegibility(req, data.elegibilities)
-            
+            data.isEligible = await processEligibility(req, data.eligibilities)
+
             data.mentorRecommendations.trails = populatedMentorTrails;
             data.menteeRecommendations.trails = populatedMenteeTrails;
 
-            delete data.elegibilities
+            delete data.eligibilities
             return _messages.success(
                 res,
                 req,
