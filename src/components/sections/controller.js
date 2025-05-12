@@ -270,7 +270,7 @@ module.exports = {
 
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
-            console.log({tags})
+            console.log({ tags })
             const classGroups = await getGroupCodesByToken(req, tags);
             const newArray = [];
             let sectionArray;
@@ -346,7 +346,7 @@ module.exports = {
                     if (trail.expirationType) {
                         trail = processExpirationDate(trail, user);
                     }
-                    
+
                     trail = processedTrail.trail;
 
                     for (const tag of trail.tags) {
@@ -382,10 +382,10 @@ module.exports = {
                                 authorization: `Bearer ${req.headers.authorization}`,
                             },
                         });
-                    
+
                         recommendedTrails.push(...data.data.recommendedTrails);
                         recommendedCourses.push(...data.data.recommendedCourses);
-                    } catch(error){
+                    } catch (error) {
                         console.log({ error })
                     }
                 }
@@ -413,16 +413,18 @@ module.exports = {
                     };
                 }
 
-                resultSections = arrSections
-                    .concat(limitArray(arrMandatorySections))
-                    .concat(limitArray(arrRecentsSections))
-                    .concat(limitArray(arrKeepLearningSections))
-                    .concat(limitArray(arrConcludedSections))
-                    .concat(limitArray(arrCoursesSections))
-                    .concat(limitArray(arrFavoriteSections))
-                    .concat(limitArray(arrMostSeenSections))
-                    .concat(limitArray(arrRecommendedTrailsSections))
-                    .concat(limitArray(arrRecommendedCoursesSections))
+                const allSections = [
+                    arrSections,
+                    arrMandatorySections,
+                    arrRecentsSections,
+                    arrKeepLearningSections,
+                    arrConcludedSections,
+                    arrCoursesSections,
+                    arrFavoriteSections,
+                    arrMostSeenSections
+                ];
+
+                resultSections = allSections.flatMap(limitArray);
 
                 if (channelId) {
                     const filteredArray = resultSections.filter((obj) =>

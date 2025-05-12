@@ -94,8 +94,8 @@ const business = {
         const trailIds = new Set();
         const courseIds = new Set();
         for (const skill of data.skill_recommendations) {
-            (skill.trailIds || []).forEach(t => trailIds.add(t.trailId));
-            (skill.coursesIds || []).forEach(c => courseIds.add(c.courseId));
+            (skill.trailIds || []).forEach((t) => trailIds.add(t.trailId));
+            (skill.coursesIds || []).forEach((c) => courseIds.add(c.courseId));
         }
 
         const [trails, courses] = await Promise.all([
@@ -130,15 +130,13 @@ const business = {
 
     buildSuggestions: async (data) => {
         const idToDateMap = new Map();
-        data.forEach((item) => {
-            console.log(item);
-            item.recommendedTrails?.forEach((trail) => {
-                idToDateMap.set(trail.id, trail.createdAt);
-            });
 
-            item.recommendedCourses?.forEach((course) => {
-                idToDateMap.set(course.courseId, course.createdAt);
-            });
+        data.recommendedTrails?.forEach((trail) => {
+            idToDateMap.set(trail.id, trail.createdAt);
+        });
+
+        data.recommendedCourses?.forEach((course) => {
+            idToDateMap.set(course.courseId, course.createdAt);
         });
 
         const ids = Array.from(idToDateMap.keys()).flat();
