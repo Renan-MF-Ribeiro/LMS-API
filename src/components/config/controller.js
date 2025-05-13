@@ -245,6 +245,12 @@ module.exports = {
         return _messages.success(res, req, deleted);
     },
 
+    async getMatrixUserVisibility(req, res) {
+        const config = await _business.getMatrixConfig()
+
+        return _messages.success(res, req, config.value);
+    },
+
     async updateMatrixUserVisibility(req, res) {
         const visibilityMode = req?.body?.visibilityMode;
         const allowedValues = Object.values(MATRIX_VISIBILITY_MODE);
