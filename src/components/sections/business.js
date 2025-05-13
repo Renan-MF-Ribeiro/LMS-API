@@ -55,9 +55,11 @@ async function populateSectionTrails(sections, options) {
     return newSections;
 }
 
-async function setAssessmentHistoricOnSections(userId, sections) {
+async function setAssessmentHistoricOnSections(userId, sections, tags) {
     const userWithTags = await UsersWithProcessedTags.findById(userId);
-    const dataAssessmentHistoric = await listTrainingSectionsStatus(userId, userWithTags.userTags);
+
+    let eligibilityTags = tags?.map(tag => tag.value) ?? userWithTags.userTags ?? [];
+    const dataAssessmentHistoric = await listTrainingSectionsStatus(userId, eligibilityTags);
 
     return cloneDeep(sections).map(currentSection => {
         if (!currentSection.isTraining) return currentSection;

@@ -60,7 +60,7 @@ async function generateTrainingSectionCertificate(req, res) {
         tags
     );
 
-    const sections = await setAssessmentHistoricOnSections(user._id, userSections ?? []);
+    const sections = await setAssessmentHistoricOnSections(user._id, userSections ?? [], tags);
     const section = sections[0];
 
     if (!section) {
@@ -226,7 +226,7 @@ async function listTrainingTrackings(req, res) {
     );
 
     res.json(
-        await setAssessmentHistoricOnSections(user._id, sections)
+        await setAssessmentHistoricOnSections(user._id, sections, tags)
     );
 }
 
