@@ -82,7 +82,7 @@ module.exports = {
                 ...req.body,
                 courseLoad: formatCourseLoad(req.body.courseLoad),
             }
-            console.log('body', bodyFormated);
+
             const { data } = await certificateClient.post(
                 '/certificates',
                 { ...bodyFormated, initialDate, trailDescription: stripHtmlTags(trailDescription ?? ''), clientId: process.env.CLIENT_ID },
