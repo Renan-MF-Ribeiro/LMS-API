@@ -391,7 +391,7 @@ module.exports = {
 
         return trails.map((t) => {
             let status = 'pending';
-            switch (t.completion) {
+            switch (t.completionPercentage) {
                 case 1:
                     status = 'completed';
                     break;
