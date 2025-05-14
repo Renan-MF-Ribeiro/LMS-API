@@ -159,9 +159,9 @@ const mentorController = {
 
     async searchMentors (req, res) {
         try {
-            const { name, weekdays, date, topics, options } = req.query;
+            const { name, weekdays, date, topics, pageSize, pageIndex, orderBy } = req.query;
 
-            const params = { name, weekdays, date, topics, options };
+            const params = { name, weekdays, date, topics, options: { pageSize: pageSize || 12, pageIndex: pageIndex || 0, orderBy, direction: 'desc' } };
             const { data } = await mentoringApi.get('/mentor/search', { params });
             const populatedData = await populateUserFields(
                 [
