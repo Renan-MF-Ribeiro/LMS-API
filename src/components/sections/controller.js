@@ -388,14 +388,18 @@ module.exports = {
                     };
                 }
 
-                resultSections = arrSections
-                    .concat(limitArray(arrMandatorySections))
-                    .concat(limitArray(arrRecentsSections))
-                    .concat(limitArray(arrKeepLearningSections))
-                    .concat(limitArray(arrConcludedSections))
-                    .concat(limitArray(arrCoursesSections))
-                    .concat(limitArray(arrFavoriteSections))
-                    .concat(limitArray(arrMostSeenSections));
+                const allSections = [
+                    arrSections,
+                    arrMandatorySections,
+                    arrRecentsSections,
+                    arrKeepLearningSections,
+                    arrConcludedSections,
+                    arrCoursesSections,
+                    arrFavoriteSections,
+                    arrMostSeenSections
+                ];
+
+                resultSections = allSections.flatMap(limitArray);
 
                 if (channelId) {
                     const filteredArray = resultSections.filter((obj) =>
@@ -435,7 +439,7 @@ module.exports = {
             const hasSomeTrainingSection = resultSections.some(section => section.isTraining);
 
             if (hasSomeTrainingSection) {
-                resultSections = await setAssessmentHistoricOnSections(user._id, resultSections);
+                resultSections = await setAssessmentHistoricOnSections(user._id, resultSections, tags);
             }
 
             _messages.success(res, req, resultSections);
@@ -711,7 +715,7 @@ module.exports = {
         }
 
         if (responseSection.isTraining) {
-            const [newSection] = await setAssessmentHistoricOnSections(user._id, [responseSection]);
+            const [newSection] = await setAssessmentHistoricOnSections(user._id, [responseSection], tags);
             responseSection = newSection;
         }
 

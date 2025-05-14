@@ -11,7 +11,8 @@ async function getEligibilityInfoByUserId(
     options = {
         sections: { skip: null, limit: null, filter: {} },
         trails: { filter: {} },
-    }
+    },
+    tags = null
 ) {
     const sections = await Section
         .find(options?.sections?.filter ?? {})
@@ -22,7 +23,7 @@ async function getEligibilityInfoByUserId(
 
     const userWithTags = await UsersWithProcessedTags.findById(userId).lean();
 
-    const eligibilityTags = userWithTags.userTags;
+    let eligibilityTags = tags?.map(tag => tag.value) ?? userWithTags.userTags ?? [];
 
     const sectionTrails = Array.from(new Set(sections.map(section => section.trails).flat()));
 
