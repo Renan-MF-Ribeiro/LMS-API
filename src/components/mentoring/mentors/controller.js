@@ -1,6 +1,7 @@
 const _messages = require('../../../utils/messages');
 const { mentoringApi } = require('../http-adapter');
 const { populateUserFields } = require('../business');
+const { User } = require('../../users/model');
 
 const mentorController = {
     async findMentorProfile (req, res) {
@@ -51,10 +52,18 @@ const mentorController = {
         }
     },
 
-    async updateMentor (req, res) {
-        const body = req.body
+    async updateMentor(req, res) {
+        const body = req.body;
         try {
             const { mentorId } = req.params;
+            const assistantIds = body.assistant || [];
+            const assistants = await User.find(
+                { _id: { $in: assistantIds } },
+                '_id email name'
+            ).lean();
+
+            body.assistant = assistants;
+
             const { data } = await mentoringApi.put(`/mentor/${mentorId}`, body);
 
             return _messages.success(res, req, data, 'ok', 'mentoring', 'updateMentor');
@@ -65,7 +74,7 @@ const mentorController = {
                 JSON.stringify(error.response?.data?.error?.internalMessage) ?? error.message,
                 error.response?.data?.error?.internalMessage ?? error.message,
                 'mentoria',
-                'find mentor profile'
+                'updateMentor'
             );
         }
     },
@@ -126,6 +135,13 @@ const mentorController = {
     async create (req, res) {
         try {
             const dto = req.body;
+            const assistantIds = dto.assistant || [];
+            const assistants = await User.find(
+                { _id: { $in: assistantIds } },
+                '_id email name'
+            ).lean();
+
+            dto.assistant = assistants;
             const { data } = await mentoringApi.post('/mentor', dto);
 
             return _messages.success(res, req, data, 'ok', 'mentoring', 'findMyProfile');
@@ -143,9 +159,9 @@ const mentorController = {
 
     async searchMentors (req, res) {
         try {
-            const { name, weekdays, date, topics, options } = req.query;
+            const { name, weekdays, date, topics, pageSize, pageIndex, orderBy } = req.query;
 
-            const params = { name, weekdays, date, topics, options };
+            const params = { name, weekdays, date, topics, options: { pageSize: pageSize || 12, pageIndex: pageIndex || 0, orderBy, direction: 'desc' } };
             const { data } = await mentoringApi.get('/mentor/search', { params });
             const populatedData = await populateUserFields(
                 [
