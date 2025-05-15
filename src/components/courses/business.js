@@ -358,10 +358,19 @@ module.exports = {
                 continue;
             }
 
+            const tagValues = courseOptionalTags.map(t => t.value);
+
+            const groups = await Group.find(
+                { "tags.value": { $in: tagValues } },
+                "name"
+            );
+
+            const courseOptionalTagsValues = groups.map(group => group.name);
+
             const userIsEligible = checkEligibilityTagsAnd(
                 user.userTags,
                 courseMandatoryTags,
-                courseOptionalTags
+                courseOptionalTagsValues
             );
 
             if (!userIsEligible) {
