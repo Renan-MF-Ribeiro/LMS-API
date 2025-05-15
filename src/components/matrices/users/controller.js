@@ -10,7 +10,7 @@ const {
 } = require('../business');
 const { getCompletedTrails } = require('../../tracking/business');
 const { Group } = require('../../groups/model');
-const courseBusiness = require('../../courses/business')
+const courseBusiness = require('../../courses/business');
 
 const usersController = {
     findAll: async (req, res) => {
@@ -140,7 +140,11 @@ const usersController = {
             }
 
             const { data } = await matricesApi.get(`/users/${id}/evaluations-result`);
-            const populatedData = await buildEvaluationsResultSuggestions(data.data, user.networkLogin);
+            const populatedData = await buildEvaluationsResultSuggestions(
+                data.data,
+                user.networkLogin,
+                user._id
+            );
 
             res.status(data.statusCode).json(populatedData);
         } catch (error) {
@@ -208,7 +212,7 @@ const usersController = {
 
             if (req?.body?.recommendedCourses?.length > 0) {
                 for (const recommendedCourse of req.body.recommendedCourses) {
-                    await courseBusiness.listJoin(req.body.userId, recommendedCourse.classId)
+                    await courseBusiness.listJoin(req.body.userId, recommendedCourse.classId);
                 }
             }
 
