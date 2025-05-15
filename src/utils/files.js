@@ -1034,6 +1034,8 @@ module.exports = {
 
         const downloadBlobResponse = await blockBlobClient.downloadToBuffer();
 
+        console.log('USING ENCODING', environment.AZURE_FILES_ENCODING ?? 'iso88591');
+
         const decodedFile = iconv.decode(
             downloadBlobResponse,
             environment.AZURE_FILES_ENCODING ?? 'iso88591'
