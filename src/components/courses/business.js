@@ -19,7 +19,6 @@ const {
 const { checkEligibilityTagsAnd } = require('../sections/business');
 const eventsController = require('../calendar/events/controller');
 
-
 module.exports = {
     uploadMaterial(material, author, folder) {
         return new Promise(async (resolve, reject) => {
@@ -115,8 +114,8 @@ module.exports = {
                 const query = isAdmin
                     ? {}
                     : {
-                        instructor: { $eq: instructor },
-                    };
+                          instructor: { $eq: instructor },
+                      };
 
                 if (searchBy) {
                     const possibleCourse = await CourseModel.find(
@@ -189,8 +188,8 @@ module.exports = {
                 program
                     ? (programID = program._id)
                     : (programID = await ProgramModel.create({
-                        title: programTitle,
-                    }));
+                          title: programTitle,
+                      }));
 
                 resolve(programID);
             } catch (error) {
@@ -232,12 +231,11 @@ module.exports = {
                         match: { author: 'INSTRUTOR' },
                     })
                     .populate('instructor', ['name']);
-
                 const classesFilter = classes.filter((item) => {
                     const usersFilter = item.users.filter((user) => {
                         if (
                             user.presence &&
-                            (user.userID === userID || user._id?.toString() === userID)
+                            (user.userID === userID || user._id?.toString() === userID.toString())
                         ) {
                             return user;
                         }
@@ -383,12 +381,12 @@ module.exports = {
             const presenceDate = isPresence
                 ? item.presenceAt
                     ? moment(item.presenceAt)
-                        .add(3, 'hours')
-                        .set({
-                            hour: nowDate.getHours(),
-                            minute: nowDate.getMinutes(),
-                        })
-                        .toDate()
+                          .add(3, 'hours')
+                          .set({
+                              hour: nowDate.getHours(),
+                              minute: nowDate.getMinutes(),
+                          })
+                          .toDate()
                     : nowDate
                 : null;
             const grade = Number(item.grades ?? 0) > 100 ? 100 : Number(item.grades ?? 0);
@@ -468,27 +466,27 @@ module.exports = {
     },
 
     async searchCourseBy(user, tags, start, end, courseId) {
-        if(!user) {
-            return []
+        if (!user) {
+            return [];
         }
 
-        const events = await eventsController.getCalendarEventsByDate(start, end, user, tags)
+        const events = await eventsController.getCalendarEventsByDate(start, end, user, tags);
 
         let calendarEvents = events;
 
         if (courseId) {
             calendarEvents = events.filter((event) => {
-                return event?.content?.courseID?.toString() === courseId?.toString()
-            })
+                return event?.content?.courseID?.toString() === courseId?.toString();
+            });
         }
 
-        return calendarEvents
+        return calendarEvents;
     },
 
     async getCoursesByIds(courseIds) {
         const query = {
             deleted: 0,
-            $or: [{ datefinal: null }, {datefinal: { $gte: new Date() }}],
+            $or: [{ datefinal: null }, { datefinal: { $gte: new Date() } }],
         };
 
         if (courseIds) {

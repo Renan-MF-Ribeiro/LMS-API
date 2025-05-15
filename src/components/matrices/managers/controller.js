@@ -3,8 +3,6 @@ const {
     pagination,
     ordernation,
     processTrailTracking,
-    handleStudentTrails,
-    getSortedDate,
 } = require('../../../utils/functions');
 const { findUsersByMatrixConfig } = require('../../config/business');
 const { matricesApi } = require('../http-adapter');
@@ -13,8 +11,10 @@ const { Trail } = require('../../trails/model.js');
 const { Tracking } = require('../../tracking/model.js');
 const httpStatus = require('http-status-codes');
 const { Group } = require('../../groups/model.js');
-const { User, LastLogin } = require('../../users/model.js');
-const { populateTrails } = require('../../trails/business.js');
+const { User } = require('../../users/model.js');
+const { getCoursesByUserID } = require('../../courses/business.js');
+const { getLastLoginByUser } = require('../../users/business.js');
+const { getLastConclusionByUser } = require('../../tracking/business.js');
 
 const managersController = {
     pendingActions: async (req, res) => {
@@ -22,10 +22,21 @@ const managersController = {
             const target = req.params.target;
 
             const applier = await getUserByToken(req);
-            const users = await findUsersByMatrixConfig(applier);
+            let users = await findUsersByMatrixConfig(applier);
 
             if (users.length === 0) {
                 return res.status(httpStatus.OK).json(users);
+            }
+
+            if (req?.query?.searchBy) {
+                const search = req.query?.searchBy?.toString().toLowerCase();
+
+                users = users?.filter(({ user }) => {
+                    return (
+                        user.name?.toLowerCase().includes(search) ||
+                        user.networkLogin?.toLowerCase().includes(search)
+                    );
+                });
             }
 
             const { data } = await matricesApi.get('/users/detailed-info', {
@@ -36,19 +47,28 @@ const managersController = {
             });
 
             const filteredUsers = [];
+            const idsMap = new Map(
+                users?.map((user) => [
+                    user._id?.toString(),
+                    {
+                        _id: user._id,
+                        networkLogin: user.networkLogin,
+                        name: user.name,
+                        office: user.office,
+                        profilePhoto: user.profilePhoto,
+                    },
+                ])
+            );
 
             if (target === 'me') {
-                filteredUsers.push(
-                    ...data.data.filter(({ hasPendingActions }) => hasPendingActions)
-                );
-            } else if (target === 'users') {
+                filteredUsers.push(...data.data?.filter((user) => user?.hasPendingActions));
+            }
+
+            if (target === 'users') {
                 for (const detailedUser of data.data) {
-                    const foundUser = users.find(
-                        (user) => user._id.toString() === detailedUser.userId
-                    );
                     const isInProgress = await isUserInProgressTraining({
                         ...detailedUser,
-                        networkLogin: foundUser.networkLogin,
+                        networkLogin: idsMap.get(detailedUser.userId).networkLogin,
                     });
 
                     if (isInProgress) {
@@ -57,8 +77,8 @@ const managersController = {
                 }
             }
 
-            const detailedUsers = filteredUsers.map((detailedUser) => {
-                const foundUser = users.find((user) => user._id.toString() === detailedUser.userId);
+            const finalUsers = filteredUsers.map((detailedUser) => {
+                const foundUser = idsMap.get(detailedUser.userId);
 
                 return {
                     user: {
@@ -74,25 +94,12 @@ const managersController = {
                 };
             });
 
-            let finalUsers = detailedUsers;
-
-            if (req?.query?.searchBy) {
-                const search = req.query?.searchBy?.toString().toLowerCase();
-
-                finalUsers = detailedUsers.filter(({ user }) => {
-                    return (
-                        user.name.toLowerCase().includes(search) ||
-                        user.networkLogin.toLowerCase().includes(search)
-                    );
-                });
-            }
-
             const { skip, limit } = pagination(req);
 
             const { orderBy = 'lastRegister' } = req?.query;
             const { sort, order } = ordernation({ query: { orderBy } });
 
-            const sortedUsers = [...finalUsers].sort((a, b) => {
+            const sortedUsers = finalUsers?.sort((a, b) => {
                 const fieldA = a[order] ?? a.user?.[order];
                 const fieldB = b[order] ?? b.user?.[order];
 
@@ -121,8 +128,7 @@ const managersController = {
     findUsers: async (req, res) => {
         try {
             const applier = await getUserByToken(req);
-            const users = await findUsersByMatrixConfig(applier);
-
+            const users = await findUsersByMatrixConfig(applier, req.query?.searchBy);
             if (users.length === 0) {
                 return res.status(httpStatus.OK).json(users);
             }
@@ -151,28 +157,7 @@ const managersController = {
                 };
             });
 
-            const { skip, limit } = pagination(req);
-
-            const { orderBy = 'name', direction = 'asc' } = req?.query;
-            const { sort, order } = ordernation({ query: { orderBy, direction } });
-
-            const sortedUsers = [...detailedUsers].sort((a, b) => {
-                const fieldA = a[order] ?? a.user?.[order];
-                const fieldB = b[order] ?? b.user?.[order];
-
-                if (typeof fieldA === 'string' && typeof fieldB === 'string') {
-                    return sort === 'desc'
-                        ? fieldB.localeCompare(fieldA)
-                        : fieldA.localeCompare(fieldB);
-                }
-
-                return sort === 'desc'
-                    ? Number(fieldB) - Number(fieldA)
-                    : Number(fieldA) - Number(fieldB);
-            });
-
-            const paginatedUsers = sortedUsers.slice(skip, skip + limit);
-
+            const paginatedUsers = paginateUsers(req, detailedUsers);
             res.status(data.statusCode).json(paginatedUsers);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
@@ -184,65 +169,24 @@ const managersController = {
 
     getUser: async (req, res) => {
         try {
-            const userId = req.params.id;
-            const { data } = await matricesApi.get(`/users/detailed-info/${userId}`);
+            const userId = req.params?.id;
 
             const user = await User.findById(userId);
-            const groupsAD = user?.groupsAD || [];
+            if (!user) return res.status(httpStatus.NOT_FOUND).json('Usuário não encontrado');
 
-            const groups = await Group.find({ name: { $in: groupsAD } });
-
-            const tags = groups.flatMap((group) => group.tags);
-
-            if (user.classGroups.length > 0) {
-                const mappedUserClassGroups = user.classGroups.map((classGroup) => ({
-                    display: classGroup.groupCode,
-                    value: classGroup.groupCode,
-                }));
-
-                tags.push(...mappedUserClassGroups);
-            }
-
-            const eligibleTrails = await populateTrails(true, {
-                tags: { $in: tags },
-                enabled: true,
-            });
-
-            const userLastLogin = await LastLogin.findOne({ user: user._id });
-
-            const { completedTrails } = await handleStudentTrails(user, eligibleTrails);
-
-            const sortedCompletedTrails = completedTrails
-                .map((completedTrail) => {
-                    return completedTrail.completionAt;
-                })
-                .sort((prev, curr) => curr.getTime() - prev.getTime());
-
-            const classes = await ClassModel.find({
-                'users.userID': user._id,
-                'users.presenceAt': { $ne: null },
-            });
-
-            const userClasses = classes.flatMap((c) => {
-                return c.users.filter((u) => u._id.toString() === user._id.toString());
-            });
-
-            const sortedPresenceAt = userClasses
-                .map((userClass) => {
-                    return userClass.presenceAt;
-                })
-                .sort((prev, curr) => curr.getTime() - prev.getTime());
-
-            const lastAccessAt = userLastLogin?.lastLogin;
-            const lastApplicationAt = data?.data?.lastApplicationAt;
-            const lastConclusionAt = sortedCompletedTrails?.[0];
-            const lastPresenceInCourseAt = sortedPresenceAt?.[0];
+            const [userLastLogin, lastApplicationAt, lastPresenceInCourseAt, lastConclusionAt] =
+                await Promise.all([
+                    getLastLoginByUser(userId),
+                    matricesApi.get(`/users/detailed-info/${userId}`),
+                    getUserLastPresenceInCourse(userId),
+                    getLastConclusionByUser(user.networkLogin),
+                ]);
 
             const payload = {
-                lastAccessAt,
-                lastApplicationAt,
-                lastConclusionAt,
-                lastPresenceInCourseAt,
+                lastAccessAt: userLastLogin?.lastLogin,
+                lastApplicationAt: lastApplicationAt?.data?.data?.lastApplicationAt,
+                lastConclusionAt: lastConclusionAt?.completionAt,
+                lastPresenceInCourseAt: lastPresenceInCourseAt,
             };
 
             res.status(httpStatus.OK).send(payload);
@@ -284,47 +228,78 @@ const managersController = {
     },
 };
 
+async function checkCoursesProgress(user) {
+    const courseIds = user?.recommendedCourses?.map((course) => course.courseId);
+    if (courseIds?.length === 0) return false;
+
+    return !!(await ClassModel.exists({
+        courseID: { $in: courseIds },
+        'users.userID': user.userId,
+    }));
+}
+
+async function checkTrailsProgress(user) {
+    const trailIds = user?.recommendedTrails?.map((trail) => trail?.id).filter(Boolean);
+    if (trailIds?.length === 0) return false;
+
+    const trails = await Trail.find({ _id: { $in: trailIds } });
+    const allItemIds = trails.flatMap((trail) => trail.items?.map((item) => item.itemID) || []);
+    if (allItemIds?.length === 0) return false;
+
+    const trackings = await Tracking.find({
+        userLogin: user.networkLogin,
+        item: { $in: allItemIds },
+    });
+
+    return trails?.some((trail) => {
+        const trailItems = trail.items?.map((item) => item.itemID) || [];
+        const trailTracking = trackings?.filter((t) => trailItems.includes(t.item));
+        const { trail: processedTrail } = processTrailTracking(trail, trailTracking);
+        return processedTrail?.completion < 1; // && processedTrail?.completion > 0;
+    });
+}
+
 async function isUserInProgressTraining(user) {
-    let isInProgress = false;
+    const [isInProgressCourses, isInProgressTrails] = await Promise.all([
+        checkCoursesProgress(user),
+        checkTrailsProgress(user),
+    ]);
+    return isInProgressCourses || isInProgressTrails;
+}
 
-    for (const recommendedCourse of user.recommendedCourses) {
-        if (isInProgress) {
-            break;
+function paginateUsers(req, users) {
+    const { skip, limit } = pagination(req);
+
+    const { orderBy = 'name', direction = 'asc' } = req?.query;
+    const { sort, order } = ordernation({ query: { orderBy, direction } });
+
+    const sortedUsers = [...users].sort((a, b) => {
+        const fieldA = a[order] ?? a.user?.[order];
+        const fieldB = b[order] ?? b.user?.[order];
+
+        if (typeof fieldA === 'string' && typeof fieldB === 'string') {
+            return sort === 'desc' ? fieldB.localeCompare(fieldA) : fieldA.localeCompare(fieldB);
         }
 
-        const foundClass = await ClassModel.findOne({
-            courseID: recommendedCourse.courseId,
-            'users.userID': user.userId,
+        return sort === 'desc' ? Number(fieldB) - Number(fieldA) : Number(fieldA) - Number(fieldB);
+    });
+
+    return sortedUsers.slice(skip, skip + limit);
+}
+
+async function getUserLastPresenceInCourse(userId) {
+    const classes = await getCoursesByUserID(userId);
+
+    return classes.reduce((latestPresence, classItem) => {
+        classItem.users.forEach((user) => {
+            if (user._id.toString() === userId.toString() && user.presenceAt) {
+                if (!latestPresence || user.presenceAt > latestPresence) {
+                    latestPresence = user.presenceAt;
+                }
+            }
         });
-
-        if (foundClass?._id) {
-            isInProgress = true;
-        }
-    }
-
-    for (const recommendedTrail of user.recommendedTrails) {
-        if (isInProgress) {
-            break;
-        }
-
-        const foundTrail = await Trail.findOne({ _id: recommendedTrail.id });
-
-        if (!foundTrail) {
-            break;
-        }
-
-        const foundTrackings = await Tracking.find({
-            userLogin: user.networkLogin,
-            item: { $in: foundTrail?.items?.map((item) => item.itemID) },
-        });
-        const { trail } = processTrailTracking(foundTrail, foundTrackings);
-
-        if (trail?.completion && trail.completion < 1) {
-            isInProgress = true;
-        }
-    }
-
-    return isInProgress;
+        return latestPresence;
+    }, null);
 }
 
 module.exports = managersController;

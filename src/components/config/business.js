@@ -126,7 +126,7 @@ module.exports = {
         return config || (await MatrixConfigModel.create({}));
     },
 
-    async findUsersByMatrixConfig(applier) {
+    async findUsersByMatrixConfig(applier, searchBy) {
         const { value } = await module.exports.getMatrixConfig();
         const query = {
             $and: [
@@ -139,6 +139,16 @@ module.exports = {
             ],
         };
 
+        if (searchBy) {
+            query.$and.push({
+                $or: [
+                    { name: { $regex: searchBy, $options: 'i' } },
+                    { email: { $regex: searchBy, $options: 'i' } },
+                    { networkLogin: { $regex: searchBy, $options: 'i' } },
+                ],
+            });
+        }
+        
         if (value.visibilityMode === MATRIX_VISIBILITY_MODE.MANAGER) {
             query.$and.push({ managerRegistration: applier.registration });
         }
