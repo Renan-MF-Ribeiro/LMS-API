@@ -31,6 +31,7 @@ const { Log } = require('../components/logs/model');
 const ApiError = require('../errors/ApiError');
 const formidable = require('express-formidable');
 const { getConnectMap } = require('./connect');
+const environment = require('../environment');
 const bucket = process.env.BUCKET;
 aws.config = {
     accessKeyId: process.env.ACCESSKEY,
@@ -1035,7 +1036,7 @@ module.exports = {
 
         const decodedFile = iconv.decode(
             downloadBlobResponse,
-            'utf-8'
+            environment.AZURE_FILES_ENCODING ?? 'iso88591'
         );
 
         const decodedReadStream = bufferToStream(decodedFile);

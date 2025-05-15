@@ -29,6 +29,7 @@ const environmentSchema = z.object({
     AZURE_STRINGCONN: z.string(),
     AZURE_BLOBNAME: z.string(),
     AZURE_BLOB_URL: z.string(),
+    AZURE_FILES_ENCODING: z.string().optional().default('iso88591'),
 
     // Micro-serviços
     API_GAMIFICATION: z.string(),
