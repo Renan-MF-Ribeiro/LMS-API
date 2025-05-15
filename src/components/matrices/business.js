@@ -132,11 +132,11 @@ const business = {
         const idToDateMap = new Map();
 
         data.recommendedTrails?.forEach((trail) => {
-            idToDateMap.set(trail.id, trail.createdAt);
+            idToDateMap.set(trail?.id, trail?.createdAt);
         });
 
         data.recommendedCourses?.forEach((course) => {
-            idToDateMap.set(course.courseId, course.createdAt);
+            idToDateMap.set(course?.courseId, course?.createdAt);
         });
 
         const ids = Array.from(idToDateMap.keys()).flat();
