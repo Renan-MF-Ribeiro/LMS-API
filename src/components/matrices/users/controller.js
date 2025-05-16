@@ -1,3 +1,4 @@
+const { ObjectId } = require('mongoose').Types;
 const { default: axios } = require('axios');
 const { User } = require('../../users/model');
 const { matricesApi } = require('../http-adapter');
@@ -11,6 +12,7 @@ const {
 const { getCompletedTrails } = require('../../tracking/business');
 const { Group } = require('../../groups/model');
 const courseBusiness = require('../../courses/business');
+const ApiError = require('../../../errors/ApiError');
 
 const usersController = {
     findAll: async (req, res) => {
@@ -211,8 +213,14 @@ const usersController = {
             const { data } = await matricesApi.post('/users/suggest-content', req.body);
 
             if (req?.body?.recommendedCourses?.length > 0) {
+                const user = await User.findOne({ _id: new ObjectId(req.body.userId) });
+
+                if (!user) {
+                    throw new ApiError('Usuário colaborador não encontrado', 404);
+                }
+
                 for (const recommendedCourse of req.body.recommendedCourses) {
-                    await courseBusiness.listJoin(req.body.userId, recommendedCourse.classId);
+                    await courseBusiness.listJoin(user, recommendedCourse.classId);
                 }
             }
 
