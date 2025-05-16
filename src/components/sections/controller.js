@@ -694,6 +694,23 @@ module.exports = {
             return { ...section, trails: fnResponse?.trails ?? [] };
         }
 
+        let recommendedTrails = [];
+        let recommendedCourses = [];
+
+        if (req?.features?.matrices) {
+            try {
+                const { data } = await matricesApi.get(`/users/${user._id}`, {
+                    headers: {
+                        authorization: `Bearer ${req.headers.authorization}`,
+                    },
+                });
+                recommendedTrails = data.data.recommendedTrails ?? [];
+                recommendedCourses = data.data.recommendedCourses ?? [];
+            } catch (error) {
+                console.log({ error })
+            }
+        }
+
         switch (section.defaultType) {
             case DEFAULT_TYPES.MANDATORY:
                 const mandatorySectionsResult = await mandatorySections(trails, tags);
@@ -722,6 +739,14 @@ module.exports = {
             case DEFAULT_TYPES.MOST_SEEN:
                 const mostSeenSectionsResult = await mostSeenSections(trails);
                 responseSection = setResponse(mostSeenSectionsResult);
+                break;
+            case DEFAULT_TYPES.RECOMMENDED_TRAILS:
+                const recommendedTrailsSectionsResult = await recommendedTrailsSections(trails, recommendedTrails);
+                responseSection = setResponse(recommendedTrailsSectionsResult);
+                break;
+            case DEFAULT_TYPES.RECOMMENDED_COURSES:
+                const recommendedCoursesSectionsResult = await recommendedCoursesSections(user._id, recommendedCourses);
+                responseSection = setResponse(recommendedCoursesSectionsResult);
                 break;
             default:
                 responseSection = { ...section, trails };
