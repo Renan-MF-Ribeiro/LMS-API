@@ -3,6 +3,7 @@ const { getCoursesByIds, getCoursesByUserID } = require('../courses/business');
 const { getTrailByIds, getTrailsWithTrackings } = require('../trails/business');
 const { User } = require('../users/model');
 const { string } = require('zod');
+const { ClassModel } = require('../courses/model');
 
 const business = {
     populateCoursesAndTrails: async (data) => {
@@ -117,6 +118,27 @@ const business = {
             ])
         );
 
+        const courseClassesWithUsers = await ClassModel.find(
+            {
+                courseID: { $in: Array.from(courseIds).map(id => new Types.ObjectId(id)) },
+                $or: [
+                    { 'users.userID': new Types.ObjectId(userId), dateApplicationFinal: { $gte: new Date() } },
+                    {
+                        users: {
+                            $elemMatch: {
+                                userID: new Types.ObjectId(userId),
+                                presenceAt: { $exists: true },
+                                presence: true
+                            }
+                        },
+                    }
+                ]
+            },
+        )
+            .select('_id name dateApplicationFinal courseID users.userID users.presence users.presenceAt')
+            .sort({ _id: -1 })
+            .lean();
+
         return data.skill_recommendations.map((skill) => {
             const skillTrails = (skill.trailIds || [])
                 .map(({ trailId, released }) => {
@@ -128,7 +150,23 @@ const business = {
             const skillCourses = (skill.coursesIds || [])
                 .map(({ courseId, released }) => {
                     const course = courseMap.get(courseId);
-                    return course ? { ...course, released } : null;
+                    const courseClass = courseClassesWithUsers.find(
+                        (courseClass) => String(courseClass.courseID) === String(courseId)
+                            && courseClass.users.some((user) => String(user.userID) === String(userId))
+                    ) ?? null;
+                    const courseClassUserInfo = courseClass?.users.find((user) => String(user.userID) === String(userId)) ?? null;
+
+                    return course ? {
+                        ...course,
+                        released: !!courseClass && released ? true : false,
+                        classes: courseClass ? {
+                            name: courseClass?.name,
+                            _id: courseClass?._id,
+                            presence: courseClassUserInfo?.presence,
+                            presenceAt: courseClassUserInfo?.presenceAt ?? null,
+                            dateApplicationFinal: courseClass?.dateApplicationFinal ?? null
+                        } : null
+                    } : null;
                 })
                 .filter(Boolean);
 
