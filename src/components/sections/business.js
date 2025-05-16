@@ -920,12 +920,10 @@ module.exports = {
             if (!section) {
                 return []
             }
-
+            const trailIds = new Set(recommendedTrails.map((trail) => trail.id.toString()));
             for (const trail of trails) {
-                const isRecommended = recommendedTrails.some((recommendedTrail) => {
-                    return trail._id.toString() === recommendedTrail.id.toString();
-                })
 
+                const isRecommended = trailIds.has(trail._id.toString());
                 if (isRecommended) {
                     section.trails.push(trail)
                 }
@@ -933,7 +931,7 @@ module.exports = {
 
             return section;
         } catch (error) {
-            console.log(error);
+            console.log(error.response?.data ?? error.message);
         }
     },
 

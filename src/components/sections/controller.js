@@ -270,7 +270,6 @@ module.exports = {
 
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
-            console.log({ tags })
             const classGroups = await getGroupCodesByToken(req, tags);
             const newArray = [];
             let sectionArray;
@@ -382,14 +381,12 @@ module.exports = {
                                 authorization: `Bearer ${req.headers.authorization}`,
                             },
                         });
-
                         recommendedTrails.push(...data.data.recommendedTrails);
                         recommendedCourses.push(...data.data.recommendedCourses);
                     } catch (error) {
                         console.log({ error })
                     }
                 }
-
                 const arrRecommendedTrailsSections = await recommendedTrailsSections(trails, recommendedTrails);
                 const arrRecommendedCoursesSections = await recommendedCoursesSections(user._id, recommendedCourses);
 
@@ -412,7 +409,6 @@ module.exports = {
                         trails: section.trails?.slice(0, trailLimit) ?? []
                     };
                 }
-
                 const allSections = [
                     arrSections,
                     arrMandatorySections,
@@ -421,7 +417,9 @@ module.exports = {
                     arrConcludedSections,
                     arrCoursesSections,
                     arrFavoriteSections,
-                    arrMostSeenSections
+                    arrMostSeenSections,
+                    arrRecommendedTrailsSections || [],
+                    arrRecommendedCoursesSections || [],
                 ];
 
                 resultSections = allSections.flatMap(limitArray);
