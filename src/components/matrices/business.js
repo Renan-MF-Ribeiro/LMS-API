@@ -99,23 +99,15 @@ const business = {
             (skill.coursesIds || []).forEach((c) => courseIds.add(c.courseId));
         }
 
-        const [trails, courses, concludedCourses] = await Promise.all([
+        const [trails, courses] = await Promise.all([
             getTrailsWithTrackings(Array.from(trailIds), userNetworkLogin),
             getCoursesByIds(Array.from(courseIds)),
-            getCoursesByUserID(userId),
         ]);
 
-        const concludedCoursesSet = new Set(concludedCourses.map((c) => c._id.toString()));
         const trailMap = new Map(trails.map((t) => [t._id.toString(), t]));
 
         const courseMap = new Map(
-            courses.map((c) => [
-                c._id.toString(),
-                {
-                    ...c,
-                    status: concludedCoursesSet.has(c._id.toString()) ? 'concluded' : 'pending',
-                },
-            ])
+            courses.map((course) => [course._id.toString(), course])
         );
 
         const courseClassesWithUsers = await ClassModel.find(
@@ -158,6 +150,7 @@ const business = {
 
                     return course ? {
                         ...course,
+                        status: courseClassUserInfo?.presence ? 'completed' : 'pending',
                         released: !!courseClass && released ? true : false,
                         classes: courseClass ? {
                             name: courseClass?.name,
