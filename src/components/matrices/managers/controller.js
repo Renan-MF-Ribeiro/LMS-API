@@ -33,16 +33,15 @@ const managersController = {
 
                 users = users?.filter(({ user }) => {
                     return (
-                        user.name?.toLowerCase().includes(search) ||
-                        user.networkLogin?.toLowerCase().includes(search)
+                        user?.name?.toLowerCase().includes(search) ||
+                        user?.networkLogin?.toLowerCase().includes(search)
                     );
                 });
             }
-
             const { data } = await matricesApi.get('/users/detailed-info', {
                 params: {
                     ...req.query,
-                    userIds: users.map((user) => user._id).join(','),
+                    userIds: users?.map((user) => user?._id).join(',') || null,
                 },
             });
 

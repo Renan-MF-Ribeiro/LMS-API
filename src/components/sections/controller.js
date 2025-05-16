@@ -293,7 +293,6 @@ module.exports = {
                         ).map(trail => trail._id)
                     }
                 });
-
                 newArray.push(
                     ...trailsInSections
                         .map((e) => {
@@ -305,7 +304,6 @@ module.exports = {
                 delete req.query.channel;
                 sectionArray = idSections;
             }
-
             let resultSections = [];
 
             if (tags.length > 0) {
@@ -324,13 +322,11 @@ module.exports = {
                         },
                     ],
                 };
-
                 if (channelId) {
                     query['_id'] = { $in: newArray };
                 }
-
+                console.log(query)
                 let trails = await populateTrails(true, query);
-
                 const allTrackingUser = await Tracking.find({
                     userLogin: { $eq: user.networkLogin },
                     $or: [
