@@ -109,7 +109,7 @@ const usersController = {
             const user = await User.findOne({ _id: id });
             const uri = `${
                 process.env.API_CERTIFIER
-            }/certificates/find/${user.networkLogin?.toLowerCase()}?clientId=${
+            }/certificates/find/${user.networkLogin}?clientId=${
                 process.env.CLIENT_ID
             }`;
 
