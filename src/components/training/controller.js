@@ -2,7 +2,7 @@ const { Types } = require("mongoose");
 const ApiError = require("../../errors/ApiError");
 const { getUserByToken, stripHtmlTags } = require("../../utils/functions");
 const { certificateClient, getHeaders } = require("../certificates/business");
-const { setAssessmentHistoricOnSections, populateSectionTrails } = require("../sections/business");
+const { setAssessmentHistoricOnSections, populateSectionTrails, getTagsElegiblesByToken } = require("../sections/business");
 const { Section } = require("../sections/model");
 const { Trail } = require("../trails/model");
 const { getEligibilityInfoByUserId } = require("../../utils/user");
@@ -44,7 +44,7 @@ async function generateTrainingSectionCertificate(req, res) {
     const sectionId = req.params.sectionId;
 
     const user = await getUserByToken(req);
-
+    const tags = await getTagsElegiblesByToken(req);
     const { sections: userSections, trackings } = await getEligibilityInfoByUserId(
         user._id,
         {
@@ -57,10 +57,10 @@ async function generateTrainingSectionCertificate(req, res) {
                 }
             }
         },
+        tags
     );
-    
-    const sections = await setAssessmentHistoricOnSections(user._id, userSections ?? []);
-    
+
+    const sections = await setAssessmentHistoricOnSections(user._id, userSections ?? [], tags);
     const section = sections[0];
 
     if (!section) {
@@ -70,7 +70,6 @@ async function generateTrainingSectionCertificate(req, res) {
     const exceptionCertificateTrails = section.exceptionCertificateTrails ?? [];
 
     const trails = section.trails;
-
     const completedTrails = trails
         .filter(trail => !trail.isException)
         .filter(trail => !exceptionCertificateTrails.map(trailId => String(trailId)).includes(String(trail._id)))
@@ -210,6 +209,7 @@ async function generateTrainingSectionCertificate(req, res) {
 
 async function listTrainingTrackings(req, res) {
     const user = await getUserByToken(req);
+    const tags = await getTagsElegiblesByToken(req);
 
     const { sections } = await getEligibilityInfoByUserId(
         user._id,
@@ -221,11 +221,12 @@ async function listTrainingTrackings(req, res) {
                     deleted: 0
                 }
             }
-        }
+        },
+        tags
     );
 
     res.json(
-        await setAssessmentHistoricOnSections(user._id, sections)
+        await setAssessmentHistoricOnSections(user._id, sections, tags)
     );
 }
 

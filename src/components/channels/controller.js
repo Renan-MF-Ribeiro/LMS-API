@@ -67,16 +67,19 @@ module.exports = {
     async getChannelsElegibles (req, res) {
         const tags = await getTagsElegiblesByToken(req);
         const user = await _functions.getUserByToken(req);
-        const mentoringBlocked = await mentorConfigController.isBlocked(user._id);
 
         try {
+            const features = await getDbCurrentFeatures(req);
             const query = { $and: [
                 { tags: { $in: tags.map((tag) => tag.value) } },
                 { enabled: true }
             ]}
 
-            if (mentoringBlocked) {
-                query.$and.push({ type: { $ne: 'mentoring' } });
+            if(features?.mentoring){
+                const mentoringBlocked = await mentorConfigController.isBlocked(user._id);
+                if (mentoringBlocked) {
+                    query.$and.push({ type: { $ne: 'mentoring' } });
+                } 
             }
 
             // if (req?.segmentation) {
@@ -88,7 +91,6 @@ module.exports = {
                 .sort({ position: 'asc' })
                 .populate({ path: 'theme', match: { deleted: 0 }, })
 
-            const features = await getDbCurrentFeatures(req);
 
             const existingMentoringChannel = await Channel.findOne({ type: 'mentoring' });
 

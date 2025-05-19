@@ -458,7 +458,7 @@ module.exports = {
             const hasSomeTrainingSection = resultSections.some(section => section.isTraining);
 
             if (hasSomeTrainingSection) {
-                resultSections = await setAssessmentHistoricOnSections(user._id, resultSections);
+                resultSections = await setAssessmentHistoricOnSections(user._id, resultSections, tags);
             }
 
             _messages.success(res, req, resultSections);
@@ -759,7 +759,7 @@ module.exports = {
         }
 
         if (responseSection.isTraining) {
-            const [newSection] = await setAssessmentHistoricOnSections(user._id, [responseSection]);
+            const [newSection] = await setAssessmentHistoricOnSections(user._id, [responseSection], tags);
             responseSection = newSection;
         }
 
