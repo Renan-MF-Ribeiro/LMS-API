@@ -45,6 +45,7 @@ const managersController = {
                 },
             });
 
+
             const filteredUsers = [];
             const idsMap = new Map(
                 users?.map((user) => [
@@ -75,7 +76,6 @@ const managersController = {
                     }
                 }
             }
-
             const finalUsers = filteredUsers.map((detailedUser) => {
                 const foundUser = idsMap.get(detailedUser.userId);
 
@@ -87,7 +87,7 @@ const managersController = {
                         office: foundUser.office,
                         profilePhoto: foundUser.profilePhoto,
                     },
-                    lastRegister: detailedUser.lastRegister,
+                    lastApplicationAt: detailedUser.lastApplicationAt,
                     hasLowScore: detailedUser.hasLowScore,
                     performance: detailedUser.performance,
                 };
@@ -95,7 +95,7 @@ const managersController = {
 
             const { skip, limit } = pagination(req);
 
-            const { orderBy = 'lastRegister' } = req?.query;
+            const { orderBy = 'lastApplicationAt' } = req?.query;
             const { sort, order } = ordernation({ query: { orderBy } });
 
             const sortedUsers = finalUsers?.sort((a, b) => {
