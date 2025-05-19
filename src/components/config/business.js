@@ -5,9 +5,12 @@ const {
     CronConfigModel,
     UsersDataConfigModel,
     CompanyConfigModel,
+    MatrixConfigModel,
+    MATRIX_VISIBILITY_MODE,
 } = require('./model');
 
 const { getUserByToken } = require('../../utils/functions');
+const { User } = require('../users/model');
 
 module.exports = {
     async getConfiguration(type) {
@@ -115,5 +118,46 @@ module.exports = {
 
         console.log('Creating company config');
         return (await CompanyConfigModel.create({}))?.value;
+    },
+
+    async getMatrixConfig() {
+        const config = await MatrixConfigModel.findOne();
+
+        return config || (await MatrixConfigModel.create({}));
+    },
+
+    async findUsersByMatrixConfig(applier, searchBy) {
+        const { value } = await module.exports.getMatrixConfig();
+        const query = {
+            $and: [
+                {
+                    status: /^ativo$/i,
+                },
+                {
+                    _id: { $ne: applier._id },
+                },
+            ],
+        };
+
+        if (searchBy) {
+            query.$and.push({
+                $or: [
+                    { name: { $regex: searchBy, $options: 'i' } },
+                    { email: { $regex: searchBy, $options: 'i' } },
+                    { networkLogin: { $regex: searchBy, $options: 'i' } },
+                ],
+            });
+        }
+        
+        if (value.visibilityMode === MATRIX_VISIBILITY_MODE.MANAGER) {
+            query.$and.push({ managerRegistration: applier.registration });
+        }
+        // TODO
+        // else if (value.visibilityMode === MATRIX_VISIBILITY_MODE.ELIGIBILITY) {
+        //     const tags = applier.groupsAD.filter((tag) => !String(tag).startsWith('PERFIL_'));
+        //     query.$and.push({ groupsAD: { $in: tags } });
+        // }
+
+        return User.find(query);
     },
 };

@@ -2,7 +2,13 @@
 
 const { azureBlob } = require('../../utils/files');
 const { User } = require('../users/model');
-const { MaterialModel, ClassModel, ProgramModel, UsersWithProcessedTags, CourseModel } = require('./model');
+const {
+    MaterialModel,
+    ClassModel,
+    ProgramModel,
+    UsersWithProcessedTags,
+    CourseModel,
+} = require('./model');
 const moment = require('moment');
 const mongoose = require('mongoose');
 const {
@@ -11,9 +17,10 @@ const {
     addHours,
 } = require('../../utils/functions');
 const { checkEligibilityTagsAnd } = require('../sections/business');
+const eventsController = require('../calendar/events/controller');
 
 module.exports = {
-    uploadMaterial (material, author, folder) {
+    uploadMaterial(material, author, folder) {
         return new Promise(async (resolve, reject) => {
             try {
                 const nameFile = material.name.split('.');
@@ -30,12 +37,10 @@ module.exports = {
         });
     },
 
-    queryInstructorCourses (searchBy) {
+    queryInstructorCourses(searchBy) {
         const today = getDateTodayWithoutHours();
 
-        const searchByClasule = searchBy
-            ? { $text: { $search: searchBy } }
-            : {};
+        const searchByClasule = searchBy ? { $text: { $search: searchBy } } : {};
         const activeCourseClasule = {
             deleted: 0,
             status: 1,
@@ -57,21 +62,18 @@ module.exports = {
         };
     },
 
-    verifyValidity (dateInitial, dateFinal) {
+    verifyValidity(dateInitial, dateFinal) {
         const startDate = formatDateWithoutHours(dateInitial);
         const endDate = formatDateWithoutHours(dateFinal);
         const today = getDateTodayWithoutHours();
 
-        if (
-            startDate <= today &&
-            (endDate >= today || endDate === 'Invalid Date')
-        ) {
+        if (startDate <= today && (endDate >= today || endDate === 'Invalid Date')) {
             return true;
         }
         return false;
     },
 
-    getStoreUSers (store) {
+    getStoreUSers(store) {
         return new Promise(async (resolve, reject) => {
             try {
                 const users = await User.find(
@@ -89,7 +91,7 @@ module.exports = {
         });
     },
 
-    getCeaUsers () {
+    getCeaUsers() {
         return new Promise(async (resolve, reject) => {
             try {
                 const users = await User.find(
@@ -106,40 +108,45 @@ module.exports = {
         });
     },
 
-    getAppliedCourses (instructor, order, sort, skip, limit, searchBy, isAdmin) {
+    getAppliedCourses(instructor, order, sort, skip, limit, searchBy, isAdmin) {
         return new Promise(async (resolve, reject) => {
             try {
-
-                const query = isAdmin ?
-                    {} : {
-                        instructor: { $eq: instructor },
-                    }
+                const query = isAdmin
+                    ? {}
+                    : {
+                          instructor: { $eq: instructor },
+                      };
 
                 if (searchBy) {
-                    const possibleCourse = await CourseModel.find({
-                        title: { $regex: searchBy, $options: 'i' }
-                    }, ['_id']);
+                    const possibleCourse = await CourseModel.find(
+                        {
+                            title: { $regex: searchBy, $options: 'i' },
+                        },
+                        ['_id']
+                    );
 
                     query.$or = [
                         { courseID: { $in: possibleCourse.map((course) => course._id) } },
                         { name: { $regex: searchBy, $options: 'i' } },
-                    ]
+                    ];
                 }
 
-                const courses = await ClassModel.find(query,
-                    ['users', 'createdAt', 'name', 'dateApplicationInitial', 'dateApplicationFinal']
-                )
+                const courses = await ClassModel.find(query, [
+                    'users',
+                    'createdAt',
+                    'name',
+                    'dateApplicationInitial',
+                    'dateApplicationFinal',
+                ])
                     .populate({
                         path: 'courseID',
-                        select: ['title',],
+                        select: ['title'],
                     })
                     .sort({ [order]: sort })
                     .skip(parseInt(skip))
                     .limit(parseInt(limit));
 
-                const total = await ClassModel.find(query,
-                    ['users', 'createdAt']
-                ).countDocuments();
+                const total = await ClassModel.find(query, ['users', 'createdAt']).countDocuments();
 
                 resolve({
                     courses,
@@ -151,7 +158,7 @@ module.exports = {
         });
     },
 
-    getClassByID (classID) {
+    getClassByID(classID) {
         return new Promise(async (resolve, reject) => {
             try {
                 const { _doc } = await ClassModel.findById(classID)
@@ -160,7 +167,7 @@ module.exports = {
 
                 resolve({
                     _id: classID,
-                    ..._doc
+                    ..._doc,
                 });
             } catch (error) {
                 reject(error);
@@ -168,7 +175,7 @@ module.exports = {
         });
     },
 
-    returnProgramaID (programTitle) {
+    returnProgramaID(programTitle) {
         return new Promise(async (resolve, reject) => {
             try {
                 let programID;
@@ -181,8 +188,8 @@ module.exports = {
                 program
                     ? (programID = program._id)
                     : (programID = await ProgramModel.create({
-                        title: programTitle,
-                    }));
+                          title: programTitle,
+                      }));
 
                 resolve(programID);
             } catch (error) {
@@ -199,8 +206,8 @@ module.exports = {
                         $or: [
                             { 'users.userID': userID },
                             { 'users._id': userID },
-                            { 'users._id': mongoose.Types.ObjectId(userID) }
-                        ]
+                            { 'users._id': mongoose.Types.ObjectId(userID) },
+                        ],
                     },
                     [
                         'users',
@@ -210,7 +217,8 @@ module.exports = {
                         'dateApplicationFinal',
                         'name',
                         'createdAt',
-                        'minister'
+                        'location',
+                        'minister',
                     ],
                     { sort: { createdAt: -1 } }
                 )
@@ -223,10 +231,12 @@ module.exports = {
                         match: { author: 'INSTRUTOR' },
                     })
                     .populate('instructor', ['name']);
-
                 const classesFilter = classes.filter((item) => {
                     const usersFilter = item.users.filter((user) => {
-                        if (user.presence && (user.userID === userID || user._id?.toString() === userID)) {
+                        if (
+                            user.presence &&
+                            (user.userID === userID || user._id?.toString() === userID.toString())
+                        ) {
                             return user;
                         }
                     });
@@ -241,10 +251,8 @@ module.exports = {
         });
     },
 
-    checkEligibility (eligibilityUser, tagsAnd, tagsOr) {
-        const eligibilitytagsAnd = eligibilityUser.map(
-            (eligibility) => eligibility.value
-        );
+    checkEligibility(eligibilityUser, tagsAnd, tagsOr) {
+        const eligibilitytagsAnd = eligibilityUser.map((eligibility) => eligibility.value);
 
         if (tagsAnd.length > 0) {
             const allEligibilitytagsAnd = tagsAnd.every((eligibility) =>
@@ -455,5 +463,89 @@ module.exports = {
         ];
 
         return { results, classInfo, courseInfo };
+    },
+
+    async searchCourseBy(user, tags, start, end, courseId) {
+        if (!user) {
+            return [];
+        }
+
+        const events = await eventsController.getCalendarEventsByDate(start, end, user, tags);
+
+        let calendarEvents = events;
+
+        if (courseId) {
+            calendarEvents = events.filter((event) => {
+                return event?.content?.courseID?.toString() === courseId?.toString();
+            });
+        }
+
+        return calendarEvents;
+    },
+
+    async getCoursesByIds(courseIds) {
+        const query = {
+            deleted: 0,
+            $or: [{ datefinal: null }, { datefinal: { $gte: new Date() } }],
+        };
+
+        if (courseIds) {
+            query._id = { $in: courseIds };
+        }
+        return await CourseModel.find(query, 'title thumbPath banner').lean();
+    },
+
+    async listJoin(user, classId) {
+        let course = null;
+        course = await ClassModel.findOneAndUpdate(
+            {
+                _id: classId,
+                'users._id': { $ne: user._id },
+                'users.userID': { $ne: user._id },
+            },
+            {
+                $addToSet: {
+                    users: {
+                        _id: user._id,
+                        userID: mongoose.Types.ObjectId(user._id),
+                        presence: false,
+                        grades: 0,
+                        name: user.name,
+                        registration: user.registration,
+                        createdAt: moment().utc().format(),
+                        origin: 'user',
+                    },
+                },
+            },
+            { new: true }
+        );
+
+        if (!course) {
+            course = await ClassModel.findOne({ _id: classId });
+        }
+
+        const classesFromCourse = await ClassModel.find({
+            courseID: course.courseID,
+        });
+
+        const removalPromises = classesFromCourse.map((classFromCourse) => {
+            const inClass = classFromCourse.users.some(
+                (u) => u._id == user._id || u.userID == user._id
+            );
+
+            if (classFromCourse._id.equals(classId) || !inClass) {
+                return Promise.resolve();
+            }
+            //SÓ REMOVER SE PRESENCE FOR FALSE
+
+            return ClassModel.findOneAndUpdate(
+                { _id: classFromCourse._id },
+                { $pull: { users: { _id: user._id, presence: false } } }
+            );
+        });
+
+        await Promise.all(removalPromises);
+
+        return course;
     },
 };
