@@ -722,6 +722,15 @@ const MenuDefault = [
                     'PERFIL_Aplicador_Matriz'
                 ],
                 index: 1
+            },
+            {
+                button: 'matrixConfig',
+                roles: [
+                    'PERFIL_Super_Admin',
+                    'PERFIL_Gestor_Matriz',
+                    'PERFIL_Aplicador_Matriz'
+                ],
+                index: 2
             }
         ],
         index: 16
