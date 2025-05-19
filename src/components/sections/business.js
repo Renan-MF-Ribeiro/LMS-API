@@ -746,7 +746,7 @@ module.exports = {
                         }
                     });
                     const classes = certificateData ? [] : classesFromCourse.map((classFromCourse) => {
-                        const inClass = classFromCourse.users.some((user) => user._id == userId || user.userID == userId)
+                        const inClass = classFromCourse.users.some((user) => String(user._id) === String(userId) || String(user.userID) === String(userId))
 
 
 
@@ -1024,9 +1024,7 @@ module.exports = {
                     }
                 });
                 const classes = certificateData ? [] : classesFromCourse.map((classFromCourse) => {
-                    const inClass = classFromCourse.users.some((user) => user._id == userId || user.userID == userId)
-
-
+                    const inClass = classFromCourse.users.some((user) => String(user._id) === String(userId) || String(user.userID) === String(userId))
 
                     return classFromCourse.dateApplicationFinal <= today ? null : {
                         _id: classFromCourse._id,
