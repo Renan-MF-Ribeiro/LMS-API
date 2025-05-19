@@ -150,7 +150,7 @@ const managersController = {
                         office: foundUser.office,
                         profilePhoto: foundUser.profilePhoto,
                     },
-                    lastRegister: detailedUser.lastRegister,
+                    lastApplicationAt: detailedUser.lastApplicationAt,
                     hasLowScore: detailedUser.hasLowScore,
                     performance: detailedUser.performance,
                 };
