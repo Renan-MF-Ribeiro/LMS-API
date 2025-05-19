@@ -700,8 +700,8 @@ const MenuDefault = [
         index: 15
     },
     {
-        button: 'matrix',
-        feature: 'matrix',
+        button: 'matrices',
+        feature: 'matrices',
         roles: [
             'PERFIL_Gestor_Matriz',
             'PERFIL_Aplicador_Matriz'
