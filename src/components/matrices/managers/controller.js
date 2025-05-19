@@ -180,10 +180,9 @@ const managersController = {
                     getUserLastPresenceInCourse(userId),
                     getLastConclusionByUser(user.networkLogin),
                 ]);
-
             const payload = {
                 lastAccessAt: userLastLogin?.lastLogin,
-                lastApplicationAt: lastApplicationAt?.data?.data?.lastApplicationAt,
+                lastApplicationAt: lastApplicationAt?.data?.data?.[0]?.lastApplicationAt,
                 lastConclusionAt: lastConclusionAt?.completionAt,
                 lastPresenceInCourseAt: lastPresenceInCourseAt,
             };
