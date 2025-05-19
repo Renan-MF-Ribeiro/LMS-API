@@ -10,6 +10,7 @@ const { Tracking } = require('../tracking/model');
 const { populateTrails } = require('../trails/business');
 const moment = require('moment');
 const { Trail } = require('../trails/model');
+const { checkIfTheTrackIsValid } = require('../sections/business');
 
 async function handleUserEligibilitiesGamification(userGroupsAD) {
     const groupsAD = userGroupsAD.filter((tag) => !String(tag).startsWith('PERFIL_'));
@@ -34,7 +35,7 @@ async function getTrailsGamification(tracking) {
         'items.itemID': tracking.item,
     });
 
-    return trails;
+    return trails.filter(checkIfTheTrackIsValid);
 }
 
 async function getUserTrackingsGamification(user) {
