@@ -74,6 +74,7 @@ const happplaceRoutes = require('./components/happplace/routes');
 const webhooksRoutes = require('./components/webhooks/routes');
 const mentoringRoutes = require('./components/mentoring/routes');
 const matricesRoutes = require('./components/matrices/routes');
+const integratorRoutes = require('./components/integrator/routes');
 
 const environment = require('./environment');
 const { matricesApiMiddleware } = require('./components/matrices/http-adapter');
@@ -187,7 +188,8 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/happplace', happplaceRoutes)
     .use('/webhooks', validateTokenRoute, isAdmin, webhooksRoutes)
     .use('/mentoring', mentoringRoutes)
-    .use('/matrices', matricesRoutes);
+    .use('/matrices', matricesRoutes)
+    .use('/integrator', integratorRoutes);
 
 app.use(errorHandler);
 
