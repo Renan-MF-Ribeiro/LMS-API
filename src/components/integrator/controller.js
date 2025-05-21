@@ -5,7 +5,7 @@ const _messages = require('../../utils/messages');
 module.exports = {
     async getUsersProviderConfig(req, res) {
         try {
-            const url = `${process.env.API_INTEGRATOR}/connection/config/99922`;
+            const url = `${process.env.API_INTEGRATOR}/connection/config/${process.env.CLIENT_ID}`;
 
             const headers = {
                 'x-api-key': process.env.API_KEY_INTEGRATOR,
@@ -40,7 +40,7 @@ module.exports = {
 
     async updateUsersProviderConfig(req, res) {
         try {
-            const url = `${process.env.API_INTEGRATOR}/connection/config/99922`;
+            const url = `${process.env.API_INTEGRATOR}/connection/config/${process.env.CLIENT_ID}`;
 
             const headers = {
                 'x-api-key': process.env.API_KEY_INTEGRATOR,
