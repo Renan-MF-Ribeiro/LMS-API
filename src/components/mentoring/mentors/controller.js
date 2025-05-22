@@ -2,12 +2,21 @@ const _messages = require('../../../utils/messages');
 const { mentoringApi } = require('../http-adapter');
 const { populateUserFields } = require('../business');
 const { User } = require('../../users/model');
+const { Types } = require('mongoose');
 
 const mentorController = {
-    async findMentorProfile (req, res) {
+    async findMentorProfile(req, res) {
         try {
             const { param } = req.params;
-            const { data } = await mentoringApi.get(`/mentor/profile/${param || ''}`);
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const receivedEmail = emailRegex.test(param);
+
+            const query = receivedEmail ? { email: param } : { _id: Types.ObjectId(param) };
+
+            const user = await User.findOne(query).lean();
+            const { data } = await mentoringApi.get(`/mentor/profile/${user._id}`);
+            
             const populatedData = await populateUserFields(
                 [
                     { fieldName: 'user', reference: 'mentorId' },
@@ -15,7 +24,14 @@ const mentorController = {
                 ],
                 data
             );
-            return _messages.success(res, req, populatedData.data, 'ok', 'mentoring', 'findMyProfile');
+            return _messages.success(
+                res,
+                req,
+                populatedData.data,
+                'ok',
+                'mentoring',
+                'findMyProfile'
+            );
         } catch (error) {
             return _messages.internalServer(
                 res,
@@ -28,7 +44,7 @@ const mentorController = {
         }
     },
 
-    async findMentor (req, res) {
+    async findMentor(req, res) {
         try {
             const { mentorId } = req.params;
             const { data } = await mentoringApi.get(`/mentor/find/${mentorId}`);
@@ -39,7 +55,14 @@ const mentorController = {
                 ],
                 data
             );
-            return _messages.success(res, req, populatedData.data, 'ok', 'mentoring', 'findMyProfile');
+            return _messages.success(
+                res,
+                req,
+                populatedData.data,
+                'ok',
+                'mentoring',
+                'findMyProfile'
+            );
         } catch (error) {
             return _messages.internalServer(
                 res,
@@ -79,7 +102,7 @@ const mentorController = {
         }
     },
 
-    async getMentorCalendar (req, res) {
+    async getMentorCalendar(req, res) {
         const { mentorId } = req.params;
         const { month, mentoringDeadLine } = req.query;
         const url = `/mentor/calendar/${mentorId}`;
@@ -99,7 +122,7 @@ const mentorController = {
         }
     },
 
-    async getMentorsByAcessorId (req, res) {
+    async getMentorsByAcessorId(req, res) {
         const { acessorId } = req.params;
         const url = `/mentor/acessor/${acessorId}`;
 
@@ -108,7 +131,7 @@ const mentorController = {
             const populatedData = await populateUserFields(
                 [
                     { fieldName: 'user', reference: 'userId' },
-                    { fieldName: 'assistant', reference: 'assistantId' }
+                    { fieldName: 'assistant', reference: 'assistantId' },
                 ],
                 data
             );
@@ -132,7 +155,7 @@ const mentorController = {
         }
     },
 
-    async create (req, res) {
+    async create(req, res) {
         try {
             const dto = req.body;
             const assistantIds = dto.assistant || [];
@@ -157,16 +180,27 @@ const mentorController = {
         }
     },
 
-    async searchMentors (req, res) {
+    async searchMentors(req, res) {
         try {
             const { name, weekdays, date, topics, pageSize, pageIndex, orderBy } = req.query;
 
-            const params = { name, weekdays, date, topics, options: { pageSize: pageSize || 12, pageIndex: pageIndex || 0, orderBy, direction: 'desc' } };
+            const params = {
+                name,
+                weekdays,
+                date,
+                topics,
+                options: {
+                    pageSize: pageSize || 12,
+                    pageIndex: pageIndex || 0,
+                    orderBy,
+                    direction: 'desc',
+                },
+            };
             const { data } = await mentoringApi.get('/mentor/search', { params });
             const populatedData = await populateUserFields(
                 [
                     { fieldName: 'user', reference: 'userId' },
-                    { fieldName: 'assistant', reference: 'assistantId' }
+                    { fieldName: 'assistant', reference: 'assistantId' },
                 ],
                 data.data
             );
@@ -184,7 +218,7 @@ const mentorController = {
         }
     },
 
-    async searchAdmin (req, res) {
+    async searchAdmin(req, res) {
         try {
             const { name } = req.query;
 
@@ -193,12 +227,19 @@ const mentorController = {
             const populatedData = await populateUserFields(
                 [
                     { fieldName: 'user', reference: 'userId' },
-                    { fieldName: 'assistant', reference: 'assistantId' }
+                    { fieldName: 'assistant', reference: 'assistantId' },
                 ],
                 data
             );
 
-            return _messages.success(res, req, populatedData.data, 'ok', 'mentoring', 'searchAdmin');
+            return _messages.success(
+                res,
+                req,
+                populatedData.data,
+                'ok',
+                'mentoring',
+                'searchAdmin'
+            );
         } catch (error) {
             return _messages.internalServer(
                 res,
@@ -211,7 +252,7 @@ const mentorController = {
         }
     },
 
-    async findAll (req, res) {
+    async findAll(req, res) {
         try {
             const options = { ...req.query };
             const { data } = await mentoringApi.get('/mentor', { params: options });
@@ -219,7 +260,7 @@ const mentorController = {
             const populatedData = await populateUserFields(
                 [
                     { fieldName: 'user', reference: 'userId' },
-                    { fieldName: 'assistant', reference: 'assistantId' }
+                    { fieldName: 'assistant', reference: 'assistantId' },
                 ],
                 data
             );
@@ -236,17 +277,17 @@ const mentorController = {
         }
     },
 
-    async findMyProfile (req, res) {
+    async findMyProfile(req, res) {
         // Não excluir essa função vazia!!!
         // Sem ela, não é possivel utilizar a rota "/mentoring/mentors/profile"
     },
 
-    async findCompletedMentorings (req, res) {
+    async findCompletedMentorings(req, res) {
         // Não excluir essa função vazia!!!
         // Sem ela, não é possivel utilizar a rota "/mentoring/mentors/historic"
     },
 
-    async findCompletedMentorings (req, res) {
+    async findCompletedMentorings(req, res) {
         try {
             const { param } = req.params;
             const { data } = await mentoringApi.get(
@@ -255,11 +296,18 @@ const mentorController = {
             const populatedData = await populateUserFields(
                 [
                     { fieldName: 'user', reference: 'userId' },
-                    { fieldName: 'mentee', reference: 'menteeId' }
+                    { fieldName: 'mentee', reference: 'menteeId' },
                 ],
                 data
             );
-            return _messages.success(res, req, populatedData.data, 'ok', 'mentoring', 'findMyProfile');
+            return _messages.success(
+                res,
+                req,
+                populatedData.data,
+                'ok',
+                'mentoring',
+                'findMyProfile'
+            );
         } catch (error) {
             return _messages.internalServer(
                 res,
