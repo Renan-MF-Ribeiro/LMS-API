@@ -19,7 +19,9 @@ class GamificationKafkaSingleton {
         if (!GamificationKafkaSingleton.instance) {
             this.#isConnected = false;
             this.#producer = kafka.producer();
-            this.#consumer = kafka.consumer({ groupId: process.env.KAFKA_GAMIFICATION_EVENTS_PENDING });
+            this.#consumer = kafka.consumer({
+                groupId: process.env.KAFKA_GAMIFICATION_EVENTS_PENDING,
+            });
             GamificationKafkaSingleton.instance = this;
         }
 
@@ -136,6 +138,8 @@ class GamificationKafkaSingleton {
                             eligibilities,
                             meta,
                         };
+
+                        console.log({ payload });
 
                         const validator = GamificationEventBusiness.validate(category, user, meta);
                         for await (const { validated, ...processedEvent } of validator) {
