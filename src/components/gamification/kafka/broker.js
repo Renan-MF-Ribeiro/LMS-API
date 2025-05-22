@@ -20,7 +20,7 @@ class GamificationKafkaSingleton {
             this.#isConnected = false;
             this.#producer = kafka.producer();
             this.#consumer = kafka.consumer({
-                groupId: `${process.env.KAFKA_GAMIFICATION_EVENTS_PENDING}-${process.env.CLIENT_ID}`,
+                groupId: `${process.env.KAFKA_GAMIFICATION_EVENTS_PENDING}-staging-${process.env.CLIENT_ID}`,
             });
             GamificationKafkaSingleton.instance = this;
         }
