@@ -32,7 +32,10 @@ class GamificationKafkaSingleton {
 
     async #setupConsumer() {
         await this.#consumer.connect();
-        await this.#consumer.subscribe({ topic: process.env.KAFKA_GAMIFICATION_EVENTS_PENDING });
+        await this.#consumer.subscribe({
+            topic: process.env.KAFKA_GAMIFICATION_EVENTS_PENDING,
+            fromBeginning: true,
+        });
         await this.#consumeEventRuleValidation();
     }
 
