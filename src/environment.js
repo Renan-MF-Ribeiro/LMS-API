@@ -55,6 +55,9 @@ const environmentSchema = z.object({
     API_PDF_PRINTER: z.string(),
     API_HAPPPLACE: z.string(),
     
+    API_CHATBOT: z.string().nullish().default(null),
+    API_KEY_CHATBOT: z.string().nullish().default(null),
+
     // Webhooks
     API_WEBHOOK: z.string(),
     API_KEY_WEBHOOK: z.string(),
