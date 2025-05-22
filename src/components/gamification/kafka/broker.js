@@ -128,6 +128,14 @@ class GamificationKafkaSingleton {
                     const userQueryField = isMongoId ? '_id' : 'networkLogin';
 
                     const user = await User.findOne({ [userQueryField]: identifier });
+
+                    if (!user) {
+                        console.log({
+                            [userQueryField]: identifier,
+                            clientId: process.env.CLIENT_ID,
+                        });
+                    }
+
                     const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD);
 
                     for (const category of events) {
