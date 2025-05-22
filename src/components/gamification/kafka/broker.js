@@ -134,6 +134,7 @@ class GamificationKafkaSingleton {
                             [userQueryField]: identifier,
                             clientId: process.env.CLIENT_ID,
                         });
+                        return;
                     }
 
                     const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD);
