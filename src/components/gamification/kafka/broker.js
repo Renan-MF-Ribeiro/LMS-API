@@ -102,6 +102,10 @@ class GamificationKafkaSingleton {
                             ...data,
                             logId: log._id,
                         }),
+
+                        headers: {
+                            clientId: process.env.CLIENT_ID,
+                        },
                     },
                 ],
             });
@@ -115,9 +119,20 @@ class GamificationKafkaSingleton {
 
     async #consumeEventRuleValidation() {
         await this.#consumer.run({
-            eachMessage: async ({ message }) => {
+            autoCommit: false,
+            eachMessage: async ({ topic, partition, message }) => {
                 if (!message.value) {
                     console.warn('Received message with no value!');
+                    return;
+                }
+
+                const headers = message.headers || {};
+                const messageClientId = headers?.clientId?.toString();
+
+                if (messageClientId !== process.env.CLIENT_ID) {
+                    console.warn(
+                        `[GamificationKafka] Ignoring message for clientId ${messageClientId} (expected: ${process.env.CLIENT_ID})`
+                    );
                     return;
                 }
 
@@ -167,6 +182,14 @@ class GamificationKafkaSingleton {
                             }
                         }
                     }
+
+                    await this.#consumer.commitOffsets([
+                        {
+                            topic,
+                            partition,
+                            offset: (Number(message.offset) + 1).toString(),
+                        },
+                    ]);
                 } catch (error) {
                     console.error('Error processing GamificationKafka:', error);
                 }
