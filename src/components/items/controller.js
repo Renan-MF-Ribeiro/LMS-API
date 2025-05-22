@@ -52,6 +52,8 @@ const { User } = require('../users/model');
 const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business');
 const ApiError = require('../../errors/ApiError');
 const GamificationKafka = require('../gamification/kafka/broker');
+const { dispatchChatItemKafkaEvent } = require('../chat/business');
+
 const ITEM_KINDS = Object.freeze({
     DocumentItem: DocumentItem,
     MediaItem: MediaItem,
@@ -312,6 +314,8 @@ const ItemController = {
 
             const { _id } = await ItemModel.create(req.body);
             await dispatch('create', 'item', { _id, ...req.body });
+
+            await dispatchChatItemKafkaEvent(_id);
 
             _messages.success(res, req, { _id });
         } catch (error) {
@@ -723,6 +727,8 @@ const ItemController = {
                     await dispatch('update', 'item', { _id: item._id, ...payload });
                 }
 
+                await dispatchChatItemKafkaEvent(item._id);
+
                 _messages.success(
                     res,
                     req,
@@ -806,6 +812,7 @@ const ItemController = {
             ) {
                 await Item.findByIdAndUpdate(_id, { enabled });
                 await dispatch('update', 'item', { _id, enabled });
+                await dispatchChatItemKafkaEvent(_id, enabled ? 'UPSERT' : 'DELETE');
                 _messages.success(res, req, 'Atualizado com sucesso');
             } else {
                 _messages.badRequest(
