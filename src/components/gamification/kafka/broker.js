@@ -163,8 +163,6 @@ class GamificationKafkaSingleton {
                             meta,
                         };
 
-                        console.log({ payload });
-
                         const validator = GamificationEventBusiness.validate(category, user, meta);
                         for await (const { validated, ...processedEvent } of validator) {
                             if (validated) {
