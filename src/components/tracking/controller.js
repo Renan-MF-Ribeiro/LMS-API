@@ -873,7 +873,7 @@ const TrackingController = {
                         : undefined;
 
             if (queryStatus) {
-                await ActivityTracking.findOneAndUpdate(
+                const updatedTracking = await ActivityTracking.findOneAndUpdate(
                     { _id: trackingId },
                     {
                         score: body.score,
@@ -882,14 +882,35 @@ const TrackingController = {
                         reviewerComment: body.reviewerComment,
                         $push: { correctedAt: todayDate },
                         ...queryStatus,
-                    }
+                    },
+                    { new: true, upsert: true, omitUndefined: true }
                 );
+
                 if (queryStatus.lessonStatus === 'passed') {
                     for (let item of optionalItems) {
                         const foundItem = await Item.findById(item)
                         const trackingKind = processTrackingType(foundItem)
                         createCompleteTracking(foundItem, trackingKind, tracking.userLogin)
                     }
+                    await GamificationKafka.publishEventRuleValidation({
+                        events: [
+                            EVENT_CATEGORY.ACHIEVED_PROGRESS_PERCENTAGE,
+                            EVENT_CATEGORY.FINISHED_FAVORITE_TRAIL,
+                            EVENT_CATEGORY.FINISHED_HIGHLIGHTED_ITEM,
+                            EVENT_CATEGORY.FINISHED_ITEM,
+                            EVENT_CATEGORY.FINISHED_OPTIONAL_ITEM,
+                            EVENT_CATEGORY.FINISHED_OPTIONAL_TRAIL,
+                            EVENT_CATEGORY.FINISHED_SECTION,
+                            EVENT_CATEGORY.FINISHED_SHARED_TRAIL,
+                            EVENT_CATEGORY.FINISHED_TRAIL,
+                            EVENT_CATEGORY.STARTED_TRAIL,
+                            EVENT_CATEGORY.WATCHED_COLLAB,
+                        ],
+                        identifier: tracking.userLogin,
+                        meta: {
+                            tracking: updatedTracking,
+                        }
+                    })
                 }
             }
 
