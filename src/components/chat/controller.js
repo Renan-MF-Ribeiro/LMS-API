@@ -14,14 +14,14 @@ const mongoose = require('mongoose');
 const ObjectId = mongoose.Types.ObjectId;
 
 const chatIAClient = axios.create({
-    baseURL: environment.API_CHATBOT, // 'https://chatbot.staging.happlearning.com.br',
+    baseURL: environment.CHATBOT_API,
     headers: {
-        'x-api-key': environment.API_KEY_CHATBOT
+        'x-api-key': environment.CHATBOT_API_KEY
     }
 });
 
 function isFeatEnabled(chatIAConfig) {
-    return Boolean(chatIAConfig?.value?.enabled && environment.API_CHATBOT && environment.API_KEY_CHATBOT);
+    return Boolean(chatIAConfig?.value?.enabled && environment.CHATBOT_API && environment.CHATBOT_API_KEY);
 }
 
 module.exports = {
