@@ -17,11 +17,14 @@ class GamificationKafkaSingleton {
 
     constructor() {
         if (!GamificationKafkaSingleton.instance) {
-            const suffix = process.env.NODE_ENV === 'production' ? 'prod' : 'staging';
+            const suffix = process.env.NODE_ENV === 'production' ? '' : '-staging';
             this.#isConnected = false;
             this.#producer = kafka.producer();
             this.#consumer = kafka.consumer({
-                groupId: `${process.env.KAFKA_GAMIFICATION_EVENTS_PENDING}-${suffix}-${process.env.CLIENT_ID}`,
+                groupId: `${process.env.KAFKA_GAMIFICATION_EVENTS_PENDING}${suffix}-${process.env.CLIENT_ID}`,
+            });
+            console.log({
+                groupId: `${process.env.KAFKA_GAMIFICATION_EVENTS_PENDING}${suffix}-${process.env.CLIENT_ID}`,
             });
             GamificationKafkaSingleton.instance = this;
         }
