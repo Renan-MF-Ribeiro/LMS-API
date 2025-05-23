@@ -16,6 +16,7 @@ function isFeatEnabled(chatIAConfig) {
 }
 
 async function dispatchChatItemKafkaEvent(itemId, event = 'UPSERT') {
+    console.log(`Dispatching chat item ${itemId} ${event}`);
     const kafkaProducer = kafka.producer();
     await kafkaProducer.connect();
     await kafkaProducer.send({

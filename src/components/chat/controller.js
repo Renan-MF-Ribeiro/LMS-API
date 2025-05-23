@@ -44,7 +44,7 @@ module.exports = {
 
         const chatConfig = await getChatIAConfig();
 
-        if (!isFeatEnabled(chatConfig)) throw new ApiError('Chat não habilitado', 403);
+        if (!isFeatEnabled(chatConfig)) throw new ApiError('Chat não habilitado', 401);
 
         if (!message) throw new ApiError('Mensagem não enviada', 400);
 
