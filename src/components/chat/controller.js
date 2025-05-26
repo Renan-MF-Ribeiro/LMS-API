@@ -157,7 +157,7 @@ module.exports = {
                 .filter(trail => itemsArray.some(item => trail.items.some(i => String(i.itemID) === String(item))))
                 .map(
                     trail => ({
-                        id: trail._id,
+                        _id: trail._id,
                         title: trail.title,
                         titleUrl: trail.titleUrl,
                     })
