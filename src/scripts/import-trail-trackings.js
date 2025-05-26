@@ -28,7 +28,7 @@ function getTrackingInfoByItem(item, { userLogin, completionAt, score }) {
         ...(item.kind === 'SCORMItem' && {
             interactions: [],
             score: Number(score || 100),
-            suspendData: '',
+            suspendData: null,
             expiredCompletion: null
         }),
 
@@ -40,7 +40,7 @@ function getTrackingInfoByItem(item, { userLogin, completionAt, score }) {
 
         sessionTime: 0,
         totalTime: 0,
-        lastState: '{}',
+        lastState: null,
         isAllowedToSendXAPI: false,
         migration: migrationTag
     };

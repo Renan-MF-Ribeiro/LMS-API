@@ -1,0 +1,20 @@
+const express = require('express');
+const _controller = require('./controller');
+
+module.exports = express
+    .Router()
+    .get('/profile/', _controller.findMentorProfile)
+    .get('/historic/', _controller.findCompletedMentorings)
+
+    .get('/profile/:param', _controller.findMentorProfile)
+    .get('/historic/:param', _controller.findCompletedMentorings)
+
+    .get('/calendar/:mentorId', _controller.getMentorCalendar)
+    .get('/acessor/:acessorId', _controller.getMentorsByAcessorId)
+    .post('/', _controller.create)
+    .get('/search', _controller.searchMentors)
+    .get('/admin', _controller.searchAdmin)
+    .get('/', _controller.findAll)
+
+    .get('/find/:mentorId', _controller.findMentor)
+    .put('/update/:mentorId', _controller.updateMentor)

@@ -29,6 +29,7 @@ const environmentSchema = z.object({
     AZURE_STRINGCONN: z.string(),
     AZURE_BLOBNAME: z.string(),
     AZURE_BLOB_URL: z.string(),
+    AZURE_FILES_ENCODING: z.string().optional().default('iso88591'),
 
     // Micro-serviços
     API_GAMIFICATION: z.string(),
@@ -89,6 +90,8 @@ const environmentSchema = z.object({
     TOPIC_MSG: z.string(),
     TOPIC_DEVICER: z.string(),
     TOPIC_MSG_LIST: z.string(),
+    KAFKA_GAMIFICATION_EVENTS_PENDING: z.string(),
+    KAFKA_GAMIFICATION_EVENTS_VALIDATED: z.string(),
 
     // Vimeo
     VIMEO_CLIENTID: z.string(),

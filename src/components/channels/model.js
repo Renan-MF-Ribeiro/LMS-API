@@ -10,7 +10,8 @@ const schemaOptions = {
 }
 
 const CHANNEL_TYPES = Object.freeze({
-    alura: "alura"
+    alura: "alura",
+    mentoring: "mentoring"
 })
 
 const ChannelSchema = new mongoose.Schema({

@@ -49,6 +49,7 @@ const { canRegisterOrCancel } = require('../sections/business')
 const { default: axios } = require('axios');
 const ApiError = require('../../errors/ApiError');
 const { getMessengerConfig } = require('../config/business');
+const _business = require('./business');
 
 module.exports = {
     async createCourse(req, res) {
@@ -62,6 +63,7 @@ module.exports = {
             body.tags = JSON.parse(body.tags);
             body.mandatory = JSON.parse(body.mandatory);
             body.certificateDue = JSON.parse(body.certificateDue);
+            body.certificateDateType = JSON.parse(body.certificateDateType);
 
             let thumbPath;
             const { thumb, banner } = req.files;
@@ -242,7 +244,7 @@ module.exports = {
             if (body.dimensions) body.dimensions = JSON.parse(body.dimensions);
             if (body.mandatory) body.mandatory = JSON.parse(body.mandatory);
             if (body.certificateDue) body.certificateDue = JSON.parse(body.certificateDue);
-
+            if (body.certificateDateType) body.certificateDateType = JSON.parse(body.certificateDateType);
             const { thumb, banner } = req.files;
             let thumbPath;
             if (thumb) {
@@ -1509,55 +1511,7 @@ module.exports = {
 
             var userID = String(user._id);
 
-            let course = null;
-            course = await ClassModel.findOneAndUpdate(
-                {
-                    _id: body.classesID,
-                    'users._id': { $ne: userID },
-                    'users.userID': { $ne: userID },
-                },
-                {
-                    $addToSet: {
-                        users: {
-                            _id: userID,
-                            userID: mongoose.Types.ObjectId(userID),
-                            presence: false,
-                            grades: 0,
-                            name: user.name,
-                            registration: user.registration,
-                            createdAt: moment().utc().format(),
-                            origin: 'user',
-                        },
-                    },
-                },
-                { new: true }
-            );
-
-            if (!course) {
-                course = await ClassModel.findOne({ _id: body.classesID });
-            }
-
-            const classesFromCourse = await ClassModel.find({
-                courseID: course.courseID,
-            });
-
-            const removalPromises = classesFromCourse.map((classFromCourse) => {
-                const inClass = classFromCourse.users.some(
-                    (u) => u._id == user._id || u.userID == user._id
-                );
-
-                if (classFromCourse._id.equals(body.classesID) || !inClass) {
-                    return Promise.resolve();
-                }
-                //SÓ REMOVER SE PRESENCE FOR FALSE
-
-                return ClassModel.findOneAndUpdate(
-                    { _id: classFromCourse._id },
-                    { $pull: { users: { _id: userID, presence: false } } }
-                );
-            });
-
-            await Promise.all(removalPromises);
+            const course = await _business.listJoin(user, body.classesID)
 
             const messengerConfig = await getMessengerConfig();
 

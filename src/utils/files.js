@@ -31,6 +31,7 @@ const { Log } = require('../components/logs/model');
 const ApiError = require('../errors/ApiError');
 const formidable = require('express-formidable');
 const { getConnectMap } = require('./connect');
+const environment = require('../environment');
 const bucket = process.env.BUCKET;
 aws.config = {
     accessKeyId: process.env.ACCESSKEY,
@@ -389,6 +390,60 @@ module.exports = {
         );
 
         return uploadStatus;
+    },
+    
+    async uploadVimeoAsync (file) {
+        return new Promise(
+            (resolve, reject) => {
+                validateFileSize(file);
+                
+                const vimeoFolderUri = `/${process.env.VIMEO_FOLDER}`;
+        
+                const vimeoTrx = new Vimeo(
+                    process.env.VIMEO_CLIENTID,
+                    process.env.VIMEO_CLIENTSECRET,
+                    process.env.VIMEO_ACCESSTOKEN
+                );
+                
+                vimeoTrx.upload(
+                    String(file.path),
+                    {
+                        name: file.name,
+                        description: file.name,
+                        folder_uri: vimeoFolderUri,
+                    },
+                    function (uri) {
+                        console.log('uri', uri)
+                        const vimeoId = uri.split('/')[2];
+                        const path = 'https://vimeo.com/' + vimeoId;
+                        resolve(path);
+                    },
+                    function (bytes_uploaded, bytes_total) {
+                        var percentage = (
+                            (bytes_uploaded / bytes_total) *
+                            100
+                        ).toFixed(2);
+                        console.log(bytes_uploaded, bytes_total, percentage + '%');
+                    },
+                    async function (error) {
+                        console.error('Something went wrong: ' + error);
+        
+                        await Log.create({
+                            user: user?._id ?? user ?? null,
+                            type: 'VIMEO_UPLOAD_ERROR',
+                            message: 'Erro ao fazer upload de vídeo',
+                            component: `uploadVimeoAsync`,
+                            dataNew: { error, payload },
+                        });
+
+                        reject({
+                            message: 'Something went wrong',
+                            error: error,
+                        });
+                    }
+                );
+            }
+        );
     },
 
 
@@ -979,9 +1034,11 @@ module.exports = {
 
         const downloadBlobResponse = await blockBlobClient.downloadToBuffer();
 
+        console.log('USING ENCODING', environment.AZURE_FILES_ENCODING ?? 'iso88591');
+
         const decodedFile = iconv.decode(
             downloadBlobResponse,
-            'utf-8'
+            environment.AZURE_FILES_ENCODING ?? 'iso88591'
         );
 
         const decodedReadStream = bufferToStream(decodedFile);

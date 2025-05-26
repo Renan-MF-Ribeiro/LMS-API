@@ -216,6 +216,7 @@ async function generateTokens(user, login, password) {
         ref: user._id,
         clientId: process.env.CLIENT_ID,
         userName: user.name,
+        email: user.email,
         userTags: eligibilities,
         profiles: profilesIDS.result,
         numbers: profilesIDS.numbers,
@@ -566,7 +567,7 @@ module.exports = {
                 const activationLink = `${process.env.DOMAIN}/login/ativacao?token=${emailToken}`;
                 await sendSignupActivationEmail(newUser.email, activationLink);
             }
-            
+
             const tokens = await generateTokens(newUser, networkLogin, password);
 
             if (newUser && form?.autoLogin) {
@@ -1595,8 +1596,6 @@ module.exports = {
                 handleSegmentationOnQuery(req, 'issuer', query);
             }
 
-            const total = await User.countDocuments(query);
-
             const totalActive = await User.find({
                 status: 'ATIVO',
                 ...query,
@@ -1618,6 +1617,7 @@ module.exports = {
                 });
             }
 
+            const total = await User.countDocuments(query);
             const users = await User.find(query)
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
@@ -1968,6 +1968,7 @@ module.exports = {
                 profilePhoto,
                 networkLogin,
                 profiles,
+                email,
                 ...user
             } = await User.findById(body._id).lean();
 
@@ -2011,8 +2012,10 @@ module.exports = {
 
                 const result = {
                     token: {
+                        ref: user._id,
                         clientId: process.env.CLIENT_ID,
                         userName: name,
+                        email: email,
                         userTags: eligibilities,
                         profiles: profilesIDS.result,
                         numbers: profilesIDS.numbers,
@@ -2021,6 +2024,7 @@ module.exports = {
                     },
                     names: namesProfiles.concat(namesGroups),
                 };
+
                 const dataToken = result.token;
                 const token = generateToken({
                     ref: body._id,

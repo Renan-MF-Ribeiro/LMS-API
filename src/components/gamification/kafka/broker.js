@@ -7,11 +7,6 @@ const GamificationEventBusiness = require('../events/business');
 const { getDbCurrentFeatures } = require('../../../utils/features');
 const { Types } = require('mongoose');
 
-const GAMIFICATION_KAFKA_EVENTS = Object.freeze({
-    PENDING: 'gamification-events-pending',
-    VALIDATED: 'gamification-events-validated',
-});
-
 class GamificationKafkaSingleton {
     static instance;
 
@@ -22,9 +17,15 @@ class GamificationKafkaSingleton {
 
     constructor() {
         if (!GamificationKafkaSingleton.instance) {
+            const suffix = process.env.NODE_ENV === 'production' ? '' : '-staging';
             this.#isConnected = false;
             this.#producer = kafka.producer();
-            this.#consumer = kafka.consumer({ groupId: GAMIFICATION_KAFKA_EVENTS.PENDING });
+            this.#consumer = kafka.consumer({
+                groupId: `${process.env.KAFKA_GAMIFICATION_EVENTS_PENDING}${suffix}-${process.env.CLIENT_ID}`,
+            });
+            console.log({
+                groupId: `${process.env.KAFKA_GAMIFICATION_EVENTS_PENDING}${suffix}-${process.env.CLIENT_ID}`,
+            });
             GamificationKafkaSingleton.instance = this;
         }
 
@@ -37,7 +38,10 @@ class GamificationKafkaSingleton {
 
     async #setupConsumer() {
         await this.#consumer.connect();
-        await this.#consumer.subscribe({ topic: GAMIFICATION_KAFKA_EVENTS.PENDING });
+        await this.#consumer.subscribe({
+            topic: process.env.KAFKA_GAMIFICATION_EVENTS_PENDING,
+            fromBeginning: true,
+        });
         await this.#consumeEventRuleValidation();
     }
 
@@ -95,13 +99,17 @@ class GamificationKafkaSingleton {
 
         try {
             await this.#producer.send({
-                topic: GAMIFICATION_KAFKA_EVENTS.PENDING,
+                topic: process.env.KAFKA_GAMIFICATION_EVENTS_PENDING,
                 messages: [
                     {
                         value: JSON.stringify({
                             ...data,
                             logId: log._id,
                         }),
+
+                        headers: {
+                            clientId: process.env.CLIENT_ID,
+                        },
                     },
                 ],
             });
@@ -115,9 +123,20 @@ class GamificationKafkaSingleton {
 
     async #consumeEventRuleValidation() {
         await this.#consumer.run({
-            eachMessage: async ({ message }) => {
+            autoCommit: false,
+            eachMessage: async ({ topic, partition, message }) => {
                 if (!message.value) {
                     console.warn('Received message with no value!');
+                    return;
+                }
+
+                const headers = message.headers || {};
+                const messageClientId = headers?.clientId?.toString();
+
+                if (messageClientId !== process.env.CLIENT_ID) {
+                    console.warn(
+                        `[GamificationKafka] Ignoring message for clientId ${messageClientId} (expected: ${process.env.CLIENT_ID})`
+                    );
                     return;
                 }
 
@@ -128,6 +147,15 @@ class GamificationKafkaSingleton {
                     const userQueryField = isMongoId ? '_id' : 'networkLogin';
 
                     const user = await User.findOne({ [userQueryField]: identifier });
+
+                    if (!user) {
+                        console.log({
+                            [userQueryField]: identifier,
+                            clientId: process.env.CLIENT_ID,
+                        });
+                        return;
+                    }
+
                     const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD);
 
                     for (const category of events) {
@@ -143,7 +171,7 @@ class GamificationKafkaSingleton {
                         for await (const { validated, ...processedEvent } of validator) {
                             if (validated) {
                                 await this.#producer.send({
-                                    topic: GAMIFICATION_KAFKA_EVENTS.VALIDATED,
+                                    topic: process.env.KAFKA_GAMIFICATION_EVENTS_VALIDATED,
                                     messages: [
                                         {
                                             value: JSON.stringify({
@@ -156,6 +184,14 @@ class GamificationKafkaSingleton {
                             }
                         }
                     }
+
+                    await this.#consumer.commitOffsets([
+                        {
+                            topic,
+                            partition,
+                            offset: (Number(message.offset) + 1).toString(),
+                        },
+                    ]);
                 } catch (error) {
                     console.error('Error processing GamificationKafka:', error);
                 }
