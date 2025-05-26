@@ -381,6 +381,7 @@ const ChatIAConfigModel = ConfigModel.discriminator(
                     enabled: false,
                     avatarId: null,
                     channelsId: [],
+                    label: 'Minha IA',
                 },
                 type: new mongoose.Schema(
                     {
@@ -398,7 +399,12 @@ const ChatIAConfigModel = ConfigModel.discriminator(
                             type: [mongoose.Schema.Types.ObjectId],
                             required: false,
                             default: [],
-                        }
+                        },
+                        label: {
+                            type: String,
+                            required: false,
+                            default: 'Minha IA',
+                        },
                     },
                     valueSchemaOptions
                 ),

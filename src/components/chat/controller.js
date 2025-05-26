@@ -37,6 +37,7 @@ module.exports = {
             enabled: isFeatEnabled(chatConfig),
             avatar,
             channelsId: chatConfig?.value?.channelsId ?? [],
+            label: chatConfig?.value?.label ?? [],
         });
     },
 
