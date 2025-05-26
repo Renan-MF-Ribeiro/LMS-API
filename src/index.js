@@ -75,6 +75,7 @@ const webhooksRoutes = require('./components/webhooks/routes');
 const mentoringRoutes = require('./components/mentoring/routes');
 const matricesRoutes = require('./components/matrices/routes');
 const chatIaRoutes = require('./components/chat/routes');
+const integratorRoutes = require('./components/integrator/routes');
 
 const environment = require('./environment');
 const { matricesApiMiddleware } = require('./components/matrices/http-adapter');
@@ -189,7 +190,8 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/webhooks', validateTokenRoute, isAdmin, webhooksRoutes)
     .use('/mentoring', mentoringRoutes)
     .use('/matrices', matricesRoutes)
-    .use('/chat', chatIaRoutes);
+    .use('/chat', chatIaRoutes)
+    .use('/integrator', integratorRoutes);
 
 app.use(errorHandler);
 

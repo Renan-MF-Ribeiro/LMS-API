@@ -791,6 +791,11 @@ const MenuDefault = [
                         button: 'calendar',
                         roles: ["PERFIL_Super_Admin"],
                         index: 3
+                    },
+                    {
+                        button: 'user_provider',
+                        roles: ["PERFIL_Super_Admin"],
+                        index: 4
                     }
                 ],
                 index: 1

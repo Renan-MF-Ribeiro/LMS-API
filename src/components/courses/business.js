@@ -18,6 +18,7 @@ const {
 } = require('../../utils/functions');
 const { checkEligibilityTagsAnd } = require('../sections/business');
 const eventsController = require('../calendar/events/controller');
+const { Group } = require('../groups/model');
 
 module.exports = {
     uploadMaterial(material, author, folder) {
@@ -114,8 +115,8 @@ module.exports = {
                 const query = isAdmin
                     ? {}
                     : {
-                          instructor: { $eq: instructor },
-                      };
+                        instructor: { $eq: instructor },
+                    };
 
                 if (searchBy) {
                     const possibleCourse = await CourseModel.find(
@@ -188,8 +189,8 @@ module.exports = {
                 program
                     ? (programID = program._id)
                     : (programID = await ProgramModel.create({
-                          title: programTitle,
-                      }));
+                        title: programTitle,
+                    }));
 
                 resolve(programID);
             } catch (error) {
@@ -358,10 +359,19 @@ module.exports = {
                 continue;
             }
 
+            const tagValues = courseOptionalTags.map(t => t.value);
+
+            const groups = await Group.find(
+                { "tags.value": { $in: tagValues } },
+                "name"
+            );
+
+            const courseOptionalTagsValues = groups.map(group => group.name);
+
             const userIsEligible = checkEligibilityTagsAnd(
                 user.userTags,
                 courseMandatoryTags,
-                courseOptionalTags
+                courseOptionalTagsValues
             );
 
             if (!userIsEligible) {
@@ -381,12 +391,12 @@ module.exports = {
             const presenceDate = isPresence
                 ? item.presenceAt
                     ? moment(item.presenceAt)
-                          .add(3, 'hours')
-                          .set({
-                              hour: nowDate.getHours(),
-                              minute: nowDate.getMinutes(),
-                          })
-                          .toDate()
+                        .add(3, 'hours')
+                        .set({
+                            hour: nowDate.getHours(),
+                            minute: nowDate.getMinutes(),
+                        })
+                        .toDate()
                     : nowDate
                 : null;
             const grade = Number(item.grades ?? 0) > 100 ? 100 : Number(item.grades ?? 0);

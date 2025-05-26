@@ -405,6 +405,7 @@ module.exports = {
                         trails: section.trails?.slice(0, trailLimit) ?? []
                     };
                 }
+
                 const allSections = [
                     arrSections,
                     arrMandatorySections,
