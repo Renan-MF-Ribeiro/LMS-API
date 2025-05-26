@@ -10,6 +10,7 @@ const { Channel } = require("../channels/model");
 const { Section } = require("../sections/model");
 const { Trail } = require("../trails/model");
 const mongoose = require('mongoose');
+const { ChatbotLog } = require("./model");
 
 const ObjectId = mongoose.Types.ObjectId;
 
@@ -43,6 +44,8 @@ module.exports = {
         const { message, channel, trail } = req.body ?? {};
 
         const chatConfig = await getChatIAConfig();
+
+        const user = await getUserByToken(req);
 
         if (!isFeatEnabled(chatConfig)) throw new ApiError('Chat não habilitado', 401);
 
@@ -99,63 +102,139 @@ module.exports = {
             .flatMap(trail => trail.items.filter(item => item.itemID))
             .map(item => new ObjectId(item.itemID));
 
-        const { data } = await chatIAClient.post('/ai/send-message', {
+        const apiBody = {
             message,
             botName: avatar?.name ?? 'Chatbot',
             items: Array.from(new Set(eligibleItems)),
-        });
+        };
 
-        const apiResponseMessage = data?.choices?.[0]?.message;
+        let messageId = null;
+        let apiData = null;
 
-        if (!apiResponseMessage) {
-            return res.json({ message: 'Desculpe, não consegui entender sua pergunta.' });
-        }
+        try {
+            const { data } = await chatIAClient.post('/ai/send-message', apiBody);
 
-        const messageContent = apiResponseMessage.content;
-        const messageCitations = apiResponseMessage.context?.citations ?? [];
-        const itemsReferences = new Set();
+            apiData = data;
+            messageId = data?.messageId;
 
-        const messageHasCitationsReferences = messageContent.match(/\[doc\d+\]/g);
+            const apiResponseMessage = data?.completion?.choices?.[0]?.message ?? data?.choices?.[0]?.message;
 
-        if (messageHasCitationsReferences?.length) {
-            const docIndexes = messageHasCitationsReferences
+            if (!apiResponseMessage) {
+                throw new ApiError('Resposta da IA não encontrada', 500);
+            }
+
+            const messageContent = apiResponseMessage.content;
+            const messageCitations = apiResponseMessage.context?.citations ?? [];
+            const itemsReferences = new Set();
+
+            const messageHasCitationsReferences = messageContent.match(/\[doc\d+\]/g);
+
+            if (messageHasCitationsReferences?.length) {
+                const docIndexes = messageHasCitationsReferences
+                    .map(
+                        doc => doc
+                            .replace(/\[doc/g, '')
+                            .replace(/\]/g, '')
+                    );
+
+                docIndexes.forEach(index => {
+                    const citation = messageCitations[index];
+
+                    if (citation) {
+                        itemsReferences.add(citation.filepath);
+                    }
+                });
+            }
+
+            const messageContentWithoutCitations = messageContent
+                .replace(/\s+/g, ' ')
+                .replace(/\s\./g, '.')
+                .replace(/\[doc\d+\]/g, '').trim();
+
+            const itemsArray = Array.from(itemsReferences);
+
+            const trailsArray = eligibleTrails
+                .filter(trail => itemsArray.some(item => trail.items.some(i => String(i.itemID) === String(item))))
                 .map(
-                    doc => doc
-                        .replace(/\[doc/g, '')
-                        .replace(/\]/g, '')
+                    trail => ({
+                        id: trail._id,
+                        title: trail.title,
+                        titleUrl: trail.titleUrl,
+                    })
                 );
 
-            docIndexes.forEach(index => {
-                const citation = messageCitations[index];
+            const response = {
+                messageId,
+                message: messageContentWithoutCitations,
+                items: itemsArray,
+                trails: trailsArray,
+            };
 
-                if (citation) {
-                    itemsReferences.add(citation.filepath);
-                }
+            await ChatbotLog.create({
+                user: user._id,
+                channel: foundChannel?._id ?? null,
+                trail: trail ? new ObjectId(trail) : null,
+                body: JSON.stringify(req.body),
+                response: JSON.stringify(response),
+                apiBody: JSON.stringify(apiBody),
+                apiResponse: JSON.stringify(data),
+                messageId,
+                error: null,
             });
+
+            return res.json(response);
+        } catch (error) {
+            const errorMessages = [
+                "Desculpe, não consegui entender sua pergunta.",
+                "Infelizmente, não consegui compreender sua solicitação.",
+                "Peço desculpas, mas não consegui entender o que você quis dizer.",
+                "Sinto muito, mas não consegui interpretar sua pergunta.",
+            ]
+
+            const response = {
+                messageId,
+                message: errorMessages[Math.floor(Math.random() * errorMessages.length)],
+                items: [],
+                trails: [],
+            };
+
+            await ChatbotLog.create({
+                user: user._id,
+                channel: foundChannel?._id ?? null,
+                trail: trail ? new ObjectId(trail) : null,
+                body: JSON.stringify(req.body),
+                response: JSON.stringify(response),
+                apiBody: JSON.stringify(apiBody),
+                apiResponse: JSON.stringify(apiData),
+                messageId,
+                error,
+            });
+
+            return res.json(response);
         }
+    },
 
-        const messageContentWithoutCitations = messageContent
-            .replace(/\s+/g, ' ')
-            .replace(/\s\./g, '.')
-            .replace(/\[doc\d+\]/g, '').trim();
+    async feedbackMessage(req, res) {
+        const messageId = req.params.messageId;
 
-        const itemsArray = Array.from(itemsReferences);
+        const { feedback } = req.body ?? {};
 
-        const trailsArray = eligibleTrails
-            .filter(trail => itemsArray.some(item => trail.items.some(i => String(i.itemID) === String(item))))
-            .map(
-                trail => ({
-                    id: trail._id,
-                    title: trail.title,
-                    titleUrl: trail.titleUrl,
-                })
-            );
+        if (!messageId) throw new ApiError('ID da mensagem não enviado', 400);
 
-        return res.json({
-            message: messageContentWithoutCitations,
-            items: itemsArray,
-            trails: trailsArray,
-            apiResponse: data
+        if (![-1, 1].includes(feedback)) throw new ApiError('Feedback inválido. O valor deve ser -1 ou 1', 400);
+
+        await chatIAClient.post('/ai/send-message-rating', {
+            messageId,
+            rating: feedback,
         });
+
+        await ChatbotLog.findOneAndUpdate(
+            { messageId },
+            { messageFeedback: feedback },
+        );
+
+        if (!log) throw new ApiError('Log não encontrado', 404);
+
+        return res.json({ success: true });
     }
 }

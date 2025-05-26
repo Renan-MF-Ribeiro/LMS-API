@@ -13,6 +13,7 @@ router.use(validateTokenRoute);
 router
     .get('/check', controller.checkFeatStatus)
     .post('/message', controller.sendMessage)
+    .post('/message/:messageId/feedback', controller.feedbackMessage)
 
 
 module.exports = router;
