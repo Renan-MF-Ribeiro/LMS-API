@@ -105,7 +105,7 @@ module.exports = {
 
         const apiBody = {
             message,
-            botName: avatar?.name ?? 'Chatbot',
+            botName: avatar?.name ?? chatConfig?.value?.label ?? 'Minha IA',
             items: Array.from(new Set(eligibleItems)),
         };
 
