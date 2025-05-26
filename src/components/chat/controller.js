@@ -234,8 +234,6 @@ module.exports = {
             { messageFeedback: feedback },
         );
 
-        if (!log) throw new ApiError('Log não encontrado', 404);
-
         return res.json({ success: true });
     }
 }
