@@ -13,6 +13,7 @@ const ChatbotLogSchema = new mongoose.Schema({
     apiBody: { type: String, required: false },
     apiResponse: { type: String, required: false },
     messageId: { type: String, required: false },
+    threadId: { type: String, required: false },
     messageFeedback: { type: Number, required: false, default: null },
     error: { type: String, required: false },
 }, {
