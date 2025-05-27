@@ -16,7 +16,7 @@ const mentorController = {
 
             const user = await User.findOne(query).lean();
             const { data } = await mentoringApi.get(`/mentor/profile/${user._id}`);
-            
+
             const populatedData = await populateUserFields(
                 [
                     { fieldName: 'user', reference: 'mentorId' },
@@ -105,10 +105,32 @@ const mentorController = {
     async getMentorCalendar(req, res) {
         const { mentorId } = req.params;
         const { month, mentoringDeadLine } = req.query;
-        const url = `/mentor/calendar/${mentorId}`;
+        const url = `/mentor/calendar/`;
 
         try {
-            const { data } = await mentoringApi.get(url, { params: { month, mentoringDeadLine } });
+            const foundMentor = await User.findOne({ _id: mentorId }, 'email name _id').lean();
+
+            if (!foundMentor) {
+                return _messages.notFound(
+                    res,
+                    req,
+                    'Mentor not found',
+                    'Mentor not found',
+                    'mentoria',
+                    'get mentor`s calendar'
+                );
+            }
+            const body = {
+                mentor: {
+                    email: foundMentor.email,
+                    name: foundMentor.name,
+                    userId: foundMentor._id
+                },
+                month: Number(month || new Date().getMonth()),
+                deadline: Boolean(mentoringDeadLine) || true
+            }
+            const { data } = await mentoringApi.post(url, body);
+
             return _messages.success(res, req, data.data, 'ok', 'mentoring', 'getMentorCalendar');
         } catch (error) {
             return _messages.internalServer(
