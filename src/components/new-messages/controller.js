@@ -272,10 +272,6 @@ module.exports = {
 
             await sendMessageToKafka(campaign, targetUsers);
 
-            console.log('------------------------------------');
-            console.log(campaign);
-            console.log(targetUsers);
-
             const urlUpdate = `${API_MESSENGER}/updatesendinglist`;
 
             await axios.put(urlUpdate, {
