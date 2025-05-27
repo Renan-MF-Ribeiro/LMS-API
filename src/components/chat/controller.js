@@ -42,7 +42,7 @@ module.exports = {
     },
 
     async sendMessage(req, res) {
-        const { message, channel, trail } = req.body ?? {};
+        const { message, channel, trail, thread } = req.body ?? {};
 
         const chatConfig = await getChatIAConfig();
 
@@ -105,18 +105,21 @@ module.exports = {
 
         const apiBody = {
             message,
+            thread,
             botName: avatar?.name ?? chatConfig?.value?.label ?? 'Minha IA',
             items: Array.from(new Set(eligibleItems)),
         };
 
         let messageId = null;
         let apiData = null;
+        let threadId = null;
 
         try {
             const { data } = await chatIAClient.post('/ai/send-message', apiBody);
 
             apiData = data;
             messageId = data?.messageId;
+            threadId = data?.thread;
 
             const apiResponseMessage = data?.completion?.choices?.[0]?.message ?? data?.choices?.[0]?.message;
 
@@ -167,6 +170,7 @@ module.exports = {
             const response = {
                 messageId,
                 message: messageContentWithoutCitations,
+                threadId,
                 items: itemsArray,
                 trails: trailsArray,
             };
@@ -180,6 +184,7 @@ module.exports = {
                 apiBody: JSON.stringify(apiBody),
                 apiResponse: JSON.stringify(data),
                 messageId,
+                threadId,
                 error: null,
             });
 
@@ -194,6 +199,7 @@ module.exports = {
 
             const response = {
                 messageId,
+                threadId,
                 message: errorMessages[Math.floor(Math.random() * errorMessages.length)],
                 items: [],
                 trails: [],
@@ -208,6 +214,7 @@ module.exports = {
                 apiBody: JSON.stringify(apiBody),
                 apiResponse: JSON.stringify(apiData),
                 messageId,
+                threadId,
                 error,
             });
 
