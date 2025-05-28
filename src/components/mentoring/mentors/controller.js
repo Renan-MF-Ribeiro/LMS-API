@@ -106,7 +106,6 @@ const mentorController = {
         const { mentorId } = req.params;
         const { month, mentoringDeadLine } = req.query;
         const url = `/mentor/calendar/`;
-
         try {
             const foundMentor = await User.findOne({ _id: mentorId }, 'email name _id').lean();
 
@@ -127,7 +126,7 @@ const mentorController = {
                     userId: foundMentor._id
                 },
                 month: Number(month || new Date().getMonth()),
-                deadline: Boolean(mentoringDeadLine) || true
+                deadline: mentoringDeadLine === "true"
             }
             const { data } = await mentoringApi.post(url, body);
 
