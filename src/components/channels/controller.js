@@ -79,7 +79,7 @@ module.exports = {
                 const mentoringBlocked = await mentorConfigController.isBlocked(user._id);
                 if (mentoringBlocked) {
                     query.$and.push({ type: { $ne: 'mentoring' } });
-                } 
+                }
             }
 
             // if (req?.segmentation) {
@@ -109,6 +109,7 @@ module.exports = {
             channels = await Promise.all(channels.map(async (channel) => {
                 if (channel.type === 'alura') return channel
                 if (channel.type === 'feed') return channel
+                if (channel.type === 'news') return channel
 
                 if(features?.mentoring && channel.type === 'mentoring') return channel
 
