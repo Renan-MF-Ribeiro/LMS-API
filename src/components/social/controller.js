@@ -453,7 +453,7 @@ module.exports = {
                 req,
                 {
                     data: commentsToResponse,
-                    total: commentsToResponse?.length ? 100 : 0,
+                    total: commentsToResponse?.length ?? 0,
                     pageIndex: currentPage,
                     isFinished: isFinishedFromSocialApi,
                 },
@@ -609,9 +609,9 @@ module.exports = {
 
             const { data } = await socialApi.patch(uri, body);
 
-            if(data?.status === COMMENT_STATUS.APPROVED) {
+            if (data?.status === COMMENT_STATUS.APPROVED) {
                 await GamificationKafka.publishEventRuleValidation({
-                    events:[EVENT_CATEGORY.COMMENT],
+                    events: [EVENT_CATEGORY.COMMENT],
                     identifier: data.userId,
                     meta: {
                         commentId,
