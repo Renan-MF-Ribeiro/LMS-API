@@ -175,18 +175,22 @@ module.exports = {
                 trails: trailsArray,
             };
 
-            await ChatbotLog.create({
-                user: user._id,
-                channel: foundChannel?._id ?? null,
-                trail: trail ? new ObjectId(trail) : null,
-                body: JSON.stringify(req.body),
-                response: JSON.stringify(response),
-                apiBody: JSON.stringify(apiBody),
-                apiResponse: JSON.stringify(data),
-                messageId,
-                threadId,
-                error: null,
-            });
+            if (environment.CHATBOT_LOG) {
+                await ChatbotLog.create({
+                    user: user._id,
+                    channel: foundChannel?._id ?? null,
+                    trail: trail ? new ObjectId(trail) : null,
+                    body: req.body,
+                    response,
+                    apiBody,
+                    apiResponse: data,
+                    messageId,
+                    threadId,
+                    error: null,
+                });
+            } else {
+                console.log('Chatbot log is disabled, skipping log creation');
+            }
 
             return res.json(response);
         } catch (error) {
@@ -209,10 +213,10 @@ module.exports = {
                 user: user._id,
                 channel: foundChannel?._id ?? null,
                 trail: trail ? new ObjectId(trail) : null,
-                body: JSON.stringify(req.body),
-                response: JSON.stringify(response),
-                apiBody: JSON.stringify(apiBody),
-                apiResponse: JSON.stringify(apiData),
+                body: req.body,
+                response,
+                apiBody,
+                apiResponse: apiData,
                 messageId,
                 threadId,
                 error,

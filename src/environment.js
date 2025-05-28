@@ -58,6 +58,7 @@ const environmentSchema = z.object({
     CHATBOT_API: z.string().nullish().default(null),
     CHATBOT_API_KEY: z.string().nullish().default(null),
     CHATBOT_KAFKA_TOPIC: z.string().nullish().default(null),
+    CHATBOT_LOG: z.string().nullish().default(false).transform(val => val === 'true' || val === '1'),
 
     // Webhooks
     API_WEBHOOK: z.string(),
