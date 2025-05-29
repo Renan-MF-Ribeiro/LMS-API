@@ -26,7 +26,8 @@ const {
     isSectionTrailInfo,
     isValidSectionTrailInfo,
     recommendedTrailsSections,
-    recommendedCoursesSections
+    recommendedCoursesSections,
+    getContentEligibilityParameterByUserId
 } = require('./business');
 
 const { getStudentCourses } = require('../home/business');
