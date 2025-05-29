@@ -135,7 +135,7 @@ module.exports = {
                     await CourseModel.findByIdAndUpdate(courseCreated._id, {
                         materials: arrMaterials,
                     });
-                    success(res, req, 'Curso criado com sucesso!');
+                    success(res, req, 'Curso criado com sucesso!', 'Curso criado com sucesso!', 'courses', '/create-course', courseCreated, null, true, 'create');
                 }
             } else {
                 badRequest(
@@ -337,7 +337,7 @@ module.exports = {
                         );
                     }
 
-                    success(res, req, 'Atualizado com sucesso');
+                    success(res, req, 'Atualizado com sucesso', 'Atualizado com sucesso', 'courses', '/update-course', body, currentCourse, true, 'update');
                 }
             }
         } catch (error) {
@@ -352,7 +352,7 @@ module.exports = {
             await CourseModel.findByIdAndUpdate(id, { deleted: 1 });
             await dispatch('delete', 'course', { id });
 
-            success(res, req, 'Curso excluído com sucesso!');
+            success(res, req, 'Curso excluído com sucesso!', 'Curso excluído com sucesso!', 'courses', '/delete-course', { courseId: id }, null, true, 'delete');
         } catch (error) {
             internalServer(
                 res,
@@ -634,7 +634,7 @@ module.exports = {
                         };
                         await createMessagesFromBackend(message);
 
-                        success(res, req, 'Criado com sucesso!');
+                        success(res, req, 'Criado com sucesso!', 'Criado com sucesso!', 'courses', '/instructor/create-class', createdClass, null, true, 'create');
                         return;
                     }
                 } else {
@@ -880,7 +880,7 @@ module.exports = {
                         });
                     }
 
-                    success(res, req, 'Atualizado com sucesso!');
+                    success(res, req, 'Atualizado com sucesso!', 'Atualizado com sucesso!', 'courses', '/instructor/update-class', classBody, currentMaterials, true, 'update');
                 } else {
                     badRequest(
                         res,
@@ -1044,7 +1044,8 @@ module.exports = {
                 materials: arrMaterials,
             });
             await MaterialModel.findByIdAndRemove(materialID);
-            success(res, req, 'Material Excluído com sucesso!');
+
+            success(res, req, 'Material Excluído com sucesso!', 'Material Excluído com sucesso!', 'courses', '/instructor/delete-material', null, null, true, 'delete');
         } catch (error) {
             internalServer(
                 res,
@@ -1074,7 +1075,7 @@ module.exports = {
             });
             await MaterialModel.findByIdAndRemove(materialID);
 
-            success(res, req, 'Material Excluído com sucesso!');
+            success(res, req, 'Material Excluído com sucesso!', 'Material Excluído com sucesso!', 'courses', '/delete-material', { courseId: courseID }, null, true, 'delete');
         } catch (error) {
             internalServer(
                 res,
@@ -1200,7 +1201,8 @@ module.exports = {
             for (const material of materials) {
                 await MaterialModel.findByIdAndRemove(material._id);
             }
-            success(res, req, 'Excluído com sucesso');
+
+            success(res, req, 'Excluído com sucesso', 'Excluído com sucesso', 'courses', '/instructor/delete-class', null, null, true, 'delete');
         } catch (error) {
             internalServer(
                 res,
