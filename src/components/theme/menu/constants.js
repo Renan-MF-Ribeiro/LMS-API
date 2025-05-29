@@ -700,11 +700,47 @@ const MenuDefault = [
         index: 15
     },
     {
+        button: 'matrices',
+        feature: 'matrices',
+        roles: [
+            'PERFIL_Gestor_Matriz',
+            'PERFIL_Aplicador_Matriz'
+        ],
+        subMenu: [
+            {
+                button: 'matrixList',
+                roles: [
+                    'PERFIL_Gestor_Matriz',
+                    'PERFIL_Aplicador_Matriz'
+                ],
+                index: 0
+            },
+            {
+                button: 'matrixApplication',
+                roles: [
+                    'PERFIL_Gestor_Matriz',
+                    'PERFIL_Aplicador_Matriz'
+                ],
+                index: 1
+            },
+            {
+                button: 'matrixConfig',
+                roles: [
+                    'PERFIL_Super_Admin',
+                    'PERFIL_Gestor_Matriz',
+                    'PERFIL_Aplicador_Matriz'
+                ],
+                index: 2
+            }
+        ],
+        index: 16
+    },
+    {
         button: "internalGallery",
         roles: [
             "PERFIL_Conteudista",
         ],
-        index: 16
+        index: 17
     },
     {
         button: "system",
@@ -755,6 +791,11 @@ const MenuDefault = [
                         button: 'calendar',
                         roles: ["PERFIL_Super_Admin"],
                         index: 3
+                    },
+                    {
+                        button: 'user_provider',
+                        roles: ["PERFIL_Super_Admin"],
+                        index: 4
                     }
                 ],
                 index: 1
@@ -857,9 +898,8 @@ const MenuDefault = [
                 index: 3
             },
         ],
-        index: 17
-    },
-
-]
+        index: 18
+    }
+];
 
 module.exports = { MenuDefault };

@@ -138,8 +138,8 @@ module.exports = {
 
     pagination(req) {
         const { pageSize, pageIndex } = req.query;
-        let skip = pageIndex || 0;
-        const limit = pageSize || 10;
+        let skip = Number(pageIndex) || 0;
+        const limit = Number(pageSize) || 10;
 
         if (skip > 0) {
             skip = limit * pageIndex;
@@ -521,7 +521,6 @@ module.exports = {
             .join('_')
             .toUpperCase();
     },
-    
 
     getSortedDate(dates = [], order = 'asc') {
         const sortedDates = dates.sort((prev, curr) => prev.getTime() - curr.getTime())
@@ -545,7 +544,7 @@ module.exports = {
             if (objTracking?.updatedAt) {
                 const currentTime = trail?.lastTrackingUpdate ? new Date(trail.lastTrackingUpdate).getTime() : 0;
                 const newTime = new Date(objTracking.updatedAt).getTime();
-                
+
                 if (currentTime === 0 || newTime > currentTime) {
                     trail.lastTrackingUpdate = objTracking.updatedAt;
                 }
@@ -607,14 +606,11 @@ module.exports = {
         scoreAverage = Number(scoreAverage.toFixed(2));
         trail.scoreAverage = isNaN(scoreAverage) ? null : scoreAverage;
 
-        var mostRecentDate = new Date(
-            Math.max.apply(
-                null,
-                completionDate.map((e) => {
-                    if (e !== null) return new Date(e);
-                })
-            )
-        );
+        const validDates = completionDate
+            .filter((e) => e !== null)
+            .map((e) => new Date(e).getTime());
+
+        const mostRecentDate = validDates.length > 0 ? new Date(Math.max(...validDates)) : null;
 
         trail.completionAt = mostRecentDate;
         trail.completion = getTrailCompletion(trail);

@@ -56,9 +56,11 @@ async function populateSectionTrails (sections, options) {
     return newSections;
 }
 
-async function setAssessmentHistoricOnSections (userId, sections) {
+async function setAssessmentHistoricOnSections (userId, sections, tags) {
     const userWithTags = await UsersWithProcessedTags.findById(userId);
-    const dataAssessmentHistoric = await listTrainingSectionsStatus(userId, userWithTags.userTags);
+
+    let eligibilityTags = tags?.map(tag => tag.value) ?? userWithTags.userTags ?? [];
+    const dataAssessmentHistoric = await listTrainingSectionsStatus(userId, eligibilityTags);
 
     return cloneDeep(sections).map(currentSection => {
         if (!currentSection.isTraining) return currentSection;
@@ -129,19 +131,16 @@ async function setAssessmentHistoricOnSections (userId, sections) {
             const isCompleted = section.trails
                 ?.filter(
                     (trail) => {
-                        const includes = ![
+                        const includes = [
                             'default',
                             'assessment',
                             'separator',
                             'certificate',
                         ].includes(trail.type);
-                        
-                        const completion = trail?.completion === 1;
-
-                        return includes && completion;
-                    } 
+                        return !includes;
+                    }
                 )
-                ?.length > 0
+                ?.every((trail) => trail.completion === 1);
 
             section.hasAssessment = false;
             section.isBlocked = false;
@@ -451,7 +450,7 @@ module.exports = {
                 sections.forEach((section) => {
                     const sectionTrails = section.trails
                         .map(trail => {
-                            return trails.find(t => String(t._id) === String(getSectionTrailId(trail))) ?? null;
+                            return trails.find(t => String(t._id) === String(getSectionTrailId(trail))) ?? trail;
                         })
                         .filter(trail => trail && isValidSectionTrailInfo(trail) && checkIfTheTrackIsValid(trail))
 
@@ -748,7 +747,7 @@ module.exports = {
                         }
                     });
                     const classes = certificateData ? [] : classesFromCourse.map((classFromCourse) => {
-                        const inClass = classFromCourse.users.some((user) => user._id == userId || user.userID == userId)
+                        const inClass = classFromCourse.users.some((user) => String(user._id) === String(userId) || String(user.userID) === String(userId))
 
 
 
@@ -913,6 +912,150 @@ module.exports = {
                 reject(error);
             }
         });
+    },
+    async recommendedTrailsSections (trails, recommendedTrails) {
+        try {
+            const section = await Section.findOne({
+                defaultType: DEFAULT_TYPES.RECOMMENDED_TRAILS,
+                active: 1,
+            }).lean();
+
+            if (!section) {
+                return []
+            }
+            const trailIds = new Set(recommendedTrails.map((trail) => trail.id.toString()));
+            for (const trail of trails) {
+
+                const isRecommended = trailIds.has(trail._id.toString());
+                if (isRecommended) {
+                    section.trails.push(trail)
+                }
+            }
+
+            return section;
+        } catch (error) {
+            console.log(error.response?.data ?? error.message);
+        }
+    },
+
+    async recommendedCoursesSections (userId, recommendedCourses) {
+        try {
+            const section = await Section.findOne({
+                defaultType: DEFAULT_TYPES.RECOMMENDED_COURSES,
+                active: 1,
+            }).lean();
+
+            if (!section) {
+                return []
+            }
+
+            let elegibleCourses = await CourseModel.find({
+                _id: { $in: recommendedCourses.map((rc) => rc.courseId) }
+            })
+                .select({
+                    title: 1,
+                    thumbPath: 1,
+                    _id: 1,
+                    description: 1,
+                    passingScore: 1,
+                    certificate: 1,
+                    certificateLayout: 1,
+                    workload: 1,
+                    instructor: 1,
+                    banner: 1,
+                    startDate: 1,
+                    endDate: 1,
+                    highlighted: 1,
+                    certificateDateType: 1,
+                })
+                .lean();
+
+            const coursePromises = elegibleCourses.map(async (course) => {
+                const alreadyJoined = await WaitListModel.findOne({
+                    userID: userId,
+                    courseID: course._id,
+                    sent: false,
+                });
+
+                const today = new Date()
+                const classesFromCourse = await ClassModel.find({
+                    courseID: course._id
+                }).populate({
+                    path: 'materials',
+                    match: { author: 'INSTRUTOR' },
+                })
+                    .populate('instructor', ['name']);
+
+                let inWaitList = false;
+                if (alreadyJoined) {
+                    inWaitList = true;
+                }
+                let certificateElegible = false
+                let certificateData = null
+
+                classesFromCourse.forEach((e) => {
+                    if (String(e.courseID._id) === String(course._id)) {
+                        const userInClass = e.users.find((user) => user._id?.toString() == userId || user.userID == userId)
+                        let grade = 0
+                        let presence = false
+                        if (userInClass) {
+                            presence = userInClass.presence;
+                            grade = userInClass.grades ? userInClass.grades : 0;
+                            const passingScore = course.passingScore ? course.passingScore : 0;
+                            certificateElegible = grade >= passingScore;
+
+                        }
+                        if (certificateElegible && presence)
+                            certificateData = {
+                                completionAt: course.certificateDateType == 2 ? userInClass?.presenceAt : e.dateApplicationFinal,
+                                qrcode: e.qrcode,
+                                certificate: course.certificate,
+                                certificateLayout: course.certificateLayout,
+                                studentMaterials: e.materials,
+                                workload: course.workload,
+                                instructor: e.instructor,
+                                grade: grade,
+                                status: certificateElegible,
+                            };
+
+                        course.presence = presence;
+                        course.completionAt = e.dateApplicationFinal;
+                        course.instructor = e.instructor;
+
+                    }
+                });
+                const classes = certificateData ? [] : classesFromCourse.map((classFromCourse) => {
+                    const inClass = classFromCourse.users.some((user) => String(user._id) === String(userId) || String(user.userID) === String(userId))
+
+                    return classFromCourse.dateApplicationFinal <= today ? null : {
+                        _id: classFromCourse._id,
+                        name: classFromCourse.name,
+                        registrationDeadline: classFromCourse.registrationDeadline,
+                        cancellationDeadline: classFromCourse.cancellationDeadline,
+                        dateApplicationInitial: classFromCourse.dateApplicationInitial,
+                        dateApplicationFinal: classFromCourse.dateApplicationFinal,
+                        location: classFromCourse.location,
+                        status: getClassStatus(classFromCourse, inClass),
+                    };
+                }).filter((classCourse) => classCourse)
+
+
+                course.certificateElegible = certificateData;
+                course.inWaitList = inWaitList;
+                course.classes = classes;
+                course.hasClasses = classes.length > 0;
+                return course;
+            });
+
+            elegibleCourses = await Promise.all(coursePromises);
+
+            section.trails.push(...elegibleCourses)
+
+            return section
+
+        } catch (error) {
+            console.log(error);
+        }
     },
 
     /**
