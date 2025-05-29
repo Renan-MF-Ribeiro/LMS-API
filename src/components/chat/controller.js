@@ -150,10 +150,29 @@ module.exports = {
                 });
             }
 
-            const messageContentWithoutCitations = messageContent
+            let messageContentWithoutCitations = messageContent
+                .replace(/\[doc\d+\]/g, '')
                 .replace(/\s+/g, ' ')
-                .replace(/\s\./g, '.')
-                .replace(/\[doc\d+\]/g, '').trim();
+                .replace(/ \./g, '.')
+                .trim();
+
+            // Se não houver referências de citações na mensagem, mas houver citações, adiciona as referências
+            if (!messageHasCitationsReferences?.length && messageCitations.length) {
+                messageCitations?.forEach(citation => {
+                    if (itemsReferences.size > 2) return;
+
+                    itemsReferences.add(citation.filepath);
+                });
+
+                const optionalReferenceMessages = [
+                    "Você pode se interessar por estes conteúdos:",
+                    "Veja alguns conteúdos que você pode se interessar:",
+                    "Você pode achar interessante alguns destes conteúdos:",
+                    "Veja alguns conteúdos que você pode gostar:",
+                ];
+
+                messageContentWithoutCitations = `${messageContentWithoutCitations} <br/> <p>${optionalReferenceMessages[Math.floor(Math.random() * optionalReferenceMessages.length)]}</p>`;
+            }
 
             const itemsArray = Array.from(itemsReferences);
 
