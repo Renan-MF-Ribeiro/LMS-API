@@ -125,8 +125,8 @@ stages:
             displayName: "Set API_VERSION environment variable"
             inputs:
               script: "echo 'API_VERSION=$(tag)' >> $(System.DefaultWorkingDirectory)/.env"
-            condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], variables['stagingBranch']), eq(variables['Build.SourceBranch'], variables['prodBranch'])))
-          
+            condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/staging'), eq(variables['Build.SourceBranch'], 'refs/heads/main')))
+
           # Build and push an image to container registry
           - task: Docker@2
             displayName: Build and push an image to container registry
