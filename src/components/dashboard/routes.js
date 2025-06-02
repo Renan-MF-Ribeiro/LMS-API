@@ -8,5 +8,6 @@ router
     .post('/create', isSuperAdminOrAnalyst, _controller.create)
     .put('/update', isSuperAdminOrAnalyst, _controller.update)
     .post('/delete', isSuperAdminOrAnalyst, _controller.delete)
+    .get('/tabs', isSuperAdminOrAnalyst, _controller.getDashboardTabs)
 
 module.exports = router

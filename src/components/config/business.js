@@ -8,6 +8,7 @@ const {
     MatrixConfigModel,
     MATRIX_VISIBILITY_MODE,
     ChatIAConfigModel,
+    DashboardConfigModel,
 } = require('./model');
 
 const { getUserByToken } = require('../../utils/functions');
@@ -131,6 +132,12 @@ module.exports = {
         const config = await ChatIAConfigModel.findOne();
 
         return config || (await ChatIAConfigModel.create({}));
+    },
+    
+    async getDashboardConfig() {
+        const config = await DashboardConfigModel.findOne();
+
+        return config || (await DashboardConfigModel.create({}));
     },
 
     async findUsersByMatrixConfig(applier, searchBy) {

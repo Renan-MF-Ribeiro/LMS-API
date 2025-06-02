@@ -22,7 +22,8 @@ const ConfigTypes = {
     UsersData: 'users-data',
     Company: 'company',
     Matrix: 'matrix',
-    ChatIA: 'chat-ia'
+    ChatIA: 'chat-ia',
+    Dashboard: 'dashboard',
 };
 
 const ConfigSchema = new mongoose.Schema(
@@ -414,6 +415,78 @@ const ChatIAConfigModel = ConfigModel.discriminator(
     )
 );
 
+const DashboardConfigModel = ConfigModel.discriminator(
+    ConfigTypes.Dashboard,
+    new mongoose.Schema(
+        {
+            value: {
+                default: {
+                    tabs: [
+                        'ELEG / OBRIG',
+                        'GESTÃO PLATAFORMA',
+                        'GRUPOS | TAGS | SEÇÕES X TRILHAS',
+                        'CADASTRO ALUNOS',
+                        'GESTÃO ELEGIBILIDADES',
+                        'ELEG / OBRIG_ADM',
+                        'ELEG / OBRIG INDICADORES_ADM',
+                        'CONCLUSÕES',
+                        'GESTÃO HORAS TREINAMENTO',
+                        'CAMPANHAS',
+                        'AVALIAÇÕES',
+                        'PESQUISA SATISFAÇÃO',
+                        'GESTÃO DE USUÁRIOS',
+                        'GESTÃO DE CONTEÚDO',
+                        'CERTIFICADOS',
+                        'CURSOS PRESENCIAIS',
+                        'MENSAGERIA',
+                        'DIÁRIO DE BORDO',
+                        'ITENS DE FORMULÁRIO',
+                        'CHAMADOS',
+                        'HAPPINSIGHTS',
+                        'ASSESSMENT',
+                        'FORMAÇÃO',
+                    ],
+                },
+                type: new mongoose.Schema(
+                    {
+                        tabs: {
+                            type: [String],
+                            required: true,
+                            default: [
+                                'ELEG / OBRIG',
+                                'GESTÃO PLATAFORMA',
+                                'GRUPOS | TAGS | SEÇÕES X TRILHAS',
+                                'CADASTRO ALUNOS',
+                                'GESTÃO ELEGIBILIDADES',
+                                'ELEG / OBRIG_ADM',
+                                'ELEG / OBRIG INDICADORES_ADM',
+                                'CONCLUSÕES',
+                                'GESTÃO HORAS TREINAMENTO',
+                                'CAMPANHAS',
+                                'AVALIAÇÕES',
+                                'PESQUISA SATISFAÇÃO',
+                                'GESTÃO DE USUÁRIOS',
+                                'GESTÃO DE CONTEÚDO',
+                                'CERTIFICADOS',
+                                'CURSOS PRESENCIAIS',
+                                'MENSAGERIA',
+                                'DIÁRIO DE BORDO',
+                                'ITENS DE FORMULÁRIO',
+                                'CHAMADOS',
+                                'HAPPINSIGHTS',
+                                'ASSESSMENT',
+                                'FORMAÇÃO',
+                            ],
+                        },
+                    },
+                    valueSchemaOptions
+                ),
+            },
+        },
+        schemaOptions
+    )
+);
+
 module.exports = {
     ConfigTypes,
     PostProcessingActions,
@@ -426,4 +499,5 @@ module.exports = {
     MatrixConfigModel,
     MATRIX_VISIBILITY_MODE,
     ChatIAConfigModel,
+    DashboardConfigModel,
 };
