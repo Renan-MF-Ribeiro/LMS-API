@@ -119,6 +119,13 @@ stages:
             inputs:
               script: "echo 'DEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
+
+          # Write default environments
+          - task: CmdLine@2
+            displayName: "Set API_VERSION environment variable"
+            inputs:
+              script: "echo 'API_VERSION=$(tag)' >> $(System.DefaultWorkingDirectory)/.env"
+            condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], variables['stagingBranch']), eq(variables['Build.SourceBranch'], variables['prodBranch'])))
           
           # Build and push an image to container registry
           - task: Docker@2
