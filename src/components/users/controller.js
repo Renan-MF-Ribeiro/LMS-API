@@ -2047,6 +2047,7 @@ module.exports = {
                 _messages.success(res, req, {
                     SAS,
                     token,
+                    email,
                     accept: acceptTerms,
                     acceptCollaboration: acceptTermsCollaboration,
                     numbers: result.token.numbers,
