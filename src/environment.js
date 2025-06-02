@@ -55,10 +55,10 @@ const environmentSchema = z.object({
     API_PDF_PRINTER: z.string(),
     API_HAPPPLACE: z.string(),
     
-    CHATBOT_API: z.string().nullish().default(null),
-    CHATBOT_API_KEY: z.string().nullish().default(null),
-    CHATBOT_KAFKA_TOPIC: z.string().nullish().default(null),
-    CHATBOT_LOG: z.string().nullish().default(false).transform(val => val === 'true' || val === '1'),
+    CHATBOT_API: z.string().optional().nullish().default(null),
+    CHATBOT_API_KEY: z.string().optional().nullish().default(null),
+    CHATBOT_KAFKA_TOPIC: z.string().optional().nullish().default(null),
+    CHATBOT_LOG: z.string().optional().default(false).transform(val => val === 'true' || val === '1'),
 
     // Webhooks
     API_WEBHOOK: z.string(),
@@ -119,6 +119,8 @@ const environmentSchema = z.object({
     SECRETKEY: z.string(),
     BUCKET: z.string(),
     REGION: z.string(),
+
+    API_VERSION: z.string().optional().default('no-info'),
 
     // SSO
     // SSO_ENTRYPOINT: z.string().optional(), // ! NAO ESTA USANDO
