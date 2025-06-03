@@ -102,14 +102,14 @@ stages:
             displayName: "Set DEBUG environment variable"
             inputs:
               script: "echo -e '\nDEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
-              condition: and(succeeded(), or(ne(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.SourceBranch'], 'refs/heads/docker-image')))
+            condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.SourceBranch'], 'refs/heads/docker-image'))
 
           # Write default environments
           - task: CmdLine@2
             displayName: "Set API_VERSION environment variable"
             inputs:
               script: "echo -e '\nAPI_VERSION=$(tag)' >> $(System.DefaultWorkingDirectory)/.env"
-              condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/docker-image'))
+            condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/docker-image'))
 
           # Build and push an image to container registry
           - task: Docker@2
