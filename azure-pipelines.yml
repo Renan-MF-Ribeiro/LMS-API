@@ -102,29 +102,29 @@ stages:
           - task: CmdLine@2
             displayName: "Set DEBUG environment variable"
             inputs:
-              script: "echo 'DEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
+              script: "echo -e '\nDEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
           - task: CmdLine@2
             displayName: "Set DEBUG environment variable"
             inputs:
-              script: "echo 'DEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
+              script: "echo -e '\nDEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-api'))
           - task: CmdLine@2
             displayName: "Set DEBUG environment variable"
             inputs:
-              script: "echo 'DEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
+              script: "echo -e '\nDEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-painel'))
           - task: CmdLine@2
             displayName: "Set DEBUG environment variable"
             inputs:
-              script: "echo 'DEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
+              script: "echo -e '\nDEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
 
           # Write default environments
           - task: CmdLine@2
             displayName: "Set API_VERSION environment variable"
             inputs:
-              script: "echo 'API_VERSION=$(tag)' >> $(System.DefaultWorkingDirectory)/.env"
+              script: "echo -e '\nAPI_VERSION=$(tag)' >> $(System.DefaultWorkingDirectory)/.env"
               condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/docker-image'))
 
           # Build and push an image to container registry
