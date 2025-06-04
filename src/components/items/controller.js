@@ -47,11 +47,13 @@ const {
     checkEligibilityTagsAnd,
 } = require('../sections/business');
 const { getUserByToken } = require('../../utils/functions');
-const GamificationController = require('../gamification/controller');
-const { EVENTS_CATEGORY } = require('../gamification/model');
+const { EVENT_CATEGORY } = require('../gamification/model');
 const { User } = require('../users/model');
-const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business');
+const { handleSegmentationOnCreate, handleSegmentationOnQuery, getChatIAConfig } = require('../config/business');
 const ApiError = require('../../errors/ApiError');
+const GamificationKafka = require('../gamification/kafka/broker');
+const { dispatchChatItemKafkaEvent, isFeatEnabled } = require('../chat/business');
+
 const ITEM_KINDS = Object.freeze({
     DocumentItem: DocumentItem,
     MediaItem: MediaItem,
@@ -192,7 +194,7 @@ const ItemController = {
                 payload.author = user._id;
 
                 const item = await ItemModel.create(payload);
-                
+
                 if (item._id) {
                     const trail = await Trail.create({
                         backgroundPath: null,
@@ -243,21 +245,6 @@ const ItemController = {
                     );
                 }
 
-                // GAMIFICATION DISPATCH
-                const collabItems = await Item.find({
-                    author: user._id,
-                    collaborative: true,
-                });
-                await GamificationController.dispatch(
-                    user.networkLogin,
-                    [EVENTS_CATEGORY.UPLOADED_CONTENT],
-                    {
-                        collabItemsCreatedAt: collabItems.map(
-                            ({ createdAt }) => createdAt
-                        ),
-                    }
-                );
-
                 //Evento novo conteúdo colaborativo
                 _messages.success(res, req, item._id);
             } catch (error) {
@@ -280,6 +267,15 @@ const ItemController = {
                         req,
                         error,
                         { name: error.name, messages },
+                        'items',
+                        'itemColaborativo'
+                    );
+                } else if (error.statusCode === 413) {
+                    _messages.internalServer(
+                        res,
+                        req,
+                        error.message,
+                        'O arquivo excede o tamanho máximo permitido.',
                         'items',
                         'itemColaborativo'
                     );
@@ -318,6 +314,10 @@ const ItemController = {
 
             const { _id } = await ItemModel.create(req.body);
             await dispatch('create', 'item', { _id, ...req.body });
+
+            const chatConfig = await getChatIAConfig();
+
+            if (isFeatEnabled(chatConfig)) await dispatchChatItemKafkaEvent(_id);
 
             _messages.success(res, req, { _id });
         } catch (error) {
@@ -515,7 +515,6 @@ const ItemController = {
                 );
 
             } catch (error) {
-                console.log(error)
                 if (error.name === 'ValidationError') {
                     const messages = {};
                     for (const k in error.errors)
@@ -730,6 +729,10 @@ const ItemController = {
                     await dispatch('update', 'item', { _id: item._id, ...payload });
                 }
 
+                const chatConfig = await getChatIAConfig();
+
+                if (isFeatEnabled(chatConfig)) await dispatchChatItemKafkaEvent(item._id);
+
                 _messages.success(
                     res,
                     req,
@@ -813,6 +816,11 @@ const ItemController = {
             ) {
                 await Item.findByIdAndUpdate(_id, { enabled });
                 await dispatch('update', 'item', { _id, enabled });
+                
+                const chatConfig = await getChatIAConfig();
+
+                if (isFeatEnabled(chatConfig)) await dispatchChatItemKafkaEvent(_id, enabled ? 'UPSERT' : 'DELETE');
+                
                 _messages.success(res, req, 'Atualizado com sucesso');
             } else {
                 _messages.badRequest(

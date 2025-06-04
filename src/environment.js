@@ -29,6 +29,7 @@ const environmentSchema = z.object({
     AZURE_STRINGCONN: z.string(),
     AZURE_BLOBNAME: z.string(),
     AZURE_BLOB_URL: z.string(),
+    AZURE_FILES_ENCODING: z.string().optional().default('iso88591'),
 
     // Micro-serviços
     API_GAMIFICATION: z.string(),
@@ -54,6 +55,11 @@ const environmentSchema = z.object({
     API_PDF_PRINTER: z.string(),
     API_HAPPPLACE: z.string(),
     
+    CHATBOT_API: z.string().optional().nullish().default(null),
+    CHATBOT_API_KEY: z.string().optional().nullish().default(null),
+    CHATBOT_KAFKA_TOPIC: z.string().optional().nullish().default(null),
+    CHATBOT_LOG: z.string().optional().default(false).transform(val => val === 'true' || val === '1'),
+
     // Webhooks
     API_WEBHOOK: z.string(),
     API_KEY_WEBHOOK: z.string(),
@@ -89,6 +95,8 @@ const environmentSchema = z.object({
     TOPIC_MSG: z.string(),
     TOPIC_DEVICER: z.string(),
     TOPIC_MSG_LIST: z.string(),
+    KAFKA_GAMIFICATION_EVENTS_PENDING: z.string(),
+    KAFKA_GAMIFICATION_EVENTS_VALIDATED: z.string(),
 
     // Vimeo
     VIMEO_CLIENTID: z.string(),
@@ -111,6 +119,8 @@ const environmentSchema = z.object({
     SECRETKEY: z.string(),
     BUCKET: z.string(),
     REGION: z.string(),
+
+    API_VERSION: z.string().optional().default('no-info'),
 
     // SSO
     // SSO_ENTRYPOINT: z.string().optional(), // ! NAO ESTA USANDO

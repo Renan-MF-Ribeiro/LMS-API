@@ -1,20 +1,38 @@
-const EVENTS_CATEGORY = Object.freeze({
+const EVENT_CATEGORY = Object.freeze({
     LIKE: 'like',
     COMMENT: 'comment',
-    RECOMMEND: 'recommend',
+    SHARE: 'share',
     LOGIN: 'login',
     OPENED_FROM_EMAIL: 'opened_from_email',
     OPENED_FROM_NOTIFICATION: 'opened_from_notification',
     EVALUATED_CONTENT: 'evaluated_content',
-    SURVEY: 'survey', // EVENTO DISPARADO PELO MICROSERVIÇO DE SURVEY
+    SURVEY: 'survey',
     FINISHED_TRAIL: 'finished_trail',
     STARTED_TRAIL: 'started_trail',
     FINISHED_ITEM: 'finished_item',
     UPLOADED_CONTENT: 'uploaded_content',
     SHARED_CONTENT: 'shared_content',
     WATCHED_COLLAB: 'watched_collab',
+    FINISHED_SHARED_TRAIL: 'finished_shared_trail',
+    FINISHED_FAVORITE_TRAIL: 'finished_favorite_trail',
+    FINISHED_OPTIONAL_TRAIL: 'finished_optional_trail',
+    FINISHED_OPTIONAL_ITEM: 'finished_optional_item',
+    FINISHED_HIGHLIGHTED_ITEM: 'finished_highlighted_item',
+    ACHIEVED_PROGRESS_PERCENTAGE: 'achieved_progress_percentage',
+    FINISHED_SECTION: 'finished_section',
+    OPTIONAL_SURVEY: 'optional_survey',
+    FINISHED_EXAM_ITEM: 'finished_exam_item',
+    FEED_LIKE: 'feed_like',
+    FEED_COMMENT: 'feed_comment',
+    FEED_SHARE: 'feed_share',
+    FEED_GROUP_CREATE: 'feed_group_create',
+    FEED_GROUP_JOIN: 'feed_group_join',
+    FEED_GROUP_PARTICIPANT: 'feed_group_participant',
+    FEED_LIKE_OWNER: 'feed_like_owner',
+    FEED_COMMENT_OWNER: 'feed_comment_owner',
+    FEED_SHARE_OWNER: 'feed_share_owner',
 });
 
 module.exports = {
-    EVENTS_CATEGORY,
+    EVENT_CATEGORY,
 };

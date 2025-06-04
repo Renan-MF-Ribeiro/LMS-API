@@ -43,7 +43,12 @@ const EventsController = {
         try {
             const events = []
             const courses = await getCoursesElegible(start, end, user, tags)
-            const certificateEvents = await getAllExpDatesByUser(start, end, user, token)
+
+            const certificateEvents = [];
+            if (token) {
+                const _certificateEvents = await getAllExpDatesByUser(start, end, user, token);
+                certificateEvents.push(..._certificateEvents);
+            }
 
             const foundEvents = await EventModel.find({
                 $and: [

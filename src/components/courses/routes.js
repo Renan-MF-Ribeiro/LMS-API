@@ -12,7 +12,7 @@ const {
 } = require('../../utils/middlewares');
 
 router
-    .get('/all', isAccountant, _controller.allCourses)
+    .get('/all', isAccountantOrInstructor, _controller.allCourses)
     .get(
         '/verify-course-evauation/:classID',
         _controller.verifyCourseEvaluation

@@ -13,7 +13,8 @@ const HeaderConfig = Theme.discriminator(
     'headerConfig',
     new mongoose.Schema({
         modulesInHeader: { type: Array, default: [], required: false },
-        modulesInHeaderMobile: { type: Array, default: [], required: false },
+            modulesInHeaderMobile: { type: Object, default: {}, required: false },
+
     }, {
         ...schemaOptions,
     }
