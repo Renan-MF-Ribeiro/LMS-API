@@ -132,6 +132,12 @@ app.use(cookieParser());
 
 app.use(express.static(path.resolve(environment.PUBLIC_PATH)));
 
+app.get('/version', (req, res) => {
+    res.json({
+        version: environment.API_VERSION ?? 'no-info',
+    });
+});
+
 app.get('/', (req, res) => {
     res.sendFile(path.resolve(path.join(environment.PUBLIC_PATH, 'index.html')));
 });

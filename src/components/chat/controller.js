@@ -150,14 +150,24 @@ module.exports = {
                 });
             }
 
-            const messageContentWithoutCitations = messageContent
+            let messageContentWithoutCitations = messageContent
+                .replace(/\[doc\d+\]/g, '')
                 .replace(/\s+/g, ' ')
-                .replace(/\s\./g, '.')
-                .replace(/\[doc\d+\]/g, '').trim();
+                .replace(/ \./g, '.')
+                .trim();
+
+            // Se não houver referências de citações na mensagem, mas houver citações, adiciona as referências
+            if (!messageHasCitationsReferences?.length && messageCitations.length) {
+                messageCitations?.forEach(citation => {
+                    if (itemsReferences.size > 2) return;
+
+                    itemsReferences.add(citation.filepath);
+                });
+            }
 
             const itemsArray = Array.from(itemsReferences);
 
-            const trailsArray = eligibleTrails
+            const trailsArray = itemsArray.length ? eligibleTrails
                 .filter(trail => itemsArray.some(item => trail.items.some(i => String(i.itemID) === String(item))))
                 .map(
                     trail => ({
@@ -165,7 +175,19 @@ module.exports = {
                         title: trail.title,
                         titleUrl: trail.titleUrl,
                     })
-                );
+                ) : [];
+
+            // Se não houver referências de citações na mensagem, mas houver trilhas, adiciona uma mensagem opcional
+            if (!messageHasCitationsReferences?.length && trailsArray.length) {
+                const optionalReferenceMessages = [
+                    "Você pode se interessar por estes conteúdos:",
+                    "Veja alguns conteúdos que você pode se interessar:",
+                    "Você pode achar interessante alguns destes conteúdos:",
+                    "Veja alguns conteúdos que você pode gostar:",
+                ];
+
+                messageContentWithoutCitations = `${messageContentWithoutCitations} <p>${optionalReferenceMessages[Math.floor(Math.random() * optionalReferenceMessages.length)]}</p>`;
+            }
 
             const response = {
                 messageId,
@@ -175,18 +197,22 @@ module.exports = {
                 trails: trailsArray,
             };
 
-            await ChatbotLog.create({
-                user: user._id,
-                channel: foundChannel?._id ?? null,
-                trail: trail ? new ObjectId(trail) : null,
-                body: JSON.stringify(req.body),
-                response: JSON.stringify(response),
-                apiBody: JSON.stringify(apiBody),
-                apiResponse: JSON.stringify(data),
-                messageId,
-                threadId,
-                error: null,
-            });
+            if (environment.CHATBOT_LOG) {
+                await ChatbotLog.create({
+                    user: user._id,
+                    channel: foundChannel?._id ?? null,
+                    trail: trail ? new ObjectId(trail) : null,
+                    body: req.body,
+                    response,
+                    apiBody,
+                    apiResponse: data,
+                    messageId,
+                    threadId,
+                    error: null,
+                });
+            } else {
+                console.log('Chatbot log is disabled, skipping log creation');
+            }
 
             return res.json(response);
         } catch (error) {
@@ -209,10 +235,10 @@ module.exports = {
                 user: user._id,
                 channel: foundChannel?._id ?? null,
                 trail: trail ? new ObjectId(trail) : null,
-                body: JSON.stringify(req.body),
-                response: JSON.stringify(response),
-                apiBody: JSON.stringify(apiBody),
-                apiResponse: JSON.stringify(apiData),
+                body: req.body,
+                response,
+                apiBody,
+                apiResponse: apiData,
                 messageId,
                 threadId,
                 error,

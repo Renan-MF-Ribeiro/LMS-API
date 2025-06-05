@@ -8,8 +8,12 @@ const meetingController = {
     async create(req, res) {
         const body = req.body;
         if (body.menteeId) {
-            const user = await User.findOne({ _id: new Types.ObjectId(body.menteeId) }).lean();
+            const [user, mentor] = await Promise.all([
+                User.findOne({ _id: new Types.ObjectId(body.menteeId) }).lean(),
+                User.findOne({ _id: new Types.ObjectId(body.mentorId) }).lean(),
+            ]);
             body.menteeEmail = user.email;
+            body.mentorEmail = mentor.email;
         }
         try {
             const { data } = await mentoringApi.post(`/meetings/`, body);
@@ -63,14 +67,7 @@ const meetingController = {
         const { id } = req.params;
         try {
             const { data } = await mentoringApi.delete(`/meetings/${id}`);
-            return _messages.success(
-                res,
-                req,
-                data.data,
-                'ok',
-                'mentoring',
-                'delete mentoring'
-            );
+            return _messages.success(res, req, data.data, 'ok', 'mentoring', 'delete mentoring');
         } catch (error) {
             return _messages.internalServer(
                 res,
@@ -161,12 +158,14 @@ const meetingController = {
     async findMeetingsByMentorId(req, res) {
         try {
             const { id } = req.params;
-            const options = req.query
+            const options = req.query;
             let searchIds = [];
 
             if (options.searchBy) {
                 const searchRegex = new RegExp(options.searchBy, 'i');
-                const user = await User.find({ name: searchRegex, email: searchRegex }).select('_id').lean();
+                const user = await User.find({ name: searchRegex, email: searchRegex })
+                    .select('_id')
+                    .lean();
                 searchIds = user.map((user) => user._id.toString());
 
                 options.searchBy = searchIds;
@@ -203,9 +202,12 @@ const meetingController = {
     async findMeetingById(req, res) {
         try {
             const { id } = req.params;
-            const { data } = await mentoringApi.get(`/meetings/${id}`,);
+            const { data } = await mentoringApi.get(`/meetings/${id}`);
             const populatedData = await populateUserFields(
-                [{ fieldName: 'user', reference: 'mentorId' }, { fieldName: 'mentee', reference: 'menteeId' }],
+                [
+                    { fieldName: 'user', reference: 'mentorId' },
+                    { fieldName: 'mentee', reference: 'menteeId' },
+                ],
                 data
             );
             return _messages.success(
@@ -258,7 +260,7 @@ const meetingController = {
         try {
             const programId = req.query.programId;
             const { data } = await mentoringApi.get(`/meetings/mentee/pendingmeetings`, {
-                params: { programId: programId }
+                params: { programId: programId },
             });
 
             const populatedData = await populateUserFields(
@@ -283,12 +285,12 @@ const meetingController = {
             );
         }
     },
-    
+
     async findMyMenteeFutureMeetings(req, res) {
         try {
             const programId = req.query.programId;
             const { data } = await mentoringApi.get(`/meetings/mentee/futuremeetings`, {
-                params: { programId: programId }
+                params: { programId: programId },
             });
 
             const populatedData = await populateUserFields(
@@ -321,14 +323,7 @@ const meetingController = {
                 params: { menteeId, mentorId },
             });
 
-            return _messages.success(
-                res,
-                req,
-                data.data,
-                'ok',
-                'mentoring',
-                'list of meetings'
-            );
+            return _messages.success(res, req, data.data, 'ok', 'mentoring', 'list of meetings');
         } catch (error) {
             return _messages.internalServer(
                 res,

@@ -545,7 +545,7 @@ module.exports = {
 
             const newUser = await User.create(userData);
 
-            WebhooksController.dispatch('create', 'users', false, { ...newUser, password: undefined });
+            WebhooksController.dispatch('create', 'users', false, { ...newUser.toObject(), password: undefined });
 
             if (token) {
                 const DATA_INICIO = today.startOf('day');
@@ -2048,6 +2048,7 @@ module.exports = {
                 _messages.success(res, req, {
                     SAS,
                     token,
+                    email,
                     accept: acceptTerms,
                     acceptCollaboration: acceptTermsCollaboration,
                     numbers: result.token.numbers,

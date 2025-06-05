@@ -7,6 +7,7 @@ module.exports = express
     .Router()
     .use('/config', configRoutes)
     .use('/forms', formsRoutes)
+    .use('/categories', categoriesRoutes)
     .get('/:id', _controller.getNews)
     .get('/', _controller.listNews)
     .post('/', _controller.createNews)
