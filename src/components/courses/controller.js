@@ -63,6 +63,7 @@ module.exports = {
             body.dimensions = JSON.parse(body.dimensions);
             body.tags = JSON.parse(body.tags);
             body.mandatory = JSON.parse(body.mandatory);
+            body.obligatory = JSON.parse(body.obligatory);
             body.certificateDue = JSON.parse(body.certificateDue);
             body.certificateDateType = JSON.parse(body.certificateDateType);
 
@@ -244,6 +245,7 @@ module.exports = {
             if (body.tags) body.tags = JSON.parse(body.tags);
             if (body.dimensions) body.dimensions = JSON.parse(body.dimensions);
             if (body.mandatory) body.mandatory = JSON.parse(body.mandatory);
+            if (body.obligatory) body.obligatory = JSON.parse(body.obligatory);
             if (body.certificateDue) body.certificateDue = JSON.parse(body.certificateDue);
             if (body.certificateDateType) body.certificateDateType = JSON.parse(body.certificateDateType);
             const { thumb, banner } = req.files;
