@@ -80,6 +80,7 @@ const newsRoutes = require('./components/news/routes');
 
 const environment = require('./environment');
 const { matricesApiMiddleware } = require('./components/matrices/http-adapter');
+const { newsApiMiddleware } = require('./components/news/http-adapter');
 
 const corsOptions = {
     origin: [environment.DOMAIN, 'https://monitoring.happlearning.com.br'],
@@ -147,6 +148,7 @@ app.use('/social', socialApiMiddleware);
 app.use('/feed', socialApiMiddleware);
 app.use('/mentoring', mentoringApiMiddleware);
 app.use('/matrices', matricesApiMiddleware);
+app.use('/news', newsApiMiddleware);
 
 app.use(setSegmentation);
 

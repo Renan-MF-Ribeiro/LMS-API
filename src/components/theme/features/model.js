@@ -49,7 +49,8 @@ const featuresSchema = new mongoose.Schema({
     segmentation: { type: Boolean, required: true, default: false },
     webhook: { type: Boolean, required: true, default: false },
     mentoring: { type: Boolean, required: true, default: false },
-    matrices: { type: Boolean, required: true, default: false }
+    matrices: { type: Boolean, required: true, default: false },
+    news: { type: Boolean, required: true, default: false },
 }, {
     ...schemaOptions,
 })
