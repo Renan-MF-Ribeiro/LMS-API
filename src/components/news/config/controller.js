@@ -5,7 +5,7 @@ const configController = {
         try {
             const { data } = await newsApi.get('/config');
 
-            res.status(data.statusCode).json(data.data);
+            res.json(data);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
@@ -19,7 +19,7 @@ const configController = {
         try {
             const { data } = await newsApi.put('/config', req.body);
 
-            res.status(data.statusCode).json(data.data);
+            res.json(data);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;

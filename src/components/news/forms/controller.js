@@ -6,7 +6,7 @@ const formsController = {
             const { id } = req.params;
             const { data } = await newsApi.get(`/forms/${id}`);
 
-            res.status(data.statusCode).json(data.data);
+            res.json(data);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
@@ -21,7 +21,7 @@ const formsController = {
             const options = req.query;
             const { data } = await newsApi.get('/forms', { params: options });
 
-            res.status(data.statusCode).json(data.data);
+            res.json(data);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
@@ -35,7 +35,7 @@ const formsController = {
         try {
             const { data } = await newsApi.post('/forms', req.body);
 
-            res.status(data.statusCode).json(data.data);
+            res.json(data);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
@@ -50,7 +50,7 @@ const formsController = {
             const { id } = req.params;
             const { data } = await newsApi.put(`/forms/${id}`, req.body);
 
-            res.status(data.statusCode).json(data.data);
+            res.json(data);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
