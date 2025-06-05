@@ -11,7 +11,8 @@ const { HistoricEvaluation } = require('../components/assessments/model');
 const { Tracking } = require('../components/tracking/model');
 const { Trail } = require('../components/trails/model');
 const { Item } = require('../components/items/model');
-
+const { htmlToText } = require('html-to-text');
+const tlds = require('tlds');
 
 module.exports = {
     getDateToday() {
@@ -137,8 +138,8 @@ module.exports = {
 
     pagination(req) {
         const { pageSize, pageIndex } = req.query;
-        let skip = pageIndex || 0;
-        const limit = pageSize || 10;
+        let skip = Number(pageIndex) || 0;
+        const limit = Number(pageSize) || 10;
 
         if (skip > 0) {
             skip = limit * pageIndex;
@@ -421,7 +422,7 @@ module.exports = {
 
                     const trailItems = trail.items.filter((item) => item.itemID?.enabled === true);
 
-                    if (trailItems.every(({ itemID }) => itemID?.completion === 1)) {
+                    if (trailItems.every(({ itemID }) => itemID?.completion === 1) && trailItems.length) {
                         completedTrails.push(trail);
                     } else {
                         let nextItem;
@@ -521,25 +522,35 @@ module.exports = {
             .toUpperCase();
     },
 
+    getSortedDate(dates = [], order = 'asc') {
+        const sortedDates = dates.sort((prev, curr) => prev.getTime() - curr.getTime())
+        return order === 'desc' ? sortedDates.slice(0)[0] : sortedDates.slice(-1)[0]
+    },
+
     processTrailTracking(trail, allTrackingUser, dashboard = false) {
         let containsACompletedItem = false;
         const completionDate = [];
         const scoreArr = [];
-        let lastTrackingUpdate;
         trail.notStarted = false;
         let duration = 0;
 
         for (const item of trail.items) {
-            const objTracking = allTrackingUser.filter((obj) => {
-                if (String(obj.item) === String(item?.itemID?._id)) {
-                    return true;
-                }
-            })[0];
-            if (dashboard && objTracking && objTracking[0] === undefined) {
+            const objTracking = allTrackingUser.find((obj) => String(obj.item) === String(item?.itemID?._id));
+
+            if (dashboard && objTracking && objTracking === undefined) {
                 trail.notStarted = true;
             }
+
+            if (objTracking?.updatedAt) {
+                const currentTime = trail?.lastTrackingUpdate ? new Date(trail.lastTrackingUpdate).getTime() : 0;
+                const newTime = new Date(objTracking.updatedAt).getTime();
+
+                if (currentTime === 0 || newTime > currentTime) {
+                    trail.lastTrackingUpdate = objTracking.updatedAt;
+                }
+            }
+
             duration += item?.itemID?.durationHours ?? 0;
-            lastTrackingUpdate = objTracking ? objTracking.updatedAt : null;
             const score = objTracking && objTracking.score ? objTracking.score : null;
             const completionAt = objTracking ? objTracking.completionAt : null;
             const updatedAt = objTracking ? objTracking.updatedAt : null;
@@ -595,15 +606,12 @@ module.exports = {
         scoreAverage = Number(scoreAverage.toFixed(2));
         trail.scoreAverage = isNaN(scoreAverage) ? null : scoreAverage;
 
-        var mostRecentDate = new Date(
-            Math.max.apply(
-                null,
-                completionDate.map((e) => {
-                    if (e !== null) return new Date(e);
-                })
-            )
-        );
-        trail.lastTrackingUpdate = lastTrackingUpdate;
+        const validDates = completionDate
+            .filter((e) => e !== null)
+            .map((e) => new Date(e).getTime());
+
+        const mostRecentDate = validDates.length > 0 ? new Date(Math.max(...validDates)) : null;
+
         trail.completionAt = mostRecentDate;
         trail.completion = getTrailCompletion(trail);
         trail.duration = duration;
@@ -709,6 +717,75 @@ module.exports = {
             return hasTags || hasTagsAnd;
         });
     },
+
+    /**
+     * Converte o HTML (texto rico) de uma notificação para um HTML mais limpo
+     * Preserva os LINKS originais (tags <a>) e adiciona LINKS em URLS
+     */
+    htmlToMessage(html) {
+        // remove estilo e preserva apenas tags <a>
+        const preserveLinks = (html) => {
+            const options = {
+                formatters: {
+                    // Formatter personalizado para tags <a>
+                    anchorFormatter: (elem, walk, builder) => {
+                        // Obtém o conteúdo interno da tag diretamente do elemento
+                        const innerContent = elem.children && elem.children[0] ?
+                            elem.children[0].data ||
+                            (elem.children[0].children && elem.children[0].children[0] ?
+                                elem.children[0].children[0].data :
+                                '') :
+                            '';
+
+                        // Reconstroe a tag <a> original
+                        const href = elem.attribs.href ? ` href="${elem.attribs.href}"` : '';
+                        const className = elem.attribs.class ? ` class="${elem.attribs.class}"` : '';
+                        const otherAttrs = Object.entries(elem.attribs)
+                            .filter(([key]) => !['href', 'class'].includes(key))
+                            .map(([key, value]) => ` ${key}="${value}"`)
+                            .join('');
+
+                        // Reconstrói a tag <a> completa
+                        builder.addInline(`<a${href}${className}${otherAttrs} style="color: #2563eb; text-decoration: none;">${innerContent}</a>`);
+                    }
+                },
+                selectors: [
+                    {
+                        selector: 'a',
+                        format: 'anchorFormatter'
+                    }
+                ],
+                preserveNewlines: true,
+                wordwrap: 130
+            };
+
+            return htmlToText(html, options);
+        }
+
+        // realça links implicitos no texto
+        const addLinksText = (text) => {
+            const tldsRegex = tlds.join('|');
+
+            const urlRegex = new RegExp(
+                `(\\[)?((https?:\/\/)?(([a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*\\.(?:${tldsRegex}))([a-zA-Z0-9-/]+(?:\\.(?!\\s)[a-zA-Z0-9-/]+)?)?))(?=[.,;:\\s\\n\\$\\]]|$)(\\])?`,
+                'gi'
+            );
+            return text?.replace(urlRegex, (fullMatch, _, url) => {
+                const cleanMatch = url?.replace(/^\[|\]$/g, '').trim();
+
+                const formattedUrl = /^http?/i.test(cleanMatch)
+                    ? cleanMatch
+                    : `https://${cleanMatch}`;
+
+                return !!cleanMatch
+                    ? `<a href="${formattedUrl}" style="color: #2563eb; text-decoration: none;" target="_blank">${cleanMatch}</a>`
+                    : ' ';
+            });
+        }
+
+        return preserveLinks(html);
+    }
+
 };
 
 function nameMonth(month) {

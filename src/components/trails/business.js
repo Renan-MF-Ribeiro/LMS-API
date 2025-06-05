@@ -1,21 +1,18 @@
-const {
-    formatDateWithoutHours,
-    getDateTodayWithoutHours,
-} = require('../../utils/functions');
+const { formatDateWithoutHours, getDateTodayWithoutHours, processTrailTracking } = require('../../utils/functions');
 
 const { Trail } = require('./model');
 const { Item } = require('../items/model');
 const axios = require('axios');
 const { socialApi } = require('../social/http-adapter');
+const { getDbCurrentFeatures } = require('../../utils/features');
+const { Tracking } = require('../tracking/model');
 
 module.exports = {
-    async checkItem (item) {
+    async checkItem(item) {
         return new Promise((resolve, reject) => {
             const today = getDateTodayWithoutHours();
             const startDate = formatDateWithoutHours(item.startDate);
-            const endDate = item.endDate
-                ? formatDateWithoutHours(item.endDate)
-                : 'Invalid Date';
+            const endDate = item.endDate ? formatDateWithoutHours(item.endDate) : 'Invalid Date';
 
             if (
                 startDate <= today &&
@@ -37,7 +34,7 @@ module.exports = {
      * @param {*} limit
      * @param {boolean} filterEnabled Flag que indica se deve filtrar por habilitado ou não. (Padrão: true)
      */
-    populateTrails (
+    populateTrails(
         flag = true,
         findObj = {},
         sortObj = {},
@@ -50,13 +47,14 @@ module.exports = {
             try {
                 let trails = [];
                 let socialConfig;
-                let socialStatus = ""
-                    
-                if (global.globalApp?.get('features')?.social) { // TODO: É a melhor maneira?
-                    const { data } = await socialApi.get(`client-config/${process.env.CLIENT_ID}`);
-                    socialConfig = data
-                }
+                let socialStatus = '';
 
+                const features = await getDbCurrentFeatures();
+
+                if (features?.social) {
+                    const { data } = await socialApi.get(`client-config/${process.env.CLIENT_ID}`);
+                    socialConfig = data;
+                }
 
                 const matchObj = filterEnabled
                     ? {
@@ -80,7 +78,7 @@ module.exports = {
                                 path: 'idEvaluation',
                                 select: 'description',
                             },
-                            select: 'title'
+                            select: 'title',
                         })
                         .sort(sortObj)
                         .skip(skip)
@@ -93,7 +91,22 @@ module.exports = {
                         .populate({
                             path: 'items.itemID',
                             match: matchObj,
-                            select: { '_id': 1, 'title': 1, 'contentPath': 1, 'durationHours': 1, 'thumbPath': 1, 'titleURL': 1, 'bannerPath': 1, 'startDate': 1, 'endDate': 1, 'highlighted': 1, 'description': 1, "format": 1, 'passingScore': 1, 'enabled': 1 },
+                            select: {
+                                _id: 1,
+                                title: 1,
+                                contentPath: 1,
+                                durationHours: 1,
+                                thumbPath: 1,
+                                titleURL: 1,
+                                bannerPath: 1,
+                                startDate: 1,
+                                endDate: 1,
+                                highlighted: 1,
+                                description: 1,
+                                format: 1,
+                                passingScore: 1,
+                                enabled: 1,
+                            },
                             populate: {
                                 path: 'idEvaluation',
                                 select: 'description',
@@ -116,40 +129,36 @@ module.exports = {
                         }
 
                         let supportMaterialEnabled = false;
-                        const filteredSupportArray =
-                            trail.supportMaterial.filter(
-                                (x) => x.deleted === false
-                            );
+                        const filteredSupportArray = trail.supportMaterial.filter(
+                            (x) => x.deleted === false
+                        );
                         if (filteredSupportArray.length > 0) {
                             supportMaterialEnabled = true;
                         }
 
                         let galleryEnabled = false;
-                        const filteredGallery =
-                            trail.gallery.filter(
-                                (x) => x.deleted === false
-                            );
+                        const filteredGallery = trail.gallery.filter((x) => x.deleted === false);
                         if (filteredGallery.length > 0) {
                             galleryEnabled = true;
                         }
 
                         if (socialConfig) {
-                            const trailTags = trail.tags?.map((tag) => tag.value)
+                            const trailTags = trail.tags?.map((tag) => tag.value);
                             for (const tag of socialConfig.tagsLists.allowed) {
                                 if (trailTags?.includes(tag)) {
-                                    socialStatus = "ALLOWED"
+                                    socialStatus = 'ALLOWED';
                                 }
                             }
 
                             for (const tag of socialConfig.tagsLists.blocked) {
                                 if (trailTags?.includes(tag)) {
-                                    socialStatus = "BLOCKED"
+                                    socialStatus = 'BLOCKED';
                                 }
                             }
 
                             for (const tag of socialConfig.tagsLists.moderated) {
                                 if (trailTags?.includes(tag)) {
-                                    socialStatus = "MODERATED"
+                                    socialStatus = 'MODERATED';
                                 }
                             }
                         }
@@ -199,7 +208,7 @@ module.exports = {
                             gallery: galleryEnabled,
                             confidential: trail.confidential,
                             updatedAt: trail.updatedAt,
-                            createdAt: trail.createdAt
+                            createdAt: trail.createdAt,
                         });
                     }
                 } else {
@@ -226,40 +235,36 @@ module.exports = {
                             userName = trail.author.name;
                         }
                         let supportMaterialEnabled = false;
-                        const filteredSupportArray =
-                            trail.supportMaterial.filter(
-                                (x) => x.deleted === false
-                            );
+                        const filteredSupportArray = trail.supportMaterial.filter(
+                            (x) => x.deleted === false
+                        );
                         if (filteredSupportArray.length > 0) {
                             supportMaterialEnabled = true;
                         }
 
                         let galleryEnabled = false;
-                        const filteredGallery =
-                            trail.gallery.filter(
-                                (x) => x.deleted === false
-                            );
+                        const filteredGallery = trail.gallery.filter((x) => x.deleted === false);
                         if (filteredGallery.length > 0) {
                             galleryEnabled = true;
                         }
 
                         if (socialConfig) {
-                            const trailTags = trail.tags?.map((tag) => tag.value)
+                            const trailTags = trail.tags?.map((tag) => tag.value);
                             for (const tag of socialConfig.tagsLists.allowed) {
                                 if (trailTags?.includes(tag)) {
-                                    socialStatus = "ALLOWED"
+                                    socialStatus = 'ALLOWED';
                                 }
                             }
 
                             for (const tag of socialConfig.tagsLists.blocked) {
                                 if (trailTags?.includes(tag)) {
-                                    socialStatus = "BLOCKED"
+                                    socialStatus = 'BLOCKED';
                                 }
                             }
 
                             for (const tag of socialConfig.tagsLists.moderated) {
                                 if (trailTags?.includes(tag)) {
-                                    socialStatus = "MODERATED"
+                                    socialStatus = 'MODERATED';
                                 }
                             }
                         }
@@ -309,7 +314,7 @@ module.exports = {
                             gallery: galleryEnabled,
                             confidential: trail.confidential,
                             updatedAt: trail.updatedAt,
-                            createdAt: trail.createdAt
+                            createdAt: trail.createdAt,
                         });
                     }
                 }
@@ -320,23 +325,89 @@ module.exports = {
         });
     },
 
-    async processTrailWorkload (trails) {
+    async processTrailWorkload(trails) {
         try {
-            return await Promise.all(trails.map(async (trail) => {
-                const itensLength = trail.items.length;
-                const workload = trail.items.reduce((accumulatorPromise, currentValue) => {
-                    const accumulator = accumulatorPromise;
-                    const durationHours = currentValue.itemID?.enabled == 1 ? (currentValue.itemID.durationHours || 0) : 0;
-                    return accumulator + durationHours;
-                }, 0);
-                return {
-                    ...trail._doc,
-                    itensLength,
-                    workload
-                };
-            }));
+            return await Promise.all(
+                trails.map(async (trail) => {
+                    const itensLength = trail.items.length;
+                    const workload = trail.items.reduce((accumulatorPromise, currentValue) => {
+                        const accumulator = accumulatorPromise;
+                        const durationHours =
+                            currentValue.itemID?.enabled == 1
+                                ? currentValue.itemID.durationHours || 0
+                                : 0;
+                        return accumulator + durationHours;
+                    }, 0);
+                    return {
+                        ...trail._doc,
+                        itensLength,
+                        workload,
+                    };
+                })
+            );
         } catch (error) {
-            throw new Error("Erro ao processar os dados: " + error.message);
+            throw new Error('Erro ao processar os dados: ' + error.message);
         }
+    },
+
+    async searchTrailBy(searchBy, tags) {
+        const query = {
+            enabled: true,
+            archive: false,
+            //owner:
+        };
+
+        if (searchBy) {
+            query.$or = [
+                { title: { $regex: searchBy, $options: 'i' } },
+                { description: { $regex: searchBy, $options: 'i' } },
+            ];
+        }
+
+        if (tags.length > 0) {
+            query['tags.value'] = { $in: tags };
+        }
+
+        return await Trail.find(query).limit(10);
+    },
+
+    async getTrailByIds(trailIds) {
+        return await Trail.find({ _id: { $in: trailIds } }, 'title thumbPath _id').lean()
+    },
+
+    async getTrailsWithTrackings(trailIds, userNetworkLogin) {
+        const trails = await Trail.find({ _id: { $in: trailIds } }, 'title thumbPath _id items').lean()
+
+        const query = {
+            userLogin: userNetworkLogin,
+            item: { $in: trails?.flatMap((trail) => trail.items?.map((item) => item.itemID)) },
+        };
+
+        const allTrackings = await Tracking.find(query);
+
+        for (const trail of trails) {
+            processTrailTracking(trail, allTrackings);
+        }
+
+        return trails.map((t) => {
+            let status = 'pending';
+            switch (t.completionPercentage) {
+                case 1:
+                    status = 'completed';
+                    break;
+                case 0:
+                    status = 'pending';
+                    break;
+                default:
+                    status = 'inProgress';
+                    break;
+            }
+            return {
+                _id: t._id,
+                title: t.title,
+                thumbPath: t.thumbPath,
+                status,
+            }
+        })
     }
 };

@@ -17,19 +17,14 @@ module.exports = {
                 },
                 clientName: process.env.COMPOSE_PROJECT_NAME,
             };
-            const user = req.headers.authorization ? await getUserByToken(req) : await User.findOne({ networkLogin: payload.ticket.custom_fields[1].value })
-            if(!user){
-                return _messages.notFound(
-                    res,
-                    req,
-                    'Usuário não encontrado',
-                    'O email informado não está associado com nenhum usuário da plataforma!',
-                    'support',
-                    'createTicket'
-                );
+
+            let user = null;
+
+            if (payload.ticket?.custom_fields?.[1]?.value) {
+                user = req.headers.authorization ? await getUserByToken(req) : await User.findOne({ networkLogin: payload.ticket.custom_fields[1].value })
             }
-            
-            payload.ticket.requester._id = user._id
+
+            payload.ticket.requester._id = user?._id || payload.ticket?.requester?.email;
             const strPayload = JSON.stringify(payload);
             form.append('payload', strPayload);
             if (Object.entries(req.files).length > 0) {

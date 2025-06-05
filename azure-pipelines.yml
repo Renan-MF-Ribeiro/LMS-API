@@ -14,6 +14,7 @@ resources:
   - repo: self
 
 variables:
+  tag: '2.10.4'
   name: "happlearning-v2"
   dockerRegistryServiceConnection: "93b93a28-98a7-4844-b8f8-c35c737f6e02"
   stagingRunningPort: "3097"
@@ -30,7 +31,6 @@ variables:
   containerRegistry: "happlearning.azurecr.io"
   dockerfilePath: "$(Build.SourcesDirectory)/Dockerfile"
   dockerfilePathImage: "$(Build.SourcesDirectory)/DockerfileImage"
-  tag: "latest"
 
   # Agent VM image name
   vmImageName: "ubuntu-latest"
@@ -102,24 +102,31 @@ stages:
           - task: CmdLine@2
             displayName: "Set DEBUG environment variable"
             inputs:
-              script: "echo 'DEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
+              script: "echo -e '\nDEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/staging'))
           - task: CmdLine@2
             displayName: "Set DEBUG environment variable"
             inputs:
-              script: "echo 'DEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
+              script: "echo -e '\nDEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-api'))
           - task: CmdLine@2
             displayName: "Set DEBUG environment variable"
             inputs:
-              script: "echo 'DEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
+              script: "echo -e '\nDEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev-painel'))
           - task: CmdLine@2
             displayName: "Set DEBUG environment variable"
             inputs:
-              script: "echo 'DEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
+              script: "echo -e '\nDEBUG=happlearning:*' >> $(System.DefaultWorkingDirectory)/.env"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
-          
+
+          # Write default environments
+          - task: CmdLine@2
+            displayName: "Set API_VERSION environment variable"
+            inputs:
+              script: "echo -e '\nAPI_VERSION=$(tag)' >> $(System.DefaultWorkingDirectory)/.env"
+            condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/docker-image'))
+
           # Build and push an image to container registry
           - task: Docker@2
             displayName: Build and push an image to container registry
@@ -129,6 +136,7 @@ stages:
               dockerfile: $(dockerfilePathImage)
               containerRegistry: $(dockerRegistryServiceConnection)
               tags: |
+                latest
                 $(tag)
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/docker-image'))
           - task: Docker@2

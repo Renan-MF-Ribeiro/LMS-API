@@ -7,7 +7,9 @@ const { Section } = require('../sections/model');
 const { Trail } = require('../trails/model');
 const { getTagsElegiblesByToken, checkEligibilityTagsAnd, getSectionTrailId } = require('../sections/business');
 const { Theme } = require('../theme/palette/model');
-const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business')
+const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business');
+const { getDbCurrentFeatures } = require('../../utils/features');
+const mentorConfigController = require('../mentoring/config/controller');
 
 
 module.exports = {
@@ -17,12 +19,15 @@ module.exports = {
             const { skip, limit } = _functions.pagination(req);
             const searchBy = req.query.searchBy;
 
-            let OptionalChannel = [{}]
-            if (!req.features?.alura) {
+            let OptionalChannel = [{}];
+
+            const features = await getDbCurrentFeatures(req);
+
+            if (!features?.alura) {
                 OptionalChannel.push({ type: { $ne: 'alura' } })
             }
 
-            if (!req.features?.collaborationComponent) {
+            if (!features?.collaborationComponent) {
                 OptionalChannel.push({ type: { $ne: 'collaboration' } })
             }
 
@@ -61,11 +66,21 @@ module.exports = {
     },
     async getChannelsElegibles (req, res) {
         const tags = await getTagsElegiblesByToken(req);
+        const user = await _functions.getUserByToken(req);
+
         try {
+            const features = await getDbCurrentFeatures(req);
             const query = { $and: [
                 { tags: { $in: tags.map((tag) => tag.value) } },
                 { enabled: true }
             ]}
+
+            if(features?.mentoring){
+                const mentoringBlocked = await mentorConfigController.isBlocked(user._id);
+                if (mentoringBlocked) {
+                    query.$and.push({ type: { $ne: 'mentoring' } });
+                } 
+            }
 
             // if (req?.segmentation) {
             //     handleSegmentationOnQuery(req, 'owner', query)
@@ -76,11 +91,28 @@ module.exports = {
                 .sort({ position: 'asc' })
                 .populate({ path: 'theme', match: { deleted: 0 }, })
 
+
+            const existingMentoringChannel = await Channel.findOne({ type: 'mentoring' });
+
+            if (!existingMentoringChannel) {
+                await Channel.create({
+                    enabled: true,
+                    tags: ['ELEGE_geral'],
+                    banners: [],
+                    idSections: [],
+                    title: 'Mentorias',
+                    position: 4,
+                    type: 'mentoring'
+                });
+            }
+
             channels = await Promise.all(channels.map(async (channel) => {
                 if (channel.type === 'alura') return channel
                 if (channel.type === 'feed') return channel
 
-                if (req.features?.collaborationComponent && channel.type === 'collaboration') return channel
+                if(features?.mentoring && channel.type === 'mentoring') return channel
+
+                if (features?.collaborationComponent && channel.type === 'collaboration') return channel
 
                 const sectionQuery = { $and: [
                     { _id: { $in: channel.idSections } }
@@ -91,10 +123,9 @@ module.exports = {
                 // }
 
                 const sections = await Section.find(sectionQuery).select('trails');
-
                 const trailsIds = sections.flatMap(
                     (section) => section.trails
-                        .map(trail => getSectionTrailId(trail))
+                        ?.map(trail => getSectionTrailId(trail))
                         .filter(Boolean)
                 );
 
@@ -119,6 +150,7 @@ module.exports = {
 
             _messages.success(res, req, channels);
         } catch (error) {
+            console.log(error)
             _messages.internalServer(
                 res,
                 req,
@@ -215,8 +247,19 @@ module.exports = {
             const findChannel = await Channel.find({ _id: channelId });
 
             if (findChannel.length) {
-                await Channel.findOneAndUpdate({ _id: channelId }, body);
-                _messages.success(res, req, 'Canal Atualizado!');
+                const channel = await Channel.findOneAndUpdate({ _id: channelId }, body, { new: true });
+                _messages.success(
+                    res,
+                    req,
+                    channel,
+                    'Atualização de dados',
+                    'channels',
+                    'update',
+                    channel,
+                    findChannel[0],
+                    true,
+                    'UPDATE'
+                );
             } else {
                 return _messages.badRequest(
                     res,
@@ -243,8 +286,19 @@ module.exports = {
         try {
             const findChannel = await Channel.find({ _id: req.params.id });
             if (findChannel.length) {
-                await Channel.findOneAndDelete({ _id: req.params.id });
-                _messages.success(res, req, 'Canal Deletado!');
+                const channel = await Channel.findOneAndDelete({ _id: req.params.id });
+                _messages.success(
+                    res,
+                    req,
+                    channel,
+                    'Canal deletado com sucesso',
+                    'channels',
+                    'delete',
+                    [],
+                    findChannel[0],
+                    true,
+                    'DELETE'
+                );
             } else {
                 return _messages.badRequest(
                     res,

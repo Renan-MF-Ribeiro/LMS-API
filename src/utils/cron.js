@@ -62,6 +62,7 @@ const { Section } = require('../components/sections/model');
 const { getConfiguration, getMessengerConfig, getCronConfig, getUsersDataConfig } = require('../components/config/business');
 const { ConfigTypes } = require('../components/config/model');
 const ApiError = require('../errors/ApiError');
+const { getConnectMap, validateDataByConnectMap } = require('./connect');
 
 module.exports = {
     async cronNotifyResponsibleUsers () {
@@ -655,6 +656,27 @@ async function processUserLoadFile(directory, fileName, isProduction, hook) {
             `Iniciando Processamento de ${users.length} usuários...`
         );
 
+        const connectMap = await getConnectMap(true);
+
+        if (connectMap) {
+            const errors = [];
+
+            users.forEach((data) => {
+                const dataErrors = validateDataByConnectMap(data, connectMap);
+
+                if (dataErrors.length > 0) {
+                    errors.push({
+                        item: data.networkLogin ?? data.cpf ?? data.email,
+                        errors: dataErrors
+                    });
+                }
+            });
+
+            if (errors.length > 0) {
+                throw new ApiError('Erro ao importar usuários', 400, errors, { skipDbLog: true });
+            }
+        }
+
         for await (const [index, user] of Object.entries(users)) {
             if (Number(index) % 100 === 0) {
                 usersLoadLog(
@@ -728,8 +750,8 @@ async function processUserLoadFile(directory, fileName, isProduction, hook) {
 
             await User.updateMany(
                 {
+                    onboarding: { $ne: true },
                     ignoreLoadInactivation: { $ne: true },
-                    updatedAt: { $lt: new Date() }
                 },
                 { $set: { status: 'INATIVO' } },
                 { multi: true }
@@ -803,7 +825,7 @@ async function processUserLoadFile(directory, fileName, isProduction, hook) {
         usersLoadLog(
             'ERROR',
             `Erro ao processar arquivo ${fileName}`,
-            error
+            JSON.stringify(error)
         );
 
         const errorMessage = `O cliente ${process.env.COMPOSE_PROJECT_NAME} teve problemas para rodar a carga! Erro: ${error.message}`;
@@ -1583,36 +1605,4 @@ async function removeAutomaticEligibilityTags() {
             }
         }
     }
-
-    const createdUsers = await User.find({
-        status: 'ATIVO',
-        onboarding: true,
-        createdAt: { $lt: lastLoginDate },
-    }).select('status onboarding _id name networkLogin createdAt');
-
-    if (createdUsers?.length) {
-        const lastLoginCreatedUsers = await LastLogin.find({
-            user: { $in: createdUsers.map(user => user._id) },
-        });
-
-        const usersWithoutLogin = createdUsers.filter(
-            user => !lastLoginCreatedUsers.some(lastLogin => String(lastLogin.user) === String(user._id))
-        );
-
-        console.log('[inactiveOldOnboardingUsers] Onboarding users without login to inactive:', usersWithoutLogin.length, JSON.stringify(usersWithoutLogin));
-
-        if (usersWithoutLogin?.length) {
-            await User.updateMany(
-                { _id: { $in: usersWithoutLogin.map(user => user._id) } },
-                { $set: { status: 'INATIVO', updatedAt: new Date() } },
-                { multi: true }
-            );
-        } else {
-            console.log('[inactiveOldOnboardingUsers] No onboarding users without login to inactive');
-        }
-    } else {
-        console.log('[inactiveOldOnboardingUsers] No onboarding users created to inactive');
-    }
-
-    console.timeEnd('[inactiveOldOnboardingUsers] execution time');
 }

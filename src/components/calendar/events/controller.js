@@ -43,7 +43,12 @@ const EventsController = {
         try {
             const events = []
             const courses = await getCoursesElegible(start, end, user, tags)
-            const certificateEvents = await getAllExpDatesByUser(start, end, user, token)
+
+            const certificateEvents = [];
+            if (token) {
+                const _certificateEvents = await getAllExpDatesByUser(start, end, user, token);
+                certificateEvents.push(..._certificateEvents);
+            }
 
             const foundEvents = await EventModel.find({
                 $and: [
@@ -286,13 +291,28 @@ async function getCoursesElegible(start, end, user, tags) {
     });
 }
 
-function getClassStatus(classFromCourse, inClass, presence) {
+function canRegisterOrCancel (initialDate, minutes) {
+    if (!minutes) return true;
+    const currentDate = new Date()
+    currentDate.setMinutes(currentDate.getMinutes() - 180);
+
+    const deadline = new Date(initialDate);
+    deadline.setMinutes(deadline.getMinutes() - minutes);
+
+    return deadline >= currentDate;
+}
+
+function getClassStatus (classFromCourse, inClass, presence) {
     try {
+        const { dateApplicationInitial, dateApplicationFinal, registrationDeadline, cancellationDeadline } = classFromCourse;
         const today = new Date()
-        const courseHasSeats = classFromCourse.users.length < classFromCourse.limit ? true : false
-        const isCourseInProgress = classFromCourse.dateApplicationInitial <= today && classFromCourse.dateApplicationFinal >= today && courseHasSeats
-        const isCourseOpen = classFromCourse.dateApplicationInitial >= today
-        const isCourseClosed = classFromCourse.dateApplicationFinal <= today
+        const courseHasSeats = classFromCourse.users.length < classFromCourse.limit || !classFromCourse.limit ? true : false
+        const isCourseInProgress = dateApplicationInitial <= today && dateApplicationFinal >= today && courseHasSeats
+        const isCourseOpen = dateApplicationInitial >= today
+        const isCourseClosed = dateApplicationFinal <= today
+
+        const canRegister = canRegisterOrCancel(dateApplicationInitial, registrationDeadline)
+        const canCancel = canRegisterOrCancel(dateApplicationInitial, cancellationDeadline)
 
         if (presence) {
             return "concluded"
@@ -303,11 +323,11 @@ function getClassStatus(classFromCourse, inClass, presence) {
         if (inClass) {
             return "registered"
         }
-        if (isCourseClosed || !courseHasSeats) {
+        if (isCourseClosed || !courseHasSeats || !canRegister || !canCancel) {
             return "closed"
         }
-        if (isCourseOpen) {
-            return "open"
+        if (isCourseOpen && (canRegister || canCancel)) {
+            return "open";
         }
 
         return null
@@ -315,6 +335,7 @@ function getClassStatus(classFromCourse, inClass, presence) {
         console.log(error);
         reject(error);
     }
+
 }
 
 async function getAllExpDatesByUser(start, end, user, token) {

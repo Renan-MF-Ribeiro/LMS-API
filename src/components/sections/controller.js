@@ -24,7 +24,9 @@ const {
     populateSectionTrails,
     getSectionTrailId,
     isSectionTrailInfo,
-    isValidSectionTrailInfo
+    isValidSectionTrailInfo,
+    recommendedTrailsSections,
+    recommendedCoursesSections
 } = require('./business');
 
 const { getStudentCourses } = require('../home/business');
@@ -37,10 +39,11 @@ const {
 const { TrailsUsersProgress, Trail } = require('../trails/model');
 const { handleSegmentationOnQuery, handleSegmentationOnCreate } = require('../config/business');
 const ApiError = require('../../errors/ApiError');
+const { matricesApi } = require('../matrices/http-adapter');
 
 const { ObjectId } = require('mongoose').Types;
 
-function parseSectionBodyTrails (req) {
+function parseSectionBodyTrails(req) {
     return req.body.trails?.map(trail => {
         const trailId = getSectionTrailId(trail);
 
@@ -60,7 +63,7 @@ function parseSectionBodyTrails (req) {
 }
 
 module.exports = {
-    async returnSections (req, res) {
+    async returnSections(req, res) {
         try {
             const searchBy = req.query.searchBy;
 
@@ -104,7 +107,7 @@ module.exports = {
         }
     },
 
-    async createSection (req, res) {
+    async createSection(req, res) {
         try {
             const verify = await Section.find({
                 title: { $eq: req.body.title },
@@ -165,7 +168,7 @@ module.exports = {
         }
     },
 
-    async updateSection (req, res) {
+    async updateSection(req, res) {
         try {
             const { _id } = req.body;
             const verify = await Section.find({
@@ -216,7 +219,7 @@ module.exports = {
         }
     },
 
-    async deleteSection (req, res) {
+    async deleteSection(req, res) {
         try {
             const { id } = req.params;
             const section = await Section.findById(id);
@@ -241,7 +244,7 @@ module.exports = {
                     'Exclusão de dados',
                     'sections',
                     'deleteSection',
-                    [],
+                    section,
                     [],
                     true,
                     'DELETE'
@@ -259,7 +262,7 @@ module.exports = {
         }
     },
 
-    async getSectionsElegibles (req, res) {
+    async getSectionsElegibles(req, res) {
         try {
             const { trailLimit: queryTrailLimit = '25', channel: channelId, ...filter } = req.query;
 
@@ -290,7 +293,6 @@ module.exports = {
                         ).map(trail => trail._id)
                     }
                 });
-
                 newArray.push(
                     ...trailsInSections
                         .map((e) => {
@@ -302,7 +304,6 @@ module.exports = {
                 delete req.query.channel;
                 sectionArray = idSections;
             }
-
             let resultSections = [];
 
             if (tags.length > 0) {
@@ -321,15 +322,11 @@ module.exports = {
                         },
                     ],
                 };
-
                 if (channelId) {
                     query['_id'] = { $in: newArray };
                 }
-
+                console.log(query)
                 let trails = await populateTrails(true, query);
-
-                trails = trails.filter((trail) => checkIfTheTrackIsValid(trail));
-
                 const allTrackingUser = await Tracking.find({
                     userLogin: { $eq: user.networkLogin },
                     $or: [
@@ -359,6 +356,8 @@ module.exports = {
                     }
                 }
 
+                trails = trails.filter(checkIfTheTrackIsValid);
+
                 let arrSections = await elegiblesContents(trails);
                 const arrMandatorySections = await mandatorySections(trails, tags);
                 const arrRecentsSections = await recentsSections(trails);
@@ -368,7 +367,26 @@ module.exports = {
                 const arrMostSeenSections = await mostSeenSections(trails);
                 const arrCoursesSections = await courseInSections(tags, user._id);
 
-                function limitArray (section) {
+                const recommendedTrails = [];
+                const recommendedCourses = [];
+
+                if (req?.features?.matrices) {
+                    try {
+                        const { data } = await matricesApi.get(`/users/${user._id}`, {
+                            headers: {
+                                authorization: `Bearer ${req.headers.authorization}`,
+                            },
+                        });
+                        recommendedTrails.push(...data.data.recommendedTrails);
+                        recommendedCourses.push(...data.data.recommendedCourses);
+                    } catch (error) {
+                        console.log({ error })
+                    }
+                }
+                const arrRecommendedTrailsSections = await recommendedTrailsSections(trails, recommendedTrails);
+                const arrRecommendedCoursesSections = await recommendedCoursesSections(user._id, recommendedCourses);
+
+                function limitArray(section) {
                     if (!section) return [];
 
                     if (!trailLimit) return section;
@@ -388,14 +406,20 @@ module.exports = {
                     };
                 }
 
-                resultSections = arrSections
-                    .concat(limitArray(arrMandatorySections))
-                    .concat(limitArray(arrRecentsSections))
-                    .concat(limitArray(arrKeepLearningSections))
-                    .concat(limitArray(arrConcludedSections))
-                    .concat(limitArray(arrCoursesSections))
-                    .concat(limitArray(arrFavoriteSections))
-                    .concat(limitArray(arrMostSeenSections));
+                const allSections = [
+                    arrSections,
+                    arrMandatorySections,
+                    arrRecentsSections,
+                    arrKeepLearningSections,
+                    arrConcludedSections,
+                    arrCoursesSections,
+                    arrFavoriteSections,
+                    arrMostSeenSections,
+                    arrRecommendedTrailsSections || [],
+                    arrRecommendedCoursesSections || [],
+                ];
+
+                resultSections = allSections.flatMap(limitArray);
 
                 if (channelId) {
                     const filteredArray = resultSections.filter((obj) =>
@@ -435,7 +459,7 @@ module.exports = {
             const hasSomeTrainingSection = resultSections.some(section => section.isTraining);
 
             if (hasSomeTrainingSection) {
-                resultSections = await setAssessmentHistoricOnSections(user._id, resultSections);
+                resultSections = await setAssessmentHistoricOnSections(user._id, resultSections, tags);
             }
 
             _messages.success(res, req, resultSections);
@@ -500,11 +524,11 @@ module.exports = {
             }
 
             const arrSections = await elegiblesContents(filteredTrails);
-            
+
             const arrKeepLearningSections = await keepLearningSections(
                 filteredTrails
             );
-            
+
             const arrConcludedSections = await concludedSections(
                 filteredTrails
             );
@@ -534,7 +558,7 @@ module.exports = {
         }
     },
 
-    async getSectionDetail (req, res) {
+    async getSectionDetail(req, res) {
         const sectionId = req.params.id;
         const channelId = req.query?.channel ?? null;
 
@@ -558,10 +582,6 @@ module.exports = {
             }]
         }
 
-        if (req?.segmentation) {
-            handleSegmentationOnQuery(req, 'owner', sectionQuery)
-        }
-
         const section = await Section.findOne(sectionQuery).lean();
 
         if (!section) {
@@ -570,10 +590,6 @@ module.exports = {
         }
 
         const query = { enabled: true };
-
-        if (req?.segmentation) {
-            handleSegmentationOnQuery(req, 'owner', query)
-        }
 
         const isDefaultSection = Object.values(DEFAULT_TYPES).includes(section.defaultType);
 
@@ -621,7 +637,6 @@ module.exports = {
 
         const trailsDb = (await populateTrails(true, query))
             ?.filter(trail => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative)
-            ?.filter((trail) => checkIfTheTrackIsValid(trail))
 
         const allTrackingUser = await Tracking.find({
             userLogin: { $eq: user.networkLogin },
@@ -660,24 +675,41 @@ module.exports = {
                 if (isSectionTrailInfo(sectionTrail)) {
                     const trail = trailsDb.find(trail => String(trail._id) === String(getSectionTrailId(sectionTrail)));
 
-                    if (!trail) return sectionTrail;
+                    if (!trail) return null;
 
                     return processTrailInfo(trail);
                 }
 
                 return sectionTrail;
             }) ?? [])
-                .filter(trail => isValidSectionTrailInfo(trail));
+                .filter(trail => trail && isValidSectionTrailInfo(trail));
 
         let responseSection;
 
-        function setResponse (fnResponse) {
+        function setResponse(fnResponse) {
             if (Array.isArray(fnResponse)) {
                 return fnResponse.find((e) => String(e._id) === String(section._id))
                     ?? { ...section, trails: [] };
             }
 
             return { ...section, trails: fnResponse?.trails ?? [] };
+        }
+
+        let recommendedTrails = [];
+        let recommendedCourses = [];
+
+        if (req?.features?.matrices) {
+            try {
+                const { data } = await matricesApi.get(`/users/${user._id}`, {
+                    headers: {
+                        authorization: `Bearer ${req.headers.authorization}`,
+                    },
+                });
+                recommendedTrails = data.data.recommendedTrails ?? [];
+                recommendedCourses = data.data.recommendedCourses ?? [];
+            } catch (error) {
+                console.log({ error })
+            }
         }
 
         switch (section.defaultType) {
@@ -709,6 +741,14 @@ module.exports = {
                 const mostSeenSectionsResult = await mostSeenSections(trails);
                 responseSection = setResponse(mostSeenSectionsResult);
                 break;
+            case DEFAULT_TYPES.RECOMMENDED_TRAILS:
+                const recommendedTrailsSectionsResult = await recommendedTrailsSections(trails, recommendedTrails);
+                responseSection = setResponse(recommendedTrailsSectionsResult);
+                break;
+            case DEFAULT_TYPES.RECOMMENDED_COURSES:
+                const recommendedCoursesSectionsResult = await recommendedCoursesSections(user._id, recommendedCourses);
+                responseSection = setResponse(recommendedCoursesSectionsResult);
+                break;
             default:
                 responseSection = { ...section, trails };
                 break;
@@ -720,7 +760,7 @@ module.exports = {
         }
 
         if (responseSection.isTraining) {
-            const [newSection] = await setAssessmentHistoricOnSections(user._id, [responseSection]);
+            const [newSection] = await setAssessmentHistoricOnSections(user._id, [responseSection], tags);
             responseSection = newSection;
         }
 
@@ -732,10 +772,21 @@ module.exports = {
             ).filter(Boolean);
         }
 
-        res.json(responseSection);
+
+        const filteredTrails = {
+            ...responseSection,
+            trails: Array.isArray(responseSection?.trails)
+                ? responseSection.trails.filter(trail => {
+                    if (!trail) return false; // Ignora entradas inválidas
+                    return checkIfTheTrackIsValid(trail);
+                })
+                : []
+        }
+
+        res.json(filteredTrails);
     },
 
-    async getSectionsFormation (req, res) {
+    async getSectionsFormation(req, res) {
         try {
             const searchBy = req.query.searchBy;
             const query = searchBy
@@ -775,7 +826,7 @@ module.exports = {
         }
     },
 
-    async getSectionsElegiblesNew (req, res) {
+    async getSectionsElegiblesNew(req, res) {
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
@@ -912,7 +963,7 @@ module.exports = {
         }
     },
 
-    async updatePosition (req, res) {
+    async updatePosition(req, res) {
         try {
             const sections = req.body;
 
@@ -934,7 +985,7 @@ module.exports = {
         }
     },
 
-    async changeStatus (req, res) {
+    async changeStatus(req, res) {
         const { id, status } = req.params;
 
         const section = await Section.findById(id);

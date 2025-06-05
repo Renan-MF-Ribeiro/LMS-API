@@ -269,11 +269,11 @@ module.exports = {
                 const result = [];
 
                 for (const p in groups) {
-                    const group = await Group.findOne({name: groups[p]})
+                    const group = await Group.findOne({ name: groups[p] })
 
                     if (group) result.push(group._id)
                 }
-            
+
                 resolve(result);
             } catch (error) {
                 reject(error);
@@ -317,7 +317,7 @@ function returnNumberOfProfile(profile) {
         case 'PERFIL_Admin':
             number = 3;
             break;
-            // Apagar depois o perfil admin
+        // Apagar depois o perfil admin
         case 'PERFIL_Gestor_Elegibilidade':
             number = 3;
             break;
@@ -341,6 +341,12 @@ function returnNumberOfProfile(profile) {
             break;
         case 'PERFIL_Gestor_Engajamento':
             number = 10;
+            break;
+        case 'PERFIL_Gestor_Matriz':
+            number = 11;
+            break;
+        case 'PERFIL_Aplicador_Matriz':
+            number = 12;
             break;
         default:
             number = 0;

@@ -23,21 +23,22 @@ const {
     getUsersLoadCron,
 } = require('./src/utils/cron')
 
-const { getDbCurrentFeatures, setAppCurrentFeatures } = require('./src/utils/features')
-
 const {
     getMessengerConfig,
     getCronConfig,
     getUsersDataConfig,
-    getCompanyConfig
+    getCompanyConfig,
+    getChatIAConfig,
+    getDashboardConfig
 } = require('./src/components/config/business')
+const GamificationKafka = require('./src/components/gamification/kafka/broker');
 
 const server = app.listen(port, async () => {
     try {
-        const dbCurrentFeatures = (await getDbCurrentFeatures()) ?? null;
-        setAppCurrentFeatures(app, dbCurrentFeatures);
+        await GamificationKafka.start();
     } catch (err) {
-        error('Error setting features: ' + err);
+        error('Error on connecting GamificationKafka: ' + err);
+        await GamificationKafka.stop();
     }
 
     try {
@@ -46,6 +47,8 @@ const server = app.listen(port, async () => {
         await getCronConfig();
         await getUsersDataConfig();
         await getCompanyConfig();
+        await getChatIAConfig();
+        await getDashboardConfig();
     } catch (err) {
         error('Error setting configs: ' + err);
     }

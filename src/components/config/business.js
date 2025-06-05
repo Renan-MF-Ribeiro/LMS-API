@@ -5,9 +5,14 @@ const {
     CronConfigModel,
     UsersDataConfigModel,
     CompanyConfigModel,
+    MatrixConfigModel,
+    MATRIX_VISIBILITY_MODE,
+    ChatIAConfigModel,
+    DashboardConfigModel,
 } = require('./model');
 
 const { getUserByToken } = require('../../utils/functions');
+const { User } = require('../users/model');
 
 module.exports = {
     async getConfiguration(type) {
@@ -51,7 +56,7 @@ module.exports = {
     async handleSegmentationOnCreate(req, payload) {
         const user = await getUserByToken(req);
         const issuer = req.segmentation.rule.issuer;
-        
+
         if (user?.[issuer]) {
             (payload || req.body).owner = user[issuer];
         }
@@ -59,14 +64,20 @@ module.exports = {
 
     handleSegmentationOnQuery(req, field, ...queries) {
         if (!req?.segmentation.isException) {
-            const _field = field === 'issuer' ? req.segmentation.rule.issuer : 'owner'
-            
+            const _field = field === 'issuer' ? req.segmentation.rule.issuer : 'owner';
+
             queries.forEach((query) => {
-                if(!query?.$and) {
-                    query.$and = []
+                if (!query?.$or) {
+                    query.$or = [
+                        {
+                            [_field]: {
+                                $exists: false,
+                            },
+                        },
+                    ];
                 }
-                
-                query.$and.push({
+
+                query.$or.push({
                     [_field]: {
                         $eq: req.segmentation.owner,
                     },
@@ -81,7 +92,7 @@ module.exports = {
         if (config) return config.value;
 
         console.log('Creating messenger config');
-        return (await MessengerConfigModel.create({}))?.value
+        return (await MessengerConfigModel.create({}))?.value;
     },
 
     async getCronConfig() {
@@ -109,5 +120,58 @@ module.exports = {
 
         console.log('Creating company config');
         return (await CompanyConfigModel.create({}))?.value;
-    }
+    },
+
+    async getMatrixConfig() {
+        const config = await MatrixConfigModel.findOne();
+
+        return config || (await MatrixConfigModel.create({}));
+    },
+
+    async getChatIAConfig() {
+        const config = await ChatIAConfigModel.findOne();
+
+        return config || (await ChatIAConfigModel.create({}));
+    },
+    
+    async getDashboardConfig() {
+        const config = await DashboardConfigModel.findOne();
+
+        return config || (await DashboardConfigModel.create({}));
+    },
+
+    async findUsersByMatrixConfig(applier, searchBy) {
+        const { value } = await module.exports.getMatrixConfig();
+        const query = {
+            $and: [
+                {
+                    status: /^ativo$/i,
+                },
+                {
+                    _id: { $ne: applier._id },
+                },
+            ],
+        };
+
+        if (searchBy) {
+            query.$and.push({
+                $or: [
+                    { name: { $regex: searchBy, $options: 'i' } },
+                    { email: { $regex: searchBy, $options: 'i' } },
+                    { networkLogin: { $regex: searchBy, $options: 'i' } },
+                ],
+            });
+        }
+        
+        if (value.visibilityMode === MATRIX_VISIBILITY_MODE.MANAGER) {
+            query.$and.push({ managerRegistration: applier.registration });
+        }
+        // TODO
+        // else if (value.visibilityMode === MATRIX_VISIBILITY_MODE.ELIGIBILITY) {
+        //     const tags = applier.groupsAD.filter((tag) => !String(tag).startsWith('PERFIL_'));
+        //     query.$and.push({ groupsAD: { $in: tags } });
+        // }
+
+        return User.find(query);
+    },
 };

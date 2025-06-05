@@ -1,6 +1,8 @@
 const { DashConfig } = require('./model')
 const _messages = require('../../utils/messages')
 const { pagination, ordernation } = require('../../utils/functions')
+const { getDashboardConfig } = require('../config/business')
+const ApiError = require('../../errors/ApiError')
 
 
 module.exports = {
@@ -73,4 +75,14 @@ module.exports = {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'dashboard', 'update')
         }
     },
+
+    async getDashboardTabs(req, res) {
+        const dashboardConfig = await getDashboardConfig();
+
+        if (!dashboardConfig.value.tabs) {
+            throw new ApiError('No dashboard tabs found', 500);
+        }
+
+        res.json({ tabs: dashboardConfig.value.tabs });
+    }
 }

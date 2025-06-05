@@ -22,6 +22,7 @@ const {
     formatDateWithoutHours,
 } = require('../../utils/functions');
 const { CourseModel } = require('../courses/model')
+const { dispatch } = require('../webhooks/controller');
 
 const { Log } = require('../logs/model');
 const mongoose = require('mongoose');
@@ -45,6 +46,9 @@ const { createItemIfAlura } = require('../items/business');
 const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business');
 
 const ObjectId = require("mongoose").Types.ObjectId;
+
+const GamificationKafka = require('../gamification/kafka/broker');
+const { EVENT_CATEGORY } = require('../gamification/model');
 
 module.exports = {
     async getCollaborative (req, res) {
@@ -145,6 +149,10 @@ module.exports = {
                 return val != null;
             });
 
+            resultSections = resultSections.filter(section => {
+                return section.trails.some(trail => !trail.type || trail.type === 'trail');
+            });
+
             if (resultSections.length > 0) {
                 resultSections.sort((a, b) =>
                     a.position < b.position ? -1 : 1
@@ -240,6 +248,7 @@ module.exports = {
             }
 
             const trail = await Trail.create(payload)
+            await dispatch('create', 'trail', payload);
 
             _messages.success(
                 res,
@@ -592,6 +601,7 @@ module.exports = {
                 }
 
                 const trail = await Trail.create(payload);
+                await dispatch('create', 'trail', payload);
 
                 for (const item of OldItems) {
                     if (item.itemID.kind === 'AluraItem') {
@@ -611,13 +621,12 @@ module.exports = {
 
                 trail.items = items
                 updateProgressAluraItem(OldItems)
-                const newData = await Trail.updateOne(
+                await Trail.updateOne(
                     { _id: { $eq: trail._id } },
                     trail,
                     { new: true }
                 );
-                // const newData = await Trail.find({ _id: { $eq: trail._id } });
-
+                
                 _messages.success(
                     res,
                     req,
@@ -625,7 +634,7 @@ module.exports = {
                     'Atualização de dados',
                     'trails',
                     'multiUploadCreate',
-                    newData,
+                    trail,
                     [],
                     true,
                     'UPDATE'
@@ -1047,6 +1056,8 @@ module.exports = {
                     { _id: { $eq: payload._id } },
                     payload,
                 )
+                await dispatch('update', 'trail', payload);
+
                 const newData = await Trail.findOne({
                     _id: { $eq: payload._id },
                 })
@@ -1107,6 +1118,7 @@ module.exports = {
                             items,
                         });
                         newData = await Trail.find({ _id: { $eq: idTrail } });
+                        await dispatch('update', 'trail',  newData);
                     }
                 }
 
@@ -1158,6 +1170,7 @@ module.exports = {
                 separators,
             });
             newData = await Trail.find({ _id: { $eq: idTrail } });
+            await dispatch('update', 'trail',  newData);
 
             _messages.success(
                 res,
@@ -1201,6 +1214,7 @@ module.exports = {
                 separators: update,
             });
             newData = await Trail.find({ _id: { $eq: idTrail } });
+            await dispatch('update', 'trail',  newData);
 
             _messages.success(
                 res,
@@ -1243,6 +1257,7 @@ module.exports = {
                 separators: update,
             });
             newData = await Trail.find({ _id: { $eq: idTrail } });
+            await dispatch('update', 'trail',  newData);
 
             _messages.success(
                 res,
@@ -1544,6 +1559,7 @@ module.exports = {
                 items: arrItens,
             });
             const newData = await Trail.find({ _id: { $eq: idTrail } });
+            await dispatch('update', 'trail',  newData);
 
             _messages.success(
                 res,
@@ -1616,6 +1632,7 @@ module.exports = {
                     separators: separatorsInOrder,
                 });
                 const newData = await Trail.find({ _id: { $eq: idTrail } });
+                await dispatch('update', 'trail',  newData);
 
                 _messages.success(
                     res,
@@ -2010,6 +2027,13 @@ module.exports = {
                 createMessagesFromBackend()
             }
 
+            if (moderation === 'approved') {
+                await GamificationKafka.publishEventRuleValidation({
+                    identifier: user.networkLogin,
+                    events: [EVENT_CATEGORY.UPLOADED_CONTENT],
+                });
+            }
+
             _messages.success(res, req, { message: 'Trilha atualizada' });
         } catch (error) {
             _messages.internalServer(
@@ -2208,7 +2232,8 @@ module.exports = {
     async archive (req, res) {
         const trailId = req.params.trailId;
 
-        await Trail.findByIdAndUpdate(trailId, { $set: { enabled: false, archive: true, archivedAt: new Date() } });
+        const trail = await Trail.findByIdAndUpdate(trailId, { $set: { enabled: false, archive: true, archivedAt: new Date() } });
+        await dispatch('update', 'trail', false, trail);
 
         res.status(204).send();
     },
@@ -2216,7 +2241,8 @@ module.exports = {
     async unarchive (req, res) {
         const trailId = req.params.trailId;
 
-        await Trail.findByIdAndUpdate(trailId, { $set: { archive: false, archivedAt: null } });
+        const trail = await Trail.findByIdAndUpdate(trailId, { $set: { archive: false, archivedAt: null } });
+        await dispatch('update', 'trail', false, trail);
 
         res.status(204).send();
     }

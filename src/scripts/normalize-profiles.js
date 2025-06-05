@@ -54,6 +54,16 @@ const currentProfiles = [
         "label": "Gestor de Usuários",
         "description": "Gerenciam o cadastro dos alunos na plataforma, adicionando ou editando perfis de alunos.\n\nVisualizam o histórico de aprendizado dos usuários, acompanham seu progresso, emitem certificado, limpam trackings, emulam usuários, entre outros.",
     },
+    {
+        "title": "PERFIL_Gestor_Matriz",
+        "label": "Gestor de Matriz de Habilidades",
+        "description": ""
+    },
+    {
+        "title": "PERFIL_Aplicador_Matriz",
+        "label": "Aplicador de Matriz de Habilidades",
+        "description": ""
+    }
 ];
 
 const profilesToDelete = ['PERFIL_Colaborador_Livre'];
@@ -90,6 +100,17 @@ async function actionUsers() {
         const newGroupAD = user.groupsAD.map(group => profileMap[group] || group);
         await User.findByIdAndUpdate(user._id, { $set: { groupsAD: newGroupAD } });
     }
+
+
+    await User.updateMany(
+        { groupsAD: 'PERFIL_Gestor_Elegibilidade' },
+        {
+            $addToSet: {
+                groupsAD: { $each: ['PERFIL_Gestor_Engajamento', 'PERFIL_Gestor_Usuario'] }
+            }
+        }
+    );
+    
     console.timeEnd('actionUsers');
 }
 

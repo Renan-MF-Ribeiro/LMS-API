@@ -12,6 +12,8 @@ const { processExamTracking } = require('../tracking/business')
 const { User } = require('../users/model')
 const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business')
 const { orderBy } = require('lodash')
+const GamificationKafka = require('../gamification/kafka/broker')
+const { EVENT_CATEGORY } = require('../gamification/model')
 
 
 module.exports = {
@@ -25,7 +27,7 @@ module.exports = {
             }).countDocuments()
 
             if (evaluationCheck < 1) {
-                
+
                 if (req?.segmentation) {
                     await handleSegmentationOnCreate(req)
                 }
@@ -48,10 +50,12 @@ module.exports = {
             const { order, sort } = _functions.ordernation(req)
             const { idEvaluation } = await Item.findOne({ _id: { $eq: id } }, 'idEvaluation')
 
-            const query = { $and: [
-                { _id: { $eq: idEvaluation } },
-                { deleted: { $eq: 0 } }
-            ]}
+            const query = {
+                $and: [
+                    { _id: { $eq: idEvaluation } },
+                    { deleted: { $eq: 0 } }
+                ]
+            }
 
             // if (req?.segmentation) {
             //     handleSegmentationOnQuery(req, 'owner', query)
@@ -64,6 +68,7 @@ module.exports = {
             const timeDuration = await HistoricEvaluation.find({
                 user: { $eq: user._id },
                 idEvaluation: { $eq: idEvaluation },
+                item: { $eq: id },
                 $or: [
                     { expiredCompletion: { $exists: false } },
                     { expiredCompletion: { $eq: null } },
@@ -71,8 +76,8 @@ module.exports = {
             })
                 .sort({ [order]: sort })
 
-            var result = null
-            var amountOfQuestions = null
+            let result = null
+            let amountOfQuestions = null
             const totalQuestions = await Question.countDocuments({
                 idEvaluation: { $eq: idEvaluation },
                 deleted: { $eq: false },
@@ -205,9 +210,11 @@ module.exports = {
             const { order, sort } = _functions.ordernation(req)
             const searchBy = req.query.searchBy
 
-            const query = { $and: [{
-                deleted: { $eq: 0 }
-            }] }
+            const query = {
+                $and: [{
+                    deleted: { $eq: 0 }
+                }]
+            }
 
             if (searchBy) {
                 query.$and.push({
@@ -263,9 +270,11 @@ module.exports = {
         try {
             const { id } = req.params
 
-            const query = { $and: [{
-                _id: id
-            }] }
+            const query = {
+                $and: [{
+                    _id: id
+                }]
+            }
 
             if (req?.segmentation) {
                 handleSegmentationOnQuery(req, 'owner', query)
@@ -518,7 +527,16 @@ module.exports = {
                     { expiredCompletion: { $eq: null } },
                 ]
             });
-            await processExamTracking(historic, passingScore, attempts, tracking)
+            const evaluationResult = await processExamTracking(historic, passingScore, attempts, tracking)
+
+            await GamificationKafka.publishEventRuleValidation({
+                events: [EVENT_CATEGORY.FINISHED_ITEM, EVENT_CATEGORY.FINISHED_EXAM_ITEM],
+                identifier: user.networkLogin,
+                meta: {
+                    tracking,
+                    evaluationResult,
+                },
+            });
 
             _messages.success(res, req, result)
         } catch (error) {
@@ -573,10 +591,10 @@ module.exports = {
                 const { questions, amount } = await _business.returnQuestionsByCategory(categories)
 
                 const questionHistoric = []
-                for (question of questions) {
-                    const categorie = question.filter(q => q._id)
+                for (let question of questions) {
+                    const categories = question.filter(q => q._id)
 
-                    questionHistoric.push(...categorie)
+                    questionHistoric.push(...categories)
                 }
 
                 const { _id } = await HistoricEvaluation.create({
