@@ -16,7 +16,9 @@ const DEFAULT_TYPES = Object.freeze({
     CONCLUDED: 'concluded',
     COURSES: 'courses',
     FAVORITES: 'favorites',
-    MOST_SEEN: 'most_seen'
+    MOST_SEEN: 'most_seen',
+    RECOMMENDED_TRAILS: 'recommended_trails',
+    RECOMMENDED_COURSES: 'recommended_courses'
 });
 
 const CARD_TYPE = Object.freeze({
@@ -62,8 +64,9 @@ const SectionSchema = new mongoose.Schema(
         exceptionCertificateTrails: { type: [{ type: 'ObjectId', ref: 'trails' }], required: false, default: [] },
         defaultType: {
             type: String,
-            enum: Object.values(DEFAULT_TYPES),
+            enum: Object.values(DEFAULT_TYPES).concat([null]),
             required: false,
+            default: null,
         },
         cardType: {
             type: Number,

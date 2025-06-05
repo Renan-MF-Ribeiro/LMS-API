@@ -8,10 +8,11 @@ const {
     isAccountant,
     isInstructor,
     isAccountantOrInstructor,
+    canListUsers
 } = require('../../utils/middlewares');
 
 router
-    .get('/all', isAccountant, _controller.allCourses)
+    .get('/all', isAccountantOrInstructor, _controller.allCourses)
     .get(
         '/verify-course-evauation/:classID',
         _controller.verifyCourseEvaluation
@@ -93,5 +94,7 @@ router
         formidable(),
         _controller.importAttendanceList
     )
+    .get('/historicByUser/:userId', canListUsers, _controller.historicByUser)
+    .delete('/remove-user-class/:classeId/:userId', canListUsers, _controller.removeUserClass)
     ;
 module.exports = router;

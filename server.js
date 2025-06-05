@@ -27,16 +27,28 @@ const {
     getMessengerConfig,
     getCronConfig,
     getUsersDataConfig,
-    getCompanyConfig
+    getCompanyConfig,
+    getChatIAConfig,
+    getDashboardConfig
 } = require('./src/components/config/business')
+const GamificationKafka = require('./src/components/gamification/kafka/broker');
 
 const server = app.listen(port, async () => {
+    try {
+        await GamificationKafka.start();
+    } catch (err) {
+        error('Error on connecting GamificationKafka: ' + err);
+        await GamificationKafka.stop();
+    }
+
     try {
         // Cria as configs caso não existam
         await getMessengerConfig();
         await getCronConfig();
         await getUsersDataConfig();
         await getCompanyConfig();
+        await getChatIAConfig();
+        await getDashboardConfig();
     } catch (err) {
         error('Error setting configs: ' + err);
     }

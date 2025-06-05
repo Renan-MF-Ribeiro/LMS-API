@@ -16,7 +16,7 @@ const {
     isAssessmentActive,
     isShowcaseActive,
     setSegmentation,
-    isAdmin
+    isAdmin,
 } = require('./utils/middlewares');
 
 const app = express();
@@ -68,31 +68,23 @@ const idpIntegrationRouter = require('./components/idp-integration/routes');
 const configRouter = require('./components/config/routes');
 const avatarRoutes = require('./components/theme/avatar/routes');
 const { socialApiMiddleware } = require('./components/social/http-adapter');
+const { mentoringApiMiddleware } = require('./components/mentoring/http-adapter');
 const feedbackRoutes = require('./components/feedback/routes');
 const happplaceRoutes = require('./components/happplace/routes');
 const webhooksRoutes = require('./components/webhooks/routes');
+const mentoringRoutes = require('./components/mentoring/routes');
+const matricesRoutes = require('./components/matrices/routes');
+const chatIaRoutes = require('./components/chat/routes');
+const integratorRoutes = require('./components/integrator/routes');
 
 const environment = require('./environment');
+const { matricesApiMiddleware } = require('./components/matrices/http-adapter');
 
 const corsOptions = {
-    origin: [
-        environment.DOMAIN,
-        'https://monitoring.happlearning.com.br',
-    ],
+    origin: [environment.DOMAIN, 'https://monitoring.happlearning.com.br'],
     credentials: true,
-    allowedHeaders: [
-        'Content-Type',
-        'Range',
-        'X-CSRF-TOKEN',
-        'Authorization',
-        'Mfatoken',
-    ],
-    exposedHeaders: [
-        'Accept-Ranges',
-        'Content-Encoding',
-        'Content-Length',
-        'Content-Range',
-    ],
+    allowedHeaders: ['Content-Type', 'Range', 'X-CSRF-TOKEN', 'Authorization', 'Mfatoken'],
+    exposedHeaders: ['Accept-Ranges', 'Content-Encoding', 'Content-Length', 'Content-Range'],
 };
 
 if (environment.NODE_ENV !== 'production') {
@@ -106,21 +98,25 @@ app.disable('server');
 
 app.use(cors(corsOptions));
 
-app.use(helmet({
-    referrerPolicy: { policy: 'same-origin' },
-}));
+app.use(
+    helmet({
+        referrerPolicy: { policy: 'same-origin' },
+    })
+);
 
 app.use(htmlInjection(path.resolve(environment.PUBLIC_PATH)));
 
 app.set('trust proxy', 1);
 
-app.use(rateLimit({
-    windowMs: 5 * 60 * 1000, // 5 minutes
-    limit: 600, // Limit each IP to 100 requests per `window` (here, per 5 minutes)
-    standardHeaders: true,
-    legacyHeaders: false,
-    skip: (req) => req.path.includes('/tracking') // Skip rate limit for tracking routes
-}));
+app.use(
+    rateLimit({
+        windowMs: 5 * 60 * 1000, // 5 minutes
+        limit: 600, // Limit each IP to 100 requests per `window` (here, per 5 minutes)
+        standardHeaders: true,
+        legacyHeaders: false,
+        skip: (req) => req.path.includes('/tracking'), // Skip rate limit for tracking routes
+    })
+);
 
 app.use(noCache());
 
@@ -134,15 +130,24 @@ app.use(cookieParser());
 
 app.use(express.static(path.resolve(environment.PUBLIC_PATH)));
 
+app.get('/version', (req, res) => {
+    res.json({
+        version: environment.API_VERSION ?? 'no-info',
+    });
+});
+
 app.get('/', (req, res) => {
     res.sendFile(path.resolve(path.join(environment.PUBLIC_PATH, 'index.html')));
 });
 
 initializePassport(app);
 
-app.use(socialApiMiddleware)
+app.use('/social', socialApiMiddleware);
+app.use('/feed', socialApiMiddleware);
+app.use('/mentoring', mentoringApiMiddleware);
+app.use('/matrices', matricesApiMiddleware);
 
-app.use(setSegmentation)
+app.use(setSegmentation);
 
 app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/tracking', validateTokenRoute, trackingRoutes)
@@ -185,15 +190,14 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/forms', formsRouter)
     .use('/idp-integration', idpIntegrationRouter)
     .use('/avatar', avatarRoutes)
-    .use(
-        '/assessment',
-        isAssessmentActive,
-        validateTokenRoute,
-        assessmentRoutes
-    )
+    .use('/assessment', isAssessmentActive, validateTokenRoute, assessmentRoutes)
     .use('/feedback', validateTokenRoute, feedbackRoutes)
     .use('/happplace', happplaceRoutes)
-    .use('/webhooks', validateTokenRoute, isAdmin, webhooksRoutes);
+    .use('/webhooks', validateTokenRoute, isAdmin, webhooksRoutes)
+    .use('/mentoring', mentoringRoutes)
+    .use('/matrices', matricesRoutes)
+    .use('/chat', chatIaRoutes)
+    .use('/integrator', integratorRoutes);
 
 app.use(errorHandler);
 

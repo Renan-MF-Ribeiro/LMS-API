@@ -49,7 +49,7 @@ const updateCertificateExpirationDate = async (req) => {
     }
 };
 
-async function getItemInitialDate (userId, trailId) {
+async function getItemInitialDate(userId, trailId) {
     const user = await User.findById(userId).select('networkLogin').lean();
 
     if (!user) return null;
@@ -72,7 +72,7 @@ async function getItemInitialDate (userId, trailId) {
     return firstUserTracking.createdAt;
 }
 
-async function getInitialDate (req) {
+async function getInitialDate(req) {
     const user = await getUserByToken(req);
 
     const { layoutId, trailId } = req.body;
@@ -98,10 +98,39 @@ async function getInitialDate (req) {
     return trail?.startDate ?? null;
 }
 
+function getCertificateFileName({ userName, trailName, itemName } = {}) {
+    try {
+        const parsed = `certificado ${userName} ${trailName ? trailName : itemName}`
+            .normalize('NFKD')
+            .toLowerCase()
+            .trim()
+            .replace(/\s+/g, '-')
+            .replace(/[^\w\-]+/g, '')
+            .replace(/\-\-+/g, '-');
+
+        return parsed;
+    } catch (error) {
+        console.error('Error generating file name:', error);
+        return `certificado-${userName}-${trailName ? trailName : itemName}`;
+    }
+}
+
+function formatCourseLoad(load) {
+    const [hours, minutes] = load.split(':').map(Number);
+    const parts = [];
+
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+
+    return parts.join(' ');
+}
+
 module.exports = {
     certificateClient,
     getHeaders,
     prepareFormData,
     updateCertificateExpirationDate,
-    getInitialDate
+    getInitialDate,
+    getCertificateFileName,
+    formatCourseLoad,
 };

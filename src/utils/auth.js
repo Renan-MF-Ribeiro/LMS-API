@@ -342,6 +342,12 @@ function returnNumberOfProfile(profile) {
         case 'PERFIL_Gestor_Engajamento':
             number = 10;
             break;
+        case 'PERFIL_Gestor_Matriz':
+            number = 11;
+            break;
+        case 'PERFIL_Aplicador_Matriz':
+            number = 12;
+            break;
         default:
             number = 0;
             break;

@@ -56,6 +56,13 @@ const AssessmentBusiness = {
 
         return data;
     },
+
+    async getHistoricBySectionId(userId, sectionId) {
+        const uri = `${host}/historics/${clientId}/${userId}/section/${sectionId}`;
+        const { data } = await axios.get(uri, { headers });
+        
+        return data
+    },
 };
 
 module.exports = AssessmentBusiness;

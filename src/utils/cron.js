@@ -1605,36 +1605,4 @@ async function removeAutomaticEligibilityTags() {
             }
         }
     }
-
-    const createdUsers = await User.find({
-        status: 'ATIVO',
-        onboarding: true,
-        createdAt: { $lt: lastLoginDate },
-    }).select('status onboarding _id name networkLogin createdAt');
-
-    if (createdUsers?.length) {
-        const lastLoginCreatedUsers = await LastLogin.find({
-            user: { $in: createdUsers.map(user => user._id) },
-        });
-
-        const usersWithoutLogin = createdUsers.filter(
-            user => !lastLoginCreatedUsers.some(lastLogin => String(lastLogin.user) === String(user._id))
-        );
-
-        console.log('[inactiveOldOnboardingUsers] Onboarding users without login to inactive:', usersWithoutLogin.length, JSON.stringify(usersWithoutLogin));
-
-        if (usersWithoutLogin?.length) {
-            await User.updateMany(
-                { _id: { $in: usersWithoutLogin.map(user => user._id) } },
-                { $set: { status: 'INATIVO', updatedAt: new Date() } },
-                { multi: true }
-            );
-        } else {
-            console.log('[inactiveOldOnboardingUsers] No onboarding users without login to inactive');
-        }
-    } else {
-        console.log('[inactiveOldOnboardingUsers] No onboarding users created to inactive');
-    }
-
-    console.timeEnd('[inactiveOldOnboardingUsers] execution time');
 }
