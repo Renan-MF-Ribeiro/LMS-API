@@ -18,7 +18,7 @@ async function fetchUserEvaluationsHistory() {
     for (let batchStart = 0; batchStart < userIds.length; batchStart += batchSize) {
         const batchUserIds = userIds.slice(batchStart, batchStart + batchSize);
 
-        const percentage = Math.round((batchStart / userIds.length) * 100);
+        const percentage = Math.min(100, Math.round(((batchStart + batchSize) / userIds.length) * 100));
 
         process.stdout.write(`\rProcessando históricos: ${percentage}%`);
 
@@ -77,7 +77,8 @@ async function setUserAndTrackingToEvaluations(userEvaluationHistory) {
     const batchSize = 100;
 
     for (let batchStart = 0; batchStart < usersIds.length; batchStart += batchSize) {
-        const percentage = Math.round((batchStart / usersIds.length) * 100);
+        const processedUsers = Math.min(batchStart + batchSize, usersIds.length);
+        const percentage = Math.round((processedUsers / usersIds.length) * 100);
 
         process.stdout.write(`\rProcessando trackings: ${percentage}%`);
 
