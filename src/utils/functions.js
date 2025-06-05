@@ -145,7 +145,7 @@ module.exports = {
             skip = limit * pageIndex;
         }
 
-        return { skip, limit };
+        return { skip: parseInt(skip), limit: parseInt(limit) };
     },
 
     ordernation(req) {

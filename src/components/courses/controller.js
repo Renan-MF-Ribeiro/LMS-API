@@ -1133,15 +1133,13 @@ module.exports = {
                 ];
             }
 
-            const currentDate = new Date();
+            const currentDate = new Date()
 
-            // ETAPA 1: Buscar todos os usuários que correspondem aos critérios básicos
-            const allUsers = await User.find(query).lean();
+            // Busca todos os usuários que correspondem aos critérios básicos
+            const users = await User.find(query).sort({ name: 1 }).lean();
 
             // Filtrar apenas usuários qualificados com base em tags e grupos
-            const eligibleUserIds = [];
-
-            for (const user of allUsers) {
+            const eligibleUsers = users.filter(user => {
                 const classGroupCodes = (user.classGroups || [])
                     .filter(classGroup =>
                         classGroup.status === 2 &&
@@ -1160,27 +1158,17 @@ module.exports = {
                     course.tags.includes(code) || tagGroupNames.includes(code)
                 );
 
-                // Aplicar a lógica de filtro e salvar apenas os IDs elegíveis
                 if (mandatoryIntersection.length > 0) {
-                    if (mandatoryIntersection.length >= course.mandatory.length) {
-                        eligibleUserIds.push(user._id);
-                    }
-                } else if (tagsIntersection.length > 0) {
-                    eligibleUserIds.push(user._id);
+                    return mandatoryIntersection.length >= course.mandatory.length;
+                } else {
+                    return tagsIntersection.length > 0;
                 }
-            }
+            });
+            
+            const data = eligibleUsers.slice(skip, skip + limit)
+            const total = eligibleUsers.length
 
-            // Total de usuários elegíveis
-            const total = eligibleUserIds.length;
-
-            // ETAPA 2: Fazer uma segunda consulta apenas com os usuários elegíveis
-            const eligibleUsers = await User.find({ _id: { $in: eligibleUserIds } })
-                .sort({ name: 1 })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit))
-                .lean();
-
-            success(res, req, { data: eligibleUsers, total });
+            success(res, req, { data, total });
         } catch (error) {
             console.error(error);
             internalServer(
