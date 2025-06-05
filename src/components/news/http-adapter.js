@@ -7,9 +7,10 @@ const newsApi = axios.create({
 
 const newsApiMiddleware = (req, res, next) => {
     const token = req.headers.authorization;
-
+    console.log('newsApiMiddleware', token);
     if (token) {
         const isBearer = token?.startsWith('Bearer');
+        console.log('newsApiMiddleware', token, isBearer);
         newsApi.defaults.headers.common.authorization = isBearer ? token : `Bearer ${token}`;
     }
 
