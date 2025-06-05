@@ -18,8 +18,11 @@ module.exports = {
 
     async getFeatures(req, res) {
         const features = await getDbCurrentFeatures(req);
-        const { size } =  getAppMaxFileSize();
+        const maxFileSize = getAppMaxFileSize();
 
-        _messages.success(res, req, { ...features, maxFileSize: size });
+        features.maxFileSize = maxFileSize.size;
+        features.maxFileSizeBytes = maxFileSize.bytes;
+
+        _messages.success(res, req, features);
     }
 }

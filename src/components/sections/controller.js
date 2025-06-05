@@ -24,7 +24,9 @@ const {
     populateSectionTrails,
     getSectionTrailId,
     isSectionTrailInfo,
-    isValidSectionTrailInfo
+    isValidSectionTrailInfo,
+    recommendedTrailsSections,
+    recommendedCoursesSections
 } = require('./business');
 
 const { getStudentCourses } = require('../home/business');
@@ -37,6 +39,7 @@ const {
 const { TrailsUsersProgress, Trail } = require('../trails/model');
 const { handleSegmentationOnQuery, handleSegmentationOnCreate } = require('../config/business');
 const ApiError = require('../../errors/ApiError');
+const { matricesApi } = require('../matrices/http-adapter');
 
 const { ObjectId } = require('mongoose').Types;
 
@@ -290,7 +293,6 @@ module.exports = {
                         ).map(trail => trail._id)
                     }
                 });
-
                 newArray.push(
                     ...trailsInSections
                         .map((e) => {
@@ -302,7 +304,6 @@ module.exports = {
                 delete req.query.channel;
                 sectionArray = idSections;
             }
-
             let resultSections = [];
 
             if (tags.length > 0) {
@@ -321,13 +322,11 @@ module.exports = {
                         },
                     ],
                 };
-
                 if (channelId) {
                     query['_id'] = { $in: newArray };
                 }
-
+                console.log(query)
                 let trails = await populateTrails(true, query);
-
                 const allTrackingUser = await Tracking.find({
                     userLogin: { $eq: user.networkLogin },
                     $or: [
@@ -368,6 +367,25 @@ module.exports = {
                 const arrMostSeenSections = await mostSeenSections(trails);
                 const arrCoursesSections = await courseInSections(tags, user._id);
 
+                const recommendedTrails = [];
+                const recommendedCourses = [];
+
+                if (req?.features?.matrices) {
+                    try {
+                        const { data } = await matricesApi.get(`/users/${user._id}`, {
+                            headers: {
+                                authorization: `Bearer ${req.headers.authorization}`,
+                            },
+                        });
+                        recommendedTrails.push(...data.data.recommendedTrails);
+                        recommendedCourses.push(...data.data.recommendedCourses);
+                    } catch (error) {
+                        console.log({ error })
+                    }
+                }
+                const arrRecommendedTrailsSections = await recommendedTrailsSections(trails, recommendedTrails);
+                const arrRecommendedCoursesSections = await recommendedCoursesSections(user._id, recommendedCourses);
+
                 function limitArray(section) {
                     if (!section) return [];
 
@@ -388,14 +406,20 @@ module.exports = {
                     };
                 }
 
-                resultSections = arrSections
-                    .concat(limitArray(arrMandatorySections))
-                    .concat(limitArray(arrRecentsSections))
-                    .concat(limitArray(arrKeepLearningSections))
-                    .concat(limitArray(arrConcludedSections))
-                    .concat(limitArray(arrCoursesSections))
-                    .concat(limitArray(arrFavoriteSections))
-                    .concat(limitArray(arrMostSeenSections));
+                const allSections = [
+                    arrSections,
+                    arrMandatorySections,
+                    arrRecentsSections,
+                    arrKeepLearningSections,
+                    arrConcludedSections,
+                    arrCoursesSections,
+                    arrFavoriteSections,
+                    arrMostSeenSections,
+                    arrRecommendedTrailsSections || [],
+                    arrRecommendedCoursesSections || [],
+                ];
+
+                resultSections = allSections.flatMap(limitArray);
 
                 if (channelId) {
                     const filteredArray = resultSections.filter((obj) =>
@@ -435,7 +459,7 @@ module.exports = {
             const hasSomeTrainingSection = resultSections.some(section => section.isTraining);
 
             if (hasSomeTrainingSection) {
-                resultSections = await setAssessmentHistoricOnSections(user._id, resultSections);
+                resultSections = await setAssessmentHistoricOnSections(user._id, resultSections, tags);
             }
 
             _messages.success(res, req, resultSections);
@@ -671,6 +695,23 @@ module.exports = {
             return { ...section, trails: fnResponse?.trails ?? [] };
         }
 
+        let recommendedTrails = [];
+        let recommendedCourses = [];
+
+        if (req?.features?.matrices) {
+            try {
+                const { data } = await matricesApi.get(`/users/${user._id}`, {
+                    headers: {
+                        authorization: `Bearer ${req.headers.authorization}`,
+                    },
+                });
+                recommendedTrails = data.data.recommendedTrails ?? [];
+                recommendedCourses = data.data.recommendedCourses ?? [];
+            } catch (error) {
+                console.log({ error })
+            }
+        }
+
         switch (section.defaultType) {
             case DEFAULT_TYPES.MANDATORY:
                 const mandatorySectionsResult = await mandatorySections(trails, tags);
@@ -700,6 +741,14 @@ module.exports = {
                 const mostSeenSectionsResult = await mostSeenSections(trails);
                 responseSection = setResponse(mostSeenSectionsResult);
                 break;
+            case DEFAULT_TYPES.RECOMMENDED_TRAILS:
+                const recommendedTrailsSectionsResult = await recommendedTrailsSections(trails, recommendedTrails);
+                responseSection = setResponse(recommendedTrailsSectionsResult);
+                break;
+            case DEFAULT_TYPES.RECOMMENDED_COURSES:
+                const recommendedCoursesSectionsResult = await recommendedCoursesSections(user._id, recommendedCourses);
+                responseSection = setResponse(recommendedCoursesSectionsResult);
+                break;
             default:
                 responseSection = { ...section, trails };
                 break;
@@ -711,7 +760,7 @@ module.exports = {
         }
 
         if (responseSection.isTraining) {
-            const [newSection] = await setAssessmentHistoricOnSections(user._id, [responseSection]);
+            const [newSection] = await setAssessmentHistoricOnSections(user._id, [responseSection], tags);
             responseSection = newSection;
         }
 

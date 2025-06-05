@@ -88,6 +88,7 @@ module.exports = express
         },
         _controller.returnUsers
     )
+    .get('/managers', validateTokenRoute, canListUsers, _controller.returnManagers)
     .put('/', validateTokenRoute, _controller.updateUser)
     .get('/users/:userId', validateTokenRoute, _controller.findById)
     .get('/import-users-test', validateTokenRoute, _controller.importUserTest)

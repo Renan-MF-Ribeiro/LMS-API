@@ -23,6 +23,7 @@ const CourseSChema = new mongoose.Schema(
         },
         certificateLayout: { type: 'ObjectId', required: false, default: null },
         certificate: { type: Number, default: 0 },
+        certificateDateType: { type: Number, default: 1 },
         certificateDue: { type: Object, default: null },
         deleted: { type: Number, default: 0 },
         status: { type: Number, default: 1 },

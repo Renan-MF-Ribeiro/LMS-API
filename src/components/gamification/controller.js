@@ -1,5 +1,4 @@
 const GamificationBusiness = require('./business');
-const GamificationEventBusiness = require('./events/business');
 const { User } = require('../users/model');
 const { Trail } = require('../trails/model');
 const _messages = require('../../utils/messages');
@@ -8,17 +7,6 @@ const { handleGroupTagsGamification } = require('./utils');
 const { getUserByToken } = require('../../utils/functions');
 
 const GamificationController = {
-    async dispatch(networkLogin, categories, props) {
-        const user = await User.findOne({ networkLogin });
-        try {
-            for (const category of categories) {
-                await GamificationEventBusiness[category](user, category, props);
-            }
-        } catch (err) {
-            console.log(err);
-        }
-    },
-
     async updateClientUser(req, res) {
         try {
             const { networkLogin } = req.params

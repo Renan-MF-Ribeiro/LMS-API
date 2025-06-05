@@ -7,6 +7,8 @@ const {
     ConfigModel,
     SegmentationConfigModel,
     SegmentationRuleSchema,
+    MATRIX_VISIBILITY_MODE,
+    MatrixConfigModel,
 } = require('./model');
 const _messages = require('../../utils/messages');
 const { Types } = require('mongoose');
@@ -241,5 +243,37 @@ module.exports = {
         );
 
         return _messages.success(res, req, deleted);
+    },
+
+    async getMatrixUserVisibility(req, res) {
+        const config = await _business.getMatrixConfig()
+
+        return _messages.success(res, req, config.value);
+    },
+
+    async updateMatrixUserVisibility(req, res) {
+        const visibilityMode = req?.body?.visibilityMode;
+        const allowedValues = Object.values(MATRIX_VISIBILITY_MODE);
+
+        if (!visibilityMode || !allowedValues.includes(visibilityMode)) {
+            const err = `Invalid visibilityMode. Accepted values are: ${allowedValues.join(', ')}`;
+            return _messages.badRequest(res, req, err, err);
+        }
+
+        const config = await _business.getMatrixConfig();
+
+        const updated = await MatrixConfigModel.findOneAndUpdate(
+            { _id: config._id },
+            {
+                $set: {
+                    value: {
+                        visibilityMode,
+                    },
+                },
+            },
+            { new: true }
+        );
+
+        return _messages.success(res, req, updated.value);
     },
 };

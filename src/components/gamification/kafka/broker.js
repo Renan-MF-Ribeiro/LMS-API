@@ -1,0 +1,230 @@
+const kafka = require('../../../utils/kafka');
+const { User } = require('../../users/model');
+const GamificationLogger = require('../logs/controller');
+const { GAMIFICATION_LOG_STATUS } = require('../logs/model');
+const { handleUserEligibilitiesGamification } = require('../utils');
+const GamificationEventBusiness = require('../events/business');
+const { getDbCurrentFeatures } = require('../../../utils/features');
+const { Types } = require('mongoose');
+
+class GamificationKafkaSingleton {
+    static instance;
+
+    #isActive;
+    #isConnected;
+    #producer;
+    #consumer;
+
+    constructor() {
+        if (!GamificationKafkaSingleton.instance) {
+            const suffix = process.env.NODE_ENV === 'production' ? '' : '-staging';
+            this.#isConnected = false;
+            this.#producer = kafka.producer();
+            this.#consumer = kafka.consumer({
+                groupId: `${process.env.KAFKA_GAMIFICATION_EVENTS_PENDING}${suffix}-${process.env.CLIENT_ID}`,
+            });
+            console.log({
+                groupId: `${process.env.KAFKA_GAMIFICATION_EVENTS_PENDING}${suffix}-${process.env.CLIENT_ID}`,
+            });
+            GamificationKafkaSingleton.instance = this;
+        }
+
+        return GamificationKafkaSingleton.instance;
+    }
+
+    async #setupProducer() {
+        await this.#producer.connect();
+    }
+
+    async #setupConsumer() {
+        await this.#consumer.connect();
+        await this.#consumer.subscribe({
+            topic: process.env.KAFKA_GAMIFICATION_EVENTS_PENDING,
+            fromBeginning: true,
+        });
+        await this.#consumeEventRuleValidation();
+    }
+
+    async #setFeature() {
+        const dbCurrentFeatures = (await getDbCurrentFeatures()) || null;
+        this.#isActive = !!dbCurrentFeatures?.gamefication;
+    }
+
+    get #isFeatureActive() {
+        if (!this.#isActive) {
+            console.error('Gamification is not active to client!');
+        }
+
+        return this.#isActive;
+    }
+
+    async start() {
+        await this.#setFeature();
+
+        if (!this.#isFeatureActive) {
+            return;
+        }
+
+        if (!this.#isConnected) {
+            await this.#setupProducer();
+            await this.#setupConsumer();
+
+            this.#isConnected = true;
+        } else {
+            console.warn('GamificationKafka is already running...');
+        }
+    }
+
+    async stop() {
+        if (!this.#isFeatureActive) {
+            return;
+        }
+
+        if (this.#isConnected) {
+            await this.#producer.disconnect();
+            await this.#consumer.disconnect();
+
+            this.#isConnected = false;
+        } else {
+            console.warn('GamificationKafka is already stopped...');
+        }
+    }
+
+    async publishEventRuleValidation(data) {
+        if (!this.#isFeatureActive) {
+            return;
+        }
+
+        const log = await GamificationLogger.create(data);
+
+        try {
+            await this.#producer.send({
+                topic: process.env.KAFKA_GAMIFICATION_EVENTS_PENDING,
+                messages: [
+                    {
+                        value: JSON.stringify({
+                            ...data,
+                            logId: log._id,
+                        }),
+
+                        headers: {
+                            clientId: process.env.CLIENT_ID,
+                        },
+                    },
+                ],
+            });
+        } catch (error) {
+            await GamificationLogger.update(log._id, {
+                status: GAMIFICATION_LOG_STATUS.SYSTEM_ERROR,
+                error,
+            });
+        }
+    }
+
+    async #consumeEventRuleValidation() {
+        await this.#consumer.run({
+            autoCommit: false,
+            eachMessage: async ({ topic, partition, message }) => {
+                if (!message.value) {
+                    console.warn('Received message with no value!');
+                    return;
+                }
+
+                const headers = message.headers || {};
+                const messageClientId = headers?.clientId?.toString();
+
+                if (messageClientId !== process.env.CLIENT_ID) {
+                    // console.warn(
+                    //     `[GamificationKafka] Ignoring message for clientId ${messageClientId} (expected: ${process.env.CLIENT_ID})`
+                    // );
+                    return;
+                }
+
+                try {
+                    const { events, identifier, meta } = JSON.parse(message.value.toString());
+
+                    const isMongoId = Types.ObjectId.isValid(identifier);
+                    const userQueryField = isMongoId ? '_id' : 'networkLogin';
+
+                    const user = await User.findOne({ [userQueryField]: identifier });
+
+                    if (!user) {
+                        console.log({
+                            [userQueryField]: identifier,
+                            clientId: process.env.CLIENT_ID,
+                        });
+                        return;
+                    }
+
+                    const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD);
+
+                    for (const category of events) {
+                        const payload = {
+                            clientId: Number(process.env.CLIENT_ID),
+                            networkLogin: user.networkLogin,
+                            category,
+                            eligibilities,
+                            meta,
+                        };
+
+                        const validator = GamificationEventBusiness.validate(category, user, meta);
+                        for await (const { validated, ...processedEvent } of validator) {
+                            if (validated) {
+                                await this.#producer.send({
+                                    topic: process.env.KAFKA_GAMIFICATION_EVENTS_VALIDATED,
+                                    messages: [
+                                        {
+                                            value: JSON.stringify({
+                                                ...payload,
+                                                ...processedEvent,
+                                            }),
+                                        },
+                                    ],
+                                });
+                            }
+                        }
+                    }
+
+                    await this.#consumer.commitOffsets([
+                        {
+                            topic,
+                            partition,
+                            offset: (Number(message.offset) + 1).toString(),
+                        },
+                    ]);
+                } catch (error) {
+                    console.error('Error processing GamificationKafka:', error);
+                }
+            },
+        });
+    }
+}
+
+const gamificationKafka = new GamificationKafkaSingleton();
+
+const GamificationKafka = {
+    async start() {
+        await gamificationKafka.start();
+    },
+    async stop() {
+        await gamificationKafka.stop();
+    },
+
+    async publishEventRuleValidation({ events, identifier, meta }) {
+        await gamificationKafka.publishEventRuleValidation({ events, identifier, meta });
+    },
+};
+
+process.on('SIGINT', async () => {
+    console.log('SIGINT received. Shutting down GamificationKafka...');
+    await gamificationKafka.stop();
+    process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+    console.log('SIGTERM received. Shutting down GamificationKafka...');
+    await gamificationKafka.stop();
+    process.exit(0);
+});
+
+module.exports = GamificationKafka;
