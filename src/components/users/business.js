@@ -813,4 +813,21 @@ module.exports = {
         }
         return `${maskedEmail}@${emailParts[1]}`;
     },
+
+    getProcessedTags(user) {
+        const { groupsAD = [], classGroups = [] } = user;
+
+        const currentDate = new Date();
+
+        return groupsAD.concat(
+            classGroups
+                .filter(
+                    (classGroup) =>
+                        classGroup.status === 2 &&
+                        new Date(classGroup.startDate) <= currentDate &&
+                        new Date(classGroup.limitDate) >= currentDate
+                )
+                .map((classGroup) => classGroup.groupCode)
+        );
+    }
 };

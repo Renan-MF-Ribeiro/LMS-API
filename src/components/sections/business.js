@@ -18,6 +18,8 @@ const { TrailViews } = require('../trails/trail-views.model');
 const { listTrainingSectionsStatus } = require('../assessment/business');
 const { Trail } = require('../trails/model');
 const { cloneDeep } = require('lodash');
+const { User } = require('../users/model');
+const { getProcessedTags } = require('../users/business');
 const { ObjectId } = require('mongoose').Types
 
 const isSectionTrailInfo = (trail) => (trail.type === 'trail' && ObjectId.isValid(trail._id)) || ObjectId.isValid(trail);
@@ -55,11 +57,11 @@ async function populateSectionTrails(sections, options) {
     return newSections;
 }
 
-async function setAssessmentHistoricOnSections(userId, sections, tags) {
-    const userWithTags = await UsersWithProcessedTags.findById(userId);
-
-    let eligibilityTags = tags?.map(tag => tag.value) ?? userWithTags.userTags ?? [];
-    const dataAssessmentHistoric = await listTrainingSectionsStatus(userId, eligibilityTags);
+async function setAssessmentHistoricOnSections(userId, sections) {
+    const user = await User.findById(userId);
+    const userTags = getProcessedTags(user)
+    
+    const dataAssessmentHistoric = await listTrainingSectionsStatus(userId, userTags);
 
     return cloneDeep(sections).map(currentSection => {
         if (!currentSection.isTraining) return currentSection;
