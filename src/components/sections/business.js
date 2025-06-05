@@ -316,10 +316,18 @@ module.exports = {
 
                 if (user.classGroups.length > 0) {
                     for (const classGroup of user.classGroups) {
-                        tags.push({
-                            display: classGroup.groupCode,
-                            value: classGroup.groupCode,
-                        });
+                        const currentDate = new Date();                        
+
+                        if (
+                            classGroup.status === 2 &&
+                            new Date(classGroup.startDate) <= currentDate &&
+                            new Date(classGroup.limitDate) >= currentDate
+                        ) {
+                            tags.push({
+                                display: classGroup.groupCode,
+                                value: classGroup.groupCode,
+                            });
+                        }
                     }
                 }
 
@@ -670,10 +678,12 @@ module.exports = {
                     defaultType: DEFAULT_TYPES.COURSES,
                     active: 1,
                 }).lean();
+
                 let elegibleCourses = await CourseModel.find({
                     tags: { $in: tags },
                     deleted: { $eq: 0 },
                     status: { $eq: 1 },
+                    dateFinal: { $gte: new Date().toISOString() }
                 })
                     .select({
                         title: 1,
