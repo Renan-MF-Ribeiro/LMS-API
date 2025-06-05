@@ -3,6 +3,7 @@ const { mentoringApi } = require('../http-adapter');
 const { populateUserFields } = require('../business');
 const { User } = require('../../users/model');
 const { Types } = require('mongoose');
+const { getUserByToken } = require('../../../utils/functions');
 
 const mentorController = {
     async findMentorProfile(req, res) {
@@ -123,11 +124,11 @@ const mentorController = {
                 mentor: {
                     email: foundMentor.email,
                     name: foundMentor.name,
-                    userId: foundMentor._id
+                    userId: foundMentor._id,
                 },
                 month: Number(month || new Date().getMonth()),
-                deadline: mentoringDeadLine === "true"
-            }
+                deadline: mentoringDeadLine === 'true',
+            };
             const { data } = await mentoringApi.post(url, body);
 
             return _messages.success(res, req, data.data, 'ok', 'mentoring', 'getMentorCalendar');
@@ -206,18 +207,34 @@ const mentorController = {
             const { name, weekdays, date, topics, pageSize, pageIndex, orderBy } = req.query;
 
             const params = {
-                name,
+                searchBy: name,
                 weekdays,
                 date,
                 topics,
-                options: {
-                    pageSize: pageSize || 12,
-                    pageIndex: pageIndex || 0,
-                    orderBy,
-                    direction: 'desc',
-                },
+                pageSize: pageSize || 12,
+                pageIndex: pageIndex || 0,
+                orderBy,
             };
+            const [hierarchies, requestUser] = await Promise.all([
+                mentoringApi.get('/config/hierarchies'),
+                getUserByToken(req),
+            ]);
+            const allHierarchies = hierarchies.data?.data;
+            const teste =
+                allHierarchies?.flatMap((h) =>
+                    h?.menteeLevel?.flatMap((m) => ({ field: m?.field, value: m?.value }))
+                ) || [];
+            
+            let mentorFields
+            for (const { field, value } of teste) {
+                if (requestUser[field] && requestUser[field] === value) {
+                    mentorFields = 
+                }
+            }
+            const mentors = await User.find(
+                { ...mentorFields}, '_id')
             const { data } = await mentoringApi.get('/mentor/search', { params });
+
             const populatedData = await populateUserFields(
                 [
                     { fieldName: 'user', reference: 'userId' },
