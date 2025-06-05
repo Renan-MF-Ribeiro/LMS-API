@@ -41,13 +41,13 @@ async function fetchUserEvaluationsHistory() {
 
             const historic = Object.entries(evaluationsGroupedByItem)
                 .map(([itemId, evaluations]) => {
-                    const orderedEvaluations = orderBy(evaluations, ['createdAt'], ['desc']);
+                    const orderedEvaluations = orderBy(evaluations, ['createdAt'], ['asc']);
 
-                    const hasPassedEvaluation = orderedEvaluations.some(evaluation => evaluation.lessonStatus === 'passed');
+                    const oldestPassedEvaluation = orderedEvaluations.find(evaluation => evaluation.lessonStatus === 'passed');
 
-                    const isPassedEvaluationTheMostRecent = orderedEvaluations[0]?.lessonStatus === 'passed';
+                    const isPassedEvaluationTheOldest = orderedEvaluations[0]?.lessonStatus === 'passed';
 
-                    if (!hasPassedEvaluation || isPassedEvaluationTheMostRecent) { return null; }
+                    if (orderedEvaluations.length <= 1 || !oldestPassedEvaluation || !isPassedEvaluationTheOldest) { return null; }
 
                     return {
                         itemId,
@@ -55,7 +55,9 @@ async function fetchUserEvaluationsHistory() {
                             ...evaluation.toObject(),
                             score: (evaluation.amountQuestionsCorrect / evaluation.amountOfQuestions) * 100,
                         })),
-                        isPassedEvaluationTheMostRecent,
+                        isPassedEvaluationTheOldest,
+                        oldestPassedDate: oldestPassedEvaluation.createdAt,
+                        oldestPassedScore: (oldestPassedEvaluation.amountQuestionsCorrect / oldestPassedEvaluation.amountOfQuestions) * 100,
                     };
                 })
                 .filter(Boolean)
@@ -66,7 +68,7 @@ async function fetchUserEvaluationsHistory() {
         }
     }
 
-    console.log("\n");
+    process.stdout.write('\r\n');
 
     return userEvaluationHistory;
 }
@@ -74,7 +76,7 @@ async function fetchUserEvaluationsHistory() {
 async function setUserAndTrackingToEvaluations(userEvaluationHistory) {
     const usersIds = userEvaluationHistory.map(item => item.userId);
 
-    const batchSize = 100;
+    const batchSize = 500;
 
     for (let batchStart = 0; batchStart < usersIds.length; batchStart += batchSize) {
         const processedUsers = Math.min(batchStart + batchSize, usersIds.length);
@@ -113,19 +115,25 @@ async function setUserAndTrackingToEvaluations(userEvaluationHistory) {
         }
     }
 
-    console.log("\n");
+    process.stdout.write('\r\n');
+
+    return userEvaluationHistory;
 }
 
 async function checkAndNormalizeEvaluations() {
     const userEvaluationHistory = await fetchUserEvaluationsHistory();
 
-    await setUserAndTrackingToEvaluations(userEvaluationHistory);
-
     console.log(`Total de usuários com avaliações para serem normalizadas: ${userEvaluationHistory.length}`);
 
     console.log(`Total de avaliações a serem normalizadas: ${userEvaluationHistory.reduce((acc, item) => acc + item.historic.length, 0)}`);
 
+    await setUserAndTrackingToEvaluations(userEvaluationHistory);
+
+    console.log('Criando report...');
+
     await writeDebugJson('evaluations-to-normalize', userEvaluationHistory);
+
+    console.log('DONE!');
 
     process.exit(0);
 }
