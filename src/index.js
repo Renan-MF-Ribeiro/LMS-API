@@ -76,6 +76,7 @@ const mentoringRoutes = require('./components/mentoring/routes');
 const matricesRoutes = require('./components/matrices/routes');
 const chatIaRoutes = require('./components/chat/routes');
 const integratorRoutes = require('./components/integrator/routes');
+const newsRoutes = require('./components/news/routes');
 
 const environment = require('./environment');
 const { matricesApiMiddleware } = require('./components/matrices/http-adapter');
@@ -197,7 +198,8 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/mentoring', mentoringRoutes)
     .use('/matrices', matricesRoutes)
     .use('/chat', chatIaRoutes)
-    .use('/integrator', integratorRoutes);
+    .use('/integrator', integratorRoutes)
+    .use('/news', newsRoutes);
 
 app.use(errorHandler);
 
