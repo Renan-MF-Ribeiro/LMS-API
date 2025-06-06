@@ -206,7 +206,7 @@ const mentorController = {
         try {
             const { name, weekdays, date, topics, pageSize, pageIndex, orderBy } = req.query;
 
-            const params = {
+            let params = {
                 searchBy: name,
                 weekdays,
                 date,
@@ -215,25 +215,40 @@ const mentorController = {
                 pageIndex: pageIndex || 0,
                 orderBy,
             };
-            const [hierarchies, requestUser] = await Promise.all([
+            const [hierarchiesResponse, requestUser] = await Promise.all([
                 mentoringApi.get('/config/hierarchies'),
                 getUserByToken(req),
             ]);
-            const allHierarchies = hierarchies.data?.data;
-            const teste =
-                allHierarchies?.flatMap((h) =>
-                    h?.menteeLevel?.flatMap((m) => ({ field: m?.field, value: m?.value }))
-                ) || [];
-            
-            let mentorFields
-            for (const { field, value } of teste) {
-                if (requestUser[field] && requestUser[field] === value) {
-                    mentorFields = 
+
+            const allHierarchies = hierarchiesResponse.data?.data || [];
+
+            const matchingHierarchies = allHierarchies?.filter(hierarchy =>
+                hierarchy.menteeLevel?.some(menteeCondition =>
+                    requestUser[menteeCondition.field] === menteeCondition.value
+                )
+            );
+
+            const mentorConditions = [];
+            const seenConditions = new Set();
+
+            matchingHierarchies?.forEach(({ mentorLevel }) => {
+                const conditionKey = `${mentorLevel?.field}:${mentorLevel?.value}`;
+                if (!seenConditions.has(conditionKey)) {
+                    seenConditions.add(conditionKey);
+                    mentorConditions.push({
+                        [mentorLevel?.field]: mentorLevel?.value
+                    });
                 }
+            });
+
+            let mentors = [];
+            if (mentorConditions.length > 0) {
+                mentors = await User.find({ $or: mentorConditions }, '_id');
             }
-            const mentors = await User.find(
-                { ...mentorFields}, '_id')
-            const { data } = await mentoringApi.get('/mentor/search', { params });
+            if (mentors.length > 0) {
+                params.mentorIds = mentors.map(mentor => mentor._id);
+            }
+            const { data } = await mentoringApi.post('/mentor/search', params);
 
             const populatedData = await populateUserFields(
                 [
