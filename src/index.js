@@ -201,7 +201,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/matrices', matricesRoutes)
     .use('/chat', chatIaRoutes)
     .use('/integrator', integratorRoutes)
-    .use('/news', newsRoutes);
+    .use('/news', validateTokenRoute, newsRoutes);
 
 app.use(errorHandler);
 
