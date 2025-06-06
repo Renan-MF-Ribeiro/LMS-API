@@ -134,9 +134,9 @@ class GamificationKafkaSingleton {
                 const messageClientId = headers?.clientId?.toString();
 
                 if (messageClientId !== process.env.CLIENT_ID) {
-                    console.warn(
-                        `[GamificationKafka] Ignoring message for clientId ${messageClientId} (expected: ${process.env.CLIENT_ID})`
-                    );
+                    // console.warn(
+                    //     `[GamificationKafka] Ignoring message for clientId ${messageClientId} (expected: ${process.env.CLIENT_ID})`
+                    // );
                     return;
                 }
 

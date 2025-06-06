@@ -122,6 +122,7 @@ const { getFormErrorsByMapConfig, getDefaultForm, getAdminForm, getFormErrorsByF
 
 const { getDbCurrentFeatures } = require('../../utils/features');
 const { ObjectId } = require('mongoose').Types;
+const { Profile } = require('../profiles/model');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -545,7 +546,7 @@ module.exports = {
 
             const newUser = await User.create(userData);
 
-            WebhooksController.dispatch('create', 'users', false, { ...newUser, password: undefined });
+            WebhooksController.dispatch('create', 'users', false, { ...newUser.toObject(), password: undefined });
 
             if (token) {
                 const DATA_INICIO = today.startOf('day');
@@ -1642,6 +1643,78 @@ module.exports = {
         }
     },
 
+    async returnManagers (req, res) {
+        try {
+            const { skip, limit } = pagination(req);
+            const { order, sort } = ordernation(req);
+
+            const searchBy = req.query.searchBy;
+            const filterManager = req.query.filterManager;
+
+            const profiles = await Profile.find({ 'title': { $ne: 'PERFIL_Aluno' } }).sort({ label: 'asc' })
+
+
+            let query = {
+                groupsAD: { $in: profiles.map((profile) => profile.title) },
+            };
+
+            if (filterManager) {
+                query.groupsAD = { $in: [filterManager] };
+            }
+
+            if (req?.segmentation) {
+                handleSegmentationOnQuery(req, 'issuer', query);
+            }
+
+
+
+            if (searchBy) {
+                query.$or = [
+                    { name: { $regex: searchBy, $options: 'i' } },
+                    { registration: { $regex: searchBy, $options: 'i' } },
+                    { email: { $regex: searchBy, $options: 'i' } },
+                    { cpf: { $regex: searchBy, $options: 'i' } },
+                ]
+            }
+            const managersCounters = []
+
+            for (const profile of profiles) {
+                const queryProfile = { groupsAD: profile.title }
+                if (searchBy) {
+                    queryProfile.$or = [
+                        { name: { $regex: searchBy, $options: 'i' } },
+                        { registration: { $regex: searchBy, $options: 'i' } },
+                        { email: { $regex: searchBy, $options: 'i' } },
+                        { cpf: { $regex: searchBy, $options: 'i' } },
+                    ]
+                }
+                const count = await User.countDocuments(queryProfile);
+                managersCounters.push({ label: profile.label, title: profile.title, count });
+            }
+
+            const total = await User.countDocuments(query);
+            const users = await User.find(query)
+                .sort({ [order]: sort })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit));
+
+            _messages.success(res, req, {
+                data: users,
+                total,
+                managersCounters
+            });
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'users',
+                'returnUsers'
+            );
+        }
+    },
+
     async returnUsersOnboarding (req, res) {
         try {
             const users = await findUsers(req, { onboarding: true });
@@ -2048,6 +2121,7 @@ module.exports = {
                 _messages.success(res, req, {
                     SAS,
                     token,
+                    email,
                     accept: acceptTerms,
                     acceptCollaboration: acceptTermsCollaboration,
                     numbers: result.token.numbers,
@@ -2606,7 +2680,7 @@ module.exports = {
     async deleteClassTag (req, res) {
         const { tag, userId, classIdentifier } = req.body;
         const classGroups = classIdentifier ? { groupCode: tag, classIdentifier: { $in: [classIdentifier, new ObjectId(classIdentifier)] } } : { groupCode: tag, classIdentifier: { $exists: false } };
-        console.log('classGroups', classGroups);
+
         try {
             await User.findByIdAndUpdate(userId, {
                 $pull: { classGroups: classGroups },
