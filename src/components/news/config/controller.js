@@ -1,17 +1,16 @@
 const { newsApi } = require('../http-adapter');
+const _messages = require('../../../utils/messages');
 
 const configController = {
     getConfig: async (req, res) => {
         try {
             const { data } = await newsApi.get('/config');
 
-            res.json(data);
+            return _messages.success(res, req, data, 'ok', 'news', 'getConfig');
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
-            const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = message ?? 'Internal server error';
 
-            res.status(statusCode).json(errorMessage);
+            return _messages.internalServer(res, req, message, message, 'news', 'getForm');
         }
     },
 
@@ -19,13 +18,11 @@ const configController = {
         try {
             const { data } = await newsApi.put('/config', req.body);
 
-            res.json(data);
+            return _messages.success(res, req, data, 'ok', 'news', 'updateConfig');
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
-            const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = message ?? 'Internal server error';
 
-            res.status(statusCode).json(errorMessage);
+            return _messages.internalServer(res, req, message, message, 'news', 'getForm');
         }
     },
 };
