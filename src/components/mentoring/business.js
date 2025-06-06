@@ -1,4 +1,6 @@
+const { getUserByToken } = require('../../utils/functions');
 const { User } = require('../users/model');
+const { mentoringApi } = require('./http-adapter');
 
 async function populateTrailFields(data) {
     const trails = await Trail.findOne({ _id: { $in: data } }, 'title titleURL thumbPath').lean();
@@ -166,7 +168,42 @@ async function processData(data, mappings, userMap) {
     return process(data);
 }
 
+async function getHierarchicalMentorIds(req) {
+    const [hierarchiesResponse, requestUser] = await Promise.all([
+        mentoringApi.get('/config/hierarchies'),
+        getUserByToken(req),
+    ]);
+
+    const allHierarchies = hierarchiesResponse.data?.data || [];
+
+    const matchingHierarchies = allHierarchies?.filter(hierarchy =>
+        hierarchy.menteeLevel?.some(menteeCondition =>
+            requestUser[menteeCondition.field] === menteeCondition.value
+        )
+    );
+
+    const mentorConditions = [];
+    const seenConditions = new Set();
+
+    matchingHierarchies?.forEach(({ mentorLevel }) => {
+        const conditionKey = `${mentorLevel?.field}:${mentorLevel?.value}`;
+        if (!seenConditions.has(conditionKey)) {
+            seenConditions.add(conditionKey);
+            mentorConditions.push({
+                [mentorLevel?.field]: mentorLevel?.value
+            });
+        }
+    });
+
+    let mentors = [];
+    if (mentorConditions.length > 0) {
+        mentors = await User.find({ $or: mentorConditions }, '_id');
+    }
+
+    return mentors.map(mentor => mentor._id) || []
+}
 module.exports = {
     populateUserFields,
-    populateBlockedUserFields
+    populateBlockedUserFields,
+    getHierarchicalMentorIds    
 };

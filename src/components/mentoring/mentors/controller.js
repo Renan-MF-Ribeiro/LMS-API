@@ -1,6 +1,6 @@
 const _messages = require('../../../utils/messages');
 const { mentoringApi } = require('../http-adapter');
-const { populateUserFields } = require('../business');
+const { populateUserFields, getHierarchicalMentorIds } = require('../business');
 const { User } = require('../../users/model');
 const { Types } = require('mongoose');
 const { getUserByToken } = require('../../../utils/functions');
@@ -215,39 +215,11 @@ const mentorController = {
                 pageIndex: pageIndex || 0,
                 orderBy,
             };
-            const [hierarchiesResponse, requestUser] = await Promise.all([
-                mentoringApi.get('/config/hierarchies'),
-                getUserByToken(req),
-            ]);
 
-            const allHierarchies = hierarchiesResponse.data?.data || [];
+            const hierarchicalMentors = await getHierarchicalMentorIds(req);
+            if (hierarchicalMentors.length > 0)
+                params.mentorIds = hierarchicalMentors;
 
-            const matchingHierarchies = allHierarchies?.filter(hierarchy =>
-                hierarchy.menteeLevel?.some(menteeCondition =>
-                    requestUser[menteeCondition.field] === menteeCondition.value
-                )
-            );
-
-            const mentorConditions = [];
-            const seenConditions = new Set();
-
-            matchingHierarchies?.forEach(({ mentorLevel }) => {
-                const conditionKey = `${mentorLevel?.field}:${mentorLevel?.value}`;
-                if (!seenConditions.has(conditionKey)) {
-                    seenConditions.add(conditionKey);
-                    mentorConditions.push({
-                        [mentorLevel?.field]: mentorLevel?.value
-                    });
-                }
-            });
-
-            let mentors = [];
-            if (mentorConditions.length > 0) {
-                mentors = await User.find({ $or: mentorConditions }, '_id');
-            }
-            if (mentors.length > 0) {
-                params.mentorIds = mentors.map(mentor => mentor._id);
-            }
             const { data } = await mentoringApi.post('/mentor/search', params);
 
             const populatedData = await populateUserFields(
