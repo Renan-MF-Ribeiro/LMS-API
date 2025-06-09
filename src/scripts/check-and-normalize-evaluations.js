@@ -1,9 +1,11 @@
 const { groupBy, orderBy } = require("lodash");
 const { Types } = require("mongoose");
 const { HistoricEvaluation } = require("../components/assessments/model");
-const { runScript, writeDebugJson } = require("./utils");
+const { runScript, writeDebugJson, generateReport } = require("./utils");
 const { Tracking } = require("../components/tracking/model");
 const { User } = require("../components/users/model");
+
+const NORMALIZE_DATA = false;
 
 async function fetchUserEvaluationsHistory() {
     // Busca todos os usuários distintos que possuem avaliações
@@ -120,12 +122,52 @@ async function setUserAndTrackingToEvaluations(userEvaluationHistory) {
     return userEvaluationHistory;
 }
 
+async function normalizeEvaluations(reallyNeedToNormalize) {
+    console.log('Normalizando avaliações...');
+
+    const results = [];
+
+    for (const userInfo of reallyNeedToNormalize) {
+        for (const historic of userInfo.historic) {
+            if (!historic.isPassedEvaluationTheOldest || historic.tracking?.lessonStatus === 'passed') continue;
+
+            results.push({
+                userId: userInfo.userId,
+                userNetworkLogin: userInfo.networkLogin,
+                itemId: historic.itemId,
+                oldestPassedDate: historic.oldestPassedDate,
+                oldestPassedScore: historic.oldestPassedScore,
+                trackingId: historic.tracking?._id,
+                currentTrackingStatus: historic.tracking?.lessonStatus,
+                currentTrackingCompletionAt: historic.tracking?.completionAt || null,
+                currentTrackingScore: historic.tracking?.score || 0,
+            });
+
+            if (NORMALIZE_DATA) {
+                await Tracking.updateOne(
+                    { _id: new Types.ObjectId(historic.tracking._id) },
+                    {
+                        $set: {
+                            lessonStatus: 'passed',
+                            completion: true,
+                            completionAt: historic.oldestPassedDate,
+                            score: historic.oldestPassedScore,
+                        }
+                    }
+                );
+            }
+        }
+    }
+
+    console.log('Avaliações normalizadas com sucesso!');
+
+    return results;
+}
+
 async function checkAndNormalizeEvaluations() {
     const userEvaluationHistory = await fetchUserEvaluationsHistory();
 
     console.log(`Total de usuários com avaliações para serem normalizadas: ${userEvaluationHistory.length}`);
-
-    console.log(`Total de avaliações a serem normalizadas: ${userEvaluationHistory.reduce((acc, item) => acc + item.historic.length, 0)}`);
 
     await setUserAndTrackingToEvaluations(userEvaluationHistory);
 
@@ -133,7 +175,36 @@ async function checkAndNormalizeEvaluations() {
 
     await writeDebugJson('evaluations-to-normalize', userEvaluationHistory);
 
-    console.log('DONE!');
+    const usersWithEvaluationsToNormalize = userEvaluationHistory.map(info => {
+        return {
+            ...info,
+            historic: info.historic.filter(h => {
+                return h.isPassedEvaluationTheOldest && h.tracking?.lessonStatus !== 'passed';
+            })
+        }
+    }).filter(info => info.historic.length > 0);
+
+    console.log(`Total de avaliações a serem normalizadas: ${usersWithEvaluationsToNormalize.length}`);
+
+    await writeDebugJson('evaluations-to-normalize-really', usersWithEvaluationsToNormalize);
+
+    const results = await normalizeEvaluations(usersWithEvaluationsToNormalize);
+
+    await generateReport(
+        results,
+        [
+            { header: 'User ID', key: 'userId' },
+            { header: 'User Network Login', key: 'userNetworkLogin' },
+            { header: 'Item ID', key: 'itemId' },
+            { header: 'Tracking ID', key: 'trackingId' },
+            { header: 'Current Tracking Status', key: 'currentTrackingStatus' },
+            { header: 'Current Tracking Completion At', key: 'currentTrackingCompletionAt' },
+            { header: 'Current Tracking Score', key: 'currentTrackingScore' },
+            { header: 'Oldest Passed Date', key: 'oldestPassedDate' },
+            { header: 'Oldest Passed Score', key: 'oldestPassedScore' },
+        ],
+        { fileName: 'evaluations-to-normalize-report' }
+    );
 
     process.exit(0);
 }
