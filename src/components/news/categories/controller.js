@@ -42,7 +42,7 @@ module.exports = {
 
     async home(req, res) {
         try {
-            const { data } = await newsApi.get(`/categories/home`);
+            const { data } = await newsApi.get(`/categories/home/${req.params.id}`);
 
             _messages.success(res, req, data);
         } catch (error) {

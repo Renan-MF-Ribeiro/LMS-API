@@ -4,7 +4,7 @@ const formidable = require('express-formidable')
 
 module.exports = express.Router()
     .get('/list', _controller.list)
-    .get('/home', _controller.home)
+    .get('/home/:id', _controller.home)
     .get('/:id', _controller.getById)
     .post('/create', formidable(), _controller.create)
     .put('/update', formidable(), _controller.update)
