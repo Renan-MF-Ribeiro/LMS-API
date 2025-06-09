@@ -33,6 +33,7 @@ const ssoFormSchema = new Schema({
     authorizationUrl: { type: String },
     tokenUrl: { type: String },
     userInfoUrl: { type: String },
+    scope: { type: [String], default: [] },
 });
 
 ssoFormSchema.index({ strategyName: 1 }, { unique: true });

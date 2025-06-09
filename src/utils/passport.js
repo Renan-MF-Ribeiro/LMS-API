@@ -53,7 +53,7 @@ async function createOpenIdConnectStrategy(config) {
             authorizationParams: {
                 prompt: config.forceAuth ? 'login' : 'none',
             },
-            scope: ['openid', 'profile', config.claim],
+            scope: config.scope?.length ? config.scope : ['openid', 'profile'],
 
         },
         async (issuer, profile, done) => {
