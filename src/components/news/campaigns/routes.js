@@ -8,4 +8,5 @@ module.exports = express
     .get('/:id', isMongoId, _controller.getCampaign)
     .get('/', _controller.listCampaigns)
     .post('/', formidable(), _controller.createCampaign)
-    .put('/:id', isMongoId, formidable(), _controller.updateCampaign);
+    .put('/:id', isMongoId, formidable(), _controller.updateCampaign)
+    .get('/elegible-users/:id', _controller.getEligibleUsers)

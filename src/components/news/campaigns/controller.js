@@ -1,6 +1,8 @@
 const _messages = require('../../../utils/messages');
 const { newsApi } = require('../http-adapter');
 const { azureBlob } = require('../../../utils/files');
+const { UsersWithProcessedTags } = require('../../courses/model');
+
 const moment = require('moment');
 
 const campaignsController = {
@@ -70,6 +72,33 @@ const campaignsController = {
             const message = error.response?.data?.message ?? error.message;
 
             return _messages.internalServer(res, req, message, message, 'news', 'updateCampaign');
+        }
+    },
+
+    getEligibleUsers: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { data } = await newsApi.get(`/campaigns/${id}`);
+
+            const tags = data.eligibilities;
+            if (!tags || tags.length === 0) {
+                return _messages.successEmpty(
+                    res,
+                    req,
+                    'Campanha não possui elegibilidade definida',
+                    'news',
+                    'getEligibleUsers'
+                );
+            }
+
+            const usersWithTags = await UsersWithProcessedTags.find({
+                userTags: { $in: tags },
+            });
+
+            return _messages.success(res, req, { eligibleUsers: usersWithTags }, 'ok', 'news', 'getEligibleUsers');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            return _messages.internalServer(res, req, message, message, 'news', 'getEligibleUsers');
         }
     },
 
