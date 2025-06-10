@@ -94,6 +94,8 @@ module.exports = {
 
             const existingMentoringChannel = await Channel.findOne({ type: 'mentoring' });
 
+            const existingNewsChannel = await Channel.findOne({ type: 'news' });
+
             if (!existingMentoringChannel) {
                 await Channel.create({
                     enabled: true,
@@ -103,6 +105,18 @@ module.exports = {
                     title: 'Mentorias',
                     position: 4,
                     type: 'mentoring'
+                });
+            }
+
+            if (!existingNewsChannel) {
+                await Channel.create({
+                    enabled: true,
+                    tags: ['ELEGE_geral'],
+                    banners: [],
+                    idSections: [],
+                    title: 'Notícias',
+                    position: 5,
+                    type: 'news'
                 });
             }
 
