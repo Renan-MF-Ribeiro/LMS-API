@@ -32,7 +32,7 @@ const campaignsController = {
 
     createCampaign: async (req, res) => {
         try {
-            const payload = req.fields;
+            const payload = JSON.parse(req.fields.payload);
 
             const { thumb } = req.files;
             if (thumb) {
@@ -54,7 +54,7 @@ const campaignsController = {
     updateCampaign: async (req, res) => {
         try {
             const { id } = req.params;
-            const payload = req.fields;
+            const payload = JSON.parse(req.fields.payload);
 
             const { thumb } = req.files;
             if (thumb) {
