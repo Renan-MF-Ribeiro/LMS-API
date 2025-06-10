@@ -31,13 +31,7 @@ const formsController = {
 
     createOrUpdateForm: async (req, res) => {
         try {
-            const { introduction, isDefault, name, labels = '{}' } = JSON.parse(req.fields.payload);
-            const payload = {
-                introduction,
-                isDefault,
-                name,
-                labels: JSON.parse(labels),
-            };
+            const payload = JSON.parse(req.fields.payload);
 
             let { material } = req.files;
 
