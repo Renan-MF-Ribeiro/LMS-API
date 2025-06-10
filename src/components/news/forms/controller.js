@@ -31,7 +31,7 @@ const formsController = {
 
     createOrUpdateForm: async (req, res) => {
         try {
-            const { introduction, isDefault, name, labels = '{}' } = req.fields;
+            const { introduction, isDefault, name, labels = '{}' } = JSON.parse(req.fields.payload);
             const payload = {
                 introduction,
                 isDefault,
