@@ -22,12 +22,12 @@ module.exports = {
 
     async create(req, res) {
             const { title, news, enabled } = req.fields
-            const { banner } = req.files;
+            const { thumb } = req.files;
 
             let thumbPath;
 
-            if (banner) {
-              thumbPath = await azureBlob(banner, 'news/banners');
+            if (thumb) {
+              thumbPath = await azureBlob(thumb, 'news/banners');
             }
 
             const body = { title, news: JSON.parse(news), enabled: enabled === 'true' ? true : false, thumbPath }
