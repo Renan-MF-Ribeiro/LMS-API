@@ -475,6 +475,153 @@ module.exports = {
         }
     },
 
+        async getCommentsByNewsId(req, res) {
+        try {
+
+            console.log("\n\n\n!!!!!!!")
+            const { newsId } = req.params;
+
+            const uri = `comments/news/${newsId}`;
+
+            const { pageSize = 5, pageIndex = 0, ...query } = req.query;
+
+            const setUsersProfilePhoto = async (commentsArr) => {
+                const usersId = commentsArr.map((comment) => comment.userId);
+
+                const usersPhoto = await User.find({ _id: { $in: usersId } }).select(
+                    'profilePhoto'
+                );
+
+                if (usersPhoto.length) {
+                    commentsArr.forEach((comment) => {
+                        const profilePhoto =
+                            usersPhoto.find((u) => String(u._id) === String(comment.userId))
+                                ?.profilePhoto ?? null;
+                        comment.profilePhoto = profilePhoto;
+                    });
+                }
+            };
+
+            // GET CONFIG
+            const config =
+                (await ConfigModel.findOne({ type: ConfigTypes.SocialFields }))?.value ?? [];
+
+            if (!config?.length) {
+                const { data: response } = await socialApi.get(uri, { params: req.query });
+
+                const commentsToResponse = response.data ?? [];
+
+                await setUsersProfilePhoto(commentsToResponse);
+
+                _messages.success(
+                    res,
+                    req,
+                    {
+                        data: commentsToResponse,
+                        total: response.total,
+                        pageIndex: Number(pageIndex),
+                        isFinished: Number(pageSize) * (Number(pageIndex) + 1) >= response.total,
+                    },
+                    'ok',
+                    'social',
+                    'getCommentsByTrailId'
+                );
+
+                return;
+            }
+
+            const fetchComments = (params) => {
+                return socialApi.get(uri, { params }, { validateStatus: false });
+            };
+
+            const userInfo = await _functions.getUserByToken(req);
+            console.log(userInfo)
+            const filter = config.reduce((acc, current) => {
+                acc[current] = userInfo[current] ?? null;
+                return acc;
+            }, {});
+            // GET USERS
+            const dbUsersInSameConditions = await User.find(filter).select('_id');
+
+            const commentsToResponse = [];
+
+            const usersToFilter = dbUsersInSameConditions.map((user) => String(user._id));
+
+            const filterCommentsByUserId = (commentsArr) => {
+                return commentsArr.filter((comment) =>
+                    usersToFilter.includes(String(comment.userId))
+                );
+            };
+
+            let isFinishedFromSocialApi = false;
+            let internalIsFinished = false;
+            let currentPage = Number(pageIndex);
+
+            while (!internalIsFinished && !isFinishedFromSocialApi) {
+                console.log('query', { pageSize, pageIndex: currentPage, ...query });
+                const { data: response } = await fetchComments({
+                    pageSize,
+                    pageIndex: currentPage,
+                    ...query,
+                });
+
+                const responseData = response.data ?? [];
+
+                const filteredComments = filterCommentsByUserId(responseData);
+
+                commentsToResponse.push(...filteredComments);
+
+                console.log(
+                    'é maior',
+                    commentsToResponse.length,
+                    commentsToResponse.length >= Number(pageSize)
+                );
+                console.log('RESPONSE TEM LENGTH', !responseData?.length);
+
+                if (!responseData?.length ?? responseData.length < Number(pageSize)) {
+                    isFinishedFromSocialApi = true;
+                }
+
+                if (commentsToResponse.length >= Number(pageSize)) {
+                    internalIsFinished = true;
+                }
+
+                if (!internalIsFinished && !isFinishedFromSocialApi) {
+                    currentPage += 1;
+                }
+            }
+
+            await setUsersProfilePhoto(commentsToResponse);
+
+            _messages.success(
+                res,
+                req,
+                {
+                    data: commentsToResponse,
+                    total: commentsToResponse?.length ? 100 : 0,
+                    pageIndex: currentPage,
+                    isFinished: isFinishedFromSocialApi,
+                },
+                'ok',
+                'social',
+                'getCommentsByTrailId'
+            );
+            return;
+        } catch (error) {
+            console.log(error)
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'getCommentsByTrailId'
+            );
+            return;
+        }
+    },
+    
+
     async updateComment(req, res) {
         try {
             const { commentId } = req.params;
@@ -675,6 +822,57 @@ module.exports = {
             let moderated = false;
             const { trailId, userId } = req.params;
             const uri = `home/like/${process.env.CLIENT_ID}/${trailId}/${userId}`;
+            const { data } = await socialApi.get(uri);
+            const { users } = data;
+
+            if (users) {
+                for (const user of users.allowed) {
+                    if (user.userId == userId) {
+                        allowed = true;
+                        data.userAllowed = allowed;
+                    }
+                }
+
+                for (const user of users.blocked) {
+                    if (user.userId == userId) {
+                        blocked = true;
+                        data.userBlocked = blocked;
+                    }
+                }
+
+                for (const user of users.moderated) {
+                    if (user.userId == userId) {
+                        moderated = true;
+                        data.userModerated = moderated;
+                    }
+                }
+            }
+
+            delete data.users;
+
+            _messages.success(res, req, data, 'ok', 'social', 'getLikesByTrailId');
+            return;
+        } catch (error) {
+            console.log(error);
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'getLikesByTrailId'
+            );
+            return;
+        }
+    },
+
+    async getLikesByNewsId(req, res) {
+        try {
+            let allowed = false;
+            let blocked = false;
+            let moderated = false;
+            const { newsId, userId } = req.params;
+            const uri = `home/like/news/${process.env.CLIENT_ID}/${newsId}/${userId}`;
             const { data } = await socialApi.get(uri);
             const { users } = data;
 

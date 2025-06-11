@@ -13,6 +13,7 @@ module.exports = express.Router()
     .post('/comments/create', _controller.createComment)
     .get('/comments/all', _controller.getAllComments)
     .get('/comments/trails/:trailId', _controller.getCommentsByTrailId)
+    .get('/comments/news/:newsId', _controller.getCommentsByNewsId)
     .put('/comments/update/:commentId', _controller.updateComment)
     // comments management
     .get('/comments/pending', isEngagementManager, _controller.getPendingComments)
@@ -22,6 +23,7 @@ module.exports = express.Router()
     //likes
     .post('/like/create', _controller.createLike)
     .get('/like/:trailId/:userId', _controller.getLikesByTrailId)
+    .get('/like/news/:newsId/:userId', _controller.getLikesByNewsId)
     .delete('/like/delete', _controller.deleteLike)
     //favorite
     .post('/favorite/create', _controller.createFavorite)
