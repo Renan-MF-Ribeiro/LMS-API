@@ -81,7 +81,7 @@ module.exports = {
     },
 
     async update(req, res) {
-        const { title, news, enabled } = req.fields;
+        const payload = JSON.parse(req.fields.payload);
         const { banner } = req.files;
 
         let thumbPath;
@@ -90,15 +90,10 @@ module.exports = {
             thumbPath = await azureBlob(banner, 'news/banners');
         }
 
-        const body = {
-            title,
-            news: JSON.parse(news),
-            enabled: enabled === 'true' ? true : false,
-            thumbPath,
-        };
+        
 
         try {
-            const { data } = await newsApi.put(`/categories/${req.params.id}`, body);
+            const { data } = await newsApi.put(`/categories/${req.params.id}`, {...payload, thumbPath });
             return _messages.success(res, req, data, 'ok', 'news', 'category updated successfully');
         } catch (error) {
             _messages.internalServer(
