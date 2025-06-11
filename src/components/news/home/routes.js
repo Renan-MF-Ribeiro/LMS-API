@@ -3,4 +3,7 @@ const _controller = require('./controller');
 const formidable = require('express-formidable');
 const { isMongoId } = require('../../../utils/middlewares');
 
-module.exports = express.Router().get('/campaigns', _controller.listCampaigns);
+module.exports = express
+    .Router()
+    .get('/', _controller.listNews)
+    .get('/campaigns', _controller.listCampaigns);
