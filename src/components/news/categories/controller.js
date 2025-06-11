@@ -81,7 +81,7 @@ module.exports = {
     },
 
     async update(req, res) {
-        const { title, news, enabled, id } = req.fields;
+        const { title, news, enabled } = req.fields;
         const { banner } = req.files;
 
         let thumbPath;
@@ -98,7 +98,7 @@ module.exports = {
         };
 
         try {
-            const { data } = await newsApi.put(`/categories/${id}`, body);
+            const { data } = await newsApi.put(`/categories/${req.params.id}`, body);
             return _messages.success(res, req, data, 'ok', 'news', 'category updated successfully');
         } catch (error) {
             _messages.internalServer(
