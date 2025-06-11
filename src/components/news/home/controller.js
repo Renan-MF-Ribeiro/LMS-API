@@ -84,7 +84,56 @@ const campaignsController = {
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
 
-            return _messages.internalServer(res, req, message, message, 'news', 'getFormByCampaignId');
+            return _messages.internalServer(
+                res,
+                req,
+                message,
+                message,
+                'news',
+                'getFormByCampaignId'
+            );
+        }
+    },
+
+    createNews: async (req, res) => {
+        try {
+            const payload = JSON.parse(req.fields.payload);
+
+            const { thumb } = req.files;
+            if (thumb) {
+                const thumbPath = await azureBlob(thumb, 'news/banners');
+
+                payload.thumbPath = thumbPath;
+            }
+            const { data } = await newsApi.post('/news', payload);
+
+            return _messages.success(res, req, data, 'ok', 'news', 'createNews');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+
+            return _messages.internalServer(res, req, message, message, 'news', 'createNews');
+        }
+    },
+
+    updateNews: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const payload = JSON.parse(req.fields.payload);
+
+            const { thumb } = req.files;
+            if (thumb) {
+                const thumbPath = await azureBlob(thumb, 'news/banners');
+
+                payload.thumbPath = thumbPath;
+            }
+
+            const { data } = await newsApi.put(`/news/${id}`, payload);
+
+            return _messages.success(res, req, data, 'ok', 'news', 'updateNews');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+
+            return _messages.internalServer(res, req, message, message, 'news', 'updateNews');
         }
     },
 };

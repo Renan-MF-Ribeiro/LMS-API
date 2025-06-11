@@ -5,7 +5,9 @@ const { isMongoId } = require('../../../utils/middlewares');
 
 module.exports = express
     .Router()
+    .post('/', formidable(), _controller.createNews)
     .get('/', _controller.listNews)
     .get('/campaigns', _controller.listCampaigns)
     .get('/:id', _controller.getNews)
-    .get('/forms/:campaignId', _controller.getFormByCampaignId);
+    .get('/forms/:campaignId', _controller.getFormByCampaignId)
+    .put('/:id', formidable(), _controller.updateNews);
