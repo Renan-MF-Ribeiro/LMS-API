@@ -1,3 +1,4 @@
+const { azureBlob } = require('../../utils/files');
 const { newsApi } = require('./http-adapter');
 
 const newsController = {
@@ -33,7 +34,15 @@ const newsController = {
 
     createNews: async (req, res) => {
         try {
-            const { data } = await newsApi.post('/news', req.body);
+            const payload = JSON.parse(req.fields.payload);
+
+            const { thumb } = req.files;
+            if (thumb) {
+                const thumbPath = await azureBlob(thumb, 'news/banners');
+
+                payload.thumbPath = thumbPath;
+            }
+            const { data } = await newsApi.post('/news', payload);
 
             res.json(data);
         } catch (error) {
