@@ -7,4 +7,5 @@ module.exports = express
     .Router()
     .get('/', _controller.listNews)
     .get('/campaigns', _controller.listCampaigns)
-    .get('/:id', _controller.getNews);
+    .get('/:id', _controller.getNews)
+    .get('/forms/:campaignId', _controller.getFormByCampaignId);

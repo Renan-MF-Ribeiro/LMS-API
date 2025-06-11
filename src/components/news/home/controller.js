@@ -30,7 +30,7 @@ const campaignsController = {
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
 
-            return _messages.internalServer(res, req, message, message, 'news', 'listNews');
+            return _messages.internalServer(res, req, message, message, 'news', 'getNews');
         }
     },
 
@@ -70,6 +70,21 @@ const campaignsController = {
             const message = error.response?.data?.message ?? error.message;
 
             return _messages.internalServer(res, req, message, message, 'news', 'listCampaigns');
+        }
+    },
+
+    getFormByCampaignId: async (req, res) => {
+        try {
+            const { campaignId } = req.params;
+            const options = req.query;
+
+            const { data } = await newsApi.get(`/home/forms/${campaignId}`, { params: options });
+
+            return _messages.success(res, req, data, 'ok', 'news', 'getFormByCampaignId');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+
+            return _messages.internalServer(res, req, message, message, 'news', 'getFormByCampaignId');
         }
     },
 };
