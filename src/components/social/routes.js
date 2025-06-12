@@ -31,5 +31,6 @@ module.exports = express.Router()
     .put('/favorite/update/:favoriteId', _controller.updateFavorite)
     //share
     .post('/share', _controller.shareSocialContent)
+    .post('/news/share', _controller.shareNewsSocialContent)
     .post('/share/users', _controller.getShareTargets)
     .get('/users', _controller.getUsersElegibleForSharing);
