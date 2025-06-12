@@ -39,7 +39,7 @@ const newsController = {
                 }
             }
 
-            res.json(data);
+            res.json({ data: news, total: data.total });
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
