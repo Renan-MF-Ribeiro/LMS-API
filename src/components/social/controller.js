@@ -1055,6 +1055,57 @@ module.exports = {
         }
     },
 
+    async shareNewsSocialContent(req, res) {
+        const { users, newsId } = req.body;
+        try {
+            const { _id, networkLogin, name } = await _functions.getUserByToken(req);
+
+            if (users) {
+                const config = {
+                    reqUser: name,
+                    communication: ['notification', 'email'],
+                    type: 'share',
+                    contentType: 'news',
+                    contentId: newsId,
+                };
+                await createNotification(config, users);
+            }
+
+            const uri = `home/share/${process.env.CLIENT_ID}`;
+            const { data } = await socialApi.post(uri, {
+                users: users,
+                newsId,
+                sharedBy: {
+                    userId: _id,
+                    userName: networkLogin,
+                },
+            });
+
+            if (data?.users?.length > 0) {
+                await GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.SHARE, EVENT_CATEGORY.SHARED_CONTENT],
+                    identifier: data.sharedBy.userId,
+                    meta: {
+                        trailId: data.trailId,
+                    },
+                });
+            }
+
+            _messages.success(res, req, data, 'ok', 'social', 'shareSocialContent');
+            return;
+        } catch (error) {
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'shareSocialContent'
+            );
+            return;
+        }
+    },
+
     async getUsersElegibleForSharing(req, res) {
         try {
             const { trailId, searchBy } = req.query;
