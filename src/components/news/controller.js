@@ -1,4 +1,5 @@
 const { azureBlob } = require('../../utils/files');
+const { User } = require('../users/model');
 const { newsApi } = require('./http-adapter');
 
 const newsController = {
@@ -21,6 +22,22 @@ const newsController = {
         try {
             const options = req.query;
             const { data } = await newsApi.get('/news', { params: options });
+
+            const news = [];
+
+            if (data?.data?.some((news) => (news?.users || []).length > 0)) {
+                for (const newsData of data.data) {
+                    const populatedNews = newsData;
+                    if (newsData?.users) {
+                        const users = await User.find({ _id: { $in: newsData.users } });
+                        populatedNews.users = users.map((user) => ({
+                            _id: user._id,
+                            name: user.name,
+                        }));
+                    }
+                    news.push(populatedNews);
+                }
+            }
 
             res.json(data);
         } catch (error) {
