@@ -82,11 +82,11 @@ module.exports = {
 
     async update(req, res) {
         const payload = JSON.parse(req.fields.payload);
-        const { banner } = req.files;
+        const { thumb } = req.files;
 
         let thumbPath;
 
-        if (banner) {
+        if (thumb) {
             thumbPath = await azureBlob(banner, 'news/banners');
         }
 
