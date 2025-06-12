@@ -38,18 +38,30 @@ const campaignsController = {
         try {
             const options = req.query;
             const { data } = await newsApi.get('/home', { params: options });
+            const { data: config } = await newsApi.get('/config');
 
             const news = [];
 
             if (data?.data?.some((news) => (news?.users || []).length > 0)) {
                 for (const newsData of data.data) {
-                    const populatedNews = newsData;
+                    const populatedNews = { ...newsData };
+
                     if (newsData?.users) {
                         const users = await User.find({ _id: { $in: newsData.users } });
-                        populatedNews.users = users.map((user) => ({
-                            _id: user._id,
-                            name: user.name,
-                        }));
+
+                        populatedNews.users = users.map((user) => {
+                            const base = { _id: user._id, name: user.name };
+
+                            if (config.enableUserLink && config?.userFields?.length) {
+                                const extraFields = config.userFields.reduce((acc, field) => {
+                                    acc[field] = user[field];
+                                    return acc;
+                                }, {});
+                                return { ...base, ...extraFields };
+                            }
+
+                            return base;
+                        });
                     }
                     news.push(populatedNews);
                 }
