@@ -39,6 +39,24 @@ const campaignsController = {
             const options = req.query;
             const { data } = await newsApi.get('/home', { params: options });
 
+            const news = [];
+
+            if (data?.data?.some((news) => (news?.users || []).length > 0)) {
+                for (const newsData of data.data) {
+                    const populatedNews = newsData;
+                    if (newsData?.users) {
+                        const users = await User.find({ _id: { $in: newsData.users } });
+                        populatedNews.users = users.map((user) => ({
+                            _id: user._id,
+                            name: user.name,
+                        }));
+                    }
+                    news.push(populatedNews);
+                }
+            }
+
+            res.json({ data: news, total: data.total });
+
             return _messages.success(res, req, data, 'ok', 'news', 'listNews');
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
