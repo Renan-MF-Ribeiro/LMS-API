@@ -13,6 +13,7 @@ const { createNotification } = require('../feed/buisiness');
 const GamificationKafka = require('../gamification/kafka/broker');
 const { EVENT_CATEGORY } = require('../gamification/model');
 const { COMMENT_STATUS } = require('./model');
+const { UsersWithProcessedTags } = require('../courses/model');
 
 module.exports = {
     async getConfig(req, res) {
@@ -1255,7 +1256,12 @@ module.exports = {
         try {
             const { users = [], campaignId } = req.body;
 
-            const { data } = await newsApi.get(`/campaigns/${campaignId}`);
+            const { data } = await newsApi.get(`/campaigns/${campaignId}`, {
+                headers: {
+                    Authorization: `Bearer ${req.headers.authorization}`
+                }
+            });
+
             const tags = data.eligibilities;
             if (!tags || tags.length === 0) {
                 _messages.success(
