@@ -857,9 +857,9 @@ module.exports = {
                         ])
                     );
 
-                    const namesProfiles = groups.filter((group) => group.startsWith('PERFIL'));
+                    const namesProfiles = groups.filter((group) => String(group).toLowerCase().startsWith('PERFIL_'));
 
-                    const namesGroups = groups.filter((group) => group.startsWith('ELEGE'));
+                    const namesGroups = groups.filter((group) => !String(group).toLowerCase().startsWith('PERFIL_'));
 
                     const profilesIDS = await returnIdProfileUser(namesProfiles);
                     const groupsIDS = await returnIdGroupUser(namesGroups);
