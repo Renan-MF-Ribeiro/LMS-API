@@ -9,14 +9,7 @@ const newsController = {
             const { id } = req.params;
             const { data } = await newsApi.get(`/news/${id}`);
 
-            return _messages.success(
-                res,
-                req,
-                data,
-                'Notícia retornada com sucesso',
-                'news',
-                'getNews'
-            );
+            return _messages.success(res, req, data, 'ok', 'news', 'getNews');
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
 
@@ -59,14 +52,7 @@ const newsController = {
 
             const data = { data: news, total: listNews.total };
 
-            return _messages.success(
-                res,
-                req,
-                data,
-                'Notícia criada com sucesso',
-                'news',
-                'listNews'
-            );
+            return _messages.success(res, req, data, 'ok', 'news', 'listNews');
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
 
@@ -106,14 +92,7 @@ const newsController = {
             const { id } = req.params;
             const { data } = await newsApi.put(`/news/${id}`, req.body);
 
-            return _messages.success(
-                res,
-                req,
-                data,
-                'Notícia atualizada com sucesso',
-                'news',
-                'updateNews'
-            );
+            return _messages.success(res, req, data, 'ok', 'news', 'updateNews');
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
 
@@ -126,13 +105,7 @@ const newsController = {
             const { id } = req.params;
             await newsApi.delete(`/news/${id}`);
 
-            return _messages.successEmpty(
-                res,
-                req,
-                'Notícia removida com sucesso',
-                'news',
-                'deleteNews'
-            );
+            return _messages.successEmpty(res, req, 'ok', 'news', 'deleteNews');
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
 

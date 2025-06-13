@@ -37,13 +37,13 @@ const campaignsController = {
     listNews: async (req, res) => {
         try {
             const options = req.query;
-            const { data } = await newsApi.get('/home', { params: options });
+            const { data: listNews } = await newsApi.get('/home', { params: options });
             const { data: config } = await newsApi.get('/config');
 
             const news = [];
 
-            if (data?.data?.some((news) => (news?.users || []).length > 0)) {
-                for (const newsData of data.data) {
+            if (listNews?.data?.some((news) => (news?.users || []).length > 0)) {
+                for (const newsData of listNews.data) {
                     const populatedNews = { ...newsData };
 
                     if (newsData?.users) {
@@ -67,7 +67,7 @@ const campaignsController = {
                 }
             }
 
-            res.json({ data: news, total: data.total });
+            const data = { data: news, total: listNews.total };
 
             return _messages.success(res, req, data, 'ok', 'news', 'listNews');
         } catch (error) {

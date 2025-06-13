@@ -76,13 +76,7 @@ const formsController = {
             const { id } = req.params;
             await newsApi.delete(`/forms/${id}`);
 
-            return _messages.successEmpty(
-                res,
-                req,
-                'Formulário removido com sucesso',
-                'news',
-                'deleteForm'
-            );
+            return _messages.successEmpty(res, req, 'ok', 'news', 'deleteForm');
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
 
@@ -95,13 +89,7 @@ const formsController = {
             const { id } = req.params;
             await newsApi.delete(`/forms/${id}/material`);
 
-            return _messages.successEmpty(
-                res,
-                req,
-                'Formulário removido com sucesso',
-                'news',
-                'deleteForm'
-            );
+            return _messages.successEmpty(res, req, 'ok', 'news', 'deleteForm');
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
 

@@ -3,8 +3,6 @@ const { newsApi } = require('../http-adapter');
 const { azureBlob } = require('../../../utils/files');
 const { UsersWithProcessedTags } = require('../../courses/model');
 
-const moment = require('moment');
-
 const campaignsController = {
     getCampaign: async (req, res) => {
         try {
@@ -114,13 +112,7 @@ const campaignsController = {
             const { id } = req.params;
             await newsApi.delete(`/campaigns/${id}`);
 
-            return _messages.successEmpty(
-                res,
-                req,
-                'Formulário removido com sucesso',
-                'news',
-                'deleteForm'
-            );
+            return _messages.successEmpty(res, req, 'ok', 'news', 'deleteForm');
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
 
@@ -133,13 +125,7 @@ const campaignsController = {
             const { id } = req.params;
             await newsApi.delete(`/campaigns/${id}/material`);
 
-            return _messages.successEmpty(
-                res,
-                req,
-                'Formulário removido com sucesso',
-                'news',
-                'deleteFormMaterial'
-            );
+            return _messages.successEmpty(res, req, 'ok', 'news', 'deleteFormMaterial');
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
 
@@ -159,13 +145,7 @@ const campaignsController = {
             const { id } = req.params;
             await newsApi.delete(`/campaigns/${id}`);
 
-            return _messages.successEmpty(
-                res,
-                req,
-                'Campanha removida com sucesso',
-                'news',
-                'deleteCampaign'
-            );
+            return _messages.successEmpty(res, req, 'ok', 'news', 'deleteCampaign');
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
 
