@@ -14,7 +14,7 @@ resources:
   - repo: self
 
 variables:
-  tag: '2.10.6'
+  tag: '2.10.7'
   name: "happlearning-v2"
   dockerRegistryServiceConnection: "93b93a28-98a7-4844-b8f8-c35c737f6e02"
   stagingRunningPort: "3097"
