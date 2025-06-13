@@ -571,6 +571,7 @@ module.exports = {
                     data: [...commentsArray],
                     total: response.data.total,
                 }
+
                 _messages.success(res, req, comments, 'ok', 'social', 'getApprovedComments');
                 return;
             }
