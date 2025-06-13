@@ -96,6 +96,45 @@ module.exports = {
         }
     },
 
+    async getNewsSocialStatus(req, res) {
+        try {
+            const userTags = await getTagsElegiblesByToken(req);
+            const user = await _functions.getUserByToken(req);
+
+            const uri = `client-config/${process.env.CLIENT_ID}`;
+
+            const { data } = await socialApi.get(uri);
+
+            let tagBlocked = false;
+            let userBlocked = false;
+
+            if (data.blockedTrails.length > 0) {
+                tagBlocked = data.tagsLists.blocked.some((tag) => {
+                    return userTags.some((t) => {
+                        return t.value === tag;
+                    });
+                });
+            }
+            if (data.usersLists.blocked.length > 0) {
+                userBlocked = data.usersLists.blocked.some((u) => {
+                    return u.userId == user._id;
+                });
+            }
+
+            _messages.success(
+                res,
+                req,
+                { tagBlocked, userBlocked },
+                'configurações encontradas',
+                'social',
+                'getConfig'
+            );
+        } catch (error) {
+            console.log(error);
+            _messages.internalServer(res, req, error.message, null, 'social', 'getConfig');
+        }
+    },
+
     async putConfig(req, res) {
         try {
             const reqBody = req.body;

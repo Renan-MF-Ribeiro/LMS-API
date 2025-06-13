@@ -8,6 +8,7 @@ module.exports = express.Router()
     .get('/users-lists', isEngagementManager, _controller.getUsers)
     .post('/users-lists', isEngagementManager, _controller.addOrRemoveFromUserList)
     .get('/status', _controller.getSocialStatus)
+    .get('/news/status', _controller.getSocialStatus)
 
     //comments
     .post('/comments/create', _controller.createComment)
