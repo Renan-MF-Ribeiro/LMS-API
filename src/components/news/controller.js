@@ -57,7 +57,7 @@ const newsController = {
                 }
             }
 
-            const data = { data: news, total: data.total };
+            const data = { data: news, total: listNews.total };
 
             return _messages.success(
                 res,
