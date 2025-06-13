@@ -17,4 +17,5 @@ module.exports = express
     .get('/:id', _controller.getNews)
     .get('/', _controller.listNews)
     .post('/', formidable(), _controller.createNews)
-    .put('/:id', formidable(), _controller.updateNews);
+    .put('/:id', formidable(), _controller.updateNews)
+    .delete('/:id', _controller.deleteNews);
