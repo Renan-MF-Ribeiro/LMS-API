@@ -1,4 +1,5 @@
 const { socialApi } = require('./http-adapter');
+const { newsApi } = require('../news/http-adapter');
 const _business = require('./business');
 const _functions = require('../../utils/functions');
 const _messages = require('../../utils/messages');
@@ -12,6 +13,7 @@ const { createNotification } = require('../feed/buisiness');
 const GamificationKafka = require('../gamification/kafka/broker');
 const { EVENT_CATEGORY } = require('../gamification/model');
 const { COMMENT_STATUS } = require('./model');
+const { UsersWithProcessedTags } = require('../courses/model');
 
 module.exports = {
     async getConfig(req, res) {
@@ -516,8 +518,6 @@ module.exports = {
 
         async getCommentsByNewsId(req, res) {
         try {
-
-            console.log("\n\n\n!!!!!!!")
             const { newsId } = req.params;
 
             const uri = `comments/news/${newsId}`;
@@ -551,7 +551,7 @@ module.exports = {
                 const commentsToResponse = response.data ?? [];
 
                 await setUsersProfilePhoto(commentsToResponse);
-
+                console.log(response.total)
                 _messages.success(
                     res,
                     req,
@@ -574,7 +574,6 @@ module.exports = {
             };
 
             const userInfo = await _functions.getUserByToken(req);
-            console.log(userInfo)
             const filter = config.reduce((acc, current) => {
                 acc[current] = userInfo[current] ?? null;
                 return acc;
@@ -597,7 +596,6 @@ module.exports = {
             let currentPage = Number(pageIndex);
 
             while (!internalIsFinished && !isFinishedFromSocialApi) {
-                console.log('query', { pageSize, pageIndex: currentPage, ...query });
                 const { data: response } = await fetchComments({
                     pageSize,
                     pageIndex: currentPage,
@@ -609,13 +607,6 @@ module.exports = {
                 const filteredComments = filterCommentsByUserId(responseData);
 
                 commentsToResponse.push(...filteredComments);
-
-                console.log(
-                    'é maior',
-                    commentsToResponse.length,
-                    commentsToResponse.length >= Number(pageSize)
-                );
-                console.log('RESPONSE TEM LENGTH', !responseData?.length);
 
                 if (!responseData?.length ?? responseData.length < Number(pageSize)) {
                     isFinishedFromSocialApi = true;
@@ -631,13 +622,12 @@ module.exports = {
             }
 
             await setUsersProfilePhoto(commentsToResponse);
-
             _messages.success(
                 res,
                 req,
                 {
                     data: commentsToResponse,
-                    total: commentsToResponse?.length ? 100 : 0,
+                    total: commentsToResponse?.length ? commentsToResponse.length : 0,
                     pageIndex: currentPage,
                     isFinished: isFinishedFromSocialApi,
                 },
@@ -1231,6 +1221,80 @@ module.exports = {
                 return {
                     _id: user._id,
                     elegible: checkEligibilityTagsAnd(userTags, trail.tagsAnd, trail.tags),
+                };
+            });
+
+            _messages.success(res, req, returnUsers, 'ok', 'social', 'getShareTargets');
+            return;
+        } catch (error) {
+            console.log(error);
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'getShareTargets'
+            );
+            return;
+        }
+    },
+
+    async getNewsShareTargets(req, res) {
+        try {
+            const { users = [], campaignId } = req.body;
+
+            const { data } = await newsApi.get(`/campaigns/${campaignId}`, {
+                headers: {
+                    Authorization: `Bearer ${req.headers.authorization}`
+                }
+            });
+
+            const tags = data.eligibilities;
+            if (!tags || tags.length === 0) {
+                _messages.success(
+                    res,
+                    req,
+                    users.map((u) => ({ ...u, elegible: false })),
+                    'ok',
+                    'social',
+                    'getShareTargets'
+                );
+                return;
+            }
+
+            const availableUsers = await User.find({
+                networkLogin: { $in: users.map((u) => u.networkLogin) },
+                status: 'ATIVO',
+            })
+                .select('_id tags groupsAD status')
+                .lean();
+
+            if (!availableUsers.length) {
+                _messages.success(
+                    res,
+                    req,
+                    users.map((u) => ({ ...u, elegible: false })),
+                    'ok',
+                    'social',
+                    'getShareTargets'
+                );
+                return;
+            }
+
+
+            const usersWithTags = await UsersWithProcessedTags.find({
+                userTags: { $in: tags },
+            });
+            const returnUsers = availableUsers.map((user) => {
+                const userTags = (user.tags ?? []).concat(user.groupsAD ?? []);
+                const elegible = usersWithTags.some((u) =>
+                    userTags.some((tag) => u.userTags.includes(tag))
+                );
+
+                return {
+                    _id: user._id,
+                    elegible,
                 };
             });
 

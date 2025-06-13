@@ -34,4 +34,5 @@ module.exports = express.Router()
     .post('/share', _controller.shareSocialContent)
     .post('/news/share', _controller.shareNewsSocialContent)
     .post('/share/users', _controller.getShareTargets)
+    .post('/share/news/users', _controller.getNewsShareTargets)
     .get('/users', _controller.getUsersElegibleForSharing);
