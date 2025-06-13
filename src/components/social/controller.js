@@ -518,8 +518,6 @@ module.exports = {
 
         async getCommentsByNewsId(req, res) {
         try {
-
-            console.log("\n\n\n!!!!!!!")
             const { newsId } = req.params;
 
             const uri = `comments/news/${newsId}`;
@@ -553,7 +551,7 @@ module.exports = {
                 const commentsToResponse = response.data ?? [];
 
                 await setUsersProfilePhoto(commentsToResponse);
-
+                console.log(response.total)
                 _messages.success(
                     res,
                     req,
@@ -576,7 +574,6 @@ module.exports = {
             };
 
             const userInfo = await _functions.getUserByToken(req);
-            console.log(userInfo)
             const filter = config.reduce((acc, current) => {
                 acc[current] = userInfo[current] ?? null;
                 return acc;
@@ -599,7 +596,6 @@ module.exports = {
             let currentPage = Number(pageIndex);
 
             while (!internalIsFinished && !isFinishedFromSocialApi) {
-                console.log('query', { pageSize, pageIndex: currentPage, ...query });
                 const { data: response } = await fetchComments({
                     pageSize,
                     pageIndex: currentPage,
@@ -611,13 +607,6 @@ module.exports = {
                 const filteredComments = filterCommentsByUserId(responseData);
 
                 commentsToResponse.push(...filteredComments);
-
-                console.log(
-                    'é maior',
-                    commentsToResponse.length,
-                    commentsToResponse.length >= Number(pageSize)
-                );
-                console.log('RESPONSE TEM LENGTH', !responseData?.length);
 
                 if (!responseData?.length ?? responseData.length < Number(pageSize)) {
                     isFinishedFromSocialApi = true;
@@ -633,13 +622,12 @@ module.exports = {
             }
 
             await setUsersProfilePhoto(commentsToResponse);
-
             _messages.success(
                 res,
                 req,
                 {
                     data: commentsToResponse,
-                    total: commentsToResponse?.length ? 100 : 0,
+                    total: commentsToResponse?.length ? commentsToResponse.length : 0,
                     pageIndex: currentPage,
                     isFinished: isFinishedFromSocialApi,
                 },
