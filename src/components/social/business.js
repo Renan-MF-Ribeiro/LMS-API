@@ -104,7 +104,7 @@ module.exports = {
                 return {
                     ...comment,
                     userName: user?.name,
-                    trailTitle: trail?.title ?? 'Trilha não encontrada ou excluída',
+                    trailTitle: trail?.title ?? "",
                 };
             })
             .filter(Boolean);
