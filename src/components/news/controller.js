@@ -1,3 +1,4 @@
+const _messages = require('../../utils/messages');
 const { azureBlob } = require('../../utils/files');
 const { User } = require('../users/model');
 const { newsApi } = require('./http-adapter');
@@ -8,26 +9,31 @@ const newsController = {
             const { id } = req.params;
             const { data } = await newsApi.get(`/news/${id}`);
 
-            res.json(data);
+            return _messages.success(
+                res,
+                req,
+                data,
+                'Notícia retornada com sucesso',
+                'news',
+                'getNews'
+            );
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
-            const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = message ?? 'Internal server error';
 
-            res.status(statusCode).json(errorMessage);
+            return _messages.internalServer(res, req, message, message, 'news', 'getNews');
         }
     },
 
     listNews: async (req, res) => {
         try {
             const options = req.query;
-            const { data } = await newsApi.get('/news', { params: options });
+            const { data: listNews } = await newsApi.get('/news', { params: options });
             const { data: config } = await newsApi.get('/config');
 
             const news = [];
 
-            if (data?.data?.some((news) => (news?.users || []).length > 0)) {
-                for (const newsData of data.data) {
+            if (listNews?.data?.some((news) => (news?.users || []).length > 0)) {
+                for (const newsData of listNews.data) {
                     const populatedNews = { ...newsData };
 
                     if (newsData?.users) {
@@ -51,13 +57,20 @@ const newsController = {
                 }
             }
 
-            res.json({ data: news, total: data.total });
+            const data = { data: news, total: data.total };
+
+            return _messages.success(
+                res,
+                req,
+                data,
+                'Notícia criada com sucesso',
+                'news',
+                'listNews'
+            );
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
-            const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = message ?? 'Internal server error';
 
-            res.status(statusCode).json(errorMessage);
+            return _messages.internalServer(res, req, message, message, 'news', 'listNews');
         }
     },
 
@@ -73,13 +86,18 @@ const newsController = {
             }
             const { data } = await newsApi.post('/news', payload);
 
-            res.json(data);
+            return _messages.success(
+                res,
+                req,
+                data,
+                'Notícia criada com sucesso',
+                'news',
+                'createNews'
+            );
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
-            const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = message ?? 'Internal server error';
 
-            res.status(statusCode).json(errorMessage);
+            return _messages.internalServer(res, req, message, message, 'news', 'createNews');
         }
     },
 
@@ -88,13 +106,37 @@ const newsController = {
             const { id } = req.params;
             const { data } = await newsApi.put(`/news/${id}`, req.body);
 
-            res.json(data);
+            return _messages.success(
+                res,
+                req,
+                data,
+                'Notícia atualizada com sucesso',
+                'news',
+                'updateNews'
+            );
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
-            const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = message ?? 'Internal server error';
 
-            res.status(statusCode).json(errorMessage);
+            return _messages.internalServer(res, req, message, message, 'news', 'updateNews');
+        }
+    },
+
+    deleteNews: async (req, res) => {
+        try {
+            const { id } = req.params;
+            await newsApi.delete(`/news/${id}`);
+
+            return _messages.successEmpty(
+                res,
+                req,
+                'Notícia removida com sucesso',
+                'news',
+                'deleteNews'
+            );
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+
+            return _messages.internalServer(res, req, message, message, 'news', 'deleteNews');
         }
     },
 };

@@ -10,3 +10,4 @@ module.exports = express
     .post('/', formidable(), _controller.createCampaign)
     .put('/:id', isMongoId, formidable(), _controller.updateCampaign)
     .get('/elegible-users/:id', _controller.getEligibleUsers)
+    .delete('/:id', _controller.deleteCampaign);

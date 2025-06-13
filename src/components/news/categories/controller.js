@@ -90,10 +90,11 @@ module.exports = {
             thumbPath = await azureBlob(banner, 'news/banners');
         }
 
-        
-
         try {
-            const { data } = await newsApi.put(`/categories/${req.params.id}`, {...payload, thumbPath });
+            const { data } = await newsApi.put(`/categories/${req.params.id}`, {
+                ...payload,
+                thumbPath,
+            });
             return _messages.success(res, req, data, 'ok', 'news', 'category updated successfully');
         } catch (error) {
             _messages.internalServer(
@@ -104,6 +105,25 @@ module.exports = {
                 'trails',
                 'createPadlet'
             );
+        }
+    },
+
+    deleteCategory: async (req, res) => {
+        try {
+            const { id } = req.params;
+            await newsApi.delete(`/categories/${id}`);
+
+            return _messages.successEmpty(
+                res,
+                req,
+                'Categoria removida com sucesso',
+                'news',
+                'deleteCategory'
+            );
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+
+            return _messages.internalServer(res, req, message, message, 'news', 'deleteCategory');
         }
     },
 };

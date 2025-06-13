@@ -95,7 +95,14 @@ const campaignsController = {
                 userTags: { $in: tags },
             });
 
-            return _messages.success(res, req, { eligibleUsers: usersWithTags }, 'ok', 'news', 'getEligibleUsers');
+            return _messages.success(
+                res,
+                req,
+                { eligibleUsers: usersWithTags },
+                'ok',
+                'news',
+                'getEligibleUsers'
+            );
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             return _messages.internalServer(res, req, message, message, 'news', 'getEligibleUsers');
@@ -131,7 +138,7 @@ const campaignsController = {
                 req,
                 'Formulário removido com sucesso',
                 'news',
-                'deleteForm'
+                'deleteFormMaterial'
             );
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
@@ -144,6 +151,25 @@ const campaignsController = {
                 'news',
                 'deleteFormMaterial'
             );
+        }
+    },
+
+    deleteCampaign: async (req, res) => {
+        try {
+            const { id } = req.params;
+            await newsApi.delete(`/campaigns/${id}`);
+
+            return _messages.successEmpty(
+                res,
+                req,
+                'Campanha removida com sucesso',
+                'news',
+                'deleteCampaign'
+            );
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+
+            return _messages.internalServer(res, req, message, message, 'news', 'deleteCampaign');
         }
     },
 };
