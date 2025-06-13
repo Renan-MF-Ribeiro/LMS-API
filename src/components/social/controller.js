@@ -1,4 +1,5 @@
 const { socialApi } = require('./http-adapter');
+const { newsApi } = require('../news/http-adapter');
 const _business = require('./business');
 const _functions = require('../../utils/functions');
 const _messages = require('../../utils/messages');
@@ -1231,6 +1232,75 @@ module.exports = {
                 return {
                     _id: user._id,
                     elegible: checkEligibilityTagsAnd(userTags, trail.tagsAnd, trail.tags),
+                };
+            });
+
+            _messages.success(res, req, returnUsers, 'ok', 'social', 'getShareTargets');
+            return;
+        } catch (error) {
+            console.log(error);
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'getShareTargets'
+            );
+            return;
+        }
+    },
+
+    async getNewsShareTargets(req, res) {
+        try {
+            const { users = [], campaignId } = req.body;
+
+            const { data } = await newsApi.get(`/campaigns/${campaignId}`);
+            const tags = data.eligibilities;
+            if (!tags || tags.length === 0) {
+                _messages.success(
+                    res,
+                    req,
+                    users.map((u) => ({ ...u, elegible: false })),
+                    'ok',
+                    'social',
+                    'getShareTargets'
+                );
+                return;
+            }
+
+            const availableUsers = await User.find({
+                networkLogin: { $in: users.map((u) => u.networkLogin) },
+                status: 'ATIVO',
+            })
+                .select('_id tags groupsAD status')
+                .lean();
+
+            if (!availableUsers.length) {
+                _messages.success(
+                    res,
+                    req,
+                    users.map((u) => ({ ...u, elegible: false })),
+                    'ok',
+                    'social',
+                    'getShareTargets'
+                );
+                return;
+            }
+
+
+            const usersWithTags = await UsersWithProcessedTags.find({
+                userTags: { $in: tags },
+            });
+            const returnUsers = availableUsers.map((user) => {
+                const userTags = (user.tags ?? []).concat(user.groupsAD ?? []);
+                const elegible = usersWithTags.some((u) =>
+                    userTags.some((tag) => u.userTags.includes(tag))
+                );
+
+                return {
+                    _id: user._id,
+                    elegible,
                 };
             });
 
