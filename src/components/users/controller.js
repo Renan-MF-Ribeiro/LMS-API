@@ -181,8 +181,11 @@ async function generateTokens (user, login, password) {
     for (const p in groups) {
         const strGroup = groups[p];
 
-        if (strGroup.includes('PERFIL_')) namesProfiles.push(strGroup);
-        if (strGroup.includes('ELEGE')) namesGroups.push(strGroup);
+        if (String(strGroup).toUpperCase().includes('PERFIL_')) {
+            namesProfiles.push(strGroup);
+        } else {
+            namesGroups.push(strGroup);
+        }
     }
 
     const profilesIDS = await returnIdProfileUser(namesProfiles);
