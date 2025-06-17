@@ -6,7 +6,8 @@ const { azureBlob } = require('../../../utils/files');
 module.exports = {
     async list(req, res) {
         try {
-            const { data } = await newsApi.get(`/categories/list`);
+            const options = req.query;
+            const { data } = await newsApi.get(`/categories/list`, { params: options });
 
             _messages.success(res, req, data);
         } catch (error) {
