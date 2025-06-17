@@ -38,6 +38,7 @@ const managersController = {
                     );
                 });
             }
+
             const { data } = await matricesApi.get('/users/detailed-info', {
                 params: {
                     ...req.query,
@@ -224,6 +225,51 @@ const managersController = {
             res.status(statusCode).json(errorMessage);
         }
     },
+
+    getOverviewById: async (req, res) => {
+        try {
+            const applier = await getUserByToken(req);
+            const appliableUsers = await findUsersByMatrixConfig(applier);
+
+            if (appliableUsers.length === 0) {
+                return res.status(httpStatus.OK).json([]);
+            }
+
+            const userIds = appliableUsers.map(u => u._id.toString());
+
+            const { id } = req.params;
+            const { data } = await matricesApi.post(`/applications/overview/${id}`, {
+                userIds
+            });
+
+            const apiUsersMap = new Map(
+                data.data?.users?.map(apiUser => [
+                    apiUser.userId?.toString(),
+                    apiUser
+                ])
+            );
+
+            const response = {
+                ...data.data,
+                users: appliableUsers.map(user => ({
+                    _id: user?._id,
+                    name: user?.name,
+                    networkLogin: user?.networkLogin,
+                    office: user?.office,
+                    finalGrade: apiUsersMap.get(user?._id?.toString())?.finalGrade || null,
+                    grades: apiUsersMap.get(user?._id?.toString())?.grades || []
+                }))
+            };
+
+            res.status(data.statusCode).json(response);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
 };
 
 async function checkCoursesProgress(user) {
