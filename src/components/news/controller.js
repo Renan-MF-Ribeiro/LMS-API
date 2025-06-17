@@ -9,6 +9,14 @@ const newsController = {
             const { id } = req.params;
             const { data } = await newsApi.get(`/news/${id}`);
 
+            if (data?.users && Array.isArray(data.users) && data.users.length > 0) {
+                const users = await User.find({ _id: { $in: data.users } });
+                data.users = users.map(user => ({
+                    _id: user._id,
+                    name: user.name
+                }));
+            }
+
             return _messages.success(res, req, data, 'ok', 'news', 'getNews');
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
