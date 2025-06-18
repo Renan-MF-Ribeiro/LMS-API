@@ -98,7 +98,16 @@ const newsController = {
     updateNews: async (req, res) => {
         try {
             const { id } = req.params;
-            const { data } = await newsApi.put(`/news/${id}`, req.body);
+            const payload = JSON.parse(req.fields.payload);
+
+            const { thumb } = req.files;
+            if (thumb) {
+                const thumbPath = await azureBlob(thumb, 'news/banners');
+
+                payload.thumbPath = thumbPath;
+            }
+            
+            const { data } = await newsApi.put(`/news/${id}`, payload);
 
             return _messages.success(res, req, data, 'ok', 'news', 'updateNews');
         } catch (error) {
