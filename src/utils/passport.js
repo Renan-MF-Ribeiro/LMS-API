@@ -6,6 +6,7 @@ const OpenIDConnectStrategy = require('passport-openidconnect');
 const { log } = require('./logger');
 const { getLoginConfig } = require('../components/users/business');
 const { getCookieProps } = require('./cookies');
+const environment = require('../environment');
 
 passport.serializeUser((user, done) => {
     done(null, user);
@@ -74,11 +75,12 @@ function getRequestStrategyName(req) {
 
 function initializePassport(app) {
     app.use(session({
-        secret: 'seuSegredoSeguro',
+        secret: environment.PROJECT_SECRET_KEY,
         resave: false,
         saveUninitialized: true,
-        cookie: getCookieProps()
-    }))
+        cookie: getCookieProps(),
+    }));
+    
     app.use(passport.initialize());
     app.use(passport.session());
 }
@@ -126,6 +128,33 @@ function removeStrategies(strategies = []) {
     strategies.forEach(strategy => passport.unuse(strategy));
 }
 
+function parseSamlUserToJson(user) {
+    const samlUserObject = {};
+    const attributes = user.attributes || {};
+
+    function capitalize(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    for (const [key, value] of Object.entries(attributes)) {
+        const normalizedKey = key
+            .replace(/[^\w]/g, ' ') // Remove non-word characters
+            .split(' ') // Split by spaces
+            .map((word, i) => i === 0 ? word.toLowerCase() : capitalize(word)) // Lowercase first word, capitalize others
+            .join('');
+
+        samlUserObject[normalizedKey] = Array.isArray(value) ? value[0] : value;
+    }
+
+    return samlUserObject;
+}
+
+async function parseSamlResponse(req, res, next) {
+    req.samlUserObject = req.user ? parseSamlUserToJson(req.user) : null;
+
+    next();
+}
+
 createStrategiesFromLoginConfigs();
 
 module.exports = {
@@ -133,5 +162,6 @@ module.exports = {
     authenticatePassport,
     getRequestStrategyName,
     createStrategiesFromLoginConfigs,
-    removeStrategies
+    removeStrategies,
+    parseSamlResponse,
 };

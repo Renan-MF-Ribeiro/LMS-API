@@ -74,7 +74,6 @@
         "ramda": "^0.26.1",
         "read-excel-file": "^4.1.0",
         "rev-hash": "^3.0.0",
-        "saml2js": "^0.1.2",
         "saslprep": "^1.0.3",
         "shelljs": "^0.8.5",
         "ssh2-sftp-client": "^4.3.1",
