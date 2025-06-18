@@ -129,7 +129,10 @@ const TrackingController = {
                         }
                     }
                     console.log("completion", completion, "newCompletion", newCompletion, "\n\n\n\n")
+                    const isNewStatus = req.body?.lessonStatus !== tracking.lessonStatus;
+
                     if (
+                        isNewStatus &&
                         (newCompletion == SCORMLessonStatus.COMPLETED ||
                             newCompletion == SCORMLessonStatus.FAILED ||
                             newCompletion == SCORMLessonStatus.PASSED)
