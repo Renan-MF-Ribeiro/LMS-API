@@ -26,7 +26,7 @@ const { sendMessageToKafka, processTargetUsers } = require('../new-messages/busi
 
 const { internalServer, success, badRequest } = require('../../utils/messages');
 
-const { pagination, ordernation, getUserByToken } = require('../../utils/functions');
+const { pagination, ordernation, getUserByToken, isDateOutOfRange } = require('../../utils/functions');
 
 const {
     uploadMaterial,
@@ -35,6 +35,7 @@ const {
     getClassByID,
     returnProgramaID,
     processAttendanceListImport,
+    enrichCoursesWithClasses
 } = require('./business');
 
 const {
@@ -62,6 +63,7 @@ module.exports = {
             body.dimensions = JSON.parse(body.dimensions);
             body.tags = JSON.parse(body.tags);
             body.mandatory = JSON.parse(body.mandatory);
+            body.obligatory = JSON.parse(body.obligatory);
             body.certificateDue = JSON.parse(body.certificateDue);
             body.certificateDateType = JSON.parse(body.certificateDateType);
 
@@ -243,6 +245,7 @@ module.exports = {
             if (body.tags) body.tags = JSON.parse(body.tags);
             if (body.dimensions) body.dimensions = JSON.parse(body.dimensions);
             if (body.mandatory) body.mandatory = JSON.parse(body.mandatory);
+            if (body.obligatory) body.obligatory = JSON.parse(body.obligatory);
             if (body.certificateDue) body.certificateDue = JSON.parse(body.certificateDue);
             if (body.certificateDateType) body.certificateDateType = JSON.parse(body.certificateDateType);
             const { thumb, banner } = req.files;
@@ -1130,15 +1133,13 @@ module.exports = {
                 ];
             }
 
-            const currentDate = new Date();
+            const currentDate = new Date()
 
-            // ETAPA 1: Buscar todos os usuários que correspondem aos critérios básicos
-            const allUsers = await User.find(query).lean();
+            // Busca todos os usuários que correspondem aos critérios básicos
+            const users = await User.find(query).sort({ name: 1 }).lean();
 
             // Filtrar apenas usuários qualificados com base em tags e grupos
-            const eligibleUserIds = [];
-
-            for (const user of allUsers) {
+            const eligibleUsers = users.filter(user => {
                 const classGroupCodes = (user.classGroups || [])
                     .filter(classGroup =>
                         classGroup.status === 2 &&
@@ -1157,27 +1158,17 @@ module.exports = {
                     course.tags.includes(code) || tagGroupNames.includes(code)
                 );
 
-                // Aplicar a lógica de filtro e salvar apenas os IDs elegíveis
                 if (mandatoryIntersection.length > 0) {
-                    if (mandatoryIntersection.length >= course.mandatory.length) {
-                        eligibleUserIds.push(user._id);
-                    }
-                } else if (tagsIntersection.length > 0) {
-                    eligibleUserIds.push(user._id);
+                    return mandatoryIntersection.length >= course.mandatory.length;
+                } else {
+                    return tagsIntersection.length > 0;
                 }
-            }
+            });
+            
+            const data = eligibleUsers.slice(skip, skip + limit)
+            const total = eligibleUsers.length
 
-            // Total de usuários elegíveis
-            const total = eligibleUserIds.length;
-
-            // ETAPA 2: Fazer uma segunda consulta apenas com os usuários elegíveis
-            const eligibleUsers = await User.find({ _id: { $in: eligibleUserIds } })
-                .sort({ name: 1 })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit))
-                .lean();
-
-            success(res, req, { data: eligibleUsers, total });
+            success(res, req, { data, total });
         } catch (error) {
             console.error(error);
             internalServer(
@@ -1355,31 +1346,16 @@ module.exports = {
             const { body } = req;
             const { _id } = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
-            const course = await ClassModel.findOne({
+            const classCourse = await ClassModel.findOne({
                 qrCodeSelfRegistration: { $eq: body.qrcode },
             }).populate('courseID', ['title', 'tags', 'mandatory']);
 
-            if (!course)
+            if (!classCourse) {
                 return badRequest(
                     res,
                     req,
                     'Não foi possível encontrar uma turma correspondente ao QRCode informado.',
                     'Não foi possível encontrar uma turma correspondente ao QRCode informado.',
-                    'courses',
-                    '/getCourseByQrCodeSelfRegistration'
-                );
-
-            const applicationInitial = moment(course.dateApplicationInitial).startOf('day').toDate();
-            const applicationFinal = new Date(course.dateApplicationFinal);
-            const applicationEndDay = moment(applicationFinal).endOf('day').toDate();
-            const today = new Date();
-
-            if (applicationInitial > today || applicationEndDay < today) {
-                return badRequest(
-                    res,
-                    req,
-                    'Não foi possível realizar o registro da presença devido ao horário.',
-                    'Não foi possível realizar o registro da presença devido ao horário.',
                     'courses',
                     '/getCourseByQrCodeSelfRegistration'
                 );
@@ -1387,11 +1363,11 @@ module.exports = {
 
             const eligibility = checkEligibilityTagsAnd(
                 tags ?? [],
-                course.courseID?.mandatory ?? [],
-                course.courseID?.tags ?? []
+                classCourse.courseID?.mandatory ?? [],
+                classCourse.courseID?.tags ?? []
             );
 
-            if (!eligibility)
+            if (!eligibility) {
                 return badRequest(
                     res,
                     req,
@@ -1400,36 +1376,69 @@ module.exports = {
                     'courses',
                     '/getCourseByQrCodeSelfRegistration'
                 );
+            }
 
-            let user = course.users.find((user) => String(user._id) === String(_id));
+            
+            const course = await CourseModel.findById(classCourse.courseID._id)
+
+            const isCourseDateOutOfRange = isDateOutOfRange(course.dateInitial, course.dateFinal);
+            const isClassDateOutOfRange = isDateOutOfRange(
+                classCourse.dateApplicationInitial,
+                classCourse.dateApplicationFinal
+            );
+
+            if (isCourseDateOutOfRange || isClassDateOutOfRange) {
+                const reason = isCourseDateOutOfRange ? 'ao curso': 'a turma'
+
+                return badRequest(
+                    res,
+                    req,
+                    `Não foi possível assinar presença devido ${reason} não estar com data vigente.`,
+                    `Não foi possível assinar presença devido ${reason} não estar com data vigente.`,
+                    'courses',
+                    '/getCourseByQrCodeSelfRegistration'
+                );
+            }
+
+            let user = classCourse.users.find((user) => String(user._id) === String(_id));
 
             if (!user) {
-                if (course.signup) {
-                    const student = await getUserByToken(req);
-
-                    const studentRegister = {
-                        _id: student._id,
-                        userID: student._id,
-                        name: student.name,
-                        email: student.email,
-                        networkLogin: student.networkLogin,
-                        registration: student.registration,
-                        presence: false,
-                        grades: 0,
-                    };
-
-                    const foundClass = await ClassModel.findOneAndUpdate(
-                        { _id: course._id },
-                        { $addToSet: { users: studentRegister } }
+                if (!classCourse.signup) {
+                    return badRequest(
+                        res,
+                        req,
+                        'Você não está inscrito na turma.',
+                        'Você não está inscrito na turma.',
+                        'courses',
+                        '/getCourseByQrCodeSelfRegistration'
                     );
-                    await dispatch('update', 'class', foundClass);
-                    user = studentRegister;
                 }
+                
+                const student = await getUserByToken(req);
+
+                const studentRegister = {
+                    _id: student._id,
+                    userID: student._id,
+                    name: student.name,
+                    email: student.email,
+                    networkLogin: student.networkLogin,
+                    registration: student.registration,
+                    presence: false,
+                    grades: 0,
+                };
+
+                const foundClass = await ClassModel.findOneAndUpdate(
+                    { _id: classCourse._id },
+                    { $addToSet: { users: studentRegister } }
+                );
+                await dispatch('update', 'class', foundClass);
+                user = studentRegister;
             }
+
             return success(res, req, {
-                title: course.courseID.title,
+                title: classCourse.courseID.title,
                 inClass: !!user,
-                _id: course._id,
+                _id: classCourse._id,
                 registered: user?.presence,
             });
         } catch (error) {
@@ -1439,7 +1448,7 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'courses',
-                '/getCourseByQrCode'
+                '/getCourseByQrCodeSelfRegistration'
             );
         }
     },
@@ -1977,6 +1986,111 @@ module.exports = {
             );
         }
     },
+
+    async historicByUser (req, res) {
+        try {
+            const userId = req.params.userId;
+            const { skip, limit } = pagination(req);
+            const { order, sort } = ordernation(req);
+            const searchBy = req.query.searchBy;
+            const classesFromUser = await ClassModel.find({
+                $or: [
+                    { 'users.userID': userId },
+                    { 'users._id': userId },
+                    { 'users._id': mongoose.Types.ObjectId(userId) }
+                ]
+            }).select({
+                courseID: 1,
+                users: 1,
+                dateApplicationInitial: 1,
+                dateApplicationFinal: 1,
+                name: 1,
+            })
+
+            let query = {
+                deleted: { $eq: 0 },
+                status: { $eq: 1 },
+                _id: { $in: classesFromUser.map(c => c.courseID) }
+            }
+
+            if (searchBy) {
+                query = {
+                    ...query,
+                    $or: [
+                        {
+                            title: {
+                                $regex: searchBy,
+                                $options: 'i',
+                            },
+                        },
+                    ],
+                }
+            }
+
+            const total = await CourseModel.find(query).countDocuments();
+
+            const data = await CourseModel.find(query)
+                .select({
+                    title: 1,
+                    passingScore: 1,
+                    certificate: 1,
+                    certificateLayout: 1,
+                    certificateDue: 1,
+                    workload: 1,
+                    dateFinal: 1,
+                    dateInitial: 1
+                }).lean()
+                .sort({
+                    [order]: sort,
+                })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit));
+
+
+            success(res, req, {
+                data: enrichCoursesWithClasses(data, classesFromUser, userId),
+                total
+            });
+
+        } catch (error) {
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'list historic courses by user',
+                '/getCourseByQrCode'
+            );
+        }
+
+    },
+
+    async removeUserClass (req, res) {
+        try {
+            const { classeId, userId } = req.params;
+            const classUpdated = await ClassModel.findOneAndUpdate(
+                { _id: classeId },
+                {
+                    $pull: {
+                        users: { _id: userId }
+                    }
+                },
+                { new: true }
+            );
+
+            success(res, req, classUpdated);
+        } catch (error) {
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'remove user from class',
+                '/removeUserClass'
+            );
+        }
+    }
+
 };
 
 async function createMessagesFromBackend(body) {

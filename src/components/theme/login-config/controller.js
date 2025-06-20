@@ -11,7 +11,12 @@ module.exports = {
         try {
             const body = req.body
 
-            body.ssoForm = processForm(body.ssoForm).map(removeEmptyFields);
+            body.ssoForm = processForm(body.ssoForm)
+                .map(removeEmptyFields)
+                .map(info => ({
+                    ...info,
+                    scope: info.scope ? info.scope.split(',').map(scope => scope.trim()) : [],
+                }));
 
             const namesFromTo = body.ssoForm
                 .map(info => ({ from: info.strategyNameFrom, to: info.strategyName }))

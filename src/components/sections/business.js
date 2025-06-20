@@ -18,6 +18,8 @@ const { TrailViews } = require('../trails/trail-views.model');
 const { listTrainingSectionsStatus } = require('../assessment/business');
 const { Trail } = require('../trails/model');
 const { cloneDeep } = require('lodash');
+const { User } = require('../users/model');
+const { getProcessedTags } = require('../users/business');
 const { ObjectId } = require('mongoose').Types
 
 const isSectionTrailInfo = (trail) => (trail.type === 'trail' && ObjectId.isValid(trail._id)) || ObjectId.isValid(trail);
@@ -55,11 +57,11 @@ async function populateSectionTrails(sections, options) {
     return newSections;
 }
 
-async function setAssessmentHistoricOnSections(userId, sections, tags) {
-    const userWithTags = await UsersWithProcessedTags.findById(userId);
-
-    let eligibilityTags = tags?.map(tag => tag.value) ?? userWithTags.userTags ?? [];
-    const dataAssessmentHistoric = await listTrainingSectionsStatus(userId, eligibilityTags);
+async function setAssessmentHistoricOnSections(userId, sections) {
+    const user = await User.findById(userId);
+    const userTags = getProcessedTags(user)
+    
+    const dataAssessmentHistoric = await listTrainingSectionsStatus(userId, userTags);
 
     return cloneDeep(sections).map(currentSection => {
         if (!currentSection.isTraining) return currentSection;
@@ -314,10 +316,18 @@ module.exports = {
 
                 if (user.classGroups.length > 0) {
                     for (const classGroup of user.classGroups) {
-                        tags.push({
-                            display: classGroup.groupCode,
-                            value: classGroup.groupCode,
-                        });
+                        const currentDate = new Date();                        
+
+                        if (
+                            classGroup.status === 2 &&
+                            new Date(classGroup.startDate) <= currentDate &&
+                            new Date(classGroup.limitDate) >= currentDate
+                        ) {
+                            tags.push({
+                                display: classGroup.groupCode,
+                                value: classGroup.groupCode,
+                            });
+                        }
                     }
                 }
 
@@ -668,10 +678,12 @@ module.exports = {
                     defaultType: DEFAULT_TYPES.COURSES,
                     active: 1,
                 }).lean();
+
                 let elegibleCourses = await CourseModel.find({
                     tags: { $in: tags },
                     deleted: { $eq: 0 },
                     status: { $eq: 1 },
+                    dateFinal: { $gte: new Date().toISOString() }
                 })
                     .select({
                         title: 1,

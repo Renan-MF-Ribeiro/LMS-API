@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const fs = require('fs/promises');
 
 const ExcelJS = require('exceljs');
@@ -73,11 +75,12 @@ async function runScript(functionToRun) {
         let count = 5;
 
         const interval = setInterval(() => {
-            console.log(`Script will start in ${count} seconds`);
+            process.stdout.write(`\rScript will start in ${count} seconds`);
             count--;
 
             if (count < 0) {
                 clearInterval(interval);
+                process.stdout.write('\n\n');
                 resolve();
             }
         }, 1000);
