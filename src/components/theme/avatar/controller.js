@@ -66,11 +66,12 @@ module.exports = {
     },
 
     async updateAvatar(req, res) {
-        const body = req.body;
+        const body = JSON.parse(req.fields?.payload) ?? null;
         const { id } = req.params;
 
         try {
             const doesAvatarExist = await Avatar.findById({ _id: id });
+            
             if (!doesAvatarExist) {
                 return _messages.notFound(res, req, null, 'Este avatar não existe');
             }
@@ -81,6 +82,7 @@ module.exports = {
                 let pathAzure = await azureBlob(file, 'avatars');
                 body.image = pathAzure.replace(AZURE_BLOB_URL, DOMAIN);
             }
+            console.log(id, body)
             const avatar = await Avatar.findByIdAndUpdate(id, body, { new: true });
 
             return _messages.success(res, req, avatar);
