@@ -327,8 +327,7 @@ function paginateUsers(req, users) {
 
         return sort === 'desc' ? Number(fieldB) - Number(fieldA) : Number(fieldA) - Number(fieldB);
     });
-
-    return sortedUsers.slice(skip, skip + limit);
+    return { data: sortedUsers.slice(skip, skip + limit), total: sortedUsers.length };
 }
 
 async function getUserLastPresenceInCourse(userId) {
