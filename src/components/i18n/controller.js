@@ -1,5 +1,5 @@
 const { i18nBusiness } = require('./business');
-const { i18nApi } = require('./http-adapter');
+const _messages = require('../../utils/messages');
 
 const i18nController = {
     get: async (req, res) => {
@@ -9,7 +9,7 @@ const i18nController = {
 
             const data = await i18nBusiness.get(locale, context);
 
-            res.status(data.statusCode).json(data.data);
+            return _messages.success(res, req, data, 'ok', 'i18n', 'get');
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
@@ -23,7 +23,7 @@ const i18nController = {
         try {
             const data = await i18nBusiness.create(req.body);
 
-            res.status(data.statusCode).json(data.data);
+            return _messages.success(res, req, data, 'ok', 'i18n', 'create');
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
