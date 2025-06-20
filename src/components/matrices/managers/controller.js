@@ -115,8 +115,12 @@ const managersController = {
             });
 
             const paginatedUsers = sortedUsers.slice(skip, skip + limit);
+            const response = {
+                data: paginatedUsers,
+                total: sortedUsers.length,
+            }
 
-            res.status(data.statusCode).json(paginatedUsers);
+            res.status(data.statusCode).json(response);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
