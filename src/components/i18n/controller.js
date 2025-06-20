@@ -35,8 +35,8 @@ const i18nController = {
 
     update: async (req, res) => {
         try {
-            const { id } = req.params;
-            const data = await i18nBusiness.update(id, req.body);
+            const { _id } = req.params;
+            const data = await i18nBusiness.update(_id, req.body);
 
             return _messages.success(res, req, data, 'ok', 'i18n', 'update');
         } catch (error) {
