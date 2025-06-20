@@ -41,15 +41,14 @@ const { getDbCurrentFeatures } = require('../../utils/features');
 
 const HomeController = {
     async searchBy(req, res) {
-        const { searchBy, pageIndex, pageSize, ...filters } = req.query;
-        const filtersValues = Object.values(filters);
-        const hasFilters = filtersValues.some((filter) => filter === 'true');
-
-        if (!searchBy?.length && !hasFilters) {
-            return _messages.success(res, req, {});
-        }
-
         try {
+            const { searchBy, pageIndex, pageSize, ...filters } = req.query;
+            const filtersValues = Object.values(filters);
+            const hasFilters = filtersValues.some((filter) => filter === 'true');
+            if (!searchBy?.length && !hasFilters) {
+                console.log('No searchBy or filters provided');
+                return _messages.success(res, req, {});
+            }
             const user = await getUserByToken(req);
             const tags = await getTagsGroupsByToken(req);
             const classGroups = user?.classGroups ?? [];
@@ -201,7 +200,7 @@ const HomeController = {
             // Recupera Cursos presenciais
             const course = await courseInSections(tags, user);
 
-            if (course && course.trails) {
+            if (course && course.trails && searchBy) {
                 course.trails = course?.trails?.filter(trail => {
                     // recupera o nome de todas as turmas do curso
                     const classNames = (trail?.classes || []).map(c => c.name);
