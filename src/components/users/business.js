@@ -71,44 +71,44 @@ module.exports = {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                      {
-                          $or: [
-                              {
-                                  onboarding: { $exists: false },
-                                  groupsAD: { $in: tag },
-                              },
-                              {
-                                  onboarding: { $eq: onboarding },
-                                  groupsAD: { $in: tag },
-                              },
-                          ],
-                      },
-                  ];
+                    {
+                        $or: [
+                            {
+                                onboarding: { $exists: false },
+                                groupsAD: { $in: tag },
+                            },
+                            {
+                                onboarding: { $eq: onboarding },
+                                groupsAD: { $in: tag },
+                            },
+                        ],
+                    },
+                ];
         } else {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                      {
-                          $or: [
-                              { onboarding: { $exists: false } },
-                              { onboarding: { $eq: onboarding } },
-                          ],
-                      },
-                  ];
+                    {
+                        $or: [
+                            { onboarding: { $exists: false } },
+                            { onboarding: { $eq: onboarding } },
+                        ],
+                    },
+                ];
         }
 
         const searchByQuery = searchBy
             ? {
-                  $or: [
-                      { name: { $regex: searchBy, $options: 'i' } },
-                      { registration: { $regex: searchBy, $options: 'i' } },
-                      { email: { $regex: searchBy, $options: 'i' } },
-                  ],
-                  $and: onboardingQuery,
-              }
+                $or: [
+                    { name: { $regex: searchBy, $options: 'i' } },
+                    { registration: { $regex: searchBy, $options: 'i' } },
+                    { email: { $regex: searchBy, $options: 'i' } },
+                ],
+                $and: onboardingQuery,
+            }
             : {
-                  $and: onboardingQuery,
-              };
+                $and: onboardingQuery,
+            };
 
         const users = await User.find(searchByQuery)
             .sort({ [order]: sort })
@@ -680,16 +680,28 @@ module.exports = {
 
     async getFirstTenUsersByGroup(groups) {
         try {
-            const users = await User.find({ groupsAD: { $in: groups } }, [
-                'networkLogin',
-                'name',
-                'office',
-            ])
-                .limit(10)
-                .lean();
-            return users;
+            // Aggregate para pegar 10 usuários aleatórios de cada grupo
+            return await User.aggregate([
+                {
+                    $match: {
+                        status: /^ativo$/i,
+                        groupsAD: { $in: groups },
+                    },
+                },
+                {
+                    $sample: { size: 10 },
+                },
+                {
+                    $project: {
+                        networkLogin: 1,
+                        name: 1,
+                        office: 1,
+                    },
+                },
+            ]);
         } catch (error) {
-            return error;
+            console.log(error);
+            return []
         }
     },
 
