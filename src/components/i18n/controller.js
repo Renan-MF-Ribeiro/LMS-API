@@ -32,6 +32,21 @@ const i18nController = {
             res.status(statusCode).json(errorMessage);
         }
     },
+
+    update: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const data = await i18nBusiness.update(id, req.body);
+
+            return _messages.success(res, req, data, 'ok', 'i18n', 'update');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+
+            res.status(statusCode).json(errorMessage);
+        }
+    },
 };
 
 module.exports = i18nController;

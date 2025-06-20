@@ -16,6 +16,12 @@ const i18nBusiness = {
         return data;
     },
 
+    update: async (id, payload) => {
+        const { data } = await i18nApi.put(`/locales/${clientId}/${id}`, payload);
+
+        return data;
+    },
+
     translate: async ({ locale = LOCALE.BR, key, vars = {}, matcher = {}, items = [] }) => {
         const localeData = await i18nBusiness.get(locale, LOCALE_CONTEXT.ADM);
         const translations = localeData[key];
