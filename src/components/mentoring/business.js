@@ -52,7 +52,6 @@ async function populateBlockedUserFields(mappings, data) {
     const dataToProcess = isArray ? data.data : [data.data];
 
     const ids = collectBlockedIds(dataToProcess, mappings);
-    console.log(ids)
     if (ids.length === 0) return data;
 
     const users = await User.find(
@@ -69,7 +68,6 @@ async function populateBlockedUserFields(mappings, data) {
         });
         const blockedAt = blockedUser?.blockedMentees?.find((blocked) => {
             const isMatch = blocked._id.toString() === user._id.toString();
-            console.log(blocked.blockedAt, isMatch)
             return isMatch;
         })?.blockedAt || null;
 
@@ -210,7 +208,6 @@ async function getHierarchicalMentorIds(req) {
             });
         }
     });
-    console.log(mentorConditions)
     let mentors = [];
     if (mentorConditions.length > 0) {
         mentors = await User.find({ $or: mentorConditions }, '_id');
