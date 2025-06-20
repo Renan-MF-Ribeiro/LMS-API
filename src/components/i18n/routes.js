@@ -5,6 +5,6 @@ const i18nController = require('./controller');
 router
     .get('/:locale', i18nController.get)
     .post('/', i18nController.create)
-    .put('/:_id', i18nController.update);
+    .put('/:id', i18nController.update);
 
 module.exports = router;
