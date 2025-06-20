@@ -1,8 +1,9 @@
 const _messages = require('../../../utils/messages');
 const { mentoringApi } = require('../http-adapter');
-const { populateUserFields } = require('../business');
+const { populateUserFields, getHierarchicalMentorIds, populateBlockedUserFields } = require('../business');
 const { User } = require('../../users/model');
 const { Types } = require('mongoose');
+const { getUserByToken } = require('../../../utils/functions');
 
 const mentorController = {
     async findMentorProfile(req, res) {
@@ -48,7 +49,7 @@ const mentorController = {
         try {
             const { mentorId } = req.params;
             const { data } = await mentoringApi.get(`/mentor/find/${mentorId}`);
-            const populatedData = await populateUserFields(
+            const populatedData = await populateBlockedUserFields(
                 [
                     { fieldName: 'user', reference: 'userId' },
                     { fieldName: 'assistant', reference: 'assistant' },
@@ -123,11 +124,11 @@ const mentorController = {
                 mentor: {
                     email: foundMentor.email,
                     name: foundMentor.name,
-                    userId: foundMentor._id
+                    userId: foundMentor._id,
                 },
                 month: Number(month || new Date().getMonth()),
-                deadline: mentoringDeadLine === "true"
-            }
+                deadline: mentoringDeadLine === 'true',
+            };
             const { data } = await mentoringApi.post(url, body);
 
             return _messages.success(res, req, data.data, 'ok', 'mentoring', 'getMentorCalendar');
@@ -205,19 +206,22 @@ const mentorController = {
         try {
             const { name, weekdays, date, topics, pageSize, pageIndex, orderBy } = req.query;
 
-            const params = {
-                name,
+            let params = {
+                searchBy: name,
                 weekdays,
                 date,
                 topics,
-                options: {
-                    pageSize: pageSize || 12,
-                    pageIndex: pageIndex || 0,
-                    orderBy,
-                    direction: 'desc',
-                },
+                pageSize: pageSize || 12,
+                pageIndex: pageIndex || 0,
+                orderBy,
             };
-            const { data } = await mentoringApi.get('/mentor/search', { params });
+
+            const hierarchicalMentors = await getHierarchicalMentorIds(req);
+            if (hierarchicalMentors.length > 0)
+                params.mentorIds = hierarchicalMentors;
+
+            const { data } = await mentoringApi.post('/mentor/search', params);
+
             const populatedData = await populateUserFields(
                 [
                     { fieldName: 'user', reference: 'userId' },
