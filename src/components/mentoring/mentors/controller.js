@@ -1,6 +1,6 @@
 const _messages = require('../../../utils/messages');
 const { mentoringApi } = require('../http-adapter');
-const { populateUserFields, getHierarchicalMentorIds } = require('../business');
+const { populateUserFields, getHierarchicalMentorIds, populateBlockedUserFields } = require('../business');
 const { User } = require('../../users/model');
 const { Types } = require('mongoose');
 const { getUserByToken } = require('../../../utils/functions');
@@ -49,7 +49,7 @@ const mentorController = {
         try {
             const { mentorId } = req.params;
             const { data } = await mentoringApi.get(`/mentor/find/${mentorId}`);
-            const populatedData = await populateUserFields(
+            const populatedData = await populateBlockedUserFields(
                 [
                     { fieldName: 'user', reference: 'userId' },
                     { fieldName: 'assistant', reference: 'assistant' },
