@@ -3,7 +3,8 @@ const _messages = require('../../../utils/messages');
 const {
   azureBlob,
 } = require('../../../utils/files');
-const { populateUserFields } = require('../business');
+const { populateUserFields, getHierarchicalMentorIds } = require('../business');
+const { getUserByToken } = require('../../../utils/functions');
 
 
 module.exports = {
@@ -114,8 +115,9 @@ module.exports = {
   async getById(req, res) {
     try {
       const id = req.params.id;
-      const { data } = (await mentoringApi.get(`/programs/details/${id}`));
+      const mentors = await getHierarchicalMentorIds(req);
 
+      const { data } = await mentoringApi.get(`/programs/details/${id}`, { params: { mentors: mentors.join(',') } });
       const populatedData = await populateUserFields(
         [
           { fieldName: 'users', reference: 'mentees' },
