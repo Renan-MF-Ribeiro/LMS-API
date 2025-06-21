@@ -176,7 +176,23 @@ async function getHierarchicalMentorIds(req) {
 
     const allHierarchies = hierarchiesResponse.data?.data || [];
 
-    const matchingHierarchies = allHierarchies?.filter(hierarchy =>
+    const hierarchiesWithInfo = allHierarchies.hierarchies?.map((h) => {
+        return {
+            menteeLevel: h.menteeLevel?.map(
+                (mentee) => {
+                    const hierarchies = allHierarchies.structures.find((structureLevel) => structureLevel.level === mentee.level)
+                    return {
+                        field: hierarchies?.field,
+                        value: hierarchies?.value,
+                        level: mentee.level
+                    }
+                }
+            ),
+            mentorLevel: allHierarchies.structures.find((structureLevel) => structureLevel.level === h.mentorLevel.level) || {},
+        };
+    })
+
+    const matchingHierarchies = hierarchiesWithInfo?.filter(hierarchy =>
         hierarchy.menteeLevel?.some(menteeCondition =>
             requestUser[menteeCondition.field] === menteeCondition.value
         )
@@ -194,16 +210,15 @@ async function getHierarchicalMentorIds(req) {
             });
         }
     });
-
+    console.log(mentorConditions)
     let mentors = [];
     if (mentorConditions.length > 0) {
         mentors = await User.find({ $or: mentorConditions }, '_id');
     }
-
     return mentors.map(mentor => mentor._id) || []
 }
 module.exports = {
     populateUserFields,
     populateBlockedUserFields,
-    getHierarchicalMentorIds    
+    getHierarchicalMentorIds
 };
