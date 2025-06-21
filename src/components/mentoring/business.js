@@ -52,7 +52,6 @@ async function populateBlockedUserFields(mappings, data) {
     const dataToProcess = isArray ? data.data : [data.data];
 
     const ids = collectBlockedIds(dataToProcess, mappings);
-    console.log(ids)
     if (ids.length === 0) return data;
 
     const users = await User.find(
@@ -69,7 +68,6 @@ async function populateBlockedUserFields(mappings, data) {
         });
         const blockedAt = blockedUser?.blockedMentees?.find((blocked) => {
             const isMatch = blocked._id.toString() === user._id.toString();
-            console.log(blocked.blockedAt, isMatch)
             return isMatch;
         })?.blockedAt || null;
 
@@ -176,7 +174,23 @@ async function getHierarchicalMentorIds(req) {
 
     const allHierarchies = hierarchiesResponse.data?.data || [];
 
-    const matchingHierarchies = allHierarchies?.filter(hierarchy =>
+    const hierarchiesWithInfo = allHierarchies.hierarchies?.map((h) => {
+        return {
+            menteeLevel: h.menteeLevel?.map(
+                (mentee) => {
+                    const hierarchies = allHierarchies.structures.find((structureLevel) => structureLevel.level === mentee.level)
+                    return {
+                        field: hierarchies?.field,
+                        value: hierarchies?.value,
+                        level: mentee.level
+                    }
+                }
+            ),
+            mentorLevel: allHierarchies.structures.find((structureLevel) => structureLevel.level === h.mentorLevel.level) || {},
+        };
+    })
+
+    const matchingHierarchies = hierarchiesWithInfo?.filter(hierarchy =>
         hierarchy.menteeLevel?.some(menteeCondition =>
             requestUser[menteeCondition.field] === menteeCondition.value
         )
@@ -194,16 +208,14 @@ async function getHierarchicalMentorIds(req) {
             });
         }
     });
-
     let mentors = [];
     if (mentorConditions.length > 0) {
         mentors = await User.find({ $or: mentorConditions }, '_id');
     }
-
     return mentors.map(mentor => mentor._id) || []
 }
 module.exports = {
     populateUserFields,
     populateBlockedUserFields,
-    getHierarchicalMentorIds    
+    getHierarchicalMentorIds
 };
