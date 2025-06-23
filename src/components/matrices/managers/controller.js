@@ -206,20 +206,13 @@ const managersController = {
             const applier = await getUserByToken(req);
             const users = await findUsersByMatrixConfig(applier);
 
-            if (users.length === 0) {
-                return res.status(httpStatus.OK).json(users);
+            if (!users[0]) {
+                return res.status(httpStatus.OK).json([]);
             }
 
-            const usersTags = users.flatMap((user) => user.groupsAD);
-            const usersGroups = (await Group.find({ name: { $in: usersTags } }, 'name tags')) || [];
-            const tags =
-                usersGroups?.flatMap((group) => group?.tags?.map((tag) => tag?.value)) || [];
+            const userIds = users.map(u => u._id);
 
-            const { data } = await matricesApi.get('/applications/overview', {
-                params: {
-                    tags: tags.join(','),
-                },
-            });
+            const { data } = await matricesApi.post('/applications/overview', { userIds });
 
             res.status(data.statusCode).json(data.data);
         } catch (error) {
