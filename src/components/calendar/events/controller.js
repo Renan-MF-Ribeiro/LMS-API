@@ -262,7 +262,8 @@ async function getCoursesElegible(start, end, user, tags) {
                     }
                 });
                 const classes = classesFromCourse.map((classFromCourse) => {
-                    const inClass = classFromCourse.users.some((u) => u._id == user._id || u.userID == user._id)
+                    const inClass = classFromCourse.users.some((u) => String(u._id) === String(user._id) || String(u.userID) === user._id)
+                    
                     return {
                         _id: classFromCourse._id,
                         createdAt: classFromCourse.createdAt,
