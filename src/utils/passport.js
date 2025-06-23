@@ -95,17 +95,15 @@ async function authenticatePassport(req, res, next) {
         failureRedirect: '/',
         failureFlash: true,
     }, async (err, user, info, status) => {
-        // save logs and continue with passport authentication
-        await Log.create({
-            type: 'PASSPORT_CALLBACK',
-            message: 'PASSPORT_CALLBACK',
-            component: 'authenticatePassport',
-            route: req.originalUrl,
-            dataNew: JSON.stringify({ err, user, info, status }),
-        });
-
-
         if (err) {
+            await Log.create({
+                type: 'PASSPORT_CALLBACK_ERROR',
+                message: 'PASSPORT_CALLBACK_ERROR',
+                component: 'authenticatePassport',
+                route: req.originalUrl,
+                dataNew: JSON.stringify({ err, user, info, status }),
+            });
+            
             return next(err);
         }
 
