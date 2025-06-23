@@ -630,8 +630,8 @@ module.exports = {
                                     users: arrUserId,
                                 },
                             },
-                            text: `Você está na turma ${name}!\n O local do treinamento será em: ${location}`,
-                            textHtml: `<p>Você está na turma ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
+                            text: `O usuário ${user.name} está na turma ${name}!\n O local do treinamento será em: ${location}`,
+                            textHtml: `<p>O usuário ${user.name} está na turma ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
                             thumbnail: messengerConfig.emailTemplate.thumbnail,
                             title: `Treinamentos: ${name}`,
                         };
@@ -852,23 +852,25 @@ module.exports = {
 
                         const messengerConfig = await getMessengerConfig();
 
-                        const message = {
-                            category: 'notify',
-                            communication: ['notification', 'email'],
-                            mode: 'manual',
-                            target: {
-                                type: 'users',
-                                value: {
-                                    users: arrUserId,
+                        for (const user of addedUsers) {
+                            const message = {
+                                category: 'notify',
+                                communication: ['notification', 'email'],
+                                mode: 'manual',
+                                target: {
+                                    type: 'users',
+                                    value: {
+                                        users: arrUserId,
+                                    },
                                 },
-                            },
-                            text: `Você está na turma ${name}!\n O local do treinamento será em: ${location} `,
-                            textHtml: `<p>Você está na turma ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
-                            thumbnail: messengerConfig.emailTemplate.thumbnail,
-                            title: `Treinamentos: ${name}`,
-                        };
+                                text: `O usuário ${user.name} está na turma ${name}!\n O local do treinamento será em: ${location} `,
+                                textHtml: `<p>O usuário ${user.name} está na turma ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
+                                thumbnail: messengerConfig.emailTemplate.thumbnail,
+                                title: `Treinamentos: ${name}`,
+                            };
 
-                        await createMessagesFromBackend(message);
+                            await createMessagesFromBackend(message);
+                        }
                     }
 
                     // Remove somente usuários que não estão presentes
@@ -1229,7 +1231,7 @@ module.exports = {
                     res,
                     req,
                     'O aluno não participou do curso',
-                    'Atenção! Você não pode responder essa avaliação.',
+                    'Atenção! Não é possível responder essa avaliação.',
                     'courses',
                     '/courseEvaluation'
                 );
@@ -1267,7 +1269,7 @@ module.exports = {
                         res,
                         req,
                         'O aluno já respondeu essa avaliação',
-                        'Atenção! Você já respondeu essa avaliação.',
+                        'Atenção! Essa avaliação já foi respondida.',
                         'courses',
                         '/courseEvaluation'
                     );
@@ -1282,7 +1284,7 @@ module.exports = {
                     res,
                     req,
                     'O aluno não participou do curso',
-                    'Atenção! Você não pode responder essa avaliação.',
+                    'Atenção! Não é possível responder essa avaliação.',
                     'courses',
                     '/courseEvaluation'
                 );
@@ -1344,7 +1346,7 @@ module.exports = {
     async getCourseByQrCodeSelfRegistration(req, res) {
         try {
             const { body } = req;
-            const { _id } = await getUserByToken(req);
+            const { _id, name } = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
             const classCourse = await ClassModel.findOne({
                 qrCodeSelfRegistration: { $eq: body.qrcode },
@@ -1372,7 +1374,7 @@ module.exports = {
                     res,
                     req,
                     'O aluno não está elegível a este treinamento',
-                    'Atenção! Você não está elegível a este treinamento.',
+                    `Atenção! O usuário ${name} não está elegível a este treinamento.`,
                     'courses',
                     '/getCourseByQrCodeSelfRegistration'
                 );
@@ -1403,18 +1405,18 @@ module.exports = {
             let user = classCourse.users.find((user) => String(user._id) === String(_id));
 
             if (!user) {
+                const student = await getUserByToken(req);
+
                 if (!classCourse.signup) {
                     return badRequest(
                         res,
                         req,
-                        'Você não está inscrito na turma.',
-                        'Você não está inscrito na turma.',
+                        `O usuário ${student.name} não está inscrito na turma.`,
+                        `O usuário ${student.name} não está inscrito na turma.`,
                         'courses',
                         '/getCourseByQrCodeSelfRegistration'
                     );
                 }
-                
-                const student = await getUserByToken(req);
 
                 const studentRegister = {
                     _id: student._id,
@@ -1534,8 +1536,8 @@ module.exports = {
                         users: [userID],
                     },
                 },
-                text: `Você está na turma ${course.name}!\n O local do treinamento será em: ${course.location}`,
-                textHtml: `<p>Você está na turma ${course.name}!</p> <p>O local do treinamento será em: ${course.location}</p>`,
+                text: `O usuário ${user.name} está na turma ${course.name}!\n O local do treinamento será em: ${course.location}`,
+                textHtml: `<p>O usuário ${user.name} está na turma ${course.name}!</p> <p>O local do treinamento será em: ${course.location}</p>`,
                 thumbnail: messengerConfig.emailTemplate.thumbnail,
                 title: `Treinamentos: ${course.name}`,
             };
@@ -1714,7 +1716,7 @@ module.exports = {
                     res,
                     req,
                     'O instrutor não completou todas as trilhas',
-                    `Para acessar a criação da turma você deve concluir as trilhas ${namesCourse}`,
+                    `Para acessar a criação da turma as trilhas ${namesCourse} devem ser concluídas.`,
                     'courses',
                     'createClass'
                 );
@@ -1734,6 +1736,7 @@ module.exports = {
     async joinWaitList(req, res) {
         try {
             let { body } = req;
+            const user = await getUserByToken(req);
             const alreadyJoined = await WaitListModel.findOne({
                 userID: body.userID,
                 courseID: body.courseID,
@@ -1744,8 +1747,8 @@ module.exports = {
                 return badRequest(
                     res,
                     req,
-                    'Você já está na lista de espera deste curso',
-                    `Você já está na lista de espera deste curso`,
+                    `O usuário ${user.name} já está na lista de espera deste curso.`,
+                    `O usuário ${user.name} já está na lista de espera deste curso.`,
                     'courses',
                     'joinWaitList'
                 );

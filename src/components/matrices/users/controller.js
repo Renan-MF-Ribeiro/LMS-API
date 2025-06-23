@@ -216,7 +216,7 @@ const usersController = {
                 const user = await User.findOne({ _id: new ObjectId(req.body.userId) });
 
                 if (!user) {
-                    throw new ApiError('Usuário colaborador não encontrado', 404);
+                    throw new ApiError('Usuário não encontrado', 404);
                 }
 
                 for (const recommendedCourse of req.body.recommendedCourses) {

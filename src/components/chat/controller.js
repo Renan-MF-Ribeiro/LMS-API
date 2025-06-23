@@ -11,6 +11,8 @@ const { Section } = require("../sections/model");
 const { Trail } = require("../trails/model");
 const mongoose = require('mongoose');
 const { ChatbotLog } = require("./model");
+const { i18nBusiness } = require("../i18n/business");
+const { LOCALE } = require("../i18n/model");
 
 const ObjectId = mongoose.Types.ObjectId;
 
@@ -217,10 +219,10 @@ module.exports = {
             return res.json(response);
         } catch (error) {
             const errorMessages = [
-                "Desculpe, não consegui entender sua pergunta.",
-                "Infelizmente, não consegui compreender sua solicitação.",
-                "Peço desculpas, mas não consegui entender o que você quis dizer.",
-                "Sinto muito, mas não consegui interpretar sua pergunta.",
+                "Desculpe, não consegui entender a pergunta.",
+                "Infelizmente, não consegui compreender a solicitação.",
+                "Peço desculpas, mas não consegui entender o que foi dito.",
+                "Sinto muito, mas não consegui interpretar a pergunta.",
             ]
 
             const response = {
@@ -255,7 +257,14 @@ module.exports = {
 
         if (!messageId) throw new ApiError('ID da mensagem não enviado', 400);
 
-        if (![-1, 1].includes(feedback)) throw new ApiError('Feedback inválido. O valor deve ser -1 ou 1', 400);
+        if (![-1, 1].includes(feedback)) {
+            const feedbackError = await i18nBusiness.translate({
+                locale: LOCALE.BR,
+                key: 'chat.messages.errors.feedback'
+            })
+            
+            throw new ApiError(feedbackError, 400);
+        }
 
         await chatIAClient.post('/ai/send-message-rating', {
             messageId,

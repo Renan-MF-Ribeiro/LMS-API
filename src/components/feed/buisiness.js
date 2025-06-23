@@ -115,9 +115,9 @@ async function createNotification(config, users) {
     // É a AÇÃO que está sendo notificada.
     const shareContent = config.contentType === 'post' ? 'um post' : 'uma trilha';
     const typesOfNotification = {
-        mention: 'mencionou você em um',
-        comment: 'respondeu seu',
-        share: `compartilhou ${shareContent} com você`,
+        mention: 'mencionou este perfil em um',
+        comment: 'respondeu o',
+        share: `compartilhou ${shareContent}`,
     };
 
     // Config.CONTENT
