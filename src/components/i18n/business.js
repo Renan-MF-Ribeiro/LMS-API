@@ -22,8 +22,15 @@ const i18nBusiness = {
         return data;
     },
 
-    translate: async ({ locale = LOCALE.BR, key, vars = {}, matcher = {}, items = [] }) => {
-        const localeData = await i18nBusiness.get(locale, LOCALE_CONTEXT.ADM);
+    translate: async ({
+        locale = LOCALE.BR,
+        context,
+        key,
+        vars = {},
+        matcher = {},
+        items = [],
+    }) => {
+        const localeData = await i18nBusiness.get(locale, context);
         const translations = localeData[key];
 
         if (!Array.isArray(translations)) return deepInterpolate(translations || '', vars);
