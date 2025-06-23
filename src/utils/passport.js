@@ -7,6 +7,7 @@ const { log } = require('./logger');
 const { getLoginConfig } = require('../components/users/business');
 const { getCookieProps } = require('./cookies');
 const environment = require('../environment');
+const { Log } = require('../components/logs/model');
 
 passport.serializeUser((user, done) => {
     done(null, user);
@@ -80,7 +81,7 @@ function initializePassport(app) {
         saveUninitialized: true,
         cookie: getCookieProps(),
     }));
-    
+
     app.use(passport.initialize());
     app.use(passport.session());
 }
@@ -93,6 +94,32 @@ async function authenticatePassport(req, res, next) {
     passport.authenticate(strategyName, {
         failureRedirect: '/',
         failureFlash: true,
+    }, async (err, user, info, status) => {
+        // save logs and continue with passport authentication
+        await Log.create({
+            type: 'PASSPORT_CALLBACK',
+            message: 'PASSPORT_CALLBACK',
+            component: 'authenticatePassport',
+            route: req.originalUrl,
+            dataNew: JSON.stringify({ err, user, info, status }),
+        });
+
+
+        if (err) {
+            return next(err);
+        }
+
+        if (!user) {
+            return res.redirect('/');
+        }
+
+        req.logIn(user, (loginErr) => {
+            if (loginErr) {
+                return next(loginErr);
+            }
+
+            return next();
+        });
     })(req, res, next);
 
 }
