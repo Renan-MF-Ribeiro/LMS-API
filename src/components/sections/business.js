@@ -59,8 +59,8 @@ async function populateSectionTrails(sections, options) {
 
 async function setAssessmentHistoricOnSections(userId, sections) {
     const user = await User.findById(userId);
-    const userTags = getProcessedTags(user)
-    
+    const userTags = await getProcessedTags(user);
+
     const dataAssessmentHistoric = await listTrainingSectionsStatus(userId, userTags);
 
     return cloneDeep(sections).map(currentSection => {
@@ -316,7 +316,7 @@ module.exports = {
 
                 if (user.classGroups.length > 0) {
                     for (const classGroup of user.classGroups) {
-                        const currentDate = new Date();                        
+                        const currentDate = new Date();
 
                         if (
                             classGroup.status === 2 &&

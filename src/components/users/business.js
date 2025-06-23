@@ -826,20 +826,28 @@ module.exports = {
         return `${maskedEmail}@${emailParts[1]}`;
     },
 
-    getProcessedTags(user) {
+    async getProcessedTags(user) {
         const { groupsAD = [], classGroups = [] } = user;
+
+        const groups = await Group.find({ name: { $in: groupsAD } });
+
+        const groupTags = groups.flatMap((group) => group.tags.map((tag) => tag.value ?? tag));
 
         const currentDate = new Date();
 
-        return groupsAD.concat(
-            classGroups
-                .filter(
-                    (classGroup) =>
-                        classGroup.status === 2 &&
-                        new Date(classGroup.startDate) <= currentDate &&
-                        new Date(classGroup.limitDate) >= currentDate
-                )
-                .map((classGroup) => classGroup.groupCode)
-        );
+        const allTags = groupsAD
+            .concat(groupTags)
+            .concat(
+                classGroups
+                    .filter(
+                        (classGroup) =>
+                            classGroup.status === 2 &&
+                            new Date(classGroup.startDate) <= currentDate &&
+                            new Date(classGroup.limitDate) >= currentDate
+                    )
+                    .map((classGroup) => classGroup.groupCode)
+            ).filter(t => !String(t).startsWith('PERFIL_'));
+
+        return allTags;
     }
 };
