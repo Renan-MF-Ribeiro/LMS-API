@@ -353,7 +353,7 @@ module.exports = {
     async searchTrailBy(searchBy, tags) {
         const query = {
             enabled: true,
-            archive: false,
+            archive: { $ne: true },
             //owner:
         };
 
