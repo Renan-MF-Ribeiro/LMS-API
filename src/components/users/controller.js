@@ -166,7 +166,7 @@ async function handleBlockUser (user) {
             sendNotificationEmail(
                 user.email,
                 'Conta bloqueada',
-                `Olá ${user.name}, uma nova tentativa de acesso a sua conta não foi permita pois sua conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
+                `Olá ${user.name}, uma nova tentativa de acesso a conta não foi permita pois a conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
             );
             return 'Usuário bloqueado temporariamente';
         }
@@ -832,7 +832,7 @@ module.exports = {
                             sendNotificationEmail(
                                 user.email,
                                 'Conta bloqueada',
-                                `Olá ${user.name}, uma nova tentativa de acesso a sua conta não foi permita pois sua conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
+                                `Olá ${user.name}, uma nova tentativa de acesso a conta não foi permita pois a conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
                             );
                             _messages.forbidden(
                                 res,
@@ -2635,7 +2635,7 @@ module.exports = {
                 res,
                 req,
                 'Sem permissão de acesso',
-                'Você não tem permissão para adicionar esta TAG enquanto a configuração de IDP estiver ativa',
+                'O perfil de acesso atual não permite adicionar esta TAG enquanto a configuração de IDP estiver ativa.',
                 'users',
                 'addGroups'
             );
