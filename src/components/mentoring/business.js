@@ -91,9 +91,9 @@ function collectIds(data, mappings) {
                 const val = obj[reference];
                 if (val != null) {
                     if (Array.isArray(val)) {
-                        val.forEach((id) => id && ids.push(id.toString()));
+                        val.forEach((id) => id && ids.push(id));
                     } else {
-                        ids.push(val.toString());
+                        ids.push(val);
                     }
                 }
             });

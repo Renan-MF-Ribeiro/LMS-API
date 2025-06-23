@@ -49,7 +49,7 @@ const mentorController = {
         try {
             const { mentorId } = req.params;
             const { data } = await mentoringApi.get(`/mentor/find/${mentorId}`);
-            const populatedData = await populateBlockedUserFields(
+            const populatedData = await populateUserFields(
                 [
                     { fieldName: 'user', reference: 'userId' },
                     { fieldName: 'assistant', reference: 'assistant' },
