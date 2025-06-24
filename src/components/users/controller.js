@@ -131,26 +131,6 @@ function hideCPFNumbers (cpf) {
     return String(cpf).substring(0, 3) + 'XXXXXXXX';
 }
 
-async function validateUserAndPassword (res, req, login, passwordDecripted) {
-    // Verifica se usuário existe
-    const user = await User.findOne({ networkLogin: { $eq: login }, status: 'ATIVO' }).lean();
-    // Verifica se a senha é válida
-    const pass = user?.password?.filter(function (obj) {
-        return obj.valid && bcrypt.compareSync(passwordDecripted, obj.hash);
-    });
-    if (!user || pass?.length === 0) {
-        return 'Usuário ou senha inválidos.';
-    }
-
-    await handleBlockUser(user);
-
-    if (new Date(pass[0].createdAt).getTime() < Date.now() - 90 * 24 * 60 * 60 * 1000) {
-        user.passwordValid = false;
-    }
-
-    return user;
-}
-
 // Gerencia block de usuário por tentativas de login consecutivas
 async function handleBlockUser (user) {
     const countOfBlocks = await checkAmountOfLocks(user._id);
@@ -628,27 +608,31 @@ module.exports = {
         }
     },
 
-    async ldapSignIn (req, res) {
-        let user = {};
-        const { login, password } = req.body;
-        try {
-            const decrypted = cryptoJS.AES.decrypt(password, 'pass');
-            const passwordDecripted = decrypted.toString(cryptoJS.enc.Utf8);
+    async ldapSignIn(req, res) {
+        if (!req.user) {
+            return _messages.forbidden(
+                res,
+                req,
+                'Usuário não encontrado',
+                'Usuário não encontrado',
+                'users',
+                'ldapSignIn'
+            );
+        }
 
-            // Valida campos faltantes
-            if (!login || !passwordDecripted) {
-                return _messages.forbidden(
-                    res,
-                    req,
-                    'Usuário ou senha não informados',
-                    'Erro de validação',
-                    'users',
-                    'ldapSignIn'
-                );
+        const user = await User.findOne({
+            _id: new mongoose.Types.ObjectId(req.user._id),
+        });
+
+        const { login, password } = req.body;
+
+        try {
+            await handleBlockUser(user);
+
+            if (new Date(user.password[0].createdAt).getTime() < Date.now() - 90 * 24 * 60 * 60 * 1000) {
+                user.passwordValid = false;
             }
 
-            // Valida usuário e senha
-            user = await validateUserAndPassword(res, req, login, passwordDecripted);
             const entryRecord = await returnDateSinceFirstLogin(user?._id);
             const firstLogin = !user.passwordValid && !entryRecord
 

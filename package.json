@@ -70,6 +70,7 @@
         "node-cryptojs-aes": "^0.4.0",
         "node-zendesk": "^5.0.6",
         "passport": "^0.4.1",
+        "passport-local": "^1.0.0",
         "passport-openidconnect": "^0.1.2",
         "passport-saml": "^3.2.1",
         "ramda": "^0.26.1",

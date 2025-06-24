@@ -1,4 +1,5 @@
 const express = require('express');
+const passport = require('passport');
 const rateLimit = require('express-rate-limit');
 const _controller = require('./controller');
 const multiparty = require('connect-multiparty');
@@ -24,6 +25,7 @@ module.exports = express
             standardHeaders: true,
             legacyHeaders: false,
         }),
+        passport.authenticate('local', { session: true }),
         _controller.ldapSignIn
     )
     .post(
