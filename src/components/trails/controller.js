@@ -49,6 +49,8 @@ const ObjectId = require("mongoose").Types.ObjectId;
 
 const GamificationKafka = require('../gamification/kafka/broker');
 const { EVENT_CATEGORY } = require('../gamification/model');
+const { LOCALE } = require('../i18n/model');
+const { i18nBusiness } = require('../i18n/business');
 
 module.exports = {
     async getCollaborative (req, res) {
@@ -360,8 +362,8 @@ module.exports = {
                 _messages.badRequest(
                     res,
                     req,
-                    'Você não esta elegível a este conteúdo',
-                    'Você não esta elegível a este conteúdo',
+                    `O usuário ${user.name} não esta elegível a este conteúdo.`,
+                    `O usuário ${user.name} não esta elegível a este conteúdo.`,
                     'trails',
                     'findByIdWithTrackingAndInnerText'
                 );
@@ -2285,10 +2287,20 @@ function prepareObject (trail) {
     };
 }
 
-function createModerationAlert (trail, verb) {
-    const title = `O conteúdo ${trail.title} foi ${verb}!`;
-    const text = `Seu conteúdo ${trail.title} acabou de ser ${verb} por um moderador!`;
-    const texthtml = `<p>Seu conteúdo ${trail.title} acabou de ser ${verb} por um moderador!</p>`;
+async function createModerationAlert (trail, verb) {
+    const title = await i18nBusiness.translate({
+        locale: LOCALE.BR,
+        key: 'trails.collaboration.moderation.alert.create.title',
+        vars: { trailTitle: trail.title, verb },
+    });
+
+    const text = await i18nBusiness.translate({
+        locale: LOCALE.BR,
+        key: 'trails.collaboration.moderation.alert.create.text',
+        vars: { trailTitle: trail.title, verb },
+    });
+
+    const texthtml = `<p>${text}</p>`;
     const communication = ['notification'];
     const mode = 'automatic';
     const category = 'notify';
