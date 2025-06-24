@@ -296,7 +296,7 @@ async function checkTrailsProgress(user) {
         const trailItems = trail.items?.map((item) => item.itemID) || [];
         const trailTracking = trackings?.filter((t) => trailItems.includes(t.item));
         const { trail: processedTrail } = processTrailTracking(trail, trailTracking);
-        return processedTrail?.completion < 1 && processedTrail?.completion > 0;
+        return processedTrail?.completion < 1;
     });
 }
 
