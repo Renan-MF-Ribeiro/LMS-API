@@ -1,4 +1,4 @@
-const { generateSASToken } = require("./auth");
+const { generateSASToken, getRequestStrategyName } = require("./auth");
 
 function getTokenDomain() {
     return process.env.DOMAIN.includes('localhost')
@@ -38,9 +38,12 @@ async function clearSASTokenFromResponse(res) {
 }
 
 function saveStrategyOnCookie(req, res, next) {
-    res.cookie('strategyName', req.query.strategy ?? 'saml', {
-        ...getCookieProps(),
-    });
+    res.cookie(
+        'strategyName',
+        req.query.strategy ?? 'saml',
+        getCookieProps()
+    );
+
     next();
 }
 

@@ -1,5 +1,6 @@
 const passport = require('passport');
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const passportSaml = require('passport-saml');
 const OpenIDConnectStrategy = require('passport-openidconnect');
 
@@ -8,6 +9,40 @@ const { getLoginConfig } = require('../components/users/business');
 const { getCookieProps } = require('./cookies');
 const environment = require('../environment');
 const { Log } = require('../components/logs/model');
+const { getConnectionString, getDbOptions } = require('./db');
+const { getRequestStrategyName } = require('./auth');
+
+const dbOptions = getDbOptions();
+
+const store = MongoStore.create({
+    mongoUrl: getConnectionString(),
+    mongoOptions: {
+        useNewUrlParser: dbOptions.useNewUrlParser,
+        useUnifiedTopology: dbOptions.useUnifiedTopology
+    },
+    collectionName: 'sessions',
+    stringify: false,
+});
+
+store.on('create', (sessionId) => {
+    log(`Session created: ${sessionId}`);
+});
+
+store.on('touch', (sessionId) => {
+    log(`Session touched: ${sessionId}`);
+});
+
+store.on('update', (sessionId) => {
+    log(`Session updated: ${sessionId}`);
+});
+
+store.on('set', (sessionId) => {
+    log(`Session set: ${sessionId}`);
+});
+
+store.on('destroy', (sessionId) => {
+    log(`Session destroyed: ${sessionId}`);
+});
 
 passport.serializeUser((user, done) => {
     done(null, user);
@@ -70,16 +105,13 @@ async function createOpenIdConnectStrategy(config) {
     passport.use(strategyName, strategy);
 }
 
-function getRequestStrategyName(req) {
-    return req.query?.strategy ?? req.cookies.strategyName ?? 'saml';
-}
-
 function initializePassport(app) {
     app.use(session({
         secret: environment.PROJECT_SECRET_KEY,
         resave: false,
-        saveUninitialized: true,
+        saveUninitialized: false,
         cookie: getCookieProps(),
+        store,
     }));
 
     app.use(passport.initialize());
@@ -91,34 +123,35 @@ async function authenticatePassport(req, res, next) {
 
     log('authenticatePassport strategyName', strategyName);
 
-    passport.authenticate(strategyName, {
-        failureRedirect: '/',
-        failureFlash: true,
-    }, async (err, user, info, status) => {
-        if (err) {
-            await Log.create({
-                type: 'PASSPORT_CALLBACK_ERROR',
-                message: 'PASSPORT_CALLBACK_ERROR',
-                component: 'authenticatePassport',
-                route: req.originalUrl,
-                dataNew: JSON.stringify({ err, user, info, status }),
-            });
-            
-            return next(err);
-        }
+    passport.authenticate(
+        strategyName,
+        { session: true },
+        async (err, user, info, status) => {
+            if (err) {
+                await Log.create({
+                    type: 'PASSPORT_CALLBACK_ERROR',
+                    message: 'PASSPORT_CALLBACK_ERROR',
+                    component: 'authenticatePassport',
+                    route: req.originalUrl,
+                    dataNew: JSON.stringify({ err, user, info, status }),
+                });
 
-        if (!user) {
-            return res.redirect('/');
-        }
-
-        req.logIn(user, (loginErr) => {
-            if (loginErr) {
-                return next(loginErr);
+                return next(err);
             }
 
-            return next();
-        });
-    })(req, res, next);
+            if (!user) {
+                return res.redirect('/');
+            }
+
+            req.logIn(user, (loginErr) => {
+                if (loginErr) {
+                    return next(loginErr);
+                }
+
+                return next();
+            });
+        }
+    )(req, res, next);
 
 }
 
@@ -185,7 +218,6 @@ createStrategiesFromLoginConfigs();
 module.exports = {
     initializePassport,
     authenticatePassport,
-    getRequestStrategyName,
     createStrategiesFromLoginConfigs,
     removeStrategies,
     parseSamlResponse,

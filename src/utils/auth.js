@@ -303,6 +303,10 @@ module.exports = {
             return error;
         }
     },
+
+    getRequestStrategyName(req) {
+        return req.query?.strategy ?? req.cookies.strategyName ?? 'saml';
+    }
 };
 
 function returnNumberOfProfile(profile) {

@@ -30,6 +30,8 @@ module.exports = express
         '/logout',
         (req, res) => {
             clearSASTokenFromResponse(res);
+            req.session?.destroy();
+            res.clearCookie('connect.sid');
             res.status(200).send('OK');
         }
     )
