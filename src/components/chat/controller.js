@@ -182,10 +182,10 @@ module.exports = {
             // Se não houver referências de citações na mensagem, mas houver trilhas, adiciona uma mensagem opcional
             if (!messageHasCitationsReferences?.length && trailsArray.length) {
                 const optionalReferenceMessages = [
-                    "Você pode se interessar por estes conteúdos:",
-                    "Veja alguns conteúdos que você pode se interessar:",
-                    "Você pode achar interessante alguns destes conteúdos:",
-                    "Veja alguns conteúdos que você pode gostar:",
+                    "Estes conteúdos podem ser de interesse:",
+                    "Conteúdos disponíveis que podem gerar interesse:",
+                    "Alguns destes conteúdos podem ser considerados interessantes:",
+                    "Conteúdos disponíveis com potencial de atratividade:"
                 ];
 
                 messageContentWithoutCitations = `${messageContentWithoutCitations} <p>${optionalReferenceMessages[Math.floor(Math.random() * optionalReferenceMessages.length)]}</p>`;
