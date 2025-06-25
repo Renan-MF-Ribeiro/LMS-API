@@ -24,14 +24,17 @@ const i18nBusiness = {
 
     translate: async ({
         locale = LOCALE.BR,
-        context,
+        context = LOCALE_CONTEXT.API,
         key,
         vars = {},
         matcher = {},
         items = [],
     }) => {
         const localeData = await i18nBusiness.get(locale, context);
-        const translations = localeData[key];
+
+        const translations = key
+            .split('.')
+            .reduce((acc, curr) => acc?.[curr], localeData?.translations);
 
         if (!Array.isArray(translations)) return deepInterpolate(translations || '', vars);
 
