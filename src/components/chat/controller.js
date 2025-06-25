@@ -181,12 +181,10 @@ module.exports = {
 
             // Se não houver referências de citações na mensagem, mas houver trilhas, adiciona uma mensagem opcional
             if (!messageHasCitationsReferences?.length && trailsArray.length) {
-                const optionalReferenceMessages = [
-                    "Estes conteúdos podem ser de interesse:",
-                    "Conteúdos disponíveis que podem gerar interesse:",
-                    "Alguns destes conteúdos podem ser considerados interessantes:",
-                    "Conteúdos disponíveis com potencial de atratividade:"
-                ];
+                const optionalReferenceMessages = await i18nBusiness.translate({
+                    locale: LOCALE.BR,
+                    key: 'chat.message.send.optionalReferenceMessages'
+                })
 
                 messageContentWithoutCitations = `${messageContentWithoutCitations} <p>${optionalReferenceMessages[Math.floor(Math.random() * optionalReferenceMessages.length)]}</p>`;
             }

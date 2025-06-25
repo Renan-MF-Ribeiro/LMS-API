@@ -4,9 +4,10 @@ const LOCALE = Object.freeze({
 });
 
 const LOCALE_CONTEXT = Object.freeze({
-    HOME: 'HOME',
-    ADM: 'ADM',
-    PUBLIC: 'PUBLIC',
+    HOME: 'home',
+    ADM: 'adm',
+    PUBLIC: 'public',
+    API: 'api'
 });
 
 module.exports = {
