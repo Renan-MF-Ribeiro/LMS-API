@@ -218,11 +218,11 @@ async function generateTokens(user, login, password, res) {
 
     await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
 
-    let tokenEncript = cryptoJS.AES.encrypt(token, String(login));
-    let tk = tokenEncript.toString();
-    let key = login + ':' + password;
+    const tokenEncript = cryptoJS.AES.encrypt(token, String(login));
 
-    key = cryptoJS.AES.encrypt(key, password).toString();
+    const tk = tokenEncript.toString(cryptoJS.enc.Utf8);
+
+    const key = cryptoJS.AES.encrypt(login + ':' + password, password).toString(cryptoJS.enc.Utf8);
 
     return {
         SAS,
