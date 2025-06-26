@@ -220,9 +220,9 @@ async function generateTokens(user, login, password, res) {
 
     const tokenEncript = cryptoJS.AES.encrypt(token, String(login));
 
-    const tk = tokenEncript.toString(cryptoJS.enc.Utf8);
+    const tk = tokenEncript.toString();
 
-    const key = cryptoJS.AES.encrypt(login + ':' + password, password).toString(cryptoJS.enc.Utf8);
+    const key = cryptoJS.AES.encrypt(login + ':' + password, password).toString();
 
     return {
         SAS,
