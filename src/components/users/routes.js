@@ -62,7 +62,14 @@ module.exports = express
     .post('/change-password', _controller.changePassword)
     .post('/change-password-email', _controller.changePasswordByEmail)
     .post('/change-photo', validateTokenRoute, formidable(), _controller.changePhoto)
-    .get('/auth/isAuthenticated', _controller.isAuthenticated)
+    .get('/auth/isAuthenticated',
+        (req, res, next) => {
+            req.query.strategy = 'session';
+            return next();
+        },
+        authenticatePassport,
+        _controller.isAuthenticated
+    )
     .get('/auth/isAuthenticatedNginx/:token', _controller.isAuthenticatedNginx)
     .get('/me', _controller.selfData)
     .post('/gamification/names', validateTokenRoute, _controller.handleNames)

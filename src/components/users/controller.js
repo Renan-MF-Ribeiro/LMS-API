@@ -1792,8 +1792,10 @@ module.exports = {
     },
 
     async isAuthenticated (req, res) {
-        if (await validateToken(req)) {
+        if (req.user && await validateToken(req)) {
             await addSASTokenToResponse(res);
+
+            req.session.maxAge = 6 * 60 * 60 * 1000; // 6 hours
 
             _messages.success(res, req, true);
         } else {

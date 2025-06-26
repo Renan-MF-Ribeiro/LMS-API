@@ -107,6 +107,7 @@ async function createLocalStrategy() {
                 email: user.email,
                 registration: user.registration,
                 groupsAD: user.groupsAD,
+                strategyName: 'local',
             });
         }
     ));
@@ -117,7 +118,10 @@ function initializePassport(app) {
         secret: environment.PROJECT_SECRET_KEY,
         resave: false,
         saveUninitialized: false,
-        cookie: getCookieProps(),
+        cookie: {
+            ...getCookieProps(),
+            maxAge: 6 * 60 * 60 * 1000, // 6 hours
+        },
         store: sessionStore,
     }));
 
