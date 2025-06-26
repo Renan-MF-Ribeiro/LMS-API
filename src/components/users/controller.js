@@ -1795,7 +1795,7 @@ module.exports = {
         if (req.user && await validateToken(req)) {
             await addSASTokenToResponse(res);
 
-            req.session.maxAge = 6 * 60 * 60 * 1000; // 6 hours
+            req.session.cookie.maxAge = 6 * 60 * 60 * 1000; // 6 hours
 
             _messages.success(res, req, true);
         } else {
