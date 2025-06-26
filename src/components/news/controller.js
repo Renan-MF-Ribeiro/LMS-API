@@ -56,8 +56,10 @@ const newsController = {
                     }
                     news.push(populatedNews);
                 }
+            } else {
+                const data = { data: listNews.data, total: listNews.total };
+                return _messages.success(res, req, data, 'ok', 'news', 'listNews');
             }
-
             const data = { data: news, total: listNews.total };
 
             return _messages.success(res, req, data, 'ok', 'news', 'listNews');
