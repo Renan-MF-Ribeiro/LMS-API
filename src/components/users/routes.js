@@ -12,7 +12,7 @@ const {
     canListUsers,
 } = require('../../utils/middlewares');
 
-const { clearSASTokenFromResponse, saveStrategyOnCookie } = require('../../utils/cookies');
+const { saveStrategyOnCookie } = require('../../utils/cookies');
 
 module.exports = express
     .Router()
@@ -35,10 +35,11 @@ module.exports = express
     .post(
         '/logout',
         (req, res) => {
-            clearSASTokenFromResponse(res);
             req.session?.destroy();
             res.clearCookie('connect.sid');
-            res.status(200).send('OK');
+            res.clearCookie('SAS');
+            res.clearCookie('strategyName');
+            res.status(200).json({ ok: true });
         }
     )
     .post('/accept-terms', validateTokenRoute, _controller.acceptTerms)
