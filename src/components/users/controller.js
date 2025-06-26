@@ -866,7 +866,7 @@ module.exports = {
                 group.tags.flatMap((tag) => tag?.value || tag.display)
             );
 
-            const token = generateSSOToken({
+            const token_sso = generateSSOToken({
                 ref: user._id,
                 clientId: process.env.CLIENT_ID,
                 userName: user.name,
@@ -901,7 +901,7 @@ module.exports = {
             await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
             await updateLastLoginUser(user._id);
 
-            var tokenEncript = cryptoJS.AES.encrypt(token, 'happlearning');
+            var tokenEncript = cryptoJS.AES.encrypt(token_sso, 'happlearning');
             var key = 'happlearning' + ':' + '25KP76yNnhiGH9bSj';
 
             var tk = tokenEncript.toString();
