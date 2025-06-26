@@ -849,5 +849,12 @@ module.exports = {
             ).filter(t => !String(t).startsWith('PERFIL_'));
 
         return allTags;
+    },
+
+    async clearAuthCookies(req, res) {
+        req.session?.destroy?.();
+        res.clearCookie('connect.sid');
+        res.clearCookie('SAS');
+        res.clearCookie('strategyName');
     }
 };

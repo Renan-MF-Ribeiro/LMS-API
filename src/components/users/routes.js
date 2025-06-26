@@ -34,13 +34,7 @@ module.exports = express
     )
     .post(
         '/logout',
-        (req, res) => {
-            req.session?.destroy();
-            res.clearCookie('connect.sid');
-            res.clearCookie('SAS');
-            res.clearCookie('strategyName');
-            res.status(200).json({ ok: true });
-        }
+        _controller.logout
     )
     .post('/accept-terms', validateTokenRoute, _controller.acceptTerms)
     .post('/watched-video', validateTokenRoute, _controller.watchedVideo)

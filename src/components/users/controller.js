@@ -55,6 +55,7 @@ const {
     generateNewPassword,
     maskEmail,
     getLoginFormByStrategyName,
+    clearAuthCookies,
 } = require('./business');
 
 const {
@@ -1795,10 +1796,10 @@ module.exports = {
         if (req.user && await validateToken(req)) {
             await addSASTokenToResponse(res);
 
-            req.session.cookie.maxAge = 6 * 60 * 60 * 1000; // 6 hours
-
             _messages.success(res, req, true);
         } else {
+            await clearAuthCookies(req, res);
+            
             _messages.forbidden(
                 res,
                 req,
@@ -2959,4 +2960,9 @@ module.exports = {
             );
         }
     },
+
+    async logout(req, res) {
+        await clearAuthCookies(req, res);
+        res.status(200).json({ ok: true });
+    }
 };
