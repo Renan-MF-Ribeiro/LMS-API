@@ -40,7 +40,7 @@ async function clearSASTokenFromResponse(res) {
 function saveStrategyOnCookie(req, res, next) {
     res.cookie(
         'strategyName',
-        req.query.strategy ?? 'saml',
+        getRequestStrategyName(req),
         getCookieProps()
     );
 

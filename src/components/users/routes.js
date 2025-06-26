@@ -28,6 +28,7 @@ module.exports = express
             req.query.strategy = 'local';
             return next();
         },
+        saveStrategyOnCookie,
         authenticatePassport,
         _controller.ldapSignIn
     )

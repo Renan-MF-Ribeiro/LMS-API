@@ -154,7 +154,7 @@ async function handleBlockUser (user) {
     }
 }
 
-async function generateTokens (user, login, password) {
+async function generateTokens(user, login, password, res) {
     const groups = user.groupsAD;
     const namesProfiles = [];
     const namesGroups = [];
@@ -214,7 +214,7 @@ async function generateTokens (user, login, password) {
         mfa: false,
     });
 
-    const SAS = generateSASToken();
+    const { token: SAS } = addSASTokenToResponse(res);
 
     await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
 
@@ -553,7 +553,7 @@ module.exports = {
                 await sendSignupActivationEmail(newUser.email, activationLink);
             }
 
-            const tokens = await generateTokens(newUser, networkLogin, password);
+            const tokens = await generateTokens(newUser, networkLogin, password, res);
 
             if (newUser && form?.autoLogin) {
                 await Log.create({
@@ -649,7 +649,7 @@ module.exports = {
                 profilesIDS,
                 namesProfiles,
                 namesGroups,
-            } = await generateTokens(user, login, password);
+            } = await generateTokens(user, login, password, res);
 
             await GamificationKafka.publishEventRuleValidation({
                 events: [EVENT_CATEGORY.LOGIN],
@@ -843,69 +843,24 @@ module.exports = {
                 }
             }
 
-            const groups = Array.from(
-                new Set([
-                    ...(tokenIdpProfiles ?? []),
-                    ...(user.groupsAD?.filter((group) =>
-                        tokenIdpProfiles
-                            ? group === 'PERFIL_Aluno' || !group.startsWith('PERFIL')
-                            : true
-                    ) ?? []),
-                ])
-            );
+            const {
+                SAS,
+                tk,
+                key,
+                tokenAnalytics,
+                tokenHappPlace,
+                mfaToken,
+                authwebPush,
+                profilesIDS,
+                namesProfiles,
+                namesGroups,
+            } = await generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', res);
 
-            const namesProfiles = groups.filter((group) => String(group).toUpperCase().startsWith('PERFIL_'));
+            const entryRecord = await returnDateSinceFirstLogin(user?._id);
+            
+            const firstLogin = !user.passwordValid && !entryRecord;
 
-            const namesGroups = groups.filter((group) => !String(group).toUpperCase().startsWith('PERFIL_'));
-
-            const profilesIDS = await returnIdProfileUser(namesProfiles);
-            const groupsIDS = await returnIdGroupUser(namesGroups);
-            const userGroups = await Group.find({ name: { $in: namesGroups } });
-
-            const eligibilities = userGroups.flatMap((group) =>
-                group.tags.flatMap((tag) => tag?.value || tag.display)
-            );
-
-            const token_sso = generateSSOToken({
-                ref: user._id,
-                clientId: process.env.CLIENT_ID,
-                userName: user.name,
-                userTags: eligibilities,
-                profiles: profilesIDS.result,
-                numbers: profilesIDS.numbers,
-                groups: groupsIDS,
-                welcomeVideoWatched: user?.welcomeVideoWatched,
-                idpProfiles: tokenIdpProfiles,
-                strategyName: tokenStrategyName,
-            });
-
-            const token_mfa = generateMfaToken({
-                ref: user._id,
-                mfa: false,
-            });
-
-            const token_analytics = generateTokenAnalytics({
-                perfil: profilesIDS.numbers,
-                clientID: CLIENT_ID,
-                filters: dashboardFilters,
-            });
-
-            const token_happplace = generateHappPlaceToken({
-                name: user.name,
-                networkLogin: user.networkLogin,
-                clientId: CLIENT_ID,
-            });
-
-            const { token: SAS } = addSASTokenToResponse(res);
-
-            await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
             await updateLastLoginUser(user._id);
-
-            var tokenEncript = cryptoJS.AES.encrypt(token_sso, 'happlearning');
-            var key = 'happlearning' + ':' + '25KP76yNnhiGH9bSj';
-
-            var tk = tokenEncript.toString();
-            key = cryptoJS.AES.encrypt(key, '25KP76yNnhiGH9bSj').toString();
 
             _messages.success(
                 res,
@@ -914,17 +869,19 @@ module.exports = {
                     SAS,
                     tk,
                     key,
+                    firstLogin,
                     accept: user.acceptTerms,
+                    acceptCollaboration: user.acceptTermsCollaboration,
                     passwordValid: true,
                     numbers: profilesIDS.numbers,
                     name: user.name,
                     profilePhoto: user.profilePhoto,
-                    tokenAnalytics: token_analytics,
-                    tokenHappPlace: token_happplace,
-                    mfaToken: token_mfa,
-                    tokenHappPlace: token_happplace,
+                    tokenAnalytics,
+                    tokenHappPlace,
+                    mfaToken,
                     networkLogin: user.networkLogin,
                     userId: user._id,
+                    authwebPush: authwebPush?.keys.auth,
                     email: user.email,
                 },
                 'Sucesso ao logar',

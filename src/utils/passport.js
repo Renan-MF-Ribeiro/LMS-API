@@ -9,7 +9,6 @@ const cryptoJS = require('crypto-js');
 
 const { log } = require('./logger');
 const { getCookieProps } = require('./cookies');
-const { getConnectionString, getDbOptions } = require('./db');
 const { getRequestStrategyName } = require('./auth');
 const { sessionStore } = require('./session-store');
 
@@ -160,7 +159,6 @@ async function authenticatePassport(req, res, next) {
             });
         }
     )(req, res, next);
-
 }
 
 async function strategyHandler(config) {
