@@ -122,6 +122,7 @@ const { getFormErrorsByMapConfig, getDefaultForm, getAdminForm, getFormErrorsByF
 
 const { getDbCurrentFeatures } = require('../../utils/features');
 const { Profile } = require('../profiles/model');
+const environment = require('../../environment');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -750,9 +751,7 @@ module.exports = {
         }
     },
 
-    async singleSignOn (req, res) {
-        let user = {};
-
+    async singleSignOn(req, res) {
         const { token } = req.body;
         const secret = process.env.PROJECT_SECRET_KEY;
 
@@ -766,7 +765,7 @@ module.exports = {
             log('singleSignOn tokenIdpProfiles', tokenIdpProfiles);
 
             const ssoForm = await getLoginFormByStrategyName(tokenStrategyName);
-            const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data?.[ssoForm.claim];
+            const claim = data[ssoForm.claim] || data.data?.[ssoForm.claim];
 
             if (!claim) {
                 return _messages.forbidden(
@@ -793,157 +792,151 @@ module.exports = {
                 })
             }
 
-            if (claim) {
-                const query = { status: 'ATIVO' };
-                query[ssoForm.claim] = claim;
-                user = await User.findOne(query).lean();
-                if (user) {
-                    const dashboardFilters = await processDashFilters(user);
+            const query = { status: 'ATIVO' };
 
-                    const amountOfLocks = await checkAmountOfLocks(user._id);
-                    // 5 Tentativas
-                    if (amountOfLocks >= 50) {
-                        const lastLoginAttemp = await returnLastLoginAttemp(user._id);
-                        const resultDiff = await checkLastAttemptTime(lastLoginAttemp);
+            query[ssoForm.claim] = claim;
 
-                        // 30min
-                        if (resultDiff >= 1) {
-                            await Block.updateMany(
-                                { user: { $eq: user._id } },
-                                { unblocked: true }
-                            );
-                        } else {
-                            sendNotificationEmail(
-                                user.email,
-                                'Conta bloqueada',
-                                `Olá ${user.name}, uma nova tentativa de acesso a conta não foi permita pois a conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
-                            );
-                            _messages.forbidden(
-                                res,
-                                req,
-                                'Usuário bloqueado temporariamente',
-                                'Por favor tente novamente mais tarde!',
-                                'users',
-                                'singleSignOn'
-                            );
-                            return;
-                        }
-                    }
+            const user = await User.findOne(query).lean();
 
-                    const groups = Array.from(
-                        new Set([
-                            ...(tokenIdpProfiles ?? []),
-                            ...(user.groupsAD?.filter((group) =>
-                                tokenIdpProfiles
-                                    ? group === 'PERFIL_Aluno' || !group.startsWith('PERFIL')
-                                    : true
-                            ) ?? []),
-                        ])
-                    );
+            if (!user) {
+                await sleep(3000);
 
-                    const namesProfiles = groups.filter((group) => String(group).toUpperCase().startsWith('PERFIL_'));
-
-                    const namesGroups = groups.filter((group) => !String(group).toUpperCase().startsWith('PERFIL_'));
-
-                    const profilesIDS = await returnIdProfileUser(namesProfiles);
-                    const groupsIDS = await returnIdGroupUser(namesGroups);
-                    const userGroups = await Group.find({ name: { $in: namesGroups } });
-
-                    const eligibilities = userGroups.flatMap((group) =>
-                        group.tags.flatMap((tag) => tag?.value || tag.display)
-                    );
-
-                    const token = generateSSOToken({
-                        ref: user._id,
-                        clientId: process.env.CLIENT_ID,
-                        userName: user.name,
-                        userTags: eligibilities,
-                        profiles: profilesIDS.result,
-                        numbers: profilesIDS.numbers,
-                        groups: groupsIDS,
-                        welcomeVideoWatched: user?.welcomeVideoWatched,
-                        idpProfiles: tokenIdpProfiles,
-                        strategyName: tokenStrategyName,
-                    });
-
-                    const token_mfa = generateMfaToken({
-                        ref: user._id,
-                        mfa: false,
-                    });
-
-                    const token_analytics = generateTokenAnalytics({
-                        perfil: profilesIDS.numbers,
-                        clientID: CLIENT_ID,
-                        filters: dashboardFilters,
-                    });
-
-                    const token_happplace = generateHappPlaceToken({
-                        name: user.name,
-                        networkLogin: user.networkLogin,
-                        clientId: CLIENT_ID,
-                    });
-
-                    const { token: SAS } = addSASTokenToResponse(res);
-
-                    await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
-                    await updateLastLoginUser(user._id);
-
-                    var tokenEncript = cryptoJS.AES.encrypt(token, 'happlearning');
-                    var key = 'happlearning' + ':' + '25KP76yNnhiGH9bSj';
-
-                    var tk = tokenEncript.toString();
-                    key = cryptoJS.AES.encrypt(key, '25KP76yNnhiGH9bSj').toString();
-
-                    _messages.success(
-                        res,
-                        req,
-                        {
-                            SAS,
-                            tk,
-                            key,
-                            accept: user.acceptTerms,
-                            passwordValid: true,
-                            numbers: profilesIDS.numbers,
-                            name: user.name,
-                            profilePhoto: user.profilePhoto,
-                            tokenAnalytics: token_analytics,
-                            tokenHappPlace: token_happplace,
-                            mfaToken: token_mfa,
-                            tokenHappPlace: token_happplace,
-                            networkLogin: user.networkLogin,
-                            userId: user._id,
-                            email: user.email,
-                        },
-                        'Sucesso ao logar',
-                        'users',
-                        'singleSignOn',
-                        [],
-                        [],
-                        true,
-                        'LOGIN',
-                        namesProfiles.concat(namesGroups)
-                    );
-                } else {
-                    await sleep(3000);
-                    _messages.forbidden(
-                        res,
-                        req,
-                        'Usuário ou senha inválidos.',
-                        { claim, claimKey: ssoForm?.claim ?? '' },
-                        'users',
-                        'singleSignOn'
-                    );
-                }
-            } else {
-                _messages.forbidden(
+                return _messages.forbidden(
                     res,
                     req,
-                    'Claim inválido',
-                    'Claim inválido',
+                    'Usuário ou senha inválidos.',
+                    { claim, claimKey: ssoForm?.claim ?? '' },
                     'users',
                     'singleSignOn'
                 );
             }
+
+            const dashboardFilters = await processDashFilters(user);
+
+            const amountOfLocks = await checkAmountOfLocks(user._id);
+            
+            // 5 Tentativas
+            if (amountOfLocks >= 50) {
+                const lastLoginAttemp = await returnLastLoginAttemp(user._id);
+                const resultDiff = await checkLastAttemptTime(lastLoginAttemp);
+
+                // 30min
+                if (resultDiff >= 1) {
+                    await Block.updateMany(
+                        { user: { $eq: user._id } },
+                        { unblocked: true }
+                    );
+                } else {
+                    sendNotificationEmail(
+                        user.email,
+                        'Conta bloqueada',
+                        `Olá ${user.name}, uma nova tentativa de acesso a conta não foi permita pois a conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
+                    );
+                    return _messages.forbidden(
+                        res,
+                        req,
+                        'Usuário bloqueado temporariamente',
+                        'Por favor tente novamente mais tarde!',
+                        'users',
+                        'singleSignOn'
+                    );
+                }
+            }
+
+            const groups = Array.from(
+                new Set([
+                    ...(tokenIdpProfiles ?? []),
+                    ...(user.groupsAD?.filter((group) =>
+                        tokenIdpProfiles
+                            ? group === 'PERFIL_Aluno' || !group.startsWith('PERFIL')
+                            : true
+                    ) ?? []),
+                ])
+            );
+
+            const namesProfiles = groups.filter((group) => String(group).toUpperCase().startsWith('PERFIL_'));
+
+            const namesGroups = groups.filter((group) => !String(group).toUpperCase().startsWith('PERFIL_'));
+
+            const profilesIDS = await returnIdProfileUser(namesProfiles);
+            const groupsIDS = await returnIdGroupUser(namesGroups);
+            const userGroups = await Group.find({ name: { $in: namesGroups } });
+
+            const eligibilities = userGroups.flatMap((group) =>
+                group.tags.flatMap((tag) => tag?.value || tag.display)
+            );
+
+            const token = generateSSOToken({
+                ref: user._id,
+                clientId: process.env.CLIENT_ID,
+                userName: user.name,
+                userTags: eligibilities,
+                profiles: profilesIDS.result,
+                numbers: profilesIDS.numbers,
+                groups: groupsIDS,
+                welcomeVideoWatched: user?.welcomeVideoWatched,
+                idpProfiles: tokenIdpProfiles,
+                strategyName: tokenStrategyName,
+            });
+
+            const token_mfa = generateMfaToken({
+                ref: user._id,
+                mfa: false,
+            });
+
+            const token_analytics = generateTokenAnalytics({
+                perfil: profilesIDS.numbers,
+                clientID: CLIENT_ID,
+                filters: dashboardFilters,
+            });
+
+            const token_happplace = generateHappPlaceToken({
+                name: user.name,
+                networkLogin: user.networkLogin,
+                clientId: CLIENT_ID,
+            });
+
+            const { token: SAS } = addSASTokenToResponse(res);
+
+            await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
+            await updateLastLoginUser(user._id);
+
+            var tokenEncript = cryptoJS.AES.encrypt(token, 'happlearning');
+            var key = 'happlearning' + ':' + '25KP76yNnhiGH9bSj';
+
+            var tk = tokenEncript.toString();
+            key = cryptoJS.AES.encrypt(key, '25KP76yNnhiGH9bSj').toString();
+
+            _messages.success(
+                res,
+                req,
+                {
+                    SAS,
+                    tk,
+                    key,
+                    accept: user.acceptTerms,
+                    passwordValid: true,
+                    numbers: profilesIDS.numbers,
+                    name: user.name,
+                    profilePhoto: user.profilePhoto,
+                    tokenAnalytics: token_analytics,
+                    tokenHappPlace: token_happplace,
+                    mfaToken: token_mfa,
+                    tokenHappPlace: token_happplace,
+                    networkLogin: user.networkLogin,
+                    userId: user._id,
+                    email: user.email,
+                },
+                'Sucesso ao logar',
+                'users',
+                'singleSignOn',
+                [],
+                [],
+                true,
+                'LOGIN',
+                namesProfiles.concat(namesGroups)
+            );
+
         } catch (error) {
             console.log(error);
             _messages.internalServer(
@@ -2160,7 +2153,7 @@ module.exports = {
         }
     },
 
-    async ssoCallback (req, res) {
+    async ssoCallback(req, res) {
         await Log.create({
             type: 'SSO_CALLBACK',
             message: 'SSO_CALLBACK',
@@ -2174,14 +2167,15 @@ module.exports = {
         const ssoForm = await getLoginFormByStrategyName(strategyName);
 
         const claim = ssoForm?.claim ?? 'networkLogin';
+
         const claimKey = ssoForm?.claimKey ?? 'no-claim-key-value';
 
-        const value =
+        const claimValue =
             claimKey.split(',').reduce((acc, key) => {
                 if (acc !== null && acc !== undefined && acc !== '') return acc;
 
-                return deepGet(req.samlUserObject, key, null);
-            }, null) ?? req.user?.nameID;
+                return _.get(req.samlUserObject ?? req.user, key, null);
+            }, null) ?? req.user?.nameID ?? null;
 
         await Log.create({
             type: 'SSO_CALLBACK_INFOS',
@@ -2194,11 +2188,11 @@ module.exports = {
                 ssoForm: ssoForm ? { ...ssoForm, certifier: undefined } : 'FORM NOT FOUND',
                 claim,
                 claimKey,
-                value
+                claimValue,
             }),
         });
 
-        if (value === undefined || value === null) {
+        if (claimValue === undefined || claimValue === null) {
             console.log('ssoCallback req.samlUserObject', req.samlUserObject);
 
             return _messages.internalServer(
@@ -2218,56 +2212,14 @@ module.exports = {
 
         const token = jwt.sign(
             {
-                [claim]: value,
+                [claim]: claimValue,
                 strategyName,
                 idpProfiles,
             },
             process.env.PROJECT_SECRET_KEY
         );
 
-        res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
-    },
-
-    async openIdCallback (req, res) {
-        await Log.create({
-            type: 'OPENID_CALLBACK',
-            message: 'OPENID_CALLBACK',
-            component: 'users',
-            route: 'openidCallback',
-            dataNew: { openidObject: req.user },
-            dataOld: null,
-        });
-
-        const { strategyName } = req.cookies;
-        const form = await getLoginFormByStrategyName(strategyName);
-        const claimValue = _.get(req.user, form.claimKey);
-
-        const { idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
-
-        await Log.create({
-            type: 'SSO_CALLBACK_INFOS',
-            message: 'SSO_CALLBACK',
-            component: 'users',
-            route: 'ssoCallback',
-            dataNew: {
-                strategyName,
-                idpProfiles,
-                form,
-                claimKey: form?.claimKey,
-                value: claimValue,
-            },
-        });
-
-        const token = jwt.sign(
-            {
-                [form.claim]: claimValue,
-                strategyName,
-                idpProfiles,
-            },
-            process.env.PROJECT_SECRET_KEY
-        );
-
-        res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
+        res.redirect(302, `${environment.DOMAIN}/login/entrar/sso?token=${token}`);
     },
 
     async updateDeviceId (req, res) {

@@ -45,7 +45,10 @@ async function createSamlPassportStrategy(config) {
             callbackUrl: `${config.callbackUrl}?strategy=${strategyName}`,
             cert: config.certifier,
         },
-        (profile, done) => done(null, profile),
+        (profile, done) => {
+            profile.strategyName = strategyName;
+            return done(null, profile);
+        },
     );
 
     passport.use(strategy);
@@ -71,7 +74,6 @@ async function createOpenIdConnectStrategy(config) {
 
         },
         async (issuer, profile, done) => {
-
             profile.strategyName = strategyName;
             profile.issuer = issuer;
 
@@ -80,6 +82,35 @@ async function createOpenIdConnectStrategy(config) {
     );
 
     passport.use(strategyName, strategy);
+}
+
+async function createLocalStrategy() {
+    passport.use(new LocalStrategy(
+        { usernameField: 'login', passwordField: 'password' },
+        async function verifyUser(login, password, cb) {
+            const decrypted = cryptoJS.AES.decrypt(password, 'pass');
+            const passwordDecrypted = decrypted.toString(cryptoJS.enc.Utf8);
+
+            const user = await User.findOne({ networkLogin: { $eq: login }, status: 'ATIVO' }).lean();
+
+            const pass = user?.password?.filter(function (obj) {
+                return obj.valid && bcrypt.compareSync(passwordDecrypted, obj.hash);
+            });
+
+            if (!user || pass?.length === 0) {
+                return cb(new ApiError('Usuário ou senha inválidos', 401), null);
+            }
+
+            return cb(null, {
+                _id: String(user._id),
+                networkLogin: user.networkLogin,
+                name: user.name,
+                email: user.email,
+                registration: user.registration,
+                groupsAD: user.groupsAD,
+            });
+        }
+    ));
 }
 
 function initializePassport(app) {
@@ -156,32 +187,7 @@ async function createStrategiesFromLoginConfigs() {
         }
     }
 
-    passport.use(new LocalStrategy(
-        { usernameField: 'login', passwordField: 'password' },
-        async function verifyUser(login, password, cb) {
-            const decrypted = cryptoJS.AES.decrypt(password, 'pass');
-            const passwordDecrypted = decrypted.toString(cryptoJS.enc.Utf8);
-
-            const user = await User.findOne({ networkLogin: { $eq: login }, status: 'ATIVO' }).lean();
-
-            const pass = user?.password?.filter(function (obj) {
-                return obj.valid && bcrypt.compareSync(passwordDecrypted, obj.hash);
-            });
-
-            if (!user || pass?.length === 0) {
-                return cb(new ApiError('Usuário ou senha inválidos', 401), null);
-            }
-
-            return cb(null, {
-                _id: String(user._id),
-                networkLogin: user.networkLogin,
-                name: user.name,
-                email: user.email,
-                registration: user.registration,
-                groupsAD: user.groupsAD,
-            });
-        }
-    ))
+    await createLocalStrategy();
 
     log('createStrategiesFromLoginConfigs strategies', Object.keys(passport._strategies));
 }

@@ -1,5 +1,4 @@
 const express = require('express');
-const passport = require('passport');
 const rateLimit = require('express-rate-limit');
 const _controller = require('./controller');
 const multiparty = require('connect-multiparty');
@@ -25,7 +24,11 @@ module.exports = express
             standardHeaders: true,
             legacyHeaders: false,
         }),
-        passport.authenticate('local', { session: true }),
+        (req, res, next) => {
+            req.query.strategy = 'local';
+            return next();
+        },
+        authenticatePassport,
         _controller.ldapSignIn
     )
     .post(
@@ -125,14 +128,14 @@ module.exports = express
         _controller.ssoCallback
     )
     .get(
-        '/openid',
+        '/sso/openid',
         saveStrategyOnCookie,
         authenticatePassport,
     )
     .get(
-        '/openid/callback',
+        '/sso/openid/callback',
         authenticatePassport,
-        _controller.openIdCallback
+        _controller.ssoCallback
     )
     .post('/device', validateTokenRoute, _controller.updateDeviceId)
     .get(
