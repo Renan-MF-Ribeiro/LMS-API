@@ -812,8 +812,6 @@ module.exports = {
                 );
             }
 
-            const dashboardFilters = await processDashFilters(user);
-
             const amountOfLocks = await checkAmountOfLocks(user._id);
             
             // 5 Tentativas
