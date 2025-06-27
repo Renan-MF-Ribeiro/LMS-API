@@ -26,6 +26,7 @@ const { ConfigLogin } = require('../theme/login-config/model');
 const ApiError = require('../../errors/ApiError');
 const { getMessengerConfig } = require('../config/business');
 const { getConnectMap } = require('../../utils/connect');
+const { getCookieProps } = require('../../utils/cookies');
 require('dotenv').config();
 
 module.exports = {
@@ -853,8 +854,8 @@ module.exports = {
 
     async clearAuthCookies(req, res) {
         req.session?.destroy?.();
-        res.clearCookie('connect.sid');
-        res.clearCookie('SAS');
-        res.clearCookie('strategyName');
+        res.clearCookie('connect.sid', getCookieProps());
+        res.clearCookie('SAS', getCookieProps());
+        res.clearCookie('strategyName', getCookieProps());
     }
 };
