@@ -1,7 +1,7 @@
 const { getUserByToken } = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
-const { populateUserFields, createNotification, getSegFieldsFromUser } = require('../buisiness');
+const { populateUserFields, createNotification, getSegFieldsFromUser, populateSingleData } = require('../buisiness');
 const {
     sendMessageToKafka,
     processTargetUsers,
@@ -387,9 +387,8 @@ module.exports = {
 
             const uri = 'posts/comments';
             const { data } = await socialApi.put(uri, req.body);
-            const PopulatedData = await populateUserFields('user', 'userId', data.data);
+            const PopulatedData = await populateSingleData('user', 'userId', data.data);
             const response = { data: PopulatedData, total: data.total };
-
             const { userId: postOwnerId } = await socialApi.get(`posts/${req.body.postId}`);
             const isReplyingOwnPost = _id === postOwnerId;
 
@@ -401,7 +400,7 @@ module.exports = {
                     communication: ['notification'],
                     type: 'mention',
                     contentType: 'comentário',
-                    contentId: PopulatedData._id,
+                    contentId: PopulatedData?._id,
                 };
                 await createNotification(config, mentionedUsers);
             }

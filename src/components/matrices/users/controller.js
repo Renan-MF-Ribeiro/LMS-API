@@ -13,6 +13,8 @@ const { getCompletedTrails } = require('../../tracking/business');
 const { Group } = require('../../groups/model');
 const courseBusiness = require('../../courses/business');
 const ApiError = require('../../../errors/ApiError');
+const { findUsersByMatrixConfig } = require('../../config/business');
+const { getUserByToken } = require('../../../utils/functions');
 
 const usersController = {
     findAll: async (req, res) => {
@@ -32,16 +34,8 @@ const usersController = {
     findByRegistrationOrName: async (req, res) => {
         try {
             const { searchBy } = req.query;
-            const users = await User.find(
-                {
-                    $or: [
-                        { registration: { $regex: searchBy, $options: 'i' } },
-                        { name: { $regex: searchBy, $options: 'i' } },
-                        { networkLogin: { $regex: searchBy, $options: 'i' } },
-                    ],
-                },
-                'name _id registration networkLogin'
-            ).limit(10);
+            const applier = await getUserByToken(req);
+            const users = await findUsersByMatrixConfig(applier, searchBy, 10)
 
             res.status(200).json(users);
         } catch (error) {
@@ -109,11 +103,9 @@ const usersController = {
             const { id } = req.params;
 
             const user = await User.findOne({ _id: id });
-            const uri = `${
-                process.env.API_CERTIFIER
-            }/certificates/find/${user.networkLogin}?clientId=${
-                process.env.CLIENT_ID
-            }`;
+            const uri = `${process.env.API_CERTIFIER
+                }/certificates/find/${user.networkLogin}?clientId=${process.env.CLIENT_ID
+                }`;
 
             let token = req.headers.authorization;
             if (!token?.startsWith('Bearer')) {
@@ -216,7 +208,7 @@ const usersController = {
                 const user = await User.findOne({ _id: new ObjectId(req.body.userId) });
 
                 if (!user) {
-                    throw new ApiError('Usuário colaborador não encontrado', 404);
+                    throw new ApiError('Usuário não encontrado', 404);
                 }
 
                 for (const recommendedCourse of req.body.recommendedCourses) {

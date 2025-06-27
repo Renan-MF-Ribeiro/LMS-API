@@ -91,6 +91,37 @@ async function populateUserFields(fieldName, reference, data) {
 
     return processData(data, userMap, avatarMap, true);
 }
+async function populateSingleData(fieldName, reference, data){
+    // Salva todos os ID's de usuários que devem ser populado de 'data'
+    const ids = new Set();
+    const avatarIds = new Set();
+
+    if (data[reference]) {
+        ids.add(data[reference].toString());
+        if (data.avatar) avatarIds.add(data.avatar.toString());
+    }
+
+    // Consultar usuários e avatares no banco em paralelo
+    const [users, avatars] = await Promise.all([
+        User.find({ _id: { $in: [...ids] } }, '_id name profilePhoto').lean(),
+        Avatar.find({ _id: { $in: [...avatarIds] } }, '_id name image').lean(),
+    ]);
+
+    const userMap = new Map(users.map((user) => [user._id.toString(), user]));
+    const avatarMap = new Map(avatars.map((avatar) => [avatar._id.toString(), avatar]));
+
+    const user = userMap.get(data[reference]?.toString());
+    if (!user) return null;
+
+    const populatedItem = {
+        [fieldName]: user,
+        ...data,
+        [reference]: undefined,
+        avatar: avatarMap.get(data.avatar?.toString()) || null,
+    };
+
+    return populatedItem
+}
 
 async function populateMembers(data) {
     const ids = data.data;
@@ -115,9 +146,9 @@ async function createNotification(config, users) {
     // É a AÇÃO que está sendo notificada.
     const shareContent = config.contentType === 'post' ? 'um post' : 'uma trilha';
     const typesOfNotification = {
-        mention: 'mencionou você em um',
-        comment: 'respondeu seu',
-        share: `compartilhou ${shareContent} com você`,
+        mention: 'mencionou este perfil em um',
+        comment: 'respondeu o',
+        share: `compartilhou ${shareContent}`,
     };
 
     // Config.CONTENT
@@ -218,4 +249,5 @@ module.exports = {
     populateMembers,
     createNotification,
     getSegFieldsFromUser,
+    populateSingleData
 };

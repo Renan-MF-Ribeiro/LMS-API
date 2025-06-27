@@ -44,181 +44,180 @@ const HomeController = {
         const { searchBy, pageIndex, pageSize, ...filters } = req.query;
         const filtersValues = Object.values(filters);
         const hasFilters = filtersValues.some((filter) => filter === 'true');
-
         if (!searchBy?.length && !hasFilters) {
+            console.log('No searchBy or filters provided');
             return _messages.success(res, req, {});
         }
+        const user = await getUserByToken(req);
+        const tags = await getTagsGroupsByToken(req);
+        const classGroups = user?.classGroups ?? [];
 
-        try {
-            const user = await getUserByToken(req);
-            const tags = await getTagsGroupsByToken(req);
-            const classGroups = user?.classGroups ?? [];
-
-            const { skip, limit } = pagination({
-                query: {
-                    pageIndex: Number(pageIndex),
-                    pageSize: Number(pageSize)
-                }
-            });
-            let filteredTrails = [];
-            let result = [];
-
-            for (const tag of user.tags) {
-                delete tag.createdAt;
-                tags.push(tag);
+        const { skip, limit } = pagination({
+            query: {
+                pageIndex: Number(pageIndex),
+                pageSize: Number(pageSize)
             }
+        });
+        let filteredTrails = [];
+        let result = [];
 
-            classGroups?.forEach(({ groupCode, startDate, limitDate }) => {
-                if (groupCode && startDate && limitDate && startDate <= new Date() && limitDate >= new Date()) {
-                    tags?.push({ display: groupCode, value: groupCode });
-                }
-            });
+        for (const tag of user.tags) {
+            delete tag.createdAt;
+            tags.push(tag);
+        }
 
-            const escapedSearchBy = searchBy ? searchBy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
-            const items = await Item.find({
-                $or: [
-                    {
-                        title: {
-                            $regex: escapedSearchBy,
-                            $options: 'i'
-                        }
-                    },
-                    {
-                        description: {
-                            $regex: escapedSearchBy,
-                            $options: 'i'
-                        }
+        classGroups?.forEach(({ groupCode, startDate, limitDate }) => {
+            if (groupCode && startDate && limitDate && startDate <= new Date() && limitDate >= new Date()) {
+                tags?.push({ display: groupCode, value: groupCode });
+            }
+        });
+
+        const escapedSearchBy = searchBy ? searchBy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
+        const items = await Item.find({
+            $or: [
+                {
+                    title: {
+                        $regex: escapedSearchBy,
+                        $options: 'i'
                     }
-                ],
-                enabled: true,
-                deleted: { $eq: 0 }
-            });
+                },
+                {
+                    description: {
+                        $regex: escapedSearchBy,
+                        $options: 'i'
+                    }
+                }
+            ],
+            enabled: true,
+            deleted: { $eq: 0 }
+        });
 
-            filteredTrails = await populateTrails(true, {
-                $or: [
-                    {
-                        $or: [
-                            {
-                                title: {
-                                    $regex: escapedSearchBy,
-                                    $options: 'i'
-                                }
-                            },
-                            {
-                                description: {
-                                    $regex: escapedSearchBy,
-                                    $options: 'i'
-                                }
+        filteredTrails = await populateTrails(true, {
+            $or: [
+                {
+                    $or: [
+                        {
+                            title: {
+                                $regex: escapedSearchBy,
+                                $options: 'i'
                             }
-                        ],
-                        tags: { $in: tags },
-                        enabled: true
-                    },
-                    {
-                        'items.itemID': { $in: items.map((item) => item._id) },
-                        $or: [{ tags: { $in: tags } }, { mandatory: { $in: tags } }],
-                        enabled: true
-                    }
-                ]
+                        },
+                        {
+                            description: {
+                                $regex: escapedSearchBy,
+                                $options: 'i'
+                            }
+                        }
+                    ],
+                    tags: { $in: tags },
+                    enabled: true
+                },
+                {
+                    'items.itemID': { $in: items.map((item) => item._id) },
+                    $or: [{ tags: { $in: tags } }, { mandatory: { $in: tags } }],
+                    enabled: true
+                }
+            ]
+        });
+
+        filteredTrails = filteredTrails.filter((trail) => {
+            return checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && checkIfTheTrackIsValid(trail);
+        });
+
+        const itemsIds = filteredTrails.flatMap((t) => t.items.map((i) => i.itemID._id));
+        const allTrackingUser = await Tracking.find({
+            userLogin: { $eq: user.networkLogin },
+            item: { $in: itemsIds },
+            $or: [
+                { expiredCompletion: { $exists: false } },
+                { expiredCompletion: { $eq: null } }
+            ]
+        });
+
+        for (let trail of filteredTrails) {
+            const processedTrail = processTrailTracking(trail, allTrackingUser);
+            trail = processedTrail.trail;
+            result.push(trail);
+        }
+
+        if (hasFilters) {
+            result = filterTrails(filters, result, tags);
+        }
+
+        const sections = await Section.find({
+            trails: { $in: result.map((t) => t._id) },
+            active: 1,
+            deleted: 0
+        }).lean();
+
+        const trailMap = new Map();
+        sections.forEach((section) => {
+            section.trails.forEach((trailId) => {
+                if (!trailMap.has(trailId.toString())) {
+                    trailMap.set(trailId.toString(), section._id);
+                }
             });
+        });
 
-            filteredTrails = filteredTrails.filter((trail) => {
-                return checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && checkIfTheTrackIsValid(trail);
-            });
+        result = sections
+            .map((section) => {
+                return {
+                    ...section,
+                    trails: section.trails
+                        .filter((trailId) => {
+                            return (
+                                result.some(({ _id }) => _id.equals(trailId)) &&
+                                section._id.equals(trailMap.get(trailId.toString()))
+                            );
+                        })
+                        .map((trailId) => {
+                            return result.find(({ _id }) => _id.equals(trailId));
+                        })
+                };
+            }).filter((section) => section.trails.length > 0);
 
-            const itemsIds = filteredTrails.flatMap((t) => t.items.map((i) => i.itemID._id));
-            const allTrackingUser = await Tracking.find({
-                userLogin: { $eq: user.networkLogin },
-                item: { $in: itemsIds },
-                $or: [
-                    { expiredCompletion: { $exists: false } },
-                    { expiredCompletion: { $eq: null } }
-                ]
-            });
-
-            for (let trail of filteredTrails) {
-                const processedTrail = processTrailTracking(trail, allTrackingUser);
-                trail = processedTrail.trail;
-                result.push(trail);
-            }
-
-            if (hasFilters) {
-                result = filterTrails(filters, result, tags);
-            }
-
-            const sections = await Section.find({
-                trails: { $in: result.map((t) => t._id) },
-                active: 1,
-                deleted: 0
-            }).lean();
-
-            const trailMap = new Map();
-            sections.forEach((section) => {
-                section.trails.forEach((trailId) => {
-                    if (!trailMap.has(trailId.toString())) {
-                        trailMap.set(trailId.toString(), section._id);
-                    }
-                });
-            });
-
-            result = sections
-                .map((section) => {
-                    return {
-                        ...section,
-                        trails: section.trails
-                            .filter((trailId) => {
-                                return (
-                                    result.some(({ _id }) => _id.equals(trailId)) &&
-                                    section._id.equals(trailMap.get(trailId.toString()))
-                                );
-                            })
-                            .map((trailId) => {
-                                return result.find(({ _id }) => _id.equals(trailId));
-                            })
-                    };
-                }).filter((section) => section.trails.length > 0);
-
-            const trailsWithoutSection = filteredTrails.filter(
-                (trail) => result.every(
-                    (section) => !section.trails.find(
-                        (sectionTrail) => String(sectionTrail._id) === String(trail._id)
-                    )
+        const trailsWithoutSection = filteredTrails.filter(
+            (trail) => result.every(
+                (section) => !section.trails.find(
+                    (sectionTrail) => String(sectionTrail._id) === String(trail._id)
                 )
-            );
+            )
+        );
 
-            const filteredTrailsWithoutSection = hasFilters
-                ? filterTrails(filters, trailsWithoutSection, tags)
-                : trailsWithoutSection;
+        const filteredTrailsWithoutSection = hasFilters
+            ? filterTrails(filters, trailsWithoutSection, tags)
+            : trailsWithoutSection;
 
-            if (filteredTrailsWithoutSection.length) {
-                result.push({
-                    _id: 'trails-without-section',
-                    title: 'SEM SEÇÃO',
-                    trails: filteredTrailsWithoutSection
-                });
-            }
+        if (filteredTrailsWithoutSection.length) {
+            result.push({
+                _id: 'trails-without-section',
+                title: 'SEM SEÇÃO',
+                trails: filteredTrailsWithoutSection
+            });
+        }
 
-            // Recupera Cursos presenciais
-            const course = await courseInSections(tags, user);
+        // Recupera Cursos presenciais
+        const course = await courseInSections(tags, user);
 
-            if (course && course.trails) {
-                course.trails = course?.trails?.filter(trail => {
-                    // recupera o nome de todas as turmas do curso
-                    const classNames = (trail?.classes || []).map(c => c.name);
+        if (course && course.trails && searchBy) {
+            course.trails = course?.trails?.filter(trail => {
+                // recupera o nome de todas as turmas do curso
+                const classNames = (trail?.classes || []).map(c => c.name);
 
-                    // recupera titulo e descrição do curso
-                    const { title, description } = trail;
+                // recupera titulo e descrição do curso
+                const { title, description } = trail;
 
-                    // retorna TRUE caso algum dos itens corresponda a pesquisa
-                    return [title, description, ...classNames].some(stg => extractTextFromRichText(stg).toLowerCase().includes(searchBy.toLowerCase()));
-                });
+                // retorna TRUE caso algum dos itens corresponda a pesquisa
+                return [title, description, ...classNames].some(stg => extractTextFromRichText(stg).toLowerCase().includes(searchBy.toLowerCase()));
+            });
 
-                result.push(course);
-            }
+            result.push(course);
+        }
 
-            const features = await getDbCurrentFeatures(req);
+        const features = await getDbCurrentFeatures(req);
 
-            if (features?.alura) {
+        if (features?.alura) {
+            try {
                 const host = process.env.API_ALURA;
                 const clientId = process.env.CLIENT_ID;
                 const headers = { 'x-client-key': process.env.API_KEY_ALURA };
@@ -228,20 +227,25 @@ const HomeController = {
                 const { data } = await axios.get(uri, { headers });
 
                 result.push(...mapAlura(filterAlura(filters, data)));
-            }
+            } catch (error) {
+                console.error('Erro ao buscar cursos da Alura:', error.message);
 
-            _messages.success(res, req, { data: result.slice(skip, skip + limit), total: result.length });
-        } catch (error) {
-            console.log(error);
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'home',
-                'searchTrailsItems'
-            );
+                await Log.create({
+                    dataNew: { error: error.response?.data ?? error },
+                    groups: groupsAD ?? [],
+                    user: user._id,
+                    login: user.networkLogin,
+                    type: "ERROR",
+                    message: "Erro ao buscar cursos da Alura",
+                    component: "home",
+                    route: "searchBy",
+                    ip: req.ip,
+                    browserDetails: req.headers['user-agent'],
+                });
+            }
         }
+
+        _messages.success(res, req, { data: result.slice(skip, skip + limit), total: result.length });
     },
 
     async searchTrailsItems(req, res) {

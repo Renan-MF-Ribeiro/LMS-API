@@ -45,9 +45,10 @@ const GamificationBusiness = {
         return data;
     },
 
-    async updateClient(body) {
+    async updateClient(body, requestUserLogin) {
         const uri = `${host}/clients/${clientId}`;
-        const { data } = await axios.put(uri, body, { headers });
+
+        const { data } = await axios.put(uri, body, { headers: { ...headers, 'x-user-id': requestUserLogin } });
 
         return data;
     },
@@ -121,9 +122,10 @@ const GamificationBusiness = {
         return data;
     },
 
-    async updateClientRankings(_id, body) {
+    async updateClientRankings(_id, body, requestUserLogin) {
         const uri = `${host}/rankings/${clientId}/${_id}`;
-        const { data } = await axios.put(uri, body, { headers });
+
+        const { data } = await axios.put(uri, body, { headers: { ...headers, 'x-user-id': requestUserLogin } });
 
         return data;
     },
@@ -150,10 +152,10 @@ const GamificationBusiness = {
         return data;
     },
 
-    async updateClientRewards(_id, body) {
+    async updateClientRewards(_id, body, requestUserLogin) {
         const uri = `${host}/rewards/${clientId}/${_id}`;
-        console.log(body)
-        const { data } = await axios.put(uri, body, { headers });
+
+        const { data } = await axios.put(uri, body, { headers: { ...headers, 'x-user-id': requestUserLogin } });
 
         return data;
     },

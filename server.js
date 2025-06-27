@@ -28,7 +28,8 @@ const {
     getCronConfig,
     getUsersDataConfig,
     getCompanyConfig,
-    getChatIAConfig
+    getChatIAConfig,
+    getDashboardConfig
 } = require('./src/components/config/business')
 const GamificationKafka = require('./src/components/gamification/kafka/broker');
 
@@ -47,6 +48,7 @@ const server = app.listen(port, async () => {
         await getUsersDataConfig();
         await getCompanyConfig();
         await getChatIAConfig();
+        await getDashboardConfig();
     } catch (err) {
         error('Error setting configs: ' + err);
     }

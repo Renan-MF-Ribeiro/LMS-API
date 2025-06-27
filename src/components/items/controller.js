@@ -901,7 +901,7 @@ const ItemController = {
         try {
             const findItemValue = req.params.itemId;
             const findITrailValue = req.params.trailId;
-            const userId = _functions.getUserByToken(req);
+            const user = _functions.getUserByToken(req);
 
             const queryItem = findItemValue.match(/^[0-9a-fA-F]{24}$/)
                 ? {
@@ -927,8 +927,8 @@ const ItemController = {
                 _messages.badRequest(
                     res,
                     req,
-                    'Você não esta elegível a este conteúdo',
-                    'Você não esta elegível a este conteúdo',
+                    `O usuário ${user.name} não esta elegível a este conteúdo.`,
+                    `O usuário ${user.name} não esta elegível a este conteúdo.`,
                     'items',
                     'findItemById'
                 );
