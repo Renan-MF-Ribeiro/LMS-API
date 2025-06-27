@@ -484,9 +484,9 @@ module.exports = {
 
     async getUserAccessibleContent (req, res) {
         try {
-            const { userId, ...filter } = req.query;
+            const { userId } = req.query;
 
-            const { user, tags, classGroups } = await getContentEligibilityParameterByUserId(userId);
+            const { user, tags } = await getContentEligibilityParameterByUserId(userId);
 
             let resultSections = [];
 
@@ -508,27 +508,6 @@ module.exports = {
                 };
                 let trails = await populateTrails(true, query);
 
-                for (let trail of trails) {
-                    const processedTrail = processTrailTracking(trail, []);
-
-                    if (trail.expirationType) {
-                        trail = processExpirationDate(trail, user);
-                    }
-
-                    trail = processedTrail.trail;
-
-                    for (const tag of trail.tags) {
-                        for (const classGroup of classGroups) {
-                            if (classGroup.groupCode === tag.value) {
-                                trail.classGroup = findObjectInRange(
-                                    classGroups.filter((e) => e.groupCode == tag.value),
-                                    new Date()
-                                );
-                            }
-                        }
-                    }
-                }
-
                 trails = trails.filter(checkIfTheTrackIsValid);
 
                 resultSections = (await elegiblesContents(trails))
@@ -548,18 +527,7 @@ module.exports = {
                     resultSections.sort((a, b) => (a.position < b.position ? -1 : 1));
                 }
 
-                if (filter && Object.values(filter).length > 0) {
-                    const arrResultSections = [];
-                    for (const section of resultSections) {
-                        section.trails = filterTrails(filter, section.trails, tags);
-                        if (section.trails.length > 0) {
-                            // Verifica a obrigatoriedade da trilha.
-                            arrResultSections.push(section);
-                        }
-                    }
 
-                    resultSections = arrResultSections;
-                }
 
             }
             _messages.success(res, req, resultSections);
