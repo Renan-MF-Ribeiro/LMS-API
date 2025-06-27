@@ -708,7 +708,8 @@ module.exports = {
                 body.collaborative = false
             }
 
-            const docClone = new Trail(body);
+            const user = await getUserByToken(req)
+            const docClone = new Trail({ ...body, author: user._id });
             const newDbTrail = await docClone.save();
 
             if (oldTrailId) {
@@ -723,7 +724,7 @@ module.exports = {
                                 return {
                                     ...item,
                                     urlItem,
-                                    urlTrail,
+                                    urlTrail
                                 }
                             }) ?? [],
                         }
@@ -739,6 +740,7 @@ module.exports = {
                 'trails',
             );
         } catch (error) {
+            console.log({error})
             _messages.internalServer(
                 res,
                 req,
