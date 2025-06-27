@@ -21,7 +21,6 @@ const { cloneDeep } = require('lodash');
 const { User } = require('../users/model');
 const { getProcessedTags } = require('../users/business');
 const { ObjectId } = require('mongoose').Types
-const { User } = require('../users/model');
 
 const isSectionTrailInfo = (trail) => (trail.type === 'trail' && ObjectId.isValid(trail._id)) || ObjectId.isValid(trail);
 
