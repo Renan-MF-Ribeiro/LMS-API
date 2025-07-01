@@ -6,6 +6,11 @@ const { Trail } = require("../components/trails/model");
 const { User } = require("../components/users/model");
 const { CourseModel } = require("../components/courses/model");
 
+function clearQueryParams(url) {
+    const [baseUrl] = url.split('?');
+    return baseUrl;
+}
+
 async function run() {
     const trails = await Trail.find({
         thumbPath: { $exists: true }
@@ -39,7 +44,7 @@ async function run() {
     for await (const trail of trails) {
         await Trail.updateOne({ _id: trail._id }, {
             $set: {
-                thumbPath: `${trail.thumbPath}?v=${Date.now()}`
+                thumbPath: `${clearQueryParams(trail.thumbPath)}?v=${Date.now()}`
             }
         });
     }
@@ -50,7 +55,7 @@ async function run() {
     for await (const item of items) {
         await Item.updateOne({ _id: item._id }, {
             $set: {
-                thumbPath: `${item.thumbPath}?v=${Date.now()}`
+                thumbPath: `${clearQueryParams(item.thumbPath)}?v=${Date.now()}`
             }
         });
     }
@@ -62,7 +67,7 @@ async function run() {
         const banners = channel.banners.map(banner => {
             return {
                 ...banner,
-                path: `${banner.path}?v=${Date.now()}`
+                path: `${clearQueryParams(banner.path)}?v=${Date.now()}`
             }
         });
 
@@ -77,7 +82,7 @@ async function run() {
     for await (const user of users) {
         await User.updateOne({ _id: user._id }, {
             $set: {
-                profilePhoto: `${user.profilePhoto}?v=${Date.now()}`
+                profilePhoto: `${clearQueryParams(user.profilePhoto)}?v=${Date.now()}`
             }
         });
     }
@@ -88,7 +93,7 @@ async function run() {
     for await (const course of courses) {
         await CourseModel.updateOne({ _id: course._id }, {
             $set: {
-                thumbPath: `${course.thumbPath}?v=${Date.now()}`
+                thumbPath: `${clearQueryParams(course.thumbPath)}?v=${Date.now()}`
             }
         });
     }
