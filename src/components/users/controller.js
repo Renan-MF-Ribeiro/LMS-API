@@ -2117,7 +2117,7 @@ module.exports = {
             message: 'SSO_CALLBACK',
             component: 'users',
             route: 'ssoCallback',
-            dataNew: JSON.stringify({ samlObj: req.samlUserObject, samlUser: req.user }),
+            dataNew: JSON.stringify({ samlObj: req.samlUserObject, samlUser: req.user, session: req.session, sessionID: req.sessionID }),
         });
 
         const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
