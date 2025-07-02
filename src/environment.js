@@ -60,6 +60,7 @@ const environmentSchema = z.object({
     API_HAPPPLACE: z.string(),
     API_MENTORING: z.string(),
     API_MATRICES: z.string(),
+    API_I18N: z.string(),
 
     // Chatbot
     CHATBOT_API: z.string().optional().nullish().default(null),
@@ -141,6 +142,7 @@ const environmentSchema = z.object({
     // LDPA_HOST: z.string().optional(), // ! NAO ESTA USANDO
     // JWT_SECRET: z.string().optional(), // ! NAO ESTA USANDO
 
+    SESSION_MAX_AGE: z.coerce.number().optional().default(6 * 60 * 60 * 1000), // 6 horas
 });
 
 const { success, data, error } = environmentSchema.safeParse(process.env);
@@ -149,7 +151,7 @@ let environment = data;
 
 if (!success) {
     console.error('Invalid environment variables:', JSON.stringify(error.issues, null, 2));
-    environment = process.env;
+    environment = { ...process.env, SESSION_MAX_AGE: 6 * 60 * 60 * 1000 };
 }
 
 module.exports = environment;

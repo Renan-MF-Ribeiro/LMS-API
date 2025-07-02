@@ -8,7 +8,7 @@ const environment = require('../environment');
 
 const dbOptions = getDbOptions();
 
-const sessionMaxAge = 6 * 60 * 60 * 1000; // 6 horas
+const sessionMaxAge = environment.SESSION_MAX_AGE;
 
 const sessionStore = MongoStore.create({
     mongoUrl: getConnectionString(),
@@ -53,4 +53,4 @@ const session = expressSession({
     store: sessionStore,
 })
 
-module.exports = { sessionStore, session, sessionMaxAge };
+module.exports = { sessionStore, session };
