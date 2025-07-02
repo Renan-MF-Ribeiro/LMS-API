@@ -18,6 +18,7 @@ const {
 var storage = require('@azure/storage-blob');
 const { Profile } = require('../components/profiles/model');
 const { Group } = require('../components/groups/model');
+const { sessionMaxAge } = require('./session');
 
 const _ldapClient = ldap.createClient({
     url: LDAP_HOST,
@@ -40,7 +41,7 @@ module.exports = {
             },
             PROJECT_SECRET_KEY,
             {
-                expiresIn: '6h',
+                expiresIn: sessionMaxAge / 1000, // sessionMaxAge is in milliseconds, so we need to convert it to seconds for jwt
             }
         );
 

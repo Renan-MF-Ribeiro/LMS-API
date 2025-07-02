@@ -53,4 +53,4 @@ const session = expressSession({
     store: sessionStore,
 })
 
-module.exports = { sessionStore, session };
+module.exports = { sessionStore, session, sessionMaxAge };
