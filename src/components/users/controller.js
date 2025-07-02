@@ -20,7 +20,6 @@ const {
 const {
     generateToken,
     generateMfaToken,
-    generateSSOToken,
     decodeToken,
     validateToken,
     validateTokenNginx,
@@ -32,7 +31,6 @@ const {
     generateMultiFactor,
     validateMultiFactor,
     returnProfileByToken,
-    generateSASToken,
 } = require('../../utils/auth');
 
 const {
@@ -47,7 +45,6 @@ const {
     sendUpdatedDeviceIdToMessenger,
     createWelcomeCampaign,
     returnDateSinceFirstLogin,
-    persistUsers,
     findUsers,
     processDashFilters,
     createClassGroup,
@@ -64,11 +61,8 @@ const {
     pagination,
     ordernation,
     getUserByToken,
-    formatNumberCpf,
     removeAccents,
-    deepGet,
     formatDateWithoutHoursBrasilian,
-    getDataByToken,
 } = require('../../utils/functions');
 
 const { getActiveIdpIntegrations } = require('../idp-integration/business');
@@ -1790,23 +1784,21 @@ module.exports = {
         }
     },
 
-    async isAuthenticated (req, res) {
+    async isAuthenticated(req, res) {
         if (req.user && await validateToken(req)) {
             await addSASTokenToResponse(res);
 
-            _messages.success(res, req, true);
-        } else {
-            await clearAuthCookies(req, res);
-            
-            _messages.forbidden(
-                res,
-                req,
-                'Sem permissão de acesso',
-                false,
-                'users',
-                'isAuthenticated'
-            );
+            return _messages.success(res, req, true);
         }
+
+        _messages.unauthorized(
+            res,
+            req,
+            'Sessão inválida ou expirada',
+            false,
+            'users',
+            'isAuthenticated'
+        );
     },
 
     async isAuthenticatedNginx (req, res) {

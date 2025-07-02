@@ -28,7 +28,7 @@ module.exports = {
 
     unauthorized: async (res, req, err, data, component = null, rota = null) => {
         info(component, rota, 'unauthorized', err)
-        await _functions.recordLog(req, 'UNAUTHORIZED', err, component, rota)
+        await _functions.recordLog(req, 'UNAUTHORIZED', err, component, rota, data)
         res.status(httpStatus.UNAUTHORIZED).json(data)
     },
 
