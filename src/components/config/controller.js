@@ -87,8 +87,63 @@ module.exports = {
             },
             { new: true }
         );
-        
+
         return _messages.success(res, req, created.value);
+    },
+
+    async setManagerRule(req, res) {
+        const rules = req.body;
+
+        if (rules?.length === 0 || !rules) {
+            ConfigModel.findOneAndUpdate(
+                { type: ConfigTypes.ManagerRule },
+                { value: [] },
+                { new: true }
+            );
+            return _messages.successEmpty(res, req, 'Regra de gestores aplicada com sucesso.');
+        }
+
+        let rulesArray = rules
+        if(!Array.isArray(rules)) {
+            rulesArray = [rules];
+        }
+
+        const query = rulesArray
+            ?.map((rule) => {
+                if (!rule?.field || !rule?.values || rule.values.length === 0) return null;
+                return { [rule.field]: { $in: rule.values } };
+            })
+            ?.filter(Boolean);
+
+        await User.updateMany(
+            { groupsAD: 'PERFIL_Gestor_Matriz' },
+            { $pull: { groupsAD: 'PERFIL_Gestor_Matriz' } }
+        );
+
+        Promise.all([
+            User.updateMany({ $or: query }, { $push: { groupsAD: 'PERFIL_Gestor_Matriz' } }),
+            ConfigModel.findOneAndUpdate(
+                { type: ConfigTypes.ManagerRule },
+                { value: rules },
+                { new: true, upsert: true }
+            ),
+        ]);
+
+        return _messages.success(res, req, 'Regra de gestores aplicada com sucesso');
+    },
+
+    async getManagerRule(req, res) {
+        let rule = await ConfigModel.findOne({
+            type: ConfigTypes.ManagerRule,
+        });
+        if (!rule) {
+            rule = await ConfigModel.findOneAndUpdate(
+                { type: ConfigTypes.ManagerRule },
+                { value: [] },
+                { new: true, upsert: true }
+            );
+        }
+        return _messages.success(res, req, rule?.value);
     },
 
     async updateRule(req, res) {
@@ -246,7 +301,7 @@ module.exports = {
     },
 
     async getMatrixUserVisibility(req, res) {
-        const config = await _business.getMatrixConfig()
+        const config = await _business.getMatrixConfig();
 
         return _messages.success(res, req, config.value);
     },
