@@ -1,5 +1,4 @@
 const passport = require('passport');
-const session = require('express-session');
 const passportSaml = require('passport-saml');
 const OpenIDConnectStrategy = require('passport-openidconnect');
 const LocalStrategy = require('passport-local');
@@ -8,11 +7,9 @@ const bcrypt = require('bcryptjs');
 const cryptoJS = require('crypto-js');
 
 const { log } = require('./logger');
-const { getCookieProps } = require('./cookies');
 const { getRequestStrategyName } = require('./auth');
-const { sessionStore } = require('./session-store');
+const { session } = require('./session');
 
-const environment = require('../environment');
 const ApiError = require('../errors/ApiError');
 
 const { getLoginConfig } = require('../components/users/business');
@@ -114,17 +111,7 @@ async function createLocalStrategy() {
 }
 
 function initializePassport(app) {
-    app.use(session({
-        secret: environment.PROJECT_SECRET_KEY,
-        resave: false,
-        saveUninitialized: false,
-        cookie: {
-            ...getCookieProps(),
-            maxAge: 6 * 60 * 60 * 1000, // 6 hours
-        },
-        store: sessionStore,
-    }));
-
+    app.use(session);
     app.use(passport.initialize());
     app.use(passport.session());
 }

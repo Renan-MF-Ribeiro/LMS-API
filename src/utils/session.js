@@ -1,9 +1,14 @@
+const expressSession = require('express-session');
 const MongoStore = require('connect-mongo');
 
 const { log } = require('./logger');
 const { getConnectionString, getDbOptions } = require('./db');
+const { getCookieProps } = require('./cookies');
+const environment = require('../environment');
 
 const dbOptions = getDbOptions();
+
+const sessionMaxAge = 6 * 60 * 60 * 1000; // 6 horas
 
 const sessionStore = MongoStore.create({
     mongoUrl: getConnectionString(),
@@ -12,6 +17,8 @@ const sessionStore = MongoStore.create({
         useUnifiedTopology: dbOptions.useUnifiedTopology
     },
     collectionName: 'sessions',
+    autoRemove: 'disabled',
+    touchAfter: sessionMaxAge,
     stringify: false,
 });
 
@@ -35,4 +42,15 @@ sessionStore.on('destroy', (sessionId) => {
     log(`Session destroyed: ${sessionId}`);
 });
 
-module.exports = { sessionStore };
+const session = expressSession({
+    secret: environment.PROJECT_SECRET_KEY,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        ...getCookieProps(),
+        maxAge: sessionMaxAge,
+    },
+    store: sessionStore,
+})
+
+module.exports = { sessionStore, session };
