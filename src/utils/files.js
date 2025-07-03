@@ -840,7 +840,6 @@ module.exports = {
 
     async readCSVUsersBuffer(file) {
         const map = await getConnectMap(true);
-
         const workbook = new ExcelJS.Workbook();
 
         const worksheet = await workbook.csv.read(file, {
@@ -848,29 +847,11 @@ module.exports = {
             map: (value) => value
         });
 
-        const headers = [];
+        const labels = [];
         const users = [];
 
         worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-            if (rowNumber === 1) {
-                return headers.push(...row.values);
-            }
-
-            const user = row.values.reduce((acc, rowValue, index) => {
-                const header = headers[index];
-
-                const mapInfo = Object.entries(map)
-                    .map(([key, mapValue]) => ({ key, mapValue }))
-                    .find(({ mapValue }) => header && String(header).trim() === String(mapValue?.field).trim());
-
-                if (!mapInfo) return acc;
-
-                acc[mapInfo.key] = rowValue?.text || rowValue || null;
-
-                return acc;
-            }, {});
-
-            return users.push(user);
+            forEachRow(row, rowNumber, map, labels, users);
         });
 
         return users;
