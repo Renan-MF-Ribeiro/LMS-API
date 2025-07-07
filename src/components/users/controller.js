@@ -221,6 +221,7 @@ async function generateTokens (user, login, password) {
         ref: user._id,
         clientId: process.env.CLIENT_ID,
         userName: user.name,
+        networkLogin: user.networkLogin,
         email: user.email,
         userTags: eligibilities,
         profiles: profilesIDS.result,

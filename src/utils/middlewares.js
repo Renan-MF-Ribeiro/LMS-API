@@ -11,6 +11,7 @@ const { getSegmentation, isSegmentationException } = require('../components/conf
 const { getUserByToken } = require('./functions');
 const ApiError = require('../errors/ApiError');
 const { log } = require('./logger');
+const { Types } = require('mongoose');
 
 const Profiles = {
     ADMIN: 'PERFIL_Admin',
@@ -227,10 +228,10 @@ module.exports = {
         const parsedFeatures = Array.isArray(features) ? features : [features];
 
         log('Checking features', parsedFeatures);
-        
+
         return async function hasFeatureMiddleware(req, res, next) {
             const features = await getDbCurrentFeatures(req);
-            
+
             if (parsedFeatures.every((feature) => features?.[feature])) {
                 return next();
             }
@@ -241,7 +242,7 @@ module.exports = {
 
     async setSegmentation(req, res, next) {
         const features = await getDbCurrentFeatures(req);
-        
+
         if (features?.segmentation) {
             const segmentation = await getSegmentation();
 
@@ -262,6 +263,21 @@ module.exports = {
                     //Fix: improve this logic
                 } catch { }
             }
+        }
+
+        next();
+    },
+
+    async isMongoId(req, res, next) {
+        if (req?.params?.id && !Types.ObjectId.isValid(req.params.id)) {
+            return _messages.badRequest(
+                res,
+                req,
+                "Parâmetro 'id' deve ser um MongoDB ID válido",
+                "Parâmetro 'id' deve ser um MongoDB ID válido",
+                'news',
+                'createOrUpdateForm'
+            );
         }
 
         next();

@@ -1,0 +1,11 @@
+const express = require('express')
+const _controller = require('./controller')
+const formidable = require('express-formidable')
+
+module.exports = express.Router()
+    .get('/list', _controller.list)
+    .get('/home/:id', _controller.home)
+    .get('/:id', _controller.getById)
+    .post('/create', formidable(), _controller.create)
+    .put('/update/:id', formidable(), _controller.update)
+    .delete('/:id', _controller.deleteCategory)
