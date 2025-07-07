@@ -20,6 +20,7 @@ const {
     getDateTodayWithoutHours,
     handleStudentAverage,
     handleStudentTrails,
+    handleStudentTrailsV2,
     pagination
 } = require('../../utils/functions');
 const { extractTextFromRichText } = require('../../utils/extract-text-from-richtext');
@@ -430,7 +431,7 @@ const HomeController = {
 
             const { average, highestScoreTrail } = await handleStudentAverage(user);
 
-            const { completedTrails, inProgressTrails: notFilteredInProgressTrails } = await handleStudentTrails(
+            const { completedTrails, inProgressTrails: notFilteredInProgressTrails } = await handleStudentTrailsV2(
                 user,
                 eligibleTrails
             );
