@@ -43,9 +43,10 @@ const campaignsController = {
             const news = [];
 
             if (listNews?.data?.some((news) => (news?.users || []).length > 0)) {
+                console.log('Populating users for news');
                 for (const newsData of listNews.data) {
                     const populatedNews = { ...newsData };
-
+                    console.log(newsData)
                     if (newsData?.users) {
                         const users = await User.find({ _id: { $in: newsData.users } });
 
@@ -67,7 +68,7 @@ const campaignsController = {
                 }
             }
 
-            const data = { data: news, total: listNews.total };
+            const data =  { data: news.length > 0 ? news : listNews.data, total: listNews.total };
 
             return _messages.success(res, req, data, 'ok', 'news', 'listNews');
         } catch (error) {
