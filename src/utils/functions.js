@@ -822,17 +822,10 @@ module.exports = {
             trackingMap.set(String(tracking.item), tracking);
         });
 
-        console.log('TRAILS', trails?.length);
-        console.log('TRACKING MAP', trackingMap.size);
-
         const filteredTrails = trails.filter((trail) => {
             const trailItems = trail.items.map((item) => String(item.itemID._id));
             return trailItems.some((item) => trackingMap.has(item));
         });
-
-        console.log('FILTERED TRAILS', filteredTrails.length);
-
-        const filteredTrailItemsId = filteredTrails.flatMap((trail) => trail.items.map((item) => String(item.itemID._id)));
 
         for (const t of filteredTrails) {
             const { trail } = module.exports.processTrailTrackingV2(t, allTrackingUser, true);
@@ -859,7 +852,7 @@ module.exports = {
                 trailItems.length;
             
             if (item) {
-                foundItem = trailItemsDb.find(({ _id }) => String(_id) === String(item.itemID._id));
+                const foundItem = trailItemsDb.find(({ _id }) => String(_id) === String(item.itemID._id));
                 
                 nextItem = {
                     _id: foundItem?._id,

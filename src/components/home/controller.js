@@ -413,63 +413,51 @@ const HomeController = {
     },
 
     async dashboardStudentv2(req, res) {
-        try {
-            const user = await getUserByToken(req);
-            const tags = await getTagsElegiblesByToken(req);
-            const courses = await getStudentCourses(req);
+        const user = await getUserByToken(req);
+        const tags = await getTagsElegiblesByToken(req);
+        const courses = await getStudentCourses(req);
 
-            const eligibleTrails = await Trail.find({
-                tags: { $in: tags },
-                enabled: true,
-                startDate: { $lt: getDateTodayWithoutHours() },
-                endDate: { $gt: getDateTodayWithoutHours() }
-            })
-                .sort({ createdAt: -1 })
-                .populate('items.itemID');
+        const eligibleTrails = await Trail.find({
+            tags: { $in: tags },
+            enabled: true,
+            startDate: { $lt: getDateTodayWithoutHours() },
+            endDate: { $gt: getDateTodayWithoutHours() }
+        })
+            .sort({ createdAt: -1 })
+            .populate('items.itemID');
 
-            const totalTrails = eligibleTrails.length;
+        const totalTrails = eligibleTrails.length;
 
-            const { average, highestScoreTrail } = await handleStudentAverage(user);
+        const { average, highestScoreTrail } = await handleStudentAverage(user);
 
-            const { completedTrails, inProgressTrails: notFilteredInProgressTrails } = await handleStudentTrailsV2(
-                user,
-                eligibleTrails
-            );
+        const { completedTrails, inProgressTrails: notFilteredInProgressTrails } = await handleStudentTrailsV2(
+            user,
+            eligibleTrails
+        );
 
-            const percentageCompletedTrails = Number(
-                ((completedTrails.length / totalTrails) * 100).toFixed(2)
-            );
+        const percentageCompletedTrails = Number(
+            ((completedTrails.length / totalTrails) * 100).toFixed(2)
+        );
 
-            const highestScoreTitle = highestScoreTrail?.title;
+        const highestScoreTitle = highestScoreTrail?.title;
 
-            const highestScoreUrl = highestScoreTrail?.titleURL;
+        const highestScoreUrl = highestScoreTrail?.titleURL;
 
-            const inProgressTrails = notFilteredInProgressTrails.filter(trail => trail.notStarted === true && trail.nextItem);
+        const inProgressTrails = notFilteredInProgressTrails.filter(trail => trail.notStarted === true && trail.nextItem);
 
-            const highestProgressTrail = maxBy(inProgressTrails, (trail) => trail.progress ?? 0) || null;
+        const highestProgressTrail = maxBy(inProgressTrails, (trail) => trail.progress ?? 0) || null;
 
-            _messages.success(res, req, {
-                totalCompletedTrails: completedTrails.length,
-                totalTrails,
-                percentageCompletedTrails,
-                inProgressTrails,
-                average,
-                lastTrail: highestProgressTrail,
-                highestScoreTitle,
-                highestScoreUrl,
-                courses
-            });
-        } catch (error) {
-            console.log(error);
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'home',
-                'dashboardStudent'
-            );
-        }
+        _messages.success(res, req, {
+            totalCompletedTrails: completedTrails.length,
+            totalTrails,
+            percentageCompletedTrails,
+            inProgressTrails,
+            average,
+            lastTrail: highestProgressTrail,
+            highestScoreTitle,
+            highestScoreUrl,
+            courses
+        });
     },
 
     async searchStudentCourses(req, res) {
@@ -488,128 +476,101 @@ const HomeController = {
     },
 
     async listCertificates(req, res) {
-        try {
-            const { searchBy } = req.query;
-            req.query = { ...req.query, pageSize: req.query.pageSize ?? 10, pageIndex: req.query.pageIndex ?? 0 };
-            const { skip, limit } = pagination(req);
-            const user = await getUserByToken(req);
-            const tags = await getTagsElegiblesByToken(req);
-            const elegibleTrails = await Trail.find({
-                tags: { $in: tags },
-                enabled: true,
-                certificate: 1,
-                startDate: { $lt: getDateTodayWithoutHours() },
-                endDate: { $gt: getDateTodayWithoutHours() }
-            }).populate('items.itemID');
-            const { completedTrails } = await handleStudentTrails(user, elegibleTrails);
-            let certificates = await returnCertificates(completedTrails, user);
+        const { searchBy } = req.query;
+        req.query = { ...req.query, pageSize: req.query.pageSize ?? 10, pageIndex: req.query.pageIndex ?? 0 };
+        const { skip, limit } = pagination(req);
+        const user = await getUserByToken(req);
+        const tags = await getTagsElegiblesByToken(req);
+        
+        const elegibleTrails = await Trail.find({
+            tags: { $in: tags },
+            enabled: true,
+            certificate: 1,
+            startDate: { $lt: getDateTodayWithoutHours() },
+            endDate: { $gt: getDateTodayWithoutHours() }
+        }).populate('items.itemID');
+        
+        const { completedTrails } = await handleStudentTrailsV2(user, elegibleTrails);
+        
+        let certificates = await returnCertificates(completedTrails, user);
 
-            if (searchBy) {
-                certificates = certificates.filter(({ title }) => {
-                    return title.toLowerCase().includes(searchBy.toLowerCase());
-                });
-            }
-            certificates = certificates.sort((prev, curr) => {
-                const prevConcludedAt = prev.concludedAt.getTime();
-                const currConcludedAt = curr.concludedAt.getTime();
-                return currConcludedAt - prevConcludedAt;
+        if (searchBy) {
+            certificates = certificates.filter(({ title }) => {
+                return title.toLowerCase().includes(searchBy.toLowerCase());
             });
-
-            certificates = certificates.slice(Number(skip), Number(skip) + Number(limit));
-
-            _messages.success(res, req, certificates);
-        } catch (error) {
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'home',
-                '/certificates'
-            );
         }
+        
+        certificates = certificates.sort((prev, curr) => {
+            const prevConcludedAt = prev.concludedAt.getTime();
+            const currConcludedAt = curr.concludedAt.getTime();
+            return currConcludedAt - prevConcludedAt;
+        });
+
+        certificates = certificates.slice(Number(skip), Number(skip) + Number(limit));
+
+        _messages.success(res, req, certificates);
     },
 
     async listExpiredCertificates(req, res) {
-        try {
-            const { searchBy } = req.query;
-            req.query = { ...req.query, pageSize: req.query.pageSize ?? 5 };
-            const { skip, limit } = pagination(req);
-            const user = await getUserByToken(req);
-            const tags = await getTagsElegiblesByToken(req);
-            const elegibleTrails = await Trail.find({
-                tags: { $in: tags },
-                enabled: true,
-                certificate: 1,
-                startDate: { $lt: getDateTodayWithoutHours() },
-                endDate: { $gt: getDateTodayWithoutHours() }
-            }).populate('items.itemID');
-            const { completedTrails } = await handleStudentTrails(user, elegibleTrails, true);
+        const { searchBy } = req.query;
+        req.query = { ...req.query, pageSize: req.query.pageSize ?? 5 };
+        const { skip, limit } = pagination(req);
+        const user = await getUserByToken(req);
+        const tags = await getTagsElegiblesByToken(req);
+        
+        const elegibleTrails = await Trail.find({
+            tags: { $in: tags },
+            enabled: true,
+            certificate: 1,
+            startDate: { $lt: getDateTodayWithoutHours() },
+            endDate: { $gt: getDateTodayWithoutHours() }
+        }).populate('items.itemID');
+        
+        const { completedTrails } = await handleStudentTrailsV2(user, elegibleTrails, true);
 
-            let certificates = await returnCertificates(completedTrails, user);
+        let certificates = await returnCertificates(completedTrails, user);
 
-            if (searchBy) {
-                certificates = certificates.filter(({ title }) => {
-                    return title.toLowerCase().includes(searchBy.toLowerCase());
-                });
-            }
-            certificates = certificates.sort((prev, curr) => {
-                const prevConcludedAt = prev.concludedAt.getTime();
-                const currConcludedAt = curr.concludedAt.getTime();
-                return currConcludedAt - prevConcludedAt;
+        if (searchBy) {
+            certificates = certificates.filter(({ title }) => {
+                return title.toLowerCase().includes(searchBy.toLowerCase());
             });
-
-            certificates = certificates.slice(skip, skip + limit);
-
-            _messages.success(res, req, certificates);
-        } catch (error) {
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'home',
-                '/certificates/expired'
-            );
         }
+        
+        certificates = certificates.sort((prev, curr) => {
+            const prevConcludedAt = prev.concludedAt.getTime();
+            const currConcludedAt = curr.concludedAt.getTime();
+            return currConcludedAt - prevConcludedAt;
+        });
+
+        certificates = certificates.slice(skip, skip + limit);
+
+        _messages.success(res, req, certificates);
     },
 
     async noCertificates(req, res) {
-        try {
-            const { searchBy } = req.query;
-            req.query = { ...req.query, pageSize: req.query.pageSize ?? 5 };
-            const { skip, limit } = pagination(req);
-            const user = await getUserByToken(req);
-            const tags = await getTagsElegiblesByToken(req);
-            const elegibleTrails = await Trail.find({
-                tags: { $in: tags },
-                enabled: true,
-                startDate: { $lt: getDateTodayWithoutHours() },
-                endDate: { $gt: getDateTodayWithoutHours() },
-                certificate: 0
-            }).populate('items.itemID');
-            let { completedTrails } = await handleStudentTrails(user, elegibleTrails);
+        const { searchBy } = req.query;
+        req.query = { ...req.query, pageSize: req.query.pageSize ?? 5 };
+        const { skip, limit } = pagination(req);
+        const user = await getUserByToken(req);
+        const tags = await getTagsElegiblesByToken(req);
+        const elegibleTrails = await Trail.find({
+            tags: { $in: tags },
+            enabled: true,
+            startDate: { $lt: getDateTodayWithoutHours() },
+            endDate: { $gt: getDateTodayWithoutHours() },
+            certificate: 0
+        }).populate('items.itemID');
+        let { completedTrails } = await handleStudentTrails(user, elegibleTrails);
 
 
-            if (searchBy) {
-                completedTrails = completedTrails.filter(({ title }) => {
-                    return title.toLowerCase().includes(searchBy.toLowerCase());
-                });
-            }
-            completedTrails = completedTrails.slice(skip, skip + limit);
-
-            _messages.success(res, req, completedTrails);
-        } catch (error) {
-            console.log({ error });
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'home',
-                '/certificates/expired'
-            );
+        if (searchBy) {
+            completedTrails = completedTrails.filter(({ title }) => {
+                return title.toLowerCase().includes(searchBy.toLowerCase());
+            });
         }
+        completedTrails = completedTrails.slice(skip, skip + limit);
+
+        _messages.success(res, req, completedTrails);
     }
 };
 
