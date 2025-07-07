@@ -34,7 +34,7 @@ module.exports = {
      * @param {*} limit
      * @param {boolean} filterEnabled Flag que indica se deve filtrar por habilitado ou não. (Padrão: true)
      */
-    populateTrails(
+    async populateTrails(
         flag = true,
         findObj = {},
         sortObj = {},
@@ -43,286 +43,265 @@ module.exports = {
         skip = null,
         limit = null
     ) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                let trails = [];
-                let socialConfig;
+        let socialConfig;
+
+        const features = await getDbCurrentFeatures();
+
+        if (features?.social) {
+            const { data } = await socialApi.get(`client-config/${process.env.CLIENT_ID}`);
+            socialConfig = data;
+        }
+
+        const matchObj = filterEnabled
+            ? {
+                ...match,
+                enabled: true,
+                deleted: 0,
+            }
+            : {
+                deleted: 0,
+            };
+        
+        matchObj['kind'] = { $ne: 'PostItem' };
+
+        const trailQuery = Trail.find(findObj)
+            .populate({
+                path: 'author',
+            })
+            .populate({
+                path: 'items.itemID',
+                match: matchObj,
+                select: {
+                    _id: 1,
+                    title: 1,
+                    contentPath: 1,
+                    durationHours: 1,
+                    thumbPath: 1,
+                    titleURL: 1,
+                    bannerPath: 1,
+                    startDate: 1,
+                    endDate: 1,
+                    highlighted: 1,
+                    description: 1,
+                    format: 1,
+                    passingScore: 1,
+                    enabled: 1,
+                },
+                populate: {
+                    path: 'idEvaluation',
+                    select: 'description',
+                },
+            })
+            .sort(sortObj);
+
+        if (skip !== null) {
+            trailQuery.skip(skip).limit(limit);
+        }
+        
+        const trails = await trailQuery.lean();
+
+        const arrTrails = [];
+        
+        if (!flag) {
+            for (const trail of trails) {
+                const arrItems = [];
+                for (const i of trail.items) {
+                    const item = await Item.findById(i.itemID);
+                    if (item !== null) arrItems.push(item);
+                }
+
+                let userName = '';
+                if (trail.author) {
+                    userName = trail.author.name;
+                }
+
+                let supportMaterialEnabled = false;
+                const filteredSupportArray = trail.supportMaterial.filter(
+                    (x) => x.deleted === false
+                );
+                if (filteredSupportArray.length > 0) {
+                    supportMaterialEnabled = true;
+                }
+
+                let galleryEnabled = false;
+                const filteredGallery = trail.gallery.filter((x) => x.deleted === false);
+                if (filteredGallery.length > 0) {
+                    galleryEnabled = true;
+                }
+
+                if (socialConfig) {
+                    const trailTags = trail.tags?.map((tag) => tag.value);
+                    for (const tag of socialConfig.tagsLists.allowed) {
+                        if (trailTags?.includes(tag)) {
+                            socialStatus = 'ALLOWED';
+                        }
+                    }
+
+                    for (const tag of socialConfig.tagsLists.blocked) {
+                        if (trailTags?.includes(tag)) {
+                            socialStatus = 'BLOCKED';
+                        }
+                    }
+
+                    for (const tag of socialConfig.tagsLists.moderated) {
+                        if (trailTags?.includes(tag)) {
+                            socialStatus = 'MODERATED';
+                        }
+                    }
+                }
+
+                let durationHours = 0;
+                for (const item of arrItems) {
+                    durationHours += item.itemID.durationHours;
+                }
+                trail.durationHours = durationHours;
+
+                arrTrails.push({
+                    _id: trail._id,
+                    enabled: trail.enabled,
+                    title: trail.title,
+                    titleURL: trail.titleURL,
+                    description: trail.description,
+                    mandatory: trail.mandatory,
+                    highlighted: trail.highlighted,
+                    thumbPath: trail.thumbPath,
+                    backgroundPath: trail.backgroundPath,
+                    bannerPath: trail.bannerPath,
+                    startDate: trail.startDate,
+                    endDate: trail.endDate,
+                    tags: trail.tags,
+                    tagsAnd: trail.tagsAnd || null,
+                    innerTextStatus: trail.innerTextStatus,
+                    innerText: trail.innerText,
+                    author: userName,
+                    completion: trail.completion,
+                    isSequenceEnabled: trail.isSequenceEnabled,
+                    isPadletEnabled: trail.isPadletEnabled,
+                    items: arrItems,
+                    separators: trail.separators,
+                    expirationType: trail.expirationType,
+                    collaborative: trail.collaborative,
+                    moderation: trail.moderation,
+                    complaints: trail.complaints,
+                    certificate: trail.certificate,
+                    certificateDue: trail.certificateDue,
+                    externalPlayer: trail.externalPlayer,
+                    certificateLayout: trail.certificateLayout,
+                    supportMaterialEnabled: supportMaterialEnabled,
+                    socialStatus: socialStatus || null,
+                    innerTextBanner: trail.innerTextBanner,
+                    durationHours: trail.durationHours,
+                    post: trail.post,
+                    gallery: galleryEnabled,
+                    confidential: trail.confidential,
+                    updatedAt: trail.updatedAt,
+                    createdAt: trail.createdAt,
+                });
+            }
+        } else {
+            for (const trail of trails) {
+                const arrItems = trail.items.map((i) => ({
+                    urlItem: i.urlItem,
+                    urlTrail: i.urlTrail,
+                    itemID: i.itemID,
+                    mandatory: i.mandatory,
+                    chief: i.chief,
+                    optional: i.optional,
+                    afterSeparator: i.afterSeparator,
+                    enabled: i.enabled,
+                }));
+
+                const userName = trail?.author?.name || '';
+
+                let supportMaterialEnabled = false;
+                const filteredSupportArray = trail.supportMaterial.filter(
+                    (x) => x.deleted === false
+                );
+
+                if (filteredSupportArray.length > 0) {
+                    supportMaterialEnabled = true;
+                }
+
+                let galleryEnabled = false;
+
+                const filteredGallery = trail.gallery?.filter((x) => x.deleted === false) ?? [];
+                if (filteredGallery.length > 0) {
+                    galleryEnabled = true;
+                }
+
                 let socialStatus = '';
 
-                const features = await getDbCurrentFeatures();
-
-                if (features?.social) {
-                    const { data } = await socialApi.get(`client-config/${process.env.CLIENT_ID}`);
-                    socialConfig = data;
-                }
-
-                const matchObj = filterEnabled
-                    ? {
-                        ...match,
-                        enabled: true,
-                        deleted: 0,
+                if (socialConfig) {
+                    const trailTags = trail.tags?.map((tag) => tag.value);
+                    for (const tag of socialConfig.tagsLists.allowed) {
+                        if (trailTags?.includes(tag)) {
+                            socialStatus = 'ALLOWED';
+                        }
                     }
-                    : {
-                        deleted: 0,
-                    };
-                matchObj['kind'] = { $ne: 'PostItem' };
-                if (skip !== null) {
-                    trails = await Trail.find(findObj)
-                        .populate({
-                            path: 'author',
-                        })
-                        .populate({
-                            path: 'items.itemID',
-                            match: matchObj,
-                            populate: {
-                                path: 'idEvaluation',
-                                select: 'description',
-                            },
-                            select: 'title',
-                        })
-                        .sort(sortObj)
-                        .skip(skip)
-                        .limit(limit);
-                } else {
-                    trails = await Trail.find(findObj)
-                        .populate({
-                            path: 'author',
-                        })
-                        .populate({
-                            path: 'items.itemID',
-                            match: matchObj,
-                            select: {
-                                _id: 1,
-                                title: 1,
-                                contentPath: 1,
-                                durationHours: 1,
-                                thumbPath: 1,
-                                titleURL: 1,
-                                bannerPath: 1,
-                                startDate: 1,
-                                endDate: 1,
-                                highlighted: 1,
-                                description: 1,
-                                format: 1,
-                                passingScore: 1,
-                                enabled: 1,
-                            },
-                            populate: {
-                                path: 'idEvaluation',
-                                select: 'description',
-                            },
-                        })
-                        .sort(sortObj);
-                }
-                const arrTrails = [];
-                if (!flag) {
-                    for (const trail of trails) {
-                        const arrItems = [];
-                        for (const i of trail.items) {
-                            const item = await Item.findById(i.itemID);
-                            if (item !== null) arrItems.push(item);
+
+                    for (const tag of socialConfig.tagsLists.blocked) {
+                        if (trailTags?.includes(tag)) {
+                            socialStatus = 'BLOCKED';
                         }
-
-                        let userName = '';
-                        if (trail.author) {
-                            userName = trail.author.name;
-                        }
-
-                        let supportMaterialEnabled = false;
-                        const filteredSupportArray = trail.supportMaterial.filter(
-                            (x) => x.deleted === false
-                        );
-                        if (filteredSupportArray.length > 0) {
-                            supportMaterialEnabled = true;
-                        }
-
-                        let galleryEnabled = false;
-                        const filteredGallery = trail.gallery.filter((x) => x.deleted === false);
-                        if (filteredGallery.length > 0) {
-                            galleryEnabled = true;
-                        }
-
-                        if (socialConfig) {
-                            const trailTags = trail.tags?.map((tag) => tag.value);
-                            for (const tag of socialConfig.tagsLists.allowed) {
-                                if (trailTags?.includes(tag)) {
-                                    socialStatus = 'ALLOWED';
-                                }
-                            }
-
-                            for (const tag of socialConfig.tagsLists.blocked) {
-                                if (trailTags?.includes(tag)) {
-                                    socialStatus = 'BLOCKED';
-                                }
-                            }
-
-                            for (const tag of socialConfig.tagsLists.moderated) {
-                                if (trailTags?.includes(tag)) {
-                                    socialStatus = 'MODERATED';
-                                }
-                            }
-                        }
-
-                        let durationHours = 0;
-                        for (const item of arrItems) {
-                            durationHours += item.itemID.durationHours;
-                        }
-                        trail.durationHours = durationHours;
-
-                        arrTrails.push({
-                            _id: trail._id,
-                            enabled: trail.enabled,
-                            title: trail.title,
-                            titleURL: trail.titleURL,
-                            description: trail.description,
-                            mandatory: trail.mandatory,
-                            highlighted: trail.highlighted,
-                            thumbPath: trail.thumbPath,
-                            backgroundPath: trail.backgroundPath,
-                            bannerPath: trail.bannerPath,
-                            startDate: trail.startDate,
-                            endDate: trail.endDate,
-                            tags: trail.tags,
-                            tagsAnd: trail.tagsAnd || null,
-                            innerTextStatus: trail.innerTextStatus,
-                            innerText: trail.innerText,
-                            author: userName,
-                            completion: trail.completion,
-                            isSequenceEnabled: trail.isSequenceEnabled,
-                            isPadletEnabled: trail.isPadletEnabled,
-                            items: arrItems,
-                            separators: trail.separators,
-                            expirationType: trail.expirationType,
-                            collaborative: trail.collaborative,
-                            moderation: trail.moderation,
-                            complaints: trail.complaints,
-                            certificate: trail.certificate,
-                            certificateDue: trail.certificateDue,
-                            externalPlayer: trail.externalPlayer,
-                            certificateLayout: trail.certificateLayout,
-                            supportMaterialEnabled: supportMaterialEnabled,
-                            socialStatus: socialStatus || null,
-                            innerTextBanner: trail.innerTextBanner,
-                            durationHours: trail.durationHours,
-                            post: trail.post,
-                            gallery: galleryEnabled,
-                            confidential: trail.confidential,
-                            updatedAt: trail.updatedAt,
-                            createdAt: trail.createdAt,
-                        });
                     }
-                } else {
-                    for (const trail of trails) {
-                        const arrItems = [];
-                        for (const i of trail.items) {
-                            //const item = await Item.findById(i.itemID);
-                            if (i?.itemID !== null) {
-                                arrItems.push({
-                                    urlItem: i.urlItem,
-                                    urlTrail: i.urlTrail,
-                                    itemID: i.itemID,
-                                    mandatory: i.mandatory,
-                                    chief: i.chief,
-                                    optional: i.optional,
-                                    afterSeparator: i.afterSeparator,
-                                    enabled: i.enabled,
-                                });
-                            }
+
+                    for (const tag of socialConfig.tagsLists.moderated) {
+                        if (trailTags?.includes(tag)) {
+                            socialStatus = 'MODERATED';
                         }
-
-                        let userName = '';
-                        if (trail.author) {
-                            userName = trail.author.name;
-                        }
-                        let supportMaterialEnabled = false;
-                        const filteredSupportArray = trail.supportMaterial.filter(
-                            (x) => x.deleted === false
-                        );
-                        if (filteredSupportArray.length > 0) {
-                            supportMaterialEnabled = true;
-                        }
-
-                        let galleryEnabled = false;
-                        const filteredGallery = trail.gallery.filter((x) => x.deleted === false);
-                        if (filteredGallery.length > 0) {
-                            galleryEnabled = true;
-                        }
-
-                        if (socialConfig) {
-                            const trailTags = trail.tags?.map((tag) => tag.value);
-                            for (const tag of socialConfig.tagsLists.allowed) {
-                                if (trailTags?.includes(tag)) {
-                                    socialStatus = 'ALLOWED';
-                                }
-                            }
-
-                            for (const tag of socialConfig.tagsLists.blocked) {
-                                if (trailTags?.includes(tag)) {
-                                    socialStatus = 'BLOCKED';
-                                }
-                            }
-
-                            for (const tag of socialConfig.tagsLists.moderated) {
-                                if (trailTags?.includes(tag)) {
-                                    socialStatus = 'MODERATED';
-                                }
-                            }
-                        }
-
-                        let durationHours = 0;
-                        for (const item of arrItems) {
-                            durationHours += item.itemID.durationHours;
-                        }
-                        trail.durationHours = durationHours;
-
-                        arrTrails.push({
-                            _id: trail._id,
-                            enabled: trail.enabled,
-                            title: trail.title,
-                            titleURL: trail.titleURL,
-                            description: trail.description,
-                            mandatory: trail.mandatory,
-                            highlighted: trail.highlighted,
-                            thumbPath: trail.thumbPath,
-                            bannerPath: trail.bannerPath,
-                            backgroundPath: trail.backgroundPath,
-                            startDate: trail.startDate,
-                            endDate: trail.endDate,
-                            tags: trail.tags,
-                            tagsAnd: trail.tagsAnd || null,
-                            completion: trail.completion,
-                            isSequenceEnabled: trail.isSequenceEnabled,
-                            isPadletEnabled: trail.isPadletEnabled,
-                            items: arrItems,
-                            separators: trail.separators,
-                            innerTextStatus: trail.innerTextStatus,
-                            innerText: trail.innerText,
-                            author: userName,
-                            expirationType: trail.expirationType,
-                            collaborative: trail.collaborative,
-                            moderation: trail.moderation,
-                            complaints: trail.complaints,
-                            certificate: trail.certificate,
-                            certificateDue: trail.certificateDue,
-                            externalPlayer: trail.externalPlayer,
-                            certificateLayout: trail.certificateLayout,
-                            supportMaterialEnabled: supportMaterialEnabled,
-                            socialStatus: socialStatus || null,
-                            innerTextBanner: trail.innerTextBanner,
-                            durationHours: trail.durationHours,
-                            post: trail.post,
-                            gallery: galleryEnabled,
-                            confidential: trail.confidential,
-                            updatedAt: trail.updatedAt,
-                            createdAt: trail.createdAt,
-                        });
                     }
                 }
-                resolve(arrTrails);
-            } catch (error) {
-                reject(error);
+
+                trail.durationHours = arrItems.reduce((acc, item) => {
+                    const itemDuration = item.itemID?.durationHours || 0;
+                    return acc + itemDuration;
+                }, 0);
+
+                arrTrails.push({
+                    _id: trail._id,
+                    enabled: trail.enabled,
+                    title: trail.title,
+                    titleURL: trail.titleURL,
+                    description: trail.description,
+                    mandatory: trail.mandatory,
+                    highlighted: trail.highlighted,
+                    thumbPath: trail.thumbPath,
+                    bannerPath: trail.bannerPath,
+                    backgroundPath: trail.backgroundPath,
+                    startDate: trail.startDate,
+                    endDate: trail.endDate,
+                    tags: trail.tags,
+                    tagsAnd: trail.tagsAnd || null,
+                    completion: trail.completion,
+                    isSequenceEnabled: trail.isSequenceEnabled,
+                    isPadletEnabled: trail.isPadletEnabled,
+                    items: arrItems,
+                    separators: trail.separators,
+                    innerTextStatus: trail.innerTextStatus,
+                    innerText: trail.innerText,
+                    author: userName,
+                    expirationType: trail.expirationType,
+                    collaborative: trail.collaborative,
+                    moderation: trail.moderation,
+                    complaints: trail.complaints,
+                    certificate: trail.certificate,
+                    certificateDue: trail.certificateDue,
+                    externalPlayer: trail.externalPlayer,
+                    certificateLayout: trail.certificateLayout,
+                    supportMaterialEnabled: supportMaterialEnabled,
+                    socialStatus: socialStatus || null,
+                    innerTextBanner: trail.innerTextBanner,
+                    durationHours: trail.durationHours,
+                    post: trail.post,
+                    gallery: galleryEnabled,
+                    confidential: trail.confidential,
+                    updatedAt: trail.updatedAt,
+                    createdAt: trail.createdAt,
+                });
             }
-        });
+        }
+
+        return arrTrails;
     },
 
     async processTrailWorkload(trails) {
