@@ -78,7 +78,7 @@ module.exports = {
                 data,
                 'ok',
                 'mentoring',
-                'feedback sent successfully'
+                'update'
             );
         } catch (error) {
             return _messages.internalServer(

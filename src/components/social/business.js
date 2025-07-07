@@ -86,21 +86,25 @@ module.exports = {
     },
 
     async handleUserNameAndTrailTitle(data) {
-        const trails = await Trail.find(
-            { _id: { $in: data.map(({ trailId }) => trailId) } },
-            'title'
-        );
-        const users = await User.find({ _id: { $in: data.map(({ userId }) => userId) } }, 'name');
+        const trailIds = data
+            .map(({ trailId }) => trailId)
+            .filter(Boolean)
+
+        const userIds = data
+            .map(({ userId }) => userId)
+            .filter(Boolean)
+
+        const trails = await Trail.find({ _id: { $in: trailIds } }, 'title');
+        const users = await User.find({ _id: { $in: userIds } }, 'name');
 
         return data
             .map((comment) => {
                 const trail = trails.find(({ _id }) => _id.equals(comment.trailId));
-                if (!trail) return null;
                 const user = users.find(({ _id }) => _id.equals(comment.userId));
                 return {
                     ...comment,
                     userName: user?.name,
-                    trailTitle: trail?.title ?? 'Trilha não encontrada ou excluída',
+                    trailTitle: trail?.title ?? "",
                 };
             })
             .filter(Boolean);

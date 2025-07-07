@@ -43,7 +43,7 @@ const validateProfile = async (req, res, next, expectedProfiles) => {
             res,
             req,
             'Sem permissão de acesso',
-            'Você não tem permissão para prosseguir com a ação!',
+            'Permissão insuficiente para prosseguir com a ação.',
             '',
             req.originalUrl
         );

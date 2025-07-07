@@ -7,3 +7,4 @@ module.exports = express
     .get('/users/:id', _controller.getUser)
     .get('/users', _controller.findUsers)
     .get('/overview', _controller.getOverview)
+    .get('/overview/:id', _controller.getOverviewById)

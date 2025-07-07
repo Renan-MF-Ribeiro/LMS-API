@@ -66,11 +66,12 @@ module.exports = {
     },
 
     async updateAvatar(req, res) {
-        const body = req.body;
+        const body = JSON.parse(req.fields?.payload) ?? null;
         const { id } = req.params;
 
         try {
             const doesAvatarExist = await Avatar.findById({ _id: id });
+
             if (!doesAvatarExist) {
                 return _messages.notFound(res, req, null, 'Este avatar não existe');
             }

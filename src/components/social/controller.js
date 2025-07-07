@@ -494,7 +494,7 @@ module.exports = {
                 req,
                 {
                     data: commentsToResponse,
-                    total: commentsToResponse?.length ? 100 : 0,
+                    total: commentsToResponse?.length ?? 0,
                     pageIndex: currentPage,
                     isFinished: isFinishedFromSocialApi,
                 },
@@ -678,10 +678,10 @@ module.exports = {
     async getPendingComments(req, res) {
         try {
             const uri = 'comments/pending';
-            const { searchBy, ...query } = req.query;
+            const { searchBy, paginated = true, ...query } = req.query;
             const searchByTrailOrUser = await _business.handleSearchByTrailOrUser(searchBy);
 
-            const { data } = await socialApi.get(uri, {
+            const response = await socialApi.get(uri, {
                 params: {
                     ...query,
                     ...(searchBy && {
@@ -689,11 +689,23 @@ module.exports = {
                             ? searchByTrailOrUser.flat()
                             : searchBy,
                     }),
+                    paginated: Boolean(paginated),
                 },
             });
-            const comments = await _business.handleUserNameAndTrailTitle(data);
 
-            _messages.success(res, req, comments, 'ok', 'social', 'getPendingComments');
+            const rawData = paginated ? response.data.data : response.data;
+            const commentsArray = await _business.handleUserNameAndTrailTitle(rawData);
+
+            if (paginated) {
+                const comments = {
+                    data: [...commentsArray],
+                    total: response.data.total,
+                }
+                _messages.success(res, req, comments, 'ok', 'social', 'getPendingComments');
+                return;
+            }
+
+            _messages.success(res, req, commentsArray, 'ok', 'social', 'getPendingComments');
             return;
         } catch (error) {
             _messages.badRequest(
@@ -711,22 +723,36 @@ module.exports = {
     async getApprovedComments(req, res) {
         try {
             const uri = 'comments/approved';
-            const { searchBy, ...query } = req.query;
+            const { searchBy, paginated = true, ...query } = req.query;
             const searchByTrailOrUser = await _business.handleSearchByTrailOrUser(searchBy);
 
-            const { data } = await socialApi.get(uri, {
+            const response = await socialApi.get(uri, {
                 params: {
                     ...query,
                     ...(searchBy && {
                         searchBy: searchByTrailOrUser.length
                             ? searchByTrailOrUser.flat()
                             : searchBy,
+
                     }),
+                    paginated: Boolean(paginated),
                 },
             });
-            const comments = await _business.handleUserNameAndTrailTitle(data);
 
-            _messages.success(res, req, comments, 'ok', 'social', 'getApprovedComments');
+            const rawData = paginated ? response.data.data : response.data;
+            const commentsArray = await _business.handleUserNameAndTrailTitle(rawData);
+
+            if (paginated) {
+                const comments = {
+                    data: [...commentsArray],
+                    total: response.data.total,
+                }
+
+                _messages.success(res, req, comments, 'ok', 'social', 'getApprovedComments');
+                return;
+            }
+
+            _messages.success(res, req, commentsArray, 'ok', 'social', 'getApprovedComments');
             return;
         } catch (error) {
             console.log(error);
@@ -745,10 +771,10 @@ module.exports = {
     async getRejectedComments(req, res) {
         try {
             const uri = 'comments/rejected';
-            const { searchBy, ...query } = req.query;
+            const { searchBy, paginated = true, ...query } = req.query;
             const searchByTrailOrUser = await _business.handleSearchByTrailOrUser(searchBy);
 
-            const { data } = await socialApi.get(uri, {
+            const response = await socialApi.get(uri, {
                 params: {
                     ...query,
                     ...(searchBy && {
@@ -756,11 +782,23 @@ module.exports = {
                             ? searchByTrailOrUser.flat()
                             : searchBy,
                     }),
+                    paginated: Boolean(paginated),
                 },
             });
-            const comments = await _business.handleUserNameAndTrailTitle(data);
 
-            _messages.success(res, req, comments, 'ok', 'social', 'getRejectedComments');
+            const rawData = paginated ? response.data.data : response.data;
+            const commentsArray = await _business.handleUserNameAndTrailTitle(rawData);
+
+            if (paginated) {
+                const comments = {
+                    data: [...commentsArray],
+                    total: response.data.total,
+                }
+                _messages.success(res, req, comments, 'ok', 'social', 'getRejectedComments');
+                return;
+            }
+
+            _messages.success(res, req, commentsArray, 'ok', 'social', 'getRejectedComments');
             return;
         } catch (error) {
             console.log(error);
@@ -785,9 +823,9 @@ module.exports = {
 
             const { data } = await socialApi.patch(uri, body);
 
-            if(data?.status === COMMENT_STATUS.APPROVED) {
+            if (data?.status === COMMENT_STATUS.APPROVED) {
                 await GamificationKafka.publishEventRuleValidation({
-                    events:[EVENT_CATEGORY.COMMENT],
+                    events: [EVENT_CATEGORY.COMMENT],
                     identifier: data.userId,
                     meta: {
                         commentId,
