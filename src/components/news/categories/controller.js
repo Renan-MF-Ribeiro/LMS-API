@@ -2,6 +2,8 @@ require('dotenv').config();
 const _messages = require('../../../utils/messages');
 const { newsApi } = require('../http-adapter');
 const { azureBlob } = require('../../../utils/files');
+const { getUserByToken } = require('../../../utils/functions');
+
 
 module.exports = {
     async list(req, res) {
@@ -27,6 +29,48 @@ module.exports = {
             const { data } = await newsApi.get(`/categories/${req.params.id}`);
 
             _messages.success(res, req, data);
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno do servidor',
+                'trails',
+                'createPadlet'
+            );
+        }
+    },
+
+    async getCategoriesByCampaing(req, res) {
+        try {
+
+            const user = await getUserByToken(req);
+            const { data } = await newsApi.get(`/categories/valid/${req.params.id}`);
+            const categories = []
+
+
+            if (data.allowOutsideUsersToPost) {
+                _messages.success(res, req, { data: data.categories, total: data.categories.length });
+            }
+            for (let category of data.categories) {
+                if (category.audiences && category.audiences.length > 0) {
+                    if (user && category.audiences && category.audiences.length > 0) {
+                        const hasValidAudience = category.audiences.some(audience => {
+                            const userValue = user[audience.field];
+                            return userValue && userValue === audience.value;
+                        });
+
+                        if (hasValidAudience) {
+                            categories.push(category);
+                        }
+                    }
+                } else {
+                    categories.push(category);
+                }
+            }
+
+
+            _messages.success(res, req, { data: categories, total: categories.length });
         } catch (error) {
             _messages.internalServer(
                 res,
