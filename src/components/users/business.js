@@ -359,37 +359,34 @@ module.exports = {
 
         dashConfig.forEach((config) => {
             config.fields?.forEach(config => {
-                if (!config.userField || !config.fieldValue || !config.dashFilter) return;
+                if (!config.userField || !config.fieldValue) return;
 
-                const currentUserDashValue = String(user[config.dashFilter] || null).trim();
+                const currentUserDashValue = String(user[config.dashFilter] || '').trim();
 
-                if (currentUserDashValue) {
-                    const matchedMaps = userMap.filter(map => isSameField(config.userField, map));
+                const matchedMaps = userMap.filter(map => isSameField(config.userField, map));
 
-                    matchedMaps.forEach(map => {
-                        const currentUserFieldValue = String(user[map.value] || null).trim();
+                matchedMaps.forEach(map => {
+                    const currentUserFieldValue = String(user[map.value] || null).trim();
 
-                        if (
-                            currentUserFieldValue
-                            && currentUserFieldValue === config.fieldValue
-                            && currentUserDashValue !== 'undefined'
-                            && currentUserDashValue !== 'null'
-                            && currentUserDashValue !== ''
-                        ) {
-                            dashboardFilters.push({
-                                field: config.dashFilter,
-                                value: currentUserDashValue,
-                                pages: config.pages,
-                                // config,
-                                // map,
-                            });
-                        }
-                    })
-                }
+                    if (
+                        currentUserFieldValue
+                        && currentUserFieldValue === config.fieldValue
+                        && currentUserDashValue !== 'undefined'
+                        && currentUserDashValue !== 'null'
+                    ) {
+                        dashboardFilters.push({
+                            field: config.dashFilter || null,
+                            value: currentUserDashValue || null,
+                            pages: config.pages,
+                            // config,
+                            // map,
+                        });
+                    }
+                })
             })
         });
 
-        // console.log(JSON.stringify(dashboardFilters, null, 2));
+        console.log(JSON.stringify(dashboardFilters, null, 2));
 
         return dashboardFilters;
     },
