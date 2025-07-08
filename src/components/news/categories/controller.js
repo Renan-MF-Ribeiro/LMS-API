@@ -2,6 +2,8 @@ require('dotenv').config();
 const _messages = require('../../../utils/messages');
 const { newsApi } = require('../http-adapter');
 const { azureBlob } = require('../../../utils/files');
+const { getUserByToken } = require('../../../utils/functions');
+
 
 module.exports = {
     async list(req, res) {
@@ -41,9 +43,28 @@ module.exports = {
 
     async home(req, res) {
         try {
-            const { data } = await newsApi.get(`/home/categories/${req.params.id}`);
 
-            _messages.success(res, req, data);
+            const user = await getUserByToken(req);
+            
+            const { data } = await newsApi.get(`/home/categories/${req.params.id}`);
+            const categories = []
+            for(let category of data.data) {
+                if(category.audiences && category.audiences.length > 0) {
+                    if(user && category.audiences && category.audiences.length > 0) {
+                        const hasValidAudience = category.audiences.some(audience => {
+                            const userValue = user[audience.field];
+                            return userValue && userValue === audience.value;
+                        });
+
+                        if(hasValidAudience) {
+                            categories.push(category);
+                        }
+                    }
+                } else {
+                    categories.push(category);
+                }
+            }
+            _messages.success(res, req, {data: categories, total: data.total});
         } catch (error) {
             _messages.internalServer(
                 res,
