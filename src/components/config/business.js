@@ -9,6 +9,7 @@ const {
     MATRIX_VISIBILITY_MODE,
     ChatIAConfigModel,
     DashboardConfigModel,
+    ConfigTypes,
 } = require('./model');
 
 const { getUserByToken } = require('../../utils/functions');
@@ -86,6 +87,22 @@ module.exports = {
         }
     },
 
+    async getManagerRule() {
+        let rule = await ConfigModel.findOne({
+            type: ConfigTypes.ManagerRule,
+        });
+        
+        if (!rule) {
+            rule = await ConfigModel.findOneAndUpdate(
+                { type: ConfigTypes.ManagerRule },
+                { value: [] },
+                { new: true, upsert: true }
+            );
+        }
+
+        return rule.value;
+    },
+
     async getMessengerConfig() {
         const config = await MessengerConfigModel.findOne().sort({ _id: -1 });
 
@@ -133,7 +150,7 @@ module.exports = {
 
         return config || (await ChatIAConfigModel.create({}));
     },
-    
+
     async getDashboardConfig() {
         const config = await DashboardConfigModel.findOne();
 
@@ -162,7 +179,7 @@ module.exports = {
                 ],
             });
         }
-        
+
         if (value.visibilityMode === MATRIX_VISIBILITY_MODE.MANAGER) {
             query.$and.push({ managerRegistration: applier.registration });
         }
@@ -171,7 +188,7 @@ module.exports = {
         //     const tags = applier.groupsAD.filter((tag) => !String(tag).startsWith('PERFIL_'));
         //     query.$and.push({ groupsAD: { $in: tags } });
         // }
-        if(limit){
+        if (limit) {
             return User.find(query).limit(limit);
         }
         return User.find(query);

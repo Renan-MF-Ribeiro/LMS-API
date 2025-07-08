@@ -6,13 +6,11 @@ const {
     ConfigTypes,
     ConfigModel,
     SegmentationConfigModel,
-    SegmentationRuleSchema,
     MATRIX_VISIBILITY_MODE,
     MatrixConfigModel,
 } = require('./model');
 const _messages = require('../../utils/messages');
 const { Types } = require('mongoose');
-const { User } = require('../users/model');
 
 module.exports = {
     async getAutomaticEligibilityOnboardConfig(req, res) {
@@ -103,46 +101,17 @@ module.exports = {
             return _messages.successEmpty(res, req, 'Regra de gestores aplicada com sucesso.');
         }
 
-        let rulesArray = rules
-        if(!Array.isArray(rules)) {
-            rulesArray = [rules];
-        }
-
-        const query = rulesArray
-            ?.map((rule) => {
-                if (!rule?.field || !rule?.values || rule.values.length === 0) return null;
-                return { [rule.field]: { $in: rule.values } };
-            })
-            ?.filter(Boolean);
-
-        await User.updateMany(
-            { groupsAD: 'PERFIL_Gestor_Matriz' },
-            { $pull: { groupsAD: 'PERFIL_Gestor_Matriz' } }
+        await ConfigModel.findOneAndUpdate(
+            { type: ConfigTypes.ManagerRule },
+            { value: rules },
+            { new: true, upsert: true }
         );
-
-        Promise.all([
-            User.updateMany({ $or: query }, { $push: { groupsAD: 'PERFIL_Gestor_Matriz' } }),
-            ConfigModel.findOneAndUpdate(
-                { type: ConfigTypes.ManagerRule },
-                { value: rules },
-                { new: true, upsert: true }
-            ),
-        ]);
 
         return _messages.success(res, req, 'Regra de gestores aplicada com sucesso');
     },
 
     async getManagerRule(req, res) {
-        let rule = await ConfigModel.findOne({
-            type: ConfigTypes.ManagerRule,
-        });
-        if (!rule) {
-            rule = await ConfigModel.findOneAndUpdate(
-                { type: ConfigTypes.ManagerRule },
-                { value: [] },
-                { new: true, upsert: true }
-            );
-        }
+        const rule = await _business.getManagerRule();
         return _messages.success(res, req, rule?.value);
     },
 
