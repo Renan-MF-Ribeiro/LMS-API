@@ -41,22 +41,28 @@ module.exports = {
         }
     },
 
-    async home(req, res) {
+    //listar categorias pro front > regras : flag de campanha ativa ? listar categorias com capanha e usuario tem campo da carga valido : listar todas as categorias da campanha.
+
+    async getCategoriesByCampaing(req, res) {
         try {
 
             const user = await getUserByToken(req);
-            
-            const { data } = await newsApi.get(`/home/categories/${req.params.id}`);
+            const { data } = await newsApi.get(`/categories/valid/${req.params.id}`);
             const categories = []
-            for(let category of data.data) {
-                if(category.audiences && category.audiences.length > 0) {
-                    if(user && category.audiences && category.audiences.length > 0) {
+
+            if (data.allowOutsideUsersToPost) {
+                return { data: data.categories, total: data.categories.length };
+            }
+
+            for (let category of data.categories) {
+                if (category.audiences && category.audiences.length > 0) {
+                    if (user && category.audiences && category.audiences.length > 0) {
                         const hasValidAudience = category.audiences.some(audience => {
                             const userValue = user[audience.field];
                             return userValue && userValue === audience.value;
                         });
 
-                        if(hasValidAudience) {
+                        if (hasValidAudience) {
                             categories.push(category);
                         }
                     }
@@ -64,7 +70,26 @@ module.exports = {
                     categories.push(category);
                 }
             }
-            _messages.success(res, req, {data: categories, total: data.total});
+
+
+            _messages.success(res, req, { data: categories, total: categories.length });
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno do servidor',
+                'trails',
+                'createPadlet'
+            );
+        }
+    },
+
+    async home(req, res) {
+        try {
+            const { data } = await newsApi.get(`/home/categories/${req.params.id}`);
+
+            _messages.success(res, req, data);
         } catch (error) {
             _messages.internalServer(
                 res,
