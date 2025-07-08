@@ -625,7 +625,7 @@ module.exports = {
         try {
             await handleBlockUser(user);
 
-            if (new Date(user.password[0].createdAt).getTime() < Date.now() - 90 * 24 * 60 * 60 * 1000) {
+            if (new Date(user.password[user.password.length - 1].createdAt).getTime() < Date.now() - 90 * 24 * 60 * 60 * 1000) {
                 user.passwordValid = false;
             }
 
