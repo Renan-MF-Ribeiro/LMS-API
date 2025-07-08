@@ -347,55 +347,51 @@ module.exports = {
         const userMap = Object.entries(connectMap).map(([key, value]) => {
             return { value: key, description: value.label, field: value.field };
         });
-        const dashboardFilters = [];
-        const dashConfig = await DashConfig.find();
+
         function isSameField(userField, mapItem) {
-            return (
-                mapItem.description === userField ||
-                mapItem.field === userField ||
-                mapItem.value === userField
-            );
+            return mapItem.field !== 'NÃO MAPEAR'
+                && (mapItem.field === userField || mapItem.value === userField)
         }
+        
+        const dashboardFilters = [];
 
-        try {
-            if (dashConfig) {
-                let dashFilters = dashConfig.map((x) => {
-                    return x.fields;
-                });
-                dashFilters = dashFilters.flat(2);
-                for (let filter of dashFilters) {
-                    for (const map of userMap) {
-                        filter.userField = isSameField(filter.userField, map)
-                            ? map.value
-                            : filter.userField;
-                        filter.dashFilter = isSameField(filter.dashFilter, map)
-                            ? map.value
-                            : filter.dashFilter;
-                    }
+        const dashConfig = await DashConfig.find();
 
-                    const userHasValidFieldValue =
-                        user[filter.userField] === filter.fieldValue &&
-                        user[filter.dashFilter] != undefined &&
-                        user[filter.dashFilter] != 'undefined' &&
-                        user[filter.dashFilter] != null &&
-                        user[filter.dashFilter] != 'null' &&
-                        user[filter.dashFilter] != '';
-                    if (userHasValidFieldValue) {
-                        if (dashboardFilters.length == 0) {
+        dashConfig.forEach((config) => {
+            config.fields?.forEach(config => {
+                if (!config.userField || !config.fieldValue || !config.dashFilter) return;
+
+                const currentUserDashValue = String(user[config.dashFilter] || null).trim();
+
+                if (currentUserDashValue) {
+                    const matchedMaps = userMap.filter(map => isSameField(config.userField, map));
+
+                    matchedMaps.forEach(map => {
+                        const currentUserFieldValue = String(user[map.value] || null).trim();
+
+                        if (
+                            currentUserFieldValue
+                            && currentUserFieldValue === config.fieldValue
+                            && currentUserDashValue !== 'undefined'
+                            && currentUserDashValue !== 'null'
+                            && currentUserDashValue !== ''
+                        ) {
                             dashboardFilters.push({
-                                field: filter.dashFilter,
-                                value: user[filter.dashFilter],
-                                pages: filter.pages,
+                                field: config.dashFilter,
+                                value: currentUserDashValue,
+                                pages: config.pages,
+                                // config,
+                                // map,
                             });
                         }
-                    }
+                    })
                 }
-                return dashboardFilters;
-            }
-        } catch (error) {
-            console.log(error);
-            return error;
-        }
+            })
+        });
+
+        // console.log(JSON.stringify(dashboardFilters, null, 2));
+
+        return dashboardFilters;
     },
 
     processUsersLoad(data, elegibilityFields = [], onboarding = false) {
