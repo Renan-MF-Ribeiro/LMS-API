@@ -41,8 +41,6 @@ module.exports = {
         }
     },
 
-    //listar categorias pro front > regras : flag de campanha ativa ? listar categorias com capanha e usuario tem campo da carga valido : listar todas as categorias da campanha.
-
     async getCategoriesByCampaing(req, res) {
         try {
 
