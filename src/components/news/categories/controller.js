@@ -50,10 +50,10 @@ module.exports = {
             const { data } = await newsApi.get(`/categories/valid/${req.params.id}`);
             const categories = []
 
-            if (data.allowOutsideUsersToPost) {
-                return { data: data.categories, total: data.categories.length };
-            }
 
+            if (data.allowOutsideUsersToPost) {
+                _messages.success(res, req, { data: data.categories, total: data.categories.length });
+            }
             for (let category of data.categories) {
                 if (category.audiences && category.audiences.length > 0) {
                     if (user && category.audiences && category.audiences.length > 0) {
