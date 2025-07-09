@@ -46,10 +46,7 @@ const session = expressSession({
     secret: environment.PROJECT_SECRET_KEY,
     resave: false,
     saveUninitialized: false,
-    cookie: {
-        ...getCookieProps(),
-        maxAge: sessionMaxAge,
-    },
+    cookie: getCookieProps(),
     store: sessionStore,
 })
 
