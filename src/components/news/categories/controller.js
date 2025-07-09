@@ -67,7 +67,7 @@ module.exports = {
                 }
             }
 
-            _messages.success(res, req, { data: categories, total: categories.length });
+            return _messages.success(res, req, { data: categories, total: categories.length });
         } catch (error) {
             console.log(error)
         }
