@@ -43,11 +43,9 @@ module.exports = {
 
     async getCategoriesByCampaing(req, res) {
         try {
-
             const user = await getUserByToken(req);
             const { data } = await newsApi.get(`/categories/valid/${req.params.id}`);
             const categories = []
-
 
             if (data.allowOutsideUsersToPost) {
                 _messages.success(res, req, { data: data.categories, total: data.categories.length });
@@ -69,17 +67,9 @@ module.exports = {
                 }
             }
 
-
-            _messages.success(res, req, { data: categories, total: categories.length });
+            return _messages.success(res, req, { data: categories, total: categories.length });
         } catch (error) {
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno do servidor',
-                'trails',
-                'createPadlet'
-            );
+            console.log(error)
         }
     },
 
