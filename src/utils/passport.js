@@ -1,13 +1,20 @@
 const passport = require('passport');
-const session = require('express-session');
 const passportSaml = require('passport-saml');
 const OpenIDConnectStrategy = require('passport-openidconnect');
+const LocalStrategy = require('passport-local');
+
+const bcrypt = require('bcryptjs');
+const cryptoJS = require('crypto-js');
 
 const { log } = require('./logger');
+const { getRequestStrategyName } = require('./auth');
+const { session } = require('./session');
+
+const ApiError = require('../errors/ApiError');
+
 const { getLoginConfig } = require('../components/users/business');
-const { getCookieProps } = require('./cookies');
-const environment = require('../environment');
 const { Log } = require('../components/logs/model');
+const { User } = require('../components/users/model');
 
 passport.serializeUser((user, done) => {
     done(null, user);
@@ -22,6 +29,7 @@ async function createSamlPassportStrategy(config) {
         ...config,
         certifier: config.certifier?.slice(-5) ?? null,
     });
+
     const strategyName = config.strategyName;
 
     const strategy = new passportSaml.Strategy(
@@ -33,7 +41,10 @@ async function createSamlPassportStrategy(config) {
             callbackUrl: `${config.callbackUrl}?strategy=${strategyName}`,
             cert: config.certifier,
         },
-        (profile, done) => done(null, profile),
+        (profile, done) => {
+            profile.strategyName = strategyName;
+            return done(null, profile);
+        },
     );
 
     passport.use(strategy);
@@ -59,7 +70,6 @@ async function createOpenIdConnectStrategy(config) {
 
         },
         async (issuer, profile, done) => {
-
             profile.strategyName = strategyName;
             profile.issuer = issuer;
 
@@ -70,18 +80,38 @@ async function createOpenIdConnectStrategy(config) {
     passport.use(strategyName, strategy);
 }
 
-function getRequestStrategyName(req) {
-    return req.query?.strategy ?? req.cookies.strategyName ?? 'saml';
+async function createLocalStrategy() {
+    passport.use(new LocalStrategy(
+        { usernameField: 'login', passwordField: 'password' },
+        async function verifyUser(login, password, cb) {
+            const decrypted = cryptoJS.AES.decrypt(password, 'pass');
+            const passwordDecrypted = decrypted.toString(cryptoJS.enc.Utf8);
+
+            const user = await User.findOne({ networkLogin: { $eq: login }, status: 'ATIVO' }).lean();
+
+            const pass = user?.password?.filter(function (obj) {
+                return obj.valid && bcrypt.compareSync(passwordDecrypted, obj.hash);
+            });
+
+            if (!user || pass?.length === 0) {
+                return cb(new ApiError('Usuário ou senha inválidos', 401), null);
+            }
+
+            return cb(null, {
+                _id: String(user._id),
+                networkLogin: user.networkLogin,
+                name: user.name,
+                email: user.email,
+                registration: user.registration,
+                groupsAD: user.groupsAD,
+                strategyName: 'local',
+            });
+        }
+    ));
 }
 
 function initializePassport(app) {
-    app.use(session({
-        secret: environment.PROJECT_SECRET_KEY,
-        resave: false,
-        saveUninitialized: true,
-        cookie: getCookieProps(),
-    }));
-
+    app.use(session);
     app.use(passport.initialize());
     app.use(passport.session());
 }
@@ -91,35 +121,35 @@ async function authenticatePassport(req, res, next) {
 
     log('authenticatePassport strategyName', strategyName);
 
-    passport.authenticate(strategyName, {
-        failureRedirect: '/',
-        failureFlash: true,
-    }, async (err, user, info, status) => {
-        if (err) {
-            await Log.create({
-                type: 'PASSPORT_CALLBACK_ERROR',
-                message: 'PASSPORT_CALLBACK_ERROR',
-                component: 'authenticatePassport',
-                route: req.originalUrl,
-                dataNew: JSON.stringify({ err, user, info, status }),
-            });
-            
-            return next(err);
-        }
+    passport.authenticate(
+        strategyName,
+        { session: true },
+        async (err, user, info, status) => {
+            if (err) {
+                await Log.create({
+                    type: 'PASSPORT_CALLBACK_ERROR',
+                    message: 'PASSPORT_CALLBACK_ERROR',
+                    component: 'authenticatePassport',
+                    route: req.originalUrl,
+                    dataNew: JSON.stringify({ err, user, info, status }),
+                });
 
-        if (!user) {
-            return res.redirect('/');
-        }
-
-        req.logIn(user, (loginErr) => {
-            if (loginErr) {
-                return next(loginErr);
+                return next(err);
             }
 
-            return next();
-        });
-    })(req, res, next);
+            if (!user) {
+                return res.redirect('/');
+            }
 
+            req.logIn(user, (loginErr) => {
+                if (loginErr) {
+                    return next(loginErr);
+                }
+
+                return next();
+            });
+        }
+    )(req, res, next);
 }
 
 async function strategyHandler(config) {
@@ -139,11 +169,14 @@ async function createStrategiesFromLoginConfigs() {
     const loginConfig = await getLoginConfig();
 
     const ssoConfigs = loginConfig.ssoForm ?? [];
+
     for await (const config of ssoConfigs) {
         if (config?.enabled) {
             await strategyHandler(config);
         }
     }
+
+    await createLocalStrategy();
 
     log('createStrategiesFromLoginConfigs strategies', Object.keys(passport._strategies));
 }
@@ -185,7 +218,6 @@ createStrategiesFromLoginConfigs();
 module.exports = {
     initializePassport,
     authenticatePassport,
-    getRequestStrategyName,
     createStrategiesFromLoginConfigs,
     removeStrategies,
     parseSamlResponse,

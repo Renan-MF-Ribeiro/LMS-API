@@ -380,11 +380,12 @@ module.exports = {
                         recommendedTrails.push(...data.data.recommendedTrails);
                         recommendedCourses.push(...data.data.recommendedCourses);
                     } catch (error) {
-                        console.log({ error })
+                        // console.log({ error })
                     }
                 }
-                const arrRecommendedTrailsSections = await recommendedTrailsSections(trails, recommendedTrails);
-                const arrRecommendedCoursesSections = await recommendedCoursesSections(user._id, recommendedCourses);
+
+                const arrRecommendedTrailsSections = req.features?.mentoring ? await recommendedTrailsSections(trails, recommendedTrails) : [];
+                const arrRecommendedCoursesSections = req.features?.mentoring ? await recommendedCoursesSections(user._id, recommendedCourses) : [];
 
                 function limitArray(section) {
                     if (!section) return [];
@@ -708,7 +709,7 @@ module.exports = {
                 recommendedTrails = data.data.recommendedTrails ?? [];
                 recommendedCourses = data.data.recommendedCourses ?? [];
             } catch (error) {
-                console.log({ error })
+                // console.log({ error })
             }
         }
 

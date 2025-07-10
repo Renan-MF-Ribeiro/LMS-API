@@ -12,7 +12,7 @@ const {
     canListUsers,
 } = require('../../utils/middlewares');
 
-const { clearSASTokenFromResponse, saveStrategyOnCookie } = require('../../utils/cookies');
+const { saveStrategyOnCookie } = require('../../utils/cookies');
 
 module.exports = express
     .Router()
@@ -24,14 +24,17 @@ module.exports = express
             standardHeaders: true,
             legacyHeaders: false,
         }),
+        (req, res, next) => {
+            req.query.strategy = 'local';
+            return next();
+        },
+        saveStrategyOnCookie,
+        authenticatePassport,
         _controller.ldapSignIn
     )
     .post(
         '/logout',
-        (req, res) => {
-            clearSASTokenFromResponse(res);
-            res.status(200).send('OK');
-        }
+        _controller.logout
     )
     .post('/accept-terms', validateTokenRoute, _controller.acceptTerms)
     .post('/watched-video', validateTokenRoute, _controller.watchedVideo)
@@ -53,7 +56,14 @@ module.exports = express
     .post('/change-password', _controller.changePassword)
     .post('/change-password-email', _controller.changePasswordByEmail)
     .post('/change-photo', validateTokenRoute, formidable(), _controller.changePhoto)
-    .get('/auth/isAuthenticated', _controller.isAuthenticated)
+    .get('/auth/isAuthenticated',
+        (req, res, next) => {
+            req.query.strategy = 'session';
+            return next();
+        },
+        authenticatePassport,
+        _controller.isAuthenticated
+    )
     .get('/auth/isAuthenticatedNginx/:token', _controller.isAuthenticatedNginx)
     .get('/me', _controller.selfData)
     .post('/gamification/names', validateTokenRoute, _controller.handleNames)
@@ -121,14 +131,14 @@ module.exports = express
         _controller.ssoCallback
     )
     .get(
-        '/openid',
+        '/sso/openid',
         saveStrategyOnCookie,
         authenticatePassport,
     )
     .get(
-        '/openid/callback',
+        '/sso/openid/callback',
         authenticatePassport,
-        _controller.openIdCallback
+        _controller.ssoCallback
     )
     .post('/device', validateTokenRoute, _controller.updateDeviceId)
     .get(
