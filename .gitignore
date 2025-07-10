@@ -68,3 +68,5 @@ pnpm-lock.yaml
 # Script files
 src/scripts/data
 src/scripts/debug
+
+.clinic
