@@ -186,8 +186,7 @@ async function setAssessmentHistoricOnSections(userId, sections) {
 
 async function setCerticateHistoricOnSections(user, sections) {
     const dataAssessmentHistoric = await getAllHistoricsSectionsByUser(user._id);
-    console.log('sections', sections);
-    console.log('dataAssessmentHistoric', dataAssessmentHistoric);
+
     const processedSections = cloneDeep(sections).map(currentSection => {
         if (!currentSection.isTraining) return currentSection;
 

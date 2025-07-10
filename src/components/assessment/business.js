@@ -60,7 +60,14 @@ const AssessmentBusiness = {
     async getHistoricBySectionId(userId, sectionId) {
         const uri = `${host}/historics/${clientId}/${userId}/section/${sectionId}`;
         const { data } = await axios.get(uri, { headers });
-        
+
+        return data
+    },
+
+    async getAllHistoricsSectionsByUser(userId) {
+        const uri = `${host}/historics/${clientId}/${userId}/by-user`;
+        const { data } = await axios.get(uri, { headers });
+
         return data
     },
 };
