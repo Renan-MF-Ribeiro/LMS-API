@@ -37,11 +37,12 @@ const business = {
         return await User.find({ $or: query }, '_id name networkLogin office').lean()
     },
 
-    isUserManager: async (user, rules) => {
-        if (!user || !rules) return false;
-
+    isUserManager: async (user) => {
+        if (!user) return false;
+        const rules = await configBusiness.getManagerRule();
+        const teste = rules[0]?.managerField
         for (const rule of rules) {
-            if (rule.managerValues?.some(v => user[rule.managerField] === v)) {
+            if (rule?.managerValues?.some(v => user?.[rule?.managerField] === v)) {
                 return true;
             }
         }
