@@ -122,13 +122,14 @@ const usersController = {
         try {
             const { id } = req.params;
             const { data } = await matricesApi.get(`/users/${id}/suggestions`);
-
+            console.log(data.data)
             const populatedData = await buildSuggestions(data.data);
             res.status(data.statusCode).json(populatedData);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
             const errorMessage = message ?? 'Internal server error';
+            console.error({ error: errorMessage });
             res.status(statusCode).json(errorMessage);
         }
     },

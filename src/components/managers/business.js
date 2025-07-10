@@ -1,9 +1,11 @@
 const { getUserByToken, pagination, ordernation, processTrailTracking } = require("../../utils/functions");
 const configBusiness = require("../config/business");
+const { getCoursesByIds } = require("../courses/business");
 const { ClassModel } = require("../courses/model");
 const { matricesApi } = require("../matrices/http-adapter");
 const { Features } = require("../theme/features/model");
 const { Tracking } = require("../tracking/model");
+const { getTrailByIds } = require("../trails/business");
 const { Trail } = require("../trails/model");
 const { User } = require("../users/model");
 
@@ -177,7 +179,7 @@ const business = {
 
         if (target === 'users') {
             const results = await Promise.all(
-                users.map(async (u) => ({
+                users?.map(async (u) => ({
                     user: u,
                     inProgress: await business.isUserInProgressTraining(u),
                     hasPendingActions: u?.hasPendingActions,
@@ -185,12 +187,41 @@ const business = {
             );
 
             return results
-                .filter((r) => r.inProgress && !r.hasPendingActions)
-                .map((r) => r.user);
+                ?.filter((r) => r.inProgress && !r.hasPendingActions)
+                ?.map((r) => r.user);
         }
 
         return users;
-    }
+    },
+
+    buildSuggestions: async (data) => {
+        const idToDateMap = new Map();
+
+        data.recommendedTrails?.forEach((trail) => {
+            idToDateMap.set(trail?.id, trail?.createdAt);
+        });
+
+        data.recommendedCourses?.forEach((course) => {
+            idToDateMap.set(course?.courseId, course?.createdAt);
+        });
+
+        const ids = Array.from(idToDateMap.keys()).flat();
+
+        const [trails, courses] = await Promise.all([getTrailByIds(ids), getCoursesByIds(ids)]);
+
+        return [
+            ...trails.map((trail) => ({
+                ...trail,
+                type: 'Online',
+                createdAt: idToDateMap.get(trail._id.toString()),
+            })),
+            ...courses.map((course) => ({
+                ...course,
+                type: 'Presencial',
+                createdAt: idToDateMap.get(course.id) || new Date(0),
+            })),
+        ];
+    },
 }
 
 module.exports = business;

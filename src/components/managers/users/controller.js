@@ -7,6 +7,9 @@ const { User } = require('../../users/model');
 const business = require('../business');
 const { default: axios } = require('axios');
 const { matricesApi } = require('../../matrices/http-adapter');
+const RecommendedContent = require('../schema/model');
+const { Trail } = require('../../trails/model');
+const { ClassModel, CourseModel } = require('../../courses/model');
 
 const managersUsersController = {
     findUserById: async (req, res) => {
@@ -66,7 +69,7 @@ const managersUsersController = {
             ]);
             const sortedCourses = await business.sortCoursesByConcludedAt([courses, trails].flat());
             res.status(200).json(sortedCourses);
-            
+
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
@@ -100,6 +103,85 @@ const managersUsersController = {
             res.status(statusCode).json(errorMessage);
         }
     },
+
+    suggestContent: async (req, res) => {
+        try {
+            const dto = req.body;
+            await validateSuggestions(dto);
+
+            const updateOperations = {
+                $addToSet: {
+                    recommendedCourses: {
+                        $each:
+                            dto.recommendedCourses?.map((course) => ({
+                                ...course,
+                                createdAt: new Date(),
+                            })) ?? [],
+                    },
+                    recommendedTrails: {
+                        $each:
+                            dto.recommendedTrails?.map((id) => ({
+                                id,
+                                createdAt: new Date(),
+                            })) ?? [],
+                    },
+                },
+            };
+
+            RecommendedContent.findOneAndUpdate(
+                { userId: dto.userId },
+                updateOperations,
+                {
+                    upsert: true,
+                    new: true,
+                },
+            );
+
+            return res.status(200).json("Recomendado com sucesso");
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            console.error({ error: errorMessage });
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    findSuggestedContent: async (req, res) => {
+        try {
+            const userId = req.params.id;
+            if (!userId) {
+                return res.status(400).json('userId is required');
+            }
+
+            const suggestedContent = await RecommendedContent.findOne({ userId }, 'recommendedCourses recommendedTrails');
+            const suggestions = await business.buildSuggestions(suggestedContent);
+            
+            res.status(200).json(suggestions);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            console.error({ error: errorMessage });
+            res.status(statusCode).json(errorMessage);
+        }
+    }
 };
+
+// utils
+const validateSuggestions = async (dto) => {
+    if (!dto.userId) {
+        throw new Error('userId is required');
+    }
+
+    if (dto.recommendedTrails?.[0])
+        await Trail.find({ _id: { $in: dto?.recommendedTrails } });
+
+    if (dto.recommendedCourses?.[0])
+        await Promise.all([
+            ClassModel.find({ _id: { $in: dto?.recommendedCourses?.map((course) => course.classId) } }),
+            CourseModel.find({ _id: { $in: dto?.recommendedCourses?.map((course) => course.courseId) } }),
+        ])
+}
 
 module.exports = managersUsersController;

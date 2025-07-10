@@ -7,3 +7,6 @@ module.exports = express
     .get('/:id', _controller.findUserById)
     .get('/:id/certifiers', _controller.findUserCertifiers)
     .get('/:id/concluded-courses', _controller.findUsersConcludedCourses)
+    .get('/:id/suggestions', _controller.findSuggestedContent)
+    .post('/suggest-content', _controller.suggestContent)
+    
