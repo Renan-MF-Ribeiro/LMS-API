@@ -216,7 +216,7 @@ module.exports = {
                 let supportMaterialEnabled = false;
                 const filteredSupportArray = trail.supportMaterial?.filter(
                     (x) => x.deleted === false
-                );
+                ) || [];
 
                 if (filteredSupportArray.length > 0) {
                     supportMaterialEnabled = true;
