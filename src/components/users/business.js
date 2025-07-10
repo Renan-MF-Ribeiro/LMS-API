@@ -26,6 +26,7 @@ const { ConfigLogin } = require('../theme/login-config/model');
 const ApiError = require('../../errors/ApiError');
 const { getMessengerConfig } = require('../config/business');
 const { getConnectMap } = require('../../utils/connect');
+const { Types } = require('mongoose');
 require('dotenv').config();
 
 module.exports = {
@@ -71,44 +72,44 @@ module.exports = {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                    {
-                        $or: [
-                            {
-                                onboarding: { $exists: false },
-                                groupsAD: { $in: tag },
-                            },
-                            {
-                                onboarding: { $eq: onboarding },
-                                groupsAD: { $in: tag },
-                            },
-                        ],
-                    },
-                ];
+                      {
+                          $or: [
+                              {
+                                  onboarding: { $exists: false },
+                                  groupsAD: { $in: tag },
+                              },
+                              {
+                                  onboarding: { $eq: onboarding },
+                                  groupsAD: { $in: tag },
+                              },
+                          ],
+                      },
+                  ];
         } else {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                    {
-                        $or: [
-                            { onboarding: { $exists: false } },
-                            { onboarding: { $eq: onboarding } },
-                        ],
-                    },
-                ];
+                      {
+                          $or: [
+                              { onboarding: { $exists: false } },
+                              { onboarding: { $eq: onboarding } },
+                          ],
+                      },
+                  ];
         }
 
         const searchByQuery = searchBy
             ? {
-                $or: [
-                    { name: { $regex: searchBy, $options: 'i' } },
-                    { registration: { $regex: searchBy, $options: 'i' } },
-                    { email: { $regex: searchBy, $options: 'i' } },
-                ],
-                $and: onboardingQuery,
-            }
+                  $or: [
+                      { name: { $regex: searchBy, $options: 'i' } },
+                      { registration: { $regex: searchBy, $options: 'i' } },
+                      { email: { $regex: searchBy, $options: 'i' } },
+                  ],
+                  $and: onboardingQuery,
+              }
             : {
-                $and: onboardingQuery,
-            };
+                  $and: onboardingQuery,
+              };
 
         const users = await User.find(searchByQuery)
             .sort({ [order]: sort })
@@ -678,6 +679,19 @@ module.exports = {
         }
     },
 
+    async getTagsByUserIds(userIds) {
+        const arrayIds = Array.isArray(userIds) ? userIds : [userIds];
+        if (arrayIds.length === 0) return [];
+
+        const users = await User.find({ _id: { $in: arrayIds?.map((id)=> new Types.ObjectId(id)) } }).lean();
+        if (users.length === 0) return [];
+
+
+        const groups = await Group.find({ name: { $in: users?.flatMap((u) => u?.groupsAD) } }, 'tags').lean();
+        const tags = groups?.flatMap((group) => group?.tags);
+        return [users, tags];
+    },
+
     async getFirstTenUsersByGroup(groups) {
         try {
             // Aggregate para pegar 10 usuários aleatórios de cada grupo
@@ -701,7 +715,7 @@ module.exports = {
             ]);
         } catch (error) {
             console.log(error);
-            return []
+            return [];
         }
     },
 
@@ -846,8 +860,9 @@ module.exports = {
                             new Date(classGroup.limitDate) >= currentDate
                     )
                     .map((classGroup) => classGroup.groupCode)
-            ).filter(t => !String(t).startsWith('PERFIL_'));
+            )
+            .filter((t) => !String(t).startsWith('PERFIL_'));
 
         return allTags;
-    }
+    },
 };

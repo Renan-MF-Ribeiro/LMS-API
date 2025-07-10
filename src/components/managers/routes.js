@@ -9,3 +9,4 @@ module.exports = express
     .get('/pending-actions/:target', controller.pendingActions)
     .get('/overview', isMatrixModuleActive, controller.getOverview)
     .get('/overview/:id', isMatrixModuleActive, controller.getOverviewById)
+    .get('/search-content/:type', controller.searchContent)

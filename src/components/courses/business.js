@@ -481,7 +481,6 @@ module.exports = {
         }
 
         const events = await eventsController.getCalendarEventsByDate(start, end, user, tags);
-
         let calendarEvents = events;
 
         if (courseId) {

@@ -2,7 +2,6 @@ const { User } = require('../../users/model');
 const { matricesApi } = require('../http-adapter');
 const {
     buildEvaluationsResultSuggestions,
-    buildSuggestions,
 } = require('../business');
 const { Group } = require('../../groups/model');
 const { findManagedUsers } = require('../../managers/business');
