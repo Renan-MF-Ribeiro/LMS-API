@@ -223,9 +223,12 @@ module.exports = {
         return module.exports.hasFeature('assessement')(req, res, next);
     },
 
+    isMatrixModuleActive: (req, res, next) => {
+        return module.exports.hasFeature('matrices')(req, res, next);
+    },
+
     hasFeature(features) {
         const parsedFeatures = Array.isArray(features) ? features : [features];
-
         log('Checking features', parsedFeatures);
         
         return async function hasFeatureMiddleware(req, res, next) {

@@ -37,29 +37,6 @@ const business = {
         return response;
     },
 
-    buildCoursesResponse: async (courses) => {
-        const response = courses.map((course) => {
-            return {
-                _id: course.courseID?.id,
-                title: course.courseID?.title,
-                description: course.courseID?.description,
-                concludedAt: course.users?.[0]?.presenceAt,
-                location: course.location,
-                type: 'Presencial',
-            };
-        });
-
-        return response;
-    },
-
-    sortCoursesByConcludedAt: async (courses) => {
-        return courses.sort((a, b) => {
-            const dateA = new Date(a.concludedAt).getTime();
-            const dateB = new Date(b.concludedAt).getTime();
-            return dateB - dateA; // Ordena do mais recente para o mais antigo
-        });
-    },
-
     populateUserFields: async (mappings, data) => {
         const isArray = Array.isArray(data.data);
         const dataToProcess = isArray ? data.data : [data.data];
@@ -202,7 +179,23 @@ const business = {
             })),
         ];
     },
+
+    getUserLastPresenceInCourse: async (userId) => {
+        const classes = await getCoursesByUserID(userId);
+
+        return classes?.reduce((latestPresence, classItem) => {
+            classItem.users.forEach((user) => {
+                if (user._id.toString() === userId.toString() && user.presenceAt) {
+                    if (!latestPresence || user.presenceAt > latestPresence) {
+                        latestPresence = user.presenceAt;
+                    }
+                }
+            });
+            return latestPresence;
+        }, null);
+    }
 };
+
 const collectIds = (data, mappings) => {
     const ids = [];
     const traverse = (obj) => {
@@ -261,5 +254,7 @@ const processData = async (data, mappings, userMap) => {
     };
 
     return process(data);
+
+
 };
 module.exports = business;

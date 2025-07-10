@@ -1,15 +1,10 @@
 const { ObjectId } = require('mongoose').Types;
-const { default: axios } = require('axios');
 const { User } = require('../../users/model');
 const { matricesApi } = require('../http-adapter');
-const { getCoursesByUserID } = require('../../courses/business');
 const {
-    buildCoursesResponse,
-    sortCoursesByConcludedAt,
     buildEvaluationsResultSuggestions,
     buildSuggestions,
 } = require('../business');
-const { getCompletedTrails } = require('../../tracking/business');
 const { Group } = require('../../groups/model');
 const courseBusiness = require('../../courses/business');
 const ApiError = require('../../../errors/ApiError');
@@ -98,32 +93,6 @@ const usersController = {
         }
     },
 
-    findUserCertifiers: async (req, res) => {
-        try {
-            const { id } = req.params;
-
-            const user = await User.findOne({ _id: id });
-            const uri = `${process.env.API_CERTIFIER
-                }/certificates/find/${user.networkLogin}?clientId=${process.env.CLIENT_ID
-                }`;
-
-            let token = req.headers.authorization;
-            if (!token?.startsWith('Bearer')) {
-                token = `Bearer ${token}`;
-            }
-
-            const { data } = await axios.get(uri, {
-                headers: { Authorization: token },
-            });
-            res.status(200).json(data);
-        } catch (error) {
-            const message = error.response?.data?.message ?? error.message;
-            const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = message ?? 'Internal server error';
-            res.status(statusCode).json(errorMessage);
-        }
-    },
-
     findUsersEvaluationsResultSuggestions: async (req, res) => {
         try {
             const { id } = req.params;
@@ -156,30 +125,6 @@ const usersController = {
 
             const populatedData = await buildSuggestions(data.data);
             res.status(data.statusCode).json(populatedData);
-        } catch (error) {
-            const message = error.response?.data?.message ?? error.message;
-            const statusCode = error.response?.data?.statusCode ?? 500;
-            const errorMessage = message ?? 'Internal server error';
-            res.status(statusCode).json(errorMessage);
-        }
-    },
-
-    findUsersConcluedCourses: async (req, res) => {
-        try {
-            const { id } = req.params;
-            const user = await User.findOne({ _id: id });
-
-            if (!user) {
-                return res.status(404).json({ message: 'Usuário não encontrado' });
-            }
-
-            const [courses, trails] = await Promise.all([
-                getCoursesByUserID(id).then((courses) => buildCoursesResponse(courses)),
-
-                getCompletedTrails(user.networkLogin),
-            ]);
-            const sortedCourses = await sortCoursesByConcludedAt([courses, trails].flat());
-            res.status(200).json(sortedCourses);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;

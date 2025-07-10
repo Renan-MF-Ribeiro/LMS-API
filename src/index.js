@@ -77,6 +77,7 @@ const matricesRoutes = require('./components/matrices/routes');
 const chatIaRoutes = require('./components/chat/routes');
 const integratorRoutes = require('./components/integrator/routes');
 const i18nRoutes = require('./components/i18n/routes');
+const managerRoutes = require('./components/managers/routes');
 
 const environment = require('./environment');
 const { matricesApiMiddleware } = require('./components/matrices/http-adapter');
@@ -148,6 +149,7 @@ app.use('/social', socialApiMiddleware);
 app.use('/feed', socialApiMiddleware);
 app.use('/mentoring', mentoringApiMiddleware);
 app.use('/matrices', matricesApiMiddleware);
+app.use('/manager', matricesApiMiddleware);
 app.use('/i18n', i18nApiMiddleware);
 
 app.use(setSegmentation);
@@ -201,7 +203,8 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/matrices', matricesRoutes)
     .use('/chat', chatIaRoutes)
     .use('/integrator', integratorRoutes)
-    .use('/i18n', i18nRoutes);
+    .use('/i18n', i18nRoutes)
+    .use('/manager', managerRoutes);
 
 app.use(errorHandler);
 

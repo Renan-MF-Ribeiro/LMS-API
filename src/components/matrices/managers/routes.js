@@ -4,7 +4,5 @@ const _controller = require('./controller');
 module.exports = express
     .Router()
     .get('/pending-actions/:target', _controller.pendingActions)
-    .get('/users/:id', _controller.getUser)
-    .get('/users', _controller.findUsers)
     .get('/overview', _controller.getOverview)
     .get('/overview/:id', _controller.getOverviewById)

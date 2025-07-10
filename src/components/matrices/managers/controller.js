@@ -10,11 +10,10 @@ const { ClassModel } = require('../../courses/model.js');
 const { Trail } = require('../../trails/model.js');
 const { Tracking } = require('../../tracking/model.js');
 const httpStatus = require('http-status-codes');
-const { Group } = require('../../groups/model.js');
 const { User } = require('../../users/model.js');
-const { getCoursesByUserID } = require('../../courses/business.js');
 const { getLastLoginByUser } = require('../../users/business.js');
 const { getLastConclusionByUser } = require('../../tracking/business.js');
+const business = require('../business.js');
 
 const managersController = {
     pendingActions: async (req, res) => {
@@ -269,45 +268,8 @@ const managersController = {
 
 };
 
-async function checkCoursesProgress(user) {
-    const courseIds = user?.recommendedCourses?.map((course) => course.courseId);
-    if (courseIds?.length === 0) return false;
 
-    return !!(await ClassModel.exists({
-        courseID: { $in: courseIds },
-        'users.userID': user.userId,
-    }));
-}
-
-async function checkTrailsProgress(user) {
-    const trailIds = user?.recommendedTrails?.map((trail) => trail?.id).filter(Boolean);
-    if (trailIds?.length === 0) return false;
-
-    const trails = await Trail.find({ _id: { $in: trailIds } });
-    const allItemIds = trails.flatMap((trail) => trail.items?.map((item) => item.itemID) || []);
-    if (allItemIds?.length === 0) return false;
-
-    const trackings = await Tracking.find({
-        userLogin: user.networkLogin,
-        item: { $in: allItemIds },
-    });
-
-    return trails?.some((trail) => {
-        const trailItems = trail.items?.map((item) => item.itemID) || [];
-        const trailTracking = trackings?.filter((t) => trailItems.includes(t.item));
-        const { trail: processedTrail } = processTrailTracking(trail, trailTracking);
-        return processedTrail?.completion < 1;
-    });
-}
-
-async function isUserInProgressTraining(user) {
-    const [isInProgressCourses, isInProgressTrails] = await Promise.all([
-        checkCoursesProgress(user),
-        checkTrailsProgress(user),
-    ]);
-    return isInProgressCourses || isInProgressTrails;
-}
-
+// utils
 function paginateUsers(req, users) {
     const { skip, limit } = pagination(req);
 
@@ -328,18 +290,7 @@ function paginateUsers(req, users) {
 }
 
 async function getUserLastPresenceInCourse(userId) {
-    const classes = await getCoursesByUserID(userId);
-
-    return classes.reduce((latestPresence, classItem) => {
-        classItem.users.forEach((user) => {
-            if (user._id.toString() === userId.toString() && user.presenceAt) {
-                if (!latestPresence || user.presenceAt > latestPresence) {
-                    latestPresence = user.presenceAt;
-                }
-            }
-        });
-        return latestPresence;
-    }, null);
+    return await business.getUserLastPresenceInCourse(userId);
 }
 
 module.exports = managersController;
