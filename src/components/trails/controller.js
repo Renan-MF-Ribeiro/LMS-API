@@ -373,7 +373,7 @@ module.exports = {
             const trail = processExpirationDate(trails[0], user);
             let durationHours = 0;
             for (const item of trail.items) {
-                durationHours += item.itemID.durationHours;
+                durationHours += item?.itemID?.durationHours || 0;
             }
             trail.durationHours = durationHours;
             const processedTrail = processTrailTracking(trail, allTrackingUser);
