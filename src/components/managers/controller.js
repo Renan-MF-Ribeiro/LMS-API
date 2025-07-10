@@ -95,7 +95,13 @@ const managersController = {
             const type = req.params?.type;
             const { searchBy, userId, start, end, courseId } = req.query;
 
-            const targetUsers = userId || (await business.findManagedUsers(req).then((users) => users?.map((u) => u?._id)));
+            let targetUsers = userId;
+            if (!targetUsers) {
+                targetUsers = await business
+                    .findManagedUsers(req)
+                    .then((users) => users?.map((u) => u?._id));
+            }
+
             const [users, tags] = await getTagsByUserIds(targetUsers);
 
             if (type === 'trails') {
@@ -117,9 +123,36 @@ const managersController = {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
             const errorMessage = message ?? 'Internal server error';
+            console.log({ error: errorMessage });
             res.status(statusCode).json(errorMessage);
         }
-    }
+    },
+
+    getAvailableUsersByContent: async (req, res) => {
+        try {
+            const type = req.params?.type;
+
+            if(type === 'trails'){
+                const response = await business.getAvailableUsersByTrail(req);
+                return res.status(200).json(response);
+            }
+
+            if(type === 'courses'){
+                const response = await business.getAvailableUsersByCourse(contentId);
+                return res.status(200).json(response);
+            }
+
+            const response = null;
+
+            res.status(data.statusCode).json(response);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            console.log({ error: errorMessage });
+            res.status(statusCode).json(errorMessage);
+        }
+    },
 };
 
 module.exports = managersController;

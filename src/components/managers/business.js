@@ -1,19 +1,26 @@
-const { getUserByToken, pagination, ordernation, processTrailTracking } = require("../../utils/functions");
-const configBusiness = require("../config/business");
-const { getCoursesByIds } = require("../courses/business");
-const { ClassModel } = require("../courses/model");
-const { matricesApi } = require("../matrices/http-adapter");
-const { Features } = require("../theme/features/model");
-const { Tracking } = require("../tracking/model");
-const { getTrailByIds } = require("../trails/business");
-const { Trail } = require("../trails/model");
-const { User } = require("../users/model");
+const { Types } = require('mongoose');
+const {
+    getUserByToken,
+    pagination,
+    ordernation,
+    processTrailTracking,
+} = require('../../utils/functions');
+const configBusiness = require('../config/business');
+const { getCoursesByIds } = require('../courses/business');
+const { ClassModel } = require('../courses/model');
+const { matricesApi } = require('../matrices/http-adapter');
+const { Features } = require('../theme/features/model');
+const { Tracking } = require('../tracking/model');
+const { getTrailByIds } = require('../trails/business');
+const { Trail } = require('../trails/model');
+const { User } = require('../users/model');
+const RecommendedContent = require('./schema/model');
 
 const business = {
     findManagedUsers: async (req) => {
         const [user, rules] = await Promise.all([
             getUserByToken(req),
-            configBusiness.getManagerRule()
+            configBusiness.getManagerRule(),
         ]);
 
         const matchingRules = await module.exports.getMatchingRules(user, rules);
@@ -21,28 +28,28 @@ const business = {
             return [];
         }
 
-        let query = matchingRules?.map((r) => ({ [r.managerField]: { $in: r.managerValues } }))
+        let query = matchingRules?.map((r) => ({ [r.managerField]: { $in: r.managerValues } }));
 
         if (req.query.searchBy) {
             const searchRegex = new RegExp(req.query.searchBy, 'i');
-            query = query.map(q => ({
+            query = query.map((q) => ({
                 ...q,
                 $or: [
                     { name: searchRegex },
                     { networkLogin: searchRegex },
-                    { office: searchRegex }
-                ]
-            }))
+                    { office: searchRegex },
+                ],
+            }));
         }
-        return await User.find({ $or: query }, '_id name networkLogin office').lean()
+        return await User.find({ $or: query }, '_id name networkLogin office').lean();
     },
 
     isUserManager: async (user) => {
         if (!user) return false;
         const rules = await configBusiness.getManagerRule();
-        const teste = rules[0]?.managerField
+        const teste = rules[0]?.managerField;
         for (const rule of rules) {
-            if (rule?.managerValues?.some(v => user?.[rule?.managerField] === v)) {
+            if (rule?.managerValues?.some((v) => user?.[rule?.managerField] === v)) {
                 return true;
             }
         }
@@ -53,8 +60,8 @@ const business = {
     getMatchingRules: async (user, rules) => {
         if (!user || !rules) return [];
 
-        return rules?.filter(rule => {
-            return rule?.managerValues?.some(value => user?.[rule?.managerField] === value);
+        return rules?.filter((rule) => {
+            return rule?.managerValues?.some((value) => user?.[rule?.managerField] === value);
         });
     },
 
@@ -69,10 +76,14 @@ const business = {
             const fieldB = b[order] ?? b.user?.[order];
 
             if (typeof fieldA === 'string' && typeof fieldB === 'string') {
-                return sort === 'desc' ? fieldB.localeCompare(fieldA) : fieldA.localeCompare(fieldB);
+                return sort === 'desc'
+                    ? fieldB.localeCompare(fieldA)
+                    : fieldA.localeCompare(fieldB);
             }
 
-            return sort === 'desc' ? Number(fieldB) - Number(fieldA) : Number(fieldA) - Number(fieldB);
+            return sort === 'desc'
+                ? Number(fieldB) - Number(fieldA)
+                : Number(fieldA) - Number(fieldB);
         });
         return { data: sortedUsers.slice(skip, skip + limit), total: sortedUsers.length };
     },
@@ -173,7 +184,6 @@ const business = {
     },
 
     handleReqTarget: async (users, target = null) => {
-
         if (target === 'me') {
             return users?.filter((user) => user?.hasPendingActions);
         }
@@ -187,9 +197,7 @@ const business = {
                 }))
             );
 
-            return results
-                ?.filter((r) => r.inProgress && !r.hasPendingActions)
-                ?.map((r) => r.user);
+            return results?.filter((r) => r.inProgress && !r.hasPendingActions)?.map((r) => r.user);
         }
 
         return users;
@@ -222,6 +230,53 @@ const business = {
             })),
         ];
     },
-}
+
+    getAvailableUsersByTrail: async (req) => {
+        const trailId = req.query?.id;
+
+        const [users, trail] = await Promise.all([
+            module.exports.findManagedUsers(req),
+            Trail.findOne({ _id: new Types.ObjectId(trailId) }).lean(),
+        ]);
+
+        if (!trail || !users[0]) {
+            return [];
+        }
+
+        const allItemIds = trail?.items?.map((item) => item.itemID) || [];
+
+        const [trackings, userRecommendations] = await Promise.all([
+            Tracking.find({
+                userLogin: { $in: users.map((u) => u.networkLogin) },
+                item: { $in: allItemIds },
+            }),
+            RecommendedContent.find({
+                userId: { $in: users.map((u) => u.userId) },
+                item: { $in: allItemIds },
+            }),
+        ]);
+
+
+        return users?.map((user) => {
+            const userStartedTrail = trackings?.some((t) => t?.userLogin === user?.networkLogin);
+            const trailWasRecommended = userRecommendations?.find(
+                (rec) => rec?.userId?.toString() === user?.userId?.toString()
+            );
+
+            return {
+                user: {
+                    name: user?.name,
+                    networkLogin: user?.networkLogin,
+                    userId: user?.userId,
+                },
+                trail: {
+                    title: trail?.title,
+                    description: trail?.description,
+                },
+                status: userStartedTrail || trailWasRecommended ? 'started' : 'not_started',
+            };
+        });
+    },
+};
 
 module.exports = business;

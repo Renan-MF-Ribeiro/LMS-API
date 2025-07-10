@@ -10,3 +10,4 @@ module.exports = express
     .get('/overview', isMatrixModuleActive, controller.getOverview)
     .get('/overview/:id', isMatrixModuleActive, controller.getOverviewById)
     .get('/search-content/:type', controller.searchContent)
+    .get('/content/:type/users', controller.getAvailableUsersByContent)
