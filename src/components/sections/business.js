@@ -173,8 +173,138 @@ async function setAssessmentHistoricOnSections(userId, sections) {
             });
         }
 
+        if (section.isCompleted) {
+            section.duration = calculateTotalDuration(
+                section.trails,
+                section.exceptionCertificateTrails,
+            );
+        }
+
         return section;
     });
+}
+
+async function setCerticateHistoricOnSections(user, sections) {
+    const dataAssessmentHistoric = await getAllHistoricsSectionsByUser(user._id);
+    console.log('sections', sections);
+    console.log('dataAssessmentHistoric', dataAssessmentHistoric);
+    const processedSections = cloneDeep(sections).map(currentSection => {
+        if (!currentSection.isTraining) return currentSection;
+
+        const section = cloneDeep(currentSection);
+
+        const trainingSectionInfo = dataAssessmentHistoric.find(info => String(info.trainingSectionId) === String(section._id))
+
+        if (trainingSectionInfo) {
+            const optionalTrails = trainingSectionInfo.optionalTrailsId ?? [];
+            const isBlocked = trainingSectionInfo.isBlocked ?? false;
+            const hasHistoric = trainingSectionInfo?.hasHistoric ?? false;
+            const hasActiveCycle = trainingSectionInfo.hasActiveCycle ?? false;
+            const hasWaitingCycle = trainingSectionInfo.hasWaitingCycle ?? false;
+            const cycleMessage = trainingSectionInfo.cycleMessage ?? null;
+            const cycleImage = trainingSectionInfo.cycleImage ?? null;
+            const exceptionTrainingTrails = trainingSectionInfo.exceptionTrainingTrails ?? [];
+            const hasCertificate = !!section.certificateLayout;
+            const cycleShowTrailResults = trainingSectionInfo?.cycleShowTrailResults ?? true;
+            const exceptionCertificateTrails = section.exceptionCertificateTrails ?? [];
+
+            section.trails?.forEach(trail => {
+                if (optionalTrails.includes(String(trail._id))) {
+                    trail.isOptional = true;
+                }
+
+                if (exceptionTrainingTrails.includes(String(trail._id))) {
+                    trail.isException = true;
+                }
+
+                if (exceptionCertificateTrails.includes(String(trail._id))) {
+                    trail.isCertificateException = true;
+                }
+            });
+
+            const filteredTrails = section.trails
+                ?.filter(
+                    trail => !['default', 'assessment', 'separator', 'certificate'].includes(trail.type)
+                )
+                ?.filter(trail => !trail.isException)
+                ?.filter(trail => !trail.isOptional)
+                ?.filter(trail => !trail.isCertificateException)
+                ?? [];
+
+            const isCompleted = filteredTrails.every(trail => trail.completion === 1);
+
+            const messages = trainingSectionInfo.messages ?? [];
+
+            if (!hasHistoric && section.displayType === 'hidden') {
+                section.trails = section.trails.filter(trail => trail.isException || (trail.type && trail.type !== 'trail'));
+            }
+
+            section.hasAssessment = true;
+            section.hasActiveCycle = hasActiveCycle;
+            section.hasHistoric = hasHistoric;
+            section.isBlocked = isBlocked;
+            section.isCompleted = hasHistoric && isCompleted;
+            section.hasCertificate = hasCertificate;
+            section.optionalTrails = optionalTrails;
+            section.cycleMessage = cycleMessage;
+            section.cycleImage = cycleImage;
+            section.cycleShowTrailResults = cycleShowTrailResults;
+            section.exceptionTrainingTrails = exceptionTrainingTrails;
+            section.messages = messages;
+            section.hasWaitingCycle = hasWaitingCycle
+        }
+        else {
+            const isCompleted = section.trails
+                ?.filter(
+                    (trail) => {
+                        const includes = [
+                            'default',
+                            'assessment',
+                            'separator',
+                            'certificate',
+                        ].includes(trail.type);
+                        return !includes;
+                    }
+                )
+                ?.every((trail) => trail.completion === 1);
+
+            section.hasAssessment = false;
+            section.isBlocked = false;
+            section.isCompleted = isCompleted;
+            section.hasCertificate = !!section.certificateLayout;
+        }
+
+        const completedTrailsType = section.completedTrailsType ?? 'optional';
+
+        if (completedTrailsType === 'hidden') {
+            section.trails = section.trails.filter(trail => !trail.isOptional);
+        }
+
+        if (section.trails?.length && !section.trails.some(trail => ['default', 'assessment', 'certificate'].includes(trail.type))) {
+            const [firstItem] = section.trails;
+
+            if (firstItem.type === 'separator') {
+                section.trails.shift();
+            }
+
+            section.trails.unshift({
+                type: 'default',
+                title: '',
+                id: 'default',
+            });
+        }
+
+        if (section.isCompleted) {
+            section.duration = calculateTotalDuration(
+                section.trails,
+                section.exceptionCertificateTrails,
+            );
+        }
+
+        return section;
+    });
+
+    return processedSections.filter(section => section.hasCertificate && section.isCompleted);
 }
 
 module.exports = {
@@ -1014,6 +1144,7 @@ module.exports = {
     isValidSectionTrailInfo,
     populateSectionTrails,
     setAssessmentHistoricOnSections,
+    setCerticateHistoricOnSections
 };
 
 function isNecessary(trail, tags) {
@@ -1187,11 +1318,11 @@ function getClassStatus(classFromCourse, inClass) {
         if (inClass) {
             return "registered"
         }
-        
+
         if (isCourseClosed || !courseHasSeats || !canRegister || !canCancel) {
             return "closed"
         }
-        
+
         if (isCourseOpen && (canRegister || canCancel)) {
             return "open";
         }

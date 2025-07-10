@@ -22,7 +22,7 @@ async function getEligibilityInfoByUserId(
         .lean();
 
     const userWithTags = await UsersWithProcessedTags.findById(userId).lean();
-
+    console.log("userWithTags", userWithTags);
     let eligibilityTags = tags?.map(tag => tag.value) ?? userWithTags.userTags ?? [];
 
     const sectionTrails = Array.from(new Set(sections.map(section => section.trails).flat()));
@@ -95,6 +95,86 @@ async function getEligibilityInfoByUserId(
     };
 }
 
+async function getInfoByUserId(
+    user,
+    options = {
+        sections: { skip: null, limit: null, filter: {} },
+        trails: { filter: {} },
+    },
+) {
+    const sections = await Section
+        .find(options?.sections?.filter ?? {})
+        .select('_id title description certificateLayout certificateDue trails isTraining completedTrailsType exceptionCertificateTrails')
+        .limit(options?.sections?.limit ?? 0)
+        .skip(options?.sections?.skip ?? 0)
+        .lean();
+
+    const sectionTrails = Array.from(new Set(sections.map(section => section.trails).flat()));
+
+    const trailsId = sectionTrails
+        .map(trails => getSectionTrailId(trails))
+        .filter(Boolean);
+
+    const populatedTrails = await populateTrails(
+        true,
+        {
+            enabled: true,
+            _id: { $in: trailsId },
+            ...(options?.trails?.filter ?? {})
+        }
+    );
+
+    const allItemsId = Array.from(
+        new Set(
+            populatedTrails.map(trail => trail.items.map(
+                item => item.itemID._id
+            )).flat()
+        )
+    );
+
+    const allTrackingUser = await Tracking.find({
+        userLogin: user.networkLogin,
+        item: {
+            $in: allItemsId
+        },
+        $or: [
+            { expiredCompletion: { $exists: false } },
+            { expiredCompletion: { $eq: null } },
+        ],
+    });
+
+    const allTrails = populatedTrails.map((trail) => {
+        const processedTrail = processTrailTracking(trail, allTrackingUser);
+        return processedTrail.trail;
+    });
+
+    const allSections = sections.map(section => {
+        const sectionTrails = section.trails.map(
+            trailInfo => {
+                if (isSectionTrailInfo(trailInfo)) {
+                    const trailId = getSectionTrailId(trailInfo);
+                    const trail = allTrails.find(
+                        trail => String(trail._id) === String(trailId)
+                    );
+
+                    return trail ?? trailInfo;
+                }
+
+                return trailInfo;
+            }
+        );
+
+        return { ...section, trails: sectionTrails }
+    });
+
+    return {
+        sections: allSections,
+        trails: allTrails,
+        trackings: allTrackingUser
+    };
+}
+
 module.exports = {
-    getEligibilityInfoByUserId
+    getEligibilityInfoByUserId,
+    getInfoByUserId
 }
