@@ -198,27 +198,26 @@ const business = {
         const idToDateMap = new Map();
 
         data.recommendedTrails?.forEach((trail) => {
-            idToDateMap.set(trail?.id, trail?.createdAt);
+            idToDateMap.set(trail?.id?.toString(), trail?.createdAt);
         });
 
         data.recommendedCourses?.forEach((course) => {
-            idToDateMap.set(course?.courseId, course?.createdAt);
+            idToDateMap.set(course?.courseId?.toString(), course?.createdAt);
         });
 
         const ids = Array.from(idToDateMap.keys()).flat();
 
         const [trails, courses] = await Promise.all([getTrailByIds(ids), getCoursesByIds(ids)]);
-
         return [
             ...trails.map((trail) => ({
                 ...trail,
                 type: 'Online',
-                createdAt: idToDateMap.get(trail._id.toString()),
+                createdAt: idToDateMap.get(trail._id?.toString()) || new Date(0),
             })),
             ...courses.map((course) => ({
                 ...course,
                 type: 'Presencial',
-                createdAt: idToDateMap.get(course.id) || new Date(0),
+                createdAt: idToDateMap.get(course.id?.toString()) || new Date(0),
             })),
         ];
     },

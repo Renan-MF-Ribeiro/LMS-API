@@ -16,7 +16,7 @@ const managersUsersController = {
         const userId = req.params?.id;
 
         const user = await User.findById(userId);
-        if (!user) return res.status(httpStatus.NOT_FOUND).json('Usuário não encontrado');
+        if (!user) return res.status(httpStatus.NOT_FOUND).json('User not found');
 
         const [userLastLogin, lastPresenceInCourseAt, lastConclusionAt, isMatrixActive] =
             await Promise.all([
@@ -27,14 +27,14 @@ const managersUsersController = {
             ]);
 
         const payload = {
-            lastAccessAt: userLastLogin?.lastLogin,
-            lastConclusionAt: lastConclusionAt?.completionAt,
-            lastPresenceInCourseAt: lastPresenceInCourseAt,
+            lastAccessAt: userLastLogin?.lastLogin || null,
+            lastConclusionAt: lastConclusionAt?.completionAt || null,
+            lastPresenceInCourseAt: lastPresenceInCourseAt || null,
         };
 
         if (isMatrixActive) {
             const lastApplicationAt = await matricesApi.get(`/users/detailed-info/${userId}`);
-            payload.lastApplicationAt = lastApplicationAt?.data?.data?.[0]?.lastApplicationAt;
+            payload.lastApplicationAt = lastApplicationAt?.data?.data?.[0]?.lastApplicationAt || null;
         }
 
         res.status(httpStatus.OK).send(payload);
@@ -156,7 +156,7 @@ const managersUsersController = {
 
             const suggestedContent = await RecommendedContent.findOne({ userId }, 'recommendedCourses recommendedTrails');
             const suggestions = await business.buildSuggestions(suggestedContent);
-            
+
             res.status(200).json(suggestions);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;

@@ -1,4 +1,3 @@
-const { getUserByToken, pagination, ordernation } = require("../../utils/functions");
 const business = require("./business");
 const { findUsersByMatrixConfig } = require("../config/business");
 const { matricesApi } = require('../matrices/http-adapter');
@@ -28,8 +27,7 @@ const managersController = {
 
     getOverview: async (req, res) => {
         try {
-            const applier = await getUserByToken(req);
-            const users = await findUsersByMatrixConfig(applier);
+            const users = await business.findManagedUsers(req);
 
             if (!users[0]) {
                 return res.status(httpStatus.OK).json([]);
@@ -50,8 +48,7 @@ const managersController = {
 
     getOverviewById: async (req, res) => {
         try {
-            const applier = await getUserByToken(req);
-            const appliableUsers = await findUsersByMatrixConfig(applier);
+            const appliableUsers = await business.findManagedUsers(req);
 
             if (appliableUsers.length === 0) {
                 return res.status(httpStatus.OK).json([]);
