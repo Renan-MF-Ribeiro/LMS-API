@@ -403,7 +403,7 @@ module.exports = {
                 recommendedTrails.push(...data.data.recommendedTrails);
                 recommendedCourses.push(...data.data.recommendedCourses);
             } catch (error) {
-                console.log({ error })
+                // console.log({ error })
             }
         }
         const arrRecommendedTrailsSections = await recommendedTrailsSections(trails, recommendedTrails);

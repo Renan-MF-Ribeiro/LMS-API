@@ -705,7 +705,7 @@ async function* handleStartedTrail({ user, meta }) {
 
     for (const trail of trails) {
         const trackings = allTrackingUser
-            .filter((tracking) => trail.items.some((item) => item.itemID.equals(tracking.item)))
+            .filter((tracking) => trail.items.some((item) => item.itemID?.equals?.(tracking.item)))
             .sort((prev, curr) => prev.createdAt.getTime() - curr.createdAt.getTime());
 
         const hasOne = trackings?.length === 1;

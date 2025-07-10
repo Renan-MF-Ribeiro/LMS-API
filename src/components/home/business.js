@@ -218,7 +218,7 @@ module.exports = {
 
                 for (const trail of arrTrails) {
                     for (const item of trail.items) {
-                        if (arrItemsID.indexOf(item.itemID._id.toString()) < 0) {
+                        if (item?.itemID && arrItemsID.indexOf(item.itemID._id.toString()) < 0) {
                             const completion = await checkItemCompleted(item, user);
                             if (completion === null) {
                                 numberOfItemsNotStarted++;
@@ -232,7 +232,7 @@ module.exports = {
                             }
                         }
 
-                        arrItemsID.push(item.itemID._id.toString());
+                        if (item.itemID?._id) arrItemsID.push(item.itemID._id.toString());
                     }
                 }
                 const {
