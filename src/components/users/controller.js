@@ -662,7 +662,7 @@ module.exports = {
             const entryRecord = await returnDateSinceFirstLogin(user?._id);
             const firstLogin = !user.passwordValid && !entryRecord
 
-            const [tokens, isManager, _, __] = await Promise.all([
+            const [tokens, isManager] = await Promise.all([
                 generateTokens(user, login, password),
                 isUserManager(user),
                 updateLastLoginUser(user?._id),
