@@ -79,7 +79,7 @@ module.exports = {
                 const mentoringBlocked = await mentorConfigController.isBlocked(user._id);
                 if (mentoringBlocked) {
                     query.$and.push({ type: { $ne: 'mentoring' } });
-                } 
+                }
             }
 
             // if (req?.segmentation) {
@@ -94,6 +94,8 @@ module.exports = {
 
             const existingMentoringChannel = await Channel.findOne({ type: 'mentoring' });
 
+            const existingNewsChannel = await Channel.findOne({ type: 'news' });
+
             if (!existingMentoringChannel) {
                 await Channel.create({
                     enabled: true,
@@ -106,9 +108,22 @@ module.exports = {
                 });
             }
 
+            if (!existingNewsChannel) {
+                await Channel.create({
+                    enabled: true,
+                    tags: ['ELEGE_geral'],
+                    banners: [],
+                    idSections: [],
+                    title: 'Notícias',
+                    position: 5,
+                    type: 'news'
+                });
+            }
+
             channels = await Promise.all(channels.map(async (channel) => {
                 if (channel.type === 'alura') return channel
                 if (channel.type === 'feed') return channel
+                if (channel.type === 'news') return channel
 
                 if(features?.mentoring && channel.type === 'mentoring') return channel
 

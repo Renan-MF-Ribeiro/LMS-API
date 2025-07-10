@@ -78,7 +78,8 @@ function bufferToStream (binary) {
 const forEachRow = (row, rowNumber, map, labels, users, previousHyperLink) => {
     if (rowNumber === 1) {
         // rowNumber === 1 means its headers
-        for (const columnHeader of row.values) {
+        for (let col = 1; col <= row.cellCount; col++) {
+            const columnHeader = row.getCell(col).value;
             const mapEntries = Object.entries(map);
             const labelDB = mapEntries.find(
                 (entry) => entry[1]?.field && columnHeader && entry[1]?.field === columnHeader
@@ -89,43 +90,50 @@ const forEachRow = (row, rowNumber, map, labels, users, previousHyperLink) => {
         const tmpUser = {};
         previousHyperLink.index = -1;
 
-        for (const value of row.values) {
-            if (!value) continue;
+        for (let col = 1; col <= labels.length; col++) {
+            const label = labels[col - 1];
+            if (!label) continue;
 
-            let i;
-            if (value.text) {
-                row.values.find((findValue, findIndex) => {
-                    if (!findValue?.text) return false;
-                    i = findIndex;
-                    return (
-                        findValue &&
-                        value &&
-                        findValue.text &&
-                        value.text &&
-                        findValue.text === value.text &&
-                        (previousHyperLink.index === -1 ||
-                            findIndex > previousHyperLink.index)
-                    );
+            const cell = row.getCell(col);
+            const value = cell?.value;
+            let i = col;
+
+            if (!value) {
+                if (['networkLogin', 'name', 'password'].includes(label)) {
+                    continue;
+                }
+
+                tmpUser[label] = null;
+                continue;
+            }
+
+            if (value?.text) {
+                row.eachCell((cellVal, cellIndex) => {
+                    if (!cellVal?.text) return;
+                    if (
+                        cellVal.text === value.text &&
+                        (previousHyperLink.index === -1 || cellIndex > previousHyperLink.index)
+                    ) {
+                        i = cellIndex;
+                    }
                 });
                 previousHyperLink.index = i;
             } else {
-                row.values.find((findValue, findIndex) => {
-                    if (findValue?.text) return false;
+                row.eachCell((cellVal, cellIndex) => {
+                    if (cellVal?.text) return;
                     if (
-                        tmpUser[labels[findIndex]] &&
-                        tmpUser[labels[findIndex]] === findValue
+                        tmpUser[labels[cellIndex - 1]] &&
+                        tmpUser[labels[cellIndex - 1]] === cellVal
                     )
-                        return false;
+                        return;
 
-                    i = findIndex;
-                    return findValue === value;
+                    if (cellVal === value) i = cellIndex;
                 });
             }
 
-            if (labels[i] && row.values[i]) {
-                tmpUser[labels[i]] = row.values[i].text ?? row.values[i] ?? '';
-            }
+            tmpUser[labels[i - 1]] = cell?.text ?? value ?? '';
         }
+
         users.push(tmpUser);
     }
 };
@@ -840,7 +848,6 @@ module.exports = {
 
     async readCSVUsersBuffer(file) {
         const map = await getConnectMap(true);
-
         const workbook = new ExcelJS.Workbook();
 
         const worksheet = await workbook.csv.read(file, {
@@ -848,29 +855,11 @@ module.exports = {
             map: (value) => value
         });
 
-        const headers = [];
+        const labels = [];
         const users = [];
 
         worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-            if (rowNumber === 1) {
-                return headers.push(...row.values);
-            }
-
-            const user = row.values.reduce((acc, rowValue, index) => {
-                const header = headers[index];
-
-                const mapInfo = Object.entries(map)
-                    .map(([key, mapValue]) => ({ key, mapValue }))
-                    .find(({ mapValue }) => header && String(header).trim() === String(mapValue?.field).trim());
-
-                if (!mapInfo) return acc;
-
-                acc[mapInfo.key] = rowValue?.text || rowValue || null;
-
-                return acc;
-            }, {});
-
-            return users.push(user);
+            forEachRow(row, rowNumber, map, labels, users);
         });
 
         return users;

@@ -7,13 +7,28 @@ const { Types } = require('mongoose');
 const meetingController = {
     async create(req, res) {
         const body = req.body;
+
         if (body.menteeId) {
             const [user, mentor] = await Promise.all([
                 User.findOne({ _id: new Types.ObjectId(body.menteeId) }).lean(),
                 User.findOne({ _id: new Types.ObjectId(body.mentorId) }).lean(),
             ]);
-            body.menteeEmail = user.email;
-            body.mentorEmail = mentor.email;
+
+            if(!user || !mentor) {
+                return _messages.badRequest(
+                    res,
+                    req,
+                    'User or mentor not found',
+                    'User or mentor not found',
+                    'mentoria',
+                    'create new mentoring'
+                );
+            }
+            
+            body.menteeEmail = user?.email;
+            body.menteeName = user?.name;
+            body.mentorName = mentor?.name;
+            body.mentorEmail = mentor?.email;
         }
         try {
             const { data } = await mentoringApi.post(`/meetings/`, body);
@@ -26,6 +41,7 @@ const meetingController = {
                 'create new mentoring'
             );
         } catch (error) {
+            console.log(error);
             return _messages.internalServer(
                 res,
                 req,

@@ -10,8 +10,9 @@ const schemaOptions = {
 }
 
 const CHANNEL_TYPES = Object.freeze({
-    alura: "alura",
-    mentoring: "mentoring"
+    ALURA: "alura",
+    MENTORING: "mentoring",
+    NEWS: "news"
 })
 
 const ChannelSchema = new mongoose.Schema({
@@ -32,4 +33,5 @@ const Channel = mongoose.model('channel', ChannelSchema)
 
 module.exports = {
     Channel,
+    CHANNEL_TYPES
 }

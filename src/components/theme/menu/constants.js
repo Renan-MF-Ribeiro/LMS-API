@@ -211,6 +211,44 @@ const MenuDefault = [
         index: 3
     },
     {
+        button: "news",
+        roles: [
+            "PERFIL_Gestor_Engajamento",
+        ],
+        feature: "news",
+        subMenu: [
+            {
+                index: 0,
+                button: "newsCampaigns",
+                roles: [
+                    "PERFIL_Gestor_Engajamento"
+                ]
+            },
+            {
+                index: 1,
+                button: "newsCategories",
+                roles: [
+                    "PERFIL_Gestor_Engajamento"
+                ]
+            },
+            {
+                index: 2,
+                button: "newsPublications",
+                roles: [
+                    "PERFIL_Gestor_Engajamento"
+                ]
+            },
+            {
+                index: 3,
+                button: "newsConfiguration",
+                roles: [
+                    "PERFIL_Gestor_Engajamento"
+                ]
+            }
+        ],
+        index: 4
+    },
+    {
         button: "feed",
         roles: [
             "PERFIL_Gestor_Engajamento",
@@ -239,7 +277,7 @@ const MenuDefault = [
                 index: 2
             },
         ],
-        index: 4
+        index: 5
     },
     {
         button: "activities",
@@ -262,7 +300,7 @@ const MenuDefault = [
                 index: 1
             },
         ],
-        index: 5
+        index: 6
     },
     {
         button: "presencialTrainings",
@@ -316,7 +354,7 @@ const MenuDefault = [
                 index: 5
             },
         ],
-        index: 6
+        index: 7
     },
     {
         button: "assessment",
@@ -347,7 +385,7 @@ const MenuDefault = [
                 index: 2
             },
         ],
-        index: 7
+        index: 8
     },
     {
         button: "message",
@@ -370,7 +408,7 @@ const MenuDefault = [
                 index: 1
             },
         ],
-        index: 8
+        index: 9
     },
     {
         button: "showcase",
@@ -443,7 +481,7 @@ const MenuDefault = [
                 index: 8
             },
         ],
-        index: 9
+        index: 10
     },
     {
         button: "certificate",
@@ -467,7 +505,7 @@ const MenuDefault = [
                 index: 1
             },
         ],
-        index: 10
+        index: 11
     },
     {
         button: "collaboration",
@@ -514,7 +552,7 @@ const MenuDefault = [
                 index: 4
             },
         ],
-        index: 11
+        index: 12
     },
     {
         button: "onboarding",
@@ -546,7 +584,7 @@ const MenuDefault = [
                 index: 2
             },
         ],
-        index: 12
+        index: 13
     },
     {
         button: "gamification",
@@ -615,7 +653,7 @@ const MenuDefault = [
                 index: 4
             },
         ],
-        index: 13
+        index: 14
     },
     {
         button: "mentoring",
@@ -673,7 +711,7 @@ const MenuDefault = [
                 index: 4
             }
         ],
-        index: 14
+        index: 15
     },
     {
         button: "dashboard",
@@ -697,7 +735,7 @@ const MenuDefault = [
                 index: 1
             },
         ],
-        index: 15
+        index: 16
     },
     {
         button: 'matrices',
@@ -733,14 +771,14 @@ const MenuDefault = [
                 index: 2
             }
         ],
-        index: 16
+        index: 17
     },
     {
         button: "internalGallery",
         roles: [
             "PERFIL_Conteudista",
         ],
-        index: 17
+        index: 18
     },
     {
         button: "system",
@@ -898,7 +936,7 @@ const MenuDefault = [
                 index: 3
             },
         ],
-        index: 18
+        index: 19
     }
 ];
 

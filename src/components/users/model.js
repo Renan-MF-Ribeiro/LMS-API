@@ -151,6 +151,14 @@ const userSchema = new mongoose.Schema(
         n5: { type: String, default: null, required: false },
         n6: { type: String, default: null, required: false },
         period: { type: String, default: null, required: false },
+        origin: {
+            type: {
+                type: String,
+                enum: ['LOAD_ADMIN', 'LOAD_SFTP', 'CONNECT', 'INTEGRATOR', 'ADMIN', 'SELF'],
+                required: false,
+            },
+            info: { type: String, required: false, trim: true }
+        },
     },
     {
         ...optionsSchema,

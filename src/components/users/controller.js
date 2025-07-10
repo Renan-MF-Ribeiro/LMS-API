@@ -121,6 +121,7 @@ const { getConnectMap, validateDataByConnectMap, getConnectEligibilities } = req
 const { getFormErrorsByMapConfig, getDefaultForm, getAdminForm, getFormErrorsByFormValidation } = require('../forms/business');
 
 const { getDbCurrentFeatures } = require('../../utils/features');
+const { ObjectId } = require('mongoose').Types;
 const { Profile } = require('../profiles/model');
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -220,6 +221,7 @@ async function generateTokens (user, login, password) {
         ref: user._id,
         clientId: process.env.CLIENT_ID,
         userName: user.name,
+        networkLogin: user.networkLogin,
         email: user.email,
         userTags: eligibilities,
         profiles: profilesIDS.result,
@@ -2680,11 +2682,12 @@ module.exports = {
     },
 
     async deleteClassTag (req, res) {
-        const { tag, userId } = req.body;
+        const { tag, userId, classIdentifier } = req.body;
+        const classGroups = classIdentifier ? { groupCode: tag, classIdentifier: { $in: [classIdentifier, new ObjectId(classIdentifier)] } } : { groupCode: tag, classIdentifier: { $exists: false } };
 
         try {
             await User.findByIdAndUpdate(userId, {
-                $pull: { classGroups: { groupCode: tag } },
+                $pull: { classGroups: classGroups },
             });
             _messages.success(res, req, { message: 'Tag de curso removida' });
         } catch (error) {
@@ -2695,10 +2698,13 @@ module.exports = {
     async addClassTag (req, res) {
         const { tag, userId } = req.body;
         try {
+            const classIdentifier = new ObjectId();
+            console.log('classIdentifier', classIdentifier);
             await User.findByIdAndUpdate(userId, {
                 $addToSet: {
                     classGroups: {
                         ...tag,
+                        classIdentifier,
                         startDate: new Date(tag.startDate),
                         limitDate: new Date(tag.limitDate),
                     },
@@ -2718,7 +2724,8 @@ module.exports = {
             const { classGroups } = await User.findOne({ _id });
             const newTags = [];
             for (group of classGroups) {
-                if (group._id == tag._id) {
+                console.log('group', group.classIdentifier, tag.classIdentifier);
+                if (group.classIdentifier == tag.classIdentifier) {
                     group = tag;
                     newTags.push({
                         ...group,
