@@ -9,9 +9,9 @@ module.exports = express
     .get('/:id/matrices', isMatrixModuleActive, _controller.findUsersMatrices)
     .get('/:userId/matrix/:matrixId', isMatrixModuleActive, _controller.findCategoriesToRelease)
     .get('/:id/evaluations-result', isMatrixModuleActive, _controller.findUsersEvaluationsResultSuggestions)
-    .get('/:id/suggestions', isMatrixModuleActive, _controller.findSuggestedContent)
-    .get('/:id', isMatrixModuleActive, _controller.findOne)
-    .post('/', isMatrixModuleActive, _controller.create)
+    .get('/:id/suggestions', _controller.findSuggestedContent)
+    .get('/:id', _controller.findOne)
+    .post('/', _controller.create)
     .post('/suggest-content', _controller.suggestContent)
-    .put('/:id', isMatrixModuleActive, _controller.update)
-    .delete('/:id', isMatrixModuleActive, _controller.delete);
+    .put('/:id', _controller.update)
+    .delete('/:id', _controller.delete);
