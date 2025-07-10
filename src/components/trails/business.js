@@ -214,7 +214,7 @@ module.exports = {
                 const userName = trail?.author?.name || '';
 
                 let supportMaterialEnabled = false;
-                const filteredSupportArray = trail.supportMaterial.filter(
+                const filteredSupportArray = trail.supportMaterial?.filter(
                     (x) => x.deleted === false
                 );
 
