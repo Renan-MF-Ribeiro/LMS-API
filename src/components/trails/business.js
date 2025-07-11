@@ -200,16 +200,7 @@ module.exports = {
             }
         } else {
             for (const trail of trails) {
-                const arrItems = trail.items.map((i) => ({
-                    urlItem: i.urlItem,
-                    urlTrail: i.urlTrail,
-                    itemID: i.itemID,
-                    mandatory: i.mandatory,
-                    chief: i.chief,
-                    optional: i.optional,
-                    afterSeparator: i.afterSeparator,
-                    enabled: i.enabled,
-                }));
+                const arrItems = trail.items.filter(i => i?.itemID);
 
                 const userName = trail?.author?.name || '';
 
