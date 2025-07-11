@@ -6,7 +6,7 @@ const {
     processTrailTracking,
 } = require('../../utils/functions');
 const configBusiness = require('../config/business');
-const { getCoursesByIds } = require('../courses/business');
+const { getCoursesByIds, getCoursesByUserID } = require('../courses/business');
 const { ClassModel } = require('../courses/model');
 const { matricesApi } = require('../matrices/http-adapter');
 const { Features } = require('../theme/features/model');
@@ -239,7 +239,7 @@ const business = {
     },
 
     getAvailableUsersByTrail: async (req) => {
-        const trailId = req.query?.id;
+        const trailId = req.query?.id || req.query?.trailId;
 
         const [users, trail] = await Promise.all([
             module.exports.findManagedUsers(req),
@@ -263,6 +263,7 @@ const business = {
         ]);
 
         const usersData = users.map((user) => {
+            // Se volumetria for grande (+100 usuários em uma turma), começar a pensar em modificar esta lógica:
             const userStartedTrail = trackings?.some((t) => t?.userLogin === user?.networkLogin);
             const trailWasRecommended = userRecommendations?.some((rec) => {
                 return rec?.recommendedTrails?.some((recTrail) => recTrail?.id?.toString() === trailId);
@@ -275,15 +276,44 @@ const business = {
                 status: trailWasRecommended || userStartedTrail ? 'started' : undefined
             };
         });
-        return {
-            trail: {
-                _id: trail?._id,
-                title: trail?.title,
-                description: trail?.description,
-            },
-            users: usersData,
-        }
+        return usersData
     },
-};
 
-module.exports = business;
+    getAvailableUsersByCourse: async (req) => {
+        const classId = req.query?.id || req.query?.classId;
+
+        const [users, classFound] = await Promise.all([
+            module.exports.findManagedUsers(req),
+            ClassModel.findOne({ _id: new Types.ObjectId(classId) }).populate('courseID').lean()
+        ]);
+
+        if(!classFound || !users[0]) {
+            return [];
+        }
+
+        // Lógica para verificar se o usuário já concluiu o curso anteriormente
+        /* const alreadyConcluded = new Set();
+        for (const user of users) {
+            const concluded = await getCoursesByUserID(user._id)
+            if (concluded?.some((c) => c.id.toString() === classId)) {
+                alreadyConcluded.add(user._id.toString());
+            }
+        } */
+
+        const userData = users?.map((user) => {
+            // Se volumetria for grande (+100 usuários em uma turma), começar a pensar em modificar esta lógica:
+            const userInClass = classFound?.users?.some((u) => u.userID.toString() === user._id.toString());
+
+            return {
+                name: user?.name,
+                networkLogin: user?.networkLogin,
+                userId: user?._id,
+                status: userInClass ? 'registered' : undefined,
+                //alreadyConcluded: alreadyConcluded.has(user._id?.toString())
+            };
+        })
+        return userData
+    }
+}
+
+module.exports = business

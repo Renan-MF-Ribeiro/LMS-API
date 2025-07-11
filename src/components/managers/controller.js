@@ -139,7 +139,7 @@ const managersController = {
             }
 
             if(type === 'courses'){
-                const response = await business.getAvailableUsersByCourse(contentId);
+                const response = await business.getAvailableUsersByCourse(req);
                 return res.status(200).json(response);
             }
 

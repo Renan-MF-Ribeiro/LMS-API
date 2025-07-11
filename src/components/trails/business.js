@@ -368,7 +368,7 @@ module.exports = {
             query['tags.value'] = { $in: tags?.map((tag) => tag?.value) };
         }
 
-        return await Trail.find(query).limit(10);
+        return await Trail.find(query, 'title description').limit(10);
     },
 
     async getTrailByIds(trailIds) {
