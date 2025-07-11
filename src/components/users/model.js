@@ -159,6 +159,12 @@ const userSchema = new mongoose.Schema(
             },
             info: { type: String, required: false, trim: true }
         },
+        login_type: {
+            type: String,
+            enum: ['SSO', 'FORM', 'BOTH'],
+            required: false,
+            default: 'BOTH',
+        },
     },
     {
         ...optionsSchema,
@@ -728,6 +734,13 @@ const defaultUserMap = {
         type: 'string',
         config: null,
     },
+    login_type: {
+        field: 'TIPO_LOGIN',
+        label: 'Tipo de login',
+        activeInForms: true,
+        type: 'string',
+        config: null,
+    },
 };
 
 const defaultOnboardingUserMap = {
@@ -846,6 +859,13 @@ const defaultOnboardingUserMap = {
         field: 'OPCIONAL_ELEGIBILIDADE6',
         label: 'OPCIONAL_ELEGIBILIDADE6',
         type: 'string'
+    },
+    login_type: {
+        field: 'TIPO_LOGIN',
+        label: 'Tipo de login',
+        activeInForms: true,
+        type: 'string',
+        config: null,
     },
 };
 
