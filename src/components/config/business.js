@@ -94,7 +94,12 @@ module.exports = {
         if (!rule) {
             rule = await ConfigModel.findOneAndUpdate(
                 { type: ConfigTypes.ManagerRule },
-                { value: [] },
+                {
+                    value: {
+                        rules: [],
+                        useIsManagerFlag: true,
+                    }
+                },
                 { new: true, upsert: true }
             );
         }

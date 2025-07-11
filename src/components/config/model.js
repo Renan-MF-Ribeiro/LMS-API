@@ -423,16 +423,18 @@ const ManagerConfigModel = ConfigModel.discriminator(
             value: {
                 default: [],
                 required: false,
-                type: [new mongoose.Schema(
+                type: new mongoose.Schema(
                     {
-                        managerField: { type: String, required: true, trim: true },
-                        managerValues: { type: [String], required: true },
-                        usersField: { type: String, required: true, trim: true },
+                        rules: [{
+                            managerField: { type: String, required: true, trim: true },
+                            managerValues: { type: [String], required: true },
+                            usersField: { type: String, required: true, trim: true },
 
+                        }],
+                        useIsManagerFlag: { type: Boolean, default: true },
                     },
-                        valueSchemaOptions
-                    ),
-                ],
+                    valueSchemaOptions
+                ),
             },
         },
         schemaOptions

@@ -92,10 +92,16 @@ module.exports = {
     async setManagerRule(req, res) {
         const rules = req.body;
 
-        if (rules?.length === 0 || !rules) {
+        if (!rules) {
+
+            const emptyRule = {
+                rules: [],
+                useIsManagerFlag: true,
+            }
+
             ConfigModel.findOneAndUpdate(
                 { type: ConfigTypes.ManagerRule },
-                { value: [] },
+                { value: emptyRule },
                 { new: true }
             );
             return _messages.successEmpty(res, req, 'Regra de gestores aplicada com sucesso.');
@@ -103,7 +109,12 @@ module.exports = {
 
         await ConfigModel.findOneAndUpdate(
             { type: ConfigTypes.ManagerRule },
-            { value: rules },
+            {
+                value: {
+                    rules: rules.rules || [],
+                    useIsManagerFlag: rules.useIsManagerFlag || true,
+                }
+            },
             { new: true, upsert: true }
         );
 
