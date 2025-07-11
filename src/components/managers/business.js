@@ -270,9 +270,10 @@ const business = {
             });
 
             return {
+                userId: user?._id,
                 name: user?.name,
                 networkLogin: user?.networkLogin,
-                userId: user?._id,
+                office: user?.office,
                 status: trailWasRecommended || userStartedTrail ? 'started' : undefined
             };
         });
@@ -291,7 +292,8 @@ const business = {
             return [];
         }
 
-        // Lógica para verificar se o usuário já concluiu o curso anteriormente
+        // Lógica para verificar se o usuário já concluiu o curso anteriormente:
+
         /* const alreadyConcluded = new Set();
         for (const user of users) {
             const concluded = await getCoursesByUserID(user._id)
@@ -305,9 +307,10 @@ const business = {
             const userInClass = classFound?.users?.some((u) => u.userID.toString() === user._id.toString());
 
             return {
+                userId: user?._id,
                 name: user?.name,
                 networkLogin: user?.networkLogin,
-                userId: user?._id,
+                office: user?.office,
                 status: userInClass ? 'registered' : undefined,
                 //alreadyConcluded: alreadyConcluded.has(user._id?.toString())
             };
