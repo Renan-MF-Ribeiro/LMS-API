@@ -271,7 +271,7 @@ const business = {
                 name: user?.name,
                 networkLogin: user?.networkLogin,
                 userId: user?._id,
-                status: trailWasRecommended || userStartedTrail ? 'started' : 'not_started',
+                status: trailWasRecommended || userStartedTrail ? 'started' : undefined
             };
         });
         return {
