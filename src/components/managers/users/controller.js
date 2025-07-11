@@ -47,7 +47,7 @@ const managersUsersController = {
                 business.findManagedUsers(req),
                 business.isMatrixActive(),
             ]);
-
+            
             if(!users?.[0]) {
                 return res.status(httpStatus.OK).json([]);
             }

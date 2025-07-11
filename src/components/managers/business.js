@@ -29,12 +29,14 @@ const business = {
             return [];
         }
 
-        let query = { enabled: true, _id: { $ne: user._id } };
-        query = matchingRules.map((rule) => {
-            const field = rule?.usersField
+        let query = matchingRules.map((rule) => {
+            const usersField = rule?.usersField
+            const managerField = rule?.managerField;
+
             return {
-                [field]: user[field],
-                ...query,
+                [usersField]: user[usersField],
+                [managerField]: { $nin: rule?.managerValues },
+                enabled: true,
             };
         });
 
@@ -55,7 +57,7 @@ const business = {
     isUserManager: async (user) => {
         if (!user) return false;
         const rules = await configBusiness.getManagerRule();
-        for (const rule of rules) {
+        for (const rule of rules.rules || []) {
             if (rule?.managerValues?.some((v) => user?.[rule?.managerField] === v)) {
                 return true;
             }
@@ -66,7 +68,7 @@ const business = {
 
     getMatchingRules: async (user, rules) => {
         if (!user || !rules) return [];
-        return rules?.filter((rule) => {
+        return rules?.rules?.filter((rule) => {
             return rule?.managerValues?.some((value) => user?.[rule?.managerField] === value);
         });
     },
@@ -169,7 +171,7 @@ const business = {
             },
         });
 
-        const responseUsers = data.data?.map((user) => {
+        const responseUsers = data?.data?.map((user) => {
             const foundUser = users?.find((u) => u?._id?.toString() === user?.userId);
             return {
                 user: {
@@ -184,8 +186,7 @@ const business = {
                 performance: user?.performance,
                 hasPendingActions: user?.hasPendingActions,
             };
-        });
-
+        }) || [];
         return await business.handleReqTarget(responseUsers, target);
     },
 

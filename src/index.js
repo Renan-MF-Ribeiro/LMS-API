@@ -207,7 +207,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/chat', chatIaRoutes)
     .use('/integrator', integratorRoutes)
     .use('/i18n', i18nRoutes)
-    .use('/manager', managerRoutes)
+    .use('/manager', validateTokenRoute, managerRoutes)
     .use('/news', validateTokenRoute, newsRoutes);
 
 app.use(errorHandler);

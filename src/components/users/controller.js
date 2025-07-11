@@ -135,14 +135,7 @@ function hideCPFNumbers(cpf) {
 
 async function validateUserAndPassword(res, req, login, passwordDecripted) {
     if (!login || !passwordDecripted) {
-        return _messages.forbidden(
-            res,
-            req,
-            'Usuário ou senha não informados',
-            'Erro de validação',
-            'users',
-            'ldapSignIn'
-        );
+        return "Usuário ou senha não informados"
     }
 
     // Verifica se usuário existe
@@ -152,14 +145,7 @@ async function validateUserAndPassword(res, req, login, passwordDecripted) {
         return obj.valid && bcrypt.compareSync(passwordDecripted, obj.hash);
     });
     if (!user || password?.length === 0) {
-        return _messages.forbidden(
-            res,
-            req,
-            'Usuário ou senha inválidos.',
-            'Erro de validação',
-            'users',
-            'ldapSignIn'
-        );
+        return "Usuário ou senha inválidos."
     }
 
     await handleBlockUser(user);

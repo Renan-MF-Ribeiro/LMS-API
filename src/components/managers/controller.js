@@ -16,6 +16,7 @@ const managersController = {
                 business.findManagedUsers(req),
                 business.isMatrixActive(),
             ]);
+            
             if (isMatrixActive) {
                 users = await business.handleUsersWhenMatrixIsActive(req.query, users, target);
             }
