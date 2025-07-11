@@ -26,13 +26,18 @@ module.exports = {
     },
 
     /**
-     * Popula os itens de uma trilha.
-     * @param {*} flag Caso a flag seja "true" popula o item com a relações com a trilha.
-     * @param {*} findObj Objeto que o mongo usa para pesquisar
-     * @param {*} sortObj Objeto que o mongo usa para ordenar
-     * @param {*} skip
-     * @param {*} limit
-     * @param {boolean} filterEnabled Flag que indica se deve filtrar por habilitado ou não. (Padrão: true)
+     * Populates and returns an array of trail objects with detailed information, including items, author, support materials, gallery status, social status, and other metadata.
+     *
+     * @async
+     * @function populateTrails
+     * @param {boolean} [flag=true] - Determines the population strategy for items (true for lean population, false for full item fetch). Prefer `true` for performance.
+     * @param {Object} [findObj={}] - MongoDB query object to filter trails.
+     * @param {Object} [sortObj={}] - MongoDB sort object to order trails.
+     * @param {boolean} [filterEnabled=true] - If true, filters items to only include enabled and non-deleted ones.
+     * @param {Object} [match={}] - MongoDB query object to filter items.
+     * @param {number|null} [skip=null] - Number of trails to skip (for pagination).
+     * @param {number|null} [limit=null] - Maximum number of trails to return (for pagination).
+     * @returns {Promise<Array<Object>>} Array of populated trail objects with metadata, items, author, and status fields.
      */
     async populateTrails(
         flag = true,
@@ -95,7 +100,11 @@ module.exports = {
             .sort(sortObj);
 
         if (skip !== null) {
-            trailQuery.skip(skip).limit(limit);
+            trailQuery.skip(skip);
+        }
+
+        if (limit !== null) {
+            trailQuery.limit(limit);
         }
         
         const trails = await trailQuery.lean();
