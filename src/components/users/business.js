@@ -438,6 +438,7 @@ module.exports = {
         data.terminationDate = parseDate(data.terminationDate);
         data.vacationStartDate = parseDate(data.vacationStartDate);
         data.vacationEndDate = parseDate(data.vacationEndDate);
+        data.loginType = data.loginType == 'AMBOS' ? 'BOTH' : data.loginType; 
 
         data.enabled = true;
         data.onboarding = onboarding;

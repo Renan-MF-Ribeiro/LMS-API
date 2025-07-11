@@ -621,7 +621,16 @@ module.exports = {
         const user = await User.findOne({
             _id: new mongoose.Types.ObjectId(req.user._id),
         });
-
+        if(user.loginType && user.loginType !== 'FORM' && user.loginType !== 'BOTH') {
+            return _messages.forbidden(
+                res,
+                req,
+                'Usuário ou senha inválidos.',
+                'Usuário ou senha inválidos.',
+                'users',
+                'ldapSignIn'
+            );
+        }
         const { login, password } = req.body;
 
         try {
@@ -795,13 +804,13 @@ module.exports = {
 
             const user = await User.findOne(query).lean();
 
-            if (!user) {
+            if (!user || (user.loginType && ( user.loginType !== 'SSO' && user.loginType !== 'BOTH'))) {
                 await sleep(3000);
 
                 return _messages.forbidden(
                     res,
                     req,
-                    'Usuário ou senha inválidos.',
+                    'Usuário ou senha inválidos',
                     { claim, claimKey: ssoForm?.claim ?? '' },
                     'users',
                     'singleSignOn'
