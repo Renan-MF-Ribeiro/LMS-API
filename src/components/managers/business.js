@@ -24,11 +24,19 @@ const business = {
         ]);
 
         const matchingRules = await module.exports.getMatchingRules(user, rules);
+
         if (!matchingRules?.[0]) {
             return [];
         }
 
-        let query = matchingRules?.map((r) => ({ [r.managerField]: { $in: r.managerValues } }));
+        let query = { enabled: true, _id: { $ne: user._id } };
+        query = matchingRules.map((rule) => {
+            const field = rule?.usersField
+            return {
+                [field]: user[field],
+                ...query,
+            };
+        });
 
         if (req.query.searchBy) {
             const searchRegex = new RegExp(req.query.searchBy, 'i');
@@ -47,7 +55,6 @@ const business = {
     isUserManager: async (user) => {
         if (!user) return false;
         const rules = await configBusiness.getManagerRule();
-        const teste = rules[0]?.managerField;
         for (const rule of rules) {
             if (rule?.managerValues?.some((v) => user?.[rule?.managerField] === v)) {
                 return true;
@@ -59,7 +66,6 @@ const business = {
 
     getMatchingRules: async (user, rules) => {
         if (!user || !rules) return [];
-
         return rules?.filter((rule) => {
             return rule?.managerValues?.some((value) => user?.[rule?.managerField] === value);
         });
@@ -251,31 +257,31 @@ const business = {
                 item: { $in: allItemIds },
             }),
             RecommendedContent.find({
-                userId: { $in: users.map((u) => u.userId) },
-                item: { $in: allItemIds },
+                userId: { $in: users.map((u) => u._id) }
             }),
         ]);
 
-
-        return users?.map((user) => {
+        const usersData = users.map((user) => {
             const userStartedTrail = trackings?.some((t) => t?.userLogin === user?.networkLogin);
-            const trailWasRecommended = userRecommendations?.find(
-                (rec) => rec?.userId?.toString() === user?.userId?.toString()
-            );
+            const trailWasRecommended = userRecommendations?.some((rec) => {
+                return rec?.recommendedTrails?.some((recTrail) => recTrail?.id?.toString() === trailId);
+            });
 
             return {
-                user: {
-                    name: user?.name,
-                    networkLogin: user?.networkLogin,
-                    userId: user?.userId,
-                },
-                trail: {
-                    title: trail?.title,
-                    description: trail?.description,
-                },
-                status: userStartedTrail || trailWasRecommended ? 'started' : 'not_started',
+                name: user?.name,
+                networkLogin: user?.networkLogin,
+                userId: user?._id,
+                status: trailWasRecommended || userStartedTrail ? 'started' : 'not_started',
             };
         });
+        return {
+            trail: {
+                _id: trail?._id,
+                title: trail?.title,
+                description: trail?.description,
+            },
+            users: usersData,
+        }
     },
 };
 

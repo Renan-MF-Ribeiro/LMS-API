@@ -42,16 +42,28 @@ const managersUsersController = {
     },
 
     findManagedUsers: async (req, res) => {
-        let [users, isMatrixActive] = await Promise.all([
-            business.findManagedUsers(req),
-            business.isMatrixActive(),
-        ]);
+        try {
+            let [users, isMatrixActive] = await Promise.all([
+                business.findManagedUsers(req),
+                business.isMatrixActive(),
+            ]);
 
-        if (isMatrixActive) {
-            users = await business.handleUsersWhenMatrixIsActive(req.query, users);
+            if(!users?.[0]) {
+                return res.status(httpStatus.OK).json([]);
+            }
+
+            if (isMatrixActive) {
+                users = await business.handleUsersWhenMatrixIsActive(req.query, users);
+            }
+            const paginatedUsers = business.paginateUsers(req, users);
+            res.status(200).json(paginatedUsers);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            console.log({ error: errorMessage });
+            res.status(statusCode).json(errorMessage);
         }
-        const paginatedUsers = business.paginateUsers(req, users);
-        res.status(200).json(paginatedUsers);
     },
 
     findUsersConcludedCourses: async (req, res) => {
@@ -128,7 +140,7 @@ const managersUsersController = {
                 },
             };
 
-            RecommendedContent.findOneAndUpdate(
+            await RecommendedContent.findOneAndUpdate(
                 { userId: dto.userId },
                 updateOperations,
                 {
