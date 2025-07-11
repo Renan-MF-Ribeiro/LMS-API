@@ -734,7 +734,7 @@ const defaultUserMap = {
         type: 'string',
         config: null,
     },
-    login_type: {
+    loginType: {
         field: 'TIPO_LOGIN',
         label: 'Tipo de login',
         activeInForms: true,
@@ -860,7 +860,7 @@ const defaultOnboardingUserMap = {
         label: 'OPCIONAL_ELEGIBILIDADE6',
         type: 'string'
     },
-    login_type: {
+    loginType: {
         field: 'TIPO_LOGIN',
         label: 'Tipo de login',
         activeInForms: true,
