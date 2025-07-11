@@ -10,6 +10,7 @@ const { matricesApi } = require('../../matrices/http-adapter');
 const RecommendedContent = require('../schema/model');
 const { Trail } = require('../../trails/model');
 const { ClassModel, CourseModel } = require('../../courses/model');
+const courseBusiness = require('../../courses/business');
 
 const managersUsersController = {
     findUserById: async (req, res) => {
@@ -47,8 +48,8 @@ const managersUsersController = {
                 business.findManagedUsers(req),
                 business.isMatrixActive(),
             ]);
-            
-            if(!users?.[0]) {
+
+            if (!users?.[0]) {
                 return res.status(httpStatus.OK).json([]);
             }
 
@@ -121,6 +122,9 @@ const managersUsersController = {
             const dto = req.body;
             await validateSuggestions(dto);
 
+            const receivedUsers = dto.userId || dto.usersIds || dto.users;
+            const userArray = Array.isArray(receivedUsers) ? receivedUsers : [receivedUsers];
+
             const updateOperations = {
                 $addToSet: {
                     recommendedCourses: {
@@ -140,14 +144,28 @@ const managersUsersController = {
                 },
             };
 
-            await RecommendedContent.findOneAndUpdate(
-                { userId: dto.userId },
+            await RecommendedContent.updateMany(
+                { userId: { $in: userArray?.map((user) => new ObjectId(user)) } },
                 updateOperations,
                 {
                     upsert: true,
                     new: true,
                 },
             );
+
+            if (dto.recommendedCourses?.length > 0) {
+                const users = await User.find({ _id: { $in: { userArray } } });
+
+                if (!users?.[0]) {
+                    throw new ApiError('Usuário(s) não encontrado', 404);
+                }
+
+                for await (const recommendedCourse of dto.recommendedCourses) {
+                    for await (const user of users) {
+                        await courseBusiness.listJoin(user, recommendedCourse.classId);
+                    }
+                }
+            }
 
             return res.status(200).json("Recomendado com sucesso");
         } catch (error) {
@@ -182,8 +200,8 @@ const managersUsersController = {
 
 // utils
 const validateSuggestions = async (dto) => {
-    if (!dto.userId) {
-        throw new Error('userId is required');
+    if (!dto.userId || dto.users.length || !dto.usersIds.length) {
+        throw new Error('user is required');
     }
 
     if (dto.recommendedTrails?.[0])
