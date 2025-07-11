@@ -112,7 +112,7 @@ module.exports = {
 
     async getManagerRule(req, res) {
         const rule = await _business.getManagerRule();
-        return _messages.success(res, req, rule?.value);
+        return _messages.success(res, req, rule);
     },
 
     async updateRule(req, res) {

@@ -91,7 +91,6 @@ module.exports = {
         let rule = await ConfigModel.findOne({
             type: ConfigTypes.ManagerRule,
         });
-        
         if (!rule) {
             rule = await ConfigModel.findOneAndUpdate(
                 { type: ConfigTypes.ManagerRule },
