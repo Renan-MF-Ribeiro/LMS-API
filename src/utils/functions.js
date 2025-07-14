@@ -823,7 +823,7 @@ module.exports = {
         });
 
         const filteredTrails = trails.filter((trail) => {
-            const trailItems = trail.items.map((item) => String(item.itemID._id));
+            const trailItems = trail.items?.filter(i => i.itemID).map((item) => String(item.itemID._id)) ?? [];
             return trailItems.some((item) => trackingMap.has(item));
         });
 
@@ -832,14 +832,13 @@ module.exports = {
 
             const trailItems = trail.items.filter((item) => item.itemID?.enabled === true);
 
-
             if (trailItems.length && trailItems.every(({ itemID }) => itemID?.completion === 1)) {
                 completedTrails.push(trail);
                 continue;
             }
 
             const trailItemsDb = await Item.find({
-                _id: { $in: trail.items.map((item) => new mongoose.Types.ObjectId(item.itemID._id)) },
+                _id: { $in: trailItems.map((item) => new mongoose.Types.ObjectId(item.itemID._id)) },
             }).select('_id titleURL').lean();
             
             let nextItem = null;
