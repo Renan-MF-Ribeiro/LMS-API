@@ -20,6 +20,7 @@ const { Trail } = require('../trails/model');
 const { cloneDeep } = require('lodash');
 const { User } = require('../users/model');
 const { getProcessedTags } = require('../users/business');
+const RecommendedContent = require('../managers/schema/model');
 const { ObjectId } = require('mongoose').Types
 
 const isSectionTrailInfo = (trail) => (trail.type === 'trail' && ObjectId.isValid(trail._id)) || ObjectId.isValid(trail);
@@ -924,44 +925,46 @@ module.exports = {
             }
         });
     },
-    async recommendedTrailsSections(trails, recommendedTrails) {
+    async recommendedTrailsSections(trails, userId) {
         try {
-            const section = await Section.findOne({
-                defaultType: DEFAULT_TYPES.RECOMMENDED_TRAILS,
-                active: 1,
-            }).lean();
-
-            if (!section) {
-                return []
+            const [section, recommendations] = await Promise.all([
+                Section.findOne({
+                    defaultType: DEFAULT_TYPES.RECOMMENDED_TRAILS,
+                    active: 1,
+                }).lean(),
+                RecommendedContent.findOne({ userId })
+            ]);
+            if (!section || !recommendations || recommendations?.length === 0) {
+                return [];
             }
-            const trailIds = new Set(recommendedTrails.map((trail) => trail.id.toString()));
-            for (const trail of trails) {
 
-                const isRecommended = trailIds.has(trail._id.toString());
+            for (const trail of trails) {
+                const isRecommended = recommendations?.recommendedTrails?.some((recommendedTrail) => recommendedTrail?.id?.toString() === trail?._id?.toString());
                 if (isRecommended) {
-                    section.trails.push(trail)
+                    section.trails?.push(trail);
                 }
             }
-
             return section;
         } catch (error) {
             console.log(error.response?.data ?? error.message);
         }
     },
 
-    async recommendedCoursesSections(userId, recommendedCourses) {
+    async recommendedCoursesSections(userId) {
         try {
-            const section = await Section.findOne({
-                defaultType: DEFAULT_TYPES.RECOMMENDED_COURSES,
-                active: 1,
-            }).lean();
-
-            if (!section) {
-                return []
+            const [section, recommendations] = await Promise.all([
+                Section.findOne({
+                    defaultType: DEFAULT_TYPES.RECOMMENDED_COURSES,
+                    active: 1,
+                }).lean(),
+                RecommendedContent.findOne({ userId })
+            ]);
+            if (!section || !recommendations || recommendations?.length === 0) {
+                return [];
             }
 
             let elegibleCourses = await CourseModel.find({
-                _id: { $in: recommendedCourses.map((rc) => rc.courseId) }
+                _id: { $in: recommendations?.recommendedCourses?.map((rc) => rc.courseId) }
             })
                 .select({
                     title: 1,

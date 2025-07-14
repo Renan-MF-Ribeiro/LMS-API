@@ -366,25 +366,8 @@ module.exports = {
                 const arrFavoriteSections = await favoriteSections(trails, user._id);
                 const arrMostSeenSections = await mostSeenSections(trails);
                 const arrCoursesSections = await courseInSections(tags, user._id);
-
-                const recommendedTrails = [];
-                const recommendedCourses = [];
-
-                if (req?.features?.matrices) {
-                    try {
-                        const { data } = await matricesApi.get(`/users/${user._id}`, {
-                            headers: {
-                                authorization: `Bearer ${req.headers.authorization}`,
-                            },
-                        });
-                        recommendedTrails.push(...data.data.recommendedTrails);
-                        recommendedCourses.push(...data.data.recommendedCourses);
-                    } catch (error) {
-                        console.log({ error })
-                    }
-                }
-                const arrRecommendedTrailsSections = await recommendedTrailsSections(trails, recommendedTrails);
-                const arrRecommendedCoursesSections = await recommendedCoursesSections(user._id, recommendedCourses);
+                const arrRecommendedTrailsSections = await recommendedTrailsSections(trails, user._id);
+                const arrRecommendedCoursesSections = await recommendedCoursesSections(user._id);
 
                 function limitArray(section) {
                     if (!section) return [];
