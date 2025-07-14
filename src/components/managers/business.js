@@ -283,12 +283,11 @@ const business = {
 
     getAvailableUsersByCourse: async (req) => {
         const classId = req.query?.id || req.query?.classId;
-
         const [users, classFound] = await Promise.all([
             module.exports.findManagedUsers(req),
             ClassModel.findOne({ _id: new Types.ObjectId(classId) }).populate('courseID').lean()
         ]);
-
+        console.log('Class Found:', classFound);
         if(!classFound || !users[0]) {
             return [];
         }

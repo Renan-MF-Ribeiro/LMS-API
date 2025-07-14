@@ -11,6 +11,7 @@ const RecommendedContent = require('../schema/model');
 const { Trail } = require('../../trails/model');
 const { ClassModel, CourseModel } = require('../../courses/model');
 const courseBusiness = require('../../courses/business');
+const { Types } = require('mongoose');
 
 const managersUsersController = {
     findUserById: async (req, res) => {
@@ -145,7 +146,7 @@ const managersUsersController = {
             };
 
             await RecommendedContent.updateMany(
-                { userId: { $in: userArray?.map((user) => new ObjectId(user)) } },
+                { userId: { $in: userArray?.map((user) => new Types.ObjectId(user)) } },
                 updateOperations,
                 {
                     upsert: true,
@@ -153,7 +154,7 @@ const managersUsersController = {
                 },
             );
 
-            if (dto.recommendedCourses?.length > 0 && userArray.length > 0) {
+            if (dto.recommendedCourses?.length > 0 && userArray?.length > 0) {
                 const users = await User.find({ _id: { $in: userArray } });
 
                 if (!users?.[0]) {
@@ -164,7 +165,7 @@ const managersUsersController = {
                 // Portanto, não é necessário iterar sobre recommendedCourses (ainda).
                 //for await (const recommendedCourse of dto.recommendedCourses) {
                 for await (const user of users) {
-                    await courseBusiness.listJoin(user, recommendedCourse.classId);
+                    await courseBusiness.listJoin(user, dto.recommendedCourses[0].classId);
                 }
                 //}
             }
@@ -202,7 +203,7 @@ const managersUsersController = {
 
 // utils
 const validateSuggestions = async (dto) => {
-    if (!dto.userId || dto.users.length || !dto.usersIds.length) {
+    if (!dto?.userId && dto?.users?.length && !dto?.usersIds?.length) {
         throw new Error('user is required');
     }
 
