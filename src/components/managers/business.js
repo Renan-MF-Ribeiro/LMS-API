@@ -211,13 +211,14 @@ const business = {
     },
 
     buildSuggestions: async (data) => {
+        if(!data) return [];
+        
         const idToDateMap = new Map();
-
-        data.recommendedTrails?.forEach((trail) => {
+        data?.recommendedTrails?.forEach((trail) => {
             idToDateMap.set(trail?.id?.toString(), trail?.createdAt);
         });
 
-        data.recommendedCourses?.forEach((course) => {
+        data?.recommendedCourses?.forEach((course) => {
             idToDateMap.set(course?.courseId?.toString(), course?.createdAt);
         });
 
@@ -225,15 +226,15 @@ const business = {
 
         const [trails, courses] = await Promise.all([getTrailByIds(ids), getCoursesByIds(ids)]);
         return [
-            ...trails.map((trail) => ({
+            ...trails?.map((trail) => ({
                 ...trail,
                 type: 'Online',
-                createdAt: idToDateMap.get(trail._id?.toString()) || new Date(0),
+                createdAt: idToDateMap.get(trail?._id?.toString()) || new Date(0),
             })),
-            ...courses.map((course) => ({
+            ...courses?.map((course) => ({
                 ...course,
                 type: 'Presencial',
-                createdAt: idToDateMap.get(course.id?.toString()) || new Date(0),
+                createdAt: idToDateMap.get(course?.id?.toString()) || new Date(0),
             })),
         ];
     },

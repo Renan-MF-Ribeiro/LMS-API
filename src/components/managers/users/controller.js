@@ -153,18 +153,20 @@ const managersUsersController = {
                 },
             );
 
-            if (dto.recommendedCourses?.length > 0) {
-                const users = await User.find({ _id: { $in: { userArray } } });
+            if (dto.recommendedCourses?.length > 0 && userArray.length > 0) {
+                const users = await User.find({ _id: { $in: userArray } });
 
                 if (!users?.[0]) {
                     throw new ApiError('Usuário(s) não encontrado', 404);
                 }
 
-                for await (const recommendedCourse of dto.recommendedCourses) {
-                    for await (const user of users) {
-                        await courseBusiness.listJoin(user, recommendedCourse.classId);
-                    }
+                // Em nosso fluxo atual, apenas um curso pode ser recomendado por vez.
+                // Portanto, não é necessário iterar sobre recommendedCourses (ainda).
+                //for await (const recommendedCourse of dto.recommendedCourses) {
+                for await (const user of users) {
+                    await courseBusiness.listJoin(user, recommendedCourse.classId);
                 }
+                //}
             }
 
             return res.status(200).json("Recomendado com sucesso");
