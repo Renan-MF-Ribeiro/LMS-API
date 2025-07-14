@@ -1,10 +1,12 @@
 const passport = require('passport');
 const passportSaml = require('passport-saml');
 const OpenIDConnectStrategy = require('passport-openidconnect');
+const OAuth2Strategy = require('passport-oauth2');
 const LocalStrategy = require('passport-local');
 
 const bcrypt = require('bcryptjs');
 const cryptoJS = require('crypto-js');
+const axios = require('axios');
 
 const { log } = require('./logger');
 const { getRequestStrategyName } = require('./auth');
@@ -72,6 +74,48 @@ async function createOpenIdConnectStrategy(config) {
         async (issuer, profile, done) => {
             profile.strategyName = strategyName;
             profile.issuer = issuer;
+
+            return done(null, profile);
+        }
+    );
+
+    passport.use(strategyName, strategy);
+}
+
+async function createOauth2Strategy(config) {
+    if (config.clientSecret?.length) return createOpenIdConnectStrategy(config);
+
+    log('createOauth2Strategy config', config);
+    const strategyName = config.strategyName;
+
+    const strategy = new OAuth2Strategy(
+        {
+            authorizationURL: config.authorizationUrl,
+            tokenURL: config.tokenUrl,
+            clientID: config.clientId,
+            callbackURL: config.callbackUrl,
+            scope: config.scope?.length ? config.scope : [],
+            state: true,
+            proxy: true,
+            pkce: true,
+
+        },
+        async (accessToken, _refreshToken, profile, done) => {
+            profile.strategyName = strategyName;
+
+            if (accessToken) {
+                const { data } = await axios.get(config.userInfoUrl, {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                    },
+                });
+
+                profile = {
+                    ...profile,
+                    ...data,
+                    accessToken: accessToken,
+                }
+            }
 
             return done(null, profile);
         }
@@ -155,13 +199,15 @@ async function authenticatePassport(req, res, next) {
 async function strategyHandler(config) {
     const strategyCreators = {
         saml: createSamlPassportStrategy,
-        openid: createOpenIdConnectStrategy
+        oauth2: createOauth2Strategy,
     };
 
     const createStrategy = strategyCreators[config.strategyType ?? 'saml'];
+
     if (!createStrategy) {
         throw new Error(`Estratégia desconhecida: ${config.strategyType}`);
     }
+
     return await createStrategy(config);
 }
 

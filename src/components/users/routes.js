@@ -131,12 +131,23 @@ module.exports = express
         _controller.ssoCallback
     )
     .get(
-        '/sso/openid',
+        '/sso/oauth2',
         saveStrategyOnCookie,
         authenticatePassport,
     )
     .get(
-        '/sso/openid/callback',
+        '/sso/oauth2/callback',
+        authenticatePassport,
+        _controller.ssoCallback
+    )
+    // Mantém retrocompatibilidade com registros antigos (/openid & /openid/callback)
+    .get(
+        '/openid',
+        saveStrategyOnCookie,
+        authenticatePassport,
+    )
+    .get(
+        '/openid/callback',
         authenticatePassport,
         _controller.ssoCallback
     )
