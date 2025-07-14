@@ -1974,6 +1974,8 @@ module.exports = {
     async emulation (req, res) {
         try {
             const { body } = req;
+            const completeUser = await User.findById(body._id).lean();
+
             const {
                 groupsAD,
                 name,
@@ -1984,7 +1986,7 @@ module.exports = {
                 profiles,
                 email,
                 ...user
-            } = await User.findById(body._id).lean();
+            } = completeUser;
 
             const isEmulatingSuperAdmin = groupsAD?.some(
                 (profile) => profile === 'PERFIL_Super_Admin' || profile === 'PERFIL_Gestor_Usuario'
@@ -2003,7 +2005,7 @@ module.exports = {
 
             const namesProfiles = [];
             const namesGroups = [];
-            const dashboardFilters = await processDashFilters(user);
+            const dashboardFilters = await processDashFilters(completeUser);
 
             for (const p in groupsAD) {
                 const cnSplit =
