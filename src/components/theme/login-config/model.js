@@ -15,19 +15,20 @@ const fieldSchema = new Schema({
 
 // Define the schema for the SSO form
 const ssoFormSchema = new Schema({
-    strategyType: { type: String, required: true },
-    entrypoint: { type: String, },
+    strategyType: { type: String, required: true }, // 'saml', 'oauth2', 'openid'
+    strategyName: { type: String, required: true, unique: true },
     issuer: { type: String, },
     callbackUrl: { type: String, },
-    certifier: { type: String, },
     claim: { type: String, },
     claimKey: { type: String, },
     enabled: { type: Number, default: 0 },
     forceAuth: { type: Boolean, default: false },
-    buttonLabel: { type: String },
-    buttonBackground: { type: String, default: null },
-    buttonTextColor: { type: String, default: null },
-    strategyName: { type: String, required: true, unique: true },
+    
+    // SAML specific fields
+    entrypoint: { type: String, },
+    certifier: { type: String, },
+    
+    // OpenID Connect and OAuth2 specific fields
     clientId: { type: String },
     clientSecret: { type: String },
     authorizationUrl: { type: String },
@@ -35,6 +36,12 @@ const ssoFormSchema = new Schema({
     userInfoUrl: { type: String },
     scope: { type: [String], default: [] },
     tokenType: { type: String, default: null, },
+    pkce: { type: String, default: null },
+    
+    // !OLD
+    buttonLabel: { type: String },
+    buttonBackground: { type: String, default: null },
+    buttonTextColor: { type: String, default: null },
 });
 
 ssoFormSchema.index({ strategyName: 1 }, { unique: true });

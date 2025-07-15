@@ -14,6 +14,18 @@ const {
 
 const { saveStrategyOnCookie } = require('../../utils/cookies');
 
+const supportedStrategies = ['saml', 'openid', 'oauth2'];
+
+function validateStrategy(req, res, next) {
+    const { strategy } = req.params;
+
+    if (!supportedStrategies.includes(strategy)) {
+        return res.status(404).send('Strategy not supported');
+    }
+
+    next();
+}
+
 module.exports = express
     .Router()
     .post(
@@ -119,27 +131,21 @@ module.exports = express
     .post('/signup', _controller.signup)
     .post('/activate', _controller.activateUser)
     .post('/sso', _controller.singleSignOn)
+
+    // SSO routes
     .get(
-        '/sso/saml',
+        '/sso/:strategy',
+        validateStrategy,
         saveStrategyOnCookie,
         authenticatePassport,
     )
-    .post(
-        '/sso/saml/callback',
-        authenticatePassport,
-        parseSamlResponse,
-        _controller.ssoCallback
-    )
-    .get(
-        '/sso/oauth2',
-        saveStrategyOnCookie,
-        authenticatePassport,
-    )
-    .get(
-        '/sso/oauth2/callback',
+    .all(
+        '/sso/:strategy/callback',
+        validateStrategy,
         authenticatePassport,
         _controller.ssoCallback
     )
+
     // Mantém retrocompatibilidade com registros antigos (/openid & /openid/callback)
     .get(
         '/openid',

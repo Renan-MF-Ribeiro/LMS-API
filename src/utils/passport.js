@@ -83,8 +83,6 @@ async function createOpenIdConnectStrategy(config) {
 }
 
 async function createOauth2Strategy(config) {
-    if (config.clientSecret?.length) return createOpenIdConnectStrategy(config);
-
     log('createOauth2Strategy config', config);
     const strategyName = config.strategyName;
 
@@ -93,17 +91,18 @@ async function createOauth2Strategy(config) {
             authorizationURL: config.authorizationUrl,
             tokenURL: config.tokenUrl,
             clientID: config.clientId,
+            clientSecret: config.clientSecret || undefined,
             callbackURL: config.callbackUrl,
             scope: config.scope?.length ? config.scope : [],
             state: true,
             proxy: true,
-            pkce: true,
+            pkce: config.pkce || false,
 
         },
         async (accessToken, _refreshToken, profile, done) => {
             profile.strategyName = strategyName;
 
-            if (accessToken) {
+            if (accessToken && config.userInfoUrl) {
                 const tokenType = config.tokenType || 'Bearer';
 
                 const { data } = await axios.get(config.userInfoUrl, {
@@ -210,6 +209,7 @@ async function authenticatePassport(req, res, next) {
 async function strategyHandler(config) {
     const strategyCreators = {
         saml: createSamlPassportStrategy,
+        openid: createOpenIdConnectStrategy,
         oauth2: createOauth2Strategy,
     };
 
