@@ -29,7 +29,7 @@ const business = {
             return [];
         }
 
-        let query = matchingRules.map((rule) => {
+        let query = matchingRules?.map((rule) => {
             const usersField = rule?.usersField
             const managerField = rule?.managerField;
 
@@ -40,7 +40,14 @@ const business = {
             };
         });
 
-        if (req.query.searchBy) {
+        if (rules?.useIsManagerFlag) {
+            query.push({
+                managerRegistration: user?.registration
+            });
+
+        }
+
+        if (req.query?.searchBy) {
             const searchRegex = new RegExp(req.query.searchBy, 'i');
             query = query.map((q) => ({
                 ...q,
@@ -211,8 +218,8 @@ const business = {
     },
 
     buildSuggestions: async (data) => {
-        if(!data) return [];
-        
+        if (!data) return [];
+
         const idToDateMap = new Map();
         data?.recommendedTrails?.forEach((trail) => {
             idToDateMap.set(trail?.id?.toString(), trail?.createdAt);
@@ -288,7 +295,7 @@ const business = {
             ClassModel.findOne({ _id: new Types.ObjectId(classId) }).populate('courseID').lean()
         ]);
         console.log('Class Found:', classFound);
-        if(!classFound || !users[0]) {
+        if (!classFound || !users[0]) {
             return [];
         }
 
