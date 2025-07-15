@@ -75,63 +75,46 @@ function bufferToStream (binary) {
     return readableInstanceStream;
 }
 
-const forEachRow = (row, rowNumber, map, labels, users, previousHyperLink) => {
+const forEachRow = (row, rowNumber, map, labels, users) => {
+    let cells = [];
+    if (row && Array.isArray(row.values)) {
+        cells = row.values.slice(1);
+    } else if (Array.isArray(row)) {
+        cells = row;
+    } else {
+        console.warn('Formato de linha desconhecido:', row);
+        return;
+    }
+
+    const mapEntries = Object.entries(map);
+
     if (rowNumber === 1) {
-        // rowNumber === 1 means its headers
-        for (let col = 1; col <= row.cellCount; col++) {
-            const columnHeader = row.getCell(col).value;
-            const mapEntries = Object.entries(map);
-            const labelDB = mapEntries.find(
-                (entry) => entry[1]?.field && columnHeader && entry[1]?.field === columnHeader
-            )?.[0];
-            labels.push(labelDB);
-        }
+        for (const columnHeader of cells) {
+            const labelDBs = mapEntries
+                .filter(
+                    (entry) => entry[1]?.field && columnHeader && entry[1].field === columnHeader
+                )
+                .map((entry) => entry[0]);
+
+            labels.push(labelDBs.length ? labelDBs : undefined);
+                }
     } else {
         const tmpUser = {};
-        previousHyperLink.index = -1;
 
-        for (let col = 1; col <= labels.length; col++) {
-            const label = labels[col - 1];
-            if (!label) continue;
+        for (let i = 0; i < cells.length; i++) {
+            const cell = cells[i];
+            const value = (cell && typeof cell === 'object' && 'text' in cell) ? cell.text : cell || null;
 
-            const cell = row.getCell(col);
-            const value = cell?.value;
-            let i = col;
-
-            if (!value) {
-                if (['networkLogin', 'name', 'password'].includes(label)) {
-                    continue;
-                }
-
-                tmpUser[label] = null;
-                continue;
-            }
-
-            if (value?.text) {
-                row.eachCell((cellVal, cellIndex) => {
-                    if (!cellVal?.text) return;
-                    if (
-                        cellVal.text === value.text &&
-                        (previousHyperLink.index === -1 || cellIndex > previousHyperLink.index)
-                    ) {
-                        i = cellIndex;
-                    }
-                });
-                previousHyperLink.index = i;
+            const labelSet = labels[i];
+            if (labelSet) {
+                if (Array.isArray(labelSet)) {
+                    labelSet.forEach((label) => {
+                        tmpUser[label] = value;
+                    });
             } else {
-                row.eachCell((cellVal, cellIndex) => {
-                    if (cellVal?.text) return;
-                    if (
-                        tmpUser[labels[cellIndex - 1]] &&
-                        tmpUser[labels[cellIndex - 1]] === cellVal
-                    )
-                        return;
-
-                    if (cellVal === value) i = cellIndex;
-                });
+                    tmpUser[labelSet] = value;
+                }
             }
-
-            tmpUser[labels[i - 1]] = cell?.text ?? value ?? '';
         }
 
         users.push(tmpUser);
