@@ -13,8 +13,7 @@ const usersController = {
 
     findByRegistrationOrName: async (req, res) => {
         try {
-            const { searchBy } = req.query;
-            const users = await findManagedUsers(searchBy);
+            const users = await findManagedUsers(req);
 
             res.status(200).json(users);
         } catch (error) {
