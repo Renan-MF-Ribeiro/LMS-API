@@ -51,7 +51,7 @@ const {
 
 shelljs.mkdir('-p', UPLOADS_PATH);
 
-async function streamToBuffer (readableStream) {
+async function streamToBuffer(readableStream) {
     return new Promise((resolve, reject) => {
         const chunks = [];
         readableStream.on('data', (data) => {
@@ -64,9 +64,9 @@ async function streamToBuffer (readableStream) {
     });
 }
 
-function bufferToStream (binary) {
+function bufferToStream(binary) {
     const readableInstanceStream = new Readable({
-        read () {
+        read() {
             this.push(binary);
             this.push(null);
         },
@@ -97,7 +97,7 @@ const forEachRow = (row, rowNumber, map, labels, users) => {
                 .map((entry) => entry[0]);
 
             labels.push(labelDBs.length ? labelDBs : undefined);
-                }
+        }
     } else {
         const tmpUser = {};
 
@@ -111,7 +111,7 @@ const forEachRow = (row, rowNumber, map, labels, users) => {
                     labelSet.forEach((label) => {
                         tmpUser[label] = value;
                     });
-            } else {
+                } else {
                     tmpUser[labelSet] = value;
                 }
             }
@@ -121,7 +121,7 @@ const forEachRow = (row, rowNumber, map, labels, users) => {
     }
 };
 
-function parseSizeStringToBytes (size) {
+function parseSizeStringToBytes(size) {
     const sizeString = size.toString().toLowerCase();
     const sizeNumber = parseInt(sizeString);
 
@@ -134,7 +134,7 @@ function parseSizeStringToBytes (size) {
     }
 }
 
-function getAppMaxFileSize () {
+function getAppMaxFileSize() {
     const maxFileSize = process.env.MAX_UPLOAD_FILE_SIZE ?? '100mb';
 
     return {
@@ -143,7 +143,7 @@ function getAppMaxFileSize () {
     }
 }
 
-function validateFileSize (file) {
+function validateFileSize(file) {
     const fileSize = file.size ?? undefined;
 
     if (fileSize === undefined) return;
@@ -158,7 +158,7 @@ function validateFileSize (file) {
     }
 }
 
-function getFormMiddleware (options = {}) {
+function getFormMiddleware(options = {}) {
     const defaultOptions = { maxFileSize: 1024 * 1024 * 1024 };
     return formidable({ ...defaultOptions, ...options })
 }
@@ -204,7 +204,7 @@ module.exports = {
     //     });
     // },
 
-    async azureBlob (
+    async azureBlob(
         file,
         folder,
         ignoreStream = false,
@@ -259,7 +259,7 @@ module.exports = {
         return url;
     },
 
-    async getAzureFile () {
+    async getAzureFile() {
         try {
             const env = process.env.NODE_ENV;
             const directory = env === 'production' ? 'producao' : 'homologacao';
@@ -304,7 +304,7 @@ module.exports = {
         // return await streamToBuffer(downloadFileResponse.readableStreamBody)
     },
 
-    async moveUserLoadToProcessed (buffer) {
+    async moveUserLoadToProcessed(buffer) {
         try {
             const env = process.env.NODE_ENV;
             const directory = env === 'production' ? 'producao' : 'homologacao';
@@ -330,7 +330,7 @@ module.exports = {
         }
     },
 
-    async uploadVimeo (file, themeId) {
+    async uploadVimeo(file, themeId) {
         validateFileSize(file);
 
         let vimeoTrx;
@@ -382,20 +382,20 @@ module.exports = {
 
         return uploadStatus;
     },
-    
-    async uploadVimeoAsync (file) {
+
+    async uploadVimeoAsync(file) {
         return new Promise(
             (resolve, reject) => {
                 validateFileSize(file);
-                
+
                 const vimeoFolderUri = `/${process.env.VIMEO_FOLDER}`;
-        
+
                 const vimeoTrx = new Vimeo(
                     process.env.VIMEO_CLIENTID,
                     process.env.VIMEO_CLIENTSECRET,
                     process.env.VIMEO_ACCESSTOKEN
                 );
-                
+
                 vimeoTrx.upload(
                     String(file.path),
                     {
@@ -418,7 +418,7 @@ module.exports = {
                     },
                     async function (error) {
                         console.error('Something went wrong: ' + error);
-        
+
                         await Log.create({
                             user: user?._id ?? user ?? null,
                             type: 'VIMEO_UPLOAD_ERROR',
@@ -438,7 +438,7 @@ module.exports = {
     },
 
 
-    vimeoFilePathCreate (file, payload, user, mode = 'create') {
+    vimeoFilePathCreate(file, payload, user, mode = 'create') {
         validateFileSize(file);
 
         let filePath;
@@ -536,7 +536,7 @@ module.exports = {
         }, 5000);
     },
 
-    vimeoFilePathUpdate (file, payload, user, vimeoId) {
+    vimeoFilePathUpdate(file, payload, user, vimeoId) {
         validateFileSize(file);
 
         let uploadStatus;
@@ -622,7 +622,7 @@ module.exports = {
         }, 5000);
     },
 
-    async moveUpload (file) {
+    async moveUpload(file) {
         if (!file) return null;
 
         const hash = revHash(file.path);
@@ -642,7 +642,7 @@ module.exports = {
         )
     ),
 
-    mkdirSCORM (packageId) {
+    mkdirSCORM(packageId) {
         const _path = path.join(UPLOADS_PATH, 'scorm', packageId);
 
         try {
@@ -652,7 +652,7 @@ module.exports = {
         return _path;
     },
 
-    mvFile (file, name) {
+    mvFile(file, name) {
         return new Promise((resolve, reject) => {
             try {
                 const _path = path.join(UPLOADS_PATH, name);
@@ -664,7 +664,7 @@ module.exports = {
         });
     },
 
-    readXLSX (file) {
+    readXLSX(file) {
         return new Promise((resolve, reject) => {
             xlsx(file)
                 .then((rows) => {
@@ -677,7 +677,7 @@ module.exports = {
         });
     },
 
-    readXLSXAlternative (file) {
+    readXLSXAlternative(file) {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.readFile(file).then(() => {
@@ -694,7 +694,7 @@ module.exports = {
         });
     },
 
-    readXLSXClassGroups (file) {
+    readXLSXClassGroups(file) {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.readFile(file).then(function () {
@@ -730,7 +730,7 @@ module.exports = {
         });
     },
 
-    writeXlsxClassGroupsResults (workbook, results) {
+    writeXlsxClassGroupsResults(workbook, results) {
         const worksheet = workbook.getWorksheet('Sua Carga Aqui');
 
         worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
@@ -751,7 +751,7 @@ module.exports = {
      * @param {string} worksheetName
      * @returns {Promise<{ workbook: ExcelJS.Workbook, worksheet: ExcelJS.Worksheet, data: Record<string, string>[], labels: string[] }>}
      */
-    async readXLSXAttendanceList (file, worksheetName) {
+    async readXLSXAttendanceList(file, worksheetName) {
         const workbook = new ExcelJS.Workbook();
 
         await workbook.xlsx.readFile(file);
@@ -799,9 +799,9 @@ module.exports = {
         return { workbook, worksheet, data, labels, labelMap };
     },
 
-    async readXLSXUsers (file, onboarding = false) {
+    async readXLSXUsers(file, onboarding = false) {
         const map = onboarding ? defaultOnboardingUserMap : (await getConnectMap(true));
-        
+
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.readFile(file).then(function () {
@@ -848,7 +848,7 @@ module.exports = {
         return users;
     },
 
-    async readXLSXUsersBuffer (file) {
+    async readXLSXUsersBuffer(file) {
         const map = await getConnectMap(true);
 
         return new Promise((resolve, reject) => {
@@ -876,7 +876,7 @@ module.exports = {
         });
     },
 
-    readCSV (file) {
+    readCSV(file) {
         return new Promise((resolve, reject) => {
             try {
                 const results = [];
@@ -893,7 +893,7 @@ module.exports = {
         });
     },
 
-    writeFile (header, records) {
+    writeFile(header, records) {
         return new Promise((resolve, reject) => {
             const csvWriter = createCsvWriter({
                 path: path.resolve() + '/src/public/lista_usuarios.csv',
@@ -911,7 +911,7 @@ module.exports = {
         });
     },
 
-    writeFileLogs (header, records) {
+    writeFileLogs(header, records) {
         return new Promise((resolve, reject) => {
             const csvWriter = createCsvWriter({
                 path:
@@ -932,7 +932,7 @@ module.exports = {
         });
     },
 
-    createCSVString (header, records) {
+    createCSVString(header, records) {
         const csvStringfier = createObjectCsvStringifier({
             header,
             encoding: 'utf8',
@@ -946,7 +946,7 @@ module.exports = {
         return csvString;
     },
 
-    readXLSXHeaders (file) {
+    readXLSXHeaders(file) {
         return new Promise((resolve, reject) => {
             const workbook = new ExcelJS.Workbook();
             workbook.xlsx.readFile(file).then(function () {
@@ -969,7 +969,7 @@ module.exports = {
         });
     },
 
-    async listAzureFilesInContainer (containerName, directory) {
+    async listAzureFilesInContainer(containerName, directory) {
         const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STRINGCONN);
         const containerClient = blobServiceClient.getContainerClient(containerName);
         const files = [];
@@ -997,7 +997,7 @@ module.exports = {
         return orderedAndMappedFiles;
     },
 
-    async getAzureFileByPath (containerName, filePath) {
+    async getAzureFileByPath(containerName, filePath) {
         const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STRINGCONN);
 
         const containerClient = blobServiceClient.getContainerClient(containerName);
@@ -1021,7 +1021,7 @@ module.exports = {
         };
     },
 
-    async moveAzureFile (containerName, sourcePath, destinationPath) {
+    async moveAzureFile(containerName, sourcePath, destinationPath) {
         const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STRINGCONN);
 
         const containerClient = blobServiceClient.getContainerClient(containerName);
@@ -1037,7 +1037,7 @@ module.exports = {
         return destinationBlockBlobClient.url;
     },
 
-    async deleteAzureFile (containerName, filePath) {
+    async deleteAzureFile(containerName, filePath) {
         const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STRINGCONN);
 
         const containerClient = blobServiceClient.getContainerClient(containerName);
