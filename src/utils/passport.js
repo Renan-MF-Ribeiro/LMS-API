@@ -104,22 +104,33 @@ async function createOauth2Strategy(config) {
             profile.strategyName = strategyName;
 
             if (accessToken) {
+                const tokenType = config.tokenType || 'Bearer';
+
                 const { data } = await axios.get(config.userInfoUrl, {
                     headers: {
-                        Authorization: `Bearer ${accessToken}`,
+                        Authorization: `${tokenType} ${accessToken}`,
                     },
                 });
 
                 profile = {
                     ...profile,
                     ...data,
-                    accessToken: accessToken,
                 }
             }
 
             return done(null, profile);
         }
     );
+
+    strategy.authorizationParams = () => {
+        const params = {};
+
+        if (config.forceAuth) {
+            params.prompt = 'login';
+        }
+
+        return params;
+    }
 
     passport.use(strategyName, strategy);
 }

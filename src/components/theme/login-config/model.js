@@ -34,6 +34,7 @@ const ssoFormSchema = new Schema({
     tokenUrl: { type: String },
     userInfoUrl: { type: String },
     scope: { type: [String], default: [] },
+    tokenType: { type: String, default: null, },
 });
 
 ssoFormSchema.index({ strategyName: 1 }, { unique: true });
