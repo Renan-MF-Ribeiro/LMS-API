@@ -69,6 +69,8 @@ const business = {
     buildEvaluationsResultSuggestions: async (data, userNetworkLogin, userId) => {
         if (!data?.skill_recommendations?.length) return [];
 
+        // uso de sets pois pode haver duplicatas dentre as recomendações
+        // e não faz sentido retornar o mesmo curso/trilha mais de uma vez
         const trailIds = new Set();
         const courseIds = new Set();
         for (const skill of data.skill_recommendations) {
@@ -76,9 +78,10 @@ const business = {
             (skill.coursesIds || []).forEach((c) => courseIds.add(c.courseId));
         }
 
-        const [trails, courses] = await Promise.all([
+        const [trails, courses, userRecommendations] = await Promise.all([
             getTrailsWithTrackings(Array.from(trailIds), userNetworkLogin),
             getCoursesByIds(Array.from(courseIds)),
+            getUserRecommendations(userId)
         ]);
 
         const trailMap = new Map(trails.map((t) => [t._id.toString(), t]));

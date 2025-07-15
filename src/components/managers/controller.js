@@ -16,7 +16,7 @@ const managersController = {
                 business.findManagedUsers(req),
                 business.isMatrixActive(),
             ]);
-            
+
             if (isMatrixActive) {
                 users = await business.handleUsersWhenMatrixIsActive(req.query, users, target);
             }
@@ -112,9 +112,18 @@ const managersController = {
 
             if (type === 'courses') {
                 const response = [];
+                //usando sets para evitar duplicatas
+                const courseIds = new Set();
+
+                //todo(performance): refatorar isto e retirar do forrloop. Escrever função que receba um conjunto de tags de todos os usuários e retorne os cursos da tabela events em uma única iteração
                 for await (const user of users) {
                     const courses = await searchCourseBy(user, tags, start, end, courseId);
-                    response.push(...courses);
+                    for (const course of courses) {
+                        if (!courseIds.has(course?.target?.id?.toString())) {
+                            courseIds.add(course?.target?.id?.toString());
+                            response.push(course);
+                        }
+                    }
                 }
                 return res.status(200).json(response);
             }
@@ -133,12 +142,12 @@ const managersController = {
         try {
             const type = req.params?.type;
 
-            if(type === 'trails'){
+            if (type === 'trails') {
                 const response = await business.getAvailableUsersByTrail(req);
                 return res.status(200).json(response);
             }
 
-            if(type === 'courses'){
+            if (type === 'courses') {
                 const response = await business.getAvailableUsersByCourse(req);
                 return res.status(200).json(response);
             }
