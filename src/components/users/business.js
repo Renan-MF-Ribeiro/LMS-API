@@ -27,7 +27,7 @@ const ApiError = require('../../errors/ApiError');
 const { getMessengerConfig } = require('../config/business');
 const { getConnectMap } = require('../../utils/connect');
 const { getCookieProps } = require('../../utils/cookies');
-require('dotenv').config();
+const { sessionStore } = require('../../utils/session');
 
 module.exports = {
     async getLoginConfig(selectFields) {
@@ -854,7 +854,7 @@ module.exports = {
     },
 
     async clearAuthCookies(req, res) {
-        req.session?.destroy?.();
+        if (req.sessionID) await sessionStore.destroy(req.sessionID);
         res.clearCookie('connect.sid', getCookieProps());
         res.clearCookie('SAS', getCookieProps());
         res.clearCookie('strategyName', getCookieProps());

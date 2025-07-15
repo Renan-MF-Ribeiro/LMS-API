@@ -46,14 +46,6 @@ module.exports = express
     )
     .post(
         '/logout',
-        (req, res, next) => {
-            req.query.strategy = 'session';
-            return next();
-        },
-        authenticatePassport,
-        (req, res) => {
-         console.log(req.sessionID)
-        },
         _controller.logout
     )
     .post('/accept-terms', validateTokenRoute, _controller.acceptTerms)
