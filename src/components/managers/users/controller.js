@@ -198,6 +198,27 @@ const managersUsersController = {
             console.error({ error: errorMessage });
             res.status(statusCode).json(errorMessage);
         }
+    },
+
+    removeUserFromClass: async (req, res) => {
+        try {
+            const classId = req.body?.classId || req.query?.classId;
+            const userIds = req.body?.userIds || req.query?.userId;
+
+            if (!classId || !userIds || userIds?.length === 0) {
+                return res.status(400).json('Class ID and user IDs are required');
+            }
+            const usersArray = Array.isArray(userIds) ? userIds : [userIds];
+            
+            await courseBusiness.removeUsersFromClass(classId, usersArray);
+            res.status(200).json('Usuário(s) removido(s) com sucesso');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            console.error({ error: errorMessage });
+            res.status(statusCode).json(errorMessage);
+        }
     }
 };
 

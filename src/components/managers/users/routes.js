@@ -9,4 +9,4 @@ module.exports = express
     .get('/:id/concluded-courses', _controller.findUsersConcludedCourses)
     .get('/:id/suggestions', _controller.findSuggestedContent)
     .post('/suggest-content', _controller.suggestContent)
-    
+    .delete('/class', _controller.removeUserFromClass)

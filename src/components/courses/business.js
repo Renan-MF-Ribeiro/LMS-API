@@ -21,7 +21,7 @@ const eventsController = require('../calendar/events/controller');
 const { Group } = require('../groups/model');
 
 module.exports = {
-    uploadMaterial (material, author, folder) {
+    uploadMaterial(material, author, folder) {
         return new Promise(async (resolve, reject) => {
             try {
                 const nameFile = material.name.split('.');
@@ -38,7 +38,7 @@ module.exports = {
         });
     },
 
-    queryInstructorCourses (searchBy) {
+    queryInstructorCourses(searchBy) {
         const today = getDateTodayWithoutHours();
 
         const searchByClasule = searchBy ? { $text: { $search: searchBy } } : {};
@@ -63,7 +63,7 @@ module.exports = {
         };
     },
 
-    verifyValidity (dateInitial, dateFinal) {
+    verifyValidity(dateInitial, dateFinal) {
         const startDate = formatDateWithoutHours(dateInitial);
         const endDate = formatDateWithoutHours(dateFinal);
         const today = getDateTodayWithoutHours();
@@ -74,7 +74,7 @@ module.exports = {
         return false;
     },
 
-    getStoreUSers (store) {
+    getStoreUSers(store) {
         return new Promise(async (resolve, reject) => {
             try {
                 const users = await User.find(
@@ -92,7 +92,7 @@ module.exports = {
         });
     },
 
-    getCeaUsers () {
+    getCeaUsers() {
         return new Promise(async (resolve, reject) => {
             try {
                 const users = await User.find(
@@ -109,7 +109,7 @@ module.exports = {
         });
     },
 
-    getAppliedCourses (instructor, order, sort, skip, limit, searchBy, isAdmin) {
+    getAppliedCourses(instructor, order, sort, skip, limit, searchBy, isAdmin) {
         return new Promise(async (resolve, reject) => {
             try {
                 const query = isAdmin
@@ -159,7 +159,7 @@ module.exports = {
         });
     },
 
-    getClassByID (classID) {
+    getClassByID(classID) {
         return new Promise(async (resolve, reject) => {
             try {
                 const { _doc } = await ClassModel.findById(classID)
@@ -176,7 +176,7 @@ module.exports = {
         });
     },
 
-    returnProgramaID (programTitle) {
+    returnProgramaID(programTitle) {
         return new Promise(async (resolve, reject) => {
             try {
                 let programID;
@@ -199,7 +199,7 @@ module.exports = {
         });
     },
 
-    getCoursesByUserID (userID) {
+    getCoursesByUserID(userID) {
         return new Promise(async (resolve, reject) => {
             try {
                 const classes = await ClassModel.find(
@@ -252,7 +252,7 @@ module.exports = {
         });
     },
 
-    checkEligibility (eligibilityUser, tagsAnd, tagsOr) {
+    checkEligibility(eligibilityUser, tagsAnd, tagsOr) {
         const eligibilitytagsAnd = eligibilityUser.map((eligibility) => eligibility.value);
 
         if (tagsAnd.length > 0) {
@@ -280,7 +280,7 @@ module.exports = {
      * @param {Record<string, string>[]} items
      * @returns {Promise<Record<string, string>[]>}
      */
-    async processAttendanceListImport (courseId, classId, items) {
+    async processAttendanceListImport(courseId, classId, items) {
         const nowDate = new Date();
 
         const courseInfo = await CourseModel.findById(courseId);
@@ -475,7 +475,7 @@ module.exports = {
         return { results, classInfo, courseInfo };
     },
 
-    async searchCourseBy (user, tags, start, end, courseId) {
+    async searchCourseBy(user, tags, start, end, courseId) {
         if (!user) {
             return [];
         }
@@ -492,7 +492,7 @@ module.exports = {
         return calendarEvents;
     },
 
-    async getCoursesByIds (courseIds) {
+    async getCoursesByIds(courseIds) {
         const query = {
             deleted: 0,
             $or: [{ datefinal: null }, { datefinal: { $gte: new Date() } }],
@@ -504,7 +504,7 @@ module.exports = {
         return await CourseModel.find(query, 'title thumbPath banner').lean();
     },
 
-    async listJoin (user, classId) {
+    async listJoin(user, classId) {
         let course = null;
         course = await ClassModel.findOneAndUpdate(
             {
@@ -564,7 +564,7 @@ module.exports = {
      * @param {string} userId
      * @returns {Array}
      */
-    enrichCoursesWithClasses (data, classesFromUser, userId) {
+    enrichCoursesWithClasses(data, classesFromUser, userId) {
         return data.map((course) => {
             let classes = classesFromUser.filter(c => c.courseID.toString() == course._id.toString());
             classes = classes.map(c => {
@@ -589,5 +589,13 @@ module.exports = {
                 classes
             };
         });
+    },
+
+    async removeUsersFromClass(classId, userIds) {
+        //must receive array of userIds
+        return await ClassModel.updateOne(
+            { _id: classId },
+            { $pull: { users: { _id: { $in: userIds } } } }
+        );
     }
 };
