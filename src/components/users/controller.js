@@ -440,9 +440,19 @@ module.exports = {
 
         try {
             // Validação de usuário já criado
-            const userExists = await User.findOne({ networkLogin });
+            const userExists = await User.exists({ networkLogin });
             if (userExists) {
-                _messages.badRequest(
+                if (!token)
+                    return _messages.badRequest(
+                        res,
+                        req,
+                        'Usuário já cadastrado',
+                        'Já existe um usuário cadastrado',
+                        'users',
+                        'signup'
+                    );
+
+                return _messages.unprocessableEntity(
                     res,
                     req,
                     'Usuário já cadastrado',
@@ -450,7 +460,6 @@ module.exports = {
                     'users',
                     'signup'
                 );
-                return;
             }
 
             // Encripta senha
