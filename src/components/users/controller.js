@@ -1187,7 +1187,7 @@ module.exports = {
 
     async changePasswordByEmail(req, res) {
         try {
-            const { password_new, password_newConfirm, token } = req.body;
+            const { password_new, password_newConfirm } = req.body;
             const { data } = decodeToken(req.headers.authorization);
             const { _id, password_old } = data;
             const user = await User.findOne({ _id: _id }, ['password']);
@@ -1252,8 +1252,8 @@ module.exports = {
                 password: newPass,
                 passwordValid: true,
             });
-            if(token){
-
+            if (data.partner_token) {
+                await updateUserByPartnerToken(req, user);
             }
 
             _messages.success(
