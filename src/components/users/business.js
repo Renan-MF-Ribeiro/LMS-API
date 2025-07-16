@@ -852,53 +852,28 @@ module.exports = {
 
     async updateUserByPartnerToken(token, user) {
         const partner = await PartnerBusiness.getPartnersByToken(token);
-        const usedToken = module.exports.validatePartnerToken(partner, token);
+        const usedToken = validatePartnerToken(partner, token);
 
-        const tokenEligibilities = usedToken?.elegibilityResult
-            ?.map((key) => key?.value)
-            ?.filter(Boolean)
-            ?.filter((value) => !user.groupsAD?.includes(value));
-
-        const tokenBlockedFields = usedToken?.defaultField?.reduce((acc, key) => {
-            const { key: tokenKey, value: tokenValue } = key;
-            if (tokenKey && tokenValue && user[tokenKey] !== tokenValue) {
-                acc[tokenKey] = tokenValue;
-            }
-            return acc;
-        }, {});
-
-        const tokenClasses = usedToken?.classGroupResult?.classGroups || [];
+        const [newGroupsAd, tokenBlockedFields, newClassGroups] =
+            await getPartnerTokenNewInformations(usedToken, user);
 
         const TokenHasNewInformation =
-            tokenEligibilities?.length > 0 || tokenBlockedFields?.length > 0;
+            newGroupsAd?.length > 0 || !!tokenBlockedFields || newClassGroups?.length > 0;
         if (!TokenHasNewInformation) {
             return user;
         }
 
-        const newGroupsAD = usedToken?.overwriteEligibility
-            ? tokenEligibilities
-            : user.groupsAD.concat(tokenEligibilities || []);
-
-        const classGroup = await ClassGroup.findOne({ _id: { $in: tokenClasses } });
-
         const update = {
-            groupsAD: newGroupsAD,
+            groupsAD: newGroupsAd,
+            classGroups: newClassGroups,
             ...tokenBlockedFields,
         };
 
-        return await User.updateOne({ _id: user._id }, { $set: update }, { new: true }).exec();
-    },
-
-    validatePartnerToken(partner, token) {
-        if (!partner) {
-            throw new ApiError('Token inválido ou parceiro não encontrado', 404);
-        }
-        const usedToken = partner?.keys.find((key) => key.key === token);
-        if (Date.now() > usedToken?.endDate) {
-            throw new ApiError('Token expirado', 403);
-        }
-
-        return usedToken;
+        return await User.findOneAndUpdate(
+            { _id: user._id },
+            { $set: update },
+            { new: true }
+        ).exec();
     },
 
     async clearAuthCookies(req, res) {
@@ -907,4 +882,64 @@ module.exports = {
         res.clearCookie('SAS', getCookieProps());
         res.clearCookie('strategyName', getCookieProps());
     },
+};
+
+const getPartnerTokenNewInformations = async (usedToken, user) => {
+    // -------------- LOOKUP EM INFORMAÇÕES QUE O TOKEN POSSUI (classes, eligibilidades e turmas) --------------
+    const tokenEligibilities = usedToken?.elegibilityResult
+        ?.map((key) => key?.value)
+        ?.filter(Boolean)
+        ?.filter((value) => !user.groupsAD?.includes(value));
+
+    const tokenBlockedFields = usedToken?.defaultField?.reduce((acc, key) => {
+        const { key: tokenKey, value: tokenValue } = key;
+        if (tokenKey && tokenValue && user[tokenKey] !== tokenValue) {
+            acc[tokenKey] = tokenValue;
+        }
+        return acc;
+    }, {});
+
+    const tokenClasses =
+        usedToken?.classGroupResult?.classGroups?.filter(
+            (classGroup) => !user?.classGroups.includes(classGroup?._id)
+        ) || [];
+
+    // -------------- MONTANDO O QUE SERÁ ATUALIZADO NO USUARIO --------------
+    // utilizando os lookups criados acima, montamos o que será atualizado no usuário seguindo as flags do token
+
+    const newGroupsAD = usedToken?.overwriteEligibility
+        ? tokenEligibilities
+        : user?.groupsAD?.concat(tokenEligibilities || []);
+
+    const classes = usedToken?.classGroupResult?.overwriteClassGroup
+        ? tokenClasses
+        : user?.classGroups?.map((classGroup) => classGroup._id)?.concat(tokenClasses);
+
+    let newClassGroups = await ClassGroup.find({ _id: { $in: classes } });
+
+    const today = moment(new Date());
+    const partnerDays = usedToken?.classGroupResult?.days || 10;
+    const DATA_INICIO = today.startOf('day');
+    const DATA_FIM = moment().add(partnerDays, 'days');
+    const { startDate, limitDate } = _functions.getDates(DATA_INICIO, DATA_FIM);
+
+    for (const _class of newClassGroups) {
+        _class.startDate = startDate;
+        _class.limitDate = limitDate;
+        _class.updatedAt = moment(new Date());
+    }
+
+    return [newGroupsAD, tokenBlockedFields, newClassGroups];
+};
+
+const validatePartnerToken = (partner, token) => {
+    if (!partner) {
+        throw new ApiError('Token inválido ou parceiro não encontrado', 404);
+    }
+    const usedToken = partner?.keys.find((key) => key.key === token);
+    if (Date.now() > usedToken?.endDate) {
+        throw new ApiError('Token expirado', 403);
+    }
+
+    return usedToken;
 };
