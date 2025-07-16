@@ -1066,7 +1066,7 @@ module.exports = {
                 'Email para recupera senha disparado',
                 'users',
                 'recoveryPassword',
-                [],
+                [{ 'userId': user._id }],
                 [],
                 true,
                 'RECOVERY PASSWORD'
