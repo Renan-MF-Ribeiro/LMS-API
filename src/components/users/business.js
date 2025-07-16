@@ -404,7 +404,7 @@ module.exports = {
         });
 
         const salt = bcrypt.genSaltSync(10);
-        const firstName = String(data.name.split(' ')[0]).trim().toLowerCase();
+        const firstName = String(data.name?.split(' ')[0]).trim().toLowerCase();
         const firstThreeCpf = sanitizeCpf(data.cpf).slice(0, 3);
         const initialPassword = !onboarding ? '1234' : `${firstName}${firstThreeCpf}`;
         data.password = [
