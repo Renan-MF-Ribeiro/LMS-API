@@ -1034,9 +1034,8 @@ module.exports = {
             delete search.birthDate;
             delete search.birthday;
         }
-
+        delete search.token;
         const user = await User.findOne(search);
-
         if (!user) {
             if (changeByEmail) {
                 return _messages.success(res, req, { status: 'Sucesso' });
@@ -1061,6 +1060,7 @@ module.exports = {
                 networkLogin: user.networkLogin,
                 _id: user._id,
                 password_old: password_new,
+                partner_token: body.token,
             });
 
             const resetPasswordUrl = `${domain}/login/troca-senha?token=${token}`;
@@ -1180,14 +1180,14 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'users',
-                'recoveryPassword'
+                'changePassword'
             );
         }
     },
 
     async changePasswordByEmail(req, res) {
         try {
-            const { password_new, password_newConfirm } = req.body;
+            const { password_new, password_newConfirm, token } = req.body;
             const { data } = decodeToken(req.headers.authorization);
             const { _id, password_old } = data;
             const user = await User.findOne({ _id: _id }, ['password']);
@@ -1252,6 +1252,9 @@ module.exports = {
                 password: newPass,
                 passwordValid: true,
             });
+            if(token){
+
+            }
 
             _messages.success(
                 res,
