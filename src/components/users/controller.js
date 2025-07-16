@@ -650,7 +650,7 @@ module.exports = {
 
         const { login, password, token } = req.body;
         if (token) {
-            user = await updateUserByPartnerToken(token, user);
+            user = await updateUserByPartnerToken(req, user);
         }
         try {
             await handleBlockUser(user);
