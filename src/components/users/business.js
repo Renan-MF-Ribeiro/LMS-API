@@ -850,8 +850,8 @@ module.exports = {
         return allTags;
     },
 
-    async updateUserByPartnerToken(req, user) {
-        const token = req.body?.token || req.query?.token;
+    async updateUserByPartnerToken(req, user, tk = null) {
+        const token = tk || req.body?.token || req.query?.token;
         const partner = await PartnerBusiness.getPartnersByToken(token);
         const usedToken = validatePartnerToken(partner, token);
 
@@ -909,14 +909,14 @@ const getPartnerTokenNewInformations = async (usedToken, user) => {
     const tokenClasses =
         usedToken?.classGroupResult?.classGroups?.filter(
             (classGroup) =>
-                !user?.classGroups.some((c) => c._id.toString() === classGroup?._id.toString())
+                !user?.classGroups?.some((c) => c._id?.toString() === classGroup?._id?.toString())
         ) || [];
     // -------------- MONTANDO O QUE SERÁ ATUALIZADO NO USUARIO --------------
     // utilizando os lookups criados acima, montamos o que será atualizado no usuário seguindo as flags do token
 
     let newGroupsAD = !usedToken?.overwriteEligibility
-        ? tokenEligibilities
-        : user?.groupsAD?.concat(tokenEligibilities || []);
+        ? tokenEligibilities.concat(['PERFIL_Aluno', 'ELEGE_CURSO'])
+        : user?.groupsAD?.concat(tokenEligibilities || [])
 
     const classes = usedToken?.classGroupResult?.overwriteClassGroup
         ? tokenClasses

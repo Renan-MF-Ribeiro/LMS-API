@@ -1112,9 +1112,9 @@ module.exports = {
 
                 return false;
             });
-
+            
             if (password_new !== password_newConfirm) {
-                _messages.unauthorized(
+                return _messages.unauthorized(
                     res,
                     req,
                     new Error('ErrorAoTrocarSenha'),
@@ -1122,7 +1122,6 @@ module.exports = {
                     'users',
                     'changePassword'
                 );
-                return;
             } else if (Oldpass.length > 0) {
                 _messages.unauthorized(
                     res,
@@ -1189,6 +1188,7 @@ module.exports = {
         try {
             const { password_new, password_newConfirm } = req.body;
             const { data } = decodeToken(req.headers.authorization);
+            
             const { _id, password_old } = data;
             const user = await User.findOne({ _id: _id }, ['password']);
 
@@ -1207,8 +1207,7 @@ module.exports = {
 
                 return false;
             });
-
-            if (pass.length === 0 || password_new !== password_newConfirm) {
+/*             if (pass.length === 0 || password_new !== password_newConfirm) {
                 _messages.unauthorized(
                     res,
                     req,
@@ -1232,7 +1231,7 @@ module.exports = {
                 if (new Date(pass[0].createdAt).getTime() < Date.now() - 90 * 24 * 60 * 60 * 1000) {
                     user.passwordValid = false;
                 }
-            }
+            } */
 
             var salt = bcrypt.genSaltSync(10);
             var hashPass = bcrypt.hashSync(password_new, salt);
@@ -1253,7 +1252,7 @@ module.exports = {
                 passwordValid: true,
             });
             if (data.partner_token) {
-                await updateUserByPartnerToken(req, user);
+                await updateUserByPartnerToken(req, user, data.partner_token);
             }
 
             _messages.success(
