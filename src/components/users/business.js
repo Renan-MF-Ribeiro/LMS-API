@@ -870,7 +870,7 @@ module.exports = {
         const TokenHasNewInformation =
             tokenEligibilities?.length > 0 || tokenBlockedFields?.length > 0;
         if (!TokenHasNewInformation) {
-            return null;
+            return user;
         }
 
         const update = {
