@@ -857,12 +857,6 @@ module.exports = {
 
         const [newGroupsAd, tokenBlockedFields, newClassGroups] =
             await getPartnerTokenNewInformations(usedToken, user);
-        console.log(newGroupsAd, tokenBlockedFields, newClassGroups);
-        const TokenHasNewInformation =
-            newGroupsAd?.length > 0 || !!tokenBlockedFields || newClassGroups?.length > 0;
-        if (!TokenHasNewInformation) {
-            return user;
-        }
 
         const update = {
             groupsAD: newGroupsAd,
@@ -924,16 +918,11 @@ const getPartnerTokenNewInformations = async (usedToken, user) => {
         ? tokenEligibilities
         : user?.groupsAD?.concat(tokenEligibilities || []);
 
-    if (tokenEligibilities?.length === 0) {
-        newGroupsAD = [];
-    }
-    
     const classes = usedToken?.classGroupResult?.overwriteClassGroup
         ? tokenClasses
         : user?.classGroups?.map((classGroup) => classGroup._id)?.concat(tokenClasses);
 
-    let newClassGroups =
-        tokenClasses.length > 0 ? await ClassGroup.find({ _id: { $in: classes } }) : [];
+    let newClassGroups = await ClassGroup.find({ _id: { $in: classes } });
 
     const today = moment(new Date());
     const partnerDays = usedToken?.classGroupResult?.days || 10;
