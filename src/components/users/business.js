@@ -857,39 +857,35 @@ module.exports = {
 
         const [newGroupsAd, tokenBlockedFields, newClassGroups] =
             await getPartnerTokenNewInformations(usedToken, user);
-
+        console.log(newGroupsAd, tokenBlockedFields, newClassGroups);
         const TokenHasNewInformation =
             newGroupsAd?.length > 0 || !!tokenBlockedFields || newClassGroups?.length > 0;
         if (!TokenHasNewInformation) {
             return user;
         }
-        
+
         const update = {
             groupsAD: newGroupsAd,
             classGroups: newClassGroups,
             ...tokenBlockedFields,
         };
 
-        const updatedUser = await User.findOneAndUpdate(
-            { _id: user._id },
-            { $set: update },
-            { new: true }
-        ).exec();
-
-        await Log.create({
-            dataNew: updatedUser,
-            dataOld: user,
-            groups: newGroupsAd ?? [],
-            user: user._id,
-            type: 'UPDATE',
-            message: `Atualização de dados por token de parceiro ${partner.title}`,
-            component: 'users',
-            route: '/users/auth',
-            ip: req.ip,
-            login: user.networkLogin,
-            browserDetails: req.headers['user-agent'],
-        });
-
+        const [updatedUser] = await Promise.all([
+            User.findOneAndUpdate({ _id: user._id }, { $set: update }, { new: true }).exec(),
+            Log.create({
+                dataNew: update,
+                dataOld: user,
+                groups: newGroupsAd ?? [],
+                user: user._id,
+                type: 'UPDATE',
+                message: `Atualização de dados por token de parceiro ${partner.title} - ${usedToken.key}`,
+                component: 'users',
+                route: '/users/auth',
+                ip: req.ip,
+                login: user.networkLogin,
+                browserDetails: req.headers['user-agent'],
+            }),
+        ]);
         return updatedUser;
     },
 
@@ -918,7 +914,8 @@ const getPartnerTokenNewInformations = async (usedToken, user) => {
 
     const tokenClasses =
         usedToken?.classGroupResult?.classGroups?.filter(
-            (classGroup) => !user?.classGroups.some((c) => c._id.toString() === classGroup?._id.toString())
+            (classGroup) =>
+                !user?.classGroups.some((c) => c._id.toString() === classGroup?._id.toString())
         ) || [];
     // -------------- MONTANDO O QUE SERÁ ATUALIZADO NO USUARIO --------------
     // utilizando os lookups criados acima, montamos o que será atualizado no usuário seguindo as flags do token
@@ -931,7 +928,8 @@ const getPartnerTokenNewInformations = async (usedToken, user) => {
         ? tokenClasses
         : user?.classGroups?.map((classGroup) => classGroup._id)?.concat(tokenClasses);
 
-    let newClassGroups = tokenClasses.length > 0 ? await ClassGroup.find({ _id: { $in: classes } }) : [];
+    let newClassGroups =
+        tokenClasses.length > 0 ? await ClassGroup.find({ _id: { $in: classes } }) : [];
 
     const today = moment(new Date());
     const partnerDays = usedToken?.classGroupResult?.days || 10;
