@@ -867,14 +867,22 @@ module.exports = {
             return acc;
         }, {});
 
+        const tokenClasses = usedToken?.classGroupResult?.classGroups || [];
+
         const TokenHasNewInformation =
             tokenEligibilities?.length > 0 || tokenBlockedFields?.length > 0;
         if (!TokenHasNewInformation) {
             return user;
         }
 
+        const newGroupsAD = usedToken?.overwriteEligibility
+            ? tokenEligibilities
+            : user.groupsAD.concat(tokenEligibilities || []);
+
+        const classGroup = await ClassGroup.findOne({ _id: { $in: tokenClasses } });
+
         const update = {
-            groupsAD: user.groupsAD.concat(tokenEligibilities || []),
+            groupsAD: newGroupsAD,
             ...tokenBlockedFields,
         };
 
