@@ -11,10 +11,7 @@ const {
     User,
     UserTest,
     Block,
-    userSchema,
-    userProjection,
     defaultUserMap,
-    groups,
 } = require('./model');
 
 const {
@@ -53,6 +50,7 @@ const {
     maskEmail,
     getLoginFormByStrategyName,
     clearAuthCookies,
+    updateUserByPartnerToken,
 } = require('./business');
 
 const {
@@ -617,8 +615,7 @@ module.exports = {
                 'ldapSignIn'
             );
         }
-
-        const user = await User.findOne({
+        let user = await User.findOne({
             _id: new mongoose.Types.ObjectId(req.user._id),
         });
         if(user.loginType && user.loginType !== 'FORM' && user.loginType !== 'BOTH') {
@@ -631,8 +628,10 @@ module.exports = {
                 'ldapSignIn'
             );
         }
-        const { login, password } = req.body;
-
+        const { login, password, token } = req.body;
+        if(token){
+          user = await updateUserByPartnerToken(token, user);
+        }
         try {
             await handleBlockUser(user);
 

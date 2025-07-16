@@ -27,6 +27,7 @@ const ApiError = require('../../errors/ApiError');
 const { getMessengerConfig } = require('../config/business');
 const { getConnectMap } = require('../../utils/connect');
 const { getCookieProps } = require('../../utils/cookies');
+const PartnerBusiness = require('../partners/business');
 require('dotenv').config();
 
 module.exports = {
@@ -72,44 +73,44 @@ module.exports = {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                    {
-                        $or: [
-                            {
-                                onboarding: { $exists: false },
-                                groupsAD: { $in: tag },
-                            },
-                            {
-                                onboarding: { $eq: onboarding },
-                                groupsAD: { $in: tag },
-                            },
-                        ],
-                    },
-                ];
+                      {
+                          $or: [
+                              {
+                                  onboarding: { $exists: false },
+                                  groupsAD: { $in: tag },
+                              },
+                              {
+                                  onboarding: { $eq: onboarding },
+                                  groupsAD: { $in: tag },
+                              },
+                          ],
+                      },
+                  ];
         } else {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                    {
-                        $or: [
-                            { onboarding: { $exists: false } },
-                            { onboarding: { $eq: onboarding } },
-                        ],
-                    },
-                ];
+                      {
+                          $or: [
+                              { onboarding: { $exists: false } },
+                              { onboarding: { $eq: onboarding } },
+                          ],
+                      },
+                  ];
         }
 
         const searchByQuery = searchBy
             ? {
-                $or: [
-                    { name: { $regex: searchBy, $options: 'i' } },
-                    { registration: { $regex: searchBy, $options: 'i' } },
-                    { email: { $regex: searchBy, $options: 'i' } },
-                ],
-                $and: onboardingQuery,
-            }
+                  $or: [
+                      { name: { $regex: searchBy, $options: 'i' } },
+                      { registration: { $regex: searchBy, $options: 'i' } },
+                      { email: { $regex: searchBy, $options: 'i' } },
+                  ],
+                  $and: onboardingQuery,
+              }
             : {
-                $and: onboardingQuery,
-            };
+                  $and: onboardingQuery,
+              };
 
         const users = await User.find(searchByQuery)
             .sort({ [order]: sort })
@@ -350,30 +351,32 @@ module.exports = {
         });
 
         function isSameField(userField, mapItem) {
-            return mapItem.field !== 'NÃO MAPEAR'
-                && (mapItem.field === userField || mapItem.value === userField)
+            return (
+                mapItem.field !== 'NÃO MAPEAR' &&
+                (mapItem.field === userField || mapItem.value === userField)
+            );
         }
-        
+
         const dashboardFilters = [];
 
         const dashConfig = await DashConfig.find();
 
         dashConfig.forEach((config) => {
-            config.fields?.forEach(config => {
+            config.fields?.forEach((config) => {
                 if (!config.userField || !config.fieldValue) return;
 
                 const currentUserDashValue = String(user[config.dashFilter] || '').trim();
 
-                const matchedMaps = userMap.filter(map => isSameField(config.userField, map));
+                const matchedMaps = userMap.filter((map) => isSameField(config.userField, map));
 
-                matchedMaps.forEach(map => {
+                matchedMaps.forEach((map) => {
                     const currentUserFieldValue = String(user[map.value] || null).trim();
 
                     if (
-                        currentUserFieldValue
-                        && currentUserFieldValue === config.fieldValue
-                        && currentUserDashValue !== 'undefined'
-                        && currentUserDashValue !== 'null'
+                        currentUserFieldValue &&
+                        currentUserFieldValue === config.fieldValue &&
+                        currentUserDashValue !== 'undefined' &&
+                        currentUserDashValue !== 'null'
                     ) {
                         dashboardFilters.push({
                             field: config.dashFilter || null,
@@ -383,8 +386,8 @@ module.exports = {
                             // map,
                         });
                     }
-                })
-            })
+                });
+            });
         });
 
         console.log(JSON.stringify(dashboardFilters, null, 2));
@@ -431,7 +434,7 @@ module.exports = {
         data.terminationDate = parseDate(data.terminationDate);
         data.vacationStartDate = parseDate(data.vacationStartDate);
         data.vacationEndDate = parseDate(data.vacationEndDate);
-        data.loginType = data.loginType == 'AMBOS' ? 'BOTH' : data.loginType; 
+        data.loginType = data.loginType == 'AMBOS' ? 'BOTH' : data.loginType;
 
         data.enabled = true;
         data.onboarding = onboarding;
@@ -696,7 +699,7 @@ module.exports = {
             ]);
         } catch (error) {
             console.log(error);
-            return []
+            return [];
         }
     },
 
@@ -841,9 +844,53 @@ module.exports = {
                             new Date(classGroup.limitDate) >= currentDate
                     )
                     .map((classGroup) => classGroup.groupCode)
-            ).filter(t => !String(t).startsWith('PERFIL_'));
+            )
+            .filter((t) => !String(t).startsWith('PERFIL_'));
 
         return allTags;
+    },
+
+    async updateUserByPartnerToken(token, user) {
+        const partner = await PartnerBusiness.getPartnersByToken(token);
+        const usedToken = module.exports.validatePartnerToken(partner, token);
+
+        const tokenEligibilities = usedToken?.elegibilityResult
+            ?.map((key) => key?.value)
+            ?.filter(Boolean)
+            ?.filter((value) => !user.groupsAD?.includes(value));
+
+        const tokenBlockedFields = usedToken?.defaultField?.reduce((acc, key) => {
+            const { key: tokenKey, value: tokenValue } = key;
+            if (tokenKey && tokenValue && user[tokenKey] !== tokenValue) {
+                acc[tokenKey] = tokenValue;
+            }
+            return acc;
+        }, {});
+
+        const TokenHasNewInformation =
+            tokenEligibilities?.length > 0 || tokenBlockedFields?.length > 0;
+        if (!TokenHasNewInformation) {
+            return null;
+        }
+
+        const update = {
+            groupsAD: user.groupsAD.concat(tokenEligibilities || []),
+            ...tokenBlockedFields,
+        };
+
+        return await User.updateOne({ _id: user._id }, { $set: update }, { new: true }).exec();
+    },
+
+    validatePartnerToken(partner, token) {
+        if (!partner) {
+            throw new ApiError('Token inválido ou parceiro não encontrado', 404);
+        }
+        const usedToken = partner?.keys.find((key) => key.key === token);
+        if (Date.now() > usedToken?.endDate) {
+            throw new ApiError('Token expirado', 403);
+        }
+
+        return usedToken;
     },
 
     async clearAuthCookies(req, res) {
@@ -851,5 +898,5 @@ module.exports = {
         res.clearCookie('connect.sid', getCookieProps());
         res.clearCookie('SAS', getCookieProps());
         res.clearCookie('strategyName', getCookieProps());
-    }
+    },
 };
