@@ -7,12 +7,7 @@ const { CLIENT_ID } = process.env;
 const _messages = require('../../utils/messages');
 const _files = require('../../utils/files');
 const { NewMessage } = require('../new-messages/model');
-const {
-    User,
-    UserTest,
-    Block,
-    defaultUserMap,
-} = require('./model');
+const { User, UserTest, Block, defaultUserMap } = require('./model');
 
 const {
     generateToken,
@@ -110,8 +105,17 @@ const { addSASTokenToResponse } = require('../../utils/cookies');
 const GamificationKafka = require('../gamification/kafka/broker');
 
 const { FormModel } = require('../forms/model');
-const { getConnectMap, validateDataByConnectMap, getConnectEligibilities } = require('../../utils/connect');
-const { getFormErrorsByMapConfig, getDefaultForm, getAdminForm, getFormErrorsByFormValidation } = require('../forms/business');
+const {
+    getConnectMap,
+    validateDataByConnectMap,
+    getConnectEligibilities,
+} = require('../../utils/connect');
+const {
+    getFormErrorsByMapConfig,
+    getDefaultForm,
+    getAdminForm,
+    getFormErrorsByFormValidation,
+} = require('../forms/business');
 
 const { getDbCurrentFeatures } = require('../../utils/features');
 const { ObjectId } = require('mongoose').Types;
@@ -120,14 +124,14 @@ const environment = require('../../environment');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-function hideCPFNumbers (cpf) {
+function hideCPFNumbers(cpf) {
     if (!cpf) return cpf;
 
     return String(cpf).substring(0, 3) + 'XXXXXXXX';
 }
 
 // Gerencia block de usuário por tentativas de login consecutivas
-async function handleBlockUser (user) {
+async function handleBlockUser(user) {
     const countOfBlocks = await checkAmountOfLocks(user._id);
     // 5 Tentativas
     if (countOfBlocks >= 5) {
@@ -234,7 +238,7 @@ async function generateTokens(user, login, password, res) {
 }
 
 module.exports = {
-    async create (req, res) {
+    async create(req, res) {
         try {
             const form = await getAdminForm();
 
@@ -276,9 +280,7 @@ module.exports = {
             }
 
             const userExists = await User.findOne({
-                $or: [
-                    { networkLogin: req.body[loginField] },
-                ]
+                $or: [{ networkLogin: req.body[loginField] }],
             });
 
             if (userExists) {
@@ -303,21 +305,25 @@ module.exports = {
 
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
-            const processedUser = await processUsersLoad({
-                networkLogin: req.body[loginField],
-                ...req.body
-            }, fieldsForElegibility);
+            const processedUser = await processUsersLoad(
+                {
+                    networkLogin: req.body[loginField],
+                    ...req.body,
+                },
+                fieldsForElegibility
+            );
 
             await User.create({
                 ...processedUser,
                 networkLogin: req.body[loginField],
             });
 
-            const created = await User.findOne(
-                { networkLogin: processedUser.networkLogin },
-            ).lean();
+            const created = await User.findOne({ networkLogin: processedUser.networkLogin }).lean();
 
-            WebhooksController.dispatch('create', 'users', false, { ...created, password: undefined });
+            WebhooksController.dispatch('create', 'users', false, {
+                ...created,
+                password: undefined,
+            });
 
             return _messages.success(res, req, created);
         } catch (error) {
@@ -346,7 +352,7 @@ module.exports = {
         }
     },
 
-    async findById (req, res) {
+    async findById(req, res) {
         try {
             const _id = req.params.userId;
 
@@ -372,7 +378,7 @@ module.exports = {
         }
     },
 
-    async signup (req, res) {
+    async signup(req, res) {
         const { token, formId: queryFormId } = req.query;
         const {
             password,
@@ -396,7 +402,8 @@ module.exports = {
         let networkLogin = data.cpf;
 
         if (data.email) data.email = String(data.email).toLowerCase();
-        if (data.alternativeEmail) data.alternativeEmail = String(data.alternativeEmail).toLowerCase();
+        if (data.alternativeEmail)
+            data.alternativeEmail = String(data.alternativeEmail).toLowerCase();
 
         if (form) {
             const connectMap = await getConnectMap(true);
@@ -524,7 +531,10 @@ module.exports = {
 
             const newUser = await User.create(userData);
 
-            WebhooksController.dispatch('create', 'users', false, { ...newUser.toObject(), password: undefined });
+            WebhooksController.dispatch('create', 'users', false, {
+                ...newUser.toObject(),
+                password: undefined,
+            });
 
             if (token) {
                 const DATA_INICIO = today.startOf('day');
@@ -556,10 +566,10 @@ module.exports = {
                     dataOld: [],
                     groups: groupsAD ?? [],
                     user: newUser._id,
-                    type: "LOGIN",
-                    message: "Sucesso ao se cadastrar",
-                    component: "users",
-                    route: "signup",
+                    type: 'LOGIN',
+                    message: 'Sucesso ao se cadastrar',
+                    component: 'users',
+                    route: 'signup',
                     ip: req.ip,
                     login: newUser.networkLogin,
                     browserDetails: req.headers['user-agent'],
@@ -582,7 +592,7 @@ module.exports = {
         }
     },
 
-    async activateUser (req, res) {
+    async activateUser(req, res) {
         try {
             const { token, email } = req.body;
             const isUser = await bcrypt.compare(email, token);
@@ -618,7 +628,7 @@ module.exports = {
         let user = await User.findOne({
             _id: new mongoose.Types.ObjectId(req.user._id),
         });
-        if(user.loginType && user.loginType !== 'FORM' && user.loginType !== 'BOTH') {
+        if (user.loginType && user.loginType !== 'FORM' && user.loginType !== 'BOTH') {
             return _messages.forbidden(
                 res,
                 req,
@@ -628,67 +638,62 @@ module.exports = {
                 'ldapSignIn'
             );
         }
+
         const { login, password, token } = req.body;
-        if(token){
-          user = await updateUserByPartnerToken(token, user);
+        if (token) {
+            user = await updateUserByPartnerToken(token, user);
         }
         try {
             await handleBlockUser(user);
-
-            if (new Date(user.password[user.password.length - 1].createdAt).getTime() < Date.now() - 90 * 24 * 60 * 60 * 1000) {
+            if (
+                new Date(user?.password?.[user?.password?.length - 1]?.createdAt)?.getTime() <
+                Date.now() - 90 * 24 * 60 * 60 * 1000
+            ) {
                 user.passwordValid = false;
             }
 
-            const entryRecord = await returnDateSinceFirstLogin(user?._id);
-            const firstLogin = !user.passwordValid && !entryRecord
-
             // Gera todos os tokens necessários
-            const {
-                tokenAnalytics,
-                tokenHappPlace,
-                mfaToken,
-                key,
-                authwebPush,
-                SAS,
-                tk,
-                profilesIDS,
-                namesProfiles,
-                namesGroups,
-            } = await generateTokens(user, login, password, res);
+            const [tokens, entryRecord] = await Promise.all([
+                generateTokens(user, login, password, res),
+                returnDateSinceFirstLogin(user?._id),
+                updateLastLoginUser(user?._id),
+                GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.LOGIN],
+                    identifier: login,
+                }),
+            ]);
 
-            await GamificationKafka.publishEventRuleValidation({
-                events: [EVENT_CATEGORY.LOGIN],
-                identifier: login
-            })
-
-            await updateLastLoginUser(user?._id)
+            const firstLogin = !user?.passwordValid && !entryRecord;
 
             WebhooksController.dispatch('APASlogin', 'users', false, {
                 ...user,
                 password: undefined,
-            })
+            });
 
             return _messages.success(
                 res,
                 req,
                 {
-                    SAS,
-                    tk,
-                    key,
-                    firstLogin,
+                    // tokens
+                    SAS: tokens.SAS,
+                    tk: tokens?.tk,
+                    key: tokens?.key,
+                    tokenAnalytics: tokens?.tokenAnalytics,
+                    tokenHappPlace: tokens?.tokenHappPlace,
+                    mfaToken: tokens?.mfaToken,
+                    authwebPush: tokens?.authwebPush?.keys.auth,
+
+                    //user data
                     accept: user.acceptTerms,
                     acceptCollaboration: user.acceptTermsCollaboration,
                     passwordValid: user.passwordValid,
-                    numbers: profilesIDS.numbers,
+                    numbers: tokens?.profilesIDS?.numbers,
                     name: user.name,
                     profilePhoto: user.profilePhoto,
-                    tokenAnalytics,
-                    tokenHappPlace,
-                    mfaToken,
                     networkLogin: user.networkLogin,
                     userId: user._id,
-                    authwebPush: authwebPush?.keys.auth,
                     email: user.email,
+                    firstLogin,
                 },
                 'Sucesso ao logar',
                 'users',
@@ -697,13 +702,13 @@ module.exports = {
                 [],
                 true,
                 'LOGIN',
-                namesProfiles.concat(namesGroups)
+                tokens?.namesProfiles?.concat(tokens?.namesGroups)
             );
         } catch (error) {
             console.log({ error });
-            if (user.id)
+            if (user?.id)
                 await Block.create({
-                    user: user._id,
+                    user: user?._id,
                     dateTimeBlock: getDateToday(),
                     ip: req.ip,
                 });
@@ -719,7 +724,7 @@ module.exports = {
         }
     },
 
-    async feedbackElegible (req, res) {
+    async feedbackElegible(req, res) {
         const user = await getUserByToken(req);
         const today = new Date();
         const uri = `${process.env.API_SURVEY}/feedback/listbyuser?userid=${user._id}`;
@@ -793,8 +798,8 @@ module.exports = {
                     identifier: claim,
                     meta: {
                         trailTitle: data?.trailTitle || data?.data?.trailTitle,
-                    }
-                })
+                    },
+                });
             }
 
             const query = { status: 'ATIVO' };
@@ -803,7 +808,10 @@ module.exports = {
 
             const user = await User.findOne(query).lean();
 
-            if (!user || (user.loginType && ( user.loginType !== 'SSO' && user.loginType !== 'BOTH'))) {
+            if (
+                !user ||
+                (user.loginType && user.loginType !== 'SSO' && user.loginType !== 'BOTH')
+            ) {
                 await sleep(3000);
 
                 return _messages.forbidden(
@@ -817,7 +825,7 @@ module.exports = {
             }
 
             const amountOfLocks = await checkAmountOfLocks(user._id);
-            
+
             // 5 Tentativas
             if (amountOfLocks >= 50) {
                 const lastLoginAttemp = await returnLastLoginAttemp(user._id);
@@ -825,10 +833,7 @@ module.exports = {
 
                 // 30min
                 if (resultDiff >= 1) {
-                    await Block.updateMany(
-                        { user: { $eq: user._id } },
-                        { unblocked: true }
-                    );
+                    await Block.updateMany({ user: { $eq: user._id } }, { unblocked: true });
                 } else {
                     sendNotificationEmail(
                         user.email,
@@ -860,7 +865,7 @@ module.exports = {
             } = await generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', res);
 
             const entryRecord = await returnDateSinceFirstLogin(user?._id);
-            
+
             const firstLogin = !user.passwordValid && !entryRecord;
 
             await updateLastLoginUser(user._id);
@@ -896,7 +901,6 @@ module.exports = {
                 'LOGIN',
                 namesProfiles.concat(namesGroups)
             );
-
         } catch (error) {
             console.log(error);
             _messages.internalServer(
@@ -910,7 +914,7 @@ module.exports = {
         }
     },
 
-    async acceptTerms (req, res) {
+    async acceptTerms(req, res) {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
@@ -940,7 +944,7 @@ module.exports = {
         }
     },
 
-    async watchedVideo (req, res) {
+    async watchedVideo(req, res) {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
@@ -970,7 +974,7 @@ module.exports = {
         }
     },
 
-    async acceptTermsCollaboration (req, res) {
+    async acceptTermsCollaboration(req, res) {
         try {
             const { _id } = await getUserByToken(req);
             await User.findByIdAndUpdate(_id, {
@@ -1000,7 +1004,7 @@ module.exports = {
         }
     },
 
-    async recoveryPassword (req, res) {
+    async recoveryPassword(req, res) {
         const { body, domain, changeByEmail } = req.body;
 
         if (typeof body !== 'object' || Object.values(body).some((value) => !value?.length)) {
@@ -1075,7 +1079,7 @@ module.exports = {
         return _messages.success(res, req, password_new);
     },
 
-    async changePassword (req, res) {
+    async changePassword(req, res) {
         try {
             const { password_old, password_new, password_newConfirm } = req.body;
             const { _id } = await getUserByToken(req);
@@ -1172,7 +1176,7 @@ module.exports = {
         }
     },
 
-    async changePasswordByEmail (req, res) {
+    async changePasswordByEmail(req, res) {
         try {
             const { password_new, password_newConfirm } = req.body;
             const { data } = decodeToken(req.headers.authorization);
@@ -1264,7 +1268,7 @@ module.exports = {
         }
     },
 
-    async import (req, res) {
+    async import(req, res) {
         var file = null;
         const newUsers = [];
         const existingUsers = [];
@@ -1414,7 +1418,7 @@ module.exports = {
         _messages.success(res, req, 'Importado com sucesso');
     },
 
-    async importOnboarding (req, res) {
+    async importOnboarding(req, res) {
         try {
             const onboarding = true;
             var file = null;
@@ -1448,7 +1452,11 @@ module.exports = {
                     networkLogin: result.cpf,
                 });
 
-                const processedUser = await processUsersLoad(result, fieldsForElegibility, onboarding);
+                const processedUser = await processUsersLoad(
+                    result,
+                    fieldsForElegibility,
+                    onboarding
+                );
 
                 const account = await processUserAccount(processedUser);
 
@@ -1514,7 +1522,7 @@ module.exports = {
         }
     },
 
-    async returnUsers (req, res) {
+    async returnUsers(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1582,7 +1590,7 @@ module.exports = {
         }
     },
 
-    async returnManagers (req, res) {
+    async returnManagers(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1590,8 +1598,9 @@ module.exports = {
             const searchBy = req.query.searchBy;
             const filterManager = req.query.filterManager;
 
-            const profiles = await Profile.find({ 'title': { $ne: 'PERFIL_Aluno' } }).sort({ label: 'asc' })
-
+            const profiles = await Profile.find({ title: { $ne: 'PERFIL_Aluno' } }).sort({
+                label: 'asc',
+            });
 
             let query = {
                 groupsAD: { $in: profiles.map((profile) => profile.title) },
@@ -1605,27 +1614,25 @@ module.exports = {
                 handleSegmentationOnQuery(req, 'issuer', query);
             }
 
-
-
             if (searchBy) {
                 query.$or = [
                     { name: { $regex: searchBy, $options: 'i' } },
                     { registration: { $regex: searchBy, $options: 'i' } },
                     { email: { $regex: searchBy, $options: 'i' } },
                     { cpf: { $regex: searchBy, $options: 'i' } },
-                ]
+                ];
             }
-            const managersCounters = []
+            const managersCounters = [];
 
             for (const profile of profiles) {
-                const queryProfile = { groupsAD: profile.title }
+                const queryProfile = { groupsAD: profile.title };
                 if (searchBy) {
                     queryProfile.$or = [
                         { name: { $regex: searchBy, $options: 'i' } },
                         { registration: { $regex: searchBy, $options: 'i' } },
                         { email: { $regex: searchBy, $options: 'i' } },
                         { cpf: { $regex: searchBy, $options: 'i' } },
-                    ]
+                    ];
                 }
                 const count = await User.countDocuments(queryProfile);
                 managersCounters.push({ label: profile.label, title: profile.title, count });
@@ -1640,7 +1647,7 @@ module.exports = {
             _messages.success(res, req, {
                 data: users,
                 total,
-                managersCounters
+                managersCounters,
             });
         } catch (error) {
             _messages.internalServer(
@@ -1654,7 +1661,7 @@ module.exports = {
         }
     },
 
-    async returnUsersOnboarding (req, res) {
+    async returnUsersOnboarding(req, res) {
         try {
             const users = await findUsers(req, { onboarding: true });
             _messages.success(res, req, users);
@@ -1670,7 +1677,7 @@ module.exports = {
         }
     },
 
-    async returnUserById (req, res) {
+    async returnUserById(req, res) {
         try {
             const { _id } = await getUserByToken(req);
             const user = await User.findOne({ _id: _id }, { password: 0 });
@@ -1690,7 +1697,7 @@ module.exports = {
         }
     },
 
-    async updateUser (req, res) {
+    async updateUser(req, res) {
         try {
             const { _id, email, cpf, networkLogin, tags } = req.body;
             delete req.body.ip;
@@ -1757,7 +1764,7 @@ module.exports = {
         }
     },
 
-    async updateUserById (req, res) {
+    async updateUserById(req, res) {
         try {
             const { _id } = req.body;
             await User.findByIdAndUpdate(_id, req.body);
@@ -1774,7 +1781,7 @@ module.exports = {
         }
     },
 
-    async changePhoto (req, res) {
+    async changePhoto(req, res) {
         try {
             const user = await getUserByToken(req);
             const file = req.files.file;
@@ -1795,7 +1802,7 @@ module.exports = {
     },
 
     async isAuthenticated(req, res) {
-        if (req.user && await validateToken(req)) {
+        if (req.user && (await validateToken(req))) {
             await addSASTokenToResponse(res);
 
             return _messages.success(res, req, true);
@@ -1811,7 +1818,7 @@ module.exports = {
         );
     },
 
-    async isAuthenticatedNginx (req, res) {
+    async isAuthenticatedNginx(req, res) {
         if (await validateTokenNginx(req.params.token)) {
             _messages.success(res, req, true);
         } else {
@@ -1826,7 +1833,7 @@ module.exports = {
         }
     },
 
-    async selfData (req, res) {
+    async selfData(req, res) {
         try {
             const { data } = await decodeToken(req.headers.authorization);
             const user = await User.findOne(
@@ -1846,7 +1853,7 @@ module.exports = {
         }
     },
 
-    async importUserTest (req, res) {
+    async importUserTest(req, res) {
         try {
             const usersTest = await UserTest.find();
             for (const result of usersTest) {
@@ -1912,7 +1919,7 @@ module.exports = {
         }
     },
 
-    async exportUsers (req, res) {
+    async exportUsers(req, res) {
         try {
             const users = await User.find();
             const records = [];
@@ -1938,7 +1945,7 @@ module.exports = {
         }
     },
 
-    async email (req, res) {
+    async email(req, res) {
         try {
             const error = { message: 'ERRO NA CARGA DIÁRIA', stack: 'erro' };
             await sendLogEmail('success', error, 100, 10, 40, 50, '13/01/2020', 10, 20, 30);
@@ -1949,7 +1956,7 @@ module.exports = {
         }
     },
 
-    async importUsersDisabled (req, res) {
+    async importUsersDisabled(req, res) {
         try {
             const { file } = req.files;
             const results = await _files.readCSV(file.path);
@@ -1970,7 +1977,7 @@ module.exports = {
         }
     },
 
-    async emulation (req, res) {
+    async emulation(req, res) {
         try {
             const { body } = req;
             const completeUser = await User.findById(body._id).lean();
@@ -2093,7 +2100,7 @@ module.exports = {
         }
     },
 
-    async importUpdateStatusUsers (req, res, next) {
+    async importUpdateStatusUsers(req, res, next) {
         try {
             const { file } = req.files;
             const results = await _files.readCSV(file.path);
@@ -2121,7 +2128,12 @@ module.exports = {
             message: 'SSO_CALLBACK',
             component: 'users',
             route: 'ssoCallback',
-            dataNew: JSON.stringify({ samlObj: req.samlUserObject, samlUser: req.user, session: req.session, sessionID: req.sessionID }),
+            dataNew: JSON.stringify({
+                samlObj: req.samlUserObject,
+                samlUser: req.user,
+                session: req.session,
+                sessionID: req.sessionID,
+            }),
         });
 
         const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
@@ -2137,7 +2149,9 @@ module.exports = {
                 if (acc !== null && acc !== undefined && acc !== '') return acc;
 
                 return _.get(req.samlUserObject ?? req.user, key, null);
-            }, null) ?? req.user?.nameID ?? null;
+            }, null) ??
+            req.user?.nameID ??
+            null;
 
         await Log.create({
             type: 'SSO_CALLBACK_INFOS',
@@ -2184,7 +2198,7 @@ module.exports = {
         res.redirect(302, `${environment.DOMAIN}/login/entrar/sso?token=${token}`);
     },
 
-    async updateDeviceId (req, res) {
+    async updateDeviceId(req, res) {
         try {
             const user = await getUserByToken(req);
             const { deviceId } = req.body;
@@ -2203,7 +2217,7 @@ module.exports = {
         }
     },
 
-    async returnCollaborativeUsers (req, res) {
+    async returnCollaborativeUsers(req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -2212,34 +2226,34 @@ module.exports = {
             const collaborativeUsers = await User.find(
                 searchBy
                     ? {
-                        $and: [
-                            {
-                                groupsAD: { $in: ['PERFIL_Colaborador'] },
-                            },
-                            {
-                                $or: [
-                                    {
-                                        name: {
-                                            $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                    {
-                                        registration: {
-                                            $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                    {
-                                        email: {
-                                            $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                ],
-                            },
-                        ],
-                    }
+                          $and: [
+                              {
+                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
+                              },
+                              {
+                                  $or: [
+                                      {
+                                          name: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          registration: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          email: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                  ],
+                              },
+                          ],
+                      }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             )
                 .sort({
@@ -2251,34 +2265,34 @@ module.exports = {
             const total = await User.countDocuments(
                 searchBy
                     ? {
-                        $and: [
-                            {
-                                groupsAD: { $in: ['PERFIL_Colaborador'] },
-                            },
-                            {
-                                $or: [
-                                    {
-                                        name: {
-                                            $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                    {
-                                        registration: {
-                                            $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                    {
-                                        email: {
-                                            $regex: searchBy,
-                                            $options: 'i',
-                                        },
-                                    },
-                                ],
-                            },
-                        ],
-                    }
+                          $and: [
+                              {
+                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
+                              },
+                              {
+                                  $or: [
+                                      {
+                                          name: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          registration: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                      {
+                                          email: {
+                                              $regex: searchBy,
+                                              $options: 'i',
+                                          },
+                                      },
+                                  ],
+                              },
+                          ],
+                      }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             );
 
@@ -2291,7 +2305,7 @@ module.exports = {
         }
     },
 
-    async setCollaborator (req, res) {
+    async setCollaborator(req, res) {
         try {
             const { userId, moderation } = req.body;
             if (!userId) {
@@ -2324,7 +2338,7 @@ module.exports = {
         }
     },
 
-    async toggleCollaboratorModeration (req, res) {
+    async toggleCollaboratorModeration(req, res) {
         try {
             const { userId, moderation } = req.body;
 
@@ -2362,7 +2376,7 @@ module.exports = {
         }
     },
 
-    async removeCollaborator (req, res) {
+    async removeCollaborator(req, res) {
         try {
             const { userId } = req.body;
 
@@ -2393,7 +2407,7 @@ module.exports = {
         }
     },
 
-    async resetUserPassword (req, res) {
+    async resetUserPassword(req, res) {
         try {
             const { userId, password, generate } = req.body;
 
@@ -2469,7 +2483,7 @@ module.exports = {
         }
     },
 
-    async deleteGroups (req, res) {
+    async deleteGroups(req, res) {
         const { tag, userId } = req.body;
 
         const arrTags = Array.isArray(tag) ? tag : [tag];
@@ -2500,7 +2514,7 @@ module.exports = {
         }
     },
 
-    async addGroups (req, res) {
+    async addGroups(req, res) {
         const { tag, userId } = req.body;
 
         // Cuurent user é o dono da requisição
@@ -2577,9 +2591,14 @@ module.exports = {
         }
     },
 
-    async deleteClassTag (req, res) {
+    async deleteClassTag(req, res) {
         const { tag, userId, classIdentifier } = req.body;
-        const classGroups = classIdentifier ? { groupCode: tag, classIdentifier: { $in: [classIdentifier, new ObjectId(classIdentifier)] } } : { groupCode: tag, classIdentifier: { $exists: false } };
+        const classGroups = classIdentifier
+            ? {
+                  groupCode: tag,
+                  classIdentifier: { $in: [classIdentifier, new ObjectId(classIdentifier)] },
+              }
+            : { groupCode: tag, classIdentifier: { $exists: false } };
 
         try {
             await User.findByIdAndUpdate(userId, {
@@ -2591,7 +2610,7 @@ module.exports = {
         }
     },
 
-    async addClassTag (req, res) {
+    async addClassTag(req, res) {
         const { tag, userId } = req.body;
         try {
             const classIdentifier = new ObjectId();
@@ -2614,7 +2633,7 @@ module.exports = {
         }
     },
 
-    async updateClassTag (req, res) {
+    async updateClassTag(req, res) {
         const { tag, _id } = req.body;
         try {
             const { classGroups } = await User.findOne({ _id });
@@ -2646,7 +2665,7 @@ module.exports = {
         }
     },
 
-    async evaluationProgress (req, res) {
+    async evaluationProgress(req, res) {
         try {
             const { idEvaluation } = req.params;
             const user = await getUserByToken(req);
@@ -2720,7 +2739,7 @@ module.exports = {
         }
     },
 
-    async getAllConteudistas (req, res) {
+    async getAllConteudistas(req, res) {
         try {
             const query = {
                 $and: [
@@ -2749,7 +2768,7 @@ module.exports = {
         }
     },
 
-    async handleNames (req, res) {
+    async handleNames(req, res) {
         try {
             const { networkLogins } = req.body;
             const users = await User.find({ networkLogin: { $in: networkLogins } }, [
@@ -2771,7 +2790,7 @@ module.exports = {
         }
     },
 
-    async generateMultiFactor (req, res) {
+    async generateMultiFactor(req, res) {
         try {
             const { networkLogin } = req.body;
             const user = await User.findOne({ networkLogin: networkLogin });
@@ -2799,7 +2818,7 @@ module.exports = {
         }
     },
 
-    async validateMultiFactor (req, res) {
+    async validateMultiFactor(req, res) {
         try {
             const user = await getUserByToken(req);
             const { secret, token } = req.body;
@@ -2832,7 +2851,7 @@ module.exports = {
         }
     },
 
-    async validateMfaToken (req, res) {
+    async validateMfaToken(req, res) {
         try {
             const isTokenValid = await validateMfaToken(req);
             _messages.success(res, req, isTokenValid);
@@ -2848,7 +2867,7 @@ module.exports = {
         }
     },
 
-    async updateWebPushAuthorization (req, res) {
+    async updateWebPushAuthorization(req, res) {
         try {
             const user = await getUserByToken(req);
             const webPushAuthorization = req.body;
@@ -2878,14 +2897,16 @@ module.exports = {
         }
     },
 
-    async getUserMap (req, res) {
+    async getUserMap(req, res) {
         try {
             const connectMap = await getConnectMap(true);
 
-            const fields = Object.entries(connectMap).map(([key, value]) => ({
-                display: defaultUserMap[key]?.label ?? key ?? value?.label,
-                value: key
-            })).filter((field) => field.value !== 'elegibility');
+            const fields = Object.entries(connectMap)
+                .map(([key, value]) => ({
+                    display: defaultUserMap[key]?.label ?? key ?? value?.label,
+                    value: key,
+                }))
+                .filter((field) => field.value !== 'elegibility');
 
             const eligibilityData = await getConnectEligibilities();
 
@@ -2894,7 +2915,7 @@ module.exports = {
             _messages.success(res, req, {
                 map: connectMap,
                 fields,
-                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd'],  // Campos que não devem ser alterados
+                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd'], // Campos que não devem ser alterados
                 eligibility,
             });
         } catch (error) {
@@ -2909,7 +2930,7 @@ module.exports = {
         }
     },
 
-    async putUserMap (req, res) {
+    async putUserMap(req, res) {
         try {
             const { body } = req;
 
@@ -2940,7 +2961,7 @@ module.exports = {
         }
     },
 
-    async readSheetHeaders (req, res) {
+    async readSheetHeaders(req, res) {
         try {
             let file = null;
             if (req.files.file) {
@@ -2971,5 +2992,5 @@ module.exports = {
     async logout(req, res) {
         await clearAuthCookies(req, res);
         res.status(200).json({ ok: true });
-    }
+    },
 };
