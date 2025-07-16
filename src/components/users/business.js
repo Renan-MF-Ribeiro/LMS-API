@@ -920,10 +920,14 @@ const getPartnerTokenNewInformations = async (usedToken, user) => {
     // -------------- MONTANDO O QUE SERÁ ATUALIZADO NO USUARIO --------------
     // utilizando os lookups criados acima, montamos o que será atualizado no usuário seguindo as flags do token
 
-    const newGroupsAD = usedToken?.overwriteEligibility
+    let newGroupsAD = !usedToken?.overwriteEligibility
         ? tokenEligibilities
         : user?.groupsAD?.concat(tokenEligibilities || []);
 
+    if (tokenEligibilities?.length === 0) {
+        newGroupsAD = [];
+    }
+    
     const classes = usedToken?.classGroupResult?.overwriteClassGroup
         ? tokenClasses
         : user?.classGroups?.map((classGroup) => classGroup._id)?.concat(tokenClasses);
