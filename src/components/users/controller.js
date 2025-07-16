@@ -764,6 +764,13 @@ module.exports = {
         try {
             const data = jwt.verify(token, secret);
 
+            // Need to create the session when using monitoring login
+            if (data.monitoringLogin) {
+                req.session.passport = { user: data };
+                res.cookie('connect.sid', req.sessionID, getCookieProps());
+                await addSASTokenToResponse(res);
+            }
+
             const tokenIdpProfiles = data?.idpProfiles;
             const tokenStrategyName = data?.strategyName ?? undefined;
 
