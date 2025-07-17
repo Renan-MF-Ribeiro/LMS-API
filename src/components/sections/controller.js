@@ -64,6 +64,29 @@ function parseSectionBodyTrails(req) {
     }) ?? [];
 }
 
+async function trackPerformance(label, fn) {
+    const startTime = process.hrtime(); // alta resolução
+    const startUsage = process.cpuUsage(); // uso de CPU
+    const startMem = process.memoryUsage().heapUsed; // memória heap usada (bytes)
+
+    const result = await fn(); // executa a função
+
+    const [sec, nanosec] = process.hrtime(startTime);
+    const cpu = process.cpuUsage(startUsage);
+    const endMem = process.memoryUsage().heapUsed;
+
+    const elapsedTime = (sec * 1e3 + nanosec / 1e6).toFixed(3); // ms
+    const cpuUserMs = (cpu.user / 1000).toFixed(3);
+    const cpuSystemMs = (cpu.system / 1000).toFixed(3);
+    const memoryDiff = ((endMem - startMem) / 1024 / 1024).toFixed(3); // MB
+
+    console.log(`[${label}] Time: ${elapsedTime} ms`);
+    console.log(`[${label}] CPU: user ${cpuUserMs} ms, system ${cpuSystemMs} ms`);
+    console.log(`[${label}] Heap Memory: ${memoryDiff} MB`);
+
+    return result;
+}
+
 module.exports = {
     async returnSections(req, res) {
         try {
@@ -271,7 +294,7 @@ module.exports = {
 
         const tags = await getTagsElegiblesByToken(req);
 
-        if(!tags?.length) {
+        if (!tags?.length) {
             _messages.success(res, req, []);
             return;
         }
@@ -281,10 +304,18 @@ module.exports = {
             getGroupCodesByToken(req, tags)
         ]);
 
-        const newArray = [];
-        
-        let sectionArray;
+        let newArray = [];
+        let sectionArray = [];
 
+        const identifier = /* user?.networkLogin ||  */new Date().getTime();
+        const processChannelConsoleTimeStr = `processChannel ${channelId || 'default'} ${identifier}`;
+        const populateTrailsConsoleTimeStr = `populateTrails ${channelId || 'default'} ${identifier}`;
+        const processTrackingConsoleTimeStr = `processTracking ${channelId || 'default'} ${identifier}`;
+        const processSectionTrailsConsoleTimeStr = `processSectionTrails ${channelId || 'default'} ${identifier}`;
+        const processTrailsConsoleTimeStr = `processTrails ${channelId || 'default'} ${identifier}`;
+        const processAssessmentConsoleTimeStr = `processAssessment ${channelId || 'default'} ${identifier}`;
+
+        console.time(processChannelConsoleTimeStr);
         if (channelId) {
             let { idSections } = await Channel.findById(channelId).select('idSections -_id');
 
@@ -304,20 +335,13 @@ module.exports = {
                     ).map(trail => trail._id)
                 }
             });
-            
-            newArray.push(
-                ...trailsInSections
-                    .map((e) => {
-                        return e.trails;
-                    })
-                    .flat(2)
-            );
+
+            newArray = trailsInSections.flatMap((e) => e.trails);
 
             delete req.query.channel;
             sectionArray = idSections;
         }
-        
-        let resultSections = [];
+        console.timeEnd(processChannelConsoleTimeStr);
 
         const query = {
             enabled: true,
@@ -328,17 +352,20 @@ module.exports = {
                 { tagsAnd: { $in: tags, } },
             ],
         };
-        
+
         if (channelId) {
             query['_id'] = { $in: newArray };
         }
 
-        console.time('populateTrails');
-        
+        console.time(populateTrailsConsoleTimeStr);
+
         let trails = await populateTrails(true, query);
-        
-        console.timeEnd('populateTrails');
-        
+
+        console.timeEnd(populateTrailsConsoleTimeStr);
+
+
+        console.time(processTrackingConsoleTimeStr);
+
         const allTrackingUser = await Tracking.find({
             userLogin: { $eq: user.networkLogin },
             $or: [
@@ -368,6 +395,10 @@ module.exports = {
             }
         }
 
+        console.timeEnd(processTrackingConsoleTimeStr);
+
+        console.time(processSectionTrailsConsoleTimeStr);
+
         trails = trails.filter(checkIfTheTrackIsValid);
 
         let arrSections = await elegiblesContents(trails);
@@ -381,13 +412,13 @@ module.exports = {
             arrMostSeenSections,
             arrCoursesSections,
         ] = await Promise.all([
-            mandatorySections(trails, tags),
-            recentsSections(trails),
-            keepLearningSections(trails),
-            concludedSections(trails),
-            favoriteSections(trails, user._id),
-            mostSeenSections(trails),
-            courseInSections(tags, user._id),
+            trackPerformance('mandatorySections', async () => mandatorySections(trails, tags)),
+            trackPerformance('recentsSections', async () => recentsSections(trails)),
+            trackPerformance('keepLearningSections', async () => keepLearningSections(trails)),
+            trackPerformance('concludedSections', async () => concludedSections(trails)),
+            trackPerformance('favoriteSections', async () => favoriteSections(trails, user._id)),
+            trackPerformance('mostSeenSections', async () => mostSeenSections(trails)),
+            trackPerformance('courseInSections', async () => courseInSections(tags, user._id)),
         ]);
 
         const recommendedTrails = [];
@@ -406,8 +437,13 @@ module.exports = {
                 // console.log({ error })
             }
         }
+
         const arrRecommendedTrailsSections = await recommendedTrailsSections(trails, recommendedTrails);
         const arrRecommendedCoursesSections = await recommendedCoursesSections(user._id, recommendedCourses);
+
+        console.timeEnd(processSectionTrailsConsoleTimeStr);
+
+        console.time(processTrailsConsoleTimeStr);
 
         function limitArray(section) {
             if (!section) return [];
@@ -429,7 +465,7 @@ module.exports = {
             };
         }
 
-        const allSections = [
+        let resultSections = [
             arrSections,
             arrMandatorySections,
             arrRecentsSections,
@@ -440,20 +476,15 @@ module.exports = {
             arrMostSeenSections,
             arrRecommendedTrailsSections || [],
             arrRecommendedCoursesSections || [],
-        ];
-
-        resultSections = allSections.flatMap(limitArray);
+        ].flatMap(limitArray);
 
         if (channelId) {
-            const filteredArray = resultSections.filter((obj) =>
+            resultSections = resultSections.filter((obj) =>
                 obj ? sectionArray.includes(obj._id) : false
             );
-            resultSections = filteredArray;
         }
 
-        resultSections = resultSections.filter((val) => {
-            return val != null;
-        });
+        resultSections = resultSections.filter(Boolean);
 
         if (resultSections.length > 0) {
             resultSections.sort((a, b) => (a.position < b.position ? -1 : 1));
@@ -478,11 +509,17 @@ module.exports = {
             }
         }
 
+        console.timeEnd(processTrailsConsoleTimeStr);
+
+        console.time(processAssessmentConsoleTimeStr);
+
         const hasSomeTrainingSection = resultSections.some(section => section.isTraining);
 
         if (hasSomeTrainingSection) {
             resultSections = await setAssessmentHistoricOnSections(user._id, resultSections, tags);
         }
+
+        console.timeEnd(processAssessmentConsoleTimeStr);
 
         _messages.success(res, req, resultSections);
     },
