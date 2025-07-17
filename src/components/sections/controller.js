@@ -64,29 +64,6 @@ function parseSectionBodyTrails(req) {
     }) ?? [];
 }
 
-async function trackPerformance(label, fn) {
-    const startTime = process.hrtime(); // alta resolução
-    const startUsage = process.cpuUsage(); // uso de CPU
-    const startMem = process.memoryUsage().heapUsed; // memória heap usada (bytes)
-
-    const result = await fn(); // executa a função
-
-    const [sec, nanosec] = process.hrtime(startTime);
-    const cpu = process.cpuUsage(startUsage);
-    const endMem = process.memoryUsage().heapUsed;
-
-    const elapsedTime = (sec * 1e3 + nanosec / 1e6).toFixed(3); // ms
-    const cpuUserMs = (cpu.user / 1000).toFixed(3);
-    const cpuSystemMs = (cpu.system / 1000).toFixed(3);
-    const memoryDiff = ((endMem - startMem) / 1024 / 1024).toFixed(3); // MB
-
-    console.log(`[${label}] Time: ${elapsedTime} ms`);
-    console.log(`[${label}] CPU: user ${cpuUserMs} ms, system ${cpuSystemMs} ms`);
-    console.log(`[${label}] Heap Memory: ${memoryDiff} MB`);
-
-    return result;
-}
-
 module.exports = {
     async returnSections(req, res) {
         try {
@@ -304,26 +281,16 @@ module.exports = {
             getGroupCodesByToken(req, tags)
         ]);
 
-        let newArray = [];
-        let sectionArray = [];
+        let trailsIdArr = [];
+        let sectionsIdArr = [];
+        let sectionInfos = [];
 
-        const identifier = /* user?.networkLogin ||  */new Date().getTime();
-        const processChannelConsoleTimeStr = `processChannel ${channelId || 'default'} ${identifier}`;
-        const populateTrailsConsoleTimeStr = `populateTrails ${channelId || 'default'} ${identifier}`;
-        const processTrackingConsoleTimeStr = `processTracking ${channelId || 'default'} ${identifier}`;
-        const processSectionTrailsConsoleTimeStr = `processSectionTrails ${channelId || 'default'} ${identifier}`;
-        const processTrailsConsoleTimeStr = `processTrails ${channelId || 'default'} ${identifier}`;
-        const processAssessmentConsoleTimeStr = `processAssessment ${channelId || 'default'} ${identifier}`;
-
-        console.time(processChannelConsoleTimeStr);
         if (channelId) {
             let { idSections } = await Channel.findById(channelId).select('idSections -_id');
 
-            const dbSections = await Section
-                .find({ _id: { $in: idSections } })
-                .select('trails -_id');
+            const dbSections = await Section.find({ _id: { $in: idSections }, active: 1 });
 
-            const sectionInfos = await populateSectionTrails(
+            sectionInfos = await populateSectionTrails(
                 dbSections,
                 { select: 'tags tagsAnd _id collaborative' }
             );
@@ -336,12 +303,11 @@ module.exports = {
                 }
             });
 
-            newArray = trailsInSections.flatMap((e) => e.trails);
+            trailsIdArr = trailsInSections.flatMap((e) => e.trails);
+            sectionsIdArr = idSections;
 
             delete req.query.channel;
-            sectionArray = idSections;
         }
-        console.timeEnd(processChannelConsoleTimeStr);
 
         const query = {
             enabled: true,
@@ -354,17 +320,10 @@ module.exports = {
         };
 
         if (channelId) {
-            query['_id'] = { $in: newArray };
+            query['_id'] = { $in: trailsIdArr };
         }
 
-        console.time(populateTrailsConsoleTimeStr);
-
         let trails = await populateTrails(true, query);
-
-        console.timeEnd(populateTrailsConsoleTimeStr);
-
-
-        console.time(processTrackingConsoleTimeStr);
 
         const allTrackingUser = await Tracking.find({
             userLogin: { $eq: user.networkLogin },
@@ -395,13 +354,19 @@ module.exports = {
             }
         }
 
-        console.timeEnd(processTrackingConsoleTimeStr);
-
-        console.time(processSectionTrailsConsoleTimeStr);
-
         trails = trails.filter(checkIfTheTrackIsValid);
 
         let arrSections = await elegiblesContents(trails);
+
+        const mandatorySectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.MANDATORY);
+        const recentSectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.RECENTS);
+        const keepLearningSectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.KEEP_LEARNING);
+        const concludedSectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.CONCLUDED);
+        const coursesSectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.COURSES);
+        const favoriteSectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.FAVORITES);
+        const mostSeenSectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.MOST_SEEN);
+        const recommendedTrailsSectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.RECOMMENDED_TRAILS);
+        const recommendedCoursesSectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.RECOMMENDED_COURSES);
 
         const [
             arrMandatorySections,
@@ -412,13 +377,13 @@ module.exports = {
             arrMostSeenSections,
             arrCoursesSections,
         ] = await Promise.all([
-            trackPerformance('mandatorySections', async () => mandatorySections(trails, tags)),
-            trackPerformance('recentsSections', async () => recentsSections(trails)),
-            trackPerformance('keepLearningSections', async () => keepLearningSections(trails)),
-            trackPerformance('concludedSections', async () => concludedSections(trails)),
-            trackPerformance('favoriteSections', async () => favoriteSections(trails, user._id)),
-            trackPerformance('mostSeenSections', async () => mostSeenSections(trails)),
-            trackPerformance('courseInSections', async () => courseInSections(tags, user._id)),
+            mandatorySectionInfo ? mandatorySections(trails, tags, mandatorySectionInfo) : Promise.resolve([]),
+            recentSectionInfo ? recentsSections(trails, tags, recentSectionInfo) : Promise.resolve([]),
+            keepLearningSectionInfo ? keepLearningSections(trails, tags, keepLearningSectionInfo) : Promise.resolve([]),
+            concludedSectionInfo ? concludedSections(trails, tags, concludedSectionInfo) : Promise.resolve([]),
+            favoriteSectionInfo ? favoriteSections(trails, user._id, favoriteSectionInfo) : Promise.resolve([]),
+            mostSeenSectionInfo ? mostSeenSections(trails, tags, mostSeenSectionInfo) : Promise.resolve([]),
+            coursesSectionInfo ? courseInSections(tags, user._id, coursesSectionInfo) : Promise.resolve([]),
         ]);
 
         const recommendedTrails = [];
@@ -438,12 +403,8 @@ module.exports = {
             }
         }
 
-        const arrRecommendedTrailsSections = await recommendedTrailsSections(trails, recommendedTrails);
-        const arrRecommendedCoursesSections = await recommendedCoursesSections(user._id, recommendedCourses);
-
-        console.timeEnd(processSectionTrailsConsoleTimeStr);
-
-        console.time(processTrailsConsoleTimeStr);
+        const arrRecommendedTrailsSections = recommendedTrailsSectionInfo ? await recommendedTrailsSections(trails, recommendedTrails, recommendedTrailsSectionInfo) : [];
+        const arrRecommendedCoursesSections = recommendedCoursesSectionInfo ? await recommendedCoursesSections(user._id, recommendedCourses, recommendedCoursesSectionInfo) : [];
 
         function limitArray(section) {
             if (!section) return [];
@@ -480,7 +441,7 @@ module.exports = {
 
         if (channelId) {
             resultSections = resultSections.filter((obj) =>
-                obj ? sectionArray.includes(obj._id) : false
+                obj ? sectionsIdArr.includes(obj._id) : false
             );
         }
 
@@ -509,17 +470,11 @@ module.exports = {
             }
         }
 
-        console.timeEnd(processTrailsConsoleTimeStr);
-
-        console.time(processAssessmentConsoleTimeStr);
-
         const hasSomeTrainingSection = resultSections.some(section => section.isTraining);
 
         if (hasSomeTrainingSection) {
             resultSections = await setAssessmentHistoricOnSections(user._id, resultSections, tags);
         }
-
-        console.timeEnd(processAssessmentConsoleTimeStr);
 
         _messages.success(res, req, resultSections);
     },
