@@ -1066,7 +1066,7 @@ module.exports = {
                 'Email para recuperação de senha disparado',
                 'users',
                 'recoveryPassword',
-                [{ 'userId': user._id }],
+                [{ userId: user._id, email: user.email }],
                 [],
                 true,
                 'RECOVERY PASSWORD'
@@ -1080,7 +1080,7 @@ module.exports = {
             'Sucesso',
             'users',
             'recoveryPassword',
-            [{ 'userId': user._id }],
+            [{ userId: user._id, email: user.email }],
             [],
             true,
             'RECOVERY PASSWORD');
