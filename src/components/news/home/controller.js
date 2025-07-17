@@ -78,6 +78,49 @@ const campaignsController = {
         }
     },
 
+    listNewsUrl: async (req, res) => {
+        try {
+            const options = req.query;
+            const { data: listNews } = await newsApi.get('/home/list/url', { params: options });
+            const { data: config } = await newsApi.get('/config');
+
+            const news = [];
+
+            if (listNews?.data?.some((news) => (news?.users || []).length > 0)) {
+                console.log('Populating users for news');
+                for (const newsData of listNews.data) {
+                    const populatedNews = { ...newsData };
+                    if (newsData?.users) {
+                        const users = await User.find({ _id: { $in: newsData.users } });
+
+                        populatedNews.users = users.map((user) => {
+                            const base = { _id: user._id, name: user.name };
+
+                            if (config.enableUserLink && config?.userFields?.length) {
+                                const extraFields = config.userFields.reduce((acc, field) => {
+                                    acc[field] = user[field];
+                                    return acc;
+                                }, {});
+                                return { ...base, ...extraFields };
+                            }
+
+                            return base;
+                        });
+                    }
+                    news.push(populatedNews);
+                }
+            }
+
+            const data =  { data: news.length > 0 ? news : listNews.data, total: listNews.total };
+
+            return _messages.success(res, req, data, 'ok', 'news', 'listNews');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+
+            return _messages.internalServer(res, req, message, message, 'news', 'listNews');
+        }
+    },
+
     listCampaigns: async (req, res) => {
         try {
             const user = await getUserByToken(req);

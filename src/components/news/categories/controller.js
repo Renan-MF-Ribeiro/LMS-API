@@ -92,6 +92,23 @@ module.exports = {
         }
     },
 
+    async homeUrl(req, res) {
+        try {
+            const { data } = await newsApi.get(`/home/categories/url/${req.params.titleUrl}`);
+
+            _messages.success(res, req, data);
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno do servidor',
+                'trails',
+                'createPadlet'
+            );
+        }
+    },
+
     async create(req, res) {
         const payload = JSON.parse(req.fields.payload);
 
