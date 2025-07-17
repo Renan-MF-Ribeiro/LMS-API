@@ -2622,36 +2622,40 @@ module.exports = {
         }
     },
 
-    async updateClassTag (req, res) {
+    async updateClassTag(req, res) {
         const { tag, _id } = req.body;
-        try {
-            const { classGroups } = await User.findOne({ _id });
-            const newTags = [];
-            for (group of classGroups) {
-                console.log('group', group.classIdentifier, tag.classIdentifier);
-                if (group.classIdentifier == tag.classIdentifier) {
-                    group = tag;
-                    newTags.push({
-                        ...group,
-                        startDate: new Date(group.startDate),
-                        limitDate: new Date(group.limitDate),
-                    });
-                } else {
-                    newTags.push({
-                        ...group,
-                        startDate: new Date(group.startDate),
-                        limitDate: new Date(group.limitDate),
-                    });
-                }
-            }
-            await User.findByIdAndUpdate(_id, { classGroups: newTags });
 
-            _messages.success(res, req, {
-                message: 'Tag de curso atualizada no usuário',
+        const { classGroups } = await User.findById(_id);
+
+        const foundTag = classGroups.find(
+            (group) => String(group._id) === String(tag._id)
+        );
+
+        if (!foundTag) {
+            await User.findByIdAndUpdate(_id, {
+                $addToSet: {
+                    classGroups: {
+                        ...tag,
+                        startDate: new Date(tag.startDate),
+                        limitDate: new Date(tag.limitDate),
+                    },
+                },
             });
-        } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users');
+        } else {
+            await User.findByIdAndUpdate(_id, {
+                $set: {
+                    'classGroups.$[elem].startDate': new Date(tag.startDate),
+                    'classGroups.$[elem].limitDate': new Date(tag.limitDate),
+                    'classGroups.$[elem].groupCode': tag.groupCode,
+                },
+            }, {
+                arrayFilters: [{ 'elem._id': tag._id }],
+            });
         }
+
+        _messages.success(res, req, {
+            message: 'Tag de curso atualizada no usuário',
+        });
     },
 
     async evaluationProgress (req, res) {
