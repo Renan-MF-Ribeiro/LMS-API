@@ -108,7 +108,7 @@ const { fetchIdpProfilesFromRequestObject } = require('../idp-integration/busine
 const { log } = require('../../utils/logger');
 const WebhooksController = require('../webhooks/controller');
 const ApiError = require('../../errors/ApiError');
-const { addSASTokenToResponse } = require('../../utils/cookies');
+const { addSASTokenToResponse, getCookieProps } = require('../../utils/cookies');
 const GamificationKafka = require('../gamification/kafka/broker');
 
 const { FormModel } = require('../forms/model');
