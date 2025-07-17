@@ -855,6 +855,9 @@ module.exports = {
         const partner = await PartnerBusiness.getPartnersByToken(token);
         const usedToken = validatePartnerToken(partner, token);
 
+        if(!getUserByToken.updatable)
+            return user;
+        n
         const [newGroupsAd, tokenBlockedFields, newClassGroups] =
             await getPartnerTokenNewInformations(usedToken, user);
 
