@@ -1,25 +1,21 @@
 const expressSession = require('express-session');
 const MongoStore = require('connect-mongo');
+const mongoose = require('mongoose');
 
 const { log } = require('./logger');
 const { getConnectionString, getDbOptions } = require('./db');
 const { getCookieProps } = require('./cookies');
 const environment = require('../environment');
 
-const dbOptions = getDbOptions();
-
 const sessionMaxAge = environment.SESSION_MAX_AGE;
 
 const sessionStore = MongoStore.create({
-    mongoUrl: getConnectionString(),
-    mongoOptions: {
-        useNewUrlParser: dbOptions.useNewUrlParser,
-        useUnifiedTopology: dbOptions.useUnifiedTopology
-    },
+    client: mongoose.connection.getClient(),
     collectionName: 'sessions',
-    autoRemove: 'disabled',
-    touchAfter: sessionMaxAge,
+    autoRemove: 'native',
+    touchAfter: sessionMaxAge / 1000, // Convert milliseconds to seconds
     stringify: false,
+    ttl: sessionMaxAge / 1000, // Convert milliseconds to seconds
 });
 
 sessionStore.on('create', (sessionId) => {
@@ -46,7 +42,12 @@ const session = expressSession({
     secret: environment.PROJECT_SECRET_KEY,
     resave: false,
     saveUninitialized: false,
-    cookie: getCookieProps(),
+    cookie: {
+        ...getCookieProps(),
+        // Make the cookie expire when the client session ends
+        maxAge: null,
+        expires: null,
+    },
     store: sessionStore,
 })
 
