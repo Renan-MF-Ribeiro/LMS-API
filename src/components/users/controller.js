@@ -540,6 +540,7 @@ module.exports = {
                 ...data,
                 birthDate: formatedDate,
                 groupsAD,
+                ...origin,
                 ...defaultFields,
             };
 
