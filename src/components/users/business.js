@@ -855,15 +855,20 @@ module.exports = {
         const partner = await PartnerBusiness.getPartnersByToken(token);
         const usedToken = validatePartnerToken(partner, token);
 
-        if(!getUserByToken.updatable)
+        if (!usedToken.updatable) return user;
+        if (user.origin?.type === 'PARTNER_TOKEN' && user.origin?.info === usedToken.key)
             return user;
-        n
+
         const [newGroupsAd, tokenBlockedFields, newClassGroups] =
             await getPartnerTokenNewInformations(usedToken, user);
 
         const update = {
             groupsAD: newGroupsAd,
             classGroups: newClassGroups,
+            origin: {
+                type: 'PARTNER_TOKEN',
+                info: usedToken.key,
+            },
             ...tokenBlockedFields,
         };
 
@@ -898,8 +903,7 @@ const getPartnerTokenNewInformations = async (usedToken, user) => {
     // -------------- LOOKUP EM INFORMAÇÕES QUE O TOKEN POSSUI (classes, eligibilidades e turmas) --------------
     const tokenEligibilities = usedToken?.elegibilityResult
         ?.map((key) => key?.value)
-        ?.filter(Boolean)
-        ?.filter((value) => !user.groupsAD?.includes(value));
+        ?.filter(Boolean);
 
     const tokenBlockedFields = usedToken?.defaultField?.reduce((acc, key) => {
         const { key: tokenKey, value: tokenValue } = key;
@@ -909,24 +913,21 @@ const getPartnerTokenNewInformations = async (usedToken, user) => {
         return acc;
     }, {});
 
-    const tokenClasses =
-        usedToken?.classGroupResult?.classGroups?.filter(
-            (classGroup) =>
-                !user?.classGroups?.some((c) => c._id?.toString() === classGroup?._id?.toString())
-        ) || [];
+    const tokenClasses = usedToken?.classGroupResult?.classGroups || [];
     // -------------- MONTANDO O QUE SERÁ ATUALIZADO NO USUARIO --------------
     // utilizando os lookups criados acima, montamos o que será atualizado no usuário seguindo as flags do token
-
-    let newGroupsAD = !usedToken?.overwriteEligibility
-        ? tokenEligibilities.concat(['PERFIL_Aluno', 'ELEGE_CURSO'])
-        : user?.groupsAD?.concat(tokenEligibilities || [])
-
-    const classes = usedToken?.classGroupResult?.overwriteClassGroup
-        ? tokenClasses
-        : user?.classGroups?.map((classGroup) => classGroup._id)?.concat(tokenClasses);
+    let newGroupsAD =
+        usedToken?.overwriteEligibility === false
+            ? (user?.groupsAD || [])?.concat(tokenEligibilities || [])
+            : (user?.groupsAD || [])
+                  ?.filter((value) => value.includes('PERFIL_'))
+                  ?.concat(tokenEligibilities);
+    const classes =
+        usedToken?.classGroupResult?.overwriteClassGroup === false
+            ? (user?.classGroups || [])?.map((classGroup) => classGroup._id)?.concat(tokenClasses)
+            : tokenClasses;
 
     let newClassGroups = await ClassGroup.find({ _id: { $in: classes } });
-
     const today = moment(new Date());
     const partnerDays = usedToken?.classGroupResult?.days || 10;
     const DATA_INICIO = today.startOf('day');

@@ -661,6 +661,16 @@ module.exports = {
                 user.passwordValid = false;
             }
 
+            if (user && user.origin && user.origin.type === 'INTEGRATOR') {
+                return _messages.forbidden(
+                    res,
+                    req,
+                    'Utilize a gestão de login externa para fazer seu acesso.',
+                    'Utilize a gestão de login externa para fazer seu acesso.',
+                    'users',
+                    'ldapSignIn'
+                );
+            }
             // Gera todos os tokens necessários
             const [tokens, entryRecord] = await Promise.all([
                 generateTokens(user, login, password, res),
@@ -1024,11 +1034,28 @@ module.exports = {
 
         if (search.birthDate || search.birthday) {
             const birthDateValue = search.birthDate || search.birthday;
-
+            const strBirthdate = body.birthDate || body.birthday;
             const birthDateQuery = {
-                $or: [{ birthDate: birthDateValue }, { birthday: birthDateValue }],
-            };
+                $or: [
+                    // lida com strings 28/12/2001
+                    { birthDate: birthDateValue },
+                    { birthday: birthDateValue },
 
+                    // lida com ISODates '2001-12-28T00:00:00.000Z'
+                    {
+                        birthDate: {
+                            $gte: moment(strBirthdate, 'DD/MM/YYYY').toISOString(),
+                            $lt: moment(strBirthdate, 'DD/MM/YYYY').add(1, 'days').toISOString(),
+                        },
+                    },
+                    {
+                        birthday: {
+                            $gte: moment(strBirthdate, 'DD/MM/YYYY').toISOString(),
+                            $lt: moment(strBirthdate, 'DD/MM/YYYY').add(1, 'days').toISOString(),
+                        },
+                    },
+                ],
+            };
             search.$or = search.$or ? [...search.$or, ...birthDateQuery.$or] : birthDateQuery.$or;
 
             delete search.birthDate;
@@ -1064,8 +1091,6 @@ module.exports = {
             });
 
             const resetPasswordUrl = `${domain}/login/troca-senha?token=${token}`;
-
-            console.log(user.email, password_new, resetPasswordUrl);
 
             await sendEmailRecoveryPassword(user.email, true, password_new, resetPasswordUrl, user);
 
@@ -1188,26 +1213,26 @@ module.exports = {
         try {
             const { password_new, password_newConfirm } = req.body;
             const { data } = decodeToken(req.headers.authorization);
-            
-            const { _id, password_old } = data;
-            const user = await User.findOne({ _id: _id }, ['password']);
 
-            var pass = user.password.filter(function (obj) {
-                if (obj.valid === true && bcrypt.compareSync(password_old, obj.hash)) {
+            const { _id, password_old } = data;
+            const user = await User.findOne({ _id: _id });
+
+             var pass = user?.password?.filter(function (obj) {
+                if (obj?.valid === true && bcrypt.compareSync(password_old, obj.hash)) {
                     return true;
                 }
 
                 return false;
             });
 
-            var Oldpass = user.password.filter(function (obj) {
+             var Oldpass = user.password.filter(function (obj) {
                 if (bcrypt.compareSync(password_new, obj.hash)) {
                     return true;
                 }
 
                 return false;
             });
-/*             if (pass.length === 0 || password_new !== password_newConfirm) {
+            if (pass.length === 0 || password_new !== password_newConfirm) {
                 _messages.unauthorized(
                     res,
                     req,
@@ -1231,7 +1256,7 @@ module.exports = {
                 if (new Date(pass[0].createdAt).getTime() < Date.now() - 90 * 24 * 60 * 60 * 1000) {
                     user.passwordValid = false;
                 }
-            } */
+            } 
 
             var salt = bcrypt.genSaltSync(10);
             var hashPass = bcrypt.hashSync(password_new, salt);
