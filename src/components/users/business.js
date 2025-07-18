@@ -923,6 +923,7 @@ const getPartnerTokenNewInformations = async (usedToken, user) => {
             : (user?.groupsAD || [])
                 ?.filter((value) => value.includes('PERFIL_'))
                 ?.concat(tokenEligibilities);
+
     const classes =
         usedToken?.classGroupResult?.overwriteClassGroup === false
             ? (user?.classGroups || [])?.map((classGroup) => classGroup._id)?.concat(tokenClasses)
@@ -936,9 +937,19 @@ const getPartnerTokenNewInformations = async (usedToken, user) => {
     const { startDate, limitDate } = _functions.getDates(DATA_INICIO, DATA_FIM);
 
     for (const _class of newClassGroups) {
-        _class.startDate = startDate;
-        _class.limitDate = limitDate;
-        _class.updatedAt = moment(new Date());
+        if (tokenClasses.includes(_class._id.toString())) {
+            _class.startDate = startDate;
+            _class.limitDate = limitDate;
+            _class.updatedAt = moment(new Date());
+        } else {
+            const existantGroup = user?.classGroups?.find(
+                (classGroup) => classGroup?._id?.toString() === _class?._id?.toString()
+            );
+            _class.startDate = existantGroup?.startDate || null;
+            _class.limitDate = existantGroup?.limitDate || null;
+            _class.updatedAt = existantGroup?.updatedAt || null;
+        }
+
     }
 
     return [newGroupsAD, tokenBlockedFields, newClassGroups];
