@@ -435,7 +435,10 @@ module.exports = {
         let defaultFields;
         let partnerDays = 0;
         let classGroupsIDs;
-        let origin;
+        let origin = {
+            type: 'SIGNUP',
+            info: 'Cadastro vitrine',
+        };
 
         const { sendSignUpActivationEmail } = await getUsersDataConfig();
 
@@ -540,7 +543,7 @@ module.exports = {
                 ...data,
                 birthDate: formatedDate,
                 groupsAD,
-                ...origin,
+                origin,
                 ...defaultFields,
             };
 
