@@ -436,7 +436,7 @@ module.exports = {
         let partnerDays = 0;
         let classGroupsIDs;
         let origin = {
-            type: 'SIGNUP',
+            type: 'SELF',
             info: 'Cadastro vitrine',
         };
 
