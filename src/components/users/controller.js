@@ -435,6 +435,7 @@ module.exports = {
         let defaultFields;
         let partnerDays = 0;
         let classGroupsIDs;
+        let origin;
 
         const { sendSignUpActivationEmail } = await getUsersDataConfig();
 
@@ -490,7 +491,7 @@ module.exports = {
                 const selectedKey = partner.keys?.find((key) => key?.key === token);
 
                 if (selectedKey.endDate < today) {
-                    _messages.unauthorized(
+                    return _messages.unauthorized(
                         res,
                         req,
                         new Error('DataInvalida'),
@@ -498,7 +499,7 @@ module.exports = {
                         'users',
                         'signup'
                     );
-                    return;
+
                 }
 
                 // Concatena todas as elegibilidades padrões e "do seu partner"
@@ -519,6 +520,10 @@ module.exports = {
                 // Gera array de objetos referentes a "_id" de classGroups
                 classGroupsIDs = selectedKey.classGroupResult?.classGroups?.map((x) => x);
                 defaultFields.partner = `${partner.title} - ${selectedKey.title}`;
+                origin = {
+                    type: 'PARTNER_TOKEN',
+                    info: selectedKey.key,
+                }
             } else {
                 groupsAD.push('ELEGE_CURSO');
             }
@@ -1137,7 +1142,7 @@ module.exports = {
 
                 return false;
             });
-            
+
             if (password_new !== password_newConfirm) {
                 return _messages.unauthorized(
                     res,
@@ -1217,7 +1222,7 @@ module.exports = {
             const { _id, password_old } = data;
             const user = await User.findOne({ _id: _id });
 
-             var pass = user?.password?.filter(function (obj) {
+            var pass = user?.password?.filter(function (obj) {
                 if (obj?.valid === true && bcrypt.compareSync(password_old, obj.hash)) {
                     return true;
                 }
@@ -1225,7 +1230,7 @@ module.exports = {
                 return false;
             });
 
-             var Oldpass = user.password.filter(function (obj) {
+            var Oldpass = user.password.filter(function (obj) {
                 if (bcrypt.compareSync(password_new, obj.hash)) {
                     return true;
                 }
@@ -1256,7 +1261,7 @@ module.exports = {
                 if (new Date(pass[0].createdAt).getTime() < Date.now() - 90 * 24 * 60 * 60 * 1000) {
                     user.passwordValid = false;
                 }
-            } 
+            }
 
             var salt = bcrypt.genSaltSync(10);
             var hashPass = bcrypt.hashSync(password_new, salt);
@@ -2262,34 +2267,34 @@ module.exports = {
             const collaborativeUsers = await User.find(
                 searchBy
                     ? {
-                          $and: [
-                              {
-                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
-                              },
-                              {
-                                  $or: [
-                                      {
-                                          name: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          registration: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          email: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                  ],
-                              },
-                          ],
-                      }
+                        $and: [
+                            {
+                                groupsAD: { $in: ['PERFIL_Colaborador'] },
+                            },
+                            {
+                                $or: [
+                                    {
+                                        name: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        registration: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        email: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                ],
+                            },
+                        ],
+                    }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             )
                 .sort({
@@ -2301,34 +2306,34 @@ module.exports = {
             const total = await User.countDocuments(
                 searchBy
                     ? {
-                          $and: [
-                              {
-                                  groupsAD: { $in: ['PERFIL_Colaborador'] },
-                              },
-                              {
-                                  $or: [
-                                      {
-                                          name: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          registration: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                      {
-                                          email: {
-                                              $regex: searchBy,
-                                              $options: 'i',
-                                          },
-                                      },
-                                  ],
-                              },
-                          ],
-                      }
+                        $and: [
+                            {
+                                groupsAD: { $in: ['PERFIL_Colaborador'] },
+                            },
+                            {
+                                $or: [
+                                    {
+                                        name: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        registration: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                    {
+                                        email: {
+                                            $regex: searchBy,
+                                            $options: 'i',
+                                        },
+                                    },
+                                ],
+                            },
+                        ],
+                    }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             );
 
@@ -2631,9 +2636,9 @@ module.exports = {
         const { tag, userId, classIdentifier } = req.body;
         const classGroups = classIdentifier
             ? {
-                  groupCode: tag,
-                  classIdentifier: { $in: [classIdentifier, new ObjectId(classIdentifier)] },
-              }
+                groupCode: tag,
+                classIdentifier: { $in: [classIdentifier, new ObjectId(classIdentifier)] },
+            }
             : { groupCode: tag, classIdentifier: { $exists: false } };
 
         try {
