@@ -2712,7 +2712,7 @@ module.exports = {
                     'classGroups.$[elem].groupCode': tag.groupCode,
                 },
             }, {
-                arrayFilters: [{ 'elem._id': tag._id }],
+                arrayFilters: [{ 'elem._id': new mongoose.Types.ObjectId(tag._id) }],
             });
         }
 
