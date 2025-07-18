@@ -41,6 +41,23 @@ module.exports = {
         }
     },
 
+    async getByUrl(req, res) {
+        try {
+            const { data } = await newsApi.get(`/categories/url/${req.params.categoryUrl}`);
+
+            _messages.success(res, req, data);
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno do servidor',
+                'trails',
+                'createPadlet'
+            );
+        }
+    },
+
     //listar categorias pro front > regras : flag de campanha ativa ? listar categorias com capanha e usuario tem campo da carga valido : listar todas as categorias da campanha.
 
     async getCategoriesByCampaing(req, res) {

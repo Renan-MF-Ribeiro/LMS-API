@@ -15,6 +15,7 @@ module.exports = express
     .use('/campaigns', campaignsRoutes)
     .use('/home', homeRoutes)
     .get('/:id', _controller.getNews)
+    .get('/url/:newsUrl', _controller.getNewsByUrl)
     .get('/', _controller.listNews)
     .post('/', formidable(), _controller.createNews)
     .put('/:id', formidable(), _controller.updateNews)

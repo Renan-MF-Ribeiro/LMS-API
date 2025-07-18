@@ -17,6 +17,19 @@ const campaignsController = {
         }
     },
 
+    getCampaignByUrl: async (req, res) => {
+        try {
+            const { campaignUrl } = req.params;
+            const { data } = await newsApi.get(`/campaigns/url/${campaignUrl}`);
+
+            return _messages.success(res, req, data, 'ok', 'news', 'getCampaign');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+
+            return _messages.internalServer(res, req, message, message, 'news', 'getCampaign');
+        }
+    },
+
     listCampaigns: async (req, res) => {
         try {
             const options = req.query;
