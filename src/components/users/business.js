@@ -396,8 +396,15 @@ module.exports = {
     },
 
     processUsersLoad(data, elegibilityFields = [], onboarding = false) {
+
+        ['networkLogin', 'name', 'password'].forEach((field) => {
+            if (!data[field]) {
+                delete data[field];
+            }
+        });
+
         const salt = bcrypt.genSaltSync(10);
-        const firstName = String(data.name.split(' ')[0]).trim().toLowerCase();
+        const firstName = String(data.name?.split(' ')[0]).trim().toLowerCase();
         const firstThreeCpf = sanitizeCpf(data.cpf).slice(0, 3);
         const initialPassword = !onboarding ? '1234' : `${firstName}${firstThreeCpf}`;
         data.password = [
