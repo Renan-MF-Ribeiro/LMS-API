@@ -323,15 +323,16 @@ module.exports = {
             query['_id'] = { $in: trailsIdArr };
         }
 
-        let trails = await populateTrails(true, query);
-
-        const allTrackingUser = await Tracking.find({
-            userLogin: { $eq: user.networkLogin },
-            $or: [
-                { expiredCompletion: { $exists: false } },
-                { expiredCompletion: { $eq: null } },
-            ],
-        }).lean();
+        const [trails, allTrackingUser] = await Promise.all([
+            populateTrails(true, query),
+            Tracking.find({
+                userLogin: { $eq: user.networkLogin },
+                $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } },
+                ],
+            }).lean()
+        ]);
 
         for (let trail of trails) {
             const processedTrail = processTrailTrackingV2(trail, allTrackingUser);
@@ -354,9 +355,9 @@ module.exports = {
             }
         }
 
-        trails = trails.filter(checkIfTheTrackIsValid);
+        const filteredTrails = trails.filter(checkIfTheTrackIsValid);
 
-        let arrSections = await elegiblesContents(trails);
+        let arrSections = await elegiblesContents(filteredTrails);
 
         const mandatorySectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.MANDATORY);
         const recentSectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.RECENTS);
@@ -377,12 +378,12 @@ module.exports = {
             arrMostSeenSections,
             arrCoursesSections,
         ] = await Promise.all([
-            mandatorySectionInfo ? mandatorySections(trails, tags, mandatorySectionInfo) : Promise.resolve([]),
-            recentSectionInfo ? recentsSections(trails, tags, recentSectionInfo) : Promise.resolve([]),
-            keepLearningSectionInfo ? keepLearningSections(trails, tags, keepLearningSectionInfo) : Promise.resolve([]),
-            concludedSectionInfo ? concludedSections(trails, tags, concludedSectionInfo) : Promise.resolve([]),
-            favoriteSectionInfo ? favoriteSections(trails, user._id, favoriteSectionInfo) : Promise.resolve([]),
-            mostSeenSectionInfo ? mostSeenSections(trails, tags, mostSeenSectionInfo) : Promise.resolve([]),
+            mandatorySectionInfo ? mandatorySections(filteredTrails, tags, mandatorySectionInfo) : Promise.resolve([]),
+            recentSectionInfo ? recentsSections(filteredTrails, tags, recentSectionInfo) : Promise.resolve([]),
+            keepLearningSectionInfo ? keepLearningSections(filteredTrails, tags, keepLearningSectionInfo) : Promise.resolve([]),
+            concludedSectionInfo ? concludedSections(filteredTrails, tags, concludedSectionInfo) : Promise.resolve([]),
+            favoriteSectionInfo ? favoriteSections(filteredTrails, user._id, favoriteSectionInfo) : Promise.resolve([]),
+            mostSeenSectionInfo ? mostSeenSections(filteredTrails, tags, mostSeenSectionInfo) : Promise.resolve([]),
             coursesSectionInfo ? courseInSections(tags, user._id, coursesSectionInfo) : Promise.resolve([]),
         ]);
 
@@ -403,8 +404,13 @@ module.exports = {
             }
         }
 
-        const arrRecommendedTrailsSections = recommendedTrailsSectionInfo ? await recommendedTrailsSections(trails, recommendedTrails, recommendedTrailsSectionInfo) : [];
-        const arrRecommendedCoursesSections = recommendedCoursesSectionInfo ? await recommendedCoursesSections(user._id, recommendedCourses, recommendedCoursesSectionInfo) : [];
+        const arrRecommendedTrailsSections = recommendedTrailsSectionInfo
+            ? await recommendedTrailsSections(filteredTrails, recommendedTrails, recommendedTrailsSectionInfo)
+            : [];
+
+        const arrRecommendedCoursesSections = recommendedCoursesSectionInfo
+            ? await recommendedCoursesSections(user._id, recommendedCourses, recommendedCoursesSectionInfo)
+            : [];
 
         function limitArray(section) {
             if (!section) return [];
