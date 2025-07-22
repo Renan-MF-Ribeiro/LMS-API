@@ -294,7 +294,6 @@ const business = {
             module.exports.findManagedUsers(req),
             ClassModel.findOne({ _id: new Types.ObjectId(classId) }).populate('courseID').lean()
         ]);
-        console.log('Class Found:', classFound);
         if (!classFound || !users[0]) {
             return [];
         }

@@ -29,6 +29,7 @@ const { getConnectMap } = require('../../utils/connect');
 const { getCookieProps } = require('../../utils/cookies');
 const PartnerBusiness = require('../partners/business');
 const { createSessionStore } = require('../../utils/session');
+const { Types } = require('mongoose');
 
 module.exports = {
     async getLoginConfig(selectFields) {
