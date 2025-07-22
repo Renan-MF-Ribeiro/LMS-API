@@ -44,10 +44,14 @@ async function populateSectionTrails(sections, options) {
 
         const trails = await query.lean();
 
+        const trailsMap = new Map(
+            trails.map((trail) => [String(trail._id), trail])
+        );
+
         section.trails = section.trails.map(trail => {
             if (isSectionTrailInfo(trail)) {
                 const trailId = getSectionTrailId(trail);
-                return trails.find(t => String(t._id) === String(trailId)) ?? trail;
+                return trailsMap.get(String(trailId)) ?? trail;
             }
 
             return trail;
@@ -447,626 +451,427 @@ module.exports = {
     },
 
     async elegiblesContents(trails) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const arrSections = [];
-                const sections = await Section.find({
-                    deleted: 0,
-                    active: 1,
-                    default: false,
-                }).lean();
+        const arrSections = [];
 
-                sections.forEach((section) => {
-                    const sectionTrails = section.trails
-                        .map(trail => {
-                            return trails.find(t => String(t._id) === String(getSectionTrailId(trail))) ?? trail;
-                        })
-                        .filter(trail => trail && isValidSectionTrailInfo(trail) && checkIfTheTrackIsValid(trail))
+        const sections = await Section.find({
+            deleted: 0,
+            active: 1,
+            default: false,
+        }).lean();
 
-                    if (sectionTrails.length > 0) {
-                        arrSections.push({
-                            ...section, trails: sectionTrails
-                        });
-                    };
+        const trailsMap = new Map(
+            trails.map((trail) => [String(trail._id), trail])
+        );
+
+        sections.forEach((section) => {
+            const sectionTrails = section.trails
+                .map(trail => {
+                    const trailId = getSectionTrailId(trail);
+                    return trailsMap.get(String(trailId)) ?? trail;
+                })
+                .filter(trail => trail && isValidSectionTrailInfo(trail) && checkIfTheTrackIsValid(trail))
+
+            if (sectionTrails.length > 0) {
+                arrSections.push({
+                    ...section, trails: sectionTrails
                 });
-
-                resolve(arrSections);
-            } catch (error) {
-                reject(error);
-            }
+            };
         });
+
+        return arrSections;
     },
 
     async mandatorySections(trails, tags) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const section = await Section.findOne({
-                    defaultType: DEFAULT_TYPES.MANDATORY,
-                    active: 1,
-                }).lean();
+        const section = await Section.findOne({
+            defaultType: DEFAULT_TYPES.MANDATORY,
+            active: 1,
+        }).lean();
 
-                if (section) {
-                    const sortFnc =
-                        section && section.ordination !== undefined && section.ordination === 0
-                            ? function (a, b) {
-                                return b.createdAt - a.createdAt;
-                            }
-                            : function (a, b) {
-                                return a.title.localeCompare(b.title);
-                            };
+        if (!section) return [];
 
-                    trails = trails.filter((trail) => {
-                        const trailItems = trail.items.filter((item) =>
-                            item.mandatory ? item.mandatory : false
-                        );
-                        return trailItems.length > 0;
-                    });
-
-                    trails = trails.filter((trail) => {
-                        for (var m in trail.mandatory) {
-                            for (const t in tags) {
-                                if (trail.mandatory[m].value === tags[t].value) {
-                                    return true;
-                                }
-                            }
-                        }
-
-                        return false;
-                    });
-
-                    trails.sort(sortFnc);
-
-                    section.trails = trails;
+        const sortFnc =
+            section && section.ordination !== undefined && section.ordination === 0
+                ? function (a, b) {
+                    return b.createdAt - a.createdAt;
                 }
+                : function (a, b) {
+                    return a.title.localeCompare(b.title);
+                };
 
-                resolve(trails.length > 0 ? section : []);
-            } catch (error) {
-                reject(error);
-            }
+        trails = trails.filter((trail) => {
+            const trailItems = trail.items.filter((item) =>
+                item.mandatory ? item.mandatory : false
+            );
+
+            return trailItems.length > 0;
         });
+
+        trails = trails.filter((trail) => {
+            for (var m in trail.mandatory) {
+                for (const t in tags) {
+                    if (trail.mandatory[m].value === tags[t].value) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        });
+
+        trails.sort(sortFnc);
+
+        section.trails = trails;
+        return trails.length > 0 ? section : [];
     },
 
     async recentsSections(trails) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const section = await Section.findOne({
-                    defaultType: DEFAULT_TYPES.RECENTS,
-                    active: 1,
-                }).lean();
 
-                if (section) {
-                    const sortFnc =
-                        section && section.ordination !== undefined && section.ordination === 0
-                            ? function (a, b) {
-                                return b.createdAt - a.createdAt;
-                            }
-                            : function (a, b) {
-                                return a.title.localeCompare(b.title);
-                            };
-                    for (const trail of trails) {
-                        const flag = calculateDiffDateTrail(trail);
-                        if (flag) {
-                            section.trails.push(trail);
-                        }
-                    }
+        const section = await Section.findOne({
+            defaultType: DEFAULT_TYPES.RECENTS,
+            active: 1,
+        }).lean();
 
-                    section.trails.sort(sortFnc);
+        if (!section) return [];
+
+        const sortFnc =
+            section && section.ordination !== undefined && section.ordination === 0
+                ? function (a, b) {
+                    return b.createdAt - a.createdAt;
                 }
+                : function (a, b) {
+                    return a.title.localeCompare(b.title);
+                };
 
-                resolve(section && section.trails.length > 0 ? section : []);
-            } catch (error) {
-                reject(error);
+        for (const trail of trails) {
+            const flag = calculateDiffDateTrail(trail);
+            if (flag) {
+                section.trails.push(trail);
             }
-        });
+        }
+
+        section.trails.sort(sortFnc);
+
+        return section.trails.length > 0 ? section : []
     },
 
     async keepLearningSections(trails) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const section = await Section.findOne({
-                    defaultType: DEFAULT_TYPES.KEEP_LEARNING,
-                    active: 1,
-                }).lean();
+        const section = await Section.findOne({
+            defaultType: DEFAULT_TYPES.KEEP_LEARNING,
+            active: 1,
+        }).lean();
 
-                if (section) {
-                    const sortFnc =
-                        section && section.ordination !== undefined && section.ordination === 0
-                            ? function (a, b) {
-                                return b.createdAt - a.createdAt;
-                            }
-                            : function (a, b) {
-                                return a.title.localeCompare(b.title);
-                            };
+        if (!section) return [];
 
-                    for (const trail of trails) {
-                        if (trail.completion === 0 ?? !trail.completion) {
-                            section.trails.push(trail);
-                        }
-                    }
-
-                    section.trails.sort(sortFnc);
+        const sortFnc =
+            section && section.ordination !== undefined && section.ordination === 0
+                ? function (a, b) {
+                    return b.createdAt - a.createdAt;
                 }
+                : function (a, b) {
+                    return a.title.localeCompare(b.title);
+                };
 
-                resolve(section && section.trails.length > 0 ? section : []);
-            } catch (error) {
-                console.log(error);
-                reject(error);
+        for (const trail of trails) {
+            if (trail.completion === 0 ?? !trail.completion) {
+                section.trails.push(trail);
             }
-        });
+        }
+
+        section.trails.sort(sortFnc);
+        return section.trails.length > 0 ? section : [];
     },
 
     async favoriteSections(trails, userId) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const section = await Section.findOne({
-                    defaultType: DEFAULT_TYPES.FAVORITES,
-                    active: 1,
-                }).lean();
+        const section = await Section.findOne({
+            defaultType: DEFAULT_TYPES.FAVORITES,
+            active: 1,
+        }).lean();
 
-                const uri = `${process.env.API_SOCIAL}/home/favorite/${userId}`;
-                const { data } = await axios.get(uri);
-                const favoriteTrails = data.map((f) => {
-                    if (f.target) {
-                        return f.trailId;
-                    }
-                });
-                if (section) {
-                    const sortFnc =
-                        section && section.ordination !== undefined && section.ordination === 0
-                            ? function (a, b) {
-                                return b.createdAt - a.createdAt;
-                            }
-                            : function (a, b) {
-                                return a.title.localeCompare(b.title);
-                            };
-
-                    for (const trail of trails) {
-                        if (favoriteTrails.includes(String(trail._id))) {
-                            section.trails.push(trail);
-                        }
-                    }
-                    section.trails.sort(sortFnc);
-                }
-
-                resolve(section && section.trails.length > 0 ? section : []);
-            } catch (error) {
-                console.log(error);
-                reject(error);
+        const uri = `${process.env.API_SOCIAL}/home/favorite/${userId}`;
+        const { data } = await axios.get(uri);
+        const favoriteTrails = data.map((f) => {
+            if (f.target) {
+                return f.trailId;
             }
         });
+
+        if (!section) return [];
+
+        const sortFnc =
+            section && section.ordination !== undefined && section.ordination === 0
+                ? function (a, b) {
+                    return b.createdAt - a.createdAt;
+                }
+                : function (a, b) {
+                    return a.title.localeCompare(b.title);
+                };
+
+        for (const trail of trails) {
+            if (favoriteTrails.includes(String(trail._id))) {
+                section.trails.push(trail);
+            }
+        }
+
+        section.trails.sort(sortFnc);
+        return section.trails.length > 0 ? section : []
     },
 
     async concludedSections(trails) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const section = await Section.findOne({
-                    defaultType: DEFAULT_TYPES.CONCLUDED,
-                    active: 1,
-                }).lean();
+        const section = await Section.findOne({
+            defaultType: DEFAULT_TYPES.CONCLUDED,
+            active: 1,
+        }).lean();
 
-                if (section) {
-                    const sortFnc =
-                        section && section.ordination !== undefined && section.ordination === 0
-                            ? function (a, b) {
-                                return b.createdAt - a.createdAt;
-                            }
-                            : function (a, b) {
-                                return a.title.localeCompare(b.title);
-                            };
+        if (!section) return [];
 
-                    for (const trail of trails) {
-                        if (trail.completion) {
-                            section.trails.push(trail);
-                        }
-                    }
-
-                    section.trails.sort(sortFnc);
+        const sortFnc =
+            section && section.ordination !== undefined && section.ordination === 0
+                ? function (a, b) {
+                    return b.createdAt - a.createdAt;
                 }
+                : function (a, b) {
+                    return a.title.localeCompare(b.title);
+                };
 
-                resolve(section && section.trails.length > 0 ? section : []);
-            } catch (error) {
-                console.log(error);
-                reject(error);
+        for (const trail of trails) {
+            if (trail.completion) {
+                section.trails.push(trail);
             }
-        });
+        }
+
+        section.trails.sort(sortFnc);
+        return section.trails.length > 0 ? section : [];
     },
 
     async courseInSections(tags, userId) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const section = await Section.findOne({
-                    defaultType: DEFAULT_TYPES.COURSES,
-                    active: 1,
-                }).lean();
+        const section = await Section.findOne({
+            defaultType: DEFAULT_TYPES.COURSES,
+            active: 1,
+        }).lean();
 
-                let elegibleCourses = await CourseModel.find({
-                    tags: { $in: tags },
-                    deleted: { $eq: 0 },
-                    status: { $eq: 1 },
-                    dateFinal: { $gte: new Date().toISOString() }
-                })
-                    .select({
-                        title: 1,
-                        thumbPath: 1,
-                        _id: 1,
-                        description: 1,
-                        passingScore: 1,
-                        certificate: 1,
-                        certificateLayout: 1,
-                        workload: 1,
-                        instructor: 1,
-                        banner: 1,
-                        startDate: 1,
-                        endDate: 1,
-                        highlighted: 1,
-                        certificateDateType: 1,
-                    })
-                    .lean();
+        if (!section) return [];
 
-                const coursePromises = elegibleCourses.map(async (course) => {
-                    const alreadyJoined = await WaitListModel.findOne({
-                        userID: userId,
-                        courseID: course._id,
-                        sent: false,
-                    });
+        const currentDateISO = new Date().toISOString();
 
-                    const today = new Date()
-                    const classesFromCourse = await ClassModel.find({
-                        courseID: course._id
-                    }).populate({
-                        path: 'materials',
-                        match: { author: 'INSTRUTOR' },
-                    })
-                        .populate('instructor', ['name']);;
+        // Get eligible courses
+        const elegibleCourses = await CourseModel.find({
+            tags: { $in: tags },
+            deleted: { $eq: 0 },
+            status: { $eq: 1 },
+            dateFinal: { $gte: currentDateISO }
+        })
+            .select({
+                title: 1,
+                thumbPath: 1,
+                _id: 1,
+                description: 1,
+                passingScore: 1,
+                certificate: 1,
+                certificateLayout: 1,
+                workload: 1,
+                instructor: 1,
+                banner: 1,
+                startDate: 1,
+                endDate: 1,
+                highlighted: 1,
+                certificateDateType: 1,
+            })
+            .lean();
 
-                    let inWaitList = false;
-                    if (alreadyJoined) {
-                        inWaitList = true;
-                    }
-                    let certificateElegible = false
-                    let certificateData = null
+        if (!elegibleCourses.length) {
+            return [];
+        }
 
-                    classesFromCourse.forEach((e) => {
-                        if (String(e.courseID._id) === String(course._id)) {
-                            const userInClass = e.users.find((user) => user._id?.toString() == userId || user.userID == userId)
-                            let grade = 0
-                            let presence = false
-                            if (userInClass) {
-                                presence = userInClass.presence;
-                                grade = userInClass.grades ? userInClass.grades : 0;
-                                const passingScore = course.passingScore ? course.passingScore : 0;
-                                certificateElegible = grade >= passingScore;
+        const processedCourses = await processCourseInSections(elegibleCourses, userId);
 
-                            }
-                            if (certificateElegible && presence)
-                                certificateData = {
-                                    completionAt: course.certificateDateType == 2 ? userInClass?.presenceAt : e.dateApplicationFinal,
-                                    qrcode: e.qrcode,
-                                    certificate: course.certificate,
-                                    certificateLayout: course.certificateLayout,
-                                    studentMaterials: e.materials,
-                                    workload: course.workload,
-                                    instructor: e.instructor,
-                                    grade: grade,
-                                    status: certificateElegible,
-                                };
+        // Sort function
+        const sortFnc = section?.ordination === 0
+            ? () => -1
+            : (a, b) => a.title?.localeCompare(b.title) || 0;
 
-                            course.presence = presence;
-                            course.completionAt = e.dateApplicationFinal;
-                            course.instructor = e.instructor;
+        // Add courses to section and sort
+        section.trails = processedCourses.sort(sortFnc);
 
-                        }
-                    });
-                    const classes = certificateData ? [] : classesFromCourse.map((classFromCourse) => {
-                        const inClass = classFromCourse.users.some((user) => String(user._id) === String(userId) || String(user.userID) === String(userId))
-
-
-
-                        return classFromCourse.dateApplicationFinal <= today ? null : {
-                            _id: classFromCourse._id,
-                            name: classFromCourse.name,
-                            registrationDeadline: classFromCourse.registrationDeadline,
-                            cancellationDeadline: classFromCourse.cancellationDeadline,
-                            dateApplicationInitial: classFromCourse.dateApplicationInitial,
-                            dateApplicationFinal: classFromCourse.dateApplicationFinal,
-                            location: classFromCourse.location,
-                            status: getClassStatus(classFromCourse, inClass),
-                        };
-                    }).filter((classCourse) => classCourse)
-
-
-                    course.certificateElegible = certificateData;
-                    course.inWaitList = inWaitList;
-                    course.classes = classes;
-                    course.hasClasses = classes.length > 0;
-                    return course;
-                });
-
-                elegibleCourses = await Promise.all(coursePromises);
-
-                if (section) {
-                    const sortFnc =
-                        section && section.ordination !== undefined && section.ordination === 0
-                            ? function (a, b) {
-                                return -1;
-                            }
-                            : function (a, b) {
-                                return a.title?.localeCompare(b.title);
-                            };
-                    for (const course of elegibleCourses) {
-                        section.trails.push(course);
-                    }
-
-                    section.trails.sort(sortFnc);
-                }
-
-                resolve(section && section.trails.length > 0 ? section : []);
-            } catch (error) {
-                console.log(error);
-                reject(error);
-            }
-        });
+        return section.trails.length > 0 ? section : [];
     },
 
     async mostSeenSections(trails) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const section = await Section.findOne({
-                    defaultType: DEFAULT_TYPES.MOST_SEEN,
-                    active: 1,
-                }).lean();
 
-                if (section) {
-                    const lastNinetyDays = moment().subtract(90, 'days').toISOString();
-                    const mostSeenTrails = await TrailViews.aggregate([
-                        {
-                            $match: {
-                                trailId: {
-                                    $in: trails.map(({ _id }) => _id),
-                                },
-                            },
-                        },
-                        {
-                            $project: {
-                                trailId: 1,
-                                count: {
-                                    $sum: {
-                                        $reduce: {
-                                            input: '$views',
-                                            initialValue: 0,
-                                            in: {
-                                                $cond: {
-                                                    if: { $gte: ['$$this.date', lastNinetyDays] },
-                                                    then: { $add: ['$$value', '$$this.count'] },
-                                                    else: { $add: ['$$value', 0] },
-                                                },
-                                            },
-                                        },
+        const section = await Section.findOne({
+            defaultType: DEFAULT_TYPES.MOST_SEEN,
+            active: 1,
+        }).lean();
+
+        if (!section) return [];
+
+        const lastNinetyDays = moment().subtract(90, 'days').toISOString();
+
+        const mostSeenTrails = await TrailViews.aggregate([
+            {
+                $match: {
+                    trailId: {
+                        $in: trails.map(({ _id }) => _id),
+                    },
+                },
+            },
+            {
+                $project: {
+                    trailId: 1,
+                    count: {
+                        $sum: {
+                            $reduce: {
+                                input: '$views',
+                                initialValue: 0,
+                                in: {
+                                    $cond: {
+                                        if: { $gte: ['$$this.date', lastNinetyDays] },
+                                        then: { $add: ['$$value', '$$this.count'] },
+                                        else: { $add: ['$$value', 0] },
                                     },
                                 },
                             },
                         },
-                        {
-                            $sort: {
-                                count: -1,
-                            },
-                        },
-                        {
-                            $limit: 10,
-                        },
-                        {
-                            $lookup: {
-                                from: 'trails',
-                                as: 'trail',
-                                foreignField: '_id',
-                                localField: 'trailId',
-                            },
-                        },
-                        {
-                            $unwind: '$trail',
-                        },
-                        {
-                            $lookup: {
-                                from: 'items',
-                                as: 'trailItems',
-                                foreignField: '_id',
-                                localField: 'trail.items.itemID'
-                            }
-                        },
-                        {
-                            $addFields: {
-                                'trail.items': {
-                                    $map: {
-                                        input: '$trail.items',
-                                        as: 'item',
-                                        in: {
-                                            $mergeObjects: [
-                                                '$$item',
+                    },
+                },
+            },
+            {
+                $sort: {
+                    count: -1,
+                },
+            },
+            {
+                $limit: 10,
+            },
+            {
+                $lookup: {
+                    from: 'trails',
+                    as: 'trail',
+                    foreignField: '_id',
+                    localField: 'trailId',
+                },
+            },
+            {
+                $unwind: '$trail',
+            },
+            {
+                $lookup: {
+                    from: 'items',
+                    as: 'trailItems',
+                    foreignField: '_id',
+                    localField: 'trail.items.itemID'
+                }
+            },
+            {
+                $addFields: {
+                    'trail.items': {
+                        $map: {
+                            input: '$trail.items',
+                            as: 'item',
+                            in: {
+                                $mergeObjects: [
+                                    '$$item',
+                                    {
+                                        itemID: {
+                                            $arrayElemAt: [
+                                                '$trailItems',
                                                 {
-                                                    itemID: {
-                                                        $arrayElemAt: [
-                                                            '$trailItems',
-                                                            {
-                                                                $indexOfArray: ['$trailItems._id', '$$item.itemID'],
-                                                            },
-                                                        ],
-                                                    },
+                                                    $indexOfArray: ['$trailItems._id', '$$item.itemID'],
                                                 },
                                             ],
                                         },
                                     },
-                                },
+                                ],
                             },
                         },
-                        {
-                            $project: {
-                                trail: 1,
-                                count: 1,
-                                _id: 0,
-                            },
-                        },
-                    ]);
+                    },
+                },
+            },
+            {
+                $project: {
+                    trail: 1,
+                    count: 1,
+                    _id: 0,
+                },
+            },
+        ]);
 
-                    section.trails = mostSeenTrails.map(({ trail, count }) => {
-                        const completion = trails.find(t => t._id.toString() === trail._id.toString())?.completion || null;
-                        return {
-                            ...trail,
-                            count,
-                            completion,
-                            confidential: trail.confidential ?? false
-                        };
-                    })
-                }
-                // console.log(section.trails)
-                resolve(trails.length > 0 ? section : []);
-            } catch (error) {
-                reject(error);
-            }
-        });
+        section.trails = mostSeenTrails.map(({ trail, count }) => {
+            const completion = trails.find(t => t._id.toString() === trail._id.toString())?.completion || null;
+            return {
+                ...trail,
+                count,
+                completion,
+                confidential: trail.confidential ?? false
+            };
+        })
+        return trails.length > 0 ? section : [];
     },
+
     async recommendedTrailsSections(trails, recommendedTrails) {
-        try {
-            const section = await Section.findOne({
-                defaultType: DEFAULT_TYPES.RECOMMENDED_TRAILS,
-                active: 1,
-            }).lean();
+        const section = await Section.findOne({
+            defaultType: DEFAULT_TYPES.RECOMMENDED_TRAILS,
+            active: 1,
+        }).lean();
 
-            if (!section) {
-                return []
-            }
-            const trailIds = new Set(recommendedTrails.map((trail) => trail.id.toString()));
-            for (const trail of trails) {
-
-                const isRecommended = trailIds.has(trail._id.toString());
-                if (isRecommended) {
-                    section.trails.push(trail)
-                }
-            }
-
-            return section;
-        } catch (error) {
-            console.log(error.response?.data ?? error.message);
+        if (!section) {
+            return []
         }
+        const trailIds = new Set(recommendedTrails.map((trail) => trail.id.toString()));
+        for (const trail of trails) {
+
+            const isRecommended = trailIds.has(trail._id.toString());
+            if (isRecommended) {
+                section.trails.push(trail)
+            }
+        }
+
+        return section;
     },
 
     async recommendedCoursesSections(userId, recommendedCourses) {
-        try {
-            const section = await Section.findOne({
-                defaultType: DEFAULT_TYPES.RECOMMENDED_COURSES,
-                active: 1,
-            }).lean();
+        const section = await Section.findOne({
+            defaultType: DEFAULT_TYPES.RECOMMENDED_COURSES,
+            active: 1,
+        }).lean();
 
-            if (!section) {
-                return []
-            }
+        if (!section) return [];
 
-            let elegibleCourses = await CourseModel.find({
-                _id: { $in: recommendedCourses.map((rc) => rc.courseId) }
+        const elegibleCourses = await CourseModel.find({
+            _id: { $in: recommendedCourses.map((rc) => rc.courseId) },
+        })
+            .select({
+                title: 1,
+                thumbPath: 1,
+                _id: 1,
+                description: 1,
+                passingScore: 1,
+                certificate: 1,
+                certificateLayout: 1,
+                workload: 1,
+                instructor: 1,
+                banner: 1,
+                startDate: 1,
+                endDate: 1,
+                highlighted: 1,
+                certificateDateType: 1,
             })
-                .select({
-                    title: 1,
-                    thumbPath: 1,
-                    _id: 1,
-                    description: 1,
-                    passingScore: 1,
-                    certificate: 1,
-                    certificateLayout: 1,
-                    workload: 1,
-                    instructor: 1,
-                    banner: 1,
-                    startDate: 1,
-                    endDate: 1,
-                    highlighted: 1,
-                    certificateDateType: 1,
-                })
-                .lean();
+            .lean();
 
-            const coursePromises = elegibleCourses.map(async (course) => {
-                const alreadyJoined = await WaitListModel.findOne({
-                    userID: userId,
-                    courseID: course._id,
-                    sent: false,
-                });
-
-                const today = new Date()
-                const classesFromCourse = await ClassModel.find({
-                    courseID: course._id
-                }).populate({
-                    path: 'materials',
-                    match: { author: 'INSTRUTOR' },
-                })
-                    .populate('instructor', ['name']);
-
-                let inWaitList = false;
-                if (alreadyJoined) {
-                    inWaitList = true;
-                }
-                let certificateElegible = false
-                let certificateData = null
-
-                classesFromCourse.forEach((e) => {
-                    if (String(e.courseID._id) === String(course._id)) {
-                        const userInClass = e.users.find((user) => user._id?.toString() == userId || user.userID == userId)
-                        let grade = 0
-                        let presence = false
-                        if (userInClass) {
-                            presence = userInClass.presence;
-                            grade = userInClass.grades ? userInClass.grades : 0;
-                            const passingScore = course.passingScore ? course.passingScore : 0;
-                            certificateElegible = grade >= passingScore;
-
-                        }
-                        if (certificateElegible && presence)
-                            certificateData = {
-                                completionAt: course.certificateDateType == 2 ? userInClass?.presenceAt : e.dateApplicationFinal,
-                                qrcode: e.qrcode,
-                                certificate: course.certificate,
-                                certificateLayout: course.certificateLayout,
-                                studentMaterials: e.materials,
-                                workload: course.workload,
-                                instructor: e.instructor,
-                                grade: grade,
-                                status: certificateElegible,
-                            };
-
-                        course.presence = presence;
-                        course.completionAt = e.dateApplicationFinal;
-                        course.instructor = e.instructor;
-
-                    }
-                });
-                const classes = certificateData ? [] : classesFromCourse.map((classFromCourse) => {
-                    const inClass = classFromCourse.users.some((user) => String(user._id) === String(userId) || String(user.userID) === String(userId))
-
-                    return classFromCourse.dateApplicationFinal <= today ? null : {
-                        _id: classFromCourse._id,
-                        name: classFromCourse.name,
-                        registrationDeadline: classFromCourse.registrationDeadline,
-                        cancellationDeadline: classFromCourse.cancellationDeadline,
-                        dateApplicationInitial: classFromCourse.dateApplicationInitial,
-                        dateApplicationFinal: classFromCourse.dateApplicationFinal,
-                        location: classFromCourse.location,
-                        status: getClassStatus(classFromCourse, inClass),
-                    };
-                }).filter((classCourse) => classCourse)
-
-
-                course.certificateElegible = certificateData;
-                course.inWaitList = inWaitList;
-                course.classes = classes;
-                course.hasClasses = classes.length > 0;
-                return course;
-            });
-
-            elegibleCourses = await Promise.all(coursePromises);
-
-            section.trails.push(...elegibleCourses)
-
-            return section
-
-        } catch (error) {
-            console.log(error);
+        if (!elegibleCourses.length) {
+            return [];
         }
+
+        const processedCourses = await processCourseInSections(elegibleCourses, userId);
+
+        // Sort function
+        const sortFnc = section?.ordination === 0
+            ? () => -1
+            : (a, b) => a.title?.localeCompare(b.title) || 0;
+
+        // Add courses to section and sort
+        section.trails = processedCourses.sort(sortFnc);
+
+        return section.trails.length > 0 ? section : [];
     },
 
     /**
@@ -1378,12 +1183,15 @@ function getClassStatus(classFromCourse, inClass) {
         if (isCourseInProgress) {
             return "in-progress"
         }
+
         if (inClass) {
             return "registered"
         }
+        
         if (isCourseClosed || !courseHasSeats || !canRegister || !canCancel) {
             return "closed"
         }
+        
         if (isCourseOpen && (canRegister || canCancel)) {
             return "open";
         }
@@ -1394,4 +1202,112 @@ function getClassStatus(classFromCourse, inClass) {
         reject(error);
     }
 
+}
+
+async function processCourseInSections(elegibleCourses, userId) {
+    const today = new Date();
+
+    // Extract course IDs for batch queries
+    const courseIds = elegibleCourses.map(course => course._id);
+
+    // Batch query for wait list entries
+    const waitListEntries = await WaitListModel.find({
+        userID: userId,
+        courseID: { $in: courseIds },
+        sent: false,
+    }).lean();
+
+    // Create a Set for faster lookups
+    const waitListCourseIds = new Set(waitListEntries.map(entry => entry.courseID.toString()));
+
+    // Batch query for all classes from all courses
+    const allClasses = await ClassModel.find({
+        courseID: { $in: courseIds }
+    })
+        .populate({
+            path: 'materials',
+            match: { author: 'INSTRUTOR' },
+        })
+        .populate('instructor', ['name'])
+        .sort({ createdAt: -1 })
+        .lean();
+
+    // Group classes by courseID for faster lookup
+    const classesByCourse = new Map();
+    allClasses.forEach(classItem => {
+        const courseId = classItem.courseID.toString();
+        if (!classesByCourse.has(courseId)) {
+            classesByCourse.set(courseId, []);
+        }
+        classesByCourse.get(courseId).push(classItem);
+    });
+
+    // Match user in class function
+    const matchUserInClass = (user) => user.userID.equals?.(userId);
+
+    // Process courses
+    const processedCourses = elegibleCourses.map((course) => {
+        const courseIdStr = course._id.toString();
+        const inWaitList = waitListCourseIds.has(courseIdStr);
+        const classesFromCourse = classesByCourse.get(courseIdStr) || [];
+
+        // Find the most recent class with presence data or the most recent class if none found
+        const mostRecentClass = classesFromCourse.find(classItem => {
+            const userInClass = classItem.users.find(matchUserInClass);
+
+            const userPassedClass = userInClass?.presence && (userInClass.grades || 0) >= (course.passingScore || 0);
+
+            return userPassedClass;
+        }) || classesFromCourse[0] || null;
+
+        const userInMostRecentClass = mostRecentClass?.users.find(matchUserInClass) ?? null;
+
+        const presence = userInMostRecentClass?.presence || false;
+        const completionAt = mostRecentClass?.dateApplicationFinal || null;
+        const instructor = mostRecentClass?.instructor || null;
+        const certificateElegible = userInMostRecentClass?.presence && (userInMostRecentClass?.grades || 0) >= (course.passingScore || 0);
+        const certificateData = certificateElegible ? {
+            completionAt: course.certificateDateType === 2
+                ? mostRecentClass?.presenceAt : mostRecentClass?.dateApplicationFinal,
+            qrcode: mostRecentClass?.qrcode || null,
+            certificate: course.certificate || null,
+            certificateLayout: course.certificateLayout || null,
+            studentMaterials: mostRecentClass?.materials || null,
+            workload: course.workload || null,
+            instructor: mostRecentClass?.instructor || null,
+            grade: userInMostRecentClass?.grades || null,
+            status: certificateElegible
+        } : null;
+
+        // Process classes only if no certificate data
+        const classes = certificateData ? [] : classesFromCourse
+            .filter(classFromCourse => classFromCourse.dateApplicationFinal > today)
+            .map((classFromCourse) => {
+                const inClass = classFromCourse.users.some(matchUserInClass);
+
+                return {
+                    _id: classFromCourse._id,
+                    name: classFromCourse.name,
+                    registrationDeadline: classFromCourse.registrationDeadline,
+                    cancellationDeadline: classFromCourse.cancellationDeadline,
+                    dateApplicationInitial: classFromCourse.dateApplicationInitial,
+                    dateApplicationFinal: classFromCourse.dateApplicationFinal,
+                    location: classFromCourse.location,
+                    status: getClassStatus(classFromCourse, inClass),
+                };
+            });
+
+        return {
+            ...course,
+            certificateElegible: certificateData,
+            inWaitList,
+            classes,
+            hasClasses: classes.length > 0,
+            presence,
+            completionAt,
+            instructor,
+        };
+    });
+
+    return processedCourses;
 }
