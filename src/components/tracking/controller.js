@@ -128,7 +128,7 @@ const TrackingController = {
                             isAllowedToSendXAPI = false;
                         }
                     }
-                    console.log("completion", completion, "newCompletion", newCompletion, "\n\n\n\n")
+                    // console.log("completion", completion, "newCompletion", newCompletion, "\n\n\n\n")
                     const isNewStatus = req.body?.lessonStatus !== tracking.lessonStatus;
 
                     if (
