@@ -64,6 +64,23 @@ function parseSectionBodyTrails(req) {
     }) ?? [];
 }
 
+async function fetchMatricesData(authorization, userId) {
+    try {
+        const { data } = await matricesApi.get(`/users/${userId}`, {
+            headers: {
+                authorization: `Bearer ${authorization}`,
+            },
+        });
+
+        return {
+            recommendedTrails: data.data.recommendedTrails ?? [],
+            recommendedCourses: data.data.recommendedCourses ?? [],
+        };
+    } catch (error) {
+        // console.log({ error })
+    }
+}
+
 module.exports = {
     async returnSections(req, res) {
         try {
@@ -341,7 +358,7 @@ module.exports = {
                     { expiredCompletion: { $exists: false } },
                     { expiredCompletion: { $eq: null } },
                 ],
-            }).lean()
+            }).sort({ _id: -1 }).lean()
         ]);
 
         for (let trail of trails) {
@@ -366,15 +383,17 @@ module.exports = {
 
         let arrSections = await elegiblesContents(filteredTrails);
 
-        const mandatorySectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.MANDATORY);
-        const recentSectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.RECENTS);
-        const keepLearningSectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.KEEP_LEARNING);
-        const concludedSectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.CONCLUDED);
-        const coursesSectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.COURSES);
-        const favoriteSectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.FAVORITES);
-        const mostSeenSectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.MOST_SEEN);
-        const recommendedTrailsSectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.RECOMMENDED_TRAILS);
-        const recommendedCoursesSectionInfo = sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.RECOMMENDED_COURSES);
+        const sectionToShow = {
+            mandatorySectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.MANDATORY),
+            recentSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.RECENTS),
+            keepLearningSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.KEEP_LEARNING),
+            concludedSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.CONCLUDED),
+            coursesSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.COURSES),
+            favoriteSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.FAVORITES),
+            mostSeenSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.MOST_SEEN),
+            recommendedTrailsSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.RECOMMENDED_TRAILS),
+            recommendedCoursesSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.RECOMMENDED_COURSES),
+        }
 
         const [
             arrMandatorySections,
@@ -385,38 +404,31 @@ module.exports = {
             arrMostSeenSections,
             arrCoursesSections,
         ] = await Promise.all([
-            mandatorySectionInfo ? mandatorySections(filteredTrails, tags, mandatorySectionInfo) : Promise.resolve([]),
-            recentSectionInfo ? recentsSections(filteredTrails, tags, recentSectionInfo) : Promise.resolve([]),
-            keepLearningSectionInfo ? keepLearningSections(filteredTrails, tags, keepLearningSectionInfo) : Promise.resolve([]),
-            concludedSectionInfo ? concludedSections(filteredTrails, tags, concludedSectionInfo) : Promise.resolve([]),
-            favoriteSectionInfo ? favoriteSections(filteredTrails, user._id, favoriteSectionInfo) : Promise.resolve([]),
-            mostSeenSectionInfo ? mostSeenSections(filteredTrails, tags, mostSeenSectionInfo) : Promise.resolve([]),
-            coursesSectionInfo ? courseInSections(tags, user._id, coursesSectionInfo) : Promise.resolve([]),
+            sectionToShow.mandatorySectionInfo ? mandatorySections(filteredTrails, tags, sectionToShow.mandatorySectionInfo) : Promise.resolve([]),
+            sectionToShow.recentSectionInfo ? recentsSections(filteredTrails, tags, sectionToShow.recentSectionInfo) : Promise.resolve([]),
+            sectionToShow.keepLearningSectionInfo ? keepLearningSections(filteredTrails, tags, sectionToShow.keepLearningSectionInfo) : Promise.resolve([]),
+            sectionToShow.concludedSectionInfo ? concludedSections(filteredTrails, tags, sectionToShow.concludedSectionInfo) : Promise.resolve([]),
+            sectionToShow.favoriteSectionInfo ? favoriteSections(filteredTrails, user._id, sectionToShow.favoriteSectionInfo) : Promise.resolve([]),
+            sectionToShow.mostSeenSectionInfo ? mostSeenSections(filteredTrails, tags, sectionToShow.mostSeenSectionInfo) : Promise.resolve([]),
+            sectionToShow.coursesSectionInfo ? courseInSections(tags, user._id, sectionToShow.coursesSectionInfo) : Promise.resolve([]),
         ]);
 
-        const recommendedTrails = [];
-        const recommendedCourses = [];
+        let recommendedTrails = [];
+        let recommendedCourses = [];
 
         if (req?.features?.matrices) {
-            try {
-                const { data } = await matricesApi.get(`/users/${user._id}`, {
-                    headers: {
-                        authorization: `Bearer ${req.headers.authorization}`,
-                    },
-                });
-                recommendedTrails.push(...data.data.recommendedTrails);
-                recommendedCourses.push(...data.data.recommendedCourses);
-            } catch (error) {
-                // console.log({ error })
-            }
+            const matricesData = await fetchMatricesData(req.headers.authorization, user._id);
+
+            recommendedTrails = matricesData.recommendedTrails || [];
+            recommendedCourses = matricesData.recommendedCourses || [];
         }
 
-        const arrRecommendedTrailsSections = recommendedTrailsSectionInfo
-            ? await recommendedTrailsSections(filteredTrails, recommendedTrails, recommendedTrailsSectionInfo)
+        const arrRecommendedTrailsSections = sectionToShow.recommendedTrailsSectionInfo && recommendedTrails.length > 0
+            ? await recommendedTrailsSections(filteredTrails, recommendedTrails, sectionToShow.recommendedTrailsSectionInfo)
             : [];
 
-        const arrRecommendedCoursesSections = recommendedCoursesSectionInfo
-            ? await recommendedCoursesSections(user._id, recommendedCourses, recommendedCoursesSectionInfo)
+        const arrRecommendedCoursesSections = sectionToShow.recommendedCoursesSectionInfo && recommendedCourses.length > 0
+            ? await recommendedCoursesSections(user._id, recommendedCourses, sectionToShow.recommendedCoursesSectionInfo)
             : [];
 
         function limitArray(section) {
