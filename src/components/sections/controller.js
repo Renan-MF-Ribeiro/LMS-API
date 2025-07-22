@@ -281,6 +281,16 @@ module.exports = {
             getGroupCodesByToken(req, tags)
         ]);
 
+        const now = new Date();
+
+        const classGroupsMap = new Map();
+        for (const classGroup of classGroups) {
+            if (!classGroupsMap.has(classGroup.groupCode)) {
+                classGroupsMap.set(classGroup.groupCode, []);
+            }
+            classGroupsMap.get(classGroup.groupCode).push(classGroup);
+        }
+
         let trailsIdArr = [];
         let sectionsIdArr = [];
         let sectionInfos = [];
@@ -344,13 +354,10 @@ module.exports = {
             trail = processedTrail.trail;
 
             for (const tag of trail.tags) {
-                for (const classGroup of classGroups) {
-                    if (classGroup.groupCode === tag.value) {
-                        trail.classGroup = findObjectInRange(
-                            classGroups.filter((e) => e.groupCode == tag.value),
-                            new Date()
-                        );
-                    }
+                const groupsForTag = classGroupsMap.get(tag.value);
+                if (groupsForTag?.length) {
+                    trail.classGroup = findObjectInRange(groupsForTag, now);
+                    if (trail.classGroup) break; // Exit early once classGroup is found
                 }
             }
         }
