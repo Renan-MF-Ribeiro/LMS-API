@@ -1275,7 +1275,7 @@ async function processCourseInSections(elegibleCourses, userId) {
             studentMaterials: mostRecentClass?.materials || null,
             workload: course.workload || null,
             instructor: mostRecentClass?.instructor || null,
-            grade: userInMostRecentClass?.grade || null,
+            grade: userInMostRecentClass?.grades || null,
             status: certificateElegible
         } : null;
 

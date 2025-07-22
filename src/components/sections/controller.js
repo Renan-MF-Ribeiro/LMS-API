@@ -419,8 +419,8 @@ module.exports = {
         if (req?.features?.matrices) {
             const matricesData = await fetchMatricesData(req.headers.authorization, user._id);
 
-            recommendedTrails = matricesData.recommendedTrails || [];
-            recommendedCourses = matricesData.recommendedCourses || [];
+            recommendedTrails = matricesData?.recommendedTrails || [];
+            recommendedCourses = matricesData?.recommendedCourses || [];
         }
 
         const arrRecommendedTrailsSections = sectionToShow.recommendedTrailsSectionInfo && recommendedTrails.length > 0
