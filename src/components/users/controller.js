@@ -8,7 +8,7 @@ const _messages = require('../../utils/messages');
 const _files = require('../../utils/files');
 const { NewMessage } = require('../new-messages/model');
 const { User, UserTest, Block, defaultUserMap } = require('./model');
-
+const managerBusiness = require('../managers/business');
 const {
     generateToken,
     generateMfaToken,
@@ -81,12 +81,9 @@ const { Question } = require('../assessments/questions/model');
 const { Alternative } = require('../assessments/alternatives/model');
 
 const { EVENT_CATEGORY } = require('../gamification/model');
-const AssessmentController = require('../assessment/controller');
 const GamificationBusiness = require('../gamification/business');
 const { Group } = require('../groups/model');
 const { handleUserEligibilitiesGamification } = require('../gamification/utils');
-const AssessmentBusiness = require('../assessment/business');
-const { Features } = require('../theme/features/model');
 const { Partner } = require('../partners/model');
 const { Log } = require('../logs/model');
 const { Tracking } = require('../tracking/model');
@@ -120,7 +117,6 @@ const {
 const { getDbCurrentFeatures } = require('../../utils/features');
 const { ObjectId } = require('mongoose').Types;
 const { Profile } = require('../profiles/model');
-const { isUserManager } = require('../managers/business');
 const environment = require('../../environment');
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -685,9 +681,10 @@ module.exports = {
                 );
             }
             // Gera todos os tokens necessários
-            const [tokens, entryRecord] = await Promise.all([
+            const [tokens, entryRecord, isUserManager] = await Promise.all([
                 generateTokens(user, login, password, res),
                 returnDateSinceFirstLogin(user?._id),
+                managerBusiness.isUserManager(user),
                 updateLastLoginUser(user?._id),
                 GamificationKafka.publishEventRuleValidation({
                     events: [EVENT_CATEGORY.LOGIN],
@@ -725,6 +722,7 @@ module.exports = {
                     userId: user._id,
                     email: user.email,
                     firstLogin,
+                    isManager: isUserManager,
                 },
                 'Sucesso ao logar',
                 'users',
