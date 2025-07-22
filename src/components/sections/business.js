@@ -1253,7 +1253,6 @@ async function processCourseInSections(elegibleCourses, userId) {
 
         // Find the most recent class with presence data or the most recent class if none found
         const mostRecentClass = classesFromCourse.find(classItem => {
-            console.log(classItem);
             const userInClass = classItem.users.find(matchUserInClass);
 
             const userPassedClass = userInClass?.presence && (userInClass.grades || 0) >= (course.passingScore || 0);
