@@ -1520,7 +1520,7 @@ module.exports = {
             const { body } = req;
             const user = await getUserByToken(req);
 
-            var userID = String(user._id);
+            const userID = String(user._id);
 
             const course = await _business.listJoin(user, body.classesID)
 
@@ -1545,6 +1545,16 @@ module.exports = {
 
             success(res, req, course);
         } catch (error) {
+            if (error instanceof ApiError) {
+                return badRequest(
+                    res,
+                    req,
+                    error.message,
+                    error.message,
+                    'courses',
+                    '/list-Join'
+                );
+            };
             internalServer(
                 res,
                 req,
