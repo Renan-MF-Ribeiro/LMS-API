@@ -35,6 +35,8 @@ const {
     processTrailTracking,
     processExpirationDate,
     findObjectInRange,
+    getDateTodayWithoutHours,
+    processTrailTrackingV2,
 } = require('../../utils/functions');
 const { TrailsUsersProgress, Trail } = require('../trails/model');
 const { handleSegmentationOnQuery, handleSegmentationOnCreate } = require('../config/business');
@@ -263,200 +265,226 @@ module.exports = {
     },
 
     async getSectionsElegibles(req, res) {
-        try {
-            const { trailLimit: queryTrailLimit = '25', channel: channelId, ...filter } = req.query;
+        const { trailLimit: queryTrailLimit = '25', channel: channelId, ...filter } = req.query;
 
-            const trailLimit = queryTrailLimit ? Number(queryTrailLimit) : null;
+        const trailLimit = queryTrailLimit ? Number(queryTrailLimit) : null;
 
-            const user = await getUserByToken(req);
-            const tags = await getTagsElegiblesByToken(req);
-            const classGroups = await getGroupCodesByToken(req, tags);
-            const newArray = [];
-            let sectionArray;
+        const tags = await getTagsElegiblesByToken(req);
 
-            if (channelId) {
-                let { idSections } = await Channel.findById(channelId).select('idSections -_id');
+        if(!tags?.length) {
+            _messages.success(res, req, []);
+            return;
+        }
 
-                const dbSections = await Section
-                    .find({ _id: { $in: idSections } })
-                    .select('trails -_id');
+        const [user, classGroups] = await Promise.all([
+            getUserByToken(req),
+            getGroupCodesByToken(req, tags)
+        ]);
 
-                const sectionInfos = await populateSectionTrails(
-                    dbSections,
-                    { select: 'tags tagsAnd _id collaborative' }
-                );
+        const newArray = [];
+        
+        let sectionArray;
 
-                const trailsInSections = sectionInfos.map(({ trails }) => {
-                    return {
-                        trails: trails.filter(
-                            (trail) => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative
-                        ).map(trail => trail._id)
-                    }
-                });
-                newArray.push(
-                    ...trailsInSections
-                        .map((e) => {
-                            return e.trails;
-                        })
-                        .flat(2)
-                );
+        if (channelId) {
+            let { idSections } = await Channel.findById(channelId).select('idSections -_id');
 
-                delete req.query.channel;
-                sectionArray = idSections;
+            const dbSections = await Section
+                .find({ _id: { $in: idSections } })
+                .select('trails -_id');
+
+            const sectionInfos = await populateSectionTrails(
+                dbSections,
+                { select: 'tags tagsAnd _id collaborative' }
+            );
+
+            const trailsInSections = sectionInfos.map(({ trails }) => {
+                return {
+                    trails: trails.filter(
+                        (trail) => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative
+                    ).map(trail => trail._id)
+                }
+            });
+            
+            newArray.push(
+                ...trailsInSections
+                    .map((e) => {
+                        return e.trails;
+                    })
+                    .flat(2)
+            );
+
+            delete req.query.channel;
+            sectionArray = idSections;
+        }
+        
+        let resultSections = [];
+
+        const query = {
+            enabled: true,
+            startDate: { $lte: getDateTodayWithoutHours() },
+            endDate: { $gte: getDateTodayWithoutHours() },
+            $or: [
+                { tags: { $in: tags, } },
+                { tagsAnd: { $in: tags, } },
+            ],
+        };
+        
+        if (channelId) {
+            query['_id'] = { $in: newArray };
+        }
+
+        console.time('populateTrails');
+        
+        let trails = await populateTrails(true, query);
+        
+        console.timeEnd('populateTrails');
+        
+        const allTrackingUser = await Tracking.find({
+            userLogin: { $eq: user.networkLogin },
+            $or: [
+                { expiredCompletion: { $exists: false } },
+                { expiredCompletion: { $eq: null } },
+            ],
+        }).lean();
+
+        for (let trail of trails) {
+            const processedTrail = processTrailTrackingV2(trail, allTrackingUser);
+
+            if (trail.expirationType) {
+                trail = processExpirationDate(trail, user);
             }
-            let resultSections = [];
 
-            if (tags.length > 0) {
-                const query = {
-                    enabled: true,
-                    $or: [
-                        {
-                            tags: {
-                                $in: tags,
-                            },
-                        },
-                        {
-                            tagsAnd: {
-                                $in: tags,
-                            },
-                        },
-                    ],
-                };
-                if (channelId) {
-                    query['_id'] = { $in: newArray };
+            trail = processedTrail.trail;
+
+            for (const tag of trail.tags) {
+                for (const classGroup of classGroups) {
+                    if (classGroup.groupCode === tag.value) {
+                        trail.classGroup = findObjectInRange(
+                            classGroups.filter((e) => e.groupCode == tag.value),
+                            new Date()
+                        );
+                    }
                 }
+            }
+        }
 
-                let trails = await populateTrails(true, query);
-                const allTrackingUser = await Tracking.find({
-                    userLogin: { $eq: user.networkLogin },
-                    $or: [
-                        { expiredCompletion: { $exists: false } },
-                        { expiredCompletion: { $eq: null } },
-                    ],
+        trails = trails.filter(checkIfTheTrackIsValid);
+
+        let arrSections = await elegiblesContents(trails);
+
+        const [
+            arrMandatorySections,
+            arrRecentsSections,
+            arrKeepLearningSections,
+            arrConcludedSections,
+            arrFavoriteSections,
+            arrMostSeenSections,
+            arrCoursesSections,
+        ] = await Promise.all([
+            mandatorySections(trails, tags),
+            recentsSections(trails),
+            keepLearningSections(trails),
+            concludedSections(trails),
+            favoriteSections(trails, user._id),
+            mostSeenSections(trails),
+            courseInSections(tags, user._id),
+        ]);
+
+        const recommendedTrails = [];
+        const recommendedCourses = [];
+
+        if (req?.features?.matrices) {
+            try {
+                const { data } = await matricesApi.get(`/users/${user._id}`, {
+                    headers: {
+                        authorization: `Bearer ${req.headers.authorization}`,
+                    },
                 });
+                recommendedTrails.push(...data.data.recommendedTrails);
+                recommendedCourses.push(...data.data.recommendedCourses);
+            } catch (error) {
+                // console.log({ error })
+            }
+        }
+        const arrRecommendedTrailsSections = await recommendedTrailsSections(trails, recommendedTrails);
+        const arrRecommendedCoursesSections = await recommendedCoursesSections(user._id, recommendedCourses);
 
-                for (let trail of trails) {
-                    const processedTrail = processTrailTracking(trail, allTrackingUser);
+        function limitArray(section) {
+            if (!section) return [];
 
-                    if (trail.expirationType) {
-                        trail = processExpirationDate(trail, user);
-                    }
+            if (!trailLimit) return section;
 
-                    trail = processedTrail.trail;
-
-                    for (const tag of trail.tags) {
-                        for (const classGroup of classGroups) {
-                            if (classGroup.groupCode === tag.value) {
-                                trail.classGroup = findObjectInRange(
-                                    classGroups.filter((e) => e.groupCode == tag.value),
-                                    new Date()
-                                );
-                            }
-                        }
-                    }
-                }
-
-                trails = trails.filter(checkIfTheTrackIsValid);
-
-                let arrSections = await elegiblesContents(trails);
-                const arrMandatorySections = await mandatorySections(trails, tags);
-                const arrRecentsSections = await recentsSections(trails);
-                const arrKeepLearningSections = await keepLearningSections(trails);
-                const arrConcludedSections = await concludedSections(trails);
-                const arrFavoriteSections = await favoriteSections(trails, user._id);
-                const arrMostSeenSections = await mostSeenSections(trails);
-                const arrCoursesSections = await courseInSections(tags, user._id);
-                const arrRecommendedTrailsSections = await recommendedTrailsSections(trails, user._id);
-                const arrRecommendedCoursesSections = await recommendedCoursesSections(user._id);
-
-                function limitArray(section) {
-                    if (!section) return [];
-
-                    if (!trailLimit) return section;
-
-                    if (Array.isArray(section) && section.length > 0) {
-                        return section.map((section) => {
-                            return {
-                                ...section,
-                                trails: section.trails?.slice(0, trailLimit) ?? []
-                            };
-                        })
-                    }
-
+            if (Array.isArray(section) && section.length > 0) {
+                return section.map((section) => {
                     return {
                         ...section,
                         trails: section.trails?.slice(0, trailLimit) ?? []
                     };
-                }
-
-                const allSections = [
-                    arrSections,
-                    arrMandatorySections,
-                    arrRecentsSections,
-                    arrKeepLearningSections,
-                    arrConcludedSections,
-                    arrCoursesSections,
-                    arrFavoriteSections,
-                    arrMostSeenSections,
-                    arrRecommendedTrailsSections || [],
-                    arrRecommendedCoursesSections || [],
-                ];
-
-                resultSections = allSections.flatMap(limitArray);
-
-                if (channelId) {
-                    const filteredArray = resultSections.filter((obj) =>
-                        obj ? sectionArray.includes(obj._id) : false
-                    );
-                    resultSections = filteredArray;
-                }
-
-                resultSections = resultSections.filter((val) => {
-                    return val != null;
-                });
-
-                if (resultSections.length > 0) {
-                    resultSections.sort((a, b) => (a.position < b.position ? -1 : 1));
-                }
-
-                if (filter && Object.values(filter).length > 0) {
-                    const arrResultSections = [];
-                    for (const section of resultSections) {
-                        section.trails = filterTrails(filter, section.trails, tags);
-                        if (section.trails.length > 0) {
-                            // Verifica a obrigatoriedade da trilha.
-                            arrResultSections.push(section);
-                        }
-                    }
-
-                    resultSections = arrResultSections;
-                }
-
-                for (const section of resultSections) {
-                    for (const trail of section.trails) {
-                        setTrailMandatory(trail, tags);
-                    }
-                }
+                })
             }
 
-            const hasSomeTrainingSection = resultSections.some(section => section.isTraining);
-
-            if (hasSomeTrainingSection) {
-                resultSections = await setAssessmentHistoricOnSections(user._id, resultSections, tags);
-            }
-
-            _messages.success(res, req, resultSections);
-        } catch (error) {
-            console.log(error);
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'sections',
-                '/elegiblesContents'
-            );
+            return {
+                ...section,
+                trails: section.trails?.slice(0, trailLimit) ?? []
+            };
         }
+
+        const allSections = [
+            arrSections,
+            arrMandatorySections,
+            arrRecentsSections,
+            arrKeepLearningSections,
+            arrConcludedSections,
+            arrCoursesSections,
+            arrFavoriteSections,
+            arrMostSeenSections,
+            arrRecommendedTrailsSections || [],
+            arrRecommendedCoursesSections || [],
+        ];
+
+        resultSections = allSections.flatMap(limitArray);
+
+        if (channelId) {
+            const filteredArray = resultSections.filter((obj) =>
+                obj ? sectionArray.includes(obj._id) : false
+            );
+            resultSections = filteredArray;
+        }
+
+        resultSections = resultSections.filter((val) => {
+            return val != null;
+        });
+
+        if (resultSections.length > 0) {
+            resultSections.sort((a, b) => (a.position < b.position ? -1 : 1));
+        }
+
+        if (filter && Object.values(filter).length > 0) {
+            const arrResultSections = [];
+            for (const section of resultSections) {
+                section.trails = filterTrails(filter, section.trails, tags);
+                if (section.trails.length > 0) {
+                    // Verifica a obrigatoriedade da trilha.
+                    arrResultSections.push(section);
+                }
+            }
+
+            resultSections = arrResultSections;
+        }
+
+        for (const section of resultSections) {
+            for (const trail of section.trails) {
+                setTrailMandatory(trail, tags);
+            }
+        }
+
+        const hasSomeTrainingSection = resultSections.some(section => section.isTraining);
+
+        if (hasSomeTrainingSection) {
+            resultSections = await setAssessmentHistoricOnSections(user._id, resultSections, tags);
+        }
+
+        _messages.success(res, req, resultSections);
     },
 
     async getCollaborationSectionDetail(req, res) {
@@ -691,7 +719,7 @@ module.exports = {
                 recommendedTrails = data.data.recommendedTrails ?? [];
                 recommendedCourses = data.data.recommendedCourses ?? [];
             } catch (error) {
-                console.log({ error })
+                // console.log({ error })
             }
         }
 

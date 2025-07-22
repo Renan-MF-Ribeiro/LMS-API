@@ -41,6 +41,8 @@ module.exports = {
         }
     },
 
+    //listar categorias pro front > regras : flag de campanha ativa ? listar categorias com capanha e usuario tem campo da carga valido : listar todas as categorias da campanha.
+
     async getCategoriesByCampaing(req, res) {
         try {
             const user = await getUserByToken(req);
@@ -122,7 +124,7 @@ module.exports = {
         let thumbPath;
 
         if (thumb) {
-            thumbPath = await azureBlob(banner, 'news/banners');
+            thumbPath = await azureBlob(thumb, 'news/banners');
         }
 
         try {
