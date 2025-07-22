@@ -1166,7 +1166,7 @@ module.exports = {
                     return tagsIntersection.length > 0;
                 }
             });
-            
+
             const data = eligibleUsers.slice(skip, skip + limit)
             const total = eligibleUsers.length
 
@@ -1380,7 +1380,7 @@ module.exports = {
                 );
             }
 
-            
+
             const course = await CourseModel.findById(classCourse.courseID._id)
 
             const isCourseDateOutOfRange = isDateOutOfRange(course.dateInitial, course.dateFinal);
@@ -1390,7 +1390,7 @@ module.exports = {
             );
 
             if (isCourseDateOutOfRange || isClassDateOutOfRange) {
-                const reason = isCourseDateOutOfRange ? 'ao curso': 'a turma'
+                const reason = isCourseDateOutOfRange ? 'ao curso' : 'a turma'
 
                 return badRequest(
                     res,
@@ -2000,7 +2000,7 @@ module.exports = {
         }
     },
 
-    async historicByUser (req, res) {
+    async historicByUser(req, res) {
         try {
             const userId = req.params.userId;
             const { skip, limit } = pagination(req);
@@ -2078,7 +2078,7 @@ module.exports = {
 
     },
 
-    async removeUserClass (req, res) {
+    async removeUserClass(req, res) {
         try {
             const { classeId, userId } = req.params;
             const classUpdated = await ClassModel.findOneAndUpdate(
