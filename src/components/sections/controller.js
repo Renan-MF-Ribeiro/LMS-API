@@ -271,7 +271,7 @@ module.exports = {
 
         const tags = await getTagsElegiblesByToken(req);
 
-        if(!tags?.length) {
+        if (!tags?.length) {
             _messages.success(res, req, []);
             return;
         }
@@ -282,7 +282,7 @@ module.exports = {
         ]);
 
         const newArray = [];
-        
+
         let sectionArray;
 
         if (channelId) {
@@ -304,7 +304,7 @@ module.exports = {
                     ).map(trail => trail._id)
                 }
             });
-            
+
             newArray.push(
                 ...trailsInSections
                     .map((e) => {
@@ -316,7 +316,7 @@ module.exports = {
             delete req.query.channel;
             sectionArray = idSections;
         }
-        
+
         let resultSections = [];
 
         const query = {
@@ -328,17 +328,17 @@ module.exports = {
                 { tagsAnd: { $in: tags, } },
             ],
         };
-        
+
         if (channelId) {
             query['_id'] = { $in: newArray };
         }
 
         console.time('populateTrails');
-        
+
         let trails = await populateTrails(true, query);
-        
+
         console.timeEnd('populateTrails');
-        
+
         const allTrackingUser = await Tracking.find({
             userLogin: { $eq: user.networkLogin },
             $or: [
@@ -380,6 +380,8 @@ module.exports = {
             arrFavoriteSections,
             arrMostSeenSections,
             arrCoursesSections,
+            arrRecommendedTrailsSections,
+            arrRecommendedCoursesSections
         ] = await Promise.all([
             mandatorySections(trails, tags),
             recentsSections(trails),
@@ -388,26 +390,9 @@ module.exports = {
             favoriteSections(trails, user._id),
             mostSeenSections(trails),
             courseInSections(tags, user._id),
+            recommendedTrailsSections(trails, user._id),
+            recommendedCoursesSections(user._id)
         ]);
-
-        const recommendedTrails = [];
-        const recommendedCourses = [];
-
-        if (req?.features?.matrices) {
-            try {
-                const { data } = await matricesApi.get(`/users/${user._id}`, {
-                    headers: {
-                        authorization: `Bearer ${req.headers.authorization}`,
-                    },
-                });
-                recommendedTrails.push(...data.data.recommendedTrails);
-                recommendedCourses.push(...data.data.recommendedCourses);
-            } catch (error) {
-                // console.log({ error })
-            }
-        }
-        const arrRecommendedTrailsSections = await recommendedTrailsSections(trails, recommendedTrails);
-        const arrRecommendedCoursesSections = await recommendedCoursesSections(user._id, recommendedCourses);
 
         function limitArray(section) {
             if (!section) return [];
