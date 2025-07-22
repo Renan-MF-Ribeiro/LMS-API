@@ -16,9 +16,10 @@ const {
     getDateTodayWithoutHours,
     addHours,
 } = require('../../utils/functions');
-const { checkEligibilityTagsAnd } = require('../sections/business');
+const { checkEligibilityTagsAnd, canRegisterOrCancel } = require('../sections/business');
 const eventsController = require('../calendar/events/controller');
 const { Group } = require('../groups/model');
+const ApiError = require('../../errors/ApiError');
 
 module.exports = {
     uploadMaterial (material, author, folder) {
@@ -505,8 +506,60 @@ module.exports = {
         return await CourseModel.find(query, 'title thumbPath banner').lean();
     },
 
-    async listJoin (user, classId) {
-        let course = null;
+    async listJoin(user, classId) {
+        let course = await ClassModel.findOne({ _id: classId });;
+
+        if (!course) {
+            course = await ClassModel.findOne({ _id: classId });
+        }
+
+        const classesFromCourse = await ClassModel.find({
+            courseID: course.courseID,
+        });
+
+        const currentClasses = classesFromCourse.filter((c) => {
+            const canRegister = canRegisterOrCancel(c.dateApplicationInitial, c.registrationDeadline)
+            const canCancel = canRegisterOrCancel(c.dateApplicationInitial, c.cancellationDeadline)
+
+            return canRegister && canCancel
+        })
+
+        const removalPromises = currentClasses.map(async (classFromCourse) => {
+            if (classFromCourse._id.equals(classId)) {
+                return Promise.resolve();
+            }
+
+            const userInClass = classFromCourse.users.find(
+                (u) =>
+                    (u._id && u._id.toString() === user._id.toString()) ||
+                    (u.userID && u.userID.toString() === user._id.toString())
+            );
+
+            if (!userInClass) {
+                return Promise.resolve();
+            }
+
+            if (userInClass.presence === true) {
+                throw new ApiError('Não é possível mais cancelar sua inscrição nesta turma.', 400);
+            }
+
+            return ClassModel.findOneAndUpdate(
+                { _id: classFromCourse._id },
+                {
+                    $pull: {
+                        users: {
+                            $or: [
+                                { _id: user._id, presence: false },
+                                { userID: user._id, presence: false },
+                            ],
+                        },
+                    },
+                }
+            );
+        });
+
+        await Promise.all(removalPromises);
+
         course = await ClassModel.findOneAndUpdate(
             {
                 _id: classId,
@@ -530,34 +583,9 @@ module.exports = {
             { new: true }
         );
 
-        if (!course) {
-            course = await ClassModel.findOne({ _id: classId });
-        }
-
-        const classesFromCourse = await ClassModel.find({
-            courseID: course.courseID,
-        });
-
-        const removalPromises = classesFromCourse.map((classFromCourse) => {
-            const inClass = classFromCourse.users.some(
-                (u) => u._id == user._id || u.userID == user._id
-            );
-
-            if (classFromCourse._id.equals(classId) || !inClass) {
-                return Promise.resolve();
-            }
-            //SÓ REMOVER SE PRESENCE FOR FALSE
-
-            return ClassModel.findOneAndUpdate(
-                { _id: classFromCourse._id },
-                { $pull: { users: { _id: user._id, presence: false } } }
-            );
-        });
-
-        await Promise.all(removalPromises);
-
         return course;
     },
+
 
     /**
      * @param {Array} data
