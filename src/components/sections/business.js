@@ -643,46 +643,9 @@ module.exports = {
         return section.trails.length > 0 ? section : [];
     },
 
-    async courseInSections(tags, userId) {
-        const section = await Section.findOne({
-            defaultType: DEFAULT_TYPES.COURSES,
-            active: 1,
-        }).lean();
-
-        if (!section) return [];
-
-        const currentDateISO = new Date().toISOString();
+    async processCourseInSections(elegibleCourses, userId) {
         const today = new Date();
-
-        // Get eligible courses
-        const elegibleCourses = await CourseModel.find({
-            tags: { $in: tags },
-            deleted: { $eq: 0 },
-            status: { $eq: 1 },
-            dateFinal: { $gte: currentDateISO }
-        })
-            .select({
-                title: 1,
-                thumbPath: 1,
-                _id: 1,
-                description: 1,
-                passingScore: 1,
-                certificate: 1,
-                certificateLayout: 1,
-                workload: 1,
-                instructor: 1,
-                banner: 1,
-                startDate: 1,
-                endDate: 1,
-                highlighted: 1,
-                certificateDateType: 1,
-            })
-            .lean();
-
-        if (!elegibleCourses.length) {
-            return [];
-        }
-
+        
         // Extract course IDs for batch queries
         const courseIds = elegibleCourses.map(course => course._id);
 
@@ -784,6 +747,50 @@ module.exports = {
                 instructor,
             };
         });
+
+        return processedCourses;
+    },
+
+    async courseInSections(tags, userId) {
+        const section = await Section.findOne({
+            defaultType: DEFAULT_TYPES.COURSES,
+            active: 1,
+        }).lean();
+
+        if (!section) return [];
+
+        const currentDateISO = new Date().toISOString();
+
+        // Get eligible courses
+        const elegibleCourses = await CourseModel.find({
+            tags: { $in: tags },
+            deleted: { $eq: 0 },
+            status: { $eq: 1 },
+            dateFinal: { $gte: currentDateISO }
+        })
+            .select({
+                title: 1,
+                thumbPath: 1,
+                _id: 1,
+                description: 1,
+                passingScore: 1,
+                certificate: 1,
+                certificateLayout: 1,
+                workload: 1,
+                instructor: 1,
+                banner: 1,
+                startDate: 1,
+                endDate: 1,
+                highlighted: 1,
+                certificateDateType: 1,
+            })
+            .lean();
+
+        if (!elegibleCourses.length) {
+            return [];
+        }
+
+        const processedCourses = await module.exports.processCourseInSections(elegibleCourses, userId);
 
         // Sort function
         const sortFnc = section?.ordination === 0
@@ -935,12 +942,10 @@ module.exports = {
             active: 1,
         }).lean();
 
-        if (!section) {
-            return []
-        }
+        if (!section) return [];
 
-        let elegibleCourses = await CourseModel.find({
-            _id: { $in: recommendedCourses.map((rc) => rc.courseId) }
+        const elegibleCourses = await CourseModel.find({
+            _id: { $in: recommendedCourses.map((rc) => rc.courseId) },
         })
             .select({
                 title: 1,
@@ -960,88 +965,21 @@ module.exports = {
             })
             .lean();
 
-        const coursePromises = elegibleCourses.map(async (course) => {
-            const alreadyJoined = await WaitListModel.findOne({
-                userID: userId,
-                courseID: course._id,
-                sent: false,
-            });
+        if (!elegibleCourses.length) {
+            return [];
+        }
 
-            const today = new Date()
-            const classesFromCourse = await ClassModel.find({
-                courseID: course._id
-            }).populate({
-                path: 'materials',
-                match: { author: 'INSTRUTOR' },
-            })
-                .populate('instructor', ['name']);
+        const processedCourses = await module.exports.processCourseInSections(elegibleCourses, userId);
 
-            let inWaitList = false;
-            if (alreadyJoined) {
-                inWaitList = true;
-            }
-            let certificateElegible = false
-            let certificateData = null
+        // Sort function
+        const sortFnc = section?.ordination === 0
+            ? () => -1
+            : (a, b) => a.title?.localeCompare(b.title) || 0;
 
-            classesFromCourse.forEach((e) => {
-                if (String(e.courseID._id) === String(course._id)) {
-                    const userInClass = e.users.find((user) => user._id?.toString() == userId || user.userID == userId)
-                    let grade = 0
-                    let presence = false
-                    if (userInClass) {
-                        presence = userInClass.presence;
-                        grade = userInClass.grades ? userInClass.grades : 0;
-                        const passingScore = course.passingScore ? course.passingScore : 0;
-                        certificateElegible = grade >= passingScore;
+        // Add courses to section and sort
+        section.trails = processedCourses.sort(sortFnc);
 
-                    }
-                    if (certificateElegible && presence)
-                        certificateData = {
-                            completionAt: course.certificateDateType == 2 ? userInClass?.presenceAt : e.dateApplicationFinal,
-                            qrcode: e.qrcode,
-                            certificate: course.certificate,
-                            certificateLayout: course.certificateLayout,
-                            studentMaterials: e.materials,
-                            workload: course.workload,
-                            instructor: e.instructor,
-                            grade: grade,
-                            status: certificateElegible,
-                        };
-
-                    course.presence = presence;
-                    course.completionAt = e.dateApplicationFinal;
-                    course.instructor = e.instructor;
-
-                }
-            });
-            const classes = certificateData ? [] : classesFromCourse.map((classFromCourse) => {
-                const inClass = classFromCourse.users.some((user) => String(user._id) === String(userId) || String(user.userID) === String(userId))
-
-                return classFromCourse.dateApplicationFinal <= today ? null : {
-                    _id: classFromCourse._id,
-                    name: classFromCourse.name,
-                    registrationDeadline: classFromCourse.registrationDeadline,
-                    cancellationDeadline: classFromCourse.cancellationDeadline,
-                    dateApplicationInitial: classFromCourse.dateApplicationInitial,
-                    dateApplicationFinal: classFromCourse.dateApplicationFinal,
-                    location: classFromCourse.location,
-                    status: getClassStatus(classFromCourse, inClass),
-                };
-            }).filter((classCourse) => classCourse)
-
-
-            course.certificateElegible = certificateData;
-            course.inWaitList = inWaitList;
-            course.classes = classes;
-            course.hasClasses = classes.length > 0;
-            return course;
-        });
-
-        elegibleCourses = await Promise.all(coursePromises);
-
-        section.trails.push(...elegibleCourses)
-
-        return section
+        return section.trails.length > 0 ? section : [];
     },
 
     /**
