@@ -28,7 +28,10 @@ module.exports = {
     getDbOptions,
     getConnectionString,
 
-    async connect() {
+    // For compatibility with old code, but should not be used in new code
+    async connect() {},
+
+    async connectDatabase() {
         try {
             const strConn = getConnectionString();
 

@@ -28,7 +28,7 @@ const { getMessengerConfig } = require('../config/business');
 const { getConnectMap } = require('../../utils/connect');
 const { getCookieProps } = require('../../utils/cookies');
 const PartnerBusiness = require('../partners/business');
-const { sessionStore } = require('../../utils/session');
+const { createSessionStore } = require('../../utils/session');
 
 module.exports = {
     async getLoginConfig(selectFields) {
@@ -900,7 +900,7 @@ module.exports = {
     },
 
     async clearAuthCookies(req, res) {
-        if (req.sessionID) await sessionStore.destroy(req.sessionID);
+        if (req.sessionID) await createSessionStore().destroy(req.sessionID);
         res.clearCookie('connect.sid', getCookieProps());
         res.clearCookie('SAS', getCookieProps());
         res.clearCookie('strategyName', getCookieProps());

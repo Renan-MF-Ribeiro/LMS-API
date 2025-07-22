@@ -1,6 +1,5 @@
 const expressSession = require('express-session');
 const MongoStore = require('connect-mongo');
-const mongoose = require('mongoose');
 
 const { log } = require('./logger');
 const { getConnectionString, getDbOptions } = require('./db');
@@ -9,34 +8,42 @@ const environment = require('../environment');
 
 const sessionMaxAge = environment.SESSION_MAX_AGE;
 
-const sessionStore = MongoStore.create({
-    client: mongoose.connection.getClient(),
-    collectionName: 'sessions',
-    autoRemove: 'native',
-    touchAfter: sessionMaxAge / 1000, // Convert milliseconds to seconds
-    stringify: false,
-    ttl: sessionMaxAge / 1000, // Convert milliseconds to seconds
-});
+let sessionStore;
 
-sessionStore.on('create', (sessionId) => {
-    log(`Session created: ${sessionId}`);
-});
+function createSessionStore() {
+    if (!sessionStore) {
+        sessionStore = MongoStore.create({
+            mongoUrl: getConnectionString(),
+            collectionName: 'sessions',
+            autoRemove: 'native',
+            touchAfter: sessionMaxAge / 1000, // Convert milliseconds to seconds
+            stringify: false,
+            ttl: sessionMaxAge / 1000, // Convert milliseconds to seconds
+        });
 
-sessionStore.on('touch', (sessionId) => {
-    log(`Session touched: ${sessionId}`);
-});
+        sessionStore.on('create', (sessionId) => {
+            log(`Session created: ${sessionId}`);
+        });
 
-sessionStore.on('update', (sessionId) => {
-    log(`Session updated: ${sessionId}`);
-});
+        sessionStore.on('touch', (sessionId) => {
+            log(`Session touched: ${sessionId}`);
+        });
 
-sessionStore.on('set', (sessionId) => {
-    log(`Session set: ${sessionId}`);
-});
+        sessionStore.on('update', (sessionId) => {
+            log(`Session updated: ${sessionId}`);
+        });
 
-sessionStore.on('destroy', (sessionId) => {
-    log(`Session destroyed: ${sessionId}`);
-});
+        sessionStore.on('set', (sessionId) => {
+            log(`Session set: ${sessionId}`);
+        });
+
+        sessionStore.on('destroy', (sessionId) => {
+            log(`Session destroyed: ${sessionId}`);
+        });
+    }
+    
+    return sessionStore;
+}
 
 const session = expressSession({
     secret: environment.PROJECT_SECRET_KEY,
@@ -48,7 +55,7 @@ const session = expressSession({
         maxAge: null,
         expires: null,
     },
-    store: sessionStore,
+    store: createSessionStore(),
 })
 
-module.exports = { sessionStore, session };
+module.exports = { createSessionStore, session };
