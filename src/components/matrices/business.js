@@ -4,6 +4,7 @@ const { getTrailByIds, getTrailsWithTrackings } = require('../trails/business');
 const { User } = require('../users/model');
 const { string } = require('zod');
 const { ClassModel } = require('../courses/model');
+const RecommendedContent = require('../managers/schema/model');
 
 const business = {
     populateCoursesAndTrails: async (data) => {
@@ -67,8 +68,9 @@ const business = {
     },
 
     buildEvaluationsResultSuggestions: async (data, userNetworkLogin, userId) => {
+        //TODO: refatorar este código pois ao longo do tempo sua função foi mudando e agora está muito grande e confuso.
         if (!data?.skill_recommendations?.length) return [];
-
+        console.log(userId)
         // uso de sets pois pode haver duplicatas dentre as recomendações
         // e não faz sentido retornar o mesmo curso/trilha mais de uma vez
         const trailIds = new Set();
@@ -81,9 +83,8 @@ const business = {
         const [trails, courses, userRecommendations] = await Promise.all([
             getTrailsWithTrackings(Array.from(trailIds), userNetworkLogin),
             getCoursesByIds(Array.from(courseIds)),
-            getUserRecommendations(userId)
+            module.exports.getUserRecommendations(userId)
         ]);
-
         const trailMap = new Map(trails.map((t) => [t._id.toString(), t]));
 
         const courseMap = new Map(
@@ -112,16 +113,24 @@ const business = {
             .lean();
 
         return data.skill_recommendations.map((skill) => {
+
             const skillTrails = (skill.trailIds || [])
-                .map(({ trailId, released }) => {
+                // Em caso de alta volumetria, modificar logica abaixo
+                .map(({ trailId, released: wasReleased }) => {
+                    const released = wasReleased || userRecommendations?.recommendedTrails?.some(
+                        (trail) => trail?.id?.toString() === trailId?.toString()
+                    ) || false;
                     const trail = trailMap.get(trailId);
                     return trail ? { ...trail, released } : null;
                 })
                 .filter(Boolean);
 
             const skillCourses = (skill.coursesIds || [])
-                .map(({ courseId, released }) => {
+                .map(({ courseId, released: wasReleased }) => {
                     const course = courseMap.get(courseId);
+                    const released = wasReleased || userRecommendations?.recommendedCourses?.some(
+                        (course) => course?.courseId?.toString() === courseId?.toString()
+                    ) || false;
                     const courseClass = courseClassesWithUsers.find(
                         (courseClass) => String(courseClass.courseID) === String(courseId)
                             && courseClass.users.some((user) => String(user.userID) === String(userId))
@@ -196,6 +205,13 @@ const business = {
             });
             return latestPresence;
         }, null);
+    },
+
+    getUserRecommendations: async (userId) => {
+        if (!userId) return [];
+
+        return await RecommendedContent.findOne({ userId }, 'recommendedCourses recommendedTrails userId');
+
     }
 };
 
