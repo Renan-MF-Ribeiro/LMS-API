@@ -649,11 +649,17 @@ module.exports = {
             active: 1,
         }).lean();
 
-        let elegibleCourses = await CourseModel.find({
+        if (!section) return [];
+
+        const currentDateISO = new Date().toISOString();
+        const today = new Date();
+
+        // Get eligible courses
+        const elegibleCourses = await CourseModel.find({
             tags: { $in: tags },
             deleted: { $eq: 0 },
             status: { $eq: 1 },
-            dateFinal: { $gte: new Date().toISOString() }
+            dateFinal: { $gte: currentDateISO }
         })
             .select({
                 title: 1,
@@ -673,105 +679,121 @@ module.exports = {
             })
             .lean();
 
-        const coursePromises = elegibleCourses.map(async (course) => {
-            const alreadyJoined = await WaitListModel.findOne({
-                userID: userId,
-                courseID: course._id,
-                sent: false,
-            });
-
-            const today = new Date()
-            const classesFromCourse = await ClassModel.find({
-                courseID: course._id
-            })
-                .populate({
-                    path: 'materials',
-                    match: { author: 'INSTRUTOR' },
-                })
-                .populate('instructor', ['name']);
-
-            let inWaitList = false;
-            if (alreadyJoined) {
-                inWaitList = true;
-            }
-            let certificateElegible = false
-            let certificateData = null
-
-            classesFromCourse.forEach((e) => {
-                if (String(e.courseID._id) === String(course._id)) {
-                    const userInClass = e.users.find((user) => user._id?.toString() == userId || user.userID == userId)
-                    let grade = 0
-                    let presence = false
-                    if (userInClass) {
-                        presence = userInClass.presence;
-                        grade = userInClass.grades ? userInClass.grades : 0;
-                        const passingScore = course.passingScore ? course.passingScore : 0;
-                        certificateElegible = grade >= passingScore;
-
-                    }
-                    if (certificateElegible && presence)
-                        certificateData = {
-                            completionAt: course.certificateDateType == 2 ? userInClass?.presenceAt : e.dateApplicationFinal,
-                            qrcode: e.qrcode,
-                            certificate: course.certificate,
-                            certificateLayout: course.certificateLayout,
-                            studentMaterials: e.materials,
-                            workload: course.workload,
-                            instructor: e.instructor,
-                            grade: grade,
-                            status: certificateElegible,
-                        };
-
-                    course.presence = presence;
-                    course.completionAt = e.dateApplicationFinal;
-                    course.instructor = e.instructor;
-
-                }
-            });
-            const classes = certificateData ? [] : classesFromCourse.map((classFromCourse) => {
-                const inClass = classFromCourse.users.some((user) => String(user._id) === String(userId) || String(user.userID) === String(userId))
-
-
-
-                return classFromCourse.dateApplicationFinal <= today ? null : {
-                    _id: classFromCourse._id,
-                    name: classFromCourse.name,
-                    registrationDeadline: classFromCourse.registrationDeadline,
-                    cancellationDeadline: classFromCourse.cancellationDeadline,
-                    dateApplicationInitial: classFromCourse.dateApplicationInitial,
-                    dateApplicationFinal: classFromCourse.dateApplicationFinal,
-                    location: classFromCourse.location,
-                    status: getClassStatus(classFromCourse, inClass),
-                };
-            }).filter((classCourse) => classCourse)
-
-
-            course.certificateElegible = certificateData;
-            course.inWaitList = inWaitList;
-            course.classes = classes;
-            course.hasClasses = classes.length > 0;
-            return course;
-        });
-
-        elegibleCourses = await Promise.all(coursePromises);
-
-        if (!section) return [];
-
-        const sortFnc =
-            section && section.ordination !== undefined && section.ordination === 0
-                ? function (a, b) {
-                    return -1;
-                }
-                : function (a, b) {
-                    return a.title?.localeCompare(b.title);
-                };
-
-        for (const course of elegibleCourses) {
-            section.trails.push(course);
+        if (!elegibleCourses.length) {
+            return [];
         }
 
-        section.trails.sort(sortFnc);
-        return section.trails.length > 0 ? section : []
+        // Extract course IDs for batch queries
+        const courseIds = elegibleCourses.map(course => course._id);
+
+        // Batch query for wait list entries
+        const waitListEntries = await WaitListModel.find({
+            userID: userId,
+            courseID: { $in: courseIds },
+            sent: false,
+        }).lean();
+
+        // Create a Set for faster lookups
+        const waitListCourseIds = new Set(waitListEntries.map(entry => entry.courseID.toString()));
+
+        // Batch query for all classes from all courses
+        const allClasses = await ClassModel.find({
+            courseID: { $in: courseIds }
+        })
+            .populate({
+                path: 'materials',
+                match: { author: 'INSTRUTOR' },
+            })
+            .populate('instructor', ['name'])
+            .sort({ createdAt: -1 })
+            .lean();
+
+        // Group classes by courseID for faster lookup
+        const classesByCourse = new Map();
+        allClasses.forEach(classItem => {
+            const courseId = classItem.courseID.toString();
+            if (!classesByCourse.has(courseId)) {
+                classesByCourse.set(courseId, []);
+            }
+            classesByCourse.get(courseId).push(classItem);
+        });
+
+        // Match user in class function
+        const matchUserInClass = (user) => user.userID.equals?.(userId);
+
+        // Process courses
+        const processedCourses = elegibleCourses.map((course) => {
+            const courseIdStr = course._id.toString();
+            const inWaitList = waitListCourseIds.has(courseIdStr);
+            const classesFromCourse = classesByCourse.get(courseIdStr) || [];
+
+            // Find the most recent class with presence data or the most recent class if none found
+            const mostRecentClass = classesFromCourse.find(classItem => {
+                const userInClass = classItem.users.find(matchUserInClass);
+
+                const userPassedClass = userInClass?.presence && (userInClass.grades || 0) >= (course.passingScore || 0);
+
+                return userPassedClass;
+            }) || classesFromCourse[0] || null;
+
+            const userInMostRecentClass = mostRecentClass?.users.find(matchUserInClass) ?? null;
+
+            const presence = userInMostRecentClass?.presence || false;
+            const completionAt = mostRecentClass?.dateApplicationFinal || null;
+            const instructor = mostRecentClass?.instructor || null;
+            const certificateElegible = userInMostRecentClass?.presence && (userInMostRecentClass?.grades || 0) >= (course.passingScore || 0);
+            const certificateData = certificateElegible ? {
+                completionAt: course.certificateDateType === 2
+                    ? mostRecentClass?.presenceAt : mostRecentClass?.dateApplicationFinal,
+                qrcode: mostRecentClass?.qrcode || null,
+                certificate: course.certificate || null,
+                certificateLayout: course.certificateLayout || null,
+                studentMaterials: mostRecentClass?.materials || null,
+                workload: course.workload || null,
+                instructor: mostRecentClass?.instructor || null,
+                grade: userInMostRecentClass?.grade || null,
+                status: certificateElegible
+            } : null;
+
+            // Process classes only if no certificate data
+            const classes = certificateData ? [] : classesFromCourse
+                .filter(classFromCourse => classFromCourse.dateApplicationFinal > today)
+                .map((classFromCourse) => {
+                    const inClass = classFromCourse.users.some(matchUserInClass);
+
+                    return {
+                        _id: classFromCourse._id,
+                        name: classFromCourse.name,
+                        registrationDeadline: classFromCourse.registrationDeadline,
+                        cancellationDeadline: classFromCourse.cancellationDeadline,
+                        dateApplicationInitial: classFromCourse.dateApplicationInitial,
+                        dateApplicationFinal: classFromCourse.dateApplicationFinal,
+                        location: classFromCourse.location,
+                        status: getClassStatus(classFromCourse, inClass),
+                    };
+                });
+
+            return {
+                ...course,
+                certificateElegible: certificateData,
+                inWaitList,
+                classes,
+                hasClasses: classes.length > 0,
+                presence,
+                completionAt,
+                instructor,
+            };
+        });
+
+        // Sort function
+        const sortFnc = section?.ordination === 0
+            ? () => -1
+            : (a, b) => a.title?.localeCompare(b.title) || 0;
+
+        // Add courses to section and sort
+        section.trails = processedCourses.sort(sortFnc);
+
+        return section.trails.length > 0 ? section : [];
     },
 
     async mostSeenSections(trails) {
@@ -1331,12 +1353,15 @@ function getClassStatus(classFromCourse, inClass) {
         if (isCourseInProgress) {
             return "in-progress"
         }
+
         if (inClass) {
             return "registered"
         }
+        
         if (isCourseClosed || !courseHasSeats || !canRegister || !canCancel) {
             return "closed"
         }
+        
         if (isCourseOpen && (canRegister || canCancel)) {
             return "open";
         }
