@@ -816,7 +816,7 @@ module.exports = {
         if (!section) {
             return []
         }
-        const trailIds = new Set(recommendedTrails.map((trail) => trail.id.toString()));
+        const trailIds = new Set(recommendedTrails.filter(trail => trail.id).map((trail) => trail.id));
         for (const trail of trails) {
 
             const isRecommended = trailIds.has(trail._id.toString());
@@ -1243,7 +1243,7 @@ async function processCourseInSections(elegibleCourses, userId) {
     });
 
     // Match user in class function
-    const matchUserInClass = (user) => user.userID.equals?.(userId);
+    const matchUserInClass = (user) => String(user._id) === userId || user.userID?.equals?.(userId) || false;
 
     // Process courses
     const processedCourses = elegibleCourses.map((course) => {
@@ -1253,6 +1253,7 @@ async function processCourseInSections(elegibleCourses, userId) {
 
         // Find the most recent class with presence data or the most recent class if none found
         const mostRecentClass = classesFromCourse.find(classItem => {
+            console.log(classItem);
             const userInClass = classItem.users.find(matchUserInClass);
 
             const userPassedClass = userInClass?.presence && (userInClass.grades || 0) >= (course.passingScore || 0);

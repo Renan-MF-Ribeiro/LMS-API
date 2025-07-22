@@ -1854,7 +1854,7 @@ module.exports = {
     },
 
     async isAuthenticated(req, res) {
-        if (req.user && (await validateToken(req))) {
+        if (/* req.user &&  */(await validateToken(req))) {
             await addSASTokenToResponse(res);
 
             return _messages.success(res, req, true);
