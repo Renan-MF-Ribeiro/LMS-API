@@ -338,8 +338,8 @@ module.exports = {
 
         const query = {
             enabled: true,
-            startDate: { $lte: getDateTodayWithoutHours() },
-            endDate: { $gte: getDateTodayWithoutHours() },
+            startDate: { $lte: now },
+            endDate: { $gte: now },
             $or: [
                 { tags: { $in: tags, } },
                 { tagsAnd: { $in: tags, } },
