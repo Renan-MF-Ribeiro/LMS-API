@@ -43,7 +43,7 @@ module.exports = {
 
     async getByUrl(req, res) {
         try {
-            const { data } = await newsApi.get(`/categories/url/${req.params.categoryUrl}`);
+            const { data } = await newsApi.get(`/categories/url/${req.params.categoryUrl}/${req.params.campaignUrl}`);
 
             _messages.success(res, req, data);
         } catch (error) {
