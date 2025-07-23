@@ -7,6 +7,7 @@ module.exports = express
     .Router()
     .post('/', formidable(), _controller.createNews)
     .get('/', _controller.listNews)
+    .get('/url', _controller.listNewsUrl)
     .get('/campaigns', _controller.listCampaigns)
     .get('/:id', _controller.getNews)
     .get('/forms/:campaignId', _controller.getFormByCampaignId)
