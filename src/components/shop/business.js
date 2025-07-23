@@ -18,11 +18,11 @@ function getDynamicRequestProps(req, ownerIsRequired = false) {
         headers: {
             'x-user-id': req.user.networkLogin
         },
-        params: {
+        params: new URLSearchParams({
             ...req.query,
-            owner: ownerFieldValue ? [ownerFieldValue] : undefined,
+            ...(ownerFieldValue && { owner: [ownerFieldValue] }),
             eligibilities: req.eligibilities ?? [],
-        },
+        }),
     };
 }
 
