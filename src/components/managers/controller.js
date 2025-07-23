@@ -1,8 +1,5 @@
 const business = require('./business');
-const { findUsersByMatrixConfig } = require('../config/business');
 const { matricesApi } = require('../matrices/http-adapter');
-const { Group } = require('../groups/model');
-const { User } = require('../users/model');
 const { searchCourseBy } = require('../courses/business');
 const { searchTrailBy } = require('../trails/business');
 const { getTagsByUserIds } = require('../users/business');
@@ -16,13 +13,13 @@ const managersController = {
                 business.findManagedUsers(req),
                 business.isMatrixActive(),
             ]);
-
             if (isMatrixActive) {
                 users = await business.handleUsersWhenMatrixIsActive(req.query, users, target);
             }
             const paginatedUsers = business.paginateUsers(req, users, target);
             res.status(200).json(paginatedUsers);
         } catch (error) {
+            //console.log(error);
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
             const errorMessage = message ?? 'Internal server error';
@@ -35,7 +32,7 @@ const managersController = {
             const users = await business.findManagedUsers(req);
 
             if (!users[0]) {
-                return res.status(httpStatus.OK).json([]);
+                return res.status(200).json([]);
             }
 
             const userIds = users.map((u) => u._id);
@@ -56,7 +53,7 @@ const managersController = {
             const appliableUsers = await business.findManagedUsers(req);
 
             if (appliableUsers.length === 0) {
-                return res.status(httpStatus.OK).json([]);
+                return res.status(200).json([]);
             }
 
             const userIds = appliableUsers.map((u) => u._id.toString());
@@ -104,6 +101,9 @@ const managersController = {
             }
 
             const [users, tags] = await getTagsByUserIds(targetUsers);
+            if(!users?.length || !users[0]) {
+                return res.status(200).json([]);
+            }
 
             if (type === 'trails') {
                 const response = await searchTrailBy(searchBy, tags);
@@ -130,6 +130,7 @@ const managersController = {
 
             res.status(400).json('Insira um tipo de busca válido: "trails" ou "courses"');
         } catch (error) {
+            console.log(error);
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
             const errorMessage = message ?? 'Internal server error';

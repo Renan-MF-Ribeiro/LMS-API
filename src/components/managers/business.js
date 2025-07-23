@@ -174,6 +174,10 @@ const business = {
     },
 
     handleUsersWhenMatrixIsActive: async (query, users, target = null) => {
+        if(!users?.length || !users[0]) {
+            return [];
+        }
+        
         const { data } = await matricesApi.get('/users/detailed-info', {
             params: {
                 ...query,

@@ -2033,10 +2033,8 @@ module.exports = {
     async emulation(req, res) {
         try {
             const { body } = req;
-            const [completeUser, isManager] = await Promise.all([
-                User.findById(body._id).lean(),
-                managerBusiness.isUserManager(body._id),
-            ]);
+            const completeUser = await User.findById(body._id).lean();
+            const isManager = await managerBusiness.isUserManager(completeUser);
 
             const {
                 groupsAD,
@@ -2133,7 +2131,7 @@ module.exports = {
                     name,
                     profilePhoto,
                     tokenAnalytics: token_analytics,
-                    isManager
+                    isManager,
                 });
             } else {
                 _messages.badRequest(
