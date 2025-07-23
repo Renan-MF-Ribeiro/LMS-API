@@ -112,7 +112,7 @@ module.exports = {
             {
                 value: {
                     rules: rules.rules || [],
-                    useIsManagerFlag: rules.useIsManagerFlag || true,
+                    useIsManagerFlag: rules.useIsManagerFlag ?? true,
                 }
             },
             { new: true, upsert: true }
