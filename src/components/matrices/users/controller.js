@@ -7,10 +7,6 @@ const { Group } = require('../../groups/model');
 const { findUsersByMatrixConfig } = require('../../config/business');
 
 const usersController = {
-    findAll: async (req, res) => {
-        return res.status(308).json('Favor utilizar o novo endpoint {api}/manager/users/');
-    },
-
     findByRegistrationOrName: async (req, res) => {
         try {
             const users = await findUsersByMatrixConfig(req);
@@ -22,10 +18,6 @@ const usersController = {
             const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
         }
-    },
-
-    findOne: async (req, res) => {
-       return res.status(308).json('Favor utilizar o novo endpoint {api}/manager/users/:id');
     },
 
     findUsersMatrices: async (req, res) => {
@@ -90,10 +82,6 @@ const usersController = {
             const errorMessage = message ?? 'Internal server error';
             res.status(statusCode).json(errorMessage);
         }
-    },
-
-    findSuggestedContent: async (req, res) => {
-       return res.status(308).json('Favor utilizar o novo endpoint {api}/manager/users/:id/suggestions');
     },
 
     create: async (req, res) => {

@@ -210,8 +210,8 @@ const managersUsersController = {
             }
             const usersArray = Array.isArray(userIds) ? userIds : [userIds];
             
-            const teste = await courseBusiness.removeUsersFromClass(classId, usersArray);
-            res.status(200).json(teste);
+            await courseBusiness.removeUsersFromClass(classId, usersArray);
+            res.status(200).json('Usuário(s) removido(s) com sucesso');
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
