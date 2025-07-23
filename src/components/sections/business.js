@@ -185,9 +185,10 @@ async function setAssessmentHistoricOnSections(userId, sections) {
 }
 
 async function setCerticateHistoricOnSections(user, sections) {
+
     const dataAssessmentHistoric = await getAllHistoricsSectionsByUser(user._id);
 
-    const processedSections = cloneDeep(sections).map(currentSection => {
+    const processedSections = cloneDeep(sections).map((currentSection) => {
         if (!currentSection.isTraining) return currentSection;
 
         const section = cloneDeep(currentSection);
@@ -207,16 +208,22 @@ async function setCerticateHistoricOnSections(user, sections) {
             const cycleShowTrailResults = trainingSectionInfo?.cycleShowTrailResults ?? true;
             const exceptionCertificateTrails = section.exceptionCertificateTrails ?? [];
 
+            const optionalTrailsStr = (optionalTrails || []).map(id => String(id));
+            const exceptionTrainingTrailsStr = (exceptionTrainingTrails || []).map(id => String(id));
+            const exceptionCertificateTrailsStr = (exceptionCertificateTrails || []).map(id => String(id));
+
             section.trails?.forEach(trail => {
-                if (optionalTrails.includes(String(trail._id))) {
+                const trailIdStr = String(trail._id);
+
+                if (optionalTrailsStr.includes(trailIdStr)) {
                     trail.isOptional = true;
                 }
 
-                if (exceptionTrainingTrails.includes(String(trail._id))) {
+                if (exceptionTrainingTrailsStr.includes(trailIdStr)) {
                     trail.isException = true;
                 }
 
-                if (exceptionCertificateTrails.includes(String(trail._id))) {
+                if (exceptionCertificateTrailsStr.includes(trailIdStr)) {
                     trail.isCertificateException = true;
                 }
             });
@@ -230,7 +237,9 @@ async function setCerticateHistoricOnSections(user, sections) {
                 ?.filter(trail => !trail.isCertificateException)
                 ?? [];
 
-            const isCompleted = filteredTrails.every(trail => trail.completion === 1);
+            const isCompleted = filteredTrails
+                .filter(trail => trail.completion !== null)
+                .every(trail => trail.completion === 1);
 
             const messages = trainingSectionInfo.messages ?? [];
 
@@ -299,11 +308,12 @@ async function setCerticateHistoricOnSections(user, sections) {
                 section.exceptionCertificateTrails,
             );
         }
-
         return section;
     });
 
-    return processedSections.filter(section => section.hasCertificate && section.isCompleted);
+    return processedSections.filter(section =>
+        section.hasCertificate && section.isCompleted
+    );
 }
 
 module.exports = {
