@@ -1,6 +1,8 @@
 const _messages = require('../../../utils/messages');
-const { getTrailCompletion } = require('../../sections/business');
-const { processTrailTracking } = require('../../../utils/functions.js');
+const {
+    getTrailCompletion,
+} = require('../../sections/business');
+const { processTrailTracking, processTrailTrackingV2 } = require('../../../utils/functions.js');
 const { handleError } = require('../../../utils/errors');
 const { populateTrails } = require('../../trails/business');
 const { EventModel, EVENT_TYPE, TARGET_ID } = require('./model');
@@ -156,7 +158,7 @@ const EventsController = {
             });
 
             for (const trail of trails) {
-                const processedTrail = processTrailTracking(trail, allTrackingUser).trail;
+                const processedTrail = processTrailTrackingV2(trail, allTrackingUser)?.trail;
 
                 if (!!processedTrail && processedTrail.completion === 1) {
                     await EventModel.findOneAndUpdate(

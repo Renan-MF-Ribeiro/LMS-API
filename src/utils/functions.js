@@ -880,8 +880,12 @@ module.exports = {
         trail.notStarted = false;
         let duration = 0;
 
+        const trackingMap = new Map(
+            allTrackingUser.map((obj) => [String(obj.item), obj])
+        );
+
         for (const item of trail.items) {
-            const objTracking = allTrackingUser.find((obj) => String(obj.item) === String(item?.itemID?._id));
+            const objTracking = trackingMap.get(String(item?.itemID?._id));
 
             if (dashboard && objTracking) {
                 trail.notStarted = true;
@@ -962,9 +966,15 @@ module.exports = {
         trail.completion = getTrailCompletion(trail);
         trail.duration = duration;
 
-        const itemsCompletion = trail.items.map((item) => item?.completion || 0);
-        const completionTotal = itemsCompletion.reduce((acc, curr) => acc + curr, 0);
+        const completionTotal = trail.items.reduce((acc, item) => {
+            if (item?.completion) {
+                return acc + item.completion || 0;
+            }
+            return acc;
+        }, 0);
+        
         trail.completionPercentage = +((completionTotal / trail.items.length) * 100).toFixed(2);
+        
         return { trail, containsACompletedItem };
     },
 
