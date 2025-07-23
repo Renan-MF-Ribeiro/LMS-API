@@ -3,6 +3,7 @@ require('dotenv').config();
 const fs = require('fs/promises');
 
 const ExcelJS = require('exceljs');
+const { connectDatabase } = require('../utils/db');
 
 async function writeDebugJson(fileName, data) {
     await fs.writeFile(
@@ -85,6 +86,8 @@ async function runScript(functionToRun) {
             }
         }, 1000);
     });
+
+    await connectDatabase();
 
     await functionToRun();
 
