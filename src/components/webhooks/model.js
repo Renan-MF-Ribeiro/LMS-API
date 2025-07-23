@@ -15,6 +15,7 @@ const authOptions = new mongoose.Schema({
 })
 
 const webhooksSchema = new mongoose.Schema({
+    _id: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
     status: { type: Boolean, default: true, },
     label: { type: String },
     endpoint: { type: String },
