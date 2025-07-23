@@ -47,7 +47,7 @@ async function getEligibilityInfoByUserId(
     const allItemsId = Array.from(
         new Set(
             trailsDb.map(trail => trail.items.map(
-                item => item.itemID._id
+                item => item.itemID?._id
             )).flat()
         )
     );
@@ -124,19 +124,9 @@ async function getInfoByUserId(
         }
     );
 
-    const allItemsId = Array.from(
-        new Set(
-            populatedTrails.map(trail => trail.items.map(
-                item => item.itemID._id
-            )).flat()
-        )
-    );
-
     const allTrackingUser = await Tracking.find({
         userLogin: user.networkLogin,
-        item: {
-            $in: allItemsId
-        },
+        kind: { $ne: 'PostTracking' },
         $or: [
             { expiredCompletion: { $exists: false } },
             { expiredCompletion: { $eq: null } },
@@ -145,24 +135,48 @@ async function getInfoByUserId(
 
     const allTrails = populatedTrails.map((trail) => {
         const processedTrail = processTrailTracking(trail, allTrackingUser);
-        return processedTrail.trail;
+        let processedTrailData = processedTrail.trail;
+
+        processedTrailData.items = processedTrailData.items.filter((item) =>
+            item.itemID?._id &&
+            item.itemID.enabled &&
+            (!item.itemID.archive && item.itemID.enabled) &&
+            item.itemID.kind !== 'PostItem'
+        );
+
+        const allValidItems = processedTrailData.items.length;
+        const completedItems = processedTrailData.items.filter(item =>
+            item.itemID?.completion === 1
+        ).length;
+
+        processedTrailData.completion = allValidItems > 0 ? completedItems / allValidItems : 0;
+
+        let trailDuration = 0;
+        for (const item of processedTrailData.items) {
+            trailDuration += item?.itemID?.durationHours || 0;
+        }
+        processedTrailData.duration = trailDuration;
+
+        return processedTrailData;
     });
 
     const allSections = sections.map(section => {
-        const sectionTrails = section.trails.map(
-            trailInfo => {
-                if (isSectionTrailInfo(trailInfo)) {
-                    const trailId = getSectionTrailId(trailInfo);
-                    const trail = allTrails.find(
-                        trail => String(trail._id) === String(trailId)
-                    );
+        const sectionTrails = section.trails.map(trailInfo => {
+            if (isSectionTrailInfo(trailInfo)) {
+                const trailId = getSectionTrailId(trailInfo);
+                const trail = allTrails.find(
+                    trail => String(trail._id) === String(trailId)
+                );
 
-                    return trail ?? trailInfo;
+                if (trail) {
+                    return trail;
+                } else {
+                    return trailInfo;
                 }
-
-                return trailInfo;
             }
-        );
+
+            return trailInfo;
+        });
 
         return { ...section, trails: sectionTrails }
     });

@@ -308,8 +308,11 @@ async function setCerticateHistoricOnSections(user, sections) {
                 section.exceptionCertificateTrails,
             );
         }
+
         return section;
     });
+
+
 
     return processedSections.filter(section =>
         section.hasCertificate && section.isCompleted
