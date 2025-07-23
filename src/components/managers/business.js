@@ -82,7 +82,10 @@ const business = {
 
     paginateUsers(req, users) {
         const { skip, limit } = pagination(req);
-
+        if(!users?.[0].user){
+            // Tratando objeto para que seja compativel com objeto gerado na matriz ativa
+            users = users.map((user) => ({ user: {...user, userId: user._id, _id: undefined} }));
+        }
         const { orderBy = 'name', direction = 'asc' } = req?.query;
         const { sort, order } = ordernation({ query: { orderBy, direction } });
 

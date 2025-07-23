@@ -4,7 +4,7 @@ const {
     buildEvaluationsResultSuggestions,
 } = require('../business');
 const { Group } = require('../../groups/model');
-const { findManagedUsers } = require('../../managers/business');
+const { findUsersByMatrixConfig } = require('../../config/business');
 
 const usersController = {
     findAll: async (req, res) => {
@@ -13,7 +13,7 @@ const usersController = {
 
     findByRegistrationOrName: async (req, res) => {
         try {
-            const users = await findManagedUsers(req);
+            const users = await findUsersByMatrixConfig(req);
 
             res.status(200).json(users);
         } catch (error) {

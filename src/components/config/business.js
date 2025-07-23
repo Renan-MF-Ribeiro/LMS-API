@@ -161,8 +161,13 @@ module.exports = {
         return config || (await DashboardConfigModel.create({}));
     },
 
-    async findUsersByMatrixConfig(applier, searchBy, limit) {
-        const { value } = await module.exports.getMatrixConfig();
+    async findUsersByMatrixConfig(req) {
+        const [rule, applier] = await Promise.all([
+            module.exports.getMatrixConfig(),
+            getUserByToken(req),
+        ]);
+        const { value } = rule
+
         const query = {
             $and: [
                 {
@@ -174,12 +179,12 @@ module.exports = {
             ],
         };
 
-        if (searchBy) {
+        if (req.query?.searchBy) {
             query.$and.push({
                 $or: [
-                    { name: { $regex: searchBy, $options: 'i' } },
-                    { email: { $regex: searchBy, $options: 'i' } },
-                    { networkLogin: { $regex: searchBy, $options: 'i' } },
+                    { name: { $regex: req.query.searchBy, $options: 'i' } },
+                    { email: { $regex: req.query.searchBy, $options: 'i' } },
+                    { networkLogin: { $regex: req.query.searchBy, $options: 'i' } },
                 ],
             });
         }
