@@ -166,7 +166,8 @@ module.exports = {
             module.exports.getMatrixConfig(),
             getUserByToken(req),
         ]);
-        const { value } = rule
+        const { value } = rule;
+        const limit = Number(req.query?.pageSize) || 10;
 
         const query = {
             $and: [
