@@ -593,9 +593,9 @@ module.exports = {
 
     async removeUsersFromClass(classId, userIds) {
         //must receive array of userIds
-        return await ClassModel.updateOne(
+        return await ClassModel.findOneAndUpdate(
             { _id: classId },
-            { $pull: { users: { _id: { $in: userIds } } } }
+            { $pull: { users: { _id: { $in: userIds.map((id) => mongoose.Types.ObjectId(id)) } } } }
         );
     }
 };
