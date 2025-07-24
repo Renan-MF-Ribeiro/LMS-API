@@ -1660,6 +1660,7 @@ const ItemController = {
         const itemId = req.params.itemId;
 
         await Item.findByIdAndUpdate(itemId, { $set: { enabled: false, archive: true, archivedAt: new Date() } });
+        await _functions.recordLog(req, 'NO_CONTENT_SUCCES', `Arquivamento do item ${itemId} realizado com sucesso`, 'items', '/archive');
 
         res.status(204).send();
     },
@@ -1668,6 +1669,7 @@ const ItemController = {
         const itemId = req.params.itemId;
 
         await Item.findByIdAndUpdate(itemId, { $set: { archive: false, archivedAt: null } });
+        await _functions.recordLog(req, 'NO_CONTENT_SUCCES', `Desarquivamento do item ${itemId} realizado com sucesso`, 'items', '/unarchive');
 
         res.status(204).send();
     }
