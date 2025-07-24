@@ -206,7 +206,7 @@ async function setCerticateHistoricOnSections(user, sections) {
             const exceptionTrainingTrails = trainingSectionInfo.exceptionTrainingTrails ?? [];
             const hasCertificate = !!section.certificateLayout;
             const cycleShowTrailResults = trainingSectionInfo?.cycleShowTrailResults ?? true;
-            const exceptionCertificateTrails = section.exceptionCertificateTrails ?? [];
+            const exceptionCertificateTrails = section?.exceptionCertificateTrails ?? [];
 
             const optionalTrailsStr = (optionalTrails || []).map(id => String(id));
             const exceptionTrainingTrailsStr = (exceptionTrainingTrails || []).map(id => String(id));
@@ -303,9 +303,14 @@ async function setCerticateHistoricOnSections(user, sections) {
         }
 
         if (section.isCompleted) {
+            const sectionExceptions = section?.exceptionCertificateTrails || [];
+            const trainingCertExceptions = trainingSectionInfo?.exceptionCertificateTrails || [];
+            const trainingExceptions = trainingSectionInfo?.exceptionTrainingTrails || [];
+            const allExceptions = [...sectionExceptions, ...trainingCertExceptions, ...trainingExceptions];
+
             section.duration = calculateTotalDuration(
                 section.trails,
-                section.exceptionCertificateTrails,
+                allExceptions
             );
         }
 
