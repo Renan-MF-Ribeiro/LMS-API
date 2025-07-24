@@ -15,7 +15,7 @@ const { Section, DEFAULT_TYPES } = require('./model');
 const { default: axios } = require('axios');
 const moment = require('moment');
 const { TrailViews } = require('../trails/trail-views.model');
-const { listTrainingSectionsStatus } = require('../assessment/business');
+const { listTrainingSectionsStatus, getAllHistoricsSectionsByUser } = require('../assessment/business');
 const { Trail } = require('../trails/model');
 const { cloneDeep } = require('lodash');
 const { User } = require('../users/model');
@@ -1459,3 +1459,18 @@ async function processCourseInSections(elegibleCourses, userId) {
 
     return processedCourses;
 }
+
+function calculateTotalDuration(trails, exceptionIds = []) {
+    const exceptionIdStrings = exceptionIds.map(String);
+
+    return trails.reduce((sum, trail) => {
+        const trailId = String(trail._id);
+        const isException = exceptionIdStrings.includes(trailId);
+
+        if (!isException) {
+            return sum + (trail.duration || 0);
+        }
+
+        return sum;
+    }, 0);
+};
