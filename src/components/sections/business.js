@@ -174,9 +174,12 @@ async function setAssessmentHistoricOnSections(userId, sections) {
         }
 
         if (section.isCompleted) {
+            const sectionExceptions = section?.exceptionCertificateTrails || [];
+            const trainingCertExceptions = section?.exceptionCertificateTrails || [];
+            const allExceptions = [...sectionExceptions, ...trainingCertExceptions];
             section.duration = calculateTotalDuration(
                 section.trails,
-                section.exceptionCertificateTrails,
+                allExceptions,
             );
         }
 
@@ -1461,6 +1464,7 @@ async function processCourseInSections(elegibleCourses, userId) {
 }
 
 function calculateTotalDuration(trails, exceptionIds = []) {
+    console.log(exceptionIds)
     const exceptionIdStrings = exceptionIds.map(String);
 
     return trails.reduce((sum, trail) => {
