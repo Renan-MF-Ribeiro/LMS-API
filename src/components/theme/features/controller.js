@@ -2,6 +2,7 @@ const { Features } = require('./model')
 const _messages = require('../../../utils/messages')
 const { getDbCurrentFeatures } = require('../../../utils/features')
 const { getAppMaxFileSize } = require('../../../utils/files');
+const { removeFromCache } = require('../../../utils/cache/store');
 
 module.exports = {
     async update(req, res) {
@@ -12,6 +13,8 @@ module.exports = {
         } else {
             features = await Features.create(req.body)
         }
+
+        removeFromCache('/theme/features');
 
         return _messages.success(res, req, features)
     },

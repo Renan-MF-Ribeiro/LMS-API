@@ -1,5 +1,6 @@
 const { log } = require("../logger");
-const { defaultCacheTtl } = require("./helpers");
+
+const defaultCacheTtl = 15 * 60 * 1000; // 15 minutes
 
 const cacheStore = new Map();
 
@@ -34,7 +35,17 @@ function getFromCache(key) {
     return null;
 }
 
-function removeFromCache(key) {
+function removeFromCache(key, matchKeys = false) {
+    if (matchKeys) {
+        for (const [cacheKey] of cacheStore) {
+            if (cacheKey.startsWith(key)) {
+                cacheStore.delete(cacheKey);
+            }
+        }
+
+        return;
+    }
+
     cacheStore.delete(key);
 }
 
@@ -58,5 +69,6 @@ module.exports = {
     getFromCache,
     removeFromCache,
     clearCache,
-    getCacheEntries
+    getCacheEntries,
+    defaultCacheTtl
 };

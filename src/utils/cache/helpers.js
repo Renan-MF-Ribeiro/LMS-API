@@ -1,8 +1,6 @@
 const { log } = require("../logger");
 
-const { getFromCache, setInCache } = require('./store');
-
-const defaultCacheTtl = 15 * 60 * 1000; // 15 minutes
+const { getFromCache, setInCache, defaultCacheTtl } = require('./store');
 
 function setResponseCacheHeaders(res, ttl) {
     res.removeHeader('Surrogate-Control');

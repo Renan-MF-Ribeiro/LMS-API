@@ -30,9 +30,9 @@ cacheRouter.get('/cache/info', (req, res) => {
 
 cacheRouter.get('/cache/remove/*', (req, res) => {
     const key = getCacheKeyFromURL(req.originalUrl);
-    removeFromCache(key);
+    removeFromCache(key, true);
 
-    res.send(`Cache entry for key "${key}" removed`);
+    res.send(`Cache entries for key "${key}" removed`);
 });
 
 cacheRouter.get('/cache/value/*', (req, res) => {
