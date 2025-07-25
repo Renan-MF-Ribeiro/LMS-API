@@ -41,6 +41,23 @@ module.exports = {
         }
     },
 
+    async getByUrl(req, res) {
+        try {
+            const { data } = await newsApi.get(`/categories/url/${req.params.categoryUrl}/${req.params.campaignUrl}`);
+
+            _messages.success(res, req, data);
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno do servidor',
+                'trails',
+                'createPadlet'
+            );
+        }
+    },
+
     //listar categorias pro front > regras : flag de campanha ativa ? listar categorias com capanha e usuario tem campo da carga valido : listar todas as categorias da campanha.
 
     async getCategoriesByCampaing(req, res) {
@@ -78,6 +95,23 @@ module.exports = {
     async home(req, res) {
         try {
             const { data } = await newsApi.get(`/home/categories/${req.params.id}`);
+
+            _messages.success(res, req, data);
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno do servidor',
+                'trails',
+                'createPadlet'
+            );
+        }
+    },
+
+    async homeUrl(req, res) {
+        try {
+            const { data } = await newsApi.get(`/home/categories/url/${req.params.titleUrl}`);
 
             _messages.success(res, req, data);
         } catch (error) {

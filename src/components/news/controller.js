@@ -6,6 +6,7 @@ const { newsApi } = require('./http-adapter');
 const newsController = {
     getNews: async (req, res) => {
         try {
+            // console.log('Fetching news by ID');
             const { id } = req.params;
             const { data } = await newsApi.get(`/news/${id}`);
 
@@ -15,6 +16,33 @@ const newsController = {
                     _id: user._id,
                     name: user.name
                 }));
+            }
+
+            return _messages.success(res, req, data, 'ok', 'news', 'getNews');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+
+            return _messages.internalServer(res, req, message, message, 'news', 'getNews');
+        }
+    },
+
+    getNewsByUrl: async (req, res) => {
+        try {
+            const { newsUrl } = req.params;
+            const { data } = await newsApi.get(`/news/url/${newsUrl}`);
+
+            if (data?.users) {
+                const users = await User.find({ _id: { $in: data.users } });
+                const { data: config } = await newsApi.get('/config');
+
+                if (config.enableUserLink && config?.userFields) {
+                    data.users = users.map((user) =>
+                        config.userFields.reduce((obj, field) => {
+                            obj[field] = user[field];
+                            return obj;
+                        }, {})
+                    );
+                }
             }
 
             return _messages.success(res, req, data, 'ok', 'news', 'getNews');

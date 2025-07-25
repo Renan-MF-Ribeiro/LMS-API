@@ -1,5 +1,7 @@
 const _messages = require('../../../utils/messages');
 const { newsApi } = require('../http-adapter');
+const { User } = require('../../users/model');
+const { getUserByToken } = require('../../../utils/functions');
 const { azureBlob } = require('../../../utils/files');
 const { UsersWithProcessedTags } = require('../../courses/model');
 
@@ -8,6 +10,50 @@ const campaignsController = {
         try {
             const { id } = req.params;
             const { data } = await newsApi.get(`/campaigns/${id}`);
+
+            return _messages.success(res, req, data, 'ok', 'news', 'getCampaign');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+
+            return _messages.internalServer(res, req, message, message, 'news', 'getCampaign');
+        }
+    },
+
+    getCampaignByUrl: async (req, res) => {
+        try {
+            const user = await getUserByToken(req);
+            
+            const { campaignUrl } = req.params;
+
+            const { data: config } = await newsApi.get('/config');
+
+            let allowedToPublish = false;
+            let limitReached = false;
+            if (config?.publishingRule) {
+                allowedToPublish = config.publishingRule.values.includes(
+                    user[config.publishingRule.field]
+                );
+            }
+
+            if (config?.publishingLimit) {
+                const userField = user[config.publishingLimit.field]
+
+                //busca todos os usuários com o campo específico
+                //e verifica se o número de publicações dos ultimos 30 dias que tem como autor os usuários com esse campo é maior que o limite
+
+                if (userField) {
+                    const usersWithField = await User.find({ [config.publishingLimit.field]: userField }).select('_id').lean()
+                    const userIds = usersWithField.map(user => user._id);
+                    const limit = config.publishingLimit.value;
+                    const { data: count } = await newsApi.post('/news/count', userIds);
+                    if (count >= limit && limit !== 0) {
+                        limitReached = true;
+                    }
+                }
+            }
+            const { data } = await newsApi.get(`/campaigns/url/${campaignUrl}`,
+                { params: { allowedToPublish, limitReached } }
+            );
 
             return _messages.success(res, req, data, 'ok', 'news', 'getCampaign');
         } catch (error) {

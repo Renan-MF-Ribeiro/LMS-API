@@ -454,7 +454,7 @@ module.exports = {
             let currentPage = Number(pageIndex);
 
             while (!internalIsFinished && !isFinishedFromSocialApi) {
-                console.log('query', { pageSize, pageIndex: currentPage, ...query });
+                // console.log('query', { pageSize, pageIndex: currentPage, ...query });
                 const { data: response } = await fetchComments({
                     pageSize,
                     pageIndex: currentPage,
@@ -467,12 +467,12 @@ module.exports = {
 
                 commentsToResponse.push(...filteredComments);
 
-                console.log(
-                    'é maior',
-                    commentsToResponse.length,
-                    commentsToResponse.length >= Number(pageSize)
-                );
-                console.log('RESPONSE TEM LENGTH', !responseData?.length);
+                // console.log(
+                //     'é maior',
+                //     commentsToResponse.length,
+                //     commentsToResponse.length >= Number(pageSize)
+                // );
+                // console.log('RESPONSE TEM LENGTH', !responseData?.length);
 
                 if (!responseData?.length ?? responseData.length < Number(pageSize)) {
                     isFinishedFromSocialApi = true;
@@ -551,7 +551,7 @@ module.exports = {
                 const commentsToResponse = response.data ?? [];
 
                 await setUsersProfilePhoto(commentsToResponse);
-                console.log(response.total)
+                // console.log(response.total)
                 _messages.success(
                     res,
                     req,

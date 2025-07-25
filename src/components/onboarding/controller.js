@@ -109,7 +109,7 @@ module.exports = {
 
             if (searchBy) {
                 data = data.filter(d => {
-                    console.log(removeAccents(d.title))
+                    // console.log(removeAccents(d.title))
                     return removeAccents(d.title).includes(removeAccents(searchBy)) ||
                         removeAccents(d.description).includes(removeAccents(searchBy))
                 })

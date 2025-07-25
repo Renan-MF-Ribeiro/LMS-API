@@ -263,7 +263,7 @@ const AssessmentController = {
             delete body.weightsByPeriod
             const uri = `${host}/matrix/update-matrix/${clientId}/${matrixId}`;
             const { data } = await axios.put(uri, body, { headers });
-            console.log(data)
+            // console.log(data)
             return _messages.success(res, req, data);
         } catch (error) {
             console.log(error)
@@ -378,7 +378,7 @@ const AssessmentController = {
                 .flatMap((tag) => tag.value)
                 .join(',');
 
-            console.log({ eligibilities });
+            // console.log({ eligibilities });
 
             const uri = `${host}/historics/${clientId}/interests?userId=${_id}&eligibilities=${eligibilities}`;
 

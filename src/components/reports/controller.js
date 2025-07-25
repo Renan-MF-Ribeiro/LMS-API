@@ -10,7 +10,7 @@ const _messages = require("../../utils/messages");
 module.exports = {
     async getHealthStatus(req, res) {
         const dbState = await getDbState();
-        console.log(dbState);
+        // console.log(dbState);
         if (dbState) {
             const systemHealth = {
                 runtimeStatus: true,

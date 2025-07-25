@@ -149,8 +149,18 @@ async function handleBlockUser(user) {
     }
 }
 
-async function generateTokens(user, login, password, res) {
-    const groups = user.groupsAD;
+async function generateTokens(user, login, password, tokenIdpProfiles, res) {
+    const groups = Array.from(
+        new Set([
+            ...(tokenIdpProfiles ?? []),
+            ...(user.groupsAD?.filter((group) =>
+                tokenIdpProfiles
+                    ? group === 'PERFIL_Aluno' || !group.startsWith('PERFIL')
+                    : true
+            ) ?? []),
+        ])
+    );
+
     const namesProfiles = [];
     const namesGroups = [];
     let tokenAnalytics, tokenHappPlace;
@@ -238,8 +248,10 @@ async function generateTokens(user, login, password, res) {
 }
 
 module.exports = {
-    async create(req, res) {
+    async create (req, res) {
         try {
+            const isOnboarding = Boolean(req.body?.onboarding)
+
             const form = await getAdminForm();
 
             const errors = getFormErrorsByFormValidation(form, req.body);
@@ -279,6 +291,17 @@ module.exports = {
                 );
             }
 
+            if (isOnboarding && !req.body?.cpf)  {
+                return _messages.forbidden(
+                    res,
+                    req,
+                    'CPF é obrigatório para usuário avulso',
+                    { error: 'CPF é obrigatório para usuário avulso' },
+                    'users',
+                    'create'
+                )
+            }
+
             const userExists = await User.findOne({
                 $or: [{ networkLogin: req.body[loginField] }],
             });
@@ -305,13 +328,10 @@ module.exports = {
 
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
-            const processedUser = await processUsersLoad(
-                {
-                    networkLogin: req.body[loginField],
-                    ...req.body,
-                },
-                fieldsForElegibility
-            );
+            const processedUser = await processUsersLoad({
+                networkLogin: req.body[loginField],
+                ...req.body
+            }, fieldsForElegibility, isOnboarding);
 
             await User.create({
                 ...processedUser,
@@ -576,7 +596,7 @@ module.exports = {
                 await sendSignupActivationEmail(newUser.email, activationLink);
             }
 
-            const tokens = await generateTokens(newUser, networkLogin, password, res);
+            const tokens = await generateTokens(newUser, networkLogin, password, null, res);
 
             if (newUser && form?.autoLogin) {
                 await Log.create({
@@ -898,7 +918,7 @@ module.exports = {
                 profilesIDS,
                 namesProfiles,
                 namesGroups,
-            } = await generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', res);
+            } = await generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', tokenIdpProfiles, res);
 
             const entryRecord = await returnDateSinceFirstLogin(user?._id);
 
@@ -2224,7 +2244,7 @@ module.exports = {
         });
 
         if (claimValue === undefined || claimValue === null) {
-            console.log('ssoCallback req.samlUserObject', req.samlUserObject);
+            // console.log('ssoCallback req.samlUserObject', req.samlUserObject);
 
             return _messages.internalServer(
                 res,
@@ -2669,7 +2689,7 @@ module.exports = {
         const { tag, userId } = req.body;
         try {
             const classIdentifier = new ObjectId();
-            console.log('classIdentifier', classIdentifier);
+            // console.log('classIdentifier', classIdentifier);
             await User.findByIdAndUpdate(userId, {
                 $addToSet: {
                     classGroups: {

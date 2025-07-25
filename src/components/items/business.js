@@ -36,7 +36,7 @@ function atualizarSeparadores (separadores, itemAlura) {
         const indexItem = separador.items.findIndex(i => {
             return i == itemAlura.id
         });
-        console.log(indexItem)
+        // console.log(indexItem)
         if (indexItem !== -1) {
             separador.items[indexItem] = itemAlura._id;
         }

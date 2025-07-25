@@ -56,7 +56,7 @@ const meetingController = {
     async sendFeedback(req, res) {
         const body = req.body;
         const { id } = req.params;
-        console.log(id);
+        // console.log(id);
         try {
             const { data } = await mentoringApi.post(`/meetings/feedback/${id}`, body);
             return _messages.success(

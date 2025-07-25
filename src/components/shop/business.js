@@ -18,11 +18,11 @@ function getDynamicRequestProps(req, ownerIsRequired = false) {
         headers: {
             'x-user-id': req.user.networkLogin
         },
-        params: {
+        params: new URLSearchParams({
             ...req.query,
-            owner: ownerFieldValue ? [ownerFieldValue] : undefined,
+            ...(ownerFieldValue && { owner: [ownerFieldValue] }),
             eligibilities: req.eligibilities ?? [],
-        },
+        }),
     };
 }
 
@@ -119,7 +119,7 @@ async function sendOrderConfirmation(user, order) {
 
     const theme = await Theme.findOne({ enabled: true });
 
-    console.log('theme', theme);
+    // console.log('theme', theme);
 
     const primaryColor = theme?.palette?.primary ?? '#4CAF50';
 

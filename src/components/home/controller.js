@@ -46,7 +46,7 @@ const HomeController = {
         const filtersValues = Object.values(filters);
         const hasFilters = filtersValues.some((filter) => filter === 'true');
         if (!searchBy?.length && !hasFilters) {
-            console.log('No searchBy or filters provided');
+            // console.log('No searchBy or filters provided');
             return _messages.success(res, req, {});
         }
         const user = await getUserByToken(req);
@@ -477,29 +477,26 @@ const HomeController = {
 
     async listCertificates(req, res) {
         const { searchBy } = req.query;
-        req.query = { ...req.query, pageSize: req.query.pageSize ?? 10, pageIndex: req.query.pageIndex ?? 0 };
+        req.query = {
+            ...req.query,
+            pageSize: req.query.pageSize ?? 10,
+            pageIndex: req.query.pageIndex ?? 0,
+        };
         const { skip, limit } = pagination(req);
         const user = await getUserByToken(req);
-        const tags = await getTagsElegiblesByToken(req);
-        
-        const elegibleTrails = await Trail.find({
-            tags: { $in: tags },
-            enabled: true,
-            certificate: 1,
-            startDate: { $lt: getDateTodayWithoutHours() },
-            endDate: { $gt: getDateTodayWithoutHours() }
-        }).populate('items.itemID');
-        
+
+        const elegibleTrails = await Trail.find({ certificate: 1 }).populate('items.itemID');
+
         const { completedTrails } = await handleStudentTrailsV2(user, elegibleTrails);
-        
+
         let certificates = await returnCertificates(completedTrails, user);
 
         if (searchBy) {
             certificates = certificates.filter(({ title }) => {
-                return title.toLowerCase().includes(searchBy.toLowerCase());
+                return title?.toLowerCase()?.includes(searchBy.toLowerCase());
             });
         }
-        
+
         certificates = certificates.sort((prev, curr) => {
             const prevConcludedAt = prev.concludedAt.getTime();
             const currConcludedAt = curr.concludedAt.getTime();
@@ -516,15 +513,8 @@ const HomeController = {
         req.query = { ...req.query, pageSize: req.query.pageSize ?? 5 };
         const { skip, limit } = pagination(req);
         const user = await getUserByToken(req);
-        const tags = await getTagsElegiblesByToken(req);
         
-        const elegibleTrails = await Trail.find({
-            tags: { $in: tags },
-            enabled: true,
-            certificate: 1,
-            startDate: { $lt: getDateTodayWithoutHours() },
-            endDate: { $gt: getDateTodayWithoutHours() }
-        }).populate('items.itemID');
+        const elegibleTrails = await Trail.find({ certificate: 1 }).populate('items.itemID');
         
         const { completedTrails } = await handleStudentTrailsV2(user, elegibleTrails, true);
 
@@ -532,7 +522,7 @@ const HomeController = {
 
         if (searchBy) {
             certificates = certificates.filter(({ title }) => {
-                return title.toLowerCase().includes(searchBy.toLowerCase());
+                return title?.toLowerCase()?.includes(searchBy.toLowerCase());
             });
         }
         
