@@ -238,8 +238,10 @@ async function generateTokens(user, login, password, res) {
 }
 
 module.exports = {
-    async create(req, res) {
+    async create (req, res) {
         try {
+            const isOnboarding = Boolean(req.body?.onboarding)
+
             const form = await getAdminForm();
 
             const errors = getFormErrorsByFormValidation(form, req.body);
@@ -279,6 +281,17 @@ module.exports = {
                 );
             }
 
+            if (isOnboarding && !req.body?.cpf)  {
+                return _messages.forbidden(
+                    res,
+                    req,
+                    'CPF é obrigatório para usuário avulso',
+                    { error: 'CPF é obrigatório para usuário avulso' },
+                    'users',
+                    'create'
+                )
+            }
+
             const userExists = await User.findOne({
                 $or: [{ networkLogin: req.body[loginField] }],
             });
@@ -305,13 +318,10 @@ module.exports = {
 
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
-            const processedUser = await processUsersLoad(
-                {
-                    networkLogin: req.body[loginField],
-                    ...req.body,
-                },
-                fieldsForElegibility
-            );
+            const processedUser = await processUsersLoad({
+                networkLogin: req.body[loginField],
+                ...req.body
+            }, fieldsForElegibility, isOnboarding);
 
             await User.create({
                 ...processedUser,
