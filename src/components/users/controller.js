@@ -152,8 +152,18 @@ async function handleBlockUser(user) {
     }
 }
 
-async function generateTokens(user, login, password, res) {
-    const groups = user.groupsAD;
+async function generateTokens(user, login, password, tokenIdpProfiles, res) {
+    const groups = Array.from(
+        new Set([
+            ...(tokenIdpProfiles ?? []),
+            ...(user.groupsAD?.filter((group) =>
+                tokenIdpProfiles
+                    ? group === 'PERFIL_Aluno' || !group.startsWith('PERFIL')
+                    : true
+            ) ?? []),
+        ])
+    );
+
     const namesProfiles = [];
     const namesGroups = [];
     let tokenAnalytics, tokenHappPlace;
@@ -586,7 +596,7 @@ module.exports = {
                 await sendSignupActivationEmail(newUser.email, activationLink);
             }
 
-            const tokens = await generateTokens(newUser, networkLogin, password, res);
+            const tokens = await generateTokens(newUser, networkLogin, password, null, res);
 
             if (newUser && form?.autoLogin) {
                 await Log.create({
@@ -692,7 +702,7 @@ module.exports = {
             }
             // Gera todos os tokens necessários
             const [tokens, entryRecord] = await Promise.all([
-                generateTokens(user, login, password, res),
+                generateTokens(user, login, password, null, res),
                 returnDateSinceFirstLogin(user?._id),
                 updateLastLoginUser(user?._id),
                 GamificationKafka.publishEventRuleValidation({
@@ -907,7 +917,7 @@ module.exports = {
                 profilesIDS,
                 namesProfiles,
                 namesGroups,
-            } = await generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', res);
+            } = await generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', tokenIdpProfiles, res);
 
             const entryRecord = await returnDateSinceFirstLogin(user?._id);
 
