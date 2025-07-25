@@ -5,10 +5,11 @@ const {
     isStudent,
     isAccountant,
 } = require('../../utils/middlewares')
+const { cacheRequestOnClient } = require('../../utils/cache/helpers')
 
 router
     .get('/', isStudent, _controller.returnSections)
-    .get('/elegibles-contents', isStudent, _controller.getSectionsElegibles)
+    .get('/elegibles-contents', cacheRequestOnClient(30 * 1000), isStudent, _controller.getSectionsElegibles) // Cache for 30 seconds
     .get('/formation', isStudent, _controller.getSectionsFormation)
     .get('/:id', isStudent, _controller.getSectionDetail)
     .patch('/:id/:status', isAccountant, _controller.changeStatus)
