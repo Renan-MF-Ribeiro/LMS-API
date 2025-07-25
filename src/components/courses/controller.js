@@ -1166,7 +1166,7 @@ module.exports = {
                     return tagsIntersection.length > 0;
                 }
             });
-            
+
             const data = eligibleUsers.slice(skip, skip + limit)
             const total = eligibleUsers.length
 
@@ -1380,7 +1380,7 @@ module.exports = {
                 );
             }
 
-            
+
             const course = await CourseModel.findById(classCourse.courseID._id)
 
             const isCourseDateOutOfRange = isDateOutOfRange(course.dateInitial, course.dateFinal);
@@ -1390,7 +1390,7 @@ module.exports = {
             );
 
             if (isCourseDateOutOfRange || isClassDateOutOfRange) {
-                const reason = isCourseDateOutOfRange ? 'ao curso': 'a turma'
+                const reason = isCourseDateOutOfRange ? 'ao curso' : 'a turma'
 
                 return badRequest(
                     res,
@@ -1520,7 +1520,7 @@ module.exports = {
             const { body } = req;
             const user = await getUserByToken(req);
 
-            var userID = String(user._id);
+            const userID = String(user._id);
 
             const course = await _business.listJoin(user, body.classesID)
 
@@ -1545,6 +1545,16 @@ module.exports = {
 
             success(res, req, course);
         } catch (error) {
+            if (error instanceof ApiError) {
+                return badRequest(
+                    res,
+                    req,
+                    error.message,
+                    error.message,
+                    'courses',
+                    '/list-Join'
+                );
+            };
             internalServer(
                 res,
                 req,
@@ -1990,7 +2000,7 @@ module.exports = {
         }
     },
 
-    async historicByUser (req, res) {
+    async historicByUser(req, res) {
         try {
             const userId = req.params.userId;
             const { skip, limit } = pagination(req);
@@ -2068,7 +2078,7 @@ module.exports = {
 
     },
 
-    async removeUserClass (req, res) {
+    async removeUserClass(req, res) {
         try {
             const { classeId, userId } = req.params;
             const classUpdated = await ClassModel.findOneAndUpdate(
