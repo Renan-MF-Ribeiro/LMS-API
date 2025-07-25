@@ -73,9 +73,9 @@ module.exports = {
                         users: [`${user._id}`]
                     }
                 },
-                text: `Sua lista de contatos está sendo processada\n`,
-                texthtml: `<p>Sua lista de contatos está sendo processada<p>`,
-                title: `Sua lista está sendo processada!`
+                text: `A lista de contatos está sendo processada\n`,
+                texthtml: `<p>A lista de contatos está sendo processada<p>`,
+                title: `A lista está sendo processada!`
             };
 
             _messages.success(res, req, notification);
@@ -360,11 +360,11 @@ module.exports = {
             let texthtml = ' ';
 
             if (type == 'URL') {
-                text = `Prezado(a) Aluno(a), Desejamos informar que sua inscrição foi registrada na lista de espera para o curso ${course.title}. É com satisfação que comunicamos que uma nova turma deste curso será ministrada no dia ${dateTime[0]} as ${dateTime[1]}, a ser realizada através do link ${place}. Em situação de impossibilidade de participação, solicitamos que considere reingressar na lista de espera, a fim de oportunizar a vaga a outros interessados. Agradecemos antecipadamente!`;
-                texthtml = `<br> <p>Prezado(a) Aluno(a), Desejamos informar que sua inscrição foi registrada na lista de espera para o curso ${course.title}. <br> <br> É com satisfação que comunicamos que uma nova turma deste curso será ministrada no dia ${dateTime[0]} as ${dateTime[1]}, a ser realizada através do link <a href="${place}">${place}</a>. <br> <br> Em situação de impossibilidade de participação, solicitamos que considere reingressar na lista de espera, a fim de oportunizar a vaga a outros interessados. <br> <br> Agradecemos antecipadamente!</p> <br>`;
+                text = `Prezado(a) Aluno(a), Desejamos informar que a inscrição foi registrada na lista de espera para o curso ${course.title}. É com satisfação que comunicamos que uma nova turma deste curso será ministrada no dia ${dateTime[0]} as ${dateTime[1]}, a ser realizada através do link ${place}. Em situação de impossibilidade de participação, solicitamos que considere reingressar na lista de espera, a fim de oportunizar a vaga a outros interessados. Agradecemos antecipadamente!`;
+                texthtml = `<br> <p>Prezado(a) Aluno(a), Desejamos informar que a inscrição foi registrada na lista de espera para o curso ${course.title}. <br> <br> É com satisfação que comunicamos que uma nova turma deste curso será ministrada no dia ${dateTime[0]} as ${dateTime[1]}, a ser realizada através do link <a href="${place}">${place}</a>. <br> <br> Em situação de impossibilidade de participação, solicitamos que considere reingressar na lista de espera, a fim de oportunizar a vaga a outros interessados. <br> <br> Agradecemos antecipadamente!</p> <br>`;
             } else if (type == 'text') {
-                text = `Prezado(a) Aluno(a), Desejamos informar que sua inscrição foi registrada na lista de espera para o curso ${course.title}. É com satisfação que comunicamos que uma nova turma deste curso será ministrada no dia ${dateTime[0]} as ${dateTime[1]}, a ser realizada nas instalações localizadas no ${place}. Em situação de impossibilidade de participação, solicitamos que considere reingressar na lista de espera, a fim de oportunizar a vaga a outros interessados. Agradecemos antecipadamente!`;
-                texthtml = `<br> <p>Prezado(a) Aluno(a), Desejamos informar que sua inscrição foi registrada na lista de espera para o curso ${course.title}. <br> <br> É com satisfação que comunicamos que uma nova turma deste curso será ministrada no dia ${dateTime[0]} as ${dateTime[1]}, a ser realizada nas instalações localizadas no ${place}. <br> <br> Em situação de impossibilidade de participação, solicitamos que considere reingressar na lista de espera, a fim de oportunizar a vaga a outros interessados. <br> <br> Agradecemos antecipadamente!</p> <br>`;
+                text = `Prezado(a) Aluno(a), Desejamos informar que a inscrição foi registrada na lista de espera para o curso ${course.title}. É com satisfação que comunicamos que uma nova turma deste curso será ministrada no dia ${dateTime[0]} as ${dateTime[1]}, a ser realizada nas instalações localizadas no ${place}. Em situação de impossibilidade de participação, solicitamos que considere reingressar na lista de espera, a fim de oportunizar a vaga a outros interessados. Agradecemos antecipadamente!`;
+                texthtml = `<br> <p>Prezado(a) Aluno(a), Desejamos informar que a inscrição foi registrada na lista de espera para o curso ${course.title}. <br> <br> É com satisfação que comunicamos que uma nova turma deste curso será ministrada no dia ${dateTime[0]} as ${dateTime[1]}, a ser realizada nas instalações localizadas no ${place}. <br> <br> Em situação de impossibilidade de participação, solicitamos que considere reingressar na lista de espera, a fim de oportunizar a vaga a outros interessados. <br> <br> Agradecemos antecipadamente!</p> <br>`;
             }
 
             const messengerConfig = await getMessengerConfig();

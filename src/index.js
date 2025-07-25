@@ -74,10 +74,15 @@ const happplaceRoutes = require('./components/happplace/routes');
 const webhooksRoutes = require('./components/webhooks/routes');
 const mentoringRoutes = require('./components/mentoring/routes');
 const matricesRoutes = require('./components/matrices/routes');
+const chatIaRoutes = require('./components/chat/routes');
 const integratorRoutes = require('./components/integrator/routes');
+const newsRoutes = require('./components/news/routes');
+const i18nRoutes = require('./components/i18n/routes');
 
 const environment = require('./environment');
 const { matricesApiMiddleware } = require('./components/matrices/http-adapter');
+const { newsApiMiddleware } = require('./components/news/http-adapter');
+const { i18nApiMiddleware } = require('./components/i18n/http-adapter');
 
 const corsOptions = {
     origin: [environment.DOMAIN, 'https://monitoring.happlearning.com.br'],
@@ -129,6 +134,12 @@ app.use(cookieParser());
 
 app.use(express.static(path.resolve(environment.PUBLIC_PATH)));
 
+app.get('/version', (req, res) => {
+    res.json({
+        version: environment.API_VERSION ?? 'no-info',
+    });
+});
+
 app.get('/', (req, res) => {
     res.sendFile(path.resolve(path.join(environment.PUBLIC_PATH, 'index.html')));
 });
@@ -139,6 +150,8 @@ app.use('/social', socialApiMiddleware);
 app.use('/feed', socialApiMiddleware);
 app.use('/mentoring', mentoringApiMiddleware);
 app.use('/matrices', matricesApiMiddleware);
+app.use('/news', newsApiMiddleware);
+app.use('/i18n', i18nApiMiddleware);
 
 app.use(setSegmentation);
 
@@ -189,7 +202,10 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/webhooks', validateTokenRoute, isAdmin, webhooksRoutes)
     .use('/mentoring', mentoringRoutes)
     .use('/matrices', matricesRoutes)
-    .use('/integrator', integratorRoutes);
+    .use('/chat', chatIaRoutes)
+    .use('/integrator', integratorRoutes)
+    .use('/news', validateTokenRoute, newsRoutes)
+    .use('/i18n', i18nRoutes);
 
 app.use(errorHandler);
 

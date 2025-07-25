@@ -123,7 +123,7 @@ const GroupController = {
             if (requests === 'true') {
                 groupRequests = await populateUserFields('user', 'userId', { data: data.requests });
             }
-            const populatedOwner = await populateUserFields('owner', 'ownerId', data);
+            const [populatedOwner] = await populateUserFields('owner', 'ownerId', data);
 
             const response = { data: { ...populatedOwner, requests: groupRequests } };
 
@@ -180,7 +180,7 @@ const GroupController = {
                 const filename = `${file.name}.${mime.extension(file.type)}`;
 
                 formData.append('banner', fs.createReadStream(file.path), filename);
-                socialApi.patch(uploadBanner, formData, {
+                await socialApi.patch(uploadBanner, formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
                         ...formData.getHeaders(),

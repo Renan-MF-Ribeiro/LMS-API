@@ -179,7 +179,7 @@ const mentorConfigController = {
             const { data } = await mentoringApi.get(`/config/blocked/${id}`);
             return data.data;
         } catch (error) {
-            console.log(error)
+            // console.log(error)
         }
     },
 };

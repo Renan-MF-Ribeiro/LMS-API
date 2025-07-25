@@ -2,7 +2,7 @@ const _messages = require('../../../utils/messages');
 const {
     getTrailCompletion,
 } = require('../../sections/business');
-const { processTrailTracking } = require('../../../utils/functions.js');
+const { processTrailTracking, processTrailTrackingV2 } = require('../../../utils/functions.js');
 const { handleError } = require('../../../utils/errors');
 const { populateTrails } = require('../../trails/business');
 const { EventModel, EVENT_TYPE, TARGET_ID } = require('./model');
@@ -154,7 +154,7 @@ const EventsController = {
             });
 
             for (const trail of trails) {
-                const processedTrail = processTrailTracking(trail, allTrackingUser).trail;
+                const processedTrail = processTrailTrackingV2(trail, allTrackingUser)?.trail;
 
                 if (
                     !!processedTrail &&
@@ -262,7 +262,8 @@ async function getCoursesElegible(start, end, user, tags) {
                     }
                 });
                 const classes = classesFromCourse.map((classFromCourse) => {
-                    const inClass = classFromCourse.users.some((u) => u._id == user._id || u.userID == user._id)
+                    const inClass = classFromCourse.users.some((u) => String(u._id) === String(user._id) || String(u.userID) === user._id)
+                    
                     return {
                         _id: classFromCourse._id,
                         createdAt: classFromCourse.createdAt,

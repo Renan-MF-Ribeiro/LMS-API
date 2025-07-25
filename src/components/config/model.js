@@ -22,6 +22,8 @@ const ConfigTypes = {
     UsersData: 'users-data',
     Company: 'company',
     Matrix: 'matrix',
+    ChatIA: 'chat-ia',
+    Dashboard: 'dashboard',
 };
 
 const ConfigSchema = new mongoose.Schema(
@@ -371,6 +373,120 @@ const MatrixConfigModel = ConfigModel.discriminator(
     )
 );
 
+const ChatIAConfigModel = ConfigModel.discriminator(
+    ConfigTypes.ChatIA,
+    new mongoose.Schema(
+        {
+            value: {
+                default: {
+                    enabled: false,
+                    avatarId: null,
+                    channelsId: [],
+                    label: 'Minha IA',
+                },
+                type: new mongoose.Schema(
+                    {
+                        enabled: {
+                            type: Boolean,
+                            required: true,
+                            default: false,
+                        },
+                        avatarId: {
+                            type: mongoose.Schema.Types.Mixed,
+                            required: false,
+                            default: null,
+                        },
+                        channelsId: {
+                            type: [mongoose.Schema.Types.ObjectId],
+                            required: false,
+                            default: [],
+                        },
+                        label: {
+                            type: String,
+                            required: false,
+                            default: 'Minha IA',
+                        },
+                    },
+                    valueSchemaOptions
+                ),
+            },
+        },
+        schemaOptions
+    )
+);
+
+const DashboardConfigModel = ConfigModel.discriminator(
+    ConfigTypes.Dashboard,
+    new mongoose.Schema(
+        {
+            value: {
+                default: {
+                    tabs: [
+                        'ELEG / OBRIG',
+                        'GESTÃO PLATAFORMA',
+                        'GRUPOS | TAGS | SEÇÕES X TRILHAS',
+                        'CADASTRO ALUNOS',
+                        'GESTÃO ELEGIBILIDADES',
+                        'ELEG / OBRIG_ADM',
+                        'ELEG / OBRIG INDICADORES_ADM',
+                        'CONCLUSÕES',
+                        'GESTÃO HORAS TREINAMENTO',
+                        'CAMPANHAS',
+                        'AVALIAÇÕES',
+                        'PESQUISA SATISFAÇÃO',
+                        'GESTÃO DE USUÁRIOS',
+                        'GESTÃO DE CONTEÚDO',
+                        'CERTIFICADOS',
+                        'CURSOS PRESENCIAIS',
+                        'MENSAGERIA',
+                        'DIÁRIO DE BORDO',
+                        'ITENS DE FORMULÁRIO',
+                        'CHAMADOS',
+                        'HAPPINSIGHTS',
+                        'ASSESSMENT',
+                        'FORMAÇÃO',
+                    ],
+                },
+                type: new mongoose.Schema(
+                    {
+                        tabs: {
+                            type: [String],
+                            required: true,
+                            default: [
+                                'ELEG / OBRIG',
+                                'GESTÃO PLATAFORMA',
+                                'GRUPOS | TAGS | SEÇÕES X TRILHAS',
+                                'CADASTRO ALUNOS',
+                                'GESTÃO ELEGIBILIDADES',
+                                'ELEG / OBRIG_ADM',
+                                'ELEG / OBRIG INDICADORES_ADM',
+                                'CONCLUSÕES',
+                                'GESTÃO HORAS TREINAMENTO',
+                                'CAMPANHAS',
+                                'AVALIAÇÕES',
+                                'PESQUISA SATISFAÇÃO',
+                                'GESTÃO DE USUÁRIOS',
+                                'GESTÃO DE CONTEÚDO',
+                                'CERTIFICADOS',
+                                'CURSOS PRESENCIAIS',
+                                'MENSAGERIA',
+                                'DIÁRIO DE BORDO',
+                                'ITENS DE FORMULÁRIO',
+                                'CHAMADOS',
+                                'HAPPINSIGHTS',
+                                'ASSESSMENT',
+                                'FORMAÇÃO',
+                            ],
+                        },
+                    },
+                    valueSchemaOptions
+                ),
+            },
+        },
+        schemaOptions
+    )
+);
+
 module.exports = {
     ConfigTypes,
     PostProcessingActions,
@@ -382,4 +498,6 @@ module.exports = {
     CompanyConfigModel,
     MatrixConfigModel,
     MATRIX_VISIBILITY_MODE,
+    ChatIAConfigModel,
+    DashboardConfigModel,
 };

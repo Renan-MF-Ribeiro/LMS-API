@@ -13,6 +13,7 @@ const { Trail } = require('../components/trails/model');
 const { Item } = require('../components/items/model');
 const { htmlToText } = require('html-to-text');
 const tlds = require('tlds');
+const mongoose = require('mongoose');
 
 module.exports = {
     getDateToday() {
@@ -145,7 +146,7 @@ module.exports = {
             skip = limit * pageIndex;
         }
 
-        return { skip, limit };
+        return { skip: parseInt(skip), limit: parseInt(limit) };
     },
 
     ordernation(req) {
@@ -718,6 +719,13 @@ module.exports = {
         });
     },
 
+    isDateOutOfRange(initialDate, finalDate) {
+        const initial = moment(new Date(initialDate)).subtract(3, 'hours').startOf('day').toDate().getTime(); 
+        const final = moment(new Date(finalDate)).subtract(3, 'hours').endOf('day').toDate().getTime(); 
+        const today = new Date().getTime();
+
+        return initial > today || final < today;
+    },
     /**
      * Converte o HTML (texto rico) de uma notificação para um HTML mais limpo
      * Preserva os LINKS originais (tags <a>) e adiciona LINKS em URLS
@@ -784,7 +792,191 @@ module.exports = {
         }
 
         return preserveLinks(html);
-    }
+    },
+
+
+    async handleStudentTrailsV2(user, trails, onlyExpired = false) {
+        const completedTrails = [];
+        const inProgressTrails = [];
+        
+        const allTrackingUser = await Tracking.find({
+            userLogin: { $eq: user.networkLogin },
+            ...(!onlyExpired
+                ? {
+                    $or: [
+                        { expiredCompletion: { $exists: false } },
+                        { expiredCompletion: { $eq: null } },
+                    ],
+                }
+                : {
+                    $and: [
+                        { expiredCompletion: { $exists: true } },
+                        { expiredCompletion: { $ne: null } },
+                    ],
+                }),
+        }).lean();
+
+        const trackingMap = new Map();
+
+        allTrackingUser.forEach((tracking) => {
+            trackingMap.set(String(tracking.item), tracking);
+        });
+
+        const filteredTrails = trails.filter((trail) => {
+            const trailItems = trail.items?.filter(i => i.itemID).map((item) => String(item.itemID._id)) ?? [];
+            return trailItems.some((item) => trackingMap.has(item));
+        });
+
+        for (const t of filteredTrails) {
+            const { trail } = module.exports.processTrailTrackingV2(t, allTrackingUser, true);
+
+            const trailItems = trail.items.filter((item) => item.itemID?.enabled === true);
+
+            if (trailItems.length && trailItems.every(({ itemID }) => itemID?.completion === 1)) {
+                completedTrails.push(trail);
+                continue;
+            }
+
+            const trailItemsDb = await Item.find({
+                _id: { $in: trailItems.map((item) => new mongoose.Types.ObjectId(item.itemID._id)) },
+            }).select('_id titleURL').lean();
+            
+            let nextItem = null;
+            
+            const item = trailItems.find(({ itemID }) => !itemID?.completion);
+            
+            const progress =
+                (trailItems.filter(({ itemID }) => itemID?.completion === 1).length *
+                    100) /
+                trailItems.length;
+            
+            if (item) {
+                const foundItem = trailItemsDb.find(({ _id }) => String(_id) === String(item.itemID._id));
+                
+                nextItem = {
+                    _id: foundItem?._id,
+                    titleURL: foundItem?.titleURL,
+                };
+            }
+
+            inProgressTrails.push({
+                _id: trail._id,
+                title: trail.title,
+                thumbPath: trail.thumbPath,
+                titleURL: trail.titleURL,
+                nextItem,
+                progress,
+                notStarted: trail.notStarted,
+            });
+        }
+
+        return { completedTrails, inProgressTrails };
+    },
+
+    processTrailTrackingV2(trail, allTrackingUser, dashboard = false) {
+        let containsACompletedItem = false;
+        const completionDate = [];
+        const scoreArr = [];
+        trail.notStarted = false;
+        let duration = 0;
+
+        const trackingMap = new Map(
+            allTrackingUser.map((obj) => [String(obj.item), obj])
+        );
+
+        for (const item of trail.items) {
+            const objTracking = trackingMap.get(String(item?.itemID?._id));
+
+            if (dashboard && objTracking) {
+                trail.notStarted = true;
+            }
+
+            if (objTracking?.updatedAt) {
+                const currentTime = trail?.lastTrackingUpdate ? new Date(trail.lastTrackingUpdate).getTime() : 0;
+                const newTime = new Date(objTracking.updatedAt).getTime();
+
+                if (currentTime === 0 || newTime > currentTime) {
+                    trail.lastTrackingUpdate = objTracking.updatedAt;
+                }
+            }
+
+            duration += item?.itemID?.durationHours ?? 0;
+            const score = objTracking && objTracking.score ? objTracking.score : null;
+            const completionAt = objTracking ? objTracking.completionAt : null;
+            const updatedAt = objTracking ? objTracking.updatedAt : null;
+            const createdAt = objTracking ? objTracking.createdAt : null;
+            item.completionAt = completionAt;
+            completionDate.push(completionAt);
+
+            var tmpCompletion = null;
+            if (objTracking) {
+                if (
+                    objTracking.kind === 'SCORMTracking' ||
+                    objTracking.kind === 'ExamTracking' ||
+                    objTracking.kind === 'ActivityTracking'
+                ) {
+                    if (
+                        objTracking.lessonStatus === 'FAILED' ||
+                        objTracking.lessonStatus === 'failed'
+                    ) {
+                        tmpCompletion = 2;
+                    } else {
+                        tmpCompletion = _isSCORMCompleted(objTracking.lessonStatus) ? 1 : 0;
+                    }
+                } else {
+                    tmpCompletion = objTracking.completion;
+                }
+            }
+            if (item.itemID?.passingScore && item.itemID.passingScore !== 0) {
+                const kindsWithScore = ['ExamTracking', 'ActivityTracking'];
+                if (objTracking && kindsWithScore.includes(objTracking.kind)) {
+                    scoreArr.push(objTracking.score);
+                }
+            }
+
+            if (item.itemID) {
+                item.itemID.score = score;
+                item.itemID.completionAt = completionAt;
+                item.itemID.updatedAt = updatedAt;
+                item.itemID.createdAt = createdAt;
+                item.itemID.completion = tmpCompletion;
+            }
+
+            item.completion = tmpCompletion;
+            if (item.completion === 1) {
+                containsACompletedItem = true;
+            }
+        }
+
+        let scoreAverage = 0;
+        for (const score of scoreArr) {
+            scoreAverage += score;
+        }
+        scoreAverage = scoreAverage / scoreArr.length;
+        scoreAverage = Number(scoreAverage.toFixed(2));
+        trail.scoreAverage = isNaN(scoreAverage) ? null : scoreAverage;
+
+        const validDates = completionDate
+            .filter((e) => e !== null)
+            .map((e) => new Date(e).getTime());
+
+        const mostRecentDate = validDates.length > 0 ? new Date(Math.max(...validDates)) : null;
+
+        trail.completionAt = mostRecentDate;
+        trail.completion = getTrailCompletion(trail);
+        trail.duration = duration;
+
+        const completionTotal = trail.items.reduce((acc, item) => {
+            if (item?.completion) {
+                return acc + item.completion || 0;
+            }
+            return acc;
+        }, 0);
+        
+        trail.completionPercentage = +((completionTotal / trail.items.length) * 100).toFixed(2);
+        
+        return { trail, containsACompletedItem };
+    },
 
 };
 

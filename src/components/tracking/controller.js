@@ -128,8 +128,11 @@ const TrackingController = {
                             isAllowedToSendXAPI = false;
                         }
                     }
-                    console.log("completion", completion, "newCompletion", newCompletion, "\n\n\n\n")
+                    // console.log("completion", completion, "newCompletion", newCompletion, "\n\n\n\n")
+                    const isNewStatus = req.body?.lessonStatus !== tracking.lessonStatus;
+
                     if (
+                        isNewStatus &&
                         (newCompletion == SCORMLessonStatus.COMPLETED ||
                             newCompletion == SCORMLessonStatus.FAILED ||
                             newCompletion == SCORMLessonStatus.PASSED)
@@ -272,16 +275,18 @@ const TrackingController = {
             });
 
             await dispatch('create', 'tracking', { ...req.body, totalTime, isAllowedToSendXAPI, completionAt });
-            //EVENTO CONCLUSAO
-            await calendarEventConclusion(
-                q.userLogin,
-                {
-                    item: q.item,
-                    completion: req.body?.completion,
-                    lessonStatus: req.body?.lessonStatus,
-                }
-            );
-
+            
+            // Dispara o evento de calendário SOMENTE se é evento de conclusão
+            if (completionAt) {
+                await calendarEventConclusion(
+                    q.userLogin,
+                    {
+                        item: q.item,
+                        completion: req.body?.completion,
+                        lessonStatus: req.body?.lessonStatus,
+                    }
+                );
+            }
 
             res.status(httpStatus.NO_CONTENT).send();
         } catch (error) {

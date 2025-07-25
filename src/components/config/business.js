@@ -7,6 +7,8 @@ const {
     CompanyConfigModel,
     MatrixConfigModel,
     MATRIX_VISIBILITY_MODE,
+    ChatIAConfigModel,
+    DashboardConfigModel,
 } = require('./model');
 
 const { getUserByToken } = require('../../utils/functions');
@@ -126,7 +128,19 @@ module.exports = {
         return config || (await MatrixConfigModel.create({}));
     },
 
-    async findUsersByMatrixConfig(applier, searchBy) {
+    async getChatIAConfig() {
+        const config = await ChatIAConfigModel.findOne();
+
+        return config || (await ChatIAConfigModel.create({}));
+    },
+    
+    async getDashboardConfig() {
+        const config = await DashboardConfigModel.findOne();
+
+        return config || (await DashboardConfigModel.create({}));
+    },
+
+    async findUsersByMatrixConfig(applier, searchBy, limit) {
         const { value } = await module.exports.getMatrixConfig();
         const query = {
             $and: [
@@ -157,7 +171,9 @@ module.exports = {
         //     const tags = applier.groupsAD.filter((tag) => !String(tag).startsWith('PERFIL_'));
         //     query.$and.push({ groupsAD: { $in: tags } });
         // }
-
+        if(limit){
+            return User.find(query).limit(limit);
+        }
         return User.find(query);
     },
 };

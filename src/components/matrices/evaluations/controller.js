@@ -44,10 +44,6 @@ const matricesController = {
 
             req.body.userOffice = user?.office
 
-            if (!req.body.userOffice) {
-                return res.status(404).json({ message: 'O usuário informado não possui um campo "office" válido.' });
-            }
-
             const { data } = await matricesApi.post('/evaluations', req.body);
             res.status(data.statusCode).json(data.data);
         } catch (error) {

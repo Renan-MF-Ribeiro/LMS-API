@@ -1,11 +1,21 @@
 const _messages = require('../../utils/messages')
 const { Profile } = require('./model')
+const { i18nBusiness } = require('../i18n/business')
+const { LOCALE } = require('../i18n/model')
 
 module.exports = {
     async findAll(req, res) {
         try {
-            const profiles = await Profile.find().sort({label: 'asc'})
-            _messages.success(res, req, profiles)
+            const profiles = await Profile.find().sort({ label: 'asc' }).lean()
+
+            const translatedProfiles = await i18nBusiness.translate({
+                locale: LOCALE.BR,
+                key: 'profiles',
+                items: profiles,
+                matcher: 'title'
+            })
+
+            _messages.success(res, req, translatedProfiles)
         } catch (error) {
             _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'section', '/createSession')
         }

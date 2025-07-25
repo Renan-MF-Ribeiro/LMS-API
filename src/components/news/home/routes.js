@@ -1,0 +1,14 @@
+const express = require('express');
+const _controller = require('./controller');
+const formidable = require('express-formidable');
+const { isMongoId } = require('../../../utils/middlewares');
+
+module.exports = express
+    .Router()
+    .post('/', formidable(), _controller.createNews)
+    .get('/', _controller.listNews)
+    .get('/url', _controller.listNewsUrl)
+    .get('/campaigns', _controller.listCampaigns)
+    .get('/:id', _controller.getNews)
+    .get('/forms/:campaignId', _controller.getFormByCampaignId)
+    .put('/:id', formidable(), _controller.updateNews);

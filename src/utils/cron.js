@@ -1111,8 +1111,8 @@ async function createReleaseCampaign (trail, emailTemplate) {
 }
 
 async function createChargeCampaign (trail, emailTemplate) {
-    const title = `Ei, faltam 5 dias para você concluir a trilha ${trail.title}!`;
-    const text = `Você ainda não completou a trilha ${trail.title}! O prazo para a conclusão é até o dia ${trail.expirationDate}. Por favor, clique para visualizar!`;
+    const title = `Ei, faltam 5 dias para a conclusão da trilha ${trail.title}!`;
+    const text = `A trilha ${trail.title} ainda não foi concluída. O prazo final é ${trail.expirationDate}. Clique para visualizar os detalhes.`;
     const communication = ['notification'];
     const category = 'charge';
     const mode = 'automatic';
@@ -1134,7 +1134,7 @@ async function createChargeCampaign (trail, emailTemplate) {
 function createExamTrackingCampaign (item) {
     const title = `O resultado da avaliação ${item} foi renovado.`;
     const text =
-        'O resultado da avaliação mencionada foi renovado, agora você pode refazer a prova para tentar obter uma aprovação!';
+        'O resultado da avaliação foi renovado. A prova está disponível para nova tentativa de aprovação.';
     const communication = ['notification'];
     const mode = 'automatic';
     const category = 'notify';
@@ -1605,36 +1605,4 @@ async function removeAutomaticEligibilityTags() {
             }
         }
     }
-
-    const createdUsers = await User.find({
-        status: 'ATIVO',
-        onboarding: true,
-        createdAt: { $lt: lastLoginDate },
-    }).select('status onboarding _id name networkLogin createdAt');
-
-    if (createdUsers?.length) {
-        const lastLoginCreatedUsers = await LastLogin.find({
-            user: { $in: createdUsers.map(user => user._id) },
-        });
-
-        const usersWithoutLogin = createdUsers.filter(
-            user => !lastLoginCreatedUsers.some(lastLogin => String(lastLogin.user) === String(user._id))
-        );
-
-        console.log('[inactiveOldOnboardingUsers] Onboarding users without login to inactive:', usersWithoutLogin.length, JSON.stringify(usersWithoutLogin));
-
-        if (usersWithoutLogin?.length) {
-            await User.updateMany(
-                { _id: { $in: usersWithoutLogin.map(user => user._id) } },
-                { $set: { status: 'INATIVO', updatedAt: new Date() } },
-                { multi: true }
-            );
-        } else {
-            console.log('[inactiveOldOnboardingUsers] No onboarding users without login to inactive');
-        }
-    } else {
-        console.log('[inactiveOldOnboardingUsers] No onboarding users created to inactive');
-    }
-
-    console.timeEnd('[inactiveOldOnboardingUsers] execution time');
 }

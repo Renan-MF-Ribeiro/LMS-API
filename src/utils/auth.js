@@ -18,6 +18,7 @@ const {
 var storage = require('@azure/storage-blob');
 const { Profile } = require('../components/profiles/model');
 const { Group } = require('../components/groups/model');
+const environment = require('../environment');
 
 const _ldapClient = ldap.createClient({
     url: LDAP_HOST,
@@ -25,6 +26,8 @@ const _ldapClient = ldap.createClient({
     reconnect: true,
 });
 _ldapClient.on('error', (err) => error('Erro LDAP: %o', err));
+
+const sessionMaxAge = environment.SESSION_MAX_AGE / 1000; // sessionMaxAge is in milliseconds, so we need to convert it to seconds for jwt
 
 module.exports = {
     ldapClient: {
@@ -40,7 +43,7 @@ module.exports = {
             },
             PROJECT_SECRET_KEY,
             {
-                expiresIn: '6h',
+                expiresIn: sessionMaxAge
             }
         );
 
@@ -54,7 +57,7 @@ module.exports = {
             },
             PROJECT_SECRET_KEY,
             {
-                expiresIn: '6h',
+                expiresIn: sessionMaxAge
             }
         );
 
@@ -68,7 +71,7 @@ module.exports = {
             },
             PROJECT_SECRET_KEY,
             {
-                expiresIn: '6h',
+                expiresIn: sessionMaxAge
             }
         );
         return token;
@@ -303,6 +306,10 @@ module.exports = {
             return error;
         }
     },
+
+    getRequestStrategyName(req) {
+        return req.query?.strategy ?? req.cookies.strategyName ?? 'saml';
+    }
 };
 
 function returnNumberOfProfile(profile) {

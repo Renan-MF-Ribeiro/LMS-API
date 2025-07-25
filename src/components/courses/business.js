@@ -16,9 +16,10 @@ const {
     getDateTodayWithoutHours,
     addHours,
 } = require('../../utils/functions');
-const { checkEligibilityTagsAnd } = require('../sections/business');
+const { checkEligibilityTagsAnd, canRegisterOrCancel } = require('../sections/business');
 const eventsController = require('../calendar/events/controller');
 const { Group } = require('../groups/model');
+const ApiError = require('../../errors/ApiError');
 
 module.exports = {
     uploadMaterial(material, author, folder) {
@@ -506,7 +507,59 @@ module.exports = {
     },
 
     async listJoin(user, classId) {
-        let course = null;
+        let course = await ClassModel.findOne({ _id: classId });;
+
+        if (!course) {
+            course = await ClassModel.findOne({ _id: classId });
+        }
+
+        const classesFromCourse = await ClassModel.find({
+            courseID: course.courseID,
+        });
+
+        const currentClasses = classesFromCourse.filter((c) => {
+            const canRegister = canRegisterOrCancel(c.dateApplicationInitial, c.registrationDeadline)
+            const canCancel = canRegisterOrCancel(c.dateApplicationInitial, c.cancellationDeadline)
+
+            return canRegister && canCancel
+        })
+
+        const removalPromises = currentClasses.map(async (classFromCourse) => {
+            if (classFromCourse._id.equals(classId)) {
+                return Promise.resolve();
+            }
+
+            const userInClass = classFromCourse.users.find(
+                (u) =>
+                    (u._id && u._id.toString() === user._id.toString()) ||
+                    (u.userID && u.userID.toString() === user._id.toString())
+            );
+
+            if (!userInClass) {
+                return Promise.resolve();
+            }
+
+            if (userInClass.presence === true) {
+                throw new ApiError('Não é possível mais cancelar sua inscrição nesta turma.', 400);
+            }
+
+            return ClassModel.findOneAndUpdate(
+                { _id: classFromCourse._id },
+                {
+                    $pull: {
+                        users: {
+                            $or: [
+                                { _id: user._id, presence: false },
+                                { userID: user._id, presence: false },
+                            ],
+                        },
+                    },
+                }
+            );
+        });
+
+        await Promise.all(removalPromises);
+
         course = await ClassModel.findOneAndUpdate(
             {
                 _id: classId,
@@ -530,32 +583,40 @@ module.exports = {
             { new: true }
         );
 
-        if (!course) {
-            course = await ClassModel.findOne({ _id: classId });
-        }
-
-        const classesFromCourse = await ClassModel.find({
-            courseID: course.courseID,
-        });
-
-        const removalPromises = classesFromCourse.map((classFromCourse) => {
-            const inClass = classFromCourse.users.some(
-                (u) => u._id == user._id || u.userID == user._id
-            );
-
-            if (classFromCourse._id.equals(classId) || !inClass) {
-                return Promise.resolve();
-            }
-            //SÓ REMOVER SE PRESENCE FOR FALSE
-
-            return ClassModel.findOneAndUpdate(
-                { _id: classFromCourse._id },
-                { $pull: { users: { _id: user._id, presence: false } } }
-            );
-        });
-
-        await Promise.all(removalPromises);
-
         return course;
     },
+
+
+    /**
+     * @param {Array} data
+     * @param {Array} classesFromUser
+     * @param {string} userId
+     * @returns {Array}
+     */
+    enrichCoursesWithClasses(data, classesFromUser, userId) {
+        return data.map((course) => {
+            let classes = classesFromUser.filter(c => c.courseID.toString() == course._id.toString());
+            classes = classes.map(c => {
+                const currentUser = c.users.find(u => u.userID == userId || u._id == userId);
+                const userGrades = currentUser.grades;
+                const passed = userGrades >= course.passingScore;
+                const hasCertificate = course.certificate && passed;
+                return {
+                    _id: c._id,
+                    course,
+                    name: c.name,
+                    dateApplicationFinal: c.dateApplicationFinal,
+                    dateApplicationInitial: c.dateApplicationInitial,
+                    passed: currentUser.presence ? passed : null,
+                    userGrades: currentUser.presence ? userGrades : null,
+                    hasCertificate,
+                    presenceAt: currentUser.presenceAt,
+                };
+            });
+            return {
+                ...course,
+                classes
+            };
+        });
+    }
 };
