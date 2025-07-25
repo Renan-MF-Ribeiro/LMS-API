@@ -6,7 +6,7 @@ const { newsApi } = require('./http-adapter');
 const newsController = {
     getNews: async (req, res) => {
         try {
-            console.log('Fetching news by ID');
+            // console.log('Fetching news by ID');
             const { id } = req.params;
             const { data } = await newsApi.get(`/news/${id}`);
 

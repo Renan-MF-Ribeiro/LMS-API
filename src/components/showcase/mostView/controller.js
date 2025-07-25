@@ -58,7 +58,7 @@ module.exports = {
                     const indexBG = fileArray.findIndex(el => el.name === body.background)
                     if (indexBG >= 0) {
 
-                        console.log(fileArray, indexBG)
+                        // console.log(fileArray, indexBG)
                         let pathBG = await azureBlob(fileArray[indexBG], 'showcase/mostView')
                         pathBG = pathBG.replace(AZURE_BLOB_URL, DOMAIN)
                         body.background = pathBG
@@ -110,7 +110,7 @@ module.exports = {
             }
 
             const lastPosition = await Showcase.find().countDocuments()
-            console.log(lastPosition)
+            // console.log(lastPosition)
             body.position = lastPosition
             body.type = DEFAULT_TYPES.mostSeen
             const mostView = await MostView_Showcase.create(body)

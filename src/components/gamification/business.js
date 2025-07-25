@@ -139,7 +139,7 @@ const GamificationBusiness = {
 
     async getClientRewards() {
         const uri = `${host}/rewards/${clientId}`;
-        console.log(uri)
+        // console.log(uri)
         const { data } = await axios.get(uri, { headers });
 
         return data;

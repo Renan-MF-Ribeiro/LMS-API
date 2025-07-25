@@ -130,7 +130,7 @@ module.exports = {
 
     async update (req, res) {
         try {
-            console.log(req.files)
+            // console.log(req.files)
             const { thumb } = req.files;
             const payload = JSON.parse(req.fields.payload) ?? null;
 

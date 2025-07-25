@@ -974,7 +974,7 @@ module.exports = {
 
             const course = await CourseModel.findById(courseId);
             const foundClass = await getClassByID(classId);
-            console.log(foundClass)
+            // console.log(foundClass)
             const { data } = await axios.post(
                 `${process.env.API_PDF_PRINTER}/attendance-list`,
                 {
@@ -1872,7 +1872,7 @@ module.exports = {
                 _id: courseId,
                 sent: false,
             }).select('users');
-            console.log('waitlistUsers', waitlistUsers);
+            // console.log('waitlistUsers', waitlistUsers);
             const foundClass = await ClassModel.findOne({
                 courseID: courseId,
             }).populate('courseID', ['title', 'tags', 'passingScore']);

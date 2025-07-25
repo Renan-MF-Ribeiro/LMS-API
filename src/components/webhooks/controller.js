@@ -9,7 +9,7 @@ module.exports = {
         try {
             const webhook = await Webhooks.findOne({ target, action }).lean()
             if (webhook?.status) {
-                console.log('DISPARANDO WEBHOOK')
+                // console.log('DISPARANDO WEBHOOK')
                 const body = {
                     data,
                     label: webhook.label,

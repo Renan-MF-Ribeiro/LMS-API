@@ -390,7 +390,7 @@ module.exports = {
             });
         });
 
-        console.log(JSON.stringify(dashboardFilters, null, 2));
+        // console.log(JSON.stringify(dashboardFilters, null, 2));
 
         return dashboardFilters;
     },
@@ -428,7 +428,7 @@ module.exports = {
                 }
             }
 
-            console.log(date, parsedDate.format('DD/MM/YYYY'));
+            // console.log(date, parsedDate.format('DD/MM/YYYY'));
 
             return parsedDate.format('DD/MM/YYYY');
         }

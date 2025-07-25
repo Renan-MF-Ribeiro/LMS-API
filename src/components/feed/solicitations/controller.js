@@ -69,7 +69,7 @@ module.exports = {
     },
     async acceptGroupSolicitation(req, res) {
         const { groupId } = req.params;
-        console.log(groupId)
+        // console.log(groupId)
         try {
             const uri = `/solicitations/group/accept/${groupId}`;
             const { data } = await socialApi.post(uri);

@@ -91,7 +91,7 @@ module.exports = {
 
         if (config) return config.value;
 
-        console.log('Creating messenger config');
+        // console.log('Creating messenger config');
         return (await MessengerConfigModel.create({}))?.value;
     },
 
@@ -100,7 +100,7 @@ module.exports = {
 
         if (config) return config.value;
 
-        console.log('Creating cron config');
+        // console.log('Creating cron config');
         return (await CronConfigModel.create({}))?.value;
     },
 
@@ -109,7 +109,7 @@ module.exports = {
 
         if (config) return config.value;
 
-        console.log('Creating users data config');
+        // console.log('Creating users data config');
         return (await UsersDataConfigModel.create({}))?.value;
     },
 
@@ -118,7 +118,7 @@ module.exports = {
 
         if (config) return config.value;
 
-        console.log('Creating company config');
+        // console.log('Creating company config');
         return (await CompanyConfigModel.create({}))?.value;
     },
 

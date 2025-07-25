@@ -16,21 +16,25 @@ function isFeatEnabled(chatIAConfig) {
 }
 
 async function dispatchChatItemKafkaEvent(itemId, event = 'UPSERT') {
-    console.log(`Dispatching chat item ${itemId} ${event}`);
-    const kafkaProducer = kafka.producer();
-    await kafkaProducer.connect();
-    await kafkaProducer.send({
-        topic: environment.CHATBOT_KAFKA_TOPIC,
-        messages: [
-            {
-                value: JSON.stringify({
-                    type: event,
-                    item: itemId,
-                    clientId: environment.CLIENT_ID,
-                }),
-            }
-        ]
-    });
+    try {
+        console.log(`Dispatching chat item ${itemId} ${event}`);
+        const kafkaProducer = kafka.producer();
+        await kafkaProducer.connect();
+        await kafkaProducer.send({
+            topic: environment.CHATBOT_KAFKA_TOPIC,
+            messages: [
+                {
+                    value: JSON.stringify({
+                        type: event,
+                        item: itemId,
+                        clientId: environment.CLIENT_ID,
+                    }),
+                }
+            ]
+        });
+    } catch (error) {
+        console.error(`Failed to dispatch chat item ${itemId} event ${event}:`, error);
+    }
 }
 
 module.exports = {

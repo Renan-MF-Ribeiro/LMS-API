@@ -483,7 +483,7 @@ const ItemController = {
                             } else if (imageValue && typeof imageValue === 'string' && imageValue.startsWith('http')) {
                                 imageUrl = imageValue;
                             }
-                            console.log({ imageUrl })
+                            // console.log({ imageUrl })
                             return {
                                 _id: new mongoose.Types.ObjectId(),
                                 title: statement.title,

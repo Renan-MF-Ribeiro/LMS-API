@@ -46,7 +46,7 @@ const HomeController = {
         const filtersValues = Object.values(filters);
         const hasFilters = filtersValues.some((filter) => filter === 'true');
         if (!searchBy?.length && !hasFilters) {
-            console.log('No searchBy or filters provided');
+            // console.log('No searchBy or filters provided');
             return _messages.success(res, req, {});
         }
         const user = await getUserByToken(req);

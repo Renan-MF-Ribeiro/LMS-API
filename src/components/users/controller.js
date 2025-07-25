@@ -2231,7 +2231,7 @@ module.exports = {
         });
 
         if (claimValue === undefined || claimValue === null) {
-            console.log('ssoCallback req.samlUserObject', req.samlUserObject);
+            // console.log('ssoCallback req.samlUserObject', req.samlUserObject);
 
             return _messages.internalServer(
                 res,
@@ -2676,7 +2676,7 @@ module.exports = {
         const { tag, userId } = req.body;
         try {
             const classIdentifier = new ObjectId();
-            console.log('classIdentifier', classIdentifier);
+            // console.log('classIdentifier', classIdentifier);
             await User.findByIdAndUpdate(userId, {
                 $addToSet: {
                     classGroups: {

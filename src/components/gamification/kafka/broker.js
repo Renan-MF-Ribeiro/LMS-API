@@ -23,9 +23,9 @@ class GamificationKafkaSingleton {
             this.#consumer = kafka.consumer({
                 groupId: `${process.env.KAFKA_GAMIFICATION_EVENTS_PENDING}${suffix}-${process.env.CLIENT_ID}`,
             });
-            console.log({
-                groupId: `${process.env.KAFKA_GAMIFICATION_EVENTS_PENDING}${suffix}-${process.env.CLIENT_ID}`,
-            });
+            // console.log({
+            //     groupId: `${process.env.KAFKA_GAMIFICATION_EVENTS_PENDING}${suffix}-${process.env.CLIENT_ID}`,
+            // });
             GamificationKafkaSingleton.instance = this;
         }
 
@@ -149,10 +149,10 @@ class GamificationKafkaSingleton {
                     const user = await User.findOne({ [userQueryField]: identifier });
 
                     if (!user) {
-                        console.log({
-                            [userQueryField]: identifier,
-                            clientId: process.env.CLIENT_ID,
-                        });
+                        // console.log({
+                        //     [userQueryField]: identifier,
+                        //     clientId: process.env.CLIENT_ID,
+                        // });
                         return;
                     }
 

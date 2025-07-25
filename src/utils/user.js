@@ -22,7 +22,7 @@ async function getEligibilityInfoByUserId(
         .lean();
 
     const userWithTags = await UsersWithProcessedTags.findById(userId).lean();
-    console.log("userWithTags", userWithTags);
+    // console.log("userWithTags", userWithTags);
     let eligibilityTags = tags?.map(tag => tag.value) ?? userWithTags.userTags ?? [];
 
     const sectionTrails = Array.from(new Set(sections.map(section => section.trails).flat()));

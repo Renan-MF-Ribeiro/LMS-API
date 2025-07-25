@@ -1464,7 +1464,7 @@ async function processCourseInSections(elegibleCourses, userId) {
 }
 
 function calculateTotalDuration(trails, exceptionIds = []) {
-    console.log(exceptionIds)
+    // console.log(exceptionIds)
     const exceptionIdStrings = exceptionIds.map(String);
 
     return trails.reduce((sum, trail) => {
