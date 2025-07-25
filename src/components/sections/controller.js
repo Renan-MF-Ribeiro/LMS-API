@@ -403,6 +403,8 @@ module.exports = {
             arrFavoriteSections,
             arrMostSeenSections,
             arrCoursesSections,
+            arrRecommendedCoursesSections,
+            arrRecommendedTrailsSections
         ] = await Promise.all([
             sectionToShow.mandatorySectionInfo ? mandatorySections(filteredTrails, tags, sectionToShow.mandatorySectionInfo) : Promise.resolve([]),
             sectionToShow.recentSectionInfo ? recentsSections(filteredTrails, tags, sectionToShow.recentSectionInfo) : Promise.resolve([]),
@@ -411,25 +413,9 @@ module.exports = {
             sectionToShow.favoriteSectionInfo ? favoriteSections(filteredTrails, user._id, sectionToShow.favoriteSectionInfo) : Promise.resolve([]),
             sectionToShow.mostSeenSectionInfo ? mostSeenSections(filteredTrails, tags, sectionToShow.mostSeenSectionInfo) : Promise.resolve([]),
             sectionToShow.coursesSectionInfo ? courseInSections(tags, user._id, sectionToShow.coursesSectionInfo) : Promise.resolve([]),
+            sectionToShow.recommendedCoursesSectionInfo ? recommendedCoursesSections(user._id, sectionToShow.recommendedCoursesSectionInfo) : Promise.resolve([]),
+            sectionToShow.recommendedTrailsSectionInfo ? recommendedTrailsSections(filteredTrails, user._id, sectionToShow.recommendedTrailsSectionInfo) : Promise.resolve([]),
         ]);
-
-        let recommendedTrails = [];
-        let recommendedCourses = [];
-
-        if (req?.features?.matrices) {
-            const matricesData = await fetchMatricesData(req.headers.authorization, user._id);
-
-            recommendedTrails = matricesData?.recommendedTrails || [];
-            recommendedCourses = matricesData?.recommendedCourses || [];
-        }
-
-        const arrRecommendedTrailsSections = sectionToShow.recommendedTrailsSectionInfo && recommendedTrails.length > 0
-            ? await recommendedTrailsSections(filteredTrails, recommendedTrails, sectionToShow.recommendedTrailsSectionInfo)
-            : [];
-
-        const arrRecommendedCoursesSections = sectionToShow.recommendedCoursesSectionInfo && recommendedCourses.length > 0
-            ? await recommendedCoursesSections(user._id, recommendedCourses, sectionToShow.recommendedCoursesSectionInfo)
-            : [];
 
         function limitArray(section) {
             if (!section) return [];

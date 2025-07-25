@@ -482,7 +482,6 @@ module.exports = {
         }
 
         const events = await eventsController.getCalendarEventsByDate(start, end, user, tags);
-
         let calendarEvents = events;
 
         if (courseId) {
@@ -618,5 +617,13 @@ module.exports = {
                 classes
             };
         });
+    },
+
+    async removeUsersFromClass(classId, userIds) {
+        //must receive array of userIds
+        return await ClassModel.findOneAndUpdate(
+            { _id: classId },
+            { $pull: { users: { _id: { $in: userIds.map((id) => mongoose.Types.ObjectId(id)) } } } }
+        );
     }
 };

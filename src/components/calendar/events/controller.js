@@ -8,41 +8,41 @@ const { populateTrails } = require('../../trails/business');
 const { EventModel, EVENT_TYPE, TARGET_ID } = require('./model');
 const { User } = require('../../users/model.js');
 const { CourseModel, WaitListModel, ClassModel } = require('../../courses/model.js');
-const { Tracking } = require('../../tracking/model.js')
-const axios = require("axios")
+const { Tracking } = require('../../tracking/model.js');
+const axios = require('axios');
 
 const EventsController = {
     async createCalendarEvent(req, res) {
         try {
-            const event = await EventModel.create(req.body)
+            const event = await EventModel.create(req.body);
             return _messages.success(res, req, event);
         } catch (error) {
-            return handleError(res, req, error)
+            return handleError(res, req, error);
         }
     },
 
     async updateCalendarEvent(req, res) {
         try {
-            const event = await EventModel.findByIdAndUpdate(req.body._id, req.body)
+            const event = await EventModel.findByIdAndUpdate(req.body._id, req.body);
             return _messages.success(res, req, event);
         } catch (error) {
-            return handleError(res, req, error)
+            return handleError(res, req, error);
         }
     },
 
     async removeCalendarEvent(req, res) {
         try {
-            const event = await EventModel.findByIdAndDelete(req.body._id)
+            const event = await EventModel.findByIdAndDelete(req.body._id);
             return _messages.success(res, req, event);
         } catch (error) {
-            return handleError(res, req, error)
+            return handleError(res, req, error);
         }
     },
 
     async getCalendarEventsByDate(start, end, user, tags, token) {
         try {
-            const events = []
-            const courses = await getCoursesElegible(start, end, user, tags)
+            const events = [];
+            const courses = await getCoursesElegible(start, end, user, tags);
 
             const certificateEvents = [];
             if (token) {
@@ -54,9 +54,9 @@ const EventsController = {
                 $and: [
                     { eventStartDate: { $gte: start } },
                     { eventEndDate: { $lte: end } },
-                    { userId: user._id }
-                ]
-            }).lean()
+                    { userId: user._id },
+                ],
+            }).lean();
 
             for (const course of courses) {
                 if (course.classes) {
@@ -66,7 +66,7 @@ const EventsController = {
                             userId: user._id,
                             target: {
                                 id: c._id,
-                                type: TARGET_ID.COURSE
+                                type: TARGET_ID.COURSE,
                             },
                             type: EVENT_TYPE.COURSE,
                             eventStartDate: c.dateApplicationInitial,
@@ -76,60 +76,64 @@ const EventsController = {
                                 dateApplicationFinal: c.dateApplicationFinal,
                                 location: c.location,
                                 status: c.status,
-                                courseID: course._id
-                            }
-                        }
-                        events.push(courseEvent)
+                                courseID: course._id,
+                            },
+                        };
+                        events.push(courseEvent);
                     }
                 }
             }
 
-            const allEvents = events.concat(foundEvents, certificateEvents)
-            return allEvents
+            const allEvents = events.concat(foundEvents, certificateEvents);
+            return allEvents;
         } catch (error) {
-            console.log(error)
+            console.log(error);
         }
     },
 
     async calendarEventClass(courseId, classId, userId) {
         try {
-            const course = await CourseModel.findById(courseId)
+            const course = await CourseModel.findById(courseId);
             await EventModel.create({
                 title: course.title,
                 userId,
                 classId,
-                type: EVENT_TYPE.COURSE
-            })
+                type: EVENT_TYPE.COURSE,
+            });
             return _messages.success();
         } catch (error) {
-            console.log(error)
+            console.log(error);
         }
     },
 
     async calendarEventCertificate(userId, certificate) {
         try {
-            await EventModel.findOneAndUpdate({
-                title: certificate.trailName,
-                userId,
-                target: {
-                    id: certificate._id,
-                    type: TARGET_ID.CERTIFICATE
-                },
-                type: EVENT_TYPE.CERTIFICATE
-            }, {
-                $set: {
+            await EventModel.findOneAndUpdate(
+                {
                     title: certificate.trailName,
                     userId,
                     target: {
                         id: certificate._id,
-                        type: TARGET_ID.CERTIFICATE
+                        type: TARGET_ID.CERTIFICATE,
                     },
-                    type: EVENT_TYPE.CERTIFICATE
-                }
-            }, { upsert: true })
+                    type: EVENT_TYPE.CERTIFICATE,
+                },
+                {
+                    $set: {
+                        title: certificate.trailName,
+                        userId,
+                        target: {
+                            id: certificate._id,
+                            type: TARGET_ID.CERTIFICATE,
+                        },
+                        type: EVENT_TYPE.CERTIFICATE,
+                    },
+                },
+                { upsert: true }
+            );
             return _messages.success();
         } catch (error) {
-            console.log(error)
+            console.log(error);
         }
     },
 
@@ -156,33 +160,34 @@ const EventsController = {
             for (const trail of trails) {
                 const processedTrail = processTrailTrackingV2(trail, allTrackingUser)?.trail;
 
-                if (
-                    !!processedTrail &&
-                    processedTrail.completion === 1
-                ) {
-                    await EventModel.findOneAndUpdate({
-                        userId: foundUser._id,
-                        target: {
-                            id: processedTrail._id,
-                            type: TARGET_ID.CONCLUSION
-                        },
-                        type: EVENT_TYPE.CONCLUSION
-                    }, {
-                        $set: {
-                            title: processedTrail.title,
+                if (!!processedTrail && processedTrail.completion === 1) {
+                    await EventModel.findOneAndUpdate(
+                        {
                             userId: foundUser._id,
                             target: {
                                 id: processedTrail._id,
-                                type: TARGET_ID.CONCLUSION
+                                type: TARGET_ID.CONCLUSION,
                             },
-                            type: EVENT_TYPE.CONCLUSION
-                        }
-                    }, { upsert: true })
+                            type: EVENT_TYPE.CONCLUSION,
+                        },
+                        {
+                            $set: {
+                                title: processedTrail.title,
+                                userId: foundUser._id,
+                                target: {
+                                    id: processedTrail._id,
+                                    type: TARGET_ID.CONCLUSION,
+                                },
+                                type: EVENT_TYPE.CONCLUSION,
+                            },
+                        },
+                        { upsert: true }
+                    );
                 }
             }
-            return
+            return;
         } catch (error) {
-            console.log(error)
+            console.log(error);
         }
     },
 };
@@ -192,7 +197,7 @@ async function getCoursesElegible(start, end, user, tags) {
         try {
             let elegibleCourses = await CourseModel.find({
                 // dateInitial: { $gte: start },
-                // dateFinal: { $lte: end },    
+                // dateFinal: { $lte: end },
                 tags: { $in: tags },
                 deleted: { $eq: 0 },
                 status: { $eq: 1 },
@@ -216,27 +221,30 @@ async function getCoursesElegible(start, end, user, tags) {
                     sent: false,
                 });
 
-                const today = new Date()
+                const today = new Date();
                 const classesFromCourse = await ClassModel.find({
-                    courseID: course._id
-                }).populate({
-                    path: 'materials',
-                    match: { author: 'INSTRUTOR' },
+                    courseID: course._id,
                 })
-                    .populate('instructor', ['name']);;
+                    .populate({
+                        path: 'materials',
+                        match: { author: 'INSTRUTOR' },
+                    })
+                    .populate('instructor', ['name']);
 
                 let inWaitList = false;
                 if (alreadyJoined) {
                     inWaitList = true;
                 }
-                let certificateElegible = false
-                let certificateData = null
+                let certificateElegible = false;
+                let certificateData = null;
 
                 classesFromCourse.forEach((e) => {
                     if (String(e.courseID._id) === String(course._id)) {
-                        const userInClass = e.users.find((u) => u._id == user._id || u.userID == user._id)
-                        let grade = 0
-                        let presence = false
+                        const userInClass = e.users.find(
+                            (u) => u._id == user._id || u.userID == user._id
+                        );
+                        let grade = 0;
+                        let presence = false;
                         if (userInClass) {
                             presence = userInClass.presence;
                             grade = userInClass.grades ? userInClass.grades : 0;
@@ -261,19 +269,24 @@ async function getCoursesElegible(start, end, user, tags) {
                         course.instructor = e.instructor;
                     }
                 });
-                const classes = classesFromCourse.map((classFromCourse) => {
-                    const inClass = classFromCourse.users.some((u) => String(u._id) === String(user._id) || String(u.userID) === user._id)
-                    
-                    return {
-                        _id: classFromCourse._id,
-                        createdAt: classFromCourse.createdAt,
-                        name: classFromCourse.name,
-                        dateApplicationInitial: classFromCourse.dateApplicationInitial,
-                        dateApplicationFinal: classFromCourse.dateApplicationFinal,
-                        location: classFromCourse.location,
-                        status: getClassStatus(classFromCourse, inClass, course.presence),
-                    };
-                }).filter((classCourse) => classCourse)
+                const classes = classesFromCourse
+                    .map((classFromCourse) => {
+                        const inClass = classFromCourse.users.some(
+                            (u) =>
+                                String(u._id) === String(user._id) || String(u.userID) === user._id
+                        );
+
+                        return {
+                            _id: classFromCourse._id,
+                            createdAt: classFromCourse.createdAt,
+                            name: classFromCourse.name,
+                            dateApplicationInitial: classFromCourse.dateApplicationInitial,
+                            dateApplicationFinal: classFromCourse.dateApplicationFinal,
+                            location: classFromCourse.location,
+                            status: getClassStatus(classFromCourse, inClass, course.presence),
+                        };
+                    })
+                    .filter((classCourse) => classCourse);
 
                 course.certificateElegible = certificateData;
                 course.inWaitList = inWaitList;
@@ -291,10 +304,19 @@ async function getCoursesElegible(start, end, user, tags) {
         }
     });
 }
+async function getCoursesByTags(start, tags) {
+    return await CourseModel.find({
+         dateInitial: { $gte: start },
+         //dateFinal: { $lte: end },
+        tags: { $in: tags },
+        deleted: { $eq: 0 },
+        status: { $eq: 1 },
+    });
+}
 
-function canRegisterOrCancel (initialDate, minutes) {
+function canRegisterOrCancel(initialDate, minutes) {
     if (!minutes) return true;
-    const currentDate = new Date()
+    const currentDate = new Date();
     currentDate.setMinutes(currentDate.getMinutes() - 180);
 
     const deadline = new Date(initialDate);
@@ -303,47 +325,55 @@ function canRegisterOrCancel (initialDate, minutes) {
     return deadline >= currentDate;
 }
 
-function getClassStatus (classFromCourse, inClass, presence) {
+function getClassStatus(classFromCourse, inClass, presence) {
     try {
-        const { dateApplicationInitial, dateApplicationFinal, registrationDeadline, cancellationDeadline } = classFromCourse;
-        const today = new Date()
-        const courseHasSeats = classFromCourse.users.length < classFromCourse.limit || !classFromCourse.limit ? true : false
-        const isCourseInProgress = dateApplicationInitial <= today && dateApplicationFinal >= today && courseHasSeats
-        const isCourseOpen = dateApplicationInitial >= today
-        const isCourseClosed = dateApplicationFinal <= today
+        const {
+            dateApplicationInitial,
+            dateApplicationFinal,
+            registrationDeadline,
+            cancellationDeadline,
+        } = classFromCourse;
+        const today = new Date();
+        const courseHasSeats =
+            classFromCourse.users.length < classFromCourse.limit || !classFromCourse.limit
+                ? true
+                : false;
+        const isCourseInProgress =
+            dateApplicationInitial <= today && dateApplicationFinal >= today && courseHasSeats;
+        const isCourseOpen = dateApplicationInitial >= today;
+        const isCourseClosed = dateApplicationFinal <= today;
 
-        const canRegister = canRegisterOrCancel(dateApplicationInitial, registrationDeadline)
-        const canCancel = canRegisterOrCancel(dateApplicationInitial, cancellationDeadline)
+        const canRegister = canRegisterOrCancel(dateApplicationInitial, registrationDeadline);
+        const canCancel = canRegisterOrCancel(dateApplicationInitial, cancellationDeadline);
 
         if (presence) {
-            return "concluded"
+            return 'concluded';
         }
         if (isCourseInProgress) {
-            return "in-progress"
+            return 'in-progress';
         }
         if (inClass) {
-            return "registered"
+            return 'registered';
         }
         if (isCourseClosed || !courseHasSeats || !canRegister || !canCancel) {
-            return "closed"
+            return 'closed';
         }
         if (isCourseOpen && (canRegister || canCancel)) {
-            return "open";
+            return 'open';
         }
 
-        return null
+        return null;
     } catch (error) {
         console.log(error);
         reject(error);
     }
-
 }
 
 async function getAllExpDatesByUser(start, end, user, token) {
     try {
         const uri = `${process.env.API_CERTIFIER}/certificates/find/${user.networkLogin}?clientId=${process.env.CLIENT_ID}`;
         const { data } = await axios.get(uri, { headers: { Authorization: 'Bearer ' + token } });
-        const events = []
+        const events = [];
         for (let certificate of data) {
             if (certificate.emissionDate >= start && certificate.emissionDate <= end) {
                 const certificateEvent = {
@@ -352,11 +382,11 @@ async function getAllExpDatesByUser(start, end, user, token) {
                     eventStartDate: certificate.emissionDate,
                     target: {
                         id: certificate.trailId,
-                        type: TARGET_ID.TRAIL
+                        type: TARGET_ID.TRAIL,
                     },
                     type: EVENT_TYPE.CERTIFICATE,
-                }
-                events.push(certificateEvent)
+                };
+                events.push(certificateEvent);
             }
 
             if (certificate.expirationDate) {
@@ -367,17 +397,16 @@ async function getAllExpDatesByUser(start, end, user, token) {
                         eventStartDate: certificate.expirationDate,
                         target: {
                             id: certificate.trailId,
-                            type: TARGET_ID.TRAIL
+                            type: TARGET_ID.TRAIL,
                         },
                         type: EVENT_TYPE.REVOKED,
-                    }
-                    events.push(revokedEvent)
+                    };
+                    events.push(revokedEvent);
                 }
             }
         }
-        return events
-    }
-    catch (error) {
+        return events;
+    } catch (error) {
         console.log(error);
     }
 }

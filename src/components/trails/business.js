@@ -344,10 +344,10 @@ module.exports = {
         }
 
         if (tags.length > 0) {
-            query['tags.value'] = { $in: tags };
+            query['tags.value'] = { $in: tags?.map((tag) => tag?.value) };
         }
 
-        return await Trail.find(query).limit(10);
+        return await Trail.find(query, 'title description').limit(10);
     },
 
     async getTrailByIds(trailIds) {
@@ -371,7 +371,7 @@ module.exports = {
         return trails.map((t) => {
             let status = 'pending';
             switch (t.completionPercentage) {
-                case 1:
+                case 100:
                     status = 'completed';
                     break;
                 case 0:

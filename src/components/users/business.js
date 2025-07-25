@@ -29,6 +29,7 @@ const { getConnectMap } = require('../../utils/connect');
 const { getCookieProps } = require('../../utils/cookies');
 const PartnerBusiness = require('../partners/business');
 const { createSessionStore } = require('../../utils/session');
+const { Types } = require('mongoose');
 
 module.exports = {
     async getLoginConfig(selectFields) {
@@ -73,44 +74,44 @@ module.exports = {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                    {
-                        $or: [
-                            {
-                                onboarding: { $exists: false },
-                                groupsAD: { $in: tag },
-                            },
-                            {
-                                onboarding: { $eq: onboarding },
-                                groupsAD: { $in: tag },
-                            },
-                        ],
-                    },
-                ];
+                      {
+                          $or: [
+                              {
+                                  onboarding: { $exists: false },
+                                  groupsAD: { $in: tag },
+                              },
+                              {
+                                  onboarding: { $eq: onboarding },
+                                  groupsAD: { $in: tag },
+                              },
+                          ],
+                      },
+                  ];
         } else {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                    {
-                        $or: [
-                            { onboarding: { $exists: false } },
-                            { onboarding: { $eq: onboarding } },
-                        ],
-                    },
-                ];
+                      {
+                          $or: [
+                              { onboarding: { $exists: false } },
+                              { onboarding: { $eq: onboarding } },
+                          ],
+                      },
+                  ];
         }
 
         const searchByQuery = searchBy
             ? {
-                $or: [
-                    { name: { $regex: searchBy, $options: 'i' } },
-                    { registration: { $regex: searchBy, $options: 'i' } },
-                    { email: { $regex: searchBy, $options: 'i' } },
-                ],
-                $and: onboardingQuery,
-            }
+                  $or: [
+                      { name: { $regex: searchBy, $options: 'i' } },
+                      { registration: { $regex: searchBy, $options: 'i' } },
+                      { email: { $regex: searchBy, $options: 'i' } },
+                  ],
+                  $and: onboardingQuery,
+              }
             : {
-                $and: onboardingQuery,
-            };
+                  $and: onboardingQuery,
+              };
 
         const users = await User.find(searchByQuery)
             .sort({ [order]: sort })
@@ -681,6 +682,19 @@ module.exports = {
         } catch (error) {
             return error;
         }
+    },
+
+    async getTagsByUserIds(userIds) {
+        const arrayIds = Array.isArray(userIds) ? userIds : [userIds];
+        if (arrayIds.length === 0) return [];
+
+        const users = await User.find({ _id: { $in: arrayIds?.map((id)=> new Types.ObjectId(id)) } }).lean();
+        if (users.length === 0) return [];
+
+
+        const groups = await Group.find({ name: { $in: users?.flatMap((u) => u?.groupsAD) } }, 'tags').lean();
+        const tags = groups?.flatMap((group) => group?.tags);
+        return [users, tags];
     },
 
     async getFirstTenUsersByGroup(groups) {

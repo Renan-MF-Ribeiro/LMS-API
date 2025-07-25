@@ -8,7 +8,7 @@ const _messages = require('../../utils/messages');
 const _files = require('../../utils/files');
 const { NewMessage } = require('../new-messages/model');
 const { User, UserTest, Block, defaultUserMap } = require('./model');
-
+const managerBusiness = require('../managers/business');
 const {
     generateToken,
     generateMfaToken,
@@ -81,12 +81,9 @@ const { Question } = require('../assessments/questions/model');
 const { Alternative } = require('../assessments/alternatives/model');
 
 const { EVENT_CATEGORY } = require('../gamification/model');
-const AssessmentController = require('../assessment/controller');
 const GamificationBusiness = require('../gamification/business');
 const { Group } = require('../groups/model');
 const { handleUserEligibilitiesGamification } = require('../gamification/utils');
-const AssessmentBusiness = require('../assessment/business');
-const { Features } = require('../theme/features/model');
 const { Partner } = require('../partners/model');
 const { Log } = require('../logs/model');
 const { Tracking } = require('../tracking/model');
@@ -140,7 +137,7 @@ async function handleBlockUser(user) {
 
         // 30min
         if (resultDiff >= 1) {
-            await Block.updateMany({ user: { $eq: user._id } }, { unblocked: true });
+            Block.updateMany({ user: { $eq: user._id } }, { unblocked: true });
         } else {
             sendNotificationEmail(
                 user.email,
@@ -176,9 +173,12 @@ async function generateTokens(user, login, password, tokenIdpProfiles, res) {
             namesGroups.push(strGroup);
         }
     }
+    const [profilesIDS, groupsIDS, _] = await Promise.all([
+        returnIdProfileUser(namesProfiles),
+        returnIdGroupUser(namesGroups),
+        updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups))
+    ]);
 
-    const profilesIDS = await returnIdProfileUser(namesProfiles);
-    const groupsIDS = await returnIdGroupUser(namesGroups);
     const userGroups = await Group.find({ name: { $in: namesGroups } });
     const eligibilities = userGroups.flatMap((group) =>
         group.tags.flatMap((tag) => tag?.value || tag.display)
@@ -195,7 +195,7 @@ async function generateTokens(user, login, password, tokenIdpProfiles, res) {
     if (namesProfiles.includes('PERFIL_Analista')) {
         const dashboardFilters = await processDashFilters(user);
         tokenAnalytics = generateTokenAnalytics({
-            perfil: profilesIDS.numbers,
+            perfil: profilesIDS?.numbers,
             clientID: CLIENT_ID,
             filters: dashboardFilters,
         });
@@ -212,8 +212,8 @@ async function generateTokens(user, login, password, tokenIdpProfiles, res) {
         networkLogin: user.networkLogin,
         email: user.email,
         userTags: eligibilities,
-        profiles: profilesIDS.result,
-        numbers: profilesIDS.numbers,
+        profiles: profilesIDS?.result,
+        numbers: profilesIDS?.numbers,
         groups: groupsIDS,
         welcomeVideoWatched: user?.welcomeVideoWatched,
     });
@@ -701,9 +701,10 @@ module.exports = {
                 );
             }
             // Gera todos os tokens necessários
-            const [tokens, entryRecord] = await Promise.all([
-                generateTokens(user, login, password, null, res),
+            const [tokens, entryRecord, isUserManager] = await Promise.all([
+                generateTokens(user, login, password, res),
                 returnDateSinceFirstLogin(user?._id),
+                managerBusiness.isUserManager(user),
                 updateLastLoginUser(user?._id),
                 GamificationKafka.publishEventRuleValidation({
                     events: [EVENT_CATEGORY.LOGIN],
@@ -730,7 +731,6 @@ module.exports = {
                     tokenHappPlace: tokens?.tokenHappPlace,
                     mfaToken: tokens?.mfaToken,
                     authwebPush: tokens?.authwebPush?.keys.auth,
-
                     //user data
                     accept: user.acceptTerms,
                     acceptCollaboration: user.acceptTermsCollaboration,
@@ -742,6 +742,7 @@ module.exports = {
                     userId: user._id,
                     email: user.email,
                     firstLogin,
+                    isManager: isUserManager,
                 },
                 'Sucesso ao logar',
                 'users',
@@ -2053,6 +2054,7 @@ module.exports = {
         try {
             const { body } = req;
             const completeUser = await User.findById(body._id).lean();
+            const isManager = await managerBusiness.isUserManager(completeUser);
 
             const {
                 groupsAD,
@@ -2149,6 +2151,7 @@ module.exports = {
                     name,
                     profilePhoto,
                     tokenAnalytics: token_analytics,
+                    isManager,
                 });
             } else {
                 _messages.badRequest(

@@ -78,6 +78,7 @@ const chatIaRoutes = require('./components/chat/routes');
 const integratorRoutes = require('./components/integrator/routes');
 const newsRoutes = require('./components/news/routes');
 const i18nRoutes = require('./components/i18n/routes');
+const managerRoutes = require('./components/managers/routes');
 
 const environment = require('./environment');
 const { matricesApiMiddleware } = require('./components/matrices/http-adapter');
@@ -150,6 +151,7 @@ app.use('/social', socialApiMiddleware);
 app.use('/feed', socialApiMiddleware);
 app.use('/mentoring', mentoringApiMiddleware);
 app.use('/matrices', matricesApiMiddleware);
+app.use('/manager', matricesApiMiddleware);
 app.use('/news', newsApiMiddleware);
 app.use('/i18n', i18nApiMiddleware);
 
@@ -204,8 +206,9 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/matrices', matricesRoutes)
     .use('/chat', chatIaRoutes)
     .use('/integrator', integratorRoutes)
-    .use('/news', validateTokenRoute, newsRoutes)
-    .use('/i18n', i18nRoutes);
+    .use('/i18n', i18nRoutes)
+    .use('/manager', validateTokenRoute, managerRoutes)
+    .use('/news', validateTokenRoute, newsRoutes);
 
 app.use(errorHandler);
 

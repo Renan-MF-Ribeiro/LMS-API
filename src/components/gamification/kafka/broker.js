@@ -193,7 +193,7 @@ class GamificationKafkaSingleton {
                         },
                     ]);
                 } catch (error) {
-                    console.error('Error processing GamificationKafka:', error);
+                    console.error('Error processing GamificationKafka:', error.message);
                 }
             },
         });
