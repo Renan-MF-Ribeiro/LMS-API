@@ -702,7 +702,7 @@ module.exports = {
             }
             // Gera todos os tokens necessários
             const [tokens, entryRecord, isUserManager] = await Promise.all([
-                generateTokens(user, login, password, res),
+                generateTokens(user, login, password, null, res),
                 returnDateSinceFirstLogin(user?._id),
                 managerBusiness.isUserManager(user),
                 updateLastLoginUser(user?._id),
