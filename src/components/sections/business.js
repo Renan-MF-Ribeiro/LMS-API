@@ -958,55 +958,43 @@ module.exports = {
         return trails.length > 0 ? section : [];
     },
     async recommendedTrailsSections(trails, userId) {
-        try {
-            const [section, recommendations] = await Promise.all([
-                Section.findOne({
-                    defaultType: DEFAULT_TYPES.RECOMMENDED_TRAILS,
-                    active: 1,
-                }).lean(),
-                RecommendedContent.findOne({ userId })
-            ]);
-            if (!section || !recommendations || recommendations?.length === 0) {
-                return [];
-            }
-
-            for (const trail of trails) {
-                const isRecommended = recommendations?.recommendedTrails?.some((recommendedTrail) => recommendedTrail?.id?.toString() === trail?._id?.toString());
-                if (isRecommended) {
-                    section.trails?.push(trail);
-                }
-            }
-            return section;
-        } catch (error) {
-            console.log(error.response?.data ?? error.message);
+        const [section, recommendations] = await Promise.all([
+            Section.findOne({
+                defaultType: DEFAULT_TYPES.RECOMMENDED_TRAILS,
+                active: 1,
+            }).lean(),
+            RecommendedContent.findOne({ userId })
+        ]);
+        
+        if (!section || !recommendations || recommendations?.length === 0) {
+            return [];
         }
-        const trailIds = new Set(recommendedTrails.filter(trail => trail.id).map((trail) => trail.id));
+
         for (const trail of trails) {
-
-            const isRecommended = trailIds.has(trail._id.toString());
+            const isRecommended = recommendations?.recommendedTrails?.some((recommendedTrail) => recommendedTrail?.id?.toString() === trail?._id?.toString());
             if (isRecommended) {
-                section.trails.push(trail)
+                section.trails?.push(trail);
             }
         }
-
+        
         return section;
     },
 
     async recommendedCoursesSections(userId) {
-            const [section, recommendations] = await Promise.all([
-                Section.findOne({
-                    defaultType: DEFAULT_TYPES.RECOMMENDED_COURSES,
-                    active: 1,
-                }).lean(),
-                RecommendedContent.findOne({ userId })
-            ]);
-            if (!section || !recommendations || recommendations?.length === 0) {
-                return [];
-            }
+        const [section, recommendations] = await Promise.all([
+            Section.findOne({
+                defaultType: DEFAULT_TYPES.RECOMMENDED_COURSES,
+                active: 1,
+            }).lean(),
+            RecommendedContent.findOne({ userId })
+        ]);
+        if (!section || !recommendations || recommendations?.length === 0) {
+            return [];
+        }
 
-            let elegibleCourses = await CourseModel.find({
-                _id: { $in: recommendations?.recommendedCourses?.map((rc) => rc.courseId) }
-            })
+        let elegibleCourses = await CourseModel.find({
+            _id: { $in: recommendations?.recommendedCourses?.map((rc) => rc.courseId) }
+        })
             .lean();
 
         if (!elegibleCourses.length) {
