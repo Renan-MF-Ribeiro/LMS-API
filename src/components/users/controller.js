@@ -2204,8 +2204,8 @@ module.exports = {
             component: 'users',
             route: 'ssoCallback',
             dataNew: JSON.stringify({
-                samlObj: req.samlUserObject,
-                samlUser: req.user,
+                user: req.user,
+                samlUserObject: req.samlUserObject,
                 session: req.session,
                 sessionID: req.sessionID,
             }),
@@ -2223,10 +2223,10 @@ module.exports = {
             claimKey.split(',').reduce((acc, key) => {
                 if (acc !== null && acc !== undefined && acc !== '') return acc;
 
-                return _.get(req.samlUserObject ?? req.user, key, null);
-            }, null) ??
-            req.user?.nameID ??
-            null;
+                return _.get(req.user, key, null) || _.get(req.samlUserObject, key, null);
+            }, null)
+            ?? req.user?.nameID
+            ?? null;
 
         await Log.create({
             type: 'SSO_CALLBACK_INFOS',
