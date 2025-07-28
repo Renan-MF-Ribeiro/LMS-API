@@ -139,6 +139,18 @@ const TrackingController = {
                     ) {
                         registerCompletationAt = true;
                     }
+
+                    //avaliação já passa o status como 'passed' antes de rodar o createOrUpdate
+                    //o status é atualizado na finalize-evaluation (assesments/controller.js)
+                    //então o isNewStatus não passa como true, por ter os dois valores como passed
+                    if (
+                        (TrackingModel == ExamTracking) &&
+                        (req.body.lessonStatus == 'completed' ||
+                            req.body.lessonStatus == 'passed' ||
+                            req.body.lessonStatus == 'failed')
+                    ) { 
+                        registerCompletationAt = true;
+                    }
                 }
             } else {
                 isAllowedToSendXAPI = false;
