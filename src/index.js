@@ -84,6 +84,8 @@ const environment = require('./environment');
 const { matricesApiMiddleware } = require('./components/matrices/http-adapter');
 const { newsApiMiddleware } = require('./components/news/http-adapter');
 const { i18nApiMiddleware } = require('./components/i18n/http-adapter');
+const { cacheRequestOnClient } = require('./utils/cache/helpers');
+const { cacheRouter } = require('./utils/cache/router');
 
 const corsOptions = {
     origin: [environment.DOMAIN, 'https://monitoring.happlearning.com.br'],
@@ -135,7 +137,7 @@ app.use(cookieParser());
 
 app.use(express.static(path.resolve(environment.PUBLIC_PATH)));
 
-app.get('/version', (req, res) => {
+app.get('/version', cacheRequestOnClient(), (req, res) => {
     res.json({
         version: environment.API_VERSION ?? 'no-info',
     });
@@ -209,6 +211,8 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/i18n', i18nRoutes)
     .use('/manager', validateTokenRoute, managerRoutes)
     .use('/news', validateTokenRoute, newsRoutes);
+
+app.use(cacheRouter);
 
 app.use(errorHandler);
 

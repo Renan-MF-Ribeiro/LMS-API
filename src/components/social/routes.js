@@ -1,6 +1,7 @@
 const express = require('express');
 const _controller = require('./controller');
 const { isEngagementManager } = require('../../utils/middlewares');
+const { cacheRequest } = require('../../utils/cache/helpers');
 
 module.exports = express.Router()
     .get('/config', isEngagementManager, _controller.getConfig)
@@ -13,7 +14,7 @@ module.exports = express.Router()
     //comments
     .post('/comments/create', _controller.createComment)
     .get('/comments/all', _controller.getAllComments)
-    .get('/comments/trails/:trailId', _controller.getCommentsByTrailId)
+    .get('/comments/trails/:trailId', cacheRequest(10 * 1000, 10 * 1000), _controller.getCommentsByTrailId) // Cache for 10 seconds
     .get('/comments/news/:newsId', _controller.getCommentsByNewsId)
     .put('/comments/update/:commentId', _controller.updateComment)
     // comments management
