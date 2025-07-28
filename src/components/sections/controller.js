@@ -282,7 +282,7 @@ module.exports = {
     },
 
     async getSectionsElegibles(req, res) {
-        const { trailLimit: queryTrailLimit = '25', channel: channelId, ...filter } = req.query;
+        const { trailLimit: queryTrailLimit = '25', channel: channelId, networkLogin, ...filter } = req.query;
 
         const trailLimit = queryTrailLimit ? Number(queryTrailLimit) : null;
 
