@@ -13,7 +13,6 @@ const {
 } = require('../../utils/middlewares');
 
 const { saveStrategyOnCookie } = require('../../utils/cookies');
-const { cacheRequestOnClient } = require('../../utils/cache/helpers');
 
 const supportedStrategies = ['saml', 'openid', 'oauth2'];
 
@@ -177,7 +176,7 @@ module.exports = express
     .post('/password/reset', validateTokenRoute, isUserManager, _controller.resetUserPassword)
     .put('/update', validateTokenRoute, isUserManager, _controller.updateUserById)
     .get('/conteudistas', validateTokenRoute, _controller.getAllConteudistas)
-    .get('/details', validateTokenRoute, cacheRequestOnClient(), _controller.returnUserById)
+    .get('/details', validateTokenRoute, _controller.returnUserById)
     .get('/feedbackelegibility', validateTokenRoute, _controller.feedbackElegible)
     .post('/remove-permission', validateTokenRoute, _controller.deleteGroups)
     .post('/add-permission', validateTokenRoute, isUserManagerOrSuperAdminOrElegibilityManager, _controller.addGroups)
