@@ -926,12 +926,20 @@ const MenuDefault = [
                         index: 4
                     },
                     {
-                        button: "modules",
+                        button: "managers",
                         roles: [
                             "PERFIL_Super_Admin",
                         ],
                         index: 5
                     },
+                    {
+                        button: "modules",
+                        roles: [
+                            "PERFIL_Super_Admin",
+                        ],
+                        index: 6
+                    },
+                    
                 ],
                 index: 3
             },
