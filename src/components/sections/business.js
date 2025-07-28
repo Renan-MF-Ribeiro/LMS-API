@@ -176,8 +176,10 @@ async function setAssessmentHistoricOnSections(userId, sections) {
 
         if (section.isCompleted) {
             const sectionExceptions = section?.exceptionCertificateTrails || [];
-            const trainingCertExceptions = section?.exceptionCertificateTrails || [];
-            const allExceptions = [...sectionExceptions, ...trainingCertExceptions];
+            const trainingCertExceptions = trainingSectionInfo?.exceptionCertificateTrails || [];
+            const trainingExceptions = trainingSectionInfo?.exceptionTrainingTrails || [];
+            const allExceptions = [...sectionExceptions, ...trainingCertExceptions, ...trainingExceptions];
+
             section.duration = calculateTotalDuration(
                 section.trails,
                 allExceptions,
@@ -965,7 +967,7 @@ module.exports = {
             }).lean(),
             RecommendedContent.findOne({ userId })
         ]);
-        
+
         if (!section || !recommendations || recommendations?.length === 0) {
             return [];
         }
@@ -976,7 +978,7 @@ module.exports = {
                 section.trails?.push(trail);
             }
         }
-        
+
         return section;
     },
 
@@ -1454,17 +1456,22 @@ async function processCourseInSections(elegibleCourses, userId) {
 }
 
 function calculateTotalDuration(trails, exceptionIds = []) {
-    // console.log(exceptionIds)
     const exceptionIdStrings = exceptionIds.map(String);
 
-    return trails.reduce((sum, trail) => {
-        const trailId = String(trail._id);
-        const isException = exceptionIdStrings.includes(trailId);
-
-        if (!isException) {
-            return sum + (trail.duration || 0);
+    return trails.reduce((total, trail) => {
+        if (!trail || typeof trail !== 'object' || ['default', 'assessment', 'separator', 'certificate'].includes(trail.type)) {
+            return total;
         }
 
-        return sum;
+        const trailId = String(trail._id);
+        const isException = exceptionIdStrings.includes(trailId);
+        if (isException) return total;
+
+        const itemsDuration = trail.items?.reduce((sum, item) => {
+            const duration = item?.itemID?.durationHours || 0;
+            return sum + duration;
+        }, 0) || 0;
+
+        return total + itemsDuration;
     }, 0);
-};
+}
