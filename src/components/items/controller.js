@@ -473,18 +473,34 @@ const ItemController = {
 
                 if (payload.kind === 'FormItem') {
                     delete payload.contentPath;
-                    payload.statements = payload.statements.map(
-                        (statement) => ({
-                            _id: new mongoose.Types.ObjectId(),
-                            title: statement.title,
-                            type: statement.type,
-                            alternatives: statement?.alternatives?.map(
-                                ({ alternative }) => ({
-                                    _id: new mongoose.Types.ObjectId(),
-                                    alternative,
-                                })
-                            ),
-                            numberCharacters: statement?.numberCharacters,
+
+                    payload.statements = await Promise.all(
+                        payload.statements.map(async (statement) => {
+                            let imageValue = statement?.image;
+                            let imageUrl;
+                            if (imageValue && typeof req.files?.[imageValue] === 'object' && req.files?.[imageValue]?.name) {
+                                imageUrl = await azureBlob(req.files?.[imageValue], 'items/statements');
+                            } else if (imageValue && typeof imageValue === 'string' && imageValue.startsWith('http')) {
+                                imageUrl = imageValue;
+                            }
+                            // console.log({ imageUrl })
+                            return {
+                                _id: new mongoose.Types.ObjectId(),
+                                title: statement.title,
+                                type: statement.type,
+
+                                alternatives: statement?.alternatives?.map(
+                                    ({ alternative }) => ({
+                                        _id: new mongoose.Types.ObjectId(),
+                                        alternative,
+                                    })
+                                ),
+                                numberCharacters: statement?.numberCharacters,
+                                ...(imageUrl && {
+                                    image: imageUrl,
+                                    imageName: statement.imageName,
+                                }),
+                            }
                         })
                     );
                 }
@@ -599,7 +615,6 @@ const ItemController = {
                 const banner = req.files.banner;
 
                 let thumbPath;
-                let thumbPath2;
                 let contentPath;
                 let bannerPath;
 
@@ -670,6 +685,15 @@ const ItemController = {
                 if (payload.kind === 'FormItem') {
                     for (let i = 0; i < payload?.statements.length; i++) {
                         const statement = payload?.statements[i];
+
+                        let imageValue = statement?.image;
+                        let imageUrl;
+                        if (imageValue && typeof req.files?.[imageValue] === 'object' && req.files?.[imageValue]?.name) {
+                            imageUrl = await azureBlob(req.files?.[imageValue], 'items/statements');
+                        } else if (imageValue && typeof imageValue === 'string' && imageValue.startsWith('http')) {
+                            imageUrl = imageValue;
+                        }
+
                         payload.statements[i] = {
                             _id:
                                 statement?._id ||
@@ -689,6 +713,10 @@ const ItemController = {
                             ...(statement?.numberCharacters && {
                                 numberCharacters:
                                     statement?.numberCharacters,
+                            }),
+                            ...(imageUrl && {
+                                image: imageUrl,
+                                imageName: statement.imageName,
                             }),
                         };
                     }
@@ -816,11 +844,11 @@ const ItemController = {
             ) {
                 await Item.findByIdAndUpdate(_id, { enabled });
                 await dispatch('update', 'item', { _id, enabled });
-                
+
                 const chatConfig = await getChatIAConfig();
 
                 if (isFeatEnabled(chatConfig)) await dispatchChatItemKafkaEvent(_id, enabled ? 'UPSERT' : 'DELETE');
-                
+
                 _messages.success(res, req, 'Atualizado com sucesso');
             } else {
                 _messages.badRequest(

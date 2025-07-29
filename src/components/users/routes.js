@@ -12,7 +12,20 @@ const {
     canListUsers,
 } = require('../../utils/middlewares');
 
-const { clearSASTokenFromResponse, saveStrategyOnCookie } = require('../../utils/cookies');
+const { saveStrategyOnCookie } = require('../../utils/cookies');
+const { cacheRequestOnClient } = require('../../utils/cache/helpers');
+
+const supportedStrategies = ['saml', 'openid', 'oauth2'];
+
+function validateStrategy(req, res, next) {
+    const { strategy } = req.params;
+
+    if (!supportedStrategies.includes(strategy)) {
+        return res.status(404).send('Strategy not supported');
+    }
+
+    next();
+}
 
 module.exports = express
     .Router()
@@ -24,14 +37,17 @@ module.exports = express
             standardHeaders: true,
             legacyHeaders: false,
         }),
+        (req, res, next) => {
+            req.query.strategy = 'local';
+            return next();
+        },
+        saveStrategyOnCookie,
+        authenticatePassport,
         _controller.ldapSignIn
     )
     .post(
         '/logout',
-        (req, res) => {
-            clearSASTokenFromResponse(res);
-            res.status(200).send('OK');
-        }
+        _controller.logout
     )
     .post('/accept-terms', validateTokenRoute, _controller.acceptTerms)
     .post('/watched-video', validateTokenRoute, _controller.watchedVideo)
@@ -53,7 +69,14 @@ module.exports = express
     .post('/change-password', _controller.changePassword)
     .post('/change-password-email', _controller.changePasswordByEmail)
     .post('/change-photo', validateTokenRoute, formidable(), _controller.changePhoto)
-    .get('/auth/isAuthenticated', _controller.isAuthenticated)
+    .get('/auth/isAuthenticated',
+        (req, res, next) => {
+            req.query.strategy = 'session';
+            return next();
+        },
+        authenticatePassport,
+        _controller.isAuthenticated
+    )
     .get('/auth/isAuthenticatedNginx/:token', _controller.isAuthenticatedNginx)
     .get('/me', _controller.selfData)
     .post('/gamification/names', validateTokenRoute, _controller.handleNames)
@@ -109,17 +132,23 @@ module.exports = express
     .post('/signup', _controller.signup)
     .post('/activate', _controller.activateUser)
     .post('/sso', _controller.singleSignOn)
+
+    // SSO routes
     .get(
-        '/sso/saml',
+        '/sso/:strategy',
+        validateStrategy,
         saveStrategyOnCookie,
         authenticatePassport,
     )
-    .post(
-        '/sso/saml/callback',
+    .all(
+        '/sso/:strategy/callback',
+        validateStrategy,
         authenticatePassport,
         parseSamlResponse,
         _controller.ssoCallback
     )
+
+    // Mantém retrocompatibilidade com registros antigos (/openid & /openid/callback)
     .get(
         '/openid',
         saveStrategyOnCookie,
@@ -128,7 +157,7 @@ module.exports = express
     .get(
         '/openid/callback',
         authenticatePassport,
-        _controller.openIdCallback
+        _controller.ssoCallback
     )
     .post('/device', validateTokenRoute, _controller.updateDeviceId)
     .get(
@@ -148,7 +177,7 @@ module.exports = express
     .post('/password/reset', validateTokenRoute, isUserManager, _controller.resetUserPassword)
     .put('/update', validateTokenRoute, isUserManager, _controller.updateUserById)
     .get('/conteudistas', validateTokenRoute, _controller.getAllConteudistas)
-    .get('/details', validateTokenRoute, _controller.returnUserById)
+    .get('/details', validateTokenRoute, cacheRequestOnClient(5 * 60 * 1000), _controller.returnUserById) // Cache for 5 minutes
     .get('/feedbackelegibility', validateTokenRoute, _controller.feedbackElegible)
     .post('/remove-permission', validateTokenRoute, _controller.deleteGroups)
     .post('/add-permission', validateTokenRoute, isUserManagerOrSuperAdminOrElegibilityManager, _controller.addGroups)

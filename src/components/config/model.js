@@ -24,6 +24,7 @@ const ConfigTypes = {
     Matrix: 'matrix',
     ChatIA: 'chat-ia',
     Dashboard: 'dashboard',
+    ManagerRule: 'manager-rule',
 };
 
 const ConfigSchema = new mongoose.Schema(
@@ -415,6 +416,30 @@ const ChatIAConfigModel = ConfigModel.discriminator(
     )
 );
 
+const ManagerConfigModel = ConfigModel.discriminator(
+    ConfigTypes.ManagerRule,
+    new mongoose.Schema(
+        {
+            value: {
+                default: [],
+                required: false,
+                type: new mongoose.Schema(
+                    {
+                        rules: [{
+                            managerField: { type: String, required: true, trim: true },
+                            managerValues: { type: [String], required: true },
+                            usersField: { type: String, required: true, trim: true },
+
+                        }],
+                        useIsManagerFlag: { type: Boolean, default: true },
+                    },
+                    valueSchemaOptions
+                ),
+            },
+        },
+        schemaOptions
+    )
+);
 const DashboardConfigModel = ConfigModel.discriminator(
     ConfigTypes.Dashboard,
     new mongoose.Schema(
@@ -500,4 +525,5 @@ module.exports = {
     MATRIX_VISIBILITY_MODE,
     ChatIAConfigModel,
     DashboardConfigModel,
+    ManagerConfigModel
 };

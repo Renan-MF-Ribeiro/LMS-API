@@ -20,6 +20,7 @@ const PartnerSchema = new mongoose.Schema(
                 {
                     key: { type: String },
                     title: { type: String, required: true },
+                    updatable: { type: Boolean, default: false },
                     initialDate: { type: Date },
                     endDate: { type: Date },
                     form: { type: mongoose.Schema.Types.ObjectId, ref: FormModel, required: false, default: null },
@@ -35,6 +36,7 @@ const PartnerSchema = new mongoose.Schema(
                             value: { type: String }
                         }
                     ],
+                    overwriteEligibility: { type: Boolean, default: false },
                     classGroupResult: {
                         classGroups: [
                             {
@@ -43,7 +45,8 @@ const PartnerSchema = new mongoose.Schema(
                                 required: true
                             }
                         ],
-                        days: { type: Number }
+                        days: { type: Number },
+                        overwriteClassGroup: { type: Boolean, default: false },
                     }
                 }
             ],

@@ -246,7 +246,7 @@ const GamificationController = {
     async createClientRewards(req, res) {
         try {
             const body = await returnBodyCreate(req);
-            console.log(body)
+            // console.log(body)
             const data = await GamificationBusiness.createClientRewards(body);
             return _messages.success(res, req, data);
         } catch (error) {

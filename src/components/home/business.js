@@ -218,7 +218,7 @@ module.exports = {
 
                 for (const trail of arrTrails) {
                     for (const item of trail.items) {
-                        if (arrItemsID.indexOf(item.itemID._id.toString()) < 0) {
+                        if (item?.itemID && arrItemsID.indexOf(item.itemID._id.toString()) < 0) {
                             const completion = await checkItemCompleted(item, user);
                             if (completion === null) {
                                 numberOfItemsNotStarted++;
@@ -232,7 +232,7 @@ module.exports = {
                             }
                         }
 
-                        arrItemsID.push(item.itemID._id.toString());
+                        if (item.itemID?._id) arrItemsID.push(item.itemID._id.toString());
                     }
                 }
                 const {
@@ -268,83 +268,80 @@ module.exports = {
         });
     },
 
-    returnCertificates(trails, user) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const certs = [];
-                const itemsID = [];
-                for (const trail of trails) {
-                    for (const item of trail.items) {
-                        if (
-                            item.completion === 1 &&
-                            item.itemID.certificate === 1 &&
-                            itemsID.indexOf(item.itemID.id) < 0
-                        ) {
-                            const tracking = await Tracking.findOne({
-                                userLogin: user.networkLogin,
-                                item: item.itemID._id,
-                            }).sort({ createdAt: -1 });
-                            
-                            item.itemID.completionAt = tracking.completionAt;
-
-                            const concludedAt = tracking.completionAt;
-                            const { completion } = item;
-                            const { durationHours, title, thumbPath } = item.itemID;
-                            
-                            certs.push({
-                                duration: durationHours || 0,
-                                concludedAt,
-                                title,
-                                userName: user.name,
-                                thumbPath,
-                                completion,
-                                score: tracking.score,
-                                type: 'item',
-                                itemId: item.itemID.id,
-                                certificateLayout: item.itemID.certificateLayout,
-                            });
-                            
-                            itemsID.push(item.itemID.id);
-                        }
-                    }
+    async returnCertificates(trails, user) {
+        const certs = [];
+        const itemsID = [];
+        
+        for (const trail of trails) {
+            for (const item of trail.items) {
+                if (
+                    item.completion === 1 &&
+                    item.itemID.certificate === 1 &&
+                    itemsID.indexOf(item.itemID.id) < 0
+                ) {
+                    const tracking = await Tracking.findOne({
+                        userLogin: user.networkLogin,
+                        item: item.itemID._id,
+                    }).sort({ createdAt: -1 });
                     
-                    var mostRecentDate = new Date(
-                        Math.max.apply(
-                            null,
-                            trail.items.map((e) => {
-                                return new Date(e.itemID.completionAt);
-                            })
-                        )
-                    );
+                    item.itemID.completionAt = tracking.completionAt;
 
-                    if (trail && trail.completion === 1) {
-                        const duration = trail.items.reduce((acc, e) => {
-                            return acc + (e.itemID?.durationHours || 0);
-                        }, 0);
-                        
-                        const { title, thumbPath, completion } = trail;
-                        certs.push({
-                            duration,
-                            title,
-                            description: trail.description,
-                            concludedAt: mostRecentDate,
-                            userName: user.name,
-                            thumbPath,
-                            completion,
-                            scoreAverage: trail.scoreAverage,
-                            type: 'trail',
-                            trailId: trail._id,
-                            certificateLayout: trail.certificateLayout,
-                            certificateDue: trail?.certificateDue,
-                            items: trail.items?.map(i => i.itemID).filter(i => i.kind !== 'PostItem') ?? []
-                        });
-                    }
+                    const concludedAt = tracking.completionAt;
+                    const { completion } = item;
+                    const { durationHours, title, thumbPath } = item.itemID;
+                    
+                    certs.push({
+                        duration: durationHours || 0,
+                        concludedAt,
+                        title,
+                        userName: user.name,
+                        thumbPath,
+                        completion,
+                        score: tracking.score,
+                        type: 'item',
+                        itemId: item.itemID.id,
+                        certificateLayout: item.itemID.certificateLayout,
+                    });
+                    
+                    itemsID.push(item.itemID.id);
                 }
-                resolve(certs);
-            } catch (error) {
-                reject(error);
             }
-        });
+            
+            var mostRecentDate = new Date(
+                Math.max.apply(
+                    null,
+                    trail.items.map((e) => {
+                        return new Date(e.itemID.completionAt);
+                    })
+                )
+            );
+
+            if (trail && trail.completion === 1) {
+                const duration = trail.items.reduce((acc, e) => {
+                    return acc + (e.itemID?.durationHours || 0);
+                }, 0);
+                
+                const { title, thumbPath, completion } = trail;
+                
+                certs.push({
+                    duration,
+                    title,
+                    description: trail.description,
+                    concludedAt: mostRecentDate,
+                    userName: user.name,
+                    thumbPath,
+                    completion,
+                    scoreAverage: trail.scoreAverage,
+                    type: 'trail',
+                    trailId: trail._id,
+                    certificateLayout: trail.certificateLayout,
+                    certificateDue: trail?.certificateDue,
+                    items: trail.items?.map(i => i.itemID).filter(i => i.kind !== 'PostItem') ?? []
+                });
+            }
+        }
+        
+        return certs;
     },
 };
 

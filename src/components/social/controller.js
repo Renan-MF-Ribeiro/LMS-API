@@ -1,4 +1,5 @@
 const { socialApi } = require('./http-adapter');
+const { newsApi } = require('../news/http-adapter');
 const _business = require('./business');
 const _functions = require('../../utils/functions');
 const _messages = require('../../utils/messages');
@@ -12,6 +13,7 @@ const { createNotification } = require('../feed/buisiness');
 const GamificationKafka = require('../gamification/kafka/broker');
 const { EVENT_CATEGORY } = require('../gamification/model');
 const { COMMENT_STATUS } = require('./model');
+const { UsersWithProcessedTags } = require('../courses/model');
 
 module.exports = {
     async getConfig(req, res) {
@@ -86,6 +88,45 @@ module.exports = {
                 res,
                 req,
                 { trailBlocked, tagBlocked, userBlocked },
+                'configurações encontradas',
+                'social',
+                'getConfig'
+            );
+        } catch (error) {
+            console.log(error);
+            _messages.internalServer(res, req, error.message, null, 'social', 'getConfig');
+        }
+    },
+
+    async getNewsSocialStatus(req, res) {
+        try {
+            const userTags = await getTagsElegiblesByToken(req);
+            const user = await _functions.getUserByToken(req);
+
+            const uri = `client-config/${process.env.CLIENT_ID}`;
+
+            const { data } = await socialApi.get(uri);
+
+            let tagBlocked = false;
+            let userBlocked = false;
+
+            if (data.blockedTrails.length > 0) {
+                tagBlocked = data.tagsLists.blocked.some((tag) => {
+                    return userTags.some((t) => {
+                        return t.value === tag;
+                    });
+                });
+            }
+            if (data.usersLists.blocked.length > 0) {
+                userBlocked = data.usersLists.blocked.some((u) => {
+                    return u.userId == user._id;
+                });
+            }
+
+            _messages.success(
+                res,
+                req,
+                { tagBlocked, userBlocked },
                 'configurações encontradas',
                 'social',
                 'getConfig'
@@ -413,7 +454,7 @@ module.exports = {
             let currentPage = Number(pageIndex);
 
             while (!internalIsFinished && !isFinishedFromSocialApi) {
-                console.log('query', { pageSize, pageIndex: currentPage, ...query });
+                // console.log('query', { pageSize, pageIndex: currentPage, ...query });
                 const { data: response } = await fetchComments({
                     pageSize,
                     pageIndex: currentPage,
@@ -426,12 +467,12 @@ module.exports = {
 
                 commentsToResponse.push(...filteredComments);
 
-                console.log(
-                    'é maior',
-                    commentsToResponse.length,
-                    commentsToResponse.length >= Number(pageSize)
-                );
-                console.log('RESPONSE TEM LENGTH', !responseData?.length);
+                // console.log(
+                //     'é maior',
+                //     commentsToResponse.length,
+                //     commentsToResponse.length >= Number(pageSize)
+                // );
+                // console.log('RESPONSE TEM LENGTH', !responseData?.length);
 
                 if (!responseData?.length ?? responseData.length < Number(pageSize)) {
                     isFinishedFromSocialApi = true;
@@ -474,6 +515,141 @@ module.exports = {
             return;
         }
     },
+
+        async getCommentsByNewsId(req, res) {
+        try {
+            const { newsId } = req.params;
+
+            const uri = `comments/news/${newsId}`;
+
+            const { pageSize = 5, pageIndex = 0, ...query } = req.query;
+
+            const setUsersProfilePhoto = async (commentsArr) => {
+                const usersId = commentsArr.map((comment) => comment.userId);
+
+                const usersPhoto = await User.find({ _id: { $in: usersId } }).select(
+                    'profilePhoto'
+                );
+
+                if (usersPhoto.length) {
+                    commentsArr.forEach((comment) => {
+                        const profilePhoto =
+                            usersPhoto.find((u) => String(u._id) === String(comment.userId))
+                                ?.profilePhoto ?? null;
+                        comment.profilePhoto = profilePhoto;
+                    });
+                }
+            };
+
+            // GET CONFIG
+            const config =
+                (await ConfigModel.findOne({ type: ConfigTypes.SocialFields }))?.value ?? [];
+
+            if (!config?.length) {
+                const { data: response } = await socialApi.get(uri, { params: req.query });
+
+                const commentsToResponse = response.data ?? [];
+
+                await setUsersProfilePhoto(commentsToResponse);
+                // console.log(response.total)
+                _messages.success(
+                    res,
+                    req,
+                    {
+                        data: commentsToResponse,
+                        total: response.total,
+                        pageIndex: Number(pageIndex),
+                        isFinished: Number(pageSize) * (Number(pageIndex) + 1) >= response.total,
+                    },
+                    'ok',
+                    'social',
+                    'getCommentsByTrailId'
+                );
+
+                return;
+            }
+
+            const fetchComments = (params) => {
+                return socialApi.get(uri, { params }, { validateStatus: false });
+            };
+
+            const userInfo = await _functions.getUserByToken(req);
+            const filter = config.reduce((acc, current) => {
+                acc[current] = userInfo[current] ?? null;
+                return acc;
+            }, {});
+            // GET USERS
+            const dbUsersInSameConditions = await User.find(filter).select('_id');
+
+            const commentsToResponse = [];
+
+            const usersToFilter = dbUsersInSameConditions.map((user) => String(user._id));
+
+            const filterCommentsByUserId = (commentsArr) => {
+                return commentsArr.filter((comment) =>
+                    usersToFilter.includes(String(comment.userId))
+                );
+            };
+
+            let isFinishedFromSocialApi = false;
+            let internalIsFinished = false;
+            let currentPage = Number(pageIndex);
+
+            while (!internalIsFinished && !isFinishedFromSocialApi) {
+                const { data: response } = await fetchComments({
+                    pageSize,
+                    pageIndex: currentPage,
+                    ...query,
+                });
+
+                const responseData = response.data ?? [];
+
+                const filteredComments = filterCommentsByUserId(responseData);
+
+                commentsToResponse.push(...filteredComments);
+
+                if (!responseData?.length ?? responseData.length < Number(pageSize)) {
+                    isFinishedFromSocialApi = true;
+                }
+
+                if (commentsToResponse.length >= Number(pageSize)) {
+                    internalIsFinished = true;
+                }
+
+                if (!internalIsFinished && !isFinishedFromSocialApi) {
+                    currentPage += 1;
+                }
+            }
+
+            await setUsersProfilePhoto(commentsToResponse);
+            _messages.success(
+                res,
+                req,
+                {
+                    data: commentsToResponse,
+                    total: commentsToResponse?.length ? commentsToResponse.length : 0,
+                    pageIndex: currentPage,
+                    isFinished: isFinishedFromSocialApi,
+                },
+                'ok',
+                'social',
+                'getCommentsByTrailId'
+            );
+            return;
+        } catch (error) {
+            console.log(error)
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'getCommentsByTrailId'
+            );
+            return;
+        }
+    },
+    
 
     async updateComment(req, res) {
         try {
@@ -757,6 +933,57 @@ module.exports = {
         }
     },
 
+    async getLikesByNewsId(req, res) {
+        try {
+            let allowed = false;
+            let blocked = false;
+            let moderated = false;
+            const { newsId, userId } = req.params;
+            const uri = `home/like/news/${process.env.CLIENT_ID}/${newsId}/${userId}`;
+            const { data } = await socialApi.get(uri);
+            const { users } = data;
+
+            if (users) {
+                for (const user of users.allowed) {
+                    if (user.userId == userId) {
+                        allowed = true;
+                        data.userAllowed = allowed;
+                    }
+                }
+
+                for (const user of users.blocked) {
+                    if (user.userId == userId) {
+                        blocked = true;
+                        data.userBlocked = blocked;
+                    }
+                }
+
+                for (const user of users.moderated) {
+                    if (user.userId == userId) {
+                        moderated = true;
+                        data.userModerated = moderated;
+                    }
+                }
+            }
+
+            delete data.users;
+
+            _messages.success(res, req, data, 'ok', 'social', 'getLikesByTrailId');
+            return;
+        } catch (error) {
+            console.log(error);
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'getLikesByTrailId'
+            );
+            return;
+        }
+    },
+
     async deleteLike(req, res) {
         try {
             const uri = 'home/like';
@@ -895,6 +1122,57 @@ module.exports = {
         }
     },
 
+    async shareNewsSocialContent(req, res) {
+        const { users, newsId } = req.body;
+        try {
+            const { _id, networkLogin, name } = await _functions.getUserByToken(req);
+
+            if (users) {
+                const config = {
+                    reqUser: name,
+                    communication: ['notification', 'email'],
+                    type: 'share',
+                    contentType: 'news',
+                    contentId: newsId,
+                };
+                await createNotification(config, users);
+            }
+
+            const uri = `home/share/${process.env.CLIENT_ID}`;
+            const { data } = await socialApi.post(uri, {
+                users: users,
+                newsId,
+                sharedBy: {
+                    userId: _id,
+                    userName: networkLogin,
+                },
+            });
+
+            if (data?.users?.length > 0) {
+                await GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.SHARE, EVENT_CATEGORY.SHARED_CONTENT],
+                    identifier: data.sharedBy.userId,
+                    meta: {
+                        trailId: data.trailId,
+                    },
+                });
+            }
+
+            _messages.success(res, req, data, 'ok', 'social', 'shareSocialContent');
+            return;
+        } catch (error) {
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'shareSocialContent'
+            );
+            return;
+        }
+    },
+
     async getUsersElegibleForSharing(req, res) {
         try {
             const { trailId, searchBy } = req.query;
@@ -981,6 +1259,80 @@ module.exports = {
                 return {
                     _id: user._id,
                     elegible: checkEligibilityTagsAnd(userTags, trail.tagsAnd, trail.tags),
+                };
+            });
+
+            _messages.success(res, req, returnUsers, 'ok', 'social', 'getShareTargets');
+            return;
+        } catch (error) {
+            console.log(error);
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'getShareTargets'
+            );
+            return;
+        }
+    },
+
+    async getNewsShareTargets(req, res) {
+        try {
+            const { users = [], campaignId } = req.body;
+
+            const { data } = await newsApi.get(`/campaigns/${campaignId}`, {
+                headers: {
+                    Authorization: `Bearer ${req.headers.authorization}`
+                }
+            });
+
+            const tags = data.eligibilities;
+            if (!tags || tags.length === 0) {
+                _messages.success(
+                    res,
+                    req,
+                    users.map((u) => ({ ...u, elegible: false })),
+                    'ok',
+                    'social',
+                    'getShareTargets'
+                );
+                return;
+            }
+
+            const availableUsers = await User.find({
+                networkLogin: { $in: users.map((u) => u.networkLogin) },
+                status: 'ATIVO',
+            })
+                .select('_id tags groupsAD status')
+                .lean();
+
+            if (!availableUsers.length) {
+                _messages.success(
+                    res,
+                    req,
+                    users.map((u) => ({ ...u, elegible: false })),
+                    'ok',
+                    'social',
+                    'getShareTargets'
+                );
+                return;
+            }
+
+
+            const usersWithTags = await UsersWithProcessedTags.find({
+                userTags: { $in: tags },
+            });
+            const returnUsers = availableUsers.map((user) => {
+                const userTags = (user.tags ?? []).concat(user.groupsAD ?? []);
+                const elegible = usersWithTags.some((u) =>
+                    userTags.some((tag) => u.userTags.includes(tag))
+                );
+
+                return {
+                    _id: user._id,
+                    elegible,
                 };
             });
 

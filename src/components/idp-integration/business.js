@@ -1,7 +1,7 @@
 const _ = require("lodash");
 
 const { log } = require("../../utils/logger");
-const { getRequestStrategyName } = require("../../utils/passport");
+const { getRequestStrategyName } = require("../../utils/auth");
 
 const { IdpIntegrationModel } = require("./models");
 

@@ -373,7 +373,7 @@ module.exports = {
             const trail = processExpirationDate(trails[0], user);
             let durationHours = 0;
             for (const item of trail.items) {
-                durationHours += item.itemID.durationHours;
+                durationHours += item?.itemID?.durationHours || 0;
             }
             trail.durationHours = durationHours;
             const processedTrail = processTrailTracking(trail, allTrackingUser);
@@ -708,7 +708,8 @@ module.exports = {
                 body.collaborative = false
             }
 
-            const docClone = new Trail(body);
+            const user = await getUserByToken(req)
+            const docClone = new Trail({ ...body, author: user._id });
             const newDbTrail = await docClone.save();
 
             if (oldTrailId) {
@@ -723,7 +724,7 @@ module.exports = {
                                 return {
                                     ...item,
                                     urlItem,
-                                    urlTrail,
+                                    urlTrail
                                 }
                             }) ?? [],
                         }
@@ -739,6 +740,7 @@ module.exports = {
                 'trails',
             );
         } catch (error) {
+            console.log({error})
             _messages.internalServer(
                 res,
                 req,

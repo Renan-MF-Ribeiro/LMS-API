@@ -26,7 +26,10 @@ const { ConfigLogin } = require('../theme/login-config/model');
 const ApiError = require('../../errors/ApiError');
 const { getMessengerConfig } = require('../config/business');
 const { getConnectMap } = require('../../utils/connect');
-require('dotenv').config();
+const { getCookieProps } = require('../../utils/cookies');
+const PartnerBusiness = require('../partners/business');
+const { createSessionStore } = require('../../utils/session');
+const { Types } = require('mongoose');
 
 module.exports = {
     async getLoginConfig(selectFields) {
@@ -71,44 +74,44 @@ module.exports = {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                    {
-                        $or: [
-                            {
-                                onboarding: { $exists: false },
-                                groupsAD: { $in: tag },
-                            },
-                            {
-                                onboarding: { $eq: onboarding },
-                                groupsAD: { $in: tag },
-                            },
-                        ],
-                    },
-                ];
+                      {
+                          $or: [
+                              {
+                                  onboarding: { $exists: false },
+                                  groupsAD: { $in: tag },
+                              },
+                              {
+                                  onboarding: { $eq: onboarding },
+                                  groupsAD: { $in: tag },
+                              },
+                          ],
+                      },
+                  ];
         } else {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                    {
-                        $or: [
-                            { onboarding: { $exists: false } },
-                            { onboarding: { $eq: onboarding } },
-                        ],
-                    },
-                ];
+                      {
+                          $or: [
+                              { onboarding: { $exists: false } },
+                              { onboarding: { $eq: onboarding } },
+                          ],
+                      },
+                  ];
         }
 
         const searchByQuery = searchBy
             ? {
-                $or: [
-                    { name: { $regex: searchBy, $options: 'i' } },
-                    { registration: { $regex: searchBy, $options: 'i' } },
-                    { email: { $regex: searchBy, $options: 'i' } },
-                ],
-                $and: onboardingQuery,
-            }
+                  $or: [
+                      { name: { $regex: searchBy, $options: 'i' } },
+                      { registration: { $regex: searchBy, $options: 'i' } },
+                      { email: { $regex: searchBy, $options: 'i' } },
+                  ],
+                  $and: onboardingQuery,
+              }
             : {
-                $and: onboardingQuery,
-            };
+                  $and: onboardingQuery,
+              };
 
         const users = await User.find(searchByQuery)
             .sort({ [order]: sort })
@@ -347,60 +350,62 @@ module.exports = {
         const userMap = Object.entries(connectMap).map(([key, value]) => {
             return { value: key, description: value.label, field: value.field };
         });
-        const dashboardFilters = [];
-        const dashConfig = await DashConfig.find();
+
         function isSameField(userField, mapItem) {
             return (
-                mapItem.description === userField ||
-                mapItem.field === userField ||
-                mapItem.value === userField
+                mapItem.field !== 'NÃO MAPEAR' &&
+                (mapItem.field === userField || mapItem.value === userField)
             );
         }
 
-        try {
-            if (dashConfig) {
-                let dashFilters = dashConfig.map((x) => {
-                    return x.fields;
-                });
-                dashFilters = dashFilters.flat(2);
-                for (let filter of dashFilters) {
-                    for (const map of userMap) {
-                        filter.userField = isSameField(filter.userField, map)
-                            ? map.value
-                            : filter.userField;
-                        filter.dashFilter = isSameField(filter.dashFilter, map)
-                            ? map.value
-                            : filter.dashFilter;
-                    }
+        const dashboardFilters = [];
 
-                    const userHasValidFieldValue =
-                        user[filter.userField] === filter.fieldValue &&
-                        user[filter.dashFilter] != undefined &&
-                        user[filter.dashFilter] != 'undefined' &&
-                        user[filter.dashFilter] != null &&
-                        user[filter.dashFilter] != 'null' &&
-                        user[filter.dashFilter] != '';
-                    if (userHasValidFieldValue) {
-                        if (dashboardFilters.length == 0) {
-                            dashboardFilters.push({
-                                field: filter.dashFilter,
-                                value: user[filter.dashFilter],
-                                pages: filter.pages,
-                            });
-                        }
+        const dashConfig = await DashConfig.find();
+
+        dashConfig.forEach((config) => {
+            config.fields?.forEach((config) => {
+                if (!config.userField || !config.fieldValue) return;
+
+                const currentUserDashValue = String(user[config.dashFilter] || '').trim();
+
+                const matchedMaps = userMap.filter((map) => isSameField(config.userField, map));
+
+                matchedMaps.forEach((map) => {
+                    const currentUserFieldValue = String(user[map.value] || null).trim();
+
+                    if (
+                        currentUserFieldValue &&
+                        currentUserFieldValue === config.fieldValue &&
+                        currentUserDashValue !== 'undefined' &&
+                        currentUserDashValue !== 'null'
+                    ) {
+                        dashboardFilters.push({
+                            field: config.dashFilter || null,
+                            value: currentUserDashValue || null,
+                            pages: config.pages,
+                            // config,
+                            // map,
+                        });
                     }
-                }
-                return dashboardFilters;
-            }
-        } catch (error) {
-            console.log(error);
-            return error;
-        }
+                });
+            });
+        });
+
+        // console.log(JSON.stringify(dashboardFilters, null, 2));
+
+        return dashboardFilters;
     },
 
     processUsersLoad(data, elegibilityFields = [], onboarding = false) {
+
+        ['networkLogin', 'name', 'password'].forEach((field) => {
+            if (!data[field]) {
+                delete data[field];
+            }
+        });
+
         const salt = bcrypt.genSaltSync(10);
-        const firstName = String(data.name.split(' ')[0]).trim().toLowerCase();
+        const firstName = String(data.name?.split(' ')[0]).trim().toLowerCase();
         const firstThreeCpf = sanitizeCpf(data.cpf).slice(0, 3);
         const initialPassword = !onboarding ? '1234' : `${firstName}${firstThreeCpf}`;
         data.password = [
@@ -424,7 +429,7 @@ module.exports = {
                 }
             }
 
-            console.log(date, parsedDate.format('DD/MM/YYYY'));
+            // console.log(date, parsedDate.format('DD/MM/YYYY'));
 
             return parsedDate.format('DD/MM/YYYY');
         }
@@ -437,6 +442,7 @@ module.exports = {
         data.terminationDate = parseDate(data.terminationDate);
         data.vacationStartDate = parseDate(data.vacationStartDate);
         data.vacationEndDate = parseDate(data.vacationEndDate);
+        data.loginType = data.loginType == 'AMBOS' ? 'BOTH' : data.loginType;
 
         data.enabled = true;
         data.onboarding = onboarding;
@@ -678,6 +684,19 @@ module.exports = {
         }
     },
 
+    async getTagsByUserIds(userIds) {
+        const arrayIds = Array.isArray(userIds) ? userIds : [userIds];
+        if (arrayIds.length === 0) return [];
+
+        const users = await User.find({ _id: { $in: arrayIds?.map((id)=> new Types.ObjectId(id)) } }).lean();
+        if (users.length === 0) return [];
+
+
+        const groups = await Group.find({ name: { $in: users?.flatMap((u) => u?.groupsAD) } }, 'tags').lean();
+        const tags = groups?.flatMap((group) => group?.tags);
+        return [users, tags];
+    },
+
     async getFirstTenUsersByGroup(groups) {
         try {
             // Aggregate para pegar 10 usuários aleatórios de cada grupo
@@ -701,7 +720,7 @@ module.exports = {
             ]);
         } catch (error) {
             console.log(error);
-            return []
+            return [];
         }
     },
 
@@ -846,8 +865,125 @@ module.exports = {
                             new Date(classGroup.limitDate) >= currentDate
                     )
                     .map((classGroup) => classGroup.groupCode)
-            ).filter(t => !String(t).startsWith('PERFIL_'));
+            )
+            .filter((t) => !String(t).startsWith('PERFIL_'));
 
         return allTags;
+    },
+
+    async updateUserByPartnerToken(req, user, tk = null) {
+        const token = tk || req.body?.token || req.query?.token;
+        const partner = await PartnerBusiness.getPartnersByToken(token);
+        const usedToken = validatePartnerToken(partner, token);
+
+        if (!usedToken.updatable) return user;
+        if (user.origin?.type === 'PARTNER_TOKEN' && user.origin?.info === usedToken.key)
+            return user;
+
+        const [newGroupsAd, tokenBlockedFields, newClassGroups] =
+            await getPartnerTokenNewInformations(usedToken, user);
+
+        const update = {
+            groupsAD: newGroupsAd,
+            classGroups: newClassGroups,
+            origin: {
+                type: 'PARTNER_TOKEN',
+                info: usedToken.key,
+            },
+            partner: `${partner.title} - ${usedToken.title}`,
+            ...tokenBlockedFields,
+        };
+
+        const [updatedUser] = await Promise.all([
+            User.findOneAndUpdate({ _id: user._id }, { $set: update }, { new: true }).exec(),
+            Log.create({
+                dataNew: update,
+                dataOld: user,
+                groups: newGroupsAd ?? [],
+                user: user._id,
+                type: 'UPDATE',
+                message: `Atualização de dados por token de parceiro ${partner.title} - ${usedToken.key}`,
+                component: 'users',
+                route: '/users/auth',
+                ip: req.ip,
+                login: user.networkLogin,
+                browserDetails: req.headers['user-agent'],
+            }),
+        ]);
+        return updatedUser;
+    },
+
+    async clearAuthCookies(req, res) {
+        if (req.sessionID) await createSessionStore().destroy(req.sessionID);
+        res.clearCookie('connect.sid', getCookieProps());
+        res.clearCookie('SAS', getCookieProps());
+        res.clearCookie('strategyName', getCookieProps());
+    },
+};
+
+const getPartnerTokenNewInformations = async (usedToken, user) => {
+    // -------------- LOOKUP EM INFORMAÇÕES QUE O TOKEN POSSUI (classes, eligibilidades e turmas) --------------
+    const tokenEligibilities = usedToken?.elegibilityResult
+        ?.map((key) => key?.value)
+        ?.filter(Boolean);
+
+    const tokenBlockedFields = usedToken?.defaultField?.reduce((acc, key) => {
+        const { key: tokenKey, value: tokenValue } = key;
+        if (tokenKey && tokenValue && user[tokenKey] !== tokenValue) {
+            acc[tokenKey] = tokenValue;
+        }
+        return acc;
+    }, {});
+
+    const tokenClasses = usedToken?.classGroupResult?.classGroups || [];
+    // -------------- MONTANDO O QUE SERÁ ATUALIZADO NO USUARIO --------------
+    // utilizando os lookups criados acima, montamos o que será atualizado no usuário seguindo as flags do token
+    let newGroupsAD =
+        usedToken?.overwriteEligibility === false
+            ? (user?.groupsAD || [])?.concat(tokenEligibilities || [])
+            : (user?.groupsAD || [])
+                ?.filter((value) => value.includes('PERFIL_'))
+                ?.concat(tokenEligibilities);
+
+    const classes =
+        usedToken?.classGroupResult?.overwriteClassGroup === false
+            ? (user?.classGroups || [])?.map((classGroup) => classGroup._id)?.concat(tokenClasses)
+            : tokenClasses;
+
+    let newClassGroups = await ClassGroup.find({ _id: { $in: classes } });
+    const today = moment(new Date());
+    const partnerDays = usedToken?.classGroupResult?.days || 10;
+    const DATA_INICIO = today.startOf('day');
+    const DATA_FIM = moment().add(partnerDays, 'days');
+    const { startDate, limitDate } = _functions.getDates(DATA_INICIO, DATA_FIM);
+
+    for (const _class of newClassGroups) {
+        if (tokenClasses.includes(_class._id.toString())) {
+            _class.startDate = startDate;
+            _class.limitDate = limitDate;
+            _class.updatedAt = moment(new Date());
+        } else {
+            const existantGroup = user?.classGroups?.find(
+                (classGroup) => classGroup?._id?.toString() === _class?._id?.toString()
+            );
+            _class.startDate = existantGroup?.startDate || null;
+            _class.limitDate = existantGroup?.limitDate || null;
+            _class.updatedAt = existantGroup?.updatedAt || null;
+        }
+
     }
+
+    return [newGroupsAD, tokenBlockedFields, newClassGroups];
+};
+
+const validatePartnerToken = (partner, token) => {
+    if (!partner) {
+        throw new ApiError('Token inválido ou parceiro não encontrado', 404);
+    }
+    const usedToken = partner?.keys.find((key) => key.key === token);
+    if (Date.now() > usedToken?.endDate) {
+        throw new ApiError('Token expirado', 403);
+    }
+
+    return usedToken;
 };

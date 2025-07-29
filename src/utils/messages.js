@@ -28,7 +28,7 @@ module.exports = {
 
     unauthorized: async (res, req, err, data, component = null, rota = null) => {
         info(component, rota, 'unauthorized', err)
-        await _functions.recordLog(req, 'UNAUTHORIZED', err, component, rota)
+        await _functions.recordLog(req, 'UNAUTHORIZED', err, component, rota, data)
         res.status(httpStatus.UNAUTHORIZED).json(data)
     },
 
@@ -49,4 +49,9 @@ module.exports = {
         await _functions.recordLog(req, 'CONFLICT', err, component, rota)
         res.status(httpStatus.CONFLICT).json(data)
     },
+    unprocessableEntity: async (res, req, err, data, component = null, rota = null) => {
+        info(component, rota, 'unprocessableEntity', err)
+        await _functions.recordLog(req, 'UNPROCESSABLE ENTITY', err, component, rota, data)
+        res.status(httpStatus.UNPROCESSABLE_ENTITY).json(data)
+    }
 }

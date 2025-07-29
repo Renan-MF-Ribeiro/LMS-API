@@ -30,7 +30,7 @@ module.exports = {
     },
     async getCertificateOpen(req, res) {
         try {
-            console.log(req)
+            // console.log(req)
             const { data } = await certificateClient.get(
                 '/certificates/find-open',
                 { params: req.query }

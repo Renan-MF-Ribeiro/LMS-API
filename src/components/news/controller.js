@@ -1,0 +1,164 @@
+const _messages = require('../../utils/messages');
+const { azureBlob } = require('../../utils/files');
+const { User } = require('../users/model');
+const { newsApi } = require('./http-adapter');
+
+const newsController = {
+    getNews: async (req, res) => {
+        try {
+            // console.log('Fetching news by ID');
+            const { id } = req.params;
+            const { data } = await newsApi.get(`/news/${id}`);
+
+            if (data?.users && Array.isArray(data.users) && data.users.length > 0) {
+                const users = await User.find({ _id: { $in: data.users } });
+                data.users = users.map(user => ({
+                    _id: user._id,
+                    name: user.name
+                }));
+            }
+
+            return _messages.success(res, req, data, 'ok', 'news', 'getNews');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+
+            return _messages.internalServer(res, req, message, message, 'news', 'getNews');
+        }
+    },
+
+    getNewsByUrl: async (req, res) => {
+        try {
+            const { newsUrl } = req.params;
+            const { data } = await newsApi.get(`/news/url/${newsUrl}`);
+
+            if (data?.users) {
+                const users = await User.find({ _id: { $in: data.users } });
+                const { data: config } = await newsApi.get('/config');
+
+                if (config.enableUserLink && config?.userFields) {
+                    data.users = users.map((user) =>
+                        config.userFields.reduce((obj, field) => {
+                            obj[field] = user[field];
+                            return obj;
+                        }, {})
+                    );
+                }
+            }
+
+            return _messages.success(res, req, data, 'ok', 'news', 'getNews');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+
+            return _messages.internalServer(res, req, message, message, 'news', 'getNews');
+        }
+    },
+
+    listNews: async (req, res) => {
+        try {
+            const options = req.query;
+            const { data: listNews } = await newsApi.get('/news', { params: options });
+            const { data: config } = await newsApi.get('/config');
+
+            const news = [];
+
+            if (listNews?.data?.some((news) => (news?.users || []).length > 0)) {
+                for (const newsData of listNews.data) {
+                    const populatedNews = { ...newsData };
+
+                    if (newsData?.users) {
+                        const users = await User.find({ _id: { $in: newsData.users } });
+
+                        populatedNews.users = users.map((user) => {
+                            const base = { _id: user._id, name: user.name };
+
+                            if (config.enableUserLink && config?.userFields?.length) {
+                                const extraFields = config.userFields.reduce((acc, field) => {
+                                    acc[field] = user[field];
+                                    return acc;
+                                }, {});
+                                return { ...base, ...extraFields };
+                            }
+
+                            return base;
+                        });
+                    }
+                    news.push(populatedNews);
+                }
+            } else {
+                const data = { data: listNews.data, total: listNews.total };
+                return _messages.success(res, req, data, 'ok', 'news', 'listNews');
+            }
+            const data = { data: news, total: listNews.total };
+
+            return _messages.success(res, req, data, 'ok', 'news', 'listNews');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+
+            return _messages.internalServer(res, req, message, message, 'news', 'listNews');
+        }
+    },
+
+    createNews: async (req, res) => {
+        try {
+            const payload = JSON.parse(req.fields.payload);
+
+            const { thumb } = req.files;
+            if (thumb) {
+                const thumbPath = await azureBlob(thumb, 'news/banners');
+
+                payload.thumbPath = thumbPath;
+            }
+            const { data } = await newsApi.post('/news', payload);
+
+            return _messages.success(
+                res,
+                req,
+                data,
+                'Notícia criada com sucesso',
+                'news',
+                'createNews'
+            );
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+
+            return _messages.internalServer(res, req, message, message, 'news', 'createNews');
+        }
+    },
+
+    updateNews: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const payload = JSON.parse(req.fields.payload);
+
+            const { thumb } = req.files;
+            if (thumb) {
+                const thumbPath = await azureBlob(thumb, 'news/banners');
+
+                payload.thumbPath = thumbPath;
+            }
+            
+            const { data } = await newsApi.put(`/news/${id}`, payload);
+
+            return _messages.success(res, req, data, 'ok', 'news', 'updateNews');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+
+            return _messages.internalServer(res, req, message, message, 'news', 'updateNews');
+        }
+    },
+
+    deleteNews: async (req, res) => {
+        try {
+            const { id } = req.params;
+            await newsApi.delete(`/news/${id}`);
+
+            return _messages.successEmpty(res, req, 'ok', 'news', 'deleteNews');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+
+            return _messages.internalServer(res, req, message, message, 'news', 'deleteNews');
+        }
+    },
+};
+
+module.exports = newsController;

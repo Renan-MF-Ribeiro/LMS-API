@@ -1,6 +1,7 @@
 const express = require('express');
 const _controller = require('./controller');
 const { isEngagementManager } = require('../../utils/middlewares');
+const { cacheRequest } = require('../../utils/cache/helpers');
 
 module.exports = express.Router()
     .get('/config', isEngagementManager, _controller.getConfig)
@@ -8,11 +9,13 @@ module.exports = express.Router()
     .get('/users-lists', isEngagementManager, _controller.getUsers)
     .post('/users-lists', isEngagementManager, _controller.addOrRemoveFromUserList)
     .get('/status', _controller.getSocialStatus)
+    .get('/news/status', _controller.getSocialStatus)
 
     //comments
     .post('/comments/create', _controller.createComment)
     .get('/comments/all', _controller.getAllComments)
-    .get('/comments/trails/:trailId', _controller.getCommentsByTrailId)
+    .get('/comments/trails/:trailId', cacheRequest(10 * 1000, 10 * 1000), _controller.getCommentsByTrailId) // Cache for 10 seconds
+    .get('/comments/news/:newsId', _controller.getCommentsByNewsId)
     .put('/comments/update/:commentId', _controller.updateComment)
     // comments management
     .get('/comments/pending', isEngagementManager, _controller.getPendingComments)
@@ -22,6 +25,7 @@ module.exports = express.Router()
     //likes
     .post('/like/create', _controller.createLike)
     .get('/like/:trailId/:userId', _controller.getLikesByTrailId)
+    .get('/like/news/:newsId/:userId', _controller.getLikesByNewsId)
     .delete('/like/delete', _controller.deleteLike)
     //favorite
     .post('/favorite/create', _controller.createFavorite)
@@ -29,5 +33,7 @@ module.exports = express.Router()
     .put('/favorite/update/:favoriteId', _controller.updateFavorite)
     //share
     .post('/share', _controller.shareSocialContent)
+    .post('/news/share', _controller.shareNewsSocialContent)
     .post('/share/users', _controller.getShareTargets)
+    .post('/share/news/users', _controller.getNewsShareTargets)
     .get('/users', _controller.getUsersElegibleForSharing);

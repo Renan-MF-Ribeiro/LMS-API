@@ -2,10 +2,10 @@ const { Types } = require("mongoose");
 const ApiError = require("../../errors/ApiError");
 const { getUserByToken, stripHtmlTags } = require("../../utils/functions");
 const { certificateClient, getHeaders } = require("../certificates/business");
-const { setAssessmentHistoricOnSections, populateSectionTrails, getTagsElegiblesByToken } = require("../sections/business");
+const { setAssessmentHistoricOnSections, populateSectionTrails, getTagsElegiblesByToken, setCerticateHistoricOnSections } = require("../sections/business");
 const { Section } = require("../sections/model");
 const { Trail } = require("../trails/model");
-const { getEligibilityInfoByUserId } = require("../../utils/user");
+const { getEligibilityInfoByUserId, getInfoByUserId } = require("../../utils/user");
 
 async function listTrainingSections(req, res) {
     const sections = await Section
@@ -211,8 +211,10 @@ async function listTrainingTrackings(req, res) {
     const user = await getUserByToken(req);
     const tags = await getTagsElegiblesByToken(req);
 
-    const { sections } = await getEligibilityInfoByUserId(
-        user._id,
+
+
+    const { sections } = await getInfoByUserId(
+        user,
         {
             sections: {
                 filter: {
@@ -222,11 +224,10 @@ async function listTrainingTrackings(req, res) {
                 }
             }
         },
-        tags
     );
 
     res.json(
-        await setAssessmentHistoricOnSections(user._id, sections, tags)
+        await setCerticateHistoricOnSections(user._id, sections, tags)
     );
 }
 
