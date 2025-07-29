@@ -76,7 +76,6 @@ module.exports = {
         else {
             tags = await getTagsElegiblesByToken(req);
         }
-        console.log('tags', tags)
         const user = await _functions.getUserByToken(req);
 
         try {
