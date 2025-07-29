@@ -16,6 +16,31 @@ module.exports = {
 
         removeFromCache('/theme/features');
 
+        if (features.mentoring && !(await Channel.countDocuments({ type: 'mentoring' }))) {
+            await Channel.create({
+                enabled: true,
+                tags: ['ELEGE_geral'],
+                banners: [],
+                idSections: [],
+                title: 'Mentorias',
+                position: 99,
+                type: 'mentoring'
+            });
+        }
+
+        if (features.news && !(await Channel.countDocuments({ type: 'news' }))) {
+            await Channel.create({
+                enabled: true,
+                tags: ['ELEGE_geral'],
+                banners: [],
+                idSections: [],
+                title: 'Notícias',
+                position: 99,
+                type: 'news'
+            });
+        }
+
+
         return _messages.success(res, req, features)
     },
 

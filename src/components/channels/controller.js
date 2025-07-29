@@ -82,62 +82,24 @@ module.exports = {
                 }
             }
 
-            // if (req?.segmentation) {
-            //     handleSegmentationOnQuery(req, 'owner', query)
-            // }
-
             let channels = await Channel
                 .find(query)
                 .sort({ position: 'asc' })
                 .populate({ path: 'theme', match: { deleted: 0 }, })
 
-
-            const existingMentoringChannel = await Channel.findOne({ type: 'mentoring' });
-
-            const existingNewsChannel = await Channel.findOne({ type: 'news' });
-
-            if (!existingMentoringChannel) {
-                await Channel.create({
-                    enabled: true,
-                    tags: ['ELEGE_geral'],
-                    banners: [],
-                    idSections: [],
-                    title: 'Mentorias',
-                    position: 4,
-                    type: 'mentoring'
-                });
-            }
-
-            if (!existingNewsChannel) {
-                await Channel.create({
-                    enabled: true,
-                    tags: ['ELEGE_geral'],
-                    banners: [],
-                    idSections: [],
-                    title: 'Notícias',
-                    position: 5,
-                    type: 'news'
-                });
-            }
-
             channels = await Promise.all(channels.map(async (channel) => {
-                if (channel.type === 'alura') return channel
-                if (channel.type === 'feed') return channel
-                if (channel.type === 'news') return channel
-
-                if(features?.mentoring && channel.type === 'mentoring') return channel
-
-                if (features?.collaborationComponent && channel.type === 'collaboration') return channel
+                if (channel.type === 'alura') return channel;
+                if (channel.type === 'feed') return channel;
+                if (channel.type === 'news') return channel;
+                if(channel.type === 'mentoring') return channel;
+                if (channel.type === 'collaboration') return channel;
 
                 const sectionQuery = { $and: [
                     { _id: { $in: channel.idSections } }
                 ] }
 
-                // if (req?.segmentation) {
-                //     handleSegmentationOnQuery(req, 'owner', sectionQuery)
-                // }
-
                 const sections = await Section.find(sectionQuery).select('trails');
+                
                 const trailsIds = sections.flatMap(
                     (section) => section.trails
                         ?.map(trail => getSectionTrailId(trail))
@@ -147,10 +109,6 @@ module.exports = {
                 const trailQuery = { $and: [
                     { _id: { $in: trailsIds } }
                 ] }
-
-                // if (req?.segmentation) {
-                //     handleSegmentationOnQuery(req, 'owner', trailQuery)
-                // }
 
                 const trails = await Trail.find(trailQuery);
 
