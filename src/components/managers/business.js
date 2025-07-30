@@ -42,7 +42,8 @@ const business = {
 
         if (rules?.useIsManagerFlag) {
             query.push({
-                managerRegistration: user?.registration
+                managerRegistration: user?.registration,
+                enabled: true,
             });
 
         }
@@ -58,7 +59,8 @@ const business = {
                 ],
             }));
         }
-        return await User.find({ $and: query }, '_id name networkLogin office').lean();
+        const finalQuery = rules?.useIsManagerFlag ? { $or: query } : { $and: query };
+        return await User.find(finalQuery, '_id name networkLogin office').lean();
     },
 
     isUserManager: async (user) => {
