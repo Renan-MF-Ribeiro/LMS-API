@@ -906,46 +906,39 @@ module.exports = {
                     );
                 }
             }
-
-            const {
-                SAS,
-                tk,
-                key,
-                tokenAnalytics,
-                tokenHappPlace,
-                mfaToken,
-                authwebPush,
-                profilesIDS,
-                namesProfiles,
-                namesGroups,
-            } = await generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', tokenIdpProfiles, res);
-
-            const entryRecord = await returnDateSinceFirstLogin(user?._id);
+            
+            const [tokens, entryRecord] = await Promise.all([
+                generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', res),
+                returnDateSinceFirstLogin(user?._id),
+                updateLastLoginUser(user?._id),
+                GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.LOGIN],
+                    identifier: user.networkLogin,
+                }),
+            ]);
 
             const firstLogin = !user.passwordValid && !entryRecord;
-
-            await updateLastLoginUser(user._id);
 
             _messages.success(
                 res,
                 req,
                 {
-                    SAS,
-                    tk,
-                    key,
+                    SAS: tokens?.SAS,
+                    tk: tokens?.tk,
+                    key: tokens?.key,
+                    numbers: tokens?.profilesIDS.numbers,
+                    tokenAnalytics: tokens?.tokenAnalytics,
+                    tokenHappPlace: tokens?.tokenHappPlace,
+                    mfaToken: tokens?.mfaToken,
+                    authwebPush: tokens?.authwebPush?.keys.auth,
                     firstLogin,
                     accept: user.acceptTerms,
                     acceptCollaboration: user.acceptTermsCollaboration,
                     passwordValid: true,
-                    numbers: profilesIDS.numbers,
                     name: user.name,
                     profilePhoto: user.profilePhoto,
-                    tokenAnalytics,
-                    tokenHappPlace,
-                    mfaToken,
                     networkLogin: user.networkLogin,
                     userId: user._id,
-                    authwebPush: authwebPush?.keys.auth,
                     email: user.email,
                 },
                 'Sucesso ao logar',
@@ -955,7 +948,7 @@ module.exports = {
                 [],
                 true,
                 'LOGIN',
-                namesProfiles.concat(namesGroups)
+                tokens?.namesProfiles.concat(tokens?.namesGroups)
             );
         } catch (error) {
             console.log(error);
