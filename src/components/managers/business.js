@@ -63,6 +63,8 @@ const business = {
 
     isUserManager: async (user) => {
         if (!user) return false;
+        if(user?.manager?.toLowerCase() !== 'nao') return true;
+        
         const rules = await configBusiness.getManagerRule();
         for (const rule of rules?.rules || []) {
             if (rule?.managerValues?.some((v) => user?.[rule?.managerField] === v)) {
