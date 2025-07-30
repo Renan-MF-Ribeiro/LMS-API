@@ -908,7 +908,7 @@ module.exports = {
             }
             
             const [tokens, entryRecord] = await Promise.all([
-                generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', res),
+                generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', tokenIdpProfiles, res),
                 returnDateSinceFirstLogin(user?._id),
                 updateLastLoginUser(user?._id),
                 GamificationKafka.publishEventRuleValidation({
