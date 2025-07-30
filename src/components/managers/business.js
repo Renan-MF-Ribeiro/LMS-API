@@ -25,7 +25,7 @@ const business = {
 
         const matchingRules = await module.exports.getMatchingRules(user, rules);
 
-        if (!matchingRules?.[0] && rules.rules?.length > 0) {
+        if (!matchingRules?.[0] && rules?.rules?.length > 0) {
             return [];
         }
 
