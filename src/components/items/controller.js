@@ -247,7 +247,7 @@ const ItemController = {
                 }
 
                 //Evento novo conteúdo colaborativo
-                _messages.success(res, req, item._id);
+                _messages.success(res, req, item._id, `Criação de novo item colaborativo com sucesso`, 'items', '/collaboration', [], [], true, 'CREATE');
             } catch (error) {
                 if (error.message === 'Something went wrong') {
                     _messages.internalServer(
@@ -320,7 +320,7 @@ const ItemController = {
 
             if (isFeatEnabled(chatConfig)) await dispatchChatItemKafkaEvent(_id);
 
-            _messages.success(res, req, { _id });
+            _messages.success(res, req, { _id }, `Item do tipo ${req.body?.kind} criado com sucesso`, 'items', '/create', [], [], true, 'CREATE');
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -819,8 +819,10 @@ const ItemController = {
 
         try {
             const _id = req.params.itemId;
-            await ItemModel.findOneAndUpdate({ _id }, req.body);
+            const newItem = await ItemModel.findOneAndUpdate({ _id }, req.body);
             await dispatch('update', 'item', { _id, ...req.body });
+
+            await _functions.recordLog(req, 'NO_CONTENT_SUCCES', `Update do item ${_id} realizado com sucesso`, 'items', '/update', newItem);
             res.status(httpStatus.NO_CONTENT).send();
         } catch (error) {
             _messages.internalServer(
@@ -843,14 +845,14 @@ const ItemController = {
                 (item.title && item.description && item.durationHours) ||
                 item.kind === 'SoonItem'
             ) {
-                await Item.findByIdAndUpdate(_id, { enabled });
+                const newItem = await Item.findByIdAndUpdate(_id, { enabled });
                 await dispatch('update', 'item', { _id, enabled });
 
                 const chatConfig = await getChatIAConfig();
 
                 if (isFeatEnabled(chatConfig)) await dispatchChatItemKafkaEvent(_id, enabled ? 'UPSERT' : 'DELETE');
 
-                _messages.success(res, req, 'Atualizado com sucesso');
+                _messages.success(res, req, 'Atualizado com sucesso', `Status do item de id: ${_id} atualizado com sucesso`, 'items', '/update-status', newItem, item, true, 'UPDATE');
             } else {
                 _messages.badRequest(
                     res,
@@ -1227,7 +1229,7 @@ const ItemController = {
                     })
                 );
 
-                _messages.success(res, req, items);
+                _messages.success(res, req, items, 'Upload SCORM item realizado com sucesso', 'items', '/scorm', [], [], true);
             } catch (err) {
                 throw _errors.SCORM_UPLOAD.INVALID_MANIFEST;
             }
@@ -1426,7 +1428,7 @@ const ItemController = {
                     })
                 );
 
-                return _messages.success(res, req, items);
+                return _messages.success(res, req, items, `Item SCORM ${_id} atualizado com sucesso`, 'items', '/updateSCORM');
             } catch (err) {
                 if (err) {
                     throw _errors.SCORM_UPLOAD.UNEXPECTED_IDENTIFIER;
@@ -1561,7 +1563,7 @@ const ItemController = {
                         course.durationHours
                     ),
                 };
-                _messages.success(res, req, certificate);
+                _messages.success(res, req, certificate, 'Certificado gerado com sucesso', 'items', '/generate-certificate/');
             } else {
                 _messages.badRequest(
                     res,
@@ -1569,7 +1571,7 @@ const ItemController = {
                     'Não foi possível gerar o certificado, pois o item não está concluído!',
                     'Conclua o item para gerar o certificado!',
                     'items',
-                    'generateCertificate'
+                    '/generate-certificate'
                 );
             }
         } catch (error) {
