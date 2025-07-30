@@ -58,7 +58,7 @@ const business = {
                 ],
             }));
         }
-        return await User.find({ $or: query }, '_id name networkLogin office').lean();
+        return await User.find({ $and: query }, '_id name networkLogin office').lean();
     },
 
     isUserManager: async (user) => {
