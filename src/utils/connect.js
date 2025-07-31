@@ -49,13 +49,13 @@ module.exports = {
 
             const connectKeyValue = connectMap[connectKey];
 
-            if (typeof connectKeyValue === 'string' || !connectKeyValue) continue;
-
-            if (!data[connectKey]) continue;
+            if (!data[connectKey] || typeof connectKeyValue === 'string' || !connectKeyValue) continue;
 
             const fieldType = connectKeyValue.type;
             const fieldConfig = connectKeyValue.config;
+            const positiveValues = ['sim', 's', '1', 'true', 'ativo', 'a', 'yes', 'y'];
 
+            // Parser
             switch (fieldType) {
                 case 'string':
                     data[connectKey] = String(data[connectKey]);
@@ -64,7 +64,7 @@ module.exports = {
                     data[connectKey] = Number(data[connectKey]);
                     break;
                 case 'boolean':
-                    data[connectKey] = ['sim', 's', '1', 'true'].includes(String(data[connectKey]).toLowerCase());
+                    data[connectKey] = positiveValues.includes(String(data[connectKey]).toLowerCase());
                     break;
                 case 'cpf':
                     data[connectKey] = String(data[connectKey]).replace(/\D/g, '');
@@ -74,8 +74,6 @@ module.exports = {
                     break;
             }
 
-            const positiveValues = ['sim', 's', '1', 'true', 'ativo', 'a', 'yes', 'y'];
-
             if (connectKey === 'status') {
                 data.status = positiveValues.includes(String(data.status).toLowerCase()) ? 'ATIVO' : 'INATIVO';
             }
@@ -84,6 +82,7 @@ module.exports = {
                 data.pcd = positiveValues.includes(String(data.pcd).toLowerCase()) ? 'SIM' : 'NAO';
             }
 
+            // Validation
             const dataValue = data[connectKey];
 
             switch (fieldType) {
@@ -118,7 +117,7 @@ module.exports = {
                     }
                     break;
                 case 'boolean':
-                    if (!['sim', 's', '1', 'true', 'não', 'n', '0', 'false'].includes(String(dataValue).toLowerCase())) {
+                    if (!['true', 'false'].includes(String(dataValue).toLowerCase())) {
                         errors.push({
                             field: connectKey,
                             message: `O campo ${connectKeyValue.label} deve ser um valor booleano.`,
@@ -176,5 +175,54 @@ module.exports = {
         }
 
         return errors;
+    },
+
+    getConnectMapReplacers(connectMap) {
+        if (!connectMap || typeof connectMap !== 'object' || !Object.keys(connectMap).length) return null;
+
+        const replaceMap = new Map();
+
+        for (const connectKey in connectMap) {
+            const connectKeyValue = connectMap[connectKey];
+            const fieldConfig = connectKeyValue?.config ?? null;
+
+            if (fieldConfig?.replace?.length) {
+                replaceMap.set(connectKey, fieldConfig.replace);
+            }
+        }
+
+        return replaceMap;
+    },
+
+    setReplacedValuesFromConnectMap(data, replaceMap) {
+        if (!data
+            || typeof data !== 'object'
+            || !Object.keys(data).length
+            || !replaceMap
+            || !(replaceMap instanceof Map)
+            || !replaceMap.size) return;
+
+        Object.keys(data).forEach((key) => {
+            if (replaceMap.has(key)) {
+                const replacers = replaceMap.get(key).map(({ from, to } = {}) => {
+                    if (!from || !to) return (value) => value;
+
+                    return (value) => {
+                        if (!value || typeof value !== 'string') return value;
+
+                        return value.replace(from, to);
+                    }
+                });
+
+                const originalValue = data[key];
+
+                data[key] = replacers.reduce(
+                    (value, replacer) => replacer(value),
+                    originalValue
+                );
+            }
+        });
+
+        return data;
     }
 };

@@ -62,7 +62,7 @@ const { Section } = require('../components/sections/model');
 const { getConfiguration, getMessengerConfig, getCronConfig, getUsersDataConfig } = require('../components/config/business');
 const { ConfigTypes } = require('../components/config/model');
 const ApiError = require('../errors/ApiError');
-const { getConnectMap, validateDataByConnectMap } = require('./connect');
+const { getConnectMap, validateDataByConnectMap, getConnectMapReplacers } = require('./connect');
 const environment = require('../environment');
 
 module.exports = {
@@ -659,6 +659,8 @@ async function processUserLoadFile(directory, fileName, isProduction, usersDataC
 
         const connectMap = await getConnectMap(true);
 
+        let replaceMap = null;
+
         if (connectMap) {
             const errors = [];
 
@@ -676,6 +678,8 @@ async function processUserLoadFile(directory, fileName, isProduction, usersDataC
             if (errors.length > 0) {
                 throw new ApiError('Erro ao importar usuários', 400, errors, { skipDbLog: true });
             }
+
+            replaceMap = getConnectMapReplacers(connectMap);
         }
 
         for await (const [index, user] of Object.entries(users)) {
@@ -694,7 +698,10 @@ async function processUserLoadFile(directory, fileName, isProduction, usersDataC
 
             const processedUser = await processUsersLoad(
                 user,
-                fieldsForEligibility
+                fieldsForEligibility,
+                false,
+                false,
+                replaceMap
             );
 
             const account = await processUserAccount(processedUser);

@@ -25,7 +25,7 @@ const { Tracking } = require('../tracking/model');
 const { ConfigLogin } = require('../theme/login-config/model');
 const ApiError = require('../../errors/ApiError');
 const { getMessengerConfig } = require('../config/business');
-const { getConnectMap } = require('../../utils/connect');
+const { getConnectMap, setReplacedValuesFromConnectMap } = require('../../utils/connect');
 const { getCookieProps } = require('../../utils/cookies');
 const PartnerBusiness = require('../partners/business');
 const { createSessionStore } = require('../../utils/session');
@@ -396,7 +396,7 @@ module.exports = {
         return dashboardFilters;
     },
 
-    async processUsersLoad(data, elegibilityFields = [], onboarding = false, preventOnboardingGroupAdd = false) {
+    async processUsersLoad(data, elegibilityFields = [], onboarding = false, preventOnboardingGroupAdd = false, replaceMap = null) {
 
         ['networkLogin', 'name', 'password'].forEach((field) => {
             if (!data[field]) {
@@ -408,13 +408,6 @@ module.exports = {
         const firstName = String(data.name?.split(' ')[0]).trim().toLowerCase();
         const firstThreeCpf = sanitizeCpf(data.cpf).slice(0, 3);
         const initialPassword = !onboarding ? '1234' : `${firstName}${firstThreeCpf}`;
-        data.password = [
-            {
-                hash: bcrypt.hashSync(String(data?.password ?? initialPassword), salt),
-                valid: true,
-                createdAt: new Date(Date.now()),
-            },
-        ];
 
         function parseDate(date) {
             if (!date) return null;
@@ -435,7 +428,6 @@ module.exports = {
         }
 
         data.clientUserKey = CLIENT_ID + '@@' + data.networkLogin;
-
         data.birthDate = parseDate(data.birthDate);
         data.admission = parseDate(data.admission);
         data.createDate = parseDate(data.createDate);
@@ -443,9 +435,15 @@ module.exports = {
         data.vacationStartDate = parseDate(data.vacationStartDate);
         data.vacationEndDate = parseDate(data.vacationEndDate);
         data.loginType = data.loginType == 'AMBOS' ? 'BOTH' : data.loginType;
-
         data.enabled = true;
         data.onboarding = onboarding;
+        data.password = [
+            {
+                hash: bcrypt.hashSync(String(data?.password ?? initialPassword), salt),
+                valid: true,
+                createdAt: new Date(Date.now()),
+            },
+        ];
 
         const groupsAD = ['PERFIL_Aluno'];
 
@@ -519,6 +517,10 @@ module.exports = {
         if (onboarding) {
             data.networkLogin = data.cpf;
             data.onboarding = true;
+        }
+
+        if (replaceMap?.size) {
+            setReplacedValuesFromConnectMap(data, replaceMap);
         }
 
         return data;

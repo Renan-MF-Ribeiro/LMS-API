@@ -1360,6 +1360,8 @@ module.exports = {
 
         const connectMap = await getConnectMap(true);
 
+        let replaceMap = null;
+
         if (connectMap) {
             const errors = [];
 
@@ -1376,6 +1378,8 @@ module.exports = {
             if (errors.length > 0) {
                 throw new ApiError('Erro ao importar usuários', 400, errors, { skipDbLog: true });
             }
+
+            replaceMap = getConnectMapReplacers(connectMap);
         }
 
         for (const result of results) {
@@ -1383,7 +1387,14 @@ module.exports = {
                 $or: [{ networkLogin: result.networkLogin }, { networkLogin: result.cpf }],
             });
 
-            const processedUser = await processUsersLoad(result, fieldsForElegibility);
+            const processedUser = await processUsersLoad(
+                result,
+                fieldsForElegibility,
+                false,
+                false,
+                replaceMap
+            );
+            
             const account = await processUserAccount(processedUser);
 
             processedUser.password = existingUser ? existingUser.password : processedUser.password;
