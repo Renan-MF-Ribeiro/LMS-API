@@ -1,6 +1,8 @@
 const express = require('express');
-const { isSuperAdmin } = require('../middlewares');
+
 const { getCacheEntries, removeFromCache, getFromCache, clearCache } = require('./store');
+
+const { isSuperAdmin } = require('../middlewares');
 
 function getCacheKeyFromURL(url) {
     return url.replace(/^((\/?)cache\/(remove|value))/g, '').split('?')[0];

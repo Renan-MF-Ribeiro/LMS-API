@@ -1,11 +1,20 @@
+const { defaultCacheUnit, getCacheTTLmsFromUnit } = require("./helpers");
+
 const { log } = require("../logger");
 
-const defaultCacheTtl = 15 * 60 * 1000; // 15 minutes
+const environment = require("../../environment");
 
 const cacheStore = new Map();
 
-function setInCache(key, value, ttl = defaultCacheTtl) {
-    log('[CACHE] Setting store', key);
+function setInCache(key, value, cacheUnit = defaultCacheUnit) {
+    if (!environment.CACHE_ENABLED) {
+        log('[CACHE][store] Caching is disabled');
+        return value;
+    }
+
+    log('[CACHE][store] Setting store', key);
+
+    const ttl = getCacheTTLmsFromUnit(cacheUnit);
 
     cacheStore.set(key, {
         value,
@@ -70,5 +79,4 @@ module.exports = {
     removeFromCache,
     clearCache,
     getCacheEntries,
-    defaultCacheTtl
 };

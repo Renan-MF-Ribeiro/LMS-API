@@ -90,6 +90,13 @@ const environmentSchema = z.object({
     // UNSPLASH
     UNSPLASH_API_KEY: z.string(),
 
+    // SESSIONS
+    SESSION_MAX_AGE: z.coerce.number().optional().default(6 * 60 * 60 * 1000), // 6 horas
+
+    // Cache
+    CACHE_ENABLED: z.string().optional().default('false').transform(val => ['true', '1'].includes(String(val))),
+    CACHE_UNIT: z.coerce.number().optional().default(1000),
+
     // API_VERSION é Setado no processo de build
     API_VERSION: z.string().optional().default('no-info'),
 
@@ -141,8 +148,6 @@ const environmentSchema = z.object({
     // // Outros
     // LDPA_HOST: z.string().optional(), // ! NAO ESTA USANDO
     // JWT_SECRET: z.string().optional(), // ! NAO ESTA USANDO
-
-    SESSION_MAX_AGE: z.coerce.number().optional().default(6 * 60 * 60 * 1000), // 6 horas
 });
 
 const { success, data, error } = environmentSchema.safeParse(process.env);
@@ -151,7 +156,18 @@ let environment = data;
 
 if (!success) {
     console.error('Invalid environment variables:', JSON.stringify(error.issues, null, 2));
-    environment = { ...process.env, SESSION_MAX_AGE: 6 * 60 * 60 * 1000 };
+    environment = {
+        ...process.env,
+        SESSION_MAX_AGE: process.env.SESSION_MAX_AGE
+            ? Number(process.env.SESSION_MAX_AGE)
+            : 6 * 60 * 60 * 1000, // 6 horas
+        CACHE_ENABLED: process.env.CACHE_ENABLED
+            ? ['true', '1'].includes(String(process.env.CACHE_ENABLED))
+            : false,
+        CACHE_UNIT: process.env.CACHE_UNIT
+            ? Number(process.env.CACHE_UNIT)
+            : 1000,
+    };
 }
 
 module.exports = environment;

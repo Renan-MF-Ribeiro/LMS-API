@@ -84,7 +84,7 @@ const environment = require('./environment');
 const { matricesApiMiddleware } = require('./components/matrices/http-adapter');
 const { newsApiMiddleware } = require('./components/news/http-adapter');
 const { i18nApiMiddleware } = require('./components/i18n/http-adapter');
-const { cacheRequestOnClient } = require('./utils/cache/helpers');
+const { cacheRequestOnClient } = require('./utils/cache/middlewares');
 const { cacheRouter } = require('./utils/cache/router');
 
 const corsOptions = {

@@ -3,7 +3,7 @@ const express = require('express');
 const controller = require('./controller');
 
 const { isStudent, validateTokenRoute } = require('../../utils/middlewares');
-const { cacheRequestOnClient } = require('../../utils/cache/helpers');
+const { cacheRequestOnClient } = require('../../utils/cache/middlewares');
 
 const router = express.Router();
 

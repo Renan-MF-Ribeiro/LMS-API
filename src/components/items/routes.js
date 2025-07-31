@@ -9,7 +9,7 @@ const {
 } = require('../../utils/middlewares')
 
 const { getFormMiddleware } = require('../../utils/files')
-const { cacheRequestOnClient } = require('../../utils/cache/helpers')
+const { cacheRequestOnClient } = require('../../utils/cache/middlewares')
 
 try {
     shelljs.mkdir('-p', UPLOADS_PATH)
@@ -27,7 +27,7 @@ module.exports = express.Router()
     .get('/:itemId', isStudent, _controller.findById)
     .patch('/:itemId/archive', isAccountant, _controller.archive)
     .patch('/:itemId/unarchive', isAccountant, _controller.unarchive)
-    .get('/:trailId/:itemId', isStudent, cacheRequestOnClient(10 * 60 * 1000), _controller.findItemById) // Cache for 10 minutes
+    .get('/:trailId/:itemId', isStudent, cacheRequestOnClient(10 * 60), _controller.findItemById) // Cache for 10 minutes
     .get('/', isAccountant, _controller.findAll)
     .get('/generate-certificate/:item', _controller.generateCertificate)
     .delete('/:itemId', isAccountant, _controller.disableById)
