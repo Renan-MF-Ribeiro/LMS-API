@@ -509,7 +509,13 @@ module.exports = {
         let course = await ClassModel.findOne({ _id: classId });;
 
         if (!course) {
-            course = await ClassModel.findOne({ _id: classId });
+            throw new ApiError('Turma não encontrada.', 404);
+        }
+
+        const hasLimit = typeof course.limit === 'number' && course.limit > 0;
+
+        if (hasLimit && course.users.length >= course.limit) {
+            throw new ApiError('Não foi possível se inscrever: turma cheia.', 409);
         }
 
         const classesFromCourse = await ClassModel.find({
