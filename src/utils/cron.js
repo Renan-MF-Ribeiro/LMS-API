@@ -63,6 +63,7 @@ const { getConfiguration, getMessengerConfig, getCronConfig, getUsersDataConfig 
 const { ConfigTypes } = require('../components/config/model');
 const ApiError = require('../errors/ApiError');
 const { getConnectMap, validateDataByConnectMap } = require('./connect');
+const environment = require('../environment');
 
 module.exports = {
     async cronNotifyResponsibleUsers () {
@@ -628,7 +629,7 @@ function usersLoadLog(...data) {
     console.log(new Date(), '[USERS_LOAD]', ...data);
 }
 
-async function processUserLoadFile(directory, fileName, isProduction, hook) {
+async function processUserLoadFile(directory, fileName, isProduction, usersDataConfig, hook) {
     try {
         const file = await getAzureFileByPath('sftp', `${directory}/${fileName}`);
         const fileExtension = fileName.split('.').pop();
@@ -743,8 +744,6 @@ async function processUserLoadFile(directory, fileName, isProduction, hook) {
             'Usuários processados!', `Usuários existentes: ${existingUsers.length}, Novos usuários: ${newUsers.length}`
         );
 
-        const usersDataConfig = await getUsersDataConfig();
-
         if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
             usersLoadLog('Inativando usuários não presentes na planilha');
 
@@ -841,12 +840,18 @@ async function processUserLoadFile(directory, fileName, isProduction, hook) {
 }
 
 async function getUsersLoad() {
-    const env = process.env.NODE_ENV;
-    const hook = process.env.WEBHOOK_URL ? new Webhook(process.env.WEBHOOK_URL) : null;
-
+    const env = environment.NODE_ENV;
+    const hook = environment.WEBHOOK_URL ? new Webhook(environment.WEBHOOK_URL) : null;
+    
     const isProduction = env === 'production';
+    
+    const usersDataConfig = await getUsersDataConfig();
+    
+    const importPath = usersDataConfig?.importPath?.replace(/^\//, '') ?? null;
 
-    const directory = isProduction ? 'producao' : 'homologacao';
+    const directory = `${isProduction ? 'producao' : 'homologacao'}${importPath?.length ? `/${importPath}` : ''}`;
+
+    usersLoadLog(`Iniciando carga de usuários do diretório: ${directory}`);
 
     console.time('[USERS_LOAD] execution time');
 
@@ -872,7 +877,7 @@ async function getUsersLoad() {
             usersLoadLog(`Processando arquivo ${fileName} (${Number(index) + 1}/${files.length})...`);
 
             try {
-                await processUserLoadFile(directory, fileName, isProduction, hook);
+                await processUserLoadFile(directory, fileName, isProduction, usersDataConfig, hook);
             } catch (err) { continue; }
         }
     } catch (error) {

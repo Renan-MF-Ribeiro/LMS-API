@@ -291,6 +291,8 @@ const UsersDataConfigModel = ConfigModel.discriminator(
                     inactivateIfNotInSpreadsheet: false,
                     sendSignUpActivationEmail: false,
                     daysSinceLastFeedback: 180,
+                    importPath: null,
+                    preventOnboardingGroupAdd: false
                 },
                 type: new mongoose.Schema(
                     {
@@ -303,6 +305,17 @@ const UsersDataConfigModel = ConfigModel.discriminator(
                         inactivateIfNotInSpreadsheet: { type: Boolean, default: false },
                         sendSignUpActivationEmail: { type: Boolean, default: false },
                         daysSinceLastFeedback: { type: Number, default: 180 },
+                        importPath: {
+                            type: String,
+                            required: false,
+                            trim: true,
+                            default: null,
+                        },
+                        preventOnboardingGroupAdd: {
+                            type: Boolean,
+                            required: false,
+                            default: false,
+                        }
                     },
                     valueSchemaOptions
                 ),

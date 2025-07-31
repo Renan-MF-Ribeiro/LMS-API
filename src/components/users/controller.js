@@ -1512,6 +1512,9 @@ module.exports = {
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
             const messengerConfig = await getMessengerConfig();
+            const usersDataConfig = await getUsersDataConfig();
+
+            const preventOnboardingGroupAdd = usersDataConfig?.preventOnboardingGroupAdd ?? false;
 
             for (const result of results) {
                 const existingUser = await User.findOne({
@@ -1521,7 +1524,8 @@ module.exports = {
                 const processedUser = await processUsersLoad(
                     result,
                     fieldsForElegibility,
-                    onboarding
+                    onboarding,
+                    preventOnboardingGroupAdd
                 );
 
                 const account = await processUserAccount(processedUser);

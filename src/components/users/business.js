@@ -396,7 +396,7 @@ module.exports = {
         return dashboardFilters;
     },
 
-    processUsersLoad(data, elegibilityFields = [], onboarding = false) {
+    async processUsersLoad(data, elegibilityFields = [], onboarding = false, preventOnboardingGroupAdd = false) {
 
         ['networkLogin', 'name', 'password'].forEach((field) => {
             if (!data[field]) {
@@ -447,10 +447,13 @@ module.exports = {
         data.enabled = true;
         data.onboarding = onboarding;
 
-        const groupsAD =
-            onboarding === true
-                ? ['PERFIL_Aluno', 'ELEGE_ONBOARDING']
-                : ['PERFIL_Aluno', 'ELEGE_CURSO'];
+        const groupsAD = ['PERFIL_Aluno'];
+
+        if (onboarding && !preventOnboardingGroupAdd) {
+            groupsAD.push('ELEGE_ONBOARDING');
+        } else if (!onboarding) {
+            groupsAD.push('ELEGE_CURSO');
+        }
 
         if (elegibilityFields && elegibilityFields.length > 0 && onboarding == false) {
             for (const field of elegibilityFields) {
@@ -485,15 +488,18 @@ module.exports = {
                 !!data[optional] && groupsAD.push(`ELEGE_${_functions.clearString(data[optional])}`)
         );
 
-        groupsAD.forEach(async (groupName) => {
+        for await (const groupName of groupsAD) {
+            if (groupName.startsWith('PERFIL_')) continue;
+
             const group = await Group.findOne({ name: groupName });
+
             if (!group) {
                 await Group.create({
                     name: groupName,
-                    tags: [],
+                    tags: [{ display: groupName, value: groupName }],
                 });
             }
-        });
+        }
 
         const roles = data.roles ? data.roles.split(',').map((item) => item.trim()) : [];
 
