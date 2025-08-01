@@ -18,6 +18,16 @@ const newsController = {
                 }));
             }
 
+            console.log('Populating author for news');
+            if (data?.author) {
+                const user = await User.findOne({ _id: data.author });
+                data.author = user ? {
+                    _id: user._id,
+                    name: user.name
+                } : null;
+            }
+
+
             return _messages.success(res, req, data, 'ok', 'news', 'getNews');
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
@@ -81,6 +91,11 @@ const newsController = {
 
                             return base;
                         });
+                    }
+
+                    if (newsData?.author) {
+                        const user = await User.findOne({ _id: newsData.author });
+                        populatedNews.author = user ? user.name : null;
                     }
                     news.push(populatedNews);
                 }
