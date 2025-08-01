@@ -689,13 +689,6 @@ async function processUserLoadFile(directory, fileName, isProduction, usersDataC
                 );
             }
 
-            const existingUser = await User.findOne({
-                $or: [
-                    { networkLogin: user.networkLogin },
-                    { networkLogin: user.cpf }
-                ]
-            });
-
             const processedUser = await processUsersLoad(
                 user,
                 fieldsForEligibility,
@@ -704,7 +697,15 @@ async function processUserLoadFile(directory, fileName, isProduction, usersDataC
                 replaceMap
             );
 
-            const account = await processUserAccount(processedUser);
+            const [account, existingUser] = await Promise.all([
+                processUserAccount(processedUser),
+                User.findOne({
+                    $or: [
+                        { networkLogin: processedUser.networkLogin },
+                        { networkLogin: processedUser.cpf }
+                    ]
+                })
+            ]);
 
             processedUser.password = existingUser
                 ? existingUser.password
