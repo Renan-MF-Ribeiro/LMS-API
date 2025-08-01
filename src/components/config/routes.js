@@ -24,4 +24,6 @@ router
     .patch('/segmentation/exceptions/:exceptionId', isSuperAdmin, _controller.updateException)
     .delete('/segmentation/exceptions/:exceptionId', isSuperAdmin, _controller.deleteException)
 
+    .get('/support-form', _controller.getCompanySupportFormConfig)
+
 module.exports = router;

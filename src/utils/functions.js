@@ -523,6 +523,18 @@ module.exports = {
             .toUpperCase();
     },
 
+    slugify(text) {
+        if (!text) return text;
+
+        return String(text)
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\s\W-]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .toLowerCase()
+            .trim();
+    },
+
     getSortedDate(dates = [], order = 'asc') {
         const sortedDates = dates.sort((prev, curr) => prev.getTime() - curr.getTime())
         return order === 'desc' ? sortedDates.slice(0)[0] : sortedDates.slice(-1)[0]

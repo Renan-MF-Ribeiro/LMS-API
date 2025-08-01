@@ -333,6 +333,7 @@ const CompanyConfigModel = ConfigModel.discriminator(
                 default: {
                     companyName: 'Happmobi',
                     mfaSupportEmail: 'suporte@happlearning.com.br',
+                    supportFormCustomEmail: null, // ['networkLogin', 'email', 'cpf', ..., [DOMAIN]]
                 },
                 type: new mongoose.Schema(
                     {
@@ -347,6 +348,11 @@ const CompanyConfigModel = ConfigModel.discriminator(
                             required: true,
                             trim: true,
                             default: 'suporte@happlearning.com.br',
+                        },
+                        supportFormCustomEmail: {
+                            type: [String],
+                            required: false,
+                            default: null,
                         },
                     },
                     valueSchemaOptions
