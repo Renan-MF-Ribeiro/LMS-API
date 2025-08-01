@@ -210,7 +210,7 @@ module.exports = {
                     return (value) => {
                         if (!value || typeof value !== 'string') return value;
 
-                        return value.replace(from, to);
+                        return value.replaceAll(from, to);
                     }
                 });
 
