@@ -205,7 +205,10 @@ module.exports = {
         Object.keys(data).forEach((key) => {
             if (replaceMap.has(key)) {
                 const replacers = replaceMap.get(key).map(({ from, to } = {}) => {
-                    if (!from || !to) return (value) => value;
+                    if (
+                        typeof from !== 'string'
+                        || typeof to !== 'string'
+                    ) return (value) => value;
 
                     return (value) => {
                         if (!value || typeof value !== 'string') return value;
@@ -219,7 +222,7 @@ module.exports = {
                 data[key] = replacers.reduce(
                     (value, replacer) => replacer(value),
                     originalValue
-                );
+                )?.trim?.();
             }
         });
 
