@@ -328,15 +328,16 @@ module.exports = {
 
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
-            const processedUser = await processUsersLoad({
-                networkLogin: req.body[loginField],
-                ...req.body
-            }, fieldsForElegibility, isOnboarding);
+            const processedUser = await processUsersLoad(
+                {
+                    ...req.body,
+                    networkLogin: req.body[loginField],
+                },
+                fieldsForElegibility,
+                isOnboarding
+            );
 
-            await User.create({
-                ...processedUser,
-                networkLogin: req.body[loginField],
-            });
+            await User.create(processedUser);
 
             const created = await User.findOne({ networkLogin: processedUser.networkLogin }).lean();
 
@@ -1360,6 +1361,8 @@ module.exports = {
 
         const connectMap = await getConnectMap(true);
 
+        let replaceMap = null;
+
         if (connectMap) {
             const errors = [];
 
@@ -1376,6 +1379,8 @@ module.exports = {
             if (errors.length > 0) {
                 throw new ApiError('Erro ao importar usuários', 400, errors, { skipDbLog: true });
             }
+
+            replaceMap = getConnectMapReplacers(connectMap);
         }
 
         for (const result of results) {
@@ -1383,7 +1388,14 @@ module.exports = {
                 $or: [{ networkLogin: result.networkLogin }, { networkLogin: result.cpf }],
             });
 
-            const processedUser = await processUsersLoad(result, fieldsForElegibility);
+            const processedUser = await processUsersLoad(
+                result,
+                fieldsForElegibility,
+                false,
+                false,
+                replaceMap
+            );
+            
             const account = await processUserAccount(processedUser);
 
             processedUser.password = existingUser ? existingUser.password : processedUser.password;
@@ -1512,6 +1524,9 @@ module.exports = {
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
             const messengerConfig = await getMessengerConfig();
+            const usersDataConfig = await getUsersDataConfig();
+
+            const preventOnboardingGroupAdd = usersDataConfig?.preventOnboardingGroupAdd ?? false;
 
             for (const result of results) {
                 const existingUser = await User.findOne({
@@ -1521,7 +1536,8 @@ module.exports = {
                 const processedUser = await processUsersLoad(
                     result,
                     fieldsForElegibility,
-                    onboarding
+                    onboarding,
+                    preventOnboardingGroupAdd
                 );
 
                 const account = await processUserAccount(processedUser);

@@ -25,7 +25,7 @@ const { Tracking } = require('../tracking/model');
 const { ConfigLogin } = require('../theme/login-config/model');
 const ApiError = require('../../errors/ApiError');
 const { getMessengerConfig } = require('../config/business');
-const { getConnectMap } = require('../../utils/connect');
+const { getConnectMap, setReplacedValuesFromConnectMap } = require('../../utils/connect');
 const { getCookieProps } = require('../../utils/cookies');
 const PartnerBusiness = require('../partners/business');
 const { createSessionStore } = require('../../utils/session');
@@ -396,7 +396,34 @@ module.exports = {
         return dashboardFilters;
     },
 
-    processUsersLoad(data, elegibilityFields = [], onboarding = false) {
+    /**
+     * Processes user data for loading into the system, handling authentication, group assignments, and data formatting.
+     * 
+     * @async
+     * @param {Object} data - The user data object to be processed
+     * @param {Array<string>} [elegibilityFields=[]] - Array of field names to use for eligibility group assignment
+     * @param {boolean} [onboarding=false] - Whether this is an onboarding user
+     * @param {boolean} [preventOnboardingGroupAdd=false] - Whether to prevent adding onboarding groups
+     * @param {Map} [replaceMap=null] - Map for replacing values using connect map
+     * @returns {Promise<Object>} The processed user data object with additional fields:
+     *   - clientUserKey: Generated client user key
+     *   - password: Array with hashed password object
+     *   - groupsAD: Array of Active Directory groups
+     *   - enabled: Set to true
+     *   - onboarding: Boolean indicating onboarding status
+     * @description
+     * This function performs the following operations:
+     * - Removes empty fields (networkLogin, name, password)
+     * - Generates initial password based on first name and CPF
+     * - Parses and formats date fields
+     * - Creates hashed password with salt
+     * - Assigns appropriate AD groups based on user type and eligibility
+     * - Creates missing groups in the database
+     * - Handles role-based group assignments
+     * - Sanitizes CPF format
+     * - Applies replacement mappings if provided
+     */
+    async processUsersLoad(data, elegibilityFields = [], onboarding = false, preventOnboardingGroupAdd = false, replaceMap = null) {
 
         ['networkLogin', 'name', 'password'].forEach((field) => {
             if (!data[field]) {
@@ -408,13 +435,6 @@ module.exports = {
         const firstName = String(data.name?.split(' ')[0]).trim().toLowerCase();
         const firstThreeCpf = sanitizeCpf(data.cpf).slice(0, 3);
         const initialPassword = !onboarding ? '1234' : `${firstName}${firstThreeCpf}`;
-        data.password = [
-            {
-                hash: bcrypt.hashSync(String(data?.password ?? initialPassword), salt),
-                valid: true,
-                createdAt: new Date(Date.now()),
-            },
-        ];
 
         function parseDate(date) {
             if (!date) return null;
@@ -435,7 +455,6 @@ module.exports = {
         }
 
         data.clientUserKey = CLIENT_ID + '@@' + data.networkLogin;
-
         data.birthDate = parseDate(data.birthDate);
         data.admission = parseDate(data.admission);
         data.createDate = parseDate(data.createDate);
@@ -443,14 +462,23 @@ module.exports = {
         data.vacationStartDate = parseDate(data.vacationStartDate);
         data.vacationEndDate = parseDate(data.vacationEndDate);
         data.loginType = data.loginType == 'AMBOS' ? 'BOTH' : data.loginType;
-
         data.enabled = true;
         data.onboarding = onboarding;
+        data.password = [
+            {
+                hash: bcrypt.hashSync(String(data?.password ?? initialPassword), salt),
+                valid: true,
+                createdAt: new Date(Date.now()),
+            },
+        ];
 
-        const groupsAD =
-            onboarding === true
-                ? ['PERFIL_Aluno', 'ELEGE_ONBOARDING']
-                : ['PERFIL_Aluno', 'ELEGE_CURSO'];
+        const groupsAD = ['PERFIL_Aluno'];
+
+        if (onboarding && !preventOnboardingGroupAdd) {
+            groupsAD.push('ELEGE_ONBOARDING');
+        } else if (!onboarding) {
+            groupsAD.push('ELEGE_CURSO');
+        }
 
         if (elegibilityFields && elegibilityFields.length > 0 && onboarding == false) {
             for (const field of elegibilityFields) {
@@ -485,15 +513,18 @@ module.exports = {
                 !!data[optional] && groupsAD.push(`ELEGE_${_functions.clearString(data[optional])}`)
         );
 
-        groupsAD.forEach(async (groupName) => {
+        for await (const groupName of groupsAD) {
+            if (groupName.startsWith('PERFIL_')) continue;
+
             const group = await Group.findOne({ name: groupName });
+
             if (!group) {
                 await Group.create({
                     name: groupName,
-                    tags: [],
+                    tags: [{ display: groupName, value: groupName }],
                 });
             }
-        });
+        }
 
         const roles = data.roles ? data.roles.split(',').map((item) => item.trim()) : [];
 
@@ -513,6 +544,10 @@ module.exports = {
         if (onboarding) {
             data.networkLogin = data.cpf;
             data.onboarding = true;
+        }
+
+        if (replaceMap?.size) {
+            setReplacedValuesFromConnectMap(data, replaceMap);
         }
 
         return data;

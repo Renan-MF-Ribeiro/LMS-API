@@ -291,6 +291,8 @@ const UsersDataConfigModel = ConfigModel.discriminator(
                     inactivateIfNotInSpreadsheet: false,
                     sendSignUpActivationEmail: false,
                     daysSinceLastFeedback: 180,
+                    importPath: null,
+                    preventOnboardingGroupAdd: false
                 },
                 type: new mongoose.Schema(
                     {
@@ -303,6 +305,17 @@ const UsersDataConfigModel = ConfigModel.discriminator(
                         inactivateIfNotInSpreadsheet: { type: Boolean, default: false },
                         sendSignUpActivationEmail: { type: Boolean, default: false },
                         daysSinceLastFeedback: { type: Number, default: 180 },
+                        importPath: {
+                            type: String,
+                            required: false,
+                            trim: true,
+                            default: null,
+                        },
+                        preventOnboardingGroupAdd: {
+                            type: Boolean,
+                            required: false,
+                            default: false,
+                        }
                     },
                     valueSchemaOptions
                 ),
@@ -320,6 +333,7 @@ const CompanyConfigModel = ConfigModel.discriminator(
                 default: {
                     companyName: 'Happmobi',
                     mfaSupportEmail: 'suporte@happlearning.com.br',
+                    supportFormCustomEmail: null, // ['networkLogin', 'email', 'cpf', ..., [DOMAIN]]
                 },
                 type: new mongoose.Schema(
                     {
@@ -334,6 +348,11 @@ const CompanyConfigModel = ConfigModel.discriminator(
                             required: true,
                             trim: true,
                             default: 'suporte@happlearning.com.br',
+                        },
+                        supportFormCustomEmail: {
+                            type: [String],
+                            required: false,
+                            default: null,
                         },
                     },
                     valueSchemaOptions
