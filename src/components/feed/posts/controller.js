@@ -393,14 +393,14 @@ module.exports = {
             const isReplyingOwnPost = _id === postOwnerId;
 
             if (isMentioningSomeone) {
-                const mentionedUsers = isMentioningSomeone.filter((user) => user !== postOwnerId);
+                const mentionedUsers = isMentioningSomeone.filter((user) => user !== originalPostOwnerId);
 
                 const config = {
                     reqUser: name,
                     communication: ['notification'],
                     type: 'mention',
                     contentType: 'comentário',
-                    contentId: PopulatedData?._id,
+                    contentId: data?.data?.postId,
                 };
                 await createNotification(config, mentionedUsers);
             }
@@ -411,6 +411,7 @@ module.exports = {
                     communication: ['notification'],
                     type: 'comment',
                     contentType: isReplyingPost ? 'post' : 'comentário',
+                    contentId: data?.data?.postId,
                 };
                 await createNotification(config, postOwnerId);
             }
@@ -616,21 +617,3 @@ module.exports = {
         }
     },
 };
-
-async function createMessagesFromBackend(body) {
-    try {
-        const campaign = body;
-        const target = campaign.target;
-        let targetUsers = [];
-
-        if (!target.value.user) {
-            targetUsers = await processTargetUsers(target, campaign.category);
-        } else {
-            targetUsers.push({ ...target.value.user });
-        }
-
-        await sendMessageToKafka(campaign, targetUsers);
-    } catch (error) {
-        console.log(error);
-    }
-}

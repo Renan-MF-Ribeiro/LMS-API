@@ -158,13 +158,13 @@ async function createNotification(config, users) {
     // As frases são criadas concatenando a ação e o objeto do que está sendo notificado.
     text = `Olá! O usuário ${config.reqUser} ${typesOfNotification[config.type]} ${
         config.type !== 'share' ? config.contentType : ''
-    }!`;
-    texthtml = `<br> <p>Olá! O usuário ${config.reqUser} ${typesOfNotification[config.type]} ${
+    }`;
+    texthtml = `<br> <p>Olá! ${config.reqUser} ${typesOfNotification[config.type]} ${
         config.type !== 'share' ? config.contentType : ''
-    }!</p> <br>`;
+    }</p> <br>`;
     title = `Happlearning - ${config.reqUser} ${typesOfNotification[config.type]} ${
         config.type !== 'share' ? config.contentType : ''
-    }!`;
+    }`;
 
     const messengerConfig = await getMessengerConfig();
 
@@ -187,7 +187,6 @@ async function createNotification(config, users) {
         },
         thumbnail: messengerConfig.emailTemplate.thumbnail,
     };
-
     try {
         async function createMessagesFromBackend(campaign) {
             const target = campaign.target;
