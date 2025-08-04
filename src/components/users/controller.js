@@ -328,15 +328,16 @@ module.exports = {
 
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
-            const processedUser = await processUsersLoad({
-                networkLogin: req.body[loginField],
-                ...req.body
-            }, fieldsForElegibility, isOnboarding);
+            const processedUser = await processUsersLoad(
+                {
+                    ...req.body,
+                    networkLogin: req.body[loginField],
+                },
+                fieldsForElegibility,
+                isOnboarding
+            );
 
-            await User.create({
-                ...processedUser,
-                networkLogin: req.body[loginField],
-            });
+            await User.create(processedUser);
 
             const created = await User.findOne({ networkLogin: processedUser.networkLogin }).lean();
 
