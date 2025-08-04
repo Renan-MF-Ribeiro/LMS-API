@@ -141,7 +141,8 @@ async function createNotification(config, users) {
     // Config.TYPE
     // Valores que podem ser recebidos em "config.type" ('mention', 'comment', 'share', 'admin_post')
     // É a AÇÃO que está sendo notificada.
-    const shareContent = config.contentType === 'post' ? 'um post' : 'uma trilha';
+    const trailContent = config?.contentName ? `uma trilha: ${config?.contentName}` : "uma trilha."
+    const shareContent = config.contentType === 'post' ? 'um post' : trailContent;
     const typesOfNotification = {
         mention: 'mencionou este perfil em um',
         comment: 'respondeu o',
@@ -154,15 +155,12 @@ async function createNotification(config, users) {
     // É a ENTIDADADE que está sendo compartilhada
 
     // As frases são criadas concatenando a ação e o objeto do que está sendo notificado.
-    text = `Olá! ${config.reqUser} ${typesOfNotification[config.type]} ${
-        config.type !== 'share' ? config.contentType : ''
-    }`;
-    texthtml = `<br> <p>Olá! ${config.reqUser} ${typesOfNotification[config.type]} ${
-        config.type !== 'share' ? config.contentType : ''
-    }</p> <br>`;
-    title = `Happlearning - ${config.reqUser} ${typesOfNotification[config.type]} ${
-        config.type !== 'share' ? config.contentType : ''
-    }`;
+    text = `Olá! ${config.reqUser} ${typesOfNotification[config.type]} ${config.type !== 'share' ? config.contentType : ''
+        }`;
+    texthtml = `<br> <p>Olá! ${config.reqUser} ${typesOfNotification[config.type]} ${config.type !== 'share' ? config.contentType : ''
+        }</p> <br>`;
+    title = `Happlearning - ${config.reqUser} ${typesOfNotification[config.type]} ${config.type !== 'share' ? config.contentType : ''
+        }`;
 
     const messengerConfig = await getMessengerConfig();
 
