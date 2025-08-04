@@ -3,6 +3,7 @@ const _messages = require('../../../utils/messages')
 const { getDbCurrentFeatures } = require('../../../utils/features')
 const { getAppMaxFileSize } = require('../../../utils/files');
 const { removeFromCache } = require('../../../utils/cache/store');
+const { Channel } = require('../../channels/model');
 
 module.exports = {
     async update(req, res) {
@@ -39,7 +40,6 @@ module.exports = {
                 type: 'news'
             });
         }
-
 
         return _messages.success(res, req, features)
     },
