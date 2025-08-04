@@ -396,6 +396,33 @@ module.exports = {
         return dashboardFilters;
     },
 
+    /**
+     * Processes user data for loading into the system, handling authentication, group assignments, and data formatting.
+     * 
+     * @async
+     * @param {Object} data - The user data object to be processed
+     * @param {Array<string>} [elegibilityFields=[]] - Array of field names to use for eligibility group assignment
+     * @param {boolean} [onboarding=false] - Whether this is an onboarding user
+     * @param {boolean} [preventOnboardingGroupAdd=false] - Whether to prevent adding onboarding groups
+     * @param {Map} [replaceMap=null] - Map for replacing values using connect map
+     * @returns {Promise<Object>} The processed user data object with additional fields:
+     *   - clientUserKey: Generated client user key
+     *   - password: Array with hashed password object
+     *   - groupsAD: Array of Active Directory groups
+     *   - enabled: Set to true
+     *   - onboarding: Boolean indicating onboarding status
+     * @description
+     * This function performs the following operations:
+     * - Removes empty fields (networkLogin, name, password)
+     * - Generates initial password based on first name and CPF
+     * - Parses and formats date fields
+     * - Creates hashed password with salt
+     * - Assigns appropriate AD groups based on user type and eligibility
+     * - Creates missing groups in the database
+     * - Handles role-based group assignments
+     * - Sanitizes CPF format
+     * - Applies replacement mappings if provided
+     */
     async processUsersLoad(data, elegibilityFields = [], onboarding = false, preventOnboardingGroupAdd = false, replaceMap = null) {
 
         ['networkLogin', 'name', 'password'].forEach((field) => {
