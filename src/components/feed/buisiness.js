@@ -138,36 +138,31 @@ async function populateTrailFields(data) {
 
 async function createNotification(config, users) {
 
-    const shareText = config.contentType === 'post' ? `${config.reqUser} compartilhou um post. Clique e confira!` : `${config.reqUser} compartilhou uma trilha: ${config.contentName}. Clique e confira!`
-    const shareTitle = config.contentType === 'post' ? `${config.reqUser} compartilhou um post.` : `${config.reqUser} compartilhou uma trilha: ${config.contentName}.`
-    const values =
-    {
-        admin_post: {
-            text: 'Uma nova publicação foi feita pela equipe de comunicação. Clique e confira!',
-            texthtml:
-                'Novo post da equipe de comunicação.',
-            title: 'Novo post da equipe de comunicação',
-        },
-        mention: {
-            text: 'Mençionou você em um comentário. Clique e confira!',
-            texthtml: 'Mençionou você em um comentário. Clique e confira!',
-            title: 'Nova menção em comentário.',
-        },
-        comment: {
-            text: 'Comentou sua publicação. Clique e confira!',
-            texthtml: 'Comentou sua publicação. Clique e confira!',
-            title: 'Novo comentário.',
-        },
-        share: {
-            text: shareText,
-            texthtml: shareText,
-            title: shareTitle,
-        },
-    }
-        ;
-    const text = values[config?.type]?.text;
-    const texthtml = values[config?.type]?.texthtml;
-    const title = values[config?.type]?.title;
+    // Config.TYPE
+    // Valores que podem ser recebidos em "config.type" ('mention', 'comment', 'share', 'admin_post')
+    // É a AÇÃO que está sendo notificada.
+    const shareContent = config.contentType === 'post' ? 'um post' : 'uma trilha';
+    const typesOfNotification = {
+        mention: 'mencionou este perfil em um',
+        comment: 'respondeu o',
+        share: `compartilhou ${shareContent}`,
+        admin_post: 'publicou um novo ',
+    };
+
+    // Config.CONTENT
+    // Valores que podem ser recebidos em "config.contetType" ("post", "comentário", "trilha")
+    // É a ENTIDADADE que está sendo compartilhada
+
+    // As frases são criadas concatenando a ação e o objeto do que está sendo notificado.
+    text = `Olá! ${config.reqUser} ${typesOfNotification[config.type]} ${
+        config.type !== 'share' ? config.contentType : ''
+    }`;
+    texthtml = `<br> <p>Olá! ${config.reqUser} ${typesOfNotification[config.type]} ${
+        config.type !== 'share' ? config.contentType : ''
+    }</p> <br>`;
+    title = `Happlearning - ${config.reqUser} ${typesOfNotification[config.type]} ${
+        config.type !== 'share' ? config.contentType : ''
+    }`;
 
     const messengerConfig = await getMessengerConfig();
 

@@ -383,9 +383,7 @@ module.exports = {
             const isReplyingOwnPost = _id === postOwnerId;
 
             if (isMentioningSomeone) {
-                const mentionedUsers = isMentioningSomeone.filter(
-                    (user) => user !== originalPostOwnerId
-                );
+                const mentionedUsers = isMentioningSomeone.filter((user) => user !== originalPostOwnerId);
 
                 const config = {
                     reqUser: name,
