@@ -43,8 +43,19 @@ module.exports = {
 
     async getByUrl(req, res) {
         try {
+            const user = await getUserByToken(req);
             const { data } = await newsApi.get(`/categories/url/${req.params.categoryUrl}/${req.params.campaignUrl}`);
 
+            
+            for(let n of data.news){
+                n.isAuthor = false;
+                if(String(n.author) == String(user._id)){
+                    n.isAuthor = true;
+                }
+
+                delete n.author;
+            }
+            
             _messages.success(res, req, data);
         } catch (error) {
             _messages.internalServer(
