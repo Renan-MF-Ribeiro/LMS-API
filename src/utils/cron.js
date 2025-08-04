@@ -635,7 +635,7 @@ async function processUserLoadFile(directory, fileName, isProduction, usersDataC
         const fileExtension = fileName.split('.').pop();
 
         const users = fileExtension === 'csv'
-            ? await readCSVUsersBuffer(file.readableStream)
+            ? await readCSVUsersBuffer(file.readableStream, usersDataConfig?.csvDelimiter || ';')
             : await readXLSXUsersBuffer(file.buffer);
 
         const newUsers = [];

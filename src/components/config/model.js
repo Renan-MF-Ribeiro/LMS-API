@@ -292,7 +292,8 @@ const UsersDataConfigModel = ConfigModel.discriminator(
                     sendSignUpActivationEmail: false,
                     daysSinceLastFeedback: 180,
                     importPath: null,
-                    preventOnboardingGroupAdd: false
+                    preventOnboardingGroupAdd: false,
+                    csvDelimiter: ';',
                 },
                 type: new mongoose.Schema(
                     {
@@ -315,7 +316,12 @@ const UsersDataConfigModel = ConfigModel.discriminator(
                             type: Boolean,
                             required: false,
                             default: false,
-                        }
+                        },
+                        csvDelimiter: {
+                            type: String,
+                            required: false,
+                            default: ';',
+                        },
                     },
                     valueSchemaOptions
                 ),
