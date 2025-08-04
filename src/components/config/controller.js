@@ -318,7 +318,7 @@ module.exports = {
         const supportFormConfig = companyConfig?.supportFormCustomEmail || null;
 
         if (!supportFormConfig || !Array.isArray(supportFormConfig) || supportFormConfig.length < 2) {
-            return _messages.successEmpty(res, req, {
+            return _messages.success(res, req, {
                 supportFormConfig,
                 customEmail: null,
             });
