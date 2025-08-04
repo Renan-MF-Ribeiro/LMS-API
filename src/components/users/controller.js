@@ -908,8 +908,9 @@ module.exports = {
                 }
             }
             
-            const [tokens, entryRecord] = await Promise.all([
+            const [tokens, isManager, entryRecord] = await Promise.all([
                 generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', tokenIdpProfiles, res),
+                managerBusiness.isUserManager(user),
                 returnDateSinceFirstLogin(user?._id),
                 updateLastLoginUser(user?._id),
                 GamificationKafka.publishEventRuleValidation({
@@ -941,6 +942,7 @@ module.exports = {
                     networkLogin: user.networkLogin,
                     userId: user._id,
                     email: user.email,
+                    isManager
                 },
                 'Sucesso ao logar',
                 'users',
