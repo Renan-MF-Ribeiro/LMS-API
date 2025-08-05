@@ -106,6 +106,7 @@ const {
     getConnectMap,
     validateDataByConnectMap,
     getConnectEligibilities,
+    getConnectMapReplacers,
 } = require('../../utils/connect');
 const {
     getFormErrorsByMapConfig,
