@@ -31,6 +31,29 @@ const PartnerBusiness = require('../partners/business');
 const { createSessionStore } = require('../../utils/session');
 const { Types } = require('mongoose');
 
+async function createGroupsByGroupsAD(groupsAD) {
+    const groupsDb = await Group.find({ name: { $in: groupsAD } })
+        .select('name')
+        .lean();
+
+    const allGroups = new Set(groupsDb.map((group) => group.name));
+
+    const createGroups = groupsAD.filter((groupName) => {
+        if (groupName.startsWith('PERFIL_')) return false;
+
+        return !allGroups.has(groupName);
+    });
+
+    return await Group.insertMany(
+        createGroups.map(
+            (groupName) => ({
+                name: groupName,
+                tags: [{ display: groupName, value: groupName }],
+            })
+        )
+    );
+}
+
 module.exports = {
     async getLoginConfig(selectFields) {
         const lastConfigurationQuery = ConfigLogin.findOne().sort({ createdAt: -1 });
@@ -449,8 +472,6 @@ module.exports = {
                 }
             }
 
-            // console.log(date, parsedDate.format('DD/MM/YYYY'));
-
             return parsedDate.format('DD/MM/YYYY');
         }
 
@@ -461,7 +482,6 @@ module.exports = {
         data.terminationDate = parseDate(data.terminationDate);
         data.vacationStartDate = parseDate(data.vacationStartDate);
         data.vacationEndDate = parseDate(data.vacationEndDate);
-        data.loginType = data.loginType == 'AMBOS' ? 'BOTH' : data.loginType;
         data.enabled = true;
         data.onboarding = onboarding;
         data.password = [
@@ -472,6 +492,19 @@ module.exports = {
             },
         ];
 
+        // Default Fields
+        data.status = _functions.isPositiveValue(data.status) ? 'ATIVO' : 'INATIVO';
+        if (data.cpf) data.cpf = _functions.parseDocument(data.cpf);
+        if (data.cnpj) data.cnpj = _functions.parseDocument(data.cnpj);
+        if (data.pcd) data.pcd = _functions.isPositiveValue(data.pcd) ? 'SIM' : 'NAO';
+        if (data.manager) data.manager = _functions.isPositiveValue(data.manager) ? 'SIM' : 'NAO';
+        if (data.loginType) data.loginType = _functions.getLoginType(data.loginType);
+
+        if (onboarding) {
+            data.networkLogin = data.cpf;
+            data.onboarding = true;
+        }
+
         const groupsAD = ['PERFIL_Aluno'];
 
         if (onboarding && !preventOnboardingGroupAdd) {
@@ -480,20 +513,22 @@ module.exports = {
             groupsAD.push('ELEGE_CURSO');
         }
 
-        if (elegibilityFields && elegibilityFields.length > 0 && onboarding == false) {
+        if (elegibilityFields && elegibilityFields.length > 0 && !onboarding) {
             for (const field of elegibilityFields) {
                 if (data[field]) {
                     const fieldType = typeof data[field];
+
                     if (fieldType === 'object') continue;
 
-                    const value =
-                        fieldType !== 'string' ? data[field] : _functions.clearString(data[field]);
+                    const value = fieldType !== 'string'
+                        ? data[field]
+                        : _functions.clearString(data[field]);
 
                     groupsAD.push(`ELEGE_${value}`);
                 }
             }
         } else {
-            if (!!data.company && !!data.office) {
+            if (data.company && data.office) {
                 groupsAD.push(`ELEGE_${_functions.clearString(data.company)}`);
                 groupsAD.push(`ELEGE_${_functions.clearString(data.office)}`);
             }
@@ -513,38 +548,30 @@ module.exports = {
                 !!data[optional] && groupsAD.push(`ELEGE_${_functions.clearString(data[optional])}`)
         );
 
-        for await (const groupName of groupsAD) {
-            if (groupName.startsWith('PERFIL_')) continue;
-
-            const group = await Group.findOne({ name: groupName });
-
-            if (!group) {
-                await Group.create({
-                    name: groupName,
-                    tags: [{ display: groupName, value: groupName }],
-                });
-            }
-        }
-
         const roles = data.roles ? data.roles.split(',').map((item) => item.trim()) : [];
 
-        if (roles.includes('Analista')) {
-            groupsAD.push('PERFIL_Analista');
-        }
-        if (roles.includes('Conteudista')) {
-            groupsAD.push('PERFIL_Conteudista');
-        }
+        const availableRolesSet = new Set([
+            'Conteudista',
+            'Analista',
+            'Integrador',
+            'Instrutor',
+            'Colaborador',
+            'Gestor_Elegibilidade',
+            'Gestor_Engajamento',
+            'Gestor_Usuario',
+            'Gestor_Matriz',
+            'Aplicador_Matriz',
+        ]);
 
-        data.groupsAD = groupsAD;
+        roles.forEach((role) => {
+            if (availableRolesSet.has(role)) groupsAD.push(`PERFIL_${role}`);
+        });
 
-        if (data.cpf) {
-            data.cpf = String(data.cpf).replace(/[^a-z0-9]/gi, '');
-        }
+        const uniqueGroupsAD = [...new Set(groupsAD)];
 
-        if (onboarding) {
-            data.networkLogin = data.cpf;
-            data.onboarding = true;
-        }
+        await createGroupsByGroupsAD(uniqueGroupsAD);
+
+        data.groupsAD = uniqueGroupsAD;
 
         if (replaceMap?.size) {
             setReplacedValuesFromConnectMap(data, replaceMap);

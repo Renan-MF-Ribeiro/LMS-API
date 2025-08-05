@@ -3,6 +3,7 @@ const axios = require('axios');
 const moment = require('moment');
 
 const { defaultUserMap } = require('../components/users/model');
+const { isPositiveValue, parseDocument } = require('./functions');
 
 module.exports = {
     async getConnectMap(newFormat = false) {
@@ -53,7 +54,6 @@ module.exports = {
 
             const fieldType = connectKeyValue.type;
             const fieldConfig = connectKeyValue.config;
-            const positiveValues = ['sim', 's', '1', 'true', 'ativo', 'a', 'yes', 'y'];
 
             // Parser
             switch (fieldType) {
@@ -64,22 +64,14 @@ module.exports = {
                     data[connectKey] = Number(data[connectKey]);
                     break;
                 case 'boolean':
-                    data[connectKey] = positiveValues.includes(String(data[connectKey]).toLowerCase());
+                    data[connectKey] = isPositiveValue(data[connectKey]);
                     break;
                 case 'cpf':
-                    data[connectKey] = String(data[connectKey]).replace(/\D/g, '');
+                    data[connectKey] = parseDocument(data[connectKey]);
                     break;
                 case 'cnpj':
-                    data[connectKey] = String(data[connectKey]).replace(/\D/g, '');
+                    data[connectKey] = parseDocument(data[connectKey]);
                     break;
-            }
-
-            if (connectKey === 'status') {
-                data.status = positiveValues.includes(String(data.status).toLowerCase()) ? 'ATIVO' : 'INATIVO';
-            }
-
-            if (connectKey === 'pcd') {
-                data.pcd = positiveValues.includes(String(data.pcd).toLowerCase()) ? 'SIM' : 'NAO';
             }
 
             // Validation

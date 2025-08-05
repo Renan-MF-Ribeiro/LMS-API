@@ -990,6 +990,27 @@ module.exports = {
         return { trail, containsACompletedItem };
     },
 
+    parseDocument(document) {
+        if (!document) return null;
+        return String(document).replace(/\D/g, '');
+    },
+
+    isPositiveValue(value) {
+        if (!value) return false;
+
+        return ['sim', 's', '1', 'true', 'ativo', 'a', 'yes', 'y'].includes(String(value).toLowerCase());
+    },
+
+    getLoginType(loginType) {
+        if (!loginType) return null;
+
+        if (String(loginType).toUpperCase() === 'SSO') return 'SSO';
+
+        if (String(loginType).toUpperCase() === 'FORM') return 'FORM';
+
+        return 'BOTH';
+    }
+
 };
 
 function nameMonth(month) {

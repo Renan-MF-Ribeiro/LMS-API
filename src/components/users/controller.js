@@ -1386,10 +1386,6 @@ module.exports = {
         }
 
         for (const result of results) {
-            const existingUser = await User.findOne({
-                $or: [{ networkLogin: result.networkLogin }, { networkLogin: result.cpf }],
-            });
-
             const processedUser = await processUsersLoad(
                 result,
                 fieldsForElegibility,
@@ -1397,8 +1393,16 @@ module.exports = {
                 false,
                 replaceMap
             );
-            
-            const account = await processUserAccount(processedUser);
+
+            const [account, existingUser] = await Promise.all([
+                processUserAccount(processedUser),
+                User.findOne({
+                    $or: [
+                        { networkLogin: processedUser.networkLogin },
+                        { networkLogin: processedUser.cpf }
+                    ]
+                })
+            ]);
 
             processedUser.password = existingUser ? existingUser.password : processedUser.password;
 
@@ -3005,7 +3009,7 @@ module.exports = {
             _messages.success(res, req, {
                 map: connectMap,
                 fields,
-                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd'], // Campos que não devem ser alterados
+                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd', 'manager'], // Campos que não devem ser alterados
                 eligibility,
             });
         } catch (error) {
