@@ -779,10 +779,14 @@ async function processUserLoadFile(directory, fileName, isProduction, usersDataC
 
                 await User.findByIdAndUpdate(user._id, user.processedUser);
 
-                await Tracking.updateMany(
-                    { userLogin: user.processedUser.cpf },
-                    { $set: { userLogin: user.processedUser.networkLogin } }
-                );
+                if (user.processedUser.cpf
+                    && user.processedUser.networkLogin
+                    && user.processedUser.cpf !== user.processedUser.networkLogin) {
+                    await Tracking.updateMany(
+                        { userLogin: user.processedUser.cpf },
+                        { $set: { userLogin: user.processedUser.networkLogin } }
+                    );
+                }
             }
         }
 
