@@ -1634,16 +1634,6 @@ module.exports = {
                 handleSegmentationOnQuery(req, 'issuer', query);
             }
 
-            const totalActive = await User.find({
-                status: 'ATIVO',
-                ...query,
-            }).countDocuments();
-
-            const totalInactive = await User.find({
-                status: 'INATIVO',
-                ...query,
-            }).countDocuments();
-
             if (searchBy && !filterBy?.length) {
                 query.$and.push({
                     $or: [
@@ -1669,7 +1659,18 @@ module.exports = {
                 }
             }
 
+            const totalActive = await User.find({
+                status: 'ATIVO',
+                ...query,
+            }).countDocuments();
+
+            const totalInactive = await User.find({
+                status: 'INATIVO',
+                ...query,
+            }).countDocuments();
+
             const total = await User.countDocuments(query);
+            
             const users = await User.find(query)
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
