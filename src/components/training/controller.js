@@ -71,7 +71,7 @@ async function generateTrainingSectionCertificate(req, res) {
 
     const trails = section.trails;
     const completedTrails = trails
-        .filter(trail => !trail.isException)
+        // .filter(trail => !trail.isException)
         .filter(trail => !exceptionCertificateTrails.map(trailId => String(trailId)).includes(String(trail._id)))
         .filter(trail => trail.completion === 1);
 

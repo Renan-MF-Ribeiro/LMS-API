@@ -177,8 +177,8 @@ async function setAssessmentHistoricOnSections(userId, sections) {
         if (section.isCompleted) {
             const sectionExceptions = section?.exceptionCertificateTrails || [];
             const trainingCertExceptions = trainingSectionInfo?.exceptionCertificateTrails || [];
-            const trainingExceptions = trainingSectionInfo?.exceptionTrainingTrails || [];
-            const allExceptions = [...sectionExceptions, ...trainingCertExceptions, ...trainingExceptions];
+
+            const allExceptions = [...sectionExceptions, ...trainingCertExceptions];
 
             section.duration = calculateTotalDuration(
                 section.trails,
@@ -311,8 +311,8 @@ async function setCerticateHistoricOnSections(user, sections) {
         if (section.isCompleted) {
             const sectionExceptions = section?.exceptionCertificateTrails || [];
             const trainingCertExceptions = trainingSectionInfo?.exceptionCertificateTrails || [];
-            const trainingExceptions = trainingSectionInfo?.exceptionTrainingTrails || [];
-            const allExceptions = [...sectionExceptions, ...trainingCertExceptions, ...trainingExceptions];
+
+            const allExceptions = [...sectionExceptions, ...trainingCertExceptions];
 
             section.duration = calculateTotalDuration(
                 section.trails,
