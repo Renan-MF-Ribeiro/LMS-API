@@ -907,7 +907,7 @@ module.exports = {
                     );
                 }
             }
-            
+          
             const [tokens, isManager, entryRecord] = await Promise.all([
                 generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', tokenIdpProfiles, res),
                 managerBusiness.isUserManager(user),
@@ -1393,7 +1393,7 @@ module.exports = {
                 false,
                 replaceMap
             );
-
+            
             const [account, existingUser] = await Promise.all([
                 processUserAccount(processedUser),
                 User.findOne({
@@ -1616,6 +1616,7 @@ module.exports = {
             const { order, sort } = ordernation(req);
 
             const searchBy = req.query.searchBy;
+            const filterBy = req.query.filterBy;
 
             const isOnboarding = req.query.onboarding === 'true' || req.query.onboarding === true;
             const isPartner = req.query.partner === 'true' || req.query.partner === true;
@@ -1643,7 +1644,7 @@ module.exports = {
                 ...query,
             }).countDocuments();
 
-            if (searchBy) {
+            if (searchBy && !filterBy?.length) {
                 query.$and.push({
                     $or: [
                         { name: { $regex: searchBy, $options: 'i' } },
@@ -1652,6 +1653,20 @@ module.exports = {
                         { cpf: { $regex: searchBy, $options: 'i' } },
                     ],
                 });
+            } else if (searchBy && filterBy?.length) {
+                if (Array.isArray(filterBy)) {
+                    query.$and.push({
+                        $or: filterBy.map((filter) => ({
+                            [filter]: { $regex: searchBy, $options: 'i' },
+                        })),
+                    });
+                } else {
+                    query.$and.push({
+                        $or: [
+                            { [filterBy]: { $regex: searchBy, $options: 'i' } }
+                        ]
+                    });
+                }
             }
 
             const total = await User.countDocuments(query);
@@ -1685,6 +1700,7 @@ module.exports = {
 
             const searchBy = req.query.searchBy;
             const filterManager = req.query.filterManager;
+            const filterBy = req.query.filterBy;
 
             const profiles = await Profile.find({ title: { $ne: 'PERFIL_Aluno' } }).sort({
                 label: 'asc',
@@ -1702,25 +1718,41 @@ module.exports = {
                 handleSegmentationOnQuery(req, 'issuer', query);
             }
 
-            if (searchBy) {
+            if (searchBy && !filterBy?.length) {
                 query.$or = [
                     { name: { $regex: searchBy, $options: 'i' } },
                     { registration: { $regex: searchBy, $options: 'i' } },
                     { email: { $regex: searchBy, $options: 'i' } },
                     { cpf: { $regex: searchBy, $options: 'i' } },
-                ];
+                ]
+            } else if (searchBy && filterBy?.length) {
+                if (Array.isArray(filterBy)) {
+                    query.$or = filterBy.map((filter) => ({
+                        [filter]: { $regex: searchBy, $options: 'i' },
+                    }));
+                } else {
+                    query.$or = [{ [filterBy]: { $regex: searchBy, $options: 'i' } }];
+                }
             }
             const managersCounters = [];
 
             for (const profile of profiles) {
                 const queryProfile = { groupsAD: profile.title };
-                if (searchBy) {
+                if (searchBy && !filterBy?.length) {
                     queryProfile.$or = [
                         { name: { $regex: searchBy, $options: 'i' } },
                         { registration: { $regex: searchBy, $options: 'i' } },
                         { email: { $regex: searchBy, $options: 'i' } },
                         { cpf: { $regex: searchBy, $options: 'i' } },
                     ];
+                } else if (searchBy && filterBy?.length) {
+                    if (Array.isArray(filterBy)) {
+                        queryProfile.$or = filterBy.map((filter) => ({
+                            [filter]: { $regex: searchBy, $options: 'i' },
+                        }));
+                    } else {
+                        queryProfile.$or = [{ [filterBy]: { $regex: searchBy, $options: 'i' } }];
+                    }
                 }
                 const count = await User.countDocuments(queryProfile);
                 managersCounters.push({ label: profile.label, title: profile.title, count });
