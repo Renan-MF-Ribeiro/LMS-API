@@ -208,6 +208,11 @@ async function updateMonolitoIds(connection, { clientId, domainToReplace, domain
         );
     }
 
+    await db.collection('channels').updateMany({}, { $unset: { oldId: '', oldID: '' } });
+    await db.collection('sections').updateMany({}, { $unset: { oldId: '', oldID: '' } });
+    await db.collection('trails').updateMany({}, { $unset: { oldId: '', oldID: '' } });
+    await db.collection('items').updateMany({}, { $unset: { oldId: '', oldID: '' } });
+
     console.log('Gerando relatorios');
 
     await generateReport(
