@@ -138,29 +138,35 @@ async function populateTrailFields(data) {
 
 async function createNotification(config, users) {
 
-    // Config.TYPE
-    // Valores que podem ser recebidos em "config.type" ('mention', 'comment', 'share', 'admin_post')
-    // É a AÇÃO que está sendo notificada.
-    const trailContent = config?.contentName ? `uma trilha: ${config?.contentName}` : "uma trilha."
-    const shareContent = config.contentType === 'post' ? 'um post' : trailContent;
-    const typesOfNotification = {
-        mention: 'mencionou este perfil em um',
-        comment: 'respondeu o',
-        share: `compartilhou ${shareContent}`,
-        admin_post: 'publicou um novo ',
-    };
+    const values = [
+        {
+            admin_post: {
+                text: 'Uma nova publicação foi feita pela equipe de comunicação. Clique e confira.',
+                texthtml:
+                    'Uma nova publicação foi feita pela equipe de comunicação. Clique e confira.',
+                title: 'Novo post da empresa!',
+            },
+            mention: {
+                text: '',
+                texthtml: '',
+                title: 'Nova menção em comentário!',
+            },
+            comment: {
+                text: '',
+                texthtml: '',
+                title: '',
+            },
+            share: {
+                text: '',
+                texthtml: '',
+                title: `Um ${config.shareContent} foi compartilhado`,
+            },
+        },
+    ];
 
-    // Config.CONTENT
-    // Valores que podem ser recebidos em "config.contetType" ("post", "comentário", "trilha")
-    // É a ENTIDADADE que está sendo compartilhada
-
-    // As frases são criadas concatenando a ação e o objeto do que está sendo notificado.
-    text = `Olá! ${config.reqUser} ${typesOfNotification[config.type]} ${config.type !== 'share' ? config.contentType : ''
-        }`;
-    texthtml = `<br> <p>Olá! ${config.reqUser} ${typesOfNotification[config.type]} ${config.type !== 'share' ? config.contentType : ''
-        }</p> <br>`;
-    title = `Happlearning - ${config.reqUser} ${typesOfNotification[config.type]} ${config.type !== 'share' ? config.contentType : ''
-        }`;
+    const text = values[config?.type]?.text;
+    const texthtml = values[config?.type]?.texthtml;
+    const title = values[config?.type]?.title;
 
     const messengerConfig = await getMessengerConfig();
 
