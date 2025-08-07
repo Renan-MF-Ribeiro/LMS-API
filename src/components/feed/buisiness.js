@@ -91,7 +91,7 @@ async function populateUserFields(fieldName, reference, data) {
 
     return processData(data, userMap, avatarMap, true);
 }
-async function populateSingleData(fieldName, reference, data){
+async function populateSingleData(fieldName, reference, data) {
     // Salva todos os ID's de usuários que devem ser populado de 'data'
     const ids = new Set();
     const avatarIds = new Set();
@@ -120,7 +120,7 @@ async function populateSingleData(fieldName, reference, data){
         avatar: avatarMap.get(data.avatar?.toString()) || null,
     };
 
-    return populatedItem
+    return populatedItem;
 }
 
 async function populateMembers(data) {
@@ -137,34 +137,36 @@ async function populateTrailFields(data) {
 }
 
 async function createNotification(config, users) {
-    let text,
-        texthtml,
-        title = undefined;
 
-    // Config.TYPE
-    // Valores que podem ser recebidos em "config.type" ('mention', 'comment', 'share')
-    // É a AÇÃO que está sendo notificada.
-    const shareContent = config.contentType === 'post' ? 'um post' : 'uma trilha';
-    const typesOfNotification = {
-        mention: 'mencionou este perfil em um',
-        comment: 'respondeu o',
-        share: `compartilhou ${shareContent}`,
-    };
+    const values = [
+        {
+            admin_post: {
+                text: 'Uma nova publicação foi feita pela equipe de comunicação. Clique e confira.',
+                texthtml:
+                    'Uma nova publicação foi feita pela equipe de comunicação. Clique e confira.',
+                title: 'Novo post da empresa!',
+            },
+            mention: {
+                text: '',
+                texthtml: '',
+                title: 'Nova menção em comentário!',
+            },
+            comment: {
+                text: '',
+                texthtml: '',
+                title: '',
+            },
+            share: {
+                text: '',
+                texthtml: '',
+                title: `Um ${config.shareContent} foi compartilhado`,
+            },
+        },
+    ];
 
-    // Config.CONTENT
-    // Valores que podem ser recebidos em "config.contetType" ("post", "comentário", "trilha")
-    // É a ENTIDADADE que está sendo compartilhada
-
-    // As frases são criadas concatenando a ação e o objeto do que está sendo notificado.
-    text = `Olá! O usuário ${config.reqUser} ${typesOfNotification[config.type]} ${
-        config.type !== 'share' ? config.contentType : ''
-    }`;
-    texthtml = `<br> <p>Olá! ${config.reqUser} ${typesOfNotification[config.type]} ${
-        config.type !== 'share' ? config.contentType : ''
-    }</p> <br>`;
-    title = `Happlearning - ${config.reqUser} ${typesOfNotification[config.type]} ${
-        config.type !== 'share' ? config.contentType : ''
-    }`;
+    const text = values[config?.type]?.text;
+    const texthtml = values[config?.type]?.texthtml;
+    const title = values[config?.type]?.title;
 
     const messengerConfig = await getMessengerConfig();
 
@@ -196,7 +198,9 @@ async function createNotification(config, users) {
             if (!target.value.user) {
                 targetUsers = await processTargetUsers(target, campaign.category);
             } else {
-                targetUsers.push({ ...target.value.user });
+                Array.isArray(target?.value?.users)
+                    ? targetUsers.push(...target.value.users)
+                    : targetUsers.push(target.value.users);
             }
 
             await sendMessageToKafka(campaign, targetUsers);
@@ -248,5 +252,5 @@ module.exports = {
     populateMembers,
     createNotification,
     getSegFieldsFromUser,
-    populateSingleData
+    populateSingleData,
 };
