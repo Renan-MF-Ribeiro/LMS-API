@@ -111,16 +111,15 @@ const business = {
             .select('_id name dateApplicationFinal courseID users.userID users.presence users.presenceAt')
             .sort({ _id: -1 })
             .lean();
-
         return data.skill_recommendations.map((skill) => {
 
             const skillTrails = (skill.trailIds || [])
                 // Em caso de alta volumetria, modificar logica abaixo
                 .map(({ trailId, released: wasReleased }) => {
+                    const trail = trailMap.get(trailId);
                     const released = wasReleased || userRecommendations?.recommendedTrails?.some(
                         (trail) => trail?.id?.toString() === trailId?.toString()
-                    ) || false;
-                    const trail = trailMap.get(trailId);
+                    ) || trail?.status === 'completed' || false;
                     return trail ? { ...trail, released } : null;
                 })
                 .filter(Boolean);
