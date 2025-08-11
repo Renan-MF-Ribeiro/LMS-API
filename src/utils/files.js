@@ -829,12 +829,12 @@ module.exports = {
         });
     },
 
-    async readCSVUsersBuffer(file) {
+    async readCSVUsersBuffer(file, delimiter = ';') {
         const map = await getConnectMap(true);
         const workbook = new ExcelJS.Workbook();
 
         const worksheet = await workbook.csv.read(file, {
-            parserOptions: { delimiter: ';' },
+            parserOptions: { delimiter },
             map: (value) => value
         });
 

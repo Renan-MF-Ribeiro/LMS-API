@@ -13,6 +13,7 @@ const {
 } = require('../../utils/middlewares');
 
 const { saveStrategyOnCookie } = require('../../utils/cookies');
+const { cacheRequestOnClient } = require('../../utils/cache/middlewares');
 
 const supportedStrategies = ['saml', 'openid', 'oauth2'];
 
@@ -143,6 +144,7 @@ module.exports = express
         '/sso/:strategy/callback',
         validateStrategy,
         authenticatePassport,
+        parseSamlResponse,
         _controller.ssoCallback
     )
 
@@ -175,7 +177,7 @@ module.exports = express
     .post('/password/reset', validateTokenRoute, isUserManager, _controller.resetUserPassword)
     .put('/update', validateTokenRoute, isUserManager, _controller.updateUserById)
     .get('/conteudistas', validateTokenRoute, _controller.getAllConteudistas)
-    .get('/details', validateTokenRoute, _controller.returnUserById)
+    .get('/details', validateTokenRoute, cacheRequestOnClient(5 * 60), _controller.returnUserById) // Cache for 5 minutes
     .get('/feedbackelegibility', validateTokenRoute, _controller.feedbackElegible)
     .post('/remove-permission', validateTokenRoute, _controller.deleteGroups)
     .post('/add-permission', validateTokenRoute, isUserManagerOrSuperAdminOrElegibilityManager, _controller.addGroups)

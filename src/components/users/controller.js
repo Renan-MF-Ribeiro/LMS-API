@@ -8,7 +8,7 @@ const _messages = require('../../utils/messages');
 const _files = require('../../utils/files');
 const { NewMessage } = require('../new-messages/model');
 const { User, UserTest, Block, defaultUserMap } = require('./model');
-
+const managerBusiness = require('../managers/business');
 const {
     generateToken,
     generateMfaToken,
@@ -81,12 +81,9 @@ const { Question } = require('../assessments/questions/model');
 const { Alternative } = require('../assessments/alternatives/model');
 
 const { EVENT_CATEGORY } = require('../gamification/model');
-const AssessmentController = require('../assessment/controller');
 const GamificationBusiness = require('../gamification/business');
 const { Group } = require('../groups/model');
 const { handleUserEligibilitiesGamification } = require('../gamification/utils');
-const AssessmentBusiness = require('../assessment/business');
-const { Features } = require('../theme/features/model');
 const { Partner } = require('../partners/model');
 const { Log } = require('../logs/model');
 const { Tracking } = require('../tracking/model');
@@ -109,6 +106,7 @@ const {
     getConnectMap,
     validateDataByConnectMap,
     getConnectEligibilities,
+    getConnectMapReplacers,
 } = require('../../utils/connect');
 const {
     getFormErrorsByMapConfig,
@@ -140,7 +138,7 @@ async function handleBlockUser(user) {
 
         // 30min
         if (resultDiff >= 1) {
-            await Block.updateMany({ user: { $eq: user._id } }, { unblocked: true });
+            Block.updateMany({ user: { $eq: user._id } }, { unblocked: true });
         } else {
             sendNotificationEmail(
                 user.email,
@@ -152,8 +150,18 @@ async function handleBlockUser(user) {
     }
 }
 
-async function generateTokens(user, login, password, res) {
-    const groups = user.groupsAD;
+async function generateTokens(user, login, password, tokenIdpProfiles, res) {
+    const groups = Array.from(
+        new Set([
+            ...(tokenIdpProfiles ?? []),
+            ...(user.groupsAD?.filter((group) =>
+                tokenIdpProfiles
+                    ? group === 'PERFIL_Aluno' || !group.startsWith('PERFIL')
+                    : true
+            ) ?? []),
+        ])
+    );
+
     const namesProfiles = [];
     const namesGroups = [];
     let tokenAnalytics, tokenHappPlace;
@@ -166,9 +174,12 @@ async function generateTokens(user, login, password, res) {
             namesGroups.push(strGroup);
         }
     }
+    const [profilesIDS, groupsIDS, _] = await Promise.all([
+        returnIdProfileUser(namesProfiles),
+        returnIdGroupUser(namesGroups),
+        updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups))
+    ]);
 
-    const profilesIDS = await returnIdProfileUser(namesProfiles);
-    const groupsIDS = await returnIdGroupUser(namesGroups);
     const userGroups = await Group.find({ name: { $in: namesGroups } });
     const eligibilities = userGroups.flatMap((group) =>
         group.tags.flatMap((tag) => tag?.value || tag.display)
@@ -185,7 +196,7 @@ async function generateTokens(user, login, password, res) {
     if (namesProfiles.includes('PERFIL_Analista')) {
         const dashboardFilters = await processDashFilters(user);
         tokenAnalytics = generateTokenAnalytics({
-            perfil: profilesIDS.numbers,
+            perfil: profilesIDS?.numbers,
             clientID: CLIENT_ID,
             filters: dashboardFilters,
         });
@@ -202,8 +213,8 @@ async function generateTokens(user, login, password, res) {
         networkLogin: user.networkLogin,
         email: user.email,
         userTags: eligibilities,
-        profiles: profilesIDS.result,
-        numbers: profilesIDS.numbers,
+        profiles: profilesIDS?.result,
+        numbers: profilesIDS?.numbers,
         groups: groupsIDS,
         welcomeVideoWatched: user?.welcomeVideoWatched,
     });
@@ -318,15 +329,16 @@ module.exports = {
 
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
-            const processedUser = await processUsersLoad({
-                networkLogin: req.body[loginField],
-                ...req.body
-            }, fieldsForElegibility, isOnboarding);
+            const processedUser = await processUsersLoad(
+                {
+                    ...req.body,
+                    networkLogin: req.body[loginField],
+                },
+                fieldsForElegibility,
+                isOnboarding
+            );
 
-            await User.create({
-                ...processedUser,
-                networkLogin: req.body[loginField],
-            });
+            await User.create(processedUser);
 
             const created = await User.findOne({ networkLogin: processedUser.networkLogin }).lean();
 
@@ -586,7 +598,7 @@ module.exports = {
                 await sendSignupActivationEmail(newUser.email, activationLink);
             }
 
-            const tokens = await generateTokens(newUser, networkLogin, password, res);
+            const tokens = await generateTokens(newUser, networkLogin, password, null, res);
 
             if (newUser && form?.autoLogin) {
                 await Log.create({
@@ -691,9 +703,10 @@ module.exports = {
                 );
             }
             // Gera todos os tokens necessários
-            const [tokens, entryRecord] = await Promise.all([
-                generateTokens(user, login, password, res),
+            const [tokens, entryRecord, isUserManager] = await Promise.all([
+                generateTokens(user, login, password, null, res),
                 returnDateSinceFirstLogin(user?._id),
+                managerBusiness.isUserManager(user),
                 updateLastLoginUser(user?._id),
                 GamificationKafka.publishEventRuleValidation({
                     events: [EVENT_CATEGORY.LOGIN],
@@ -720,7 +733,6 @@ module.exports = {
                     tokenHappPlace: tokens?.tokenHappPlace,
                     mfaToken: tokens?.mfaToken,
                     authwebPush: tokens?.authwebPush?.keys.auth,
-
                     //user data
                     accept: user.acceptTerms,
                     acceptCollaboration: user.acceptTermsCollaboration,
@@ -732,6 +744,7 @@ module.exports = {
                     userId: user._id,
                     email: user.email,
                     firstLogin,
+                    isManager: isUserManager,
                 },
                 'Sucesso ao logar',
                 'users',
@@ -895,47 +908,42 @@ module.exports = {
                     );
                 }
             }
-
-            const {
-                SAS,
-                tk,
-                key,
-                tokenAnalytics,
-                tokenHappPlace,
-                mfaToken,
-                authwebPush,
-                profilesIDS,
-                namesProfiles,
-                namesGroups,
-            } = await generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', res);
-
-            const entryRecord = await returnDateSinceFirstLogin(user?._id);
+          
+            const [tokens, isManager, entryRecord] = await Promise.all([
+                generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', tokenIdpProfiles, res),
+                managerBusiness.isUserManager(user),
+                returnDateSinceFirstLogin(user?._id),
+                updateLastLoginUser(user?._id),
+                GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.LOGIN],
+                    identifier: user.networkLogin,
+                }),
+            ]);
 
             const firstLogin = !user.passwordValid && !entryRecord;
-
-            await updateLastLoginUser(user._id);
 
             _messages.success(
                 res,
                 req,
                 {
-                    SAS,
-                    tk,
-                    key,
+                    SAS: tokens?.SAS,
+                    tk: tokens?.tk,
+                    key: tokens?.key,
+                    numbers: tokens?.profilesIDS.numbers,
+                    tokenAnalytics: tokens?.tokenAnalytics,
+                    tokenHappPlace: tokens?.tokenHappPlace,
+                    mfaToken: tokens?.mfaToken,
+                    authwebPush: tokens?.authwebPush?.keys.auth,
                     firstLogin,
                     accept: user.acceptTerms,
                     acceptCollaboration: user.acceptTermsCollaboration,
                     passwordValid: true,
-                    numbers: profilesIDS.numbers,
                     name: user.name,
                     profilePhoto: user.profilePhoto,
-                    tokenAnalytics,
-                    tokenHappPlace,
-                    mfaToken,
                     networkLogin: user.networkLogin,
                     userId: user._id,
-                    authwebPush: authwebPush?.keys.auth,
                     email: user.email,
+                    isManager
                 },
                 'Sucesso ao logar',
                 'users',
@@ -944,7 +952,7 @@ module.exports = {
                 [],
                 true,
                 'LOGIN',
-                namesProfiles.concat(namesGroups)
+                tokens?.namesProfiles.concat(tokens?.namesGroups)
             );
         } catch (error) {
             console.log(error);
@@ -1356,6 +1364,8 @@ module.exports = {
 
         const connectMap = await getConnectMap(true);
 
+        let replaceMap = null;
+
         if (connectMap) {
             const errors = [];
 
@@ -1372,15 +1382,28 @@ module.exports = {
             if (errors.length > 0) {
                 throw new ApiError('Erro ao importar usuários', 400, errors, { skipDbLog: true });
             }
+
+            replaceMap = getConnectMapReplacers(connectMap);
         }
 
         for (const result of results) {
-            const existingUser = await User.findOne({
-                $or: [{ networkLogin: result.networkLogin }, { networkLogin: result.cpf }],
-            });
-
-            const processedUser = await processUsersLoad(result, fieldsForElegibility);
-            const account = await processUserAccount(processedUser);
+            const processedUser = await processUsersLoad(
+                result,
+                fieldsForElegibility,
+                false,
+                false,
+                replaceMap
+            );
+            
+            const [account, existingUser] = await Promise.all([
+                processUserAccount(processedUser),
+                User.findOne({
+                    $or: [
+                        { networkLogin: processedUser.networkLogin },
+                        { networkLogin: processedUser.cpf }
+                    ]
+                })
+            ]);
 
             processedUser.password = existingUser ? existingUser.password : processedUser.password;
 
@@ -1508,6 +1531,9 @@ module.exports = {
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
             const messengerConfig = await getMessengerConfig();
+            const usersDataConfig = await getUsersDataConfig();
+
+            const preventOnboardingGroupAdd = usersDataConfig?.preventOnboardingGroupAdd ?? false;
 
             for (const result of results) {
                 const existingUser = await User.findOne({
@@ -1517,7 +1543,8 @@ module.exports = {
                 const processedUser = await processUsersLoad(
                     result,
                     fieldsForElegibility,
-                    onboarding
+                    onboarding,
+                    preventOnboardingGroupAdd
                 );
 
                 const account = await processUserAccount(processedUser);
@@ -1590,6 +1617,7 @@ module.exports = {
             const { order, sort } = ordernation(req);
 
             const searchBy = req.query.searchBy;
+            const filterBy = req.query.filterBy;
 
             const isOnboarding = req.query.onboarding === 'true' || req.query.onboarding === true;
             const isPartner = req.query.partner === 'true' || req.query.partner === true;
@@ -1607,6 +1635,31 @@ module.exports = {
                 handleSegmentationOnQuery(req, 'issuer', query);
             }
 
+            if (searchBy && !filterBy?.length) {
+                query.$and.push({
+                    $or: [
+                        { name: { $regex: searchBy, $options: 'i' } },
+                        { registration: { $regex: searchBy, $options: 'i' } },
+                        { email: { $regex: searchBy, $options: 'i' } },
+                        { cpf: { $regex: searchBy, $options: 'i' } },
+                    ],
+                });
+            } else if (searchBy && filterBy?.length) {
+                if (Array.isArray(filterBy)) {
+                    query.$and.push({
+                        $or: filterBy.map((filter) => ({
+                            [filter]: { $regex: searchBy, $options: 'i' },
+                        })),
+                    });
+                } else {
+                    query.$and.push({
+                        $or: [
+                            { [filterBy]: { $regex: searchBy, $options: 'i' } }
+                        ]
+                    });
+                }
+            }
+
             const totalActive = await User.find({
                 status: 'ATIVO',
                 ...query,
@@ -1617,18 +1670,8 @@ module.exports = {
                 ...query,
             }).countDocuments();
 
-            if (searchBy) {
-                query.$and.push({
-                    $or: [
-                        { name: { $regex: searchBy, $options: 'i' } },
-                        { registration: { $regex: searchBy, $options: 'i' } },
-                        { email: { $regex: searchBy, $options: 'i' } },
-                        { cpf: { $regex: searchBy, $options: 'i' } },
-                    ],
-                });
-            }
-
             const total = await User.countDocuments(query);
+            
             const users = await User.find(query)
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
@@ -1659,6 +1702,7 @@ module.exports = {
 
             const searchBy = req.query.searchBy;
             const filterManager = req.query.filterManager;
+            const filterBy = req.query.filterBy;
 
             const profiles = await Profile.find({ title: { $ne: 'PERFIL_Aluno' } }).sort({
                 label: 'asc',
@@ -1676,25 +1720,41 @@ module.exports = {
                 handleSegmentationOnQuery(req, 'issuer', query);
             }
 
-            if (searchBy) {
+            if (searchBy && !filterBy?.length) {
                 query.$or = [
                     { name: { $regex: searchBy, $options: 'i' } },
                     { registration: { $regex: searchBy, $options: 'i' } },
                     { email: { $regex: searchBy, $options: 'i' } },
                     { cpf: { $regex: searchBy, $options: 'i' } },
-                ];
+                ]
+            } else if (searchBy && filterBy?.length) {
+                if (Array.isArray(filterBy)) {
+                    query.$or = filterBy.map((filter) => ({
+                        [filter]: { $regex: searchBy, $options: 'i' },
+                    }));
+                } else {
+                    query.$or = [{ [filterBy]: { $regex: searchBy, $options: 'i' } }];
+                }
             }
             const managersCounters = [];
 
             for (const profile of profiles) {
                 const queryProfile = { groupsAD: profile.title };
-                if (searchBy) {
+                if (searchBy && !filterBy?.length) {
                     queryProfile.$or = [
                         { name: { $regex: searchBy, $options: 'i' } },
                         { registration: { $regex: searchBy, $options: 'i' } },
                         { email: { $regex: searchBy, $options: 'i' } },
                         { cpf: { $regex: searchBy, $options: 'i' } },
                     ];
+                } else if (searchBy && filterBy?.length) {
+                    if (Array.isArray(filterBy)) {
+                        queryProfile.$or = filterBy.map((filter) => ({
+                            [filter]: { $regex: searchBy, $options: 'i' },
+                        }));
+                    } else {
+                        queryProfile.$or = [{ [filterBy]: { $regex: searchBy, $options: 'i' } }];
+                    }
                 }
                 const count = await User.countDocuments(queryProfile);
                 managersCounters.push({ label: profile.label, title: profile.title, count });
@@ -2043,6 +2103,7 @@ module.exports = {
         try {
             const { body } = req;
             const completeUser = await User.findById(body._id).lean();
+            const isManager = await managerBusiness.isUserManager(completeUser);
 
             const {
                 groupsAD,
@@ -2139,6 +2200,7 @@ module.exports = {
                     name,
                     profilePhoto,
                     tokenAnalytics: token_analytics,
+                    isManager,
                 });
             } else {
                 _messages.badRequest(
@@ -2191,8 +2253,8 @@ module.exports = {
             component: 'users',
             route: 'ssoCallback',
             dataNew: JSON.stringify({
-                samlObj: req.samlUserObject,
-                samlUser: req.user,
+                user: req.user,
+                samlUserObject: req.samlUserObject,
                 session: req.session,
                 sessionID: req.sessionID,
             }),
@@ -2210,10 +2272,10 @@ module.exports = {
             claimKey.split(',').reduce((acc, key) => {
                 if (acc !== null && acc !== undefined && acc !== '') return acc;
 
-                return _.get(req.samlUserObject ?? req.user, key, null);
-            }, null) ??
-            req.user?.nameID ??
-            null;
+                return _.get(req.user, key, null) || _.get(req.samlUserObject, key, null);
+            }, null)
+            ?? req.user?.nameID
+            ?? null;
 
         await Log.create({
             type: 'SSO_CALLBACK_INFOS',
@@ -2231,7 +2293,7 @@ module.exports = {
         });
 
         if (claimValue === undefined || claimValue === null) {
-            console.log('ssoCallback req.samlUserObject', req.samlUserObject);
+            // console.log('ssoCallback req.samlUserObject', req.samlUserObject);
 
             return _messages.internalServer(
                 res,
@@ -2676,7 +2738,7 @@ module.exports = {
         const { tag, userId } = req.body;
         try {
             const classIdentifier = new ObjectId();
-            console.log('classIdentifier', classIdentifier);
+            // console.log('classIdentifier', classIdentifier);
             await User.findByIdAndUpdate(userId, {
                 $addToSet: {
                     classGroups: {
@@ -2981,7 +3043,7 @@ module.exports = {
             _messages.success(res, req, {
                 map: connectMap,
                 fields,
-                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd'], // Campos que não devem ser alterados
+                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd', 'manager'], // Campos que não devem ser alterados
                 eligibility,
             });
         } catch (error) {

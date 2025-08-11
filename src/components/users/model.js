@@ -160,8 +160,8 @@ const userSchema = new mongoose.Schema(
             info: { type: String, required: false, trim: true }
         },
         loginType: {
-            type: String,
-            enum: ['SSO', 'FORM', 'BOTH'],
+            type: mongoose.Schema.Types.Mixed,
+            enum: ['SSO', 'FORM', 'BOTH', null],
             required: false,
             default: 'BOTH',
         },

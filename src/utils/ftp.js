@@ -86,7 +86,7 @@ module.exports = {
     },
     uploadFileDegreed (localFile, remoteFile) {
         if (process.env.SFTP_ENABLE_DEGREED !== 'true') {
-            console.log('Executação bloqueada, ambiente não é prod.')
+            // console.log('Executação bloqueada, ambiente não é prod.')
             return
         }
 
@@ -97,7 +97,7 @@ module.exports = {
                 if (err) throw err
                 fs.unlink(localFile, err => {
                     if (err) throw err
-                    console.log(localFile + 'was deleted')
+                    // console.log(localFile + 'was deleted')
                     client.end()
                 })
             })
@@ -111,7 +111,7 @@ module.exports = {
         })
 
         client.on('greeting', msg => {
-            console.log(msg)
+            // console.log(msg)
         })
 
         client.connect(configDegreed)

@@ -454,7 +454,7 @@ module.exports = {
         try {
             const urlFetch = `${API_MESSENGER}/listmessage`;
             const params = { skip: req.query.skip, limit: req.query.limit, clientid: +CLIENT_ID, identifier: req.query.identifier };
-            console.log(params);
+            // console.log(params);
             const response = await axios.get(urlFetch, { headers: getHeaders(req), params });
 
             return _messages.success(res, req, response.data);

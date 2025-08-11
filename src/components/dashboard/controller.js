@@ -56,7 +56,7 @@ module.exports = {
     async update(req, res) {
         try {
             const data = req.body
-            console.log(data)
+            // console.log(data)
             const dashConfig = await DashConfig.findByIdAndUpdate(data._id, data)
             _messages.success(res, req, dashConfig)
         } catch (error) {

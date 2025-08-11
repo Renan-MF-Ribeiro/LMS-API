@@ -523,6 +523,18 @@ module.exports = {
             .toUpperCase();
     },
 
+    slugify(text) {
+        if (!text) return text;
+
+        return String(text)
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\s\W-]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .toLowerCase()
+            .trim();
+    },
+
     getSortedDate(dates = [], order = 'asc') {
         const sortedDates = dates.sort((prev, curr) => prev.getTime() - curr.getTime())
         return order === 'desc' ? sortedDates.slice(0)[0] : sortedDates.slice(-1)[0]
@@ -977,6 +989,27 @@ module.exports = {
         
         return { trail, containsACompletedItem };
     },
+
+    parseDocument(document) {
+        if (!document) return null;
+        return String(document).replace(/\D/g, '');
+    },
+
+    isPositiveValue(value) {
+        if (!value) return false;
+
+        return ['sim', 's', '1', 'true', 'ativo', 'a', 'yes', 'y'].includes(String(value).toLowerCase());
+    },
+
+    getLoginType(loginType) {
+        if (!loginType) return null;
+
+        if (String(loginType).toUpperCase() === 'SSO') return 'SSO';
+
+        if (String(loginType).toUpperCase() === 'FORM') return 'FORM';
+
+        return 'BOTH';
+    }
 
 };
 

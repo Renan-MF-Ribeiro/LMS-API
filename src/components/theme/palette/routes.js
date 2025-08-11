@@ -2,9 +2,10 @@ const express = require("express");
 const _controller = require("./controller");
 const formidable = require('express-formidable')
 const { validateTokenRoute, isEngagementManager } = require('../../../utils/middlewares');
+const { cacheRequest } = require("../../../utils/cache/middlewares");
 
 module.exports = express.Router()
-    .get('/', _controller.getTheme)
+    .get('/', cacheRequest(), _controller.getTheme)
     .put('/', formidable(), validateTokenRoute, isEngagementManager, _controller.createOrUpdate)
     .post('/duplicate', validateTokenRoute, isEngagementManager, _controller.duplicateTheme)
     .delete('/:_id', validateTokenRoute, isEngagementManager, _controller.delete)

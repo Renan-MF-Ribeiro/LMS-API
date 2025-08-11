@@ -482,7 +482,6 @@ module.exports = {
         }
 
         const events = await eventsController.getCalendarEventsByDate(start, end, user, tags);
-
         let calendarEvents = events;
 
         if (courseId) {
@@ -510,7 +509,13 @@ module.exports = {
         let course = await ClassModel.findOne({ _id: classId });;
 
         if (!course) {
-            course = await ClassModel.findOne({ _id: classId });
+            throw new ApiError('Turma não encontrada.', 404);
+        }
+
+        const hasLimit = typeof course.limit === 'number' && course.limit > 0;
+
+        if (hasLimit && course.users.length >= course.limit) {
+            throw new ApiError('Não foi possível se inscrever: turma cheia.', 409);
         }
 
         const classesFromCourse = await ClassModel.find({
@@ -618,5 +623,13 @@ module.exports = {
                 classes
             };
         });
+    },
+
+    async removeUsersFromClass(classId, userIds) {
+        //must receive array of userIds
+        return await ClassModel.findOneAndUpdate(
+            { _id: classId },
+            { $pull: { users: { _id: { $in: userIds.map((id) => mongoose.Types.ObjectId(id)) } } } }
+        );
     }
 };

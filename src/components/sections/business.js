@@ -20,6 +20,7 @@ const { Trail } = require('../trails/model');
 const { cloneDeep } = require('lodash');
 const { User } = require('../users/model');
 const { getProcessedTags } = require('../users/business');
+const RecommendedContent = require('../managers/schema/model');
 const { ObjectId } = require('mongoose').Types
 
 const isSectionTrailInfo = (trail) => (trail.type === 'trail' && ObjectId.isValid(trail._id)) || ObjectId.isValid(trail);
@@ -175,10 +176,12 @@ async function setAssessmentHistoricOnSections(userId, sections) {
 
         if (section.isCompleted) {
             const sectionExceptions = section?.exceptionCertificateTrails || [];
-            const trainingCertExceptions = section?.exceptionCertificateTrails || [];
+            const trainingCertExceptions = trainingSectionInfo?.exceptionCertificateTrails || [];
+
             const allExceptions = [...sectionExceptions, ...trainingCertExceptions];
+
             section.duration = calculateTotalDuration(
-                section.trails,
+                section.trails.filter(trail => trail.completion === 1 && !trail.isCertificateException),
                 allExceptions,
             );
         }
@@ -308,11 +311,11 @@ async function setCerticateHistoricOnSections(user, sections) {
         if (section.isCompleted) {
             const sectionExceptions = section?.exceptionCertificateTrails || [];
             const trainingCertExceptions = trainingSectionInfo?.exceptionCertificateTrails || [];
-            const trainingExceptions = trainingSectionInfo?.exceptionTrainingTrails || [];
-            const allExceptions = [...sectionExceptions, ...trainingCertExceptions, ...trainingExceptions];
+
+            const allExceptions = [...sectionExceptions, ...trainingCertExceptions];
 
             section.duration = calculateTotalDuration(
-                section.trails,
+                section.trails.filter(trail => trail.completion === 1 && !trail.isCertificateException),
                 allExceptions
             );
         }
@@ -956,55 +959,44 @@ module.exports = {
         })
         return trails.length > 0 ? section : [];
     },
+    async recommendedTrailsSections(trails, userId) {
+        const [section, recommendations] = await Promise.all([
+            Section.findOne({
+                defaultType: DEFAULT_TYPES.RECOMMENDED_TRAILS,
+                active: 1,
+            }).lean(),
+            RecommendedContent.findOne({ userId })
+        ]);
 
-    async recommendedTrailsSections(trails, recommendedTrails) {
-        const section = await Section.findOne({
-            defaultType: DEFAULT_TYPES.RECOMMENDED_TRAILS,
-            active: 1,
-        }).lean();
-
-        if (!section) {
-            return []
+        if (!section || !recommendations || recommendations?.length === 0) {
+            return [];
         }
-        const trailIds = new Set(recommendedTrails.filter(trail => trail.id).map((trail) => trail.id));
-        for (const trail of trails) {
 
-            const isRecommended = trailIds.has(trail._id.toString());
+        for (const trail of trails) {
+            const isRecommended = recommendations?.recommendedTrails?.some((recommendedTrail) => recommendedTrail?.id?.toString() === trail?._id?.toString());
             if (isRecommended) {
-                section.trails.push(trail)
+                section.trails?.push(trail);
             }
         }
 
         return section;
     },
 
-    async recommendedCoursesSections(userId, recommendedCourses) {
-        const section = await Section.findOne({
-            defaultType: DEFAULT_TYPES.RECOMMENDED_COURSES,
-            active: 1,
-        }).lean();
+    async recommendedCoursesSections(userId) {
+        const [section, recommendations] = await Promise.all([
+            Section.findOne({
+                defaultType: DEFAULT_TYPES.RECOMMENDED_COURSES,
+                active: 1,
+            }).lean(),
+            RecommendedContent.findOne({ userId })
+        ]);
+        if (!section || !recommendations || recommendations?.length === 0) {
+            return [];
+        }
 
-        if (!section) return [];
-
-        const elegibleCourses = await CourseModel.find({
-            _id: { $in: recommendedCourses.map((rc) => rc.courseId) },
+        let elegibleCourses = await CourseModel.find({
+            _id: { $in: recommendations?.recommendedCourses?.map((rc) => rc.courseId) }
         })
-            .select({
-                title: 1,
-                thumbPath: 1,
-                _id: 1,
-                description: 1,
-                passingScore: 1,
-                certificate: 1,
-                certificateLayout: 1,
-                workload: 1,
-                instructor: 1,
-                banner: 1,
-                startDate: 1,
-                endDate: 1,
-                highlighted: 1,
-                certificateDateType: 1,
-            })
             .lean();
 
         if (!elegibleCourses.length) {
@@ -1464,17 +1456,22 @@ async function processCourseInSections(elegibleCourses, userId) {
 }
 
 function calculateTotalDuration(trails, exceptionIds = []) {
-    console.log(exceptionIds)
     const exceptionIdStrings = exceptionIds.map(String);
 
-    return trails.reduce((sum, trail) => {
-        const trailId = String(trail._id);
-        const isException = exceptionIdStrings.includes(trailId);
-
-        if (!isException) {
-            return sum + (trail.duration || 0);
+    return trails.reduce((total, trail) => {
+        if (!trail || typeof trail !== 'object' || ['default', 'assessment', 'separator', 'certificate'].includes(trail.type)) {
+            return total;
         }
 
-        return sum;
+        const trailId = String(trail._id);
+        const isException = exceptionIdStrings.includes(trailId);
+        if (isException) return total;
+
+        const itemsDuration = trail.items?.reduce((sum, item) => {
+            const duration = item?.itemID?.durationHours || 0;
+            return sum + duration;
+        }, 0) || 0;
+
+        return total + itemsDuration;
     }, 0);
-};
+}

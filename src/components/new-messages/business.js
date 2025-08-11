@@ -82,7 +82,7 @@ module.exports = {
             }
             const chunk = 10;
             for (let i = 0; i < messages.length; i += chunk) {
-                console.log(process.env.TOPIC_MFA);
+                // console.log(process.env.TOPIC_MFA);
                 const temporary = messages.slice(i, i + chunk);
                 await producer.send({
                     topic: process.env.TOPIC_MFA,
@@ -433,7 +433,7 @@ module.exports = {
                 }
             }
 
-            console.log({ messaginListLength: messagingList.length });
+            // console.log({ messaginListLength: messagingList.length });
 
             const nonDuplicate = messagingList.filter(
                 (v, i, a) => a.findIndex((v2) => v2.name === v.name && v2.email === v.email) === i
@@ -441,7 +441,7 @@ module.exports = {
 
             const orderedList = nonDuplicate.sort((a, b) => a.name.localeCompare(b.name));
 
-            console.log({ getUserListDbCalls: dbCounter });
+            // console.log({ getUserListDbCalls: dbCounter });
             return orderedList;
         } catch (error) {
             console.error(error);
