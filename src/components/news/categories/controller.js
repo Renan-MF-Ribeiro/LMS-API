@@ -43,8 +43,19 @@ module.exports = {
 
     async getByUrl(req, res) {
         try {
+            const user = await getUserByToken(req);
             const { data } = await newsApi.get(`/categories/url/${req.params.categoryUrl}/${req.params.campaignUrl}`);
 
+            
+            for(let n of data.news){
+                n.isAuthor = false;
+                if(String(n.author) == String(user._id)){
+                    n.isAuthor = true;
+                }
+
+                delete n.author;
+            }
+            
             _messages.success(res, req, data);
         } catch (error) {
             _messages.internalServer(
@@ -97,6 +108,42 @@ module.exports = {
             const { data } = await newsApi.get(`/home/categories/${req.params.id}`);
 
             _messages.success(res, req, data);
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno do servidor',
+                'trails',
+                'createPadlet'
+            );
+        }
+    },
+
+    async form(req, res) {
+        try {
+            const { data } = await newsApi.get(`/home/categories/form/${req.params.id}`);
+            const allowPublishingOutsideCategory = data.data.allowPublishingOutsideCategory || false;
+            console.log(allowPublishingOutsideCategory)
+            if(!allowPublishingOutsideCategory){
+                    const user = await getUserByToken(req);
+                    console.log(data)
+                    if (data.data && Array.isArray(data.data)) {  
+                        const filtered = data.data.filter(category => {
+                            if (category.audiences && category.audiences.length > 0) {
+                                
+                                const hasValidAudience = category.audiences.some(audience => {
+                                    const userValue = user[audience.field];
+                                    return userValue && userValue === audience.value;
+                                });
+                                return hasValidAudience;
+                            }
+                            return false;
+                        });
+                        return _messages.success(res, req, { data: filtered, total: filtered.length, allowPublishingOutsideCategory });
+                    }
+            }
+            return _messages.success(res, req, {...data, allowPublishingOutsideCategory});
         } catch (error) {
             _messages.internalServer(
                 res,
