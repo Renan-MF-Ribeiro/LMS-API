@@ -6,7 +6,7 @@ const {
     processTrailTracking,
 } = require('../../utils/functions');
 const configBusiness = require('../config/business');
-const { getCoursesByIds, getCoursesByUserID } = require('../courses/business');
+const { getCoursesByIds, isUserPresent, userHasSomePresence } = require('../courses/business');
 const { ClassModel } = require('../courses/model');
 const { matricesApi } = require('../matrices/http-adapter');
 const { Features } = require('../theme/features/model');
@@ -325,16 +325,15 @@ const business = {
         if (!classFound || !users[0]) {
             return [];
         }
-
         // Lógica para verificar se o usuário já concluiu o curso anteriormente:
 
-        /* const alreadyConcluded = new Set();
+        const alreadyConcluded = new Set();
         for (const user of users) {
-            const concluded = await getCoursesByUserID(user._id)
-            if (concluded?.some((c) => c.id.toString() === classId)) {
-                alreadyConcluded.add(user._id.toString());
+            const present = await userHasSomePresence(user._id, classFound?.courseID?._id, classFound._id)
+            if (present) {
+                alreadyConcluded.add(user._id?.toString());
             }
-        } */
+        }
 
         const userData = users?.map((user) => {
             // Se volumetria for grande (+100 usuários em uma turma), começar a pensar em modificar esta lógica:
@@ -348,9 +347,9 @@ const business = {
                 networkLogin: user?.networkLogin,
                 office: user?.office,
                 status: userInClass ? 'registered' : undefined,
-                //alreadyConcluded: alreadyConcluded.has(user._id?.toString())
+                alreadyConcluded: alreadyConcluded.has(user._id?.toString())
             };
-        });
+        }).filter((user) => !user.alreadyConcluded);
         return userData;
     },
 };
