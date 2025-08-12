@@ -63,41 +63,53 @@ module.exports = {
         }
     },
 
-    async createQuestion (req, res) {
+    async createQuestion(req, res) {
         try {
-            const { idCategory, description, idEvaluation } = req.body
-            const verify = await Question.find({
+            const { idCategory, description, idEvaluation } = req.body;
+
+            const exists = await Question.exists({
                 description: { $eq: description },
                 idEvaluation: { $eq: idEvaluation },
                 deleted: { $eq: 0 },
-            })
+            });
 
-            if (verify.length === 0) {
-                let alert = ''
-                const category = await Category.findOne({
-                    _id: { $eq: idCategory },
-                })
-                const totalQuestions = await Question.find({
-                    idCategory: { $eq: idCategory },
-                    deleted: { $eq: 0 },
-                    repealed: { $eq: 0 },
-                })
-                if (category.amountOfQuestions > totalQuestions.length + 1) {
-                    alert = `${totalQuestions.length + 1} de ${category.amountOfQuestions} questões gravadas para a categoria. É necessário cadastrar no mínimo mais ${category.amountOfQuestions - (totalQuestions.length + 1)} ${category.amountOfQuestions - (totalQuestions.length + 1) > 1 ? 'questões' : 'questão'}.`
-                    await Category.findOneAndUpdate({ _id: category._id }, { amountOfQuestions: totalQuestions.length })
-                }
-                const objQuestion = { ...req.body }
-                const { idEvaluation } = await Category.findOne({ _id: { $eq: idCategory } })
-                objQuestion.idEvaluation = idEvaluation
-                const alternativeCreated = await Question.create(objQuestion)
-                const question = await Question.findById(alternativeCreated._id).populate('idCategory', 'description')
-
-                _messages.success(res, req, question, 'questions', 'createQuestion', alternativeCreated, [], true, 'CREATE')
-            } else {
-                _messages.badRequest(res, req, 'Essa questão já foi cadastrada!', 'Essa questão já foi cadastrada!', 'questions', 'createQuestion')
+            if (exists) {
+                return _messages.badRequest(
+                    res,
+                    req,
+                    'Essa questão já foi cadastrada!',
+                    'Essa questão já foi cadastrada!',
+                    'questions',
+                    'createQuestion'
+                );
             }
+
+            const alternativeCreated = await Question.create({ ...req.body, idEvaluation });
+            const question = await Question.findById(alternativeCreated._id).populate(
+                'idCategory',
+                'description'
+            );
+
+            _messages.success(
+                res,
+                req,
+                question,
+                'questions',
+                'createQuestion',
+                alternativeCreated,
+                [],
+                true,
+                'CREATE'
+            );
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'questions', 'createQuestion')
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'questions',
+                'createQuestion'
+            );
         }
     },
 
