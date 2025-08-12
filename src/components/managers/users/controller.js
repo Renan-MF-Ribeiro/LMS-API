@@ -35,8 +35,8 @@ const managersUsersController = {
         };
 
         if (isMatrixActive) {
-            const lastApplicationAt = await matricesApi.get(`/users/detailed-info/${userId}`);
-            payload.lastApplicationAt = lastApplicationAt?.data?.data?.[0]?.lastApplicationAt || null;
+            const lastApplicationAt = await matricesApi.get(`/users/last-application/${userId}`);
+            payload.lastApplicationAt = lastApplicationAt?.data?.data || null;
         }
 
         res.status(httpStatus.OK).send(payload);
