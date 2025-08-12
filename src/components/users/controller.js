@@ -1616,9 +1616,7 @@ module.exports = {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
 
-            const searchBy = req.query.searchBy;
-            const filterBy = req.query.filterBy;
-
+            const searchBy = req.query?.searchBy ?? null;
             const isOnboarding = req.query.onboarding === 'true' || req.query.onboarding === true;
             const isPartner = req.query.partner === 'true' || req.query.partner === true;
 
@@ -1635,7 +1633,7 @@ module.exports = {
                 handleSegmentationOnQuery(req, 'issuer', query);
             }
 
-            if (searchBy && !filterBy?.length) {
+            if (searchBy?.length) {
                 query.$and.push({
                     $or: [
                         { name: { $regex: searchBy, $options: 'i' } },
@@ -1644,20 +1642,6 @@ module.exports = {
                         { cpf: { $regex: searchBy, $options: 'i' } },
                     ],
                 });
-            } else if (searchBy && filterBy?.length) {
-                if (Array.isArray(filterBy)) {
-                    query.$and.push({
-                        $or: filterBy.map((filter) => ({
-                            [filter]: { $regex: searchBy, $options: 'i' },
-                        })),
-                    });
-                } else {
-                    query.$and.push({
-                        $or: [
-                            { [filterBy]: { $regex: searchBy, $options: 'i' } }
-                        ]
-                    });
-                }
             }
 
             const totalActive = await User.find({
