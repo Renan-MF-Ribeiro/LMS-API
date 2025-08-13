@@ -475,20 +475,16 @@ async function processMessage(campaign, user) {
 
     try {
         const notificationlink = await processNotificationLink(target, communication);
-        const foundUser = await User.findById(user._id).select('email networkLogin deviceId -_id');
+        const foundUser = await User.findById(user?._id || user).select('email networkLogin deviceId -_id');
 
         const message = {
             clientid,
             type: communication,
             ...data,
-            identifier: foundUser.networkLogin,
+            identifier: foundUser?.networkLogin,
             viewed: false,
-            userEmail: campaign.userEmail
-                ? campaign.userEmail
-                : foundUser.email
-                ? foundUser.email
-                : null,
-            userDevice: foundUser.deviceId ? foundUser.deviceId : null,
+            userEmail: campaign?.userEmail ?? foundUser?.email ?? null,
+            userDevice: foundUser?.deviceId ?? null,
             notificationlink,
         };
         return message;
