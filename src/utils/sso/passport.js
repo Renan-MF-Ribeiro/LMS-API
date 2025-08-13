@@ -1,22 +1,21 @@
 const passport = require('passport');
 const passportSaml = require('passport-saml');
-const OpenIDConnectStrategy = require('passport-openidconnect');
-const OAuth2Strategy = require('passport-oauth2');
 const LocalStrategy = require('passport-local');
 
 const bcrypt = require('bcryptjs');
 const cryptoJS = require('crypto-js');
-const axios = require('axios');
 
-const { log } = require('./logger');
-const { getRequestStrategyName } = require('./auth');
-const { session } = require('./session');
+const { log } = require('../logger');
+const { getRequestStrategyName } = require('../auth');
+const { session } = require('../session');
 
-const ApiError = require('../errors/ApiError');
+const ApiError = require('../../errors/ApiError');
 
-const { getLoginConfig } = require('../components/users/business');
-const { Log } = require('../components/logs/model');
-const { User } = require('../components/users/model');
+const { getLoginConfig } = require('../../components/users/business');
+const { Log } = require('../../components/logs/model');
+const { User } = require('../../components/users/model');
+const CustomOIDCStrategy = require('./customStrategyOpenID');
+const CustomOAuth2Strategy = require('./customStrategyOAuth2');
 
 passport.serializeUser((user, done) => {
     done(null, user);
@@ -56,27 +55,85 @@ async function createOpenIdConnectStrategy(config) {
     log('createOpenIdConnectStrategy config', config);
     const strategyName = config.strategyName;
 
-    const strategy = new OpenIDConnectStrategy(
+    const verifyCallback = async (accessToken, refreshToken, profile, done) => {
+        try {
+            await Log.create({
+                type: 'OIDC_PROFILE_PROCESSED',
+                message: 'OIDC_PROFILE_PROCESSED',
+                component: strategyName,
+                route: '/auth/verify',
+                dataNew: JSON.stringify({
+                    user: {
+                        id: profile?.sub || profile?.id,
+                        email: profile?.email,
+                        name: profile?.name,
+                        emailVerified: profile?.email_verified,
+                        picture: profile?.picture
+                    },
+                    tokens: {
+                        hasAccessToken: !!accessToken,
+                        hasRefreshToken: !!refreshToken
+                    },
+                    profileKeys: profile ? Object.keys(profile) : [],
+                    rawProfile: profile,
+                    timestamp: new Date().toISOString()
+                })
+            });
+            console.log('OIDC profile processed:', profile);
+
+            const user = {
+                id: profile?.sub || profile?.id,
+                name: profile?.name || profile?.displayName,
+                email: profile?.email,
+                emailVerified: profile?.email_verified,
+                picture: profile?.picture,
+                strategyName: strategyName,
+                issuer: config.issuer,
+
+                emails: profile?.emails || (profile?.email ? [{ value: profile.email }] : [{ value: 'unknown@example.com' }]),
+                displayName: profile?.name || profile?.displayName || 'Unknown User',
+                username: profile?.preferred_username || profile?.email || 'unknown',
+            };
+
+            if (!user.emails || user.emails.length === 0) {
+                console.warn('⚠️ Nenhum email encontrado no profile, usando email do ID token ou fallback');
+                user.emails = [{ value: profile?.email || 'no-email-provided@unknown.com' }];
+            }
+
+            return done(null, user);
+        } catch (err) {
+            console.error('Erro no verify callback:', err);
+
+            await Log.create({
+                type: 'OIDC_PROFILE_ERROR',
+                message: 'OIDC_PROFILE_ERROR',
+                component: strategyName,
+                route: '/auth/verify',
+                dataNew: JSON.stringify({
+                    error: err.message,
+                    stack: err.stack,
+                    timestamp: new Date().toISOString()
+                })
+            });
+
+            done(err);
+        }
+    };
+
+    const strategy = new CustomOIDCStrategy(
         {
+            name: strategyName,
+            strategyName: strategyName,
             issuer: config.issuer,
             authorizationURL: config.authorizationUrl,
             tokenURL: config.tokenUrl,
-            userInfoURL: config.userInfoUrl,
             clientID: config.clientId,
             clientSecret: config.clientSecret,
             callbackURL: config.callbackUrl,
-            authorizationParams: {
-                prompt: config.forceAuth ? 'login' : 'none',
-            },
-            scope: config.scope?.length ? config.scope : ['openid', 'profile'],
-
+            // userInfoURL: config.userInfoUrl,
+            scope: config.scope?.length ? config.scope : ['openid', 'profile', 'email']
         },
-        async (issuer, profile, done) => {
-            profile.strategyName = strategyName;
-            profile.issuer = issuer;
-
-            return done(null, profile);
-        }
+        verifyCallback
     );
 
     passport.use(strategyName, strategy);
@@ -86,49 +143,79 @@ async function createOauth2Strategy(config) {
     log('createOauth2Strategy config', config);
     const strategyName = config.strategyName;
 
-    const strategy = new OAuth2Strategy(
+    const verifyCallback = async (accessToken, refreshToken, profile, done) => {
+        try {
+            await Log.create({
+                type: 'OAUTH2_PROFILE_PROCESSED',
+                message: 'OAUTH2_PROFILE_PROCESSED',
+                component: strategyName,
+                route: '/auth/verify',
+                dataNew: JSON.stringify({
+                    user: {
+                        id: profile?.id,
+                        login: profile?.login,
+                        email: profile?.email,
+                        name: profile?.name
+                    },
+                    tokens: {
+                        hasAccessToken: !!accessToken,
+                        hasRefreshToken: !!refreshToken
+                    },
+                    profileKeys: profile ? Object.keys(profile) : [],
+                    timestamp: new Date().toISOString()
+                })
+            });
+
+            const user = {
+                id: profile?.id,
+                login: profile?.login,
+                name: profile?.name,
+                email: profile?.email,
+                strategyName: strategyName
+            };
+
+            return done(null, user);
+        } catch (err) {
+            await Log.create({
+                type: 'OAUTH2_PROFILE_ERROR',
+                message: 'OAUTH2_PROFILE_ERROR',
+                component: strategyName,
+                route: '/auth/verify',
+                dataNew: JSON.stringify({
+                    error: err.message,
+                    stack: err.stack,
+                    timestamp: new Date().toISOString()
+                })
+            });
+
+            done(err);
+        }
+    };
+
+    const strategy = new CustomOAuth2Strategy(
         {
+            name: strategyName,
+            strategyName: strategyName,
             authorizationURL: config.authorizationUrl,
             tokenURL: config.tokenUrl,
             clientID: config.clientId,
             clientSecret: config.clientSecret || undefined,
             callbackURL: config.callbackUrl,
+            userInfoURL: config.userInfoUrl,
+            tokenType: config.tokenType || 'Bearer',
             scope: config.scope?.length ? config.scope : [],
             state: true,
             proxy: true,
-            pkce: config.pkce || false,
-
+            pkce: config.pkce || false
         },
-        async (accessToken, _refreshToken, profile, done) => {
-            profile.strategyName = strategyName;
-
-            if (accessToken && config.userInfoUrl) {
-                const tokenType = config.tokenType || 'Bearer';
-
-                const { data } = await axios.get(config.userInfoUrl, {
-                    headers: {
-                        Authorization: `${tokenType} ${accessToken}`,
-                    },
-                });
-
-                profile = {
-                    ...profile,
-                    ...data,
-                }
-            }
-
-            return done(null, profile);
-        }
+        verifyCallback
     );
 
-    strategy.authorizationParams = () => {
-        const params = {};
-
-        if (config.forceAuth) {
-            params.prompt = 'login';
-        }
-
-        return params;
+    // Adicionar authorizationParams se necessário
+    if (config.forceAuth) {
+        strategy.authorizationParams = () => ({
+            prompt: 'login'
+        });
     }
 
     passport.use(strategyName, strategy);
