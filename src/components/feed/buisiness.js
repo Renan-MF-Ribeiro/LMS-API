@@ -138,32 +138,33 @@ async function populateTrailFields(data) {
 
 async function createNotification(config, users) {
 
-    const values = [
-        {
-            admin_post: {
-                text: 'Uma nova publicação foi feita pela equipe de comunicação. Clique e confira.',
-                texthtml:
-                    'Uma nova publicação foi feita pela equipe de comunicação. Clique e confira.',
-                title: 'Novo post da empresa!',
-            },
-            mention: {
-                text: '',
-                texthtml: '',
-                title: 'Nova menção em comentário!',
-            },
-            comment: {
-                text: '',
-                texthtml: '',
-                title: '',
-            },
-            share: {
-                text: '',
-                texthtml: '',
-                title: `Um ${config.shareContent} foi compartilhado`,
-            },
+    const shareText = config.shareContent === 'post' ? `${config.reqUser} compartilhou um post. Clique e confira!` : `${config.reqUser} compartilhou uma trilha: ${config.contentName}. Clique e confira!`
+    const shareTitle = config.shareContent === 'post' ? `${config.reqUser} compartilhou um post.` : `${config.reqUser} compartilhou uma trilha: ${config.contentName}.`
+    const values =
+    {
+        admin_post: {
+            text: 'Uma nova publicação foi feita pela equipe de comunicação. Clique e confira!',
+            texthtml:
+                'Novo post da equipe de comunicação.',
+            title: 'Novo post da equipe de comunicação',
         },
-    ];
-
+        mention: {
+            text: 'Mençionou você em um comentário. Clique e confira!',
+            texthtml: 'Mençionou você em um comentário. Clique e confira!',
+            title: 'Nova menção em comentário.',
+        },
+        comment: {
+            text: 'Comentou sua publicação. Clique e confira!',
+            texthtml: 'Comentou sua publicação. Clique e confira!',
+            title: 'Novo comentário.',
+        },
+        share: {
+            text: shareText,
+            texthtml: shareText,
+            title: shareTitle,
+        },
+    }
+        ;
     const text = values[config?.type]?.text;
     const texthtml = values[config?.type]?.texthtml;
     const title = values[config?.type]?.title;
@@ -205,7 +206,7 @@ async function createNotification(config, users) {
 
             await sendMessageToKafka(campaign, targetUsers);
         }
-
+        console.log(message)
         await createMessagesFromBackend(message);
     } catch (error) {
         console.log(error);
