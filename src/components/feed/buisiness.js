@@ -206,7 +206,6 @@ async function createNotification(config, users) {
 
             await sendMessageToKafka(campaign, targetUsers);
         }
-        console.log(message)
         await createMessagesFromBackend(message);
     } catch (error) {
         console.log(error);
