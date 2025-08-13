@@ -61,8 +61,8 @@ async function createOpenIdConnectStrategy(config) {
                 type: 'OIDC_PROFILE_PROCESSED',
                 message: 'OIDC_PROFILE_PROCESSED',
                 component: strategyName,
-                route: '/auth/verify',
-                dataNew: JSON.stringify({
+                route: 'authorization url',
+                dataNew: {
                     user: {
                         id: profile?.sub || profile?.id,
                         email: profile?.email,
@@ -77,10 +77,8 @@ async function createOpenIdConnectStrategy(config) {
                     profileKeys: profile ? Object.keys(profile) : [],
                     rawProfile: profile,
                     timestamp: new Date().toISOString()
-                })
+                }
             });
-            console.log('OIDC profile processed:', profile);
-
             const user = {
                 id: profile?.sub || profile?.id,
                 name: profile?.name || profile?.displayName,
@@ -95,20 +93,13 @@ async function createOpenIdConnectStrategy(config) {
                 username: profile?.preferred_username || profile?.email || 'unknown',
             };
 
-            if (!user.emails || user.emails.length === 0) {
-                console.warn('⚠️ Nenhum email encontrado no profile, usando email do ID token ou fallback');
-                user.emails = [{ value: profile?.email || 'no-email-provided@unknown.com' }];
-            }
-
             return done(null, user);
         } catch (err) {
-            console.error('Erro no verify callback:', err);
-
             await Log.create({
                 type: 'OIDC_PROFILE_ERROR',
                 message: 'OIDC_PROFILE_ERROR',
                 component: strategyName,
-                route: '/auth/verify',
+                route: 'authorization url',
                 dataNew: JSON.stringify({
                     error: err.message,
                     stack: err.stack,
@@ -130,7 +121,7 @@ async function createOpenIdConnectStrategy(config) {
             clientID: config.clientId,
             clientSecret: config.clientSecret,
             callbackURL: config.callbackUrl,
-            // userInfoURL: config.userInfoUrl,
+            ...(config.userInfoUrl && { userInfoURL: config.userInfoUrl }),
             scope: config.scope?.length ? config.scope : ['openid', 'profile', 'email']
         },
         verifyCallback
@@ -149,7 +140,7 @@ async function createOauth2Strategy(config) {
                 type: 'OAUTH2_PROFILE_PROCESSED',
                 message: 'OAUTH2_PROFILE_PROCESSED',
                 component: strategyName,
-                route: '/auth/verify',
+                route: 'authorization url',
                 dataNew: JSON.stringify({
                     user: {
                         id: profile?.id,
@@ -180,7 +171,7 @@ async function createOauth2Strategy(config) {
                 type: 'OAUTH2_PROFILE_ERROR',
                 message: 'OAUTH2_PROFILE_ERROR',
                 component: strategyName,
-                route: '/auth/verify',
+                route: 'authorization url',
                 dataNew: JSON.stringify({
                     error: err.message,
                     stack: err.stack,
@@ -211,7 +202,6 @@ async function createOauth2Strategy(config) {
         verifyCallback
     );
 
-    // Adicionar authorizationParams se necessário
     if (config.forceAuth) {
         strategy.authorizationParams = () => ({
             prompt: 'login'
