@@ -9,7 +9,6 @@ const {
 } = require('../buisiness');
 const { sendMessageToKafka, processTargetUsers } = require('../../new-messages/business');
 const fs = require('fs');
-const mime = require('mime-types');
 const FormData = require('form-data');
 const {
     getSegmentation,
@@ -19,6 +18,7 @@ const {
 
 const GamificationKafka = require('../../gamification/kafka/broker');
 const { EVENT_CATEGORY } = require('../../gamification/model');
+const { getUsersByTags } = require('../../users/business');
 
 module.exports = {
     async create(req, res) {
@@ -47,16 +47,16 @@ module.exports = {
 
                 const formData = new FormData();
 
-                 Object.keys(req?.files).forEach((key, i) => {
-                     const file = req?.files[key];
+                Object.keys(req?.files).forEach((key, i) => {
+                    const file = req?.files[key];
 
-                     const filename = `${i}-${file.name.replace(/ /g, '-')}`;
+                    const filename = `${i}-${file.name.replace(/ /g, '-')}`;
 
-                     formData.append(filename, fs.createReadStream(file.path), {
-                         filename,
-                         contentType: file.type,
-                     });
-                 });
+                    formData.append(filename, fs.createReadStream(file.path), {
+                        filename,
+                        contentType: file.type,
+                    });
+                });
 
                 const result = await socialApi.patch(uploadContent, formData, {
                     headers: {
@@ -65,9 +65,9 @@ module.exports = {
                     },
                 });
 
-                 if (result?.data && data?.post) {
-                     data.post.content = result.data;
-                 }
+                if (result?.data && data?.post) {
+                    data.post.content = result.data;
+                }
             }
 
             if (body.notifyUsers === true && (body?.elegibilities || body?.elegibilitiesAnd)) {
@@ -81,8 +81,7 @@ module.exports = {
                     contentId: data?.post?._id,
                     targetType: 'tag',
                 };
-
-                sendCustomMessageToKafka(messageList, process.env.TOPIC_MSG_LIST);
+                await createNotification(config, users);
             }
 
             return _messages.success(res, req, data);
@@ -379,8 +378,9 @@ module.exports = {
 
             const PopulatedData = await populateSingleData('user', 'userId', data.data);
             const response = { data: PopulatedData, total: data.total };
-            const { userId: postOwnerId } = await socialApi.get(`posts/${req.body.postId}`);
-            const isReplyingOwnPost = _id === postOwnerId;
+
+            const originalPostOwnerId = originalPost.data?.userId;
+            const isReplyingOwnPost = _id === originalPostOwnerId;
 
             if (isMentioningSomeone) {
                 const mentionedUsers = isMentioningSomeone.filter(
@@ -405,10 +405,10 @@ module.exports = {
                     contentType: isReplyingPost ? 'post' : 'comentário',
                     contentId: data?.data?.postId,
                 };
-                await createNotification(config, postOwnerId);
+                await createNotification(config, originalPostOwnerId);
             }
 
-            if(!isReplyingOwnPost) {
+            if (!isReplyingOwnPost) {
                 await GamificationKafka.publishEventRuleValidation({
                     events: [EVENT_CATEGORY.FEED_COMMENT, EVENT_CATEGORY.FEED_COMMENT_OWNER],
                     identifier: networkLogin,
