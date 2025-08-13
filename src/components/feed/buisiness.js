@@ -138,28 +138,30 @@ async function populateTrailFields(data) {
 
 async function createNotification(config, users) {
 
+    const shareText = config.shareContent === 'post' ? `${config.reqUser} compartilhou um post. Clique e confira!` : `${config.reqUser} compartilhou uma trilha: ${config.contentName}. Clique e confira!`
+    const shareTitle = config.shareContent === 'post' ? `${config.reqUser} compartilhou um post.` : `${config.reqUser} compartilhou uma trilha: ${config.contentName}.`
     const values = [
         {
             admin_post: {
-                text: 'Uma nova publicação foi feita pela equipe de comunicação. Clique e confira.',
+                text: 'Uma nova publicação foi feita pela equipe de comunicação. Clique e confira!',
                 texthtml:
-                    'Uma nova publicação foi feita pela equipe de comunicação. Clique e confira.',
-                title: 'Novo post da empresa!',
+                    'Novo post da equipe de comunicação.',
+                title: 'Novo post da equipe de comunicação',
             },
             mention: {
-                text: '',
-                texthtml: '',
-                title: 'Nova menção em comentário!',
+                text: 'Mençionou você em um comentário. Clique e confira!',
+                texthtml: 'Mençionou você em um comentário. Clique e confira!',
+                title: 'Nova menção em comentário.',
             },
             comment: {
-                text: '',
-                texthtml: '',
-                title: '',
+                text: 'Comentou sua publicação. Clique e confira!',
+                texthtml: 'Comentou sua publicação. Clique e confira!',
+                title: 'Novo comentário.',
             },
             share: {
-                text: '',
-                texthtml: '',
-                title: `Um ${config.shareContent} foi compartilhado`,
+                text: shareText,
+                texthtml: shareText,
+                title: shareTitle,
             },
         },
     ];
