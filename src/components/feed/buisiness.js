@@ -179,7 +179,7 @@ async function createNotification(config, users) {
         category: 'notify',
         mode: 'manual',
         target: {
-            type: 'users',
+            type: config.targetType || 'users',
             value: {
                 users,
             },
@@ -196,14 +196,13 @@ async function createNotification(config, users) {
 
             let targetUsers = [];
 
-            if (!target.value.user) {
+            if (!target.value.users) {
                 targetUsers = await processTargetUsers(target, campaign.category);
             } else {
                 Array.isArray(target?.value?.users)
                     ? targetUsers.push(...target.value.users)
                     : targetUsers.push(target.value.users);
             }
-
             await sendMessageToKafka(campaign, targetUsers);
         }
         await createMessagesFromBackend(message);
