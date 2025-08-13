@@ -17,48 +17,16 @@ class CustomOAuth2Strategy extends OAuth2Strategy {
         this._strategyName = options.strategyName || this.name;
         this._tokenType = options.tokenType || 'Bearer';
 
-        this._logStrategyCreated();
         this._wrapOAuth2Methods();
     }
 
-    _logStrategyCreated() {
-        Log.create({
-            type: 'OAUTH2_STRATEGY_CREATED',
-            message: 'OAUTH2_STRATEGY_CREATED',
-            component: this._strategyName,
-            route: '/auth/strategy-init',
-            dataNew: JSON.stringify({
-                strategyName: this._strategyName,
-                authorizationURL: this._oauth2?._authorizeUrl,
-                tokenURL: this._oauth2?._accessTokenUrl,
-                userInfoURL: this._userinfoURL,
-                tokenType: this._tokenType,
-                timestamp: new Date().toISOString()
-            })
-        });
-    }
-
     _wrapOAuth2Methods() {
-        // Aguardar até que _oauth2 esteja disponível
         process.nextTick(() => {
-            if (this._oauth2 && this._oauth2.getAccessToken) {
+            if (this._oauth2?.getAccessToken) {
                 const originalGetAccessToken = this._oauth2.getAccessToken.bind(this._oauth2);
 
                 this._oauth2.getAccessToken = (code, params, callback) => {
                     const startTime = Date.now();
-
-                    Log.create({
-                        type: 'OAUTH2_TOKEN_EXCHANGE_START',
-                        message: 'OAUTH2_TOKEN_EXCHANGE_START',
-                        component: this._strategyName,
-                        route: '/oauth/token',
-                        dataNew: JSON.stringify({
-                            hasCode: !!code,
-                            codePreview: code ? code.substring(0, 10) + '...' : null,
-                            tokenURL: this._oauth2._accessTokenUrl,
-                            timestamp: new Date().toISOString()
-                        })
-                    });
 
                     return originalGetAccessToken.call(this._oauth2, code, params, (err, accessToken, refreshToken, results) => {
                         const duration = Date.now() - startTime;
@@ -68,21 +36,21 @@ class CustomOAuth2Strategy extends OAuth2Strategy {
                                 type: 'OAUTH2_TOKEN_EXCHANGE_ERROR',
                                 message: 'OAUTH2_TOKEN_EXCHANGE_ERROR',
                                 component: this._strategyName,
-                                route: '/oauth/token',
-                                dataNew: JSON.stringify({
+                                route: 'accessToken url',
+                                dataNew: {
                                     error: err.message || err,
                                     statusCode: err.statusCode,
                                     duration,
                                     timestamp: new Date().toISOString()
-                                })
+                                }
                             });
                         } else {
                             Log.create({
                                 type: 'OAUTH2_TOKEN_EXCHANGE_SUCCESS',
                                 message: 'OAUTH2_TOKEN_EXCHANGE_SUCCESS',
                                 component: this._strategyName,
-                                route: '/oauth/token',
-                                dataNew: JSON.stringify({
+                                route: 'accessToken url',
+                                dataNew: {
                                     hasAccessToken: !!accessToken,
                                     hasRefreshToken: !!refreshToken,
                                     tokenType: results?.token_type,
@@ -90,38 +58,23 @@ class CustomOAuth2Strategy extends OAuth2Strategy {
                                     scope: results?.scope,
                                     duration,
                                     timestamp: new Date().toISOString()
-                                })
+                                }
                             });
                         }
 
                         callback(err, accessToken, refreshToken, results);
                     });
                 };
-            } else {
-                console.warn('_oauth2 ou getAccessToken não disponível para wrapping (OAuth2)');
             }
         });
     }
 
     userProfile(accessToken, done) {
         if (!this._userinfoURL) {
-            return done(null, {}); // OAuth2 pode não ter userInfo endpoint
+            return done(null, {});
         }
 
         const startTime = Date.now();
-
-        Log.create({
-            type: 'OAUTH2_USERINFO_REQUEST_START',
-            message: 'OAUTH2_USERINFO_REQUEST_START',
-            component: this._strategyName,
-            route: '/userinfo',
-            dataNew: JSON.stringify({
-                url: this._userinfoURL,
-                hasAccessToken: !!accessToken,
-                tokenType: this._tokenType,
-                timestamp: new Date().toISOString()
-            })
-        });
 
         fetch(this._userinfoURL, {
             method: 'GET',
@@ -140,14 +93,14 @@ class CustomOAuth2Strategy extends OAuth2Strategy {
                         type: 'OAUTH2_USERINFO_HTTP_ERROR',
                         message: 'OAUTH2_USERINFO_HTTP_ERROR',
                         component: this._strategyName,
-                        route: '/userinfo',
-                        dataNew: JSON.stringify({
+                        route: 'userInfo url',
+                        dataNew: {
                             status: response.status,
                             statusText: response.statusText,
                             error: errorText,
                             duration,
                             timestamp: new Date().toISOString()
-                        })
+                        }
                     });
 
                     throw new Error(`UserInfo request failed: ${response.status} ${errorText}`);
@@ -162,8 +115,8 @@ class CustomOAuth2Strategy extends OAuth2Strategy {
                     type: 'OAUTH2_USERINFO_SUCCESS',
                     message: 'OAUTH2_USERINFO_SUCCESS',
                     component: this._strategyName,
-                    route: '/userinfo',
-                    dataNew: JSON.stringify({
+                    route: 'userInfo url',
+                    dataNew: {
                         duration,
                         userData: {
                             id: profile?.id,
@@ -173,7 +126,7 @@ class CustomOAuth2Strategy extends OAuth2Strategy {
                         },
                         profileKeys: profile ? Object.keys(profile) : [],
                         timestamp: new Date().toISOString()
-                    })
+                    }
                 });
 
                 done(null, profile);
@@ -185,12 +138,12 @@ class CustomOAuth2Strategy extends OAuth2Strategy {
                     type: 'OAUTH2_USERINFO_ERROR',
                     message: 'OAUTH2_USERINFO_ERROR',
                     component: this._strategyName,
-                    route: '/userinfo',
-                    dataNew: JSON.stringify({
+                    route: 'userInfo url',
+                    dataNew: {
                         error: err.message,
                         duration,
                         timestamp: new Date().toISOString()
-                    })
+                    }
                 });
 
                 done(err);
