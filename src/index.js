@@ -21,7 +21,7 @@ const {
 
 const app = express();
 
-const { initializePassport } = require('./utils/passport');
+const { initializePassport } = require('./utils/sso/passport');
 
 const { errorHandler } = require('./utils/errors');
 
