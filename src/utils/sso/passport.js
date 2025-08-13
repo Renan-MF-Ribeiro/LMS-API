@@ -14,8 +14,8 @@ const ApiError = require('../../errors/ApiError');
 const { getLoginConfig } = require('../../components/users/business');
 const { Log } = require('../../components/logs/model');
 const { User } = require('../../components/users/model');
-const CustomOIDCStrategy = require('./customStrategyOpenID');
-const CustomOAuth2Strategy = require('./customStrategyOAuth2');
+
+const UnifiedOAuth2Strategy = require('./unifiedOAuth2Strategy');
 
 passport.serializeUser((user, done) => {
     done(null, user);
@@ -79,6 +79,7 @@ async function createOpenIdConnectStrategy(config) {
                     timestamp: new Date().toISOString()
                 }
             });
+
             const user = {
                 id: profile?.sub || profile?.id,
                 name: profile?.name || profile?.displayName,
@@ -87,7 +88,6 @@ async function createOpenIdConnectStrategy(config) {
                 picture: profile?.picture,
                 strategyName: strategyName,
                 issuer: config.issuer,
-
                 emails: profile?.emails || (profile?.email ? [{ value: profile.email }] : [{ value: 'unknown@example.com' }]),
                 displayName: profile?.name || profile?.displayName || 'Unknown User',
                 username: profile?.preferred_username || profile?.email || 'unknown',
@@ -100,21 +100,22 @@ async function createOpenIdConnectStrategy(config) {
                 message: 'OIDC_PROFILE_ERROR',
                 component: strategyName,
                 route: 'authorization url',
-                dataNew: JSON.stringify({
+                dataNew: {
                     error: err.message,
                     stack: err.stack,
                     timestamp: new Date().toISOString()
-                })
+                }
             });
 
             done(err);
         }
     };
 
-    const strategy = new CustomOIDCStrategy(
+    const strategy = new UnifiedOAuth2Strategy(
         {
             name: strategyName,
             strategyName: strategyName,
+            isOIDC: true, // Flag para indicar que é OIDC
             issuer: config.issuer,
             authorizationURL: config.authorizationUrl,
             tokenURL: config.tokenUrl,
@@ -122,10 +123,18 @@ async function createOpenIdConnectStrategy(config) {
             clientSecret: config.clientSecret,
             callbackURL: config.callbackUrl,
             ...(config.userInfoUrl && { userInfoURL: config.userInfoUrl }),
-            scope: config.scope?.length ? config.scope : ['openid', 'profile', 'email']
+            scope: config.scope?.length ? config.scope : ['openid', 'profile', 'email'],
+            tokenType: 'Bearer'
         },
         verifyCallback
     );
+
+    // Adiciona parâmetros de autorização se forceAuth estiver habilitado
+    if (config.forceAuth) {
+        strategy.authorizationParams = () => ({
+            prompt: 'login'
+        });
+    }
 
     passport.use(strategyName, strategy);
 }
@@ -141,7 +150,7 @@ async function createOauth2Strategy(config) {
                 message: 'OAUTH2_PROFILE_PROCESSED',
                 component: strategyName,
                 route: 'authorization url',
-                dataNew: JSON.stringify({
+                dataNew: {
                     user: {
                         id: profile?.id,
                         login: profile?.login,
@@ -154,7 +163,7 @@ async function createOauth2Strategy(config) {
                     },
                     profileKeys: profile ? Object.keys(profile) : [],
                     timestamp: new Date().toISOString()
-                })
+                }
             });
 
             const user = {
@@ -172,21 +181,22 @@ async function createOauth2Strategy(config) {
                 message: 'OAUTH2_PROFILE_ERROR',
                 component: strategyName,
                 route: 'authorization url',
-                dataNew: JSON.stringify({
+                dataNew: {
                     error: err.message,
                     stack: err.stack,
                     timestamp: new Date().toISOString()
-                })
+                }
             });
 
             done(err);
         }
     };
 
-    const strategy = new CustomOAuth2Strategy(
+    const strategy = new UnifiedOAuth2Strategy(
         {
             name: strategyName,
             strategyName: strategyName,
+            isOIDC: false, // Flag para indicar que é OAuth2 puro
             authorizationURL: config.authorizationUrl,
             tokenURL: config.tokenUrl,
             clientID: config.clientId,
@@ -202,6 +212,7 @@ async function createOauth2Strategy(config) {
         verifyCallback
     );
 
+    // Adiciona parâmetros de autorização se forceAuth estiver habilitado
     if (config.forceAuth) {
         strategy.authorizationParams = () => ({
             prompt: 'login'
