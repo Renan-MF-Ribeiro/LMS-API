@@ -493,7 +493,7 @@ async function processMessage(campaign, user) {
         };
         return message;
     } catch (error) {
-        console.error(error);
+        console.error("Erro ao criar notificação na mensageria: ", error);
     }
 }
 
@@ -526,7 +526,6 @@ async function processRecoveryMessage(campaign, user) {
 
 async function processNotificationLink(target, communication) {
     const { type } = target;
-
     let response = undefined;
 
     if (!type) {
@@ -558,7 +557,7 @@ async function processNotificationLink(target, communication) {
             case 'post': {
                 const url = `${process.env.DOMAIN}/app/home/canal/feed/post/${value}`;
                 response = {
-                    postId: target.postId,
+                    postId: value,
                     url,
                 };
                 break;
@@ -567,7 +566,7 @@ async function processNotificationLink(target, communication) {
                 const url = `${process.env.DOMAIN}/app/home/canal/feed/post/${value}`;
                 response = {
                     postId: target.postId,
-                    commentId: value,
+                    postId: value,
                     url,
                 };
                 break;
