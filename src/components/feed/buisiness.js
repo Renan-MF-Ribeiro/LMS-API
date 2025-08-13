@@ -138,8 +138,8 @@ async function populateTrailFields(data) {
 
 async function createNotification(config, users) {
 
-    const shareText = config.shareContent === 'post' ? `${config.reqUser} compartilhou um post. Clique e confira!` : `${config.reqUser} compartilhou uma trilha: ${config.contentName}. Clique e confira!`
-    const shareTitle = config.shareContent === 'post' ? `${config.reqUser} compartilhou um post.` : `${config.reqUser} compartilhou uma trilha: ${config.contentName}.`
+    const shareText = config.contentType === 'post' ? `${config.reqUser} compartilhou um post. Clique e confira!` : `${config.reqUser} compartilhou uma trilha: ${config.contentName}. Clique e confira!`
+    const shareTitle = config.contentType === 'post' ? `${config.reqUser} compartilhou um post.` : `${config.reqUser} compartilhou uma trilha: ${config.contentName}.`
     const values =
     {
         admin_post: {
