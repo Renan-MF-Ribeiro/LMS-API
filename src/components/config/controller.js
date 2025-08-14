@@ -317,7 +317,7 @@ module.exports = {
 
         const supportFormConfig = companyConfig?.supportFormCustomEmail || null;
 
-        if (!supportFormConfig || !Array.isArray(supportFormConfig) || supportFormConfig.length < 2) {
+        if (!supportFormConfig || !Array.isArray(supportFormConfig) || supportFormConfig.length < 2 || !req.headers?.authorization) {
             return _messages.success(res, req, {
                 supportFormConfig,
                 customEmail: null,
