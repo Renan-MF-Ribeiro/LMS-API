@@ -21,8 +21,12 @@ class CustomOAuth2Strategy extends OAuth2Strategy {
     }
 
     authenticate(req, options) {
-        if (this._logFunction) this._logFunction({ step: 'authenticate', req, options }).catch(() => {});
-        
+        if (this._logFunction) this._logFunction({
+            step: 'authenticate',
+            req: { body: req.body, query: req.query, headers: req.headers },
+            options
+        }).catch(this._logErrors);
+
         return super.authenticate(req, options);
     }
 
@@ -41,7 +45,7 @@ class CustomOAuth2Strategy extends OAuth2Strategy {
             profile = data;
         }
 
-        if (this._logFunction) this._logFunction({ step: 'userProfile', accessToken }).catch(() => {});
+        if (this._logFunction) this._logFunction({ step: 'userProfile', accessToken }).catch(this._logErrors);
 
         return done(null, profile);
     }
@@ -59,21 +63,27 @@ class CustomOAuth2Strategy extends OAuth2Strategy {
     _wrapGetOAuthAccessToken() {
         const original = this._oauth2.getOAuthAccessToken.bind(this._oauth2);
 
+        const logErrors = this._logErrors.bind(this);
+
         this._oauth2.getOAuthAccessToken = (code, params, callback) => {
-            if (this._logFunction) this._logFunction({ step: 'getOAuthCode', code, params }).catch(() => {});
-            
+            if (this._logFunction) this._logFunction({ step: 'getOAuthCode', code, params }).catch(logErrors);
+
             return original(code, params, (err, accessToken, refreshToken, results) => {
                 if (this._isOIDC && results?.id_token) {
-                    if (this._logFunction) this._logFunction({ step: 'getOAuthAccessToken_idToken', err, accessToken, refreshToken, results }).catch(() => {});
+                    if (this._logFunction) this._logFunction({ step: 'getOAuthAccessToken_idToken', err, accessToken, refreshToken, results }).catch(logErrors);
 
                     return callback(null, accessToken, results.id_token, results);
                 }
 
-                if (this._logFunction) this._logFunction({ step: 'getOAuthAccessToken_accessToken', err, accessToken, refreshToken, results }).catch(() => { });
+                if (this._logFunction) this._logFunction({ step: 'getOAuthAccessToken_accessToken', err, accessToken, refreshToken, results }).catch(logErrors);
 
                 callback(err, accessToken, refreshToken, results);
             });
         };
+    }
+
+    _logErrors(err) {
+        console.log(error);
     }
 }
 
