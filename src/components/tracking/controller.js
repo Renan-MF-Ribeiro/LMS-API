@@ -38,6 +38,7 @@ const { createCompleteTracking } = require('./business')
 
 const _functions = require('../../utils/functions');
 const GamificationKafka = require('../gamification/kafka/broker');
+const { Group } = require('../groups/model');
 
 const TRACKING_KINDS = Object.freeze({
     DocumentTracking: DocumentTracking,
@@ -148,7 +149,7 @@ const TrackingController = {
                         (req.body.lessonStatus == 'completed' ||
                             req.body.lessonStatus == 'passed' ||
                             req.body.lessonStatus == 'failed')
-                    ) { 
+                    ) {
                         registerCompletationAt = true;
                     }
                 }
@@ -287,7 +288,7 @@ const TrackingController = {
             });
 
             await dispatch('create', 'tracking', { ...req.body, totalTime, isAllowedToSendXAPI, completionAt });
-            
+
             // Dispara o evento de calendário SOMENTE se é evento de conclusão
             if (completionAt) {
                 await calendarEventConclusion(
@@ -414,7 +415,9 @@ const TrackingController = {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
-            const { userLogin, searchBy } = req.query;
+            const { userLogin, searchBy, filterByEligibility } = req.query;
+
+            console.log('filterByEligibility', filterByEligibility);
 
             const trailsWithTracking = [];
             const processedTrailsWithTracking = [];
@@ -444,7 +447,7 @@ const TrackingController = {
                     },
                 };
 
-            const trails = await Trail.find({
+            let trails = await Trail.find({
                 ...query
             })
                 .populate({
@@ -458,6 +461,57 @@ const TrackingController = {
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
+            if (filterByEligibility === 'true') {
+                console.log('APLICANDO FILTRO');
+                try {
+                    const user = await User.findOne({ networkLogin: userLogin });
+                    if (user) {
+                        // Get user tags
+                        const userTags = [];
+
+                        if (user.groupsAD && user.groupsAD.length > 0) {
+                            const groups = await Group.find({ name: { $in: user.groupsAD } });
+                            for (const group of groups) {
+                                if (group.tags && group.tags.length > 0) {
+                                    userTags.push(...group.tags);
+                                }
+                            }
+                        }
+
+                        if (user.tags && user.tags.length > 0) {
+                            userTags.push(...user.tags);
+                        }
+
+                        trails = trails.filter(trail => {
+                            // Check if user has any matching tag with the trail
+                            if (trail.tags && trail.tags.length > 0) {
+                                for (const trailTag of trail.tags) {
+                                    for (const userTag of userTags) {
+                                        if (userTag.value === trailTag.value) {
+                                            return true;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Check tagsAnd if present
+                            if (trail.tagsAnd && trail.tagsAnd.length > 0) {
+                                const isEligible = trail.tagsAnd.every(trailTag => {
+                                    return userTags.some(userTag => userTag.value === trailTag.value);
+                                });
+                                if (isEligible) {
+                                    return true;
+                                }
+                            }
+
+                            return false;
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error filtering trails by eligibility:', error);
+                }
+            }
+
             for (const trail of trails) {
                 const processedTrail = processTrailTracking(
                     trail,
@@ -466,9 +520,11 @@ const TrackingController = {
                 trailsWithTracking.push(processedTrail);
             }
 
-            const totalTrails = await Trail.find({
-                ...query
-            }).countDocuments();
+            let totalTrails;
+            if (filterByEligibility === 'true' && trails.length < await Trail.find({...query}).countDocuments()) {
+            } else {
+                totalTrails = await Trail.find({...query}).countDocuments();
+            }
 
             for (const v of trailsWithTracking) {
                 const trail = v.trail;

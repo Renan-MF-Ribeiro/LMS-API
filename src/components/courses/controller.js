@@ -2006,6 +2006,8 @@ module.exports = {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
             const searchBy = req.query.searchBy;
+            const filterByEligibility = req.query?.filterByEligibility === 'true';
+
             const classesFromUser = await ClassModel.find({
                 $or: [
                     { 'users.userID': userId },
@@ -2040,9 +2042,7 @@ module.exports = {
                 }
             }
 
-            const total = await CourseModel.find(query).countDocuments();
-
-            const data = await CourseModel.find(query)
+            let data = await CourseModel.find(query)
                 .select({
                     title: 1,
                     passingScore: 1,
@@ -2051,14 +2051,31 @@ module.exports = {
                     certificateDue: 1,
                     workload: 1,
                     dateFinal: 1,
-                    dateInitial: 1
+                    dateInitial: 1,
+                    tags: 1,
+                    tagsAnd: 1,
+                    tagsOr: 1
                 }).lean()
                 .sort({
                     [order]: sort,
-                })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit));
+                });
 
+            // Filter by eligibility if requested
+            if (filterByEligibility) {
+                // Get user for eligibility check
+                const user = await User.findById(userId).lean();
+                if (user && user.tags) {
+                    // Filter courses by eligibility
+                    data = data.filter(course =>
+                        checkEligibilityTagsAnd(user.tags, course.tagsAnd, course.tagsOr)
+                    );
+                }
+            }
+
+            const total = data.length;
+
+            // Apply pagination after filtering
+            data = data.slice(parseInt(skip), parseInt(skip) + parseInt(limit));
 
             success(res, req, {
                 data: enrichCoursesWithClasses(data, classesFromUser, userId),
