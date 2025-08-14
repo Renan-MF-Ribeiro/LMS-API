@@ -1,0 +1,83 @@
+const { processApi } = require('./http-adapter');
+const { azureBlob } = require('../../utils/files');
+
+const processController = {
+    findAllPaginated: async (req, res) => {
+        try {
+            const options = req.query;
+            const { data } = await processApi.get('/process/', {
+                params: options,
+            });
+
+            res.status(data.statusCode).json(data.data);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    findOne: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { data } = await processApi.get(`/process/${id}`);
+            res.status(data.statusCode).json(data.data);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    getStatus: async (req, res) => {
+        try {
+            const options = req.query;
+            const { data } = await processApi.get(`/process/status`, {
+                params: options,
+            });
+            res.status(data.statusCode).json(data.data);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    create: async (req, res) => {
+        const body = req.fields?.payload ? JSON.parse(req.fields?.payload) : req.body;
+
+        const file = req.files?.file
+        if (file) {
+            body.file = await azureBlob(banner, 'process/banners');
+        }
+
+        try {
+            const { data } = await processApi.post('/process', body);
+            res.status(data.statusCode).json(data.data);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    delete: async (req, res) => {
+        try {
+            const id = req.params?.id;
+
+            const { data } = await processApi.delete(`/process/${id}`, req.body);
+            res.status(data.statusCode).json(data.data);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+};
+
+module.exports = processController;
