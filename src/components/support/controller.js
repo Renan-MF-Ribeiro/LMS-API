@@ -1,7 +1,7 @@
 const axios = require('axios');
 const fs = require('fs');
 const FormData = require('form-data');
-const { getUserByToken } = require('../../utils/functions');
+const { getUserByToken, validateUniqueEmail } = require('../../utils/functions');
 const { User } = require('../users/model');
 
 const _messages = require('../../utils/messages');
@@ -24,6 +24,7 @@ module.exports = {
                 user = req.headers.authorization ? await getUserByToken(req) : await User.findOne({ networkLogin: payload.ticket.custom_fields[1].value })
             }
 
+            payload.ticket.requester.email = await validateUniqueEmail(payload.ticket.requester.email, user);
             payload.ticket.requester._id = user?._id || payload.ticket?.requester?.email;
             const strPayload = JSON.stringify(payload);
             form.append('payload', strPayload);

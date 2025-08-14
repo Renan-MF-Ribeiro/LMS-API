@@ -11,6 +11,8 @@ const { HistoricEvaluation } = require('../components/assessments/model');
 const { Tracking } = require('../components/tracking/model');
 const { Trail } = require('../components/trails/model');
 const { Item } = require('../components/items/model');
+const { getCustomEmail } = require('../utils/functions');
+const { getCompanyConfig } = require('../components/config/business');
 const { htmlToText } = require('html-to-text');
 const tlds = require('tlds');
 const mongoose = require('mongoose');
@@ -633,6 +635,36 @@ module.exports = {
         const completionTotal = itemsCompletion.reduce((acc, curr) => acc + curr, 0);
         trail.completionPercentage = +((completionTotal / trail.items.length) * 100).toFixed(2);
         return { trail, containsACompletedItem };
+    },
+    async validateUniqueEmail(email, user) {
+        const { customEmail } = await getCustomEmail(user);
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (!email || email === "null" || !emailRegex.test(email)) {
+            return customEmail;
+        }
+
+        const count = await User.countDocuments({ email });
+        if (count > 1) {
+            return customEmail;
+        }
+        return email;
+    },
+
+    async getCustomEmail(user){
+        const companyConfig = await getCompanyConfig();
+        const supportFormConfig = companyConfig?.supportFormCustomEmail || null;
+
+        const domain = supportFormConfig.pop().replace('@', '').trim();
+        const customEmail = supportFormConfig.map((field) => {
+            if (user[field]) {
+                return String(user[field]).trim()
+            }
+
+            return null;
+        }).filter(Boolean).join('_');
+
+        return { customEmail: `${slugify(customEmail)}@${domain}`, domain };
     },
 
     processExpirationDate(trail, user) {
