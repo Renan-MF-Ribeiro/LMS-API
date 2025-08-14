@@ -174,6 +174,9 @@ if (!success) {
         CACHE_UNIT: process.env.CACHE_UNIT
             ? Number(process.env.CACHE_UNIT)
             : 1000,
+        OAUTH2_LOG: process.env.OAUTH2_LOG
+            ? ['true', '1'].includes(String(process.env.OAUTH2_LOG))
+            : false,
     };
 }
 
