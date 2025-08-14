@@ -4,7 +4,7 @@ const { ConfigLogin } = require('./model')
 const _messages = require('../../../utils/messages')
 const { getLoginConfig } = require('../../users/business')
 const { IdpIntegrationModel } = require('../../idp-integration/models')
-const { createStrategiesFromLoginConfigs, removeStrategies } = require('../../../utils/sso/passport')
+const { createStrategiesFromLoginConfigs, removeStrategies } = require('../../../utils/passport')
 const { removeFromCache } = require('../../../utils/cache/store')
 
 module.exports = {

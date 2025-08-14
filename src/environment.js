@@ -1,5 +1,9 @@
 const { z } = require('zod');
 
+function transformBoolean(value) {
+    return value === 'true' || value === '1';
+}
+
 const environmentSchema = z.object({
     COMPOSE_PROJECT_NAME: z.string().optional().default('happlearningv2'),
     NODE_ENV: z.string().optional().default('staging'),
@@ -66,7 +70,7 @@ const environmentSchema = z.object({
     CHATBOT_API: z.string().optional().nullish().default(null),
     CHATBOT_API_KEY: z.string().optional().nullish().default(null),
     CHATBOT_KAFKA_TOPIC: z.string().optional().nullish().default(null),
-    CHATBOT_LOG: z.string().optional().default('0').transform(val => val === 'true' || val === '1'),
+    CHATBOT_LOG: z.string().optional().default('0').transform(transformBoolean),
 
     // Kafka
     KAFKA_ADDR: z.string(),
@@ -94,8 +98,11 @@ const environmentSchema = z.object({
     SESSION_MAX_AGE: z.coerce.number().optional().default(6 * 60 * 60 * 1000), // 6 horas
 
     // Cache
-    CACHE_ENABLED: z.string().optional().default('false').transform(val => ['true', '1'].includes(String(val))),
+    CACHE_ENABLED: z.string().optional().default('0').transform(transformBoolean),
     CACHE_UNIT: z.coerce.number().optional().default(1000),
+
+    // Logs
+    OAUTH2_LOG: z.string().optional().default('0').transform(transformBoolean),
 
     // API_VERSION é Setado no processo de build
     API_VERSION: z.string().optional().default('no-info'),
