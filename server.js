@@ -4,8 +4,6 @@ const { ldapClient } = require('./src/utils/auth')
 const { log, error } = require('./src/utils/logger')
 const { connectDatabase } = require('./src/utils/db')
 const app = require('./src/index')
-const port = process.env.PORT || 3000
-const HOSTNAME = process.env.HOSTNAME
 
 const {
     updateAverageCourses,
@@ -33,6 +31,11 @@ const {
     getDashboardConfig
 } = require('./src/components/config/business')
 const GamificationKafka = require('./src/components/gamification/kafka/broker');
+
+const environment = require('./src/environment');
+
+const port = environment.PORT || 3000;
+const HOSTNAME = environment.HOSTNAME;
 
 async function startApp() {
     await connectDatabase();
