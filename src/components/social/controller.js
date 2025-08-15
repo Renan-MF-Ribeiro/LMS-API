@@ -939,6 +939,7 @@ module.exports = {
                     communication: ['notification', 'email'],
                     type: 'share',
                     contentType: 'trail',
+                    contentName: trail.title,
                     contentId: trail._id,
                 };
                 await createNotification(config, users);

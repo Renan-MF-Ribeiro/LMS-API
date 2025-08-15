@@ -1612,175 +1612,120 @@ module.exports = {
     },
 
     async returnUsers(req, res) {
-        try {
-            const { skip, limit } = pagination(req);
-            const { order, sort } = ordernation(req);
+        const { skip, limit } = pagination(req);
+        const { order, sort } = ordernation(req);
 
-            const searchBy = req.query.searchBy;
-            const filterBy = req.query.filterBy;
+        const searchBy = req.query?.searchBy ?? null;
+        const isOnboarding = req.query.onboarding === 'true' || req.query.onboarding === true;
+        const isPartner = req.query.partner === 'true' || req.query.partner === true;
 
-            const isOnboarding = req.query.onboarding === 'true' || req.query.onboarding === true;
-            const isPartner = req.query.partner === 'true' || req.query.partner === true;
+        const query = {
+            $and: [
+                {
+                    onboarding: isOnboarding ? true : { $ne: true },
+                    partner: isPartner ? { $exists: true } : { $exists: false },
+                },
+            ],
+        };
 
-            const query = {
-                $and: [
-                    {
-                        onboarding: isOnboarding ? true : { $ne: true },
-                        partner: isPartner ? { $exists: true } : { $exists: false },
-                    },
-                ],
-            };
-
-            if (req?.segmentation) {
-                handleSegmentationOnQuery(req, 'issuer', query);
-            }
-
-            if (searchBy && !filterBy?.length) {
-                query.$and.push({
-                    $or: [
-                        { name: { $regex: searchBy, $options: 'i' } },
-                        { registration: { $regex: searchBy, $options: 'i' } },
-                        { email: { $regex: searchBy, $options: 'i' } },
-                        { cpf: { $regex: searchBy, $options: 'i' } },
-                    ],
-                });
-            } else if (searchBy && filterBy?.length) {
-                if (Array.isArray(filterBy)) {
-                    query.$and.push({
-                        $or: filterBy.map((filter) => ({
-                            [filter]: { $regex: searchBy, $options: 'i' },
-                        })),
-                    });
-                } else {
-                    query.$and.push({
-                        $or: [
-                            { [filterBy]: { $regex: searchBy, $options: 'i' } }
-                        ]
-                    });
-                }
-            }
-
-            const totalActive = await User.find({
-                status: 'ATIVO',
-                ...query,
-            }).countDocuments();
-
-            const totalInactive = await User.find({
-                status: 'INATIVO',
-                ...query,
-            }).countDocuments();
-
-            const total = await User.countDocuments(query);
-            
-            const users = await User.find(query)
-                .sort({ [order]: sort })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit));
-
-            _messages.success(res, req, {
-                data: users,
-                total,
-                totalActive,
-                totalInactive,
-            });
-        } catch (error) {
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'users',
-                'returnUsers'
-            );
+        if (req?.segmentation) {
+            handleSegmentationOnQuery(req, 'issuer', query);
         }
-    },
 
-    async returnManagers(req, res) {
-        try {
-            const { skip, limit } = pagination(req);
-            const { order, sort } = ordernation(req);
-
-            const searchBy = req.query.searchBy;
-            const filterManager = req.query.filterManager;
-            const filterBy = req.query.filterBy;
-
-            const profiles = await Profile.find({ title: { $ne: 'PERFIL_Aluno' } }).sort({
-                label: 'asc',
-            });
-
-            let query = {
-                groupsAD: { $in: profiles.map((profile) => profile.title) },
-            };
-
-            if (filterManager) {
-                query.groupsAD = { $in: [filterManager] };
-            }
-
-            if (req?.segmentation) {
-                handleSegmentationOnQuery(req, 'issuer', query);
-            }
-
-            if (searchBy && !filterBy?.length) {
-                query.$or = [
+        if (searchBy?.length) {
+            query.$and.push({
+                $or: [
                     { name: { $regex: searchBy, $options: 'i' } },
                     { registration: { $regex: searchBy, $options: 'i' } },
                     { email: { $regex: searchBy, $options: 'i' } },
                     { cpf: { $regex: searchBy, $options: 'i' } },
-                ]
-            } else if (searchBy && filterBy?.length) {
-                if (Array.isArray(filterBy)) {
-                    query.$or = filterBy.map((filter) => ({
-                        [filter]: { $regex: searchBy, $options: 'i' },
-                    }));
-                } else {
-                    query.$or = [{ [filterBy]: { $regex: searchBy, $options: 'i' } }];
-                }
-            }
-            const managersCounters = [];
-
-            for (const profile of profiles) {
-                const queryProfile = { groupsAD: profile.title };
-                if (searchBy && !filterBy?.length) {
-                    queryProfile.$or = [
-                        { name: { $regex: searchBy, $options: 'i' } },
-                        { registration: { $regex: searchBy, $options: 'i' } },
-                        { email: { $regex: searchBy, $options: 'i' } },
-                        { cpf: { $regex: searchBy, $options: 'i' } },
-                    ];
-                } else if (searchBy && filterBy?.length) {
-                    if (Array.isArray(filterBy)) {
-                        queryProfile.$or = filterBy.map((filter) => ({
-                            [filter]: { $regex: searchBy, $options: 'i' },
-                        }));
-                    } else {
-                        queryProfile.$or = [{ [filterBy]: { $regex: searchBy, $options: 'i' } }];
-                    }
-                }
-                const count = await User.countDocuments(queryProfile);
-                managersCounters.push({ label: profile.label, title: profile.title, count });
-            }
-
-            const total = await User.countDocuments(query);
-            const users = await User.find(query)
-                .sort({ [order]: sort })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit));
-
-            _messages.success(res, req, {
-                data: users,
-                total,
-                managersCounters,
+                ],
             });
-        } catch (error) {
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'users',
-                'returnUsers'
-            );
         }
+
+        const totalActive = await User.find({
+            status: 'ATIVO',
+            ...query,
+        }).countDocuments();
+
+        const totalInactive = await User.find({
+            status: 'INATIVO',
+            ...query,
+        }).countDocuments();
+
+        const total = await User.countDocuments(query);
+
+        const users = await User.find(query)
+            .sort({ [order]: sort })
+            .skip(parseInt(skip))
+            .limit(parseInt(limit));
+
+        return _messages.success(res, req, {
+            data: users,
+            total,
+            totalActive,
+            totalInactive,
+        });
+    },
+
+    async returnManagers(req, res) {
+        const { skip, limit } = pagination(req);
+        const { order, sort } = ordernation(req);
+
+        const searchBy = req.query.searchBy;
+        const filterManager = req.query.filterManager;
+
+        const profiles = await Profile.find({ title: { $ne: 'PERFIL_Aluno' } }).sort({
+            label: 'asc',
+        });
+
+        let query = {
+            groupsAD: { $in: profiles.map((profile) => profile.title) },
+        };
+
+        if (filterManager) {
+            query.groupsAD = { $in: [filterManager] };
+        }
+
+        if (req?.segmentation) {
+            handleSegmentationOnQuery(req, 'issuer', query);
+        }
+
+        if (searchBy) {
+            query.$or = [
+                { name: { $regex: searchBy, $options: 'i' } },
+                { registration: { $regex: searchBy, $options: 'i' } },
+                { email: { $regex: searchBy, $options: 'i' } },
+                { cpf: { $regex: searchBy, $options: 'i' } },
+            ];
+        }
+        const managersCounters = [];
+
+        for (const profile of profiles) {
+            const queryProfile = { groupsAD: profile.title };
+            if (searchBy) {
+                queryProfile.$or = [
+                    { name: { $regex: searchBy, $options: 'i' } },
+                    { registration: { $regex: searchBy, $options: 'i' } },
+                    { email: { $regex: searchBy, $options: 'i' } },
+                    { cpf: { $regex: searchBy, $options: 'i' } },
+                ];
+            }
+            const count = await User.countDocuments(queryProfile);
+            managersCounters.push({ label: profile.label, title: profile.title, count });
+        }
+
+        const total = await User.countDocuments(query);
+        const users = await User.find(query)
+            .sort({ [order]: sort })
+            .skip(parseInt(skip))
+            .limit(parseInt(limit));
+
+        return _messages.success(res, req, {
+            data: users,
+            total,
+            managersCounters,
+        });
     },
 
     async returnUsersOnboarding(req, res) {

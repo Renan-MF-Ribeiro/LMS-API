@@ -8,6 +8,7 @@ const {
     ProgramModel,
     UsersWithProcessedTags,
     CourseModel,
+    CourseEvaluationModel,
 } = require('./model');
 const moment = require('moment');
 const mongoose = require('mongoose');
@@ -200,6 +201,23 @@ module.exports = {
         });
     },
 
+    async userHasSomePresence(userId, courseId, classId) {
+        return await ClassModel.findOne({
+            courseID: new mongoose.Types.ObjectId(courseId),
+            _id: { $ne: classId },
+            users: {
+                $elemMatch: {
+                    presence: true,
+                    $or: [
+                        { userID: userId },
+                        { _id: userId },
+                        { _id: mongoose.Types.ObjectId(userId) },
+                    ],
+                },
+            }
+        })
+    },
+
     getCoursesByUserID(userID) {
         return new Promise(async (resolve, reject) => {
             try {
@@ -233,20 +251,32 @@ module.exports = {
                         match: { author: 'INSTRUTOR' },
                     })
                     .populate('instructor', ['name']);
-                const classesFilter = classes.filter((item) => {
-                    const usersFilter = item.users.filter((user) => {
-                        if (
-                            user.presence &&
-                            (user.userID === userID || user._id?.toString() === userID.toString())
-                        ) {
-                            return user;
+
+
+                const classesFilter = await Promise.all(
+                    classes.map(async (item) => {
+                        const usersFilter = item.users.filter((user) => {
+                            if (
+                                user.presence &&
+                                (user.userID === userID || user._id?.toString() === userID.toString())
+                            ) {
+                                return user;
+                            }
+                        });
+
+                        if (usersFilter.length > 0) {
+                            const evaluationVerify = await CourseEvaluationModel.find({
+                                classID: { $eq: item._id },
+                                studentID: { $eq: usersFilter[0]._id },
+                            });
+                            return { ...item._doc, evaluationAnswered: evaluationVerify.length > 0 };
                         }
-                    });
+                        return null;
+                    })
+                );
 
-                    if (usersFilter.length > 0) return item;
-                });
-
-                resolve(classesFilter);
+                // Remove nulls (classes that didn't match)
+                resolve(classesFilter.filter(Boolean));
             } catch (error) {
                 reject(error);
             }
