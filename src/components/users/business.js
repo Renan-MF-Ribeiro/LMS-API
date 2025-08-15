@@ -48,7 +48,7 @@ async function createGroupsByGroupsAD(groupsAD) {
         createGroups.map(
             (groupName) => ({
                 name: groupName,
-                tags: [{ display: groupName, value: groupName }],
+                tags: [],
             })
         )
     );
