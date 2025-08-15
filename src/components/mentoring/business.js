@@ -1,4 +1,6 @@
+const { getUserByToken } = require('../../utils/functions');
 const { User } = require('../users/model');
+const { mentoringApi } = require('./http-adapter');
 
 async function populateTrailFields(data) {
     const trails = await Trail.findOne({ _id: { $in: data } }, 'title titleURL thumbPath').lean();
@@ -50,7 +52,6 @@ async function populateBlockedUserFields(mappings, data) {
     const dataToProcess = isArray ? data.data : [data.data];
 
     const ids = collectBlockedIds(dataToProcess, mappings);
-    console.log(ids)
     if (ids.length === 0) return data;
 
     const users = await User.find(
@@ -67,7 +68,6 @@ async function populateBlockedUserFields(mappings, data) {
         });
         const blockedAt = blockedUser?.blockedMentees?.find((blocked) => {
             const isMatch = blocked._id.toString() === user._id.toString();
-            console.log(blocked.blockedAt, isMatch)
             return isMatch;
         })?.blockedAt || null;
 
@@ -91,9 +91,9 @@ function collectIds(data, mappings) {
                 const val = obj[reference];
                 if (val != null) {
                     if (Array.isArray(val)) {
-                        val.forEach((id) => id && ids.push(id.toString()));
+                        val.forEach((id) => id && ids.push(id));
                     } else {
-                        ids.push(val.toString());
+                        ids.push(val);
                     }
                 }
             });
@@ -166,7 +166,56 @@ async function processData(data, mappings, userMap) {
     return process(data);
 }
 
+async function getHierarchicalMentorIds(req) {
+    const [hierarchiesResponse, requestUser] = await Promise.all([
+        mentoringApi.get('/config/hierarchies'),
+        getUserByToken(req),
+    ]);
+
+    const allHierarchies = hierarchiesResponse.data?.data || [];
+
+    const hierarchiesWithInfo = allHierarchies.hierarchies?.map((h) => {
+        return {
+            menteeLevel: h.menteeLevel?.map(
+                (mentee) => {
+                    const hierarchies = allHierarchies.structures.find((structureLevel) => structureLevel.level === mentee.level)
+                    return {
+                        field: hierarchies?.field,
+                        value: hierarchies?.value,
+                        level: mentee.level
+                    }
+                }
+            ),
+            mentorLevel: allHierarchies.structures.find((structureLevel) => structureLevel.level === h.mentorLevel.level) || {},
+        };
+    })
+
+    const matchingHierarchies = hierarchiesWithInfo?.filter(hierarchy =>
+        hierarchy.menteeLevel?.some(menteeCondition =>
+            requestUser[menteeCondition.field] === menteeCondition.value
+        )
+    );
+
+    const mentorConditions = [];
+    const seenConditions = new Set();
+
+    matchingHierarchies?.forEach(({ mentorLevel }) => {
+        const conditionKey = `${mentorLevel?.field}:${mentorLevel?.value}`;
+        if (!seenConditions.has(conditionKey)) {
+            seenConditions.add(conditionKey);
+            mentorConditions.push({
+                [mentorLevel?.field]: mentorLevel?.value
+            });
+        }
+    });
+    let mentors = [];
+    if (mentorConditions.length > 0) {
+        mentors = await User.find({ $or: mentorConditions }, '_id');
+    }
+    return mentors.map(mentor => mentor._id) || []
+}
 module.exports = {
     populateUserFields,
-    populateBlockedUserFields
+    populateBlockedUserFields,
+    getHierarchicalMentorIds
 };

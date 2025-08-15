@@ -14,7 +14,7 @@ const TrackingSchema = new mongoose.Schema({
     sessionTime: { type: Number, required: true },
     totalTime: { type: Number, required: true, defaultValue: 0 },
     userLogin: { type: String, required: true },
-    lastState: { type: String, required: true },
+    lastState: { type: String, required: false },
     isAllowedToSendXAPI: { type: Boolean, required: false },
     isXAPICompleteSent: { type: Boolean, required: false },
     completionAt: { type: Date, required: true, default: null },

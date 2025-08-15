@@ -64,102 +64,82 @@ module.exports = {
             );
         }
     },
-    async getChannelsElegibles (req, res) {
+    async getChannelsElegibles(req, res) {
         const tags = await getTagsElegiblesByToken(req);
         const user = await _functions.getUserByToken(req);
+        const features = await getDbCurrentFeatures(req);
 
-        try {
-            const features = await getDbCurrentFeatures(req);
-            const query = { $and: [
+        const query = {
+            $and: [
                 { tags: { $in: tags.map((tag) => tag.value) } },
                 { enabled: true }
-            ]}
+            ]
+        };
 
-            if(features?.mentoring){
+        const defaultChannelsByFeature = {
+            alura: 'alura',
+            feed: 'feed',
+            news: 'news',
+            mentoring: 'mentoring',
+            collaborationComponent: 'collaboration',
+        };
+
+        for await (const [feature, channelType] of Object.entries(defaultChannelsByFeature)) {
+            if (feature === 'mentoring') {
+                if (!features?.mentoring) query.$and.push({ type: { $ne: 'mentoring' } });
+
                 const mentoringBlocked = await mentorConfigController.isBlocked(user._id);
-                if (mentoringBlocked) {
-                    query.$and.push({ type: { $ne: 'mentoring' } });
-                } 
+
+                if (mentoringBlocked) query.$and.push({ type: { $ne: 'mentoring' } });
+
+                continue;
             }
 
-            // if (req?.segmentation) {
-            //     handleSegmentationOnQuery(req, 'owner', query)
-            // }
-
-            let channels = await Channel
-                .find(query)
-                .sort({ position: 'asc' })
-                .populate({ path: 'theme', match: { deleted: 0 }, })
-
-
-            const existingMentoringChannel = await Channel.findOne({ type: 'mentoring' });
-
-            if (!existingMentoringChannel) {
-                await Channel.create({
-                    enabled: true,
-                    tags: ['ELEGE_geral'],
-                    banners: [],
-                    idSections: [],
-                    title: 'Mentorias',
-                    position: 4,
-                    type: 'mentoring'
-                });
+            if (!features?.[feature]) {
+                query.$and.push({ type: { $ne: channelType } });
             }
-
-            channels = await Promise.all(channels.map(async (channel) => {
-                if (channel.type === 'alura') return channel
-                if (channel.type === 'feed') return channel
-
-                if(features?.mentoring && channel.type === 'mentoring') return channel
-
-                if (features?.collaborationComponent && channel.type === 'collaboration') return channel
-
-                const sectionQuery = { $and: [
-                    { _id: { $in: channel.idSections } }
-                ] }
-
-                // if (req?.segmentation) {
-                //     handleSegmentationOnQuery(req, 'owner', sectionQuery)
-                // }
-
-                const sections = await Section.find(sectionQuery).select('trails');
-                const trailsIds = sections.flatMap(
-                    (section) => section.trails
-                        ?.map(trail => getSectionTrailId(trail))
-                        .filter(Boolean)
-                );
-
-                const trailQuery = { $and: [
-                    { _id: { $in: trailsIds } }
-                ] }
-
-                // if (req?.segmentation) {
-                //     handleSegmentationOnQuery(req, 'owner', trailQuery)
-                // }
-
-                const trails = await Trail.find(trailQuery);
-
-                const hasEligibleTrails = trails.some((trail) =>
-                    checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative
-                );
-
-                return hasEligibleTrails ? channel : null;
-            }));
-
-            channels = channels.filter((channel) => channel)
-
-            _messages.success(res, req, channels);
-        } catch (error) {
-            console.log(error)
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'channels',
-                'get'
-            );
         }
+
+        let channels = await Channel
+            .find(query)
+            .sort({ position: 'asc' })
+            .populate({ path: 'theme', match: { deleted: 0 } });
+
+        channels = await Promise.all(channels.map(async (channel) => {
+            if (Object.values(defaultChannelsByFeature).includes(channel.type)) return channel;
+
+            const sectionQuery = {
+                $and: [
+                    { _id: { $in: channel.idSections } }
+                ]
+            }
+
+            const sections = await Section.find(sectionQuery).select('trails');
+
+            const trailsIds = sections.flatMap(
+                (section) => section.trails
+                    ?.map(trail => getSectionTrailId(trail))
+                    .filter(Boolean)
+            );
+
+            const trailQuery = {
+                $and: [
+                    { _id: { $in: trailsIds } }
+                ]
+            }
+
+            const trails = await Trail.find(trailQuery);
+
+            const hasEligibleTrails = trails.some((trail) =>
+                checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative
+            );
+
+            return hasEligibleTrails ? channel : null;
+        }));
+
+        channels = channels.filter(Boolean);
+
+        return _messages.success(res, req, channels);
     },
 
     async create (req, res) {

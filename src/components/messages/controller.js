@@ -13,7 +13,7 @@ module.exports = {
 
             const message = await Message.create(campaign)
             const targetUsers = await processTargetUsers(target, campaign.category)
-            console.log(targetUsers)
+            // console.log(targetUsers)
             await sendMessageToKafka(campaign, targetUsers)
 
             _messages.success(res, req, message)
@@ -105,7 +105,7 @@ module.exports = {
 }
 async function createMessagesFromBackend (body) {
     try {
-        console.log(body)
+        // console.log(body)
         const campaign = body
         const target = campaign.target
 

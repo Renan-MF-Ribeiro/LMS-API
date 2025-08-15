@@ -1,8 +1,8 @@
 const { socialApi } = require('./http-adapter');
+const { newsApi } = require('../news/http-adapter');
 const _business = require('./business');
 const _functions = require('../../utils/functions');
 const _messages = require('../../utils/messages');
-const { sendMessageToKafka, processTargetUsers } = require('../new-messages/business');
 const { Trail } = require('../trails/model');
 const { User } = require('../users/model');
 const { getTagsElegiblesByToken, checkEligibilityTagsAnd } = require('../sections/business');
@@ -12,6 +12,136 @@ const { createNotification } = require('../feed/buisiness');
 const GamificationKafka = require('../gamification/kafka/broker');
 const { EVENT_CATEGORY } = require('../gamification/model');
 const { COMMENT_STATUS } = require('./model');
+const { UsersWithProcessedTags } = require('../courses/model');
+
+async function getComments(uri, req, res) {
+    const { pageSize = 5, pageIndex = 0, ...query } = req.query;
+
+    const setUsersProfilePhoto = async (commentsArr) => {
+        const usersId = commentsArr.map((comment) => comment.userId);
+
+        const usersPhoto = await User.find({
+            _id: { $in: usersId },
+            profilePhoto: { $exists: true, $ne: null },
+            status: 'ATIVO',
+        }).select('profilePhoto').lean();
+
+        const photoMap = new Map(
+            usersPhoto.map((user) => [String(user._id), user.profilePhoto])
+        );
+
+        if (usersPhoto.length) {
+            commentsArr.forEach((comment) => {
+                const profilePhoto = photoMap.get(String(comment.userId)) ?? null;
+                comment.profilePhoto = profilePhoto;
+            });
+        }
+    };
+
+    const config =
+        (await ConfigModel.findOne({ type: ConfigTypes.SocialFields }))?.value ?? [];
+
+    if (!config?.length) {
+        const { data: response } = await socialApi.get(uri, { params: req.query });
+
+        const commentsToResponse = response.data ?? [];
+
+        await setUsersProfilePhoto(commentsToResponse);
+
+        _messages.success(
+            res,
+            req,
+            {
+                data: commentsToResponse,
+                total: response.total,
+                pageIndex: Number(pageIndex),
+                isFinished: Number(pageSize) * (Number(pageIndex) + 1) >= response.total,
+            },
+            'ok',
+            'social',
+            'getCommentsByTrailId'
+        );
+
+        return;
+    }
+
+    const fetchComments = (params) => {
+        return socialApi.get(uri, { params }, { validateStatus: false });
+    };
+
+    const userInfo = await _functions.getUserByToken(req);
+
+    const filter = config.reduce((acc, current) => {
+        acc[current] = userInfo[current] ?? null;
+        return acc;
+    }, {});
+
+    const dbUsersInSameConditions = await User.find({
+        ...filter,
+        status: 'ATIVO',
+    }).select('_id');
+
+    const commentsToResponse = [];
+
+    const usersToFilter = dbUsersInSameConditions.map((user) => String(user._id));
+
+    const usersToFilterSet = new Set(usersToFilter);
+
+    const filterCommentsByUserId = (commentsArr) => {
+        return commentsArr.filter((comment) => usersToFilterSet.has(String(comment.userId)));
+    };
+
+    let isFinishedFromSocialApi = false;
+    let internalIsFinished = false;
+    let currentPage = Number(pageIndex);
+    const limitPage = 1000; // Limit to avoid too many requests
+
+    while (
+        !internalIsFinished
+        && !isFinishedFromSocialApi
+        && currentPage <= limitPage // Limit the number of pages to avoid infinite loop
+    ) {
+        const { data: response } = await fetchComments({
+            pageSize,
+            pageIndex: currentPage,
+            ...query,
+        });
+
+        const responseData = response.data ?? [];
+
+        const filteredComments = filterCommentsByUserId(responseData);
+
+        commentsToResponse.push(...filteredComments);
+
+        if (!responseData?.length ?? responseData.length < Number(pageSize)) {
+            isFinishedFromSocialApi = true;
+        }
+
+        if (commentsToResponse.length >= Number(pageSize)) {
+            internalIsFinished = true;
+        }
+
+        if (!internalIsFinished && !isFinishedFromSocialApi) {
+            currentPage += 1;
+        }
+    }
+
+    await setUsersProfilePhoto(commentsToResponse);
+
+    return _messages.success(
+        res,
+        req,
+        {
+            data: commentsToResponse,
+            total: commentsToResponse?.length ?? 0,
+            pageIndex: currentPage,
+            isFinished: isFinishedFromSocialApi,
+        },
+        'ok',
+        'social',
+        `getComments_${uri}`
+    );
+}
 
 module.exports = {
     async getConfig(req, res) {
@@ -86,6 +216,45 @@ module.exports = {
                 res,
                 req,
                 { trailBlocked, tagBlocked, userBlocked },
+                'configurações encontradas',
+                'social',
+                'getConfig'
+            );
+        } catch (error) {
+            console.log(error);
+            _messages.internalServer(res, req, error.message, null, 'social', 'getConfig');
+        }
+    },
+
+    async getNewsSocialStatus(req, res) {
+        try {
+            const userTags = await getTagsElegiblesByToken(req);
+            const user = await _functions.getUserByToken(req);
+
+            const uri = `client-config/${process.env.CLIENT_ID}`;
+
+            const { data } = await socialApi.get(uri);
+
+            let tagBlocked = false;
+            let userBlocked = false;
+
+            if (data.blockedTrails.length > 0) {
+                tagBlocked = data.tagsLists.blocked.some((tag) => {
+                    return userTags.some((t) => {
+                        return t.value === tag;
+                    });
+                });
+            }
+            if (data.usersLists.blocked.length > 0) {
+                userBlocked = data.usersLists.blocked.some((u) => {
+                    return u.userId == user._id;
+                });
+            }
+
+            _messages.success(
+                res,
+                req,
+                { tagBlocked, userBlocked },
                 'configurações encontradas',
                 'social',
                 'getConfig'
@@ -330,149 +499,13 @@ module.exports = {
             return;
         }
     },
-
+    
     async getCommentsByTrailId(req, res) {
-        try {
-            const { trailId } = req.params;
+        return getComments(`comments/${req.params.trailId}`, req, res);
+    },
 
-            const uri = `comments/${trailId}`;
-
-            const { pageSize = 5, pageIndex = 0, ...query } = req.query;
-
-            const setUsersProfilePhoto = async (commentsArr) => {
-                const usersId = commentsArr.map((comment) => comment.userId);
-
-                const usersPhoto = await User.find({ _id: { $in: usersId } }).select(
-                    'profilePhoto'
-                );
-
-                if (usersPhoto.length) {
-                    commentsArr.forEach((comment) => {
-                        const profilePhoto =
-                            usersPhoto.find((u) => String(u._id) === String(comment.userId))
-                                ?.profilePhoto ?? null;
-                        comment.profilePhoto = profilePhoto;
-                    });
-                }
-            };
-
-            // GET CONFIG
-            const config =
-                (await ConfigModel.findOne({ type: ConfigTypes.SocialFields }))?.value ?? [];
-
-            if (!config?.length) {
-                const { data: response } = await socialApi.get(uri, { params: req.query });
-
-                const commentsToResponse = response.data ?? [];
-
-                await setUsersProfilePhoto(commentsToResponse);
-
-                _messages.success(
-                    res,
-                    req,
-                    {
-                        data: commentsToResponse,
-                        total: response.total,
-                        pageIndex: Number(pageIndex),
-                        isFinished: Number(pageSize) * (Number(pageIndex) + 1) >= response.total,
-                    },
-                    'ok',
-                    'social',
-                    'getCommentsByTrailId'
-                );
-
-                return;
-            }
-
-            const fetchComments = (params) => {
-                return socialApi.get(uri, { params }, { validateStatus: false });
-            };
-
-            const userInfo = await _functions.getUserByToken(req);
-
-            const filter = config.reduce((acc, current) => {
-                acc[current] = userInfo[current] ?? null;
-                return acc;
-            }, {});
-
-            // GET USERS
-            const dbUsersInSameConditions = await User.find(filter).select('_id');
-
-            const commentsToResponse = [];
-
-            const usersToFilter = dbUsersInSameConditions.map((user) => String(user._id));
-
-            const filterCommentsByUserId = (commentsArr) => {
-                return commentsArr.filter((comment) =>
-                    usersToFilter.includes(String(comment.userId))
-                );
-            };
-
-            let isFinishedFromSocialApi = false;
-            let internalIsFinished = false;
-            let currentPage = Number(pageIndex);
-
-            while (!internalIsFinished && !isFinishedFromSocialApi) {
-                console.log('query', { pageSize, pageIndex: currentPage, ...query });
-                const { data: response } = await fetchComments({
-                    pageSize,
-                    pageIndex: currentPage,
-                    ...query,
-                });
-
-                const responseData = response.data ?? [];
-
-                const filteredComments = filterCommentsByUserId(responseData);
-
-                commentsToResponse.push(...filteredComments);
-
-                console.log(
-                    'é maior',
-                    commentsToResponse.length,
-                    commentsToResponse.length >= Number(pageSize)
-                );
-                console.log('RESPONSE TEM LENGTH', !responseData?.length);
-
-                if (!responseData?.length ?? responseData.length < Number(pageSize)) {
-                    isFinishedFromSocialApi = true;
-                }
-
-                if (commentsToResponse.length >= Number(pageSize)) {
-                    internalIsFinished = true;
-                }
-
-                if (!internalIsFinished && !isFinishedFromSocialApi) {
-                    currentPage += 1;
-                }
-            }
-
-            await setUsersProfilePhoto(commentsToResponse);
-
-            _messages.success(
-                res,
-                req,
-                {
-                    data: commentsToResponse,
-                    total: commentsToResponse?.length ? 100 : 0,
-                    pageIndex: currentPage,
-                    isFinished: isFinishedFromSocialApi,
-                },
-                'ok',
-                'social',
-                'getCommentsByTrailId'
-            );
-            return;
-        } catch (error) {
-            _messages.badRequest(
-                res,
-                req,
-                'Operação inválida',
-                'Operação inválida',
-                'social',
-                'getCommentsByTrailId'
-            );
-            return;
-        }
+    async getCommentsByNewsId(req, res) {
+        return getComments(`comments/news/${req.params.newsId}`, req, res);
     },
 
     async updateComment(req, res) {
@@ -502,10 +535,10 @@ module.exports = {
     async getPendingComments(req, res) {
         try {
             const uri = 'comments/pending';
-            const { searchBy, ...query } = req.query;
+            const { searchBy, paginated = true, ...query } = req.query;
             const searchByTrailOrUser = await _business.handleSearchByTrailOrUser(searchBy);
 
-            const { data } = await socialApi.get(uri, {
+            const response = await socialApi.get(uri, {
                 params: {
                     ...query,
                     ...(searchBy && {
@@ -513,11 +546,23 @@ module.exports = {
                             ? searchByTrailOrUser.flat()
                             : searchBy,
                     }),
+                    paginated: Boolean(paginated),
                 },
             });
-            const comments = await _business.handleUserNameAndTrailTitle(data);
 
-            _messages.success(res, req, comments, 'ok', 'social', 'getPendingComments');
+            const rawData = paginated ? response.data.data : response.data;
+            const commentsArray = await _business.handleUserNameAndTrailTitle(rawData);
+
+            if (paginated) {
+                const comments = {
+                    data: [...commentsArray],
+                    total: response.data.total,
+                }
+                _messages.success(res, req, comments, 'ok', 'social', 'getPendingComments');
+                return;
+            }
+
+            _messages.success(res, req, commentsArray, 'ok', 'social', 'getPendingComments');
             return;
         } catch (error) {
             _messages.badRequest(
@@ -535,22 +580,36 @@ module.exports = {
     async getApprovedComments(req, res) {
         try {
             const uri = 'comments/approved';
-            const { searchBy, ...query } = req.query;
+            const { searchBy, paginated = true, ...query } = req.query;
             const searchByTrailOrUser = await _business.handleSearchByTrailOrUser(searchBy);
 
-            const { data } = await socialApi.get(uri, {
+            const response = await socialApi.get(uri, {
                 params: {
                     ...query,
                     ...(searchBy && {
                         searchBy: searchByTrailOrUser.length
                             ? searchByTrailOrUser.flat()
                             : searchBy,
+
                     }),
+                    paginated: Boolean(paginated),
                 },
             });
-            const comments = await _business.handleUserNameAndTrailTitle(data);
 
-            _messages.success(res, req, comments, 'ok', 'social', 'getApprovedComments');
+            const rawData = paginated ? response.data.data : response.data;
+            const commentsArray = await _business.handleUserNameAndTrailTitle(rawData);
+
+            if (paginated) {
+                const comments = {
+                    data: [...commentsArray],
+                    total: response.data.total,
+                }
+
+                _messages.success(res, req, comments, 'ok', 'social', 'getApprovedComments');
+                return;
+            }
+
+            _messages.success(res, req, commentsArray, 'ok', 'social', 'getApprovedComments');
             return;
         } catch (error) {
             console.log(error);
@@ -569,10 +628,10 @@ module.exports = {
     async getRejectedComments(req, res) {
         try {
             const uri = 'comments/rejected';
-            const { searchBy, ...query } = req.query;
+            const { searchBy, paginated = true, ...query } = req.query;
             const searchByTrailOrUser = await _business.handleSearchByTrailOrUser(searchBy);
 
-            const { data } = await socialApi.get(uri, {
+            const response = await socialApi.get(uri, {
                 params: {
                     ...query,
                     ...(searchBy && {
@@ -580,11 +639,23 @@ module.exports = {
                             ? searchByTrailOrUser.flat()
                             : searchBy,
                     }),
+                    paginated: Boolean(paginated),
                 },
             });
-            const comments = await _business.handleUserNameAndTrailTitle(data);
 
-            _messages.success(res, req, comments, 'ok', 'social', 'getRejectedComments');
+            const rawData = paginated ? response.data.data : response.data;
+            const commentsArray = await _business.handleUserNameAndTrailTitle(rawData);
+
+            if (paginated) {
+                const comments = {
+                    data: [...commentsArray],
+                    total: response.data.total,
+                }
+                _messages.success(res, req, comments, 'ok', 'social', 'getRejectedComments');
+                return;
+            }
+
+            _messages.success(res, req, commentsArray, 'ok', 'social', 'getRejectedComments');
             return;
         } catch (error) {
             console.log(error);
@@ -609,9 +680,9 @@ module.exports = {
 
             const { data } = await socialApi.patch(uri, body);
 
-            if(data?.status === COMMENT_STATUS.APPROVED) {
+            if (data?.status === COMMENT_STATUS.APPROVED) {
                 await GamificationKafka.publishEventRuleValidation({
-                    events:[EVENT_CATEGORY.COMMENT],
+                    events: [EVENT_CATEGORY.COMMENT],
                     identifier: data.userId,
                     meta: {
                         commentId,
@@ -675,6 +746,57 @@ module.exports = {
             let moderated = false;
             const { trailId, userId } = req.params;
             const uri = `home/like/${process.env.CLIENT_ID}/${trailId}/${userId}`;
+            const { data } = await socialApi.get(uri);
+            const { users } = data;
+
+            if (users) {
+                for (const user of users.allowed) {
+                    if (user.userId == userId) {
+                        allowed = true;
+                        data.userAllowed = allowed;
+                    }
+                }
+
+                for (const user of users.blocked) {
+                    if (user.userId == userId) {
+                        blocked = true;
+                        data.userBlocked = blocked;
+                    }
+                }
+
+                for (const user of users.moderated) {
+                    if (user.userId == userId) {
+                        moderated = true;
+                        data.userModerated = moderated;
+                    }
+                }
+            }
+
+            delete data.users;
+
+            _messages.success(res, req, data, 'ok', 'social', 'getLikesByTrailId');
+            return;
+        } catch (error) {
+            console.log(error);
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'getLikesByTrailId'
+            );
+            return;
+        }
+    },
+
+    async getLikesByNewsId(req, res) {
+        try {
+            let allowed = false;
+            let blocked = false;
+            let moderated = false;
+            const { newsId, userId } = req.params;
+            const uri = `home/like/news/${process.env.CLIENT_ID}/${newsId}/${userId}`;
             const { data } = await socialApi.get(uri);
             const { users } = data;
 
@@ -817,6 +939,7 @@ module.exports = {
                     communication: ['notification', 'email'],
                     type: 'share',
                     contentType: 'trail',
+                    contentName: trail.title,
                     contentId: trail._id,
                 };
                 await createNotification(config, users);
@@ -826,6 +949,57 @@ module.exports = {
             const { data } = await socialApi.post(uri, {
                 users: users,
                 trailId,
+                sharedBy: {
+                    userId: _id,
+                    userName: networkLogin,
+                },
+            });
+
+            if (data?.users?.length > 0) {
+                await GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.SHARE, EVENT_CATEGORY.SHARED_CONTENT],
+                    identifier: data.sharedBy.userId,
+                    meta: {
+                        trailId: data.trailId,
+                    },
+                });
+            }
+
+            _messages.success(res, req, data, 'ok', 'social', 'shareSocialContent');
+            return;
+        } catch (error) {
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'shareSocialContent'
+            );
+            return;
+        }
+    },
+
+    async shareNewsSocialContent(req, res) {
+        const { users, newsId } = req.body;
+        try {
+            const { _id, networkLogin, name } = await _functions.getUserByToken(req);
+
+            if (users) {
+                const config = {
+                    reqUser: name,
+                    communication: ['notification', 'email'],
+                    type: 'share',
+                    contentType: 'news',
+                    contentId: newsId,
+                };
+                await createNotification(config, users);
+            }
+
+            const uri = `home/share/${process.env.CLIENT_ID}`;
+            const { data } = await socialApi.post(uri, {
+                users: users,
+                newsId,
                 sharedBy: {
                     userId: _id,
                     userName: networkLogin,
@@ -962,6 +1136,80 @@ module.exports = {
         }
     },
 
+    async getNewsShareTargets(req, res) {
+        try {
+            const { users = [], campaignId } = req.body;
+
+            const { data } = await newsApi.get(`/campaigns/${campaignId}`, {
+                headers: {
+                    Authorization: `Bearer ${req.headers.authorization}`
+                }
+            });
+
+            const tags = data.eligibilities;
+            if (!tags || tags.length === 0) {
+                _messages.success(
+                    res,
+                    req,
+                    users.map((u) => ({ ...u, elegible: false })),
+                    'ok',
+                    'social',
+                    'getShareTargets'
+                );
+                return;
+            }
+
+            const availableUsers = await User.find({
+                networkLogin: { $in: users.map((u) => u.networkLogin) },
+                status: 'ATIVO',
+            })
+                .select('_id tags groupsAD status')
+                .lean();
+
+            if (!availableUsers.length) {
+                _messages.success(
+                    res,
+                    req,
+                    users.map((u) => ({ ...u, elegible: false })),
+                    'ok',
+                    'social',
+                    'getShareTargets'
+                );
+                return;
+            }
+
+
+            const usersWithTags = await UsersWithProcessedTags.find({
+                userTags: { $in: tags },
+            });
+            const returnUsers = availableUsers.map((user) => {
+                const userTags = (user.tags ?? []).concat(user.groupsAD ?? []);
+                const elegible = usersWithTags.some((u) =>
+                    userTags.some((tag) => u.userTags.includes(tag))
+                );
+
+                return {
+                    _id: user._id,
+                    elegible,
+                };
+            });
+
+            _messages.success(res, req, returnUsers, 'ok', 'social', 'getShareTargets');
+            return;
+        } catch (error) {
+            console.log(error);
+            _messages.badRequest(
+                res,
+                req,
+                'Operação inválida',
+                'Operação inválida',
+                'social',
+                'getShareTargets'
+            );
+            return;
+        }
+    },
+
     async findGroupsManagedByUser(req, res) {
         try {
             const uri = 'groups/managed';
@@ -981,21 +1229,3 @@ module.exports = {
         }
     },
 };
-
-async function createMessagesFromBackend(body) {
-    try {
-        const campaign = body;
-        const target = campaign.target;
-        let targetUsers = [];
-
-        if (!target.value.user) {
-            targetUsers = await processTargetUsers(target, campaign.category);
-        } else {
-            targetUsers.push({ ...target.value.user });
-        }
-
-        await sendMessageToKafka(campaign, targetUsers);
-    } catch (error) {
-        console.log(error);
-    }
-}

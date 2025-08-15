@@ -7,20 +7,11 @@ const { CLIENT_ID } = process.env;
 const _messages = require('../../utils/messages');
 const _files = require('../../utils/files');
 const { NewMessage } = require('../new-messages/model');
-const {
-    User,
-    UserTest,
-    Block,
-    userSchema,
-    userProjection,
-    defaultUserMap,
-    groups,
-} = require('./model');
-
+const { User, UserTest, Block, defaultUserMap } = require('./model');
+const managerBusiness = require('../managers/business');
 const {
     generateToken,
     generateMfaToken,
-    generateSSOToken,
     decodeToken,
     validateToken,
     validateTokenNginx,
@@ -32,7 +23,6 @@ const {
     generateMultiFactor,
     validateMultiFactor,
     returnProfileByToken,
-    generateSASToken,
 } = require('../../utils/auth');
 
 const {
@@ -47,7 +37,6 @@ const {
     sendUpdatedDeviceIdToMessenger,
     createWelcomeCampaign,
     returnDateSinceFirstLogin,
-    persistUsers,
     findUsers,
     processDashFilters,
     createClassGroup,
@@ -55,6 +44,8 @@ const {
     generateNewPassword,
     maskEmail,
     getLoginFormByStrategyName,
+    clearAuthCookies,
+    updateUserByPartnerToken,
 } = require('./business');
 
 const {
@@ -63,11 +54,8 @@ const {
     pagination,
     ordernation,
     getUserByToken,
-    formatNumberCpf,
     removeAccents,
-    deepGet,
     formatDateWithoutHoursBrasilian,
-    getDataByToken,
 } = require('../../utils/functions');
 
 const { getActiveIdpIntegrations } = require('../idp-integration/business');
@@ -93,12 +81,9 @@ const { Question } = require('../assessments/questions/model');
 const { Alternative } = require('../assessments/alternatives/model');
 
 const { EVENT_CATEGORY } = require('../gamification/model');
-const AssessmentController = require('../assessment/controller');
 const GamificationBusiness = require('../gamification/business');
 const { Group } = require('../groups/model');
 const { handleUserEligibilitiesGamification } = require('../gamification/utils');
-const AssessmentBusiness = require('../assessment/business');
-const { Features } = require('../theme/features/model');
 const { Partner } = require('../partners/model');
 const { Log } = require('../logs/model');
 const { Tracking } = require('../tracking/model');
@@ -113,14 +98,27 @@ const { fetchIdpProfilesFromRequestObject } = require('../idp-integration/busine
 const { log } = require('../../utils/logger');
 const WebhooksController = require('../webhooks/controller');
 const ApiError = require('../../errors/ApiError');
-const { addSASTokenToResponse } = require('../../utils/cookies');
+const { addSASTokenToResponse, getCookieProps } = require('../../utils/cookies');
 const GamificationKafka = require('../gamification/kafka/broker');
 
 const { FormModel } = require('../forms/model');
-const { getConnectMap, validateDataByConnectMap, getConnectEligibilities } = require('../../utils/connect');
-const { getFormErrorsByMapConfig, getDefaultForm, getAdminForm, getFormErrorsByFormValidation } = require('../forms/business');
+const {
+    getConnectMap,
+    validateDataByConnectMap,
+    getConnectEligibilities,
+    getConnectMapReplacers,
+} = require('../../utils/connect');
+const {
+    getFormErrorsByMapConfig,
+    getDefaultForm,
+    getAdminForm,
+    getFormErrorsByFormValidation,
+} = require('../forms/business');
 
 const { getDbCurrentFeatures } = require('../../utils/features');
+const { ObjectId } = require('mongoose').Types;
+const { Profile } = require('../profiles/model');
+const environment = require('../../environment');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -128,26 +126,6 @@ function hideCPFNumbers(cpf) {
     if (!cpf) return cpf;
 
     return String(cpf).substring(0, 3) + 'XXXXXXXX';
-}
-
-async function validateUserAndPassword(res, req, login, passwordDecripted) {
-    // Verifica se usuário existe
-    const user = await User.findOne({ networkLogin: { $eq: login }, status: 'ATIVO' }).lean();
-    // Verifica se a senha é válida
-    const pass = user?.password?.filter(function (obj) {
-        return obj.valid && bcrypt.compareSync(passwordDecripted, obj.hash);
-    });
-    if (!user || pass?.length === 0) {
-        return 'Usuário ou senha inválidos.';
-    }
-
-    await handleBlockUser(user);
-
-    if (new Date(pass[0].createdAt).getTime() < Date.now() - 90 * 24 * 60 * 60 * 1000) {
-        user.passwordValid = false;
-    }
-
-    return user;
 }
 
 // Gerencia block de usuário por tentativas de login consecutivas
@@ -160,32 +138,48 @@ async function handleBlockUser(user) {
 
         // 30min
         if (resultDiff >= 1) {
-            await Block.updateMany({ user: { $eq: user._id } }, { unblocked: true });
+            Block.updateMany({ user: { $eq: user._id } }, { unblocked: true });
         } else {
             sendNotificationEmail(
                 user.email,
                 'Conta bloqueada',
-                `Olá ${user.name}, uma nova tentativa de acesso a sua conta não foi permita pois sua conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
+                `Olá ${user.name}, uma nova tentativa de acesso a conta não foi permita pois a conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
             );
             return 'Usuário bloqueado temporariamente';
         }
     }
 }
 
-async function generateTokens(user, login, password) {
-    const groups = user.groupsAD;
+async function generateTokens(user, login, password, tokenIdpProfiles, res) {
+    const groups = Array.from(
+        new Set([
+            ...(tokenIdpProfiles ?? []),
+            ...(user.groupsAD?.filter((group) =>
+                tokenIdpProfiles
+                    ? group === 'PERFIL_Aluno' || !group.startsWith('PERFIL')
+                    : true
+            ) ?? []),
+        ])
+    );
+
     const namesProfiles = [];
     const namesGroups = [];
     let tokenAnalytics, tokenHappPlace;
     for (const p in groups) {
         const strGroup = groups[p];
 
-        if (strGroup.includes('PERFIL_')) namesProfiles.push(strGroup);
-        if (strGroup.includes('ELEGE')) namesGroups.push(strGroup);
+        if (String(strGroup).toUpperCase().includes('PERFIL_')) {
+            namesProfiles.push(strGroup);
+        } else {
+            namesGroups.push(strGroup);
+        }
     }
+    const [profilesIDS, groupsIDS, _] = await Promise.all([
+        returnIdProfileUser(namesProfiles),
+        returnIdGroupUser(namesGroups),
+        updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups))
+    ]);
 
-    const profilesIDS = await returnIdProfileUser(namesProfiles);
-    const groupsIDS = await returnIdGroupUser(namesGroups);
     const userGroups = await Group.find({ name: { $in: namesGroups } });
     const eligibilities = userGroups.flatMap((group) =>
         group.tags.flatMap((tag) => tag?.value || tag.display)
@@ -202,7 +196,7 @@ async function generateTokens(user, login, password) {
     if (namesProfiles.includes('PERFIL_Analista')) {
         const dashboardFilters = await processDashFilters(user);
         tokenAnalytics = generateTokenAnalytics({
-            perfil: profilesIDS.numbers,
+            perfil: profilesIDS?.numbers,
             clientID: CLIENT_ID,
             filters: dashboardFilters,
         });
@@ -216,10 +210,11 @@ async function generateTokens(user, login, password) {
         ref: user._id,
         clientId: process.env.CLIENT_ID,
         userName: user.name,
+        networkLogin: user.networkLogin,
         email: user.email,
         userTags: eligibilities,
-        profiles: profilesIDS.result,
-        numbers: profilesIDS.numbers,
+        profiles: profilesIDS?.result,
+        numbers: profilesIDS?.numbers,
         groups: groupsIDS,
         welcomeVideoWatched: user?.welcomeVideoWatched,
     });
@@ -229,15 +224,15 @@ async function generateTokens(user, login, password) {
         mfa: false,
     });
 
-    const SAS = generateSASToken();
+    const { token: SAS } = addSASTokenToResponse(res);
 
     await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
 
-    let tokenEncript = cryptoJS.AES.encrypt(token, String(login));
-    let tk = tokenEncript.toString();
-    let key = login + ':' + password;
+    const tokenEncript = cryptoJS.AES.encrypt(token, String(login));
 
-    key = cryptoJS.AES.encrypt(key, password).toString();
+    const tk = tokenEncript.toString();
+
+    const key = cryptoJS.AES.encrypt(login + ':' + password, password).toString();
 
     return {
         SAS,
@@ -254,8 +249,10 @@ async function generateTokens(user, login, password) {
 }
 
 module.exports = {
-    async create(req, res) {
+    async create (req, res) {
         try {
+            const isOnboarding = Boolean(req.body?.onboarding)
+
             const form = await getAdminForm();
 
             const errors = getFormErrorsByFormValidation(form, req.body);
@@ -295,10 +292,19 @@ module.exports = {
                 );
             }
 
+            if (isOnboarding && !req.body?.cpf)  {
+                return _messages.forbidden(
+                    res,
+                    req,
+                    'CPF é obrigatório para usuário avulso',
+                    { error: 'CPF é obrigatório para usuário avulso' },
+                    'users',
+                    'create'
+                )
+            }
+
             const userExists = await User.findOne({
-                $or: [
-                    { networkLogin: req.body[loginField] },
-                ]
+                $or: [{ networkLogin: req.body[loginField] }],
             });
 
             if (userExists) {
@@ -323,21 +329,23 @@ module.exports = {
 
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
-            const processedUser = await processUsersLoad({
-                networkLogin: req.body[loginField],
-                ...req.body
-            }, fieldsForElegibility);
+            const processedUser = await processUsersLoad(
+                {
+                    ...req.body,
+                    networkLogin: req.body[loginField],
+                },
+                fieldsForElegibility,
+                isOnboarding
+            );
 
-            await User.create({
-                ...processedUser,
-                networkLogin: req.body[loginField],
+            await User.create(processedUser);
+
+            const created = await User.findOne({ networkLogin: processedUser.networkLogin }).lean();
+
+            WebhooksController.dispatch('create', 'users', false, {
+                ...created,
+                password: undefined,
             });
-
-            const created = await User.findOne(
-                { networkLogin: processedUser.networkLogin },
-            ).lean();
-
-            WebhooksController.dispatch('create', 'users', false, { ...created, password: undefined });
 
             return _messages.success(res, req, created);
         } catch (error) {
@@ -416,7 +424,8 @@ module.exports = {
         let networkLogin = data.cpf;
 
         if (data.email) data.email = String(data.email).toLowerCase();
-        if (data.alternativeEmail) data.alternativeEmail = String(data.alternativeEmail).toLowerCase();
+        if (data.alternativeEmail)
+            data.alternativeEmail = String(data.alternativeEmail).toLowerCase();
 
         if (form) {
             const connectMap = await getConnectMap(true);
@@ -448,14 +457,28 @@ module.exports = {
         let defaultFields;
         let partnerDays = 0;
         let classGroupsIDs;
+        let origin = {
+            type: 'SELF',
+            info: 'Cadastro vitrine',
+        };
 
         const { sendSignUpActivationEmail } = await getUsersDataConfig();
 
         try {
             // Validação de usuário já criado
-            const userExists = await User.findOne({ networkLogin });
+            const userExists = await User.exists({ networkLogin });
             if (userExists) {
-                _messages.badRequest(
+                if (!token)
+                    return _messages.badRequest(
+                        res,
+                        req,
+                        'Usuário já cadastrado',
+                        'Já existe um usuário cadastrado',
+                        'users',
+                        'signup'
+                    );
+
+                return _messages.unprocessableEntity(
                     res,
                     req,
                     'Usuário já cadastrado',
@@ -463,7 +486,6 @@ module.exports = {
                     'users',
                     'signup'
                 );
-                return;
             }
 
             // Encripta senha
@@ -494,7 +516,7 @@ module.exports = {
                 const selectedKey = partner.keys?.find((key) => key?.key === token);
 
                 if (selectedKey.endDate < today) {
-                    _messages.unauthorized(
+                    return _messages.unauthorized(
                         res,
                         req,
                         new Error('DataInvalida'),
@@ -502,7 +524,7 @@ module.exports = {
                         'users',
                         'signup'
                     );
-                    return;
+
                 }
 
                 // Concatena todas as elegibilidades padrões e "do seu partner"
@@ -523,6 +545,10 @@ module.exports = {
                 // Gera array de objetos referentes a "_id" de classGroups
                 classGroupsIDs = selectedKey.classGroupResult?.classGroups?.map((x) => x);
                 defaultFields.partner = `${partner.title} - ${selectedKey.title}`;
+                origin = {
+                    type: 'PARTNER_TOKEN',
+                    info: selectedKey.key,
+                }
             } else {
                 groupsAD.push('ELEGE_CURSO');
             }
@@ -539,12 +565,16 @@ module.exports = {
                 ...data,
                 birthDate: formatedDate,
                 groupsAD,
+                origin,
                 ...defaultFields,
             };
 
             const newUser = await User.create(userData);
 
-            WebhooksController.dispatch('create', 'users', false, { ...newUser, password: undefined });
+            WebhooksController.dispatch('create', 'users', false, {
+                ...newUser.toObject(),
+                password: undefined,
+            });
 
             if (token) {
                 const DATA_INICIO = today.startOf('day');
@@ -568,7 +598,7 @@ module.exports = {
                 await sendSignupActivationEmail(newUser.email, activationLink);
             }
 
-            const tokens = await generateTokens(newUser, networkLogin, password);
+            const tokens = await generateTokens(newUser, networkLogin, password, null, res);
 
             if (newUser && form?.autoLogin) {
                 await Log.create({
@@ -576,10 +606,10 @@ module.exports = {
                     dataOld: [],
                     groups: groupsAD ?? [],
                     user: newUser._id,
-                    type: "LOGIN",
-                    message: "Sucesso ao se cadastrar",
-                    component: "users",
-                    route: "signup",
+                    type: 'LOGIN',
+                    message: 'Sucesso ao se cadastrar',
+                    component: 'users',
+                    route: 'signup',
                     ip: req.ip,
                     login: newUser.networkLogin,
                     browserDetails: req.headers['user-agent'],
@@ -625,76 +655,96 @@ module.exports = {
     },
 
     async ldapSignIn(req, res) {
-        let user = {};
-        const { login, password } = req.body;
-        try {
-            const decrypted = cryptoJS.AES.decrypt(password, 'pass');
-            const passwordDecripted = decrypted.toString(cryptoJS.enc.Utf8);
+        if (!req.user) {
+            return _messages.forbidden(
+                res,
+                req,
+                'Usuário não encontrado',
+                'Usuário não encontrado',
+                'users',
+                'ldapSignIn'
+            );
+        }
+        let user = await User.findOne({
+            _id: new mongoose.Types.ObjectId(req.user._id),
+        });
+        if (user.loginType && user.loginType !== 'FORM' && user.loginType !== 'BOTH') {
+            return _messages.forbidden(
+                res,
+                req,
+                'Usuário ou senha inválidos.',
+                'Usuário ou senha inválidos.',
+                'users',
+                'ldapSignIn'
+            );
+        }
 
-            // Valida campos faltantes
-            if (!login || !passwordDecripted) {
+        const { login, password, token } = req.body;
+        if (token) {
+            user = await updateUserByPartnerToken(req, user);
+        }
+        try {
+            await handleBlockUser(user);
+            if (
+                new Date(user?.password?.[user?.password?.length - 1]?.createdAt)?.getTime() <
+                Date.now() - 90 * 24 * 60 * 60 * 1000
+            ) {
+                user.passwordValid = false;
+            }
+
+            if (user && user.origin && user.origin.type === 'INTEGRATOR') {
                 return _messages.forbidden(
                     res,
                     req,
-                    'Usuário ou senha não informados',
-                    'Erro de validação',
+                    'Utilize a gestão de login externa para fazer seu acesso.',
+                    'Utilize a gestão de login externa para fazer seu acesso.',
                     'users',
                     'ldapSignIn'
                 );
             }
-
-            // Valida usuário e senha
-            user = await validateUserAndPassword(res, req, login, passwordDecripted);
-            const entryRecord = await returnDateSinceFirstLogin(user?._id);
-            const firstLogin = !user.passwordValid && !entryRecord
-
             // Gera todos os tokens necessários
-            const {
-                tokenAnalytics,
-                tokenHappPlace,
-                mfaToken,
-                key,
-                authwebPush,
-                SAS,
-                tk,
-                profilesIDS,
-                namesProfiles,
-                namesGroups,
-            } = await generateTokens(user, login, password);
+            const [tokens, entryRecord, isUserManager] = await Promise.all([
+                generateTokens(user, login, password, null, res),
+                returnDateSinceFirstLogin(user?._id),
+                managerBusiness.isUserManager(user),
+                updateLastLoginUser(user?._id),
+                GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.LOGIN],
+                    identifier: login,
+                }),
+            ]);
 
-            await GamificationKafka.publishEventRuleValidation({
-                events: [EVENT_CATEGORY.LOGIN],
-                identifier: login
-            })
-
-            await updateLastLoginUser(user?._id)
+            const firstLogin = !user?.passwordValid && !entryRecord;
 
             WebhooksController.dispatch('APASlogin', 'users', false, {
                 ...user,
                 password: undefined,
-            })
+            });
 
             return _messages.success(
                 res,
                 req,
                 {
-                    SAS,
-                    tk,
-                    key,
-                    firstLogin,
+                    // tokens
+                    SAS: tokens.SAS,
+                    tk: tokens?.tk,
+                    key: tokens?.key,
+                    tokenAnalytics: tokens?.tokenAnalytics,
+                    tokenHappPlace: tokens?.tokenHappPlace,
+                    mfaToken: tokens?.mfaToken,
+                    authwebPush: tokens?.authwebPush?.keys.auth,
+                    //user data
                     accept: user.acceptTerms,
                     acceptCollaboration: user.acceptTermsCollaboration,
                     passwordValid: user.passwordValid,
-                    numbers: profilesIDS.numbers,
+                    numbers: tokens?.profilesIDS?.numbers,
                     name: user.name,
                     profilePhoto: user.profilePhoto,
-                    tokenAnalytics,
-                    tokenHappPlace,
-                    mfaToken,
                     networkLogin: user.networkLogin,
                     userId: user._id,
-                    authwebPush: authwebPush?.keys.auth,
                     email: user.email,
+                    firstLogin,
+                    isManager: isUserManager,
                 },
                 'Sucesso ao logar',
                 'users',
@@ -703,13 +753,13 @@ module.exports = {
                 [],
                 true,
                 'LOGIN',
-                namesProfiles.concat(namesGroups)
+                tokens?.namesProfiles?.concat(tokens?.namesGroups)
             );
         } catch (error) {
             console.log({ error });
-            if (user.id)
+            if (user?.id)
                 await Block.create({
-                    user: user._id,
+                    user: user?._id,
                     dateTimeBlock: getDateToday(),
                     ip: req.ip,
                 });
@@ -763,13 +813,18 @@ module.exports = {
     },
 
     async singleSignOn(req, res) {
-        let user = {};
-
         const { token } = req.body;
         const secret = process.env.PROJECT_SECRET_KEY;
 
         try {
             const data = jwt.verify(token, secret);
+
+            // Need to create the session when using monitoring login
+            if (data.monitoringLogin) {
+                req.session.passport = { user: data };
+                res.cookie('connect.sid', req.sessionID, getCookieProps());
+                await addSASTokenToResponse(res);
+            }
 
             const tokenIdpProfiles = data?.idpProfiles;
             const tokenStrategyName = data?.strategyName ?? undefined;
@@ -778,7 +833,7 @@ module.exports = {
             log('singleSignOn tokenIdpProfiles', tokenIdpProfiles);
 
             const ssoForm = await getLoginFormByStrategyName(tokenStrategyName);
-            const claim = data[ssoForm.claim] ? data[ssoForm.claim] : data.data?.[ssoForm.claim];
+            const claim = data[ssoForm.claim] || data.data?.[ssoForm.claim];
 
             if (!claim) {
                 return _messages.forbidden(
@@ -801,161 +856,104 @@ module.exports = {
                     identifier: claim,
                     meta: {
                         trailTitle: data?.trailTitle || data?.data?.trailTitle,
-                    }
-                })
+                    },
+                });
             }
 
-            if (claim) {
-                const query = { status: 'ATIVO' };
-                query[ssoForm.claim] = claim;
-                user = await User.findOne(query).lean();
-                if (user) {
-                    const dashboardFilters = await processDashFilters(user);
+            const query = { status: 'ATIVO' };
 
-                    const amountOfLocks = await checkAmountOfLocks(user._id);
-                    // 5 Tentativas
-                    if (amountOfLocks >= 50) {
-                        const lastLoginAttemp = await returnLastLoginAttemp(user._id);
-                        const resultDiff = await checkLastAttemptTime(lastLoginAttemp);
+            query[ssoForm.claim] = claim;
 
-                        // 30min
-                        if (resultDiff >= 1) {
-                            await Block.updateMany(
-                                { user: { $eq: user._id } },
-                                { unblocked: true }
-                            );
-                        } else {
-                            sendNotificationEmail(
-                                user.email,
-                                'Conta bloqueada',
-                                `Olá ${user.name}, uma nova tentativa de acesso a sua conta não foi permita pois sua conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
-                            );
-                            _messages.forbidden(
-                                res,
-                                req,
-                                'Usuário bloqueado temporariamente',
-                                'Por favor tente novamente mais tarde!',
-                                'users',
-                                'singleSignOn'
-                            );
-                            return;
-                        }
-                    }
+            const user = await User.findOne(query).lean();
 
-                    const groups = Array.from(
-                        new Set([
-                            ...(tokenIdpProfiles ?? []),
-                            ...(user.groupsAD?.filter((group) =>
-                                tokenIdpProfiles
-                                    ? group === 'PERFIL_Aluno' || !group.startsWith('PERFIL')
-                                    : true
-                            ) ?? []),
-                        ])
-                    );
+            if (
+                !user ||
+                (user.loginType && user.loginType !== 'SSO' && user.loginType !== 'BOTH')
+            ) {
+                await sleep(3000);
 
-                    const namesProfiles = groups.filter((group) => group.startsWith('PERFIL'));
-
-                    const namesGroups = groups.filter((group) => group.startsWith('ELEGE'));
-
-                    const profilesIDS = await returnIdProfileUser(namesProfiles);
-                    const groupsIDS = await returnIdGroupUser(namesGroups);
-                    const userGroups = await Group.find({ name: { $in: namesGroups } });
-
-                    const eligibilities = userGroups.flatMap((group) =>
-                        group.tags.flatMap((tag) => tag?.value || tag.display)
-                    );
-
-                    const token = generateSSOToken({
-                        ref: user._id,
-                        clientId: process.env.CLIENT_ID,
-                        userName: user.name,
-                        userTags: eligibilities,
-                        profiles: profilesIDS.result,
-                        numbers: profilesIDS.numbers,
-                        groups: groupsIDS,
-                        welcomeVideoWatched: user?.welcomeVideoWatched,
-                        idpProfiles: tokenIdpProfiles,
-                        strategyName: tokenStrategyName,
-                    });
-
-                    const token_mfa = generateMfaToken({
-                        ref: user._id,
-                        mfa: false,
-                    });
-
-                    const token_analytics = generateTokenAnalytics({
-                        perfil: profilesIDS.numbers,
-                        clientID: CLIENT_ID,
-                        filters: dashboardFilters,
-                    });
-
-                    const token_happplace = generateHappPlaceToken({
-                        name: user.name,
-                        networkLogin: user.networkLogin,
-                        clientId: CLIENT_ID,
-                    });
-
-                    const { token: SAS } = addSASTokenToResponse(res);
-
-                    await updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups));
-                    await updateLastLoginUser(user._id);
-
-                    var tokenEncript = cryptoJS.AES.encrypt(token, 'happlearning');
-                    var key = 'happlearning' + ':' + '25KP76yNnhiGH9bSj';
-
-                    var tk = tokenEncript.toString();
-                    key = cryptoJS.AES.encrypt(key, '25KP76yNnhiGH9bSj').toString();
-
-                    _messages.success(
-                        res,
-                        req,
-                        {
-                            SAS,
-                            tk,
-                            key,
-                            accept: user.acceptTerms,
-                            passwordValid: true,
-                            numbers: profilesIDS.numbers,
-                            name: user.name,
-                            profilePhoto: user.profilePhoto,
-                            tokenAnalytics: token_analytics,
-                            tokenHappPlace: token_happplace,
-                            mfaToken: token_mfa,
-                            tokenHappPlace: token_happplace,
-                            networkLogin: user.networkLogin,
-                            userId: user._id,
-                            email: user.email,
-                        },
-                        'Sucesso ao logar',
-                        'users',
-                        'singleSignOn',
-                        [],
-                        [],
-                        true,
-                        'LOGIN',
-                        namesProfiles.concat(namesGroups)
-                    );
-                } else {
-                    await sleep(3000);
-                    _messages.forbidden(
-                        res,
-                        req,
-                        'Usuário ou senha inválidos.',
-                        { claim, claimKey: ssoForm?.claim ?? '' },
-                        'users',
-                        'singleSignOn'
-                    );
-                }
-            } else {
-                _messages.forbidden(
+                return _messages.forbidden(
                     res,
                     req,
-                    'Claim inválido',
-                    'Claim inválido',
+                    'Usuário ou senha inválidos',
+                    { claim, claimKey: ssoForm?.claim ?? '' },
                     'users',
                     'singleSignOn'
                 );
             }
+
+            const amountOfLocks = await checkAmountOfLocks(user._id);
+
+            // 5 Tentativas
+            if (amountOfLocks >= 50) {
+                const lastLoginAttemp = await returnLastLoginAttemp(user._id);
+                const resultDiff = await checkLastAttemptTime(lastLoginAttemp);
+
+                // 30min
+                if (resultDiff >= 1) {
+                    await Block.updateMany({ user: { $eq: user._id } }, { unblocked: true });
+                } else {
+                    sendNotificationEmail(
+                        user.email,
+                        'Conta bloqueada',
+                        `Olá ${user.name}, uma nova tentativa de acesso a conta não foi permita pois a conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
+                    );
+                    return _messages.forbidden(
+                        res,
+                        req,
+                        'Usuário bloqueado temporariamente',
+                        'Por favor tente novamente mais tarde!',
+                        'users',
+                        'singleSignOn'
+                    );
+                }
+            }
+          
+            const [tokens, isManager, entryRecord] = await Promise.all([
+                generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', tokenIdpProfiles, res),
+                managerBusiness.isUserManager(user),
+                returnDateSinceFirstLogin(user?._id),
+                updateLastLoginUser(user?._id),
+                GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.LOGIN],
+                    identifier: user.networkLogin,
+                }),
+            ]);
+
+            const firstLogin = !user.passwordValid && !entryRecord;
+
+            _messages.success(
+                res,
+                req,
+                {
+                    SAS: tokens?.SAS,
+                    tk: tokens?.tk,
+                    key: tokens?.key,
+                    numbers: tokens?.profilesIDS.numbers,
+                    tokenAnalytics: tokens?.tokenAnalytics,
+                    tokenHappPlace: tokens?.tokenHappPlace,
+                    mfaToken: tokens?.mfaToken,
+                    authwebPush: tokens?.authwebPush?.keys.auth,
+                    firstLogin,
+                    accept: user.acceptTerms,
+                    acceptCollaboration: user.acceptTermsCollaboration,
+                    passwordValid: true,
+                    name: user.name,
+                    profilePhoto: user.profilePhoto,
+                    networkLogin: user.networkLogin,
+                    userId: user._id,
+                    email: user.email,
+                    isManager
+                },
+                'Sucesso ao logar',
+                'users',
+                'singleSignOn',
+                [],
+                [],
+                true,
+                'LOGIN',
+                tokens?.namesProfiles.concat(tokens?.namesGroups)
+            );
         } catch (error) {
             console.log(error);
             _messages.internalServer(
@@ -1070,19 +1068,35 @@ module.exports = {
 
         if (search.birthDate || search.birthday) {
             const birthDateValue = search.birthDate || search.birthday;
-
+            const strBirthdate = body.birthDate || body.birthday;
             const birthDateQuery = {
-                $or: [{ birthDate: birthDateValue }, { birthday: birthDateValue }],
-            };
+                $or: [
+                    // lida com strings 28/12/2001
+                    { birthDate: birthDateValue },
+                    { birthday: birthDateValue },
 
+                    // lida com ISODates '2001-12-28T00:00:00.000Z'
+                    {
+                        birthDate: {
+                            $gte: moment(strBirthdate, 'DD/MM/YYYY').toISOString(),
+                            $lt: moment(strBirthdate, 'DD/MM/YYYY').add(1, 'days').toISOString(),
+                        },
+                    },
+                    {
+                        birthday: {
+                            $gte: moment(strBirthdate, 'DD/MM/YYYY').toISOString(),
+                            $lt: moment(strBirthdate, 'DD/MM/YYYY').add(1, 'days').toISOString(),
+                        },
+                    },
+                ],
+            };
             search.$or = search.$or ? [...search.$or, ...birthDateQuery.$or] : birthDateQuery.$or;
 
             delete search.birthDate;
             delete search.birthday;
         }
-
+        delete search.token;
         const user = await User.findOne(search);
-
         if (!user) {
             if (changeByEmail) {
                 return _messages.success(res, req, { status: 'Sucesso' });
@@ -1107,11 +1121,10 @@ module.exports = {
                 networkLogin: user.networkLogin,
                 _id: user._id,
                 password_old: password_new,
+                partner_token: body.token,
             });
 
             const resetPasswordUrl = `${domain}/login/troca-senha?token=${token}`;
-
-            console.log(user.email, password_new, resetPasswordUrl);
 
             await sendEmailRecoveryPassword(user.email, true, password_new, resetPasswordUrl, user);
 
@@ -1160,7 +1173,7 @@ module.exports = {
             });
 
             if (password_new !== password_newConfirm) {
-                _messages.unauthorized(
+                return _messages.unauthorized(
                     res,
                     req,
                     new Error('ErrorAoTrocarSenha'),
@@ -1168,7 +1181,6 @@ module.exports = {
                     'users',
                     'changePassword'
                 );
-                return;
             } else if (Oldpass.length > 0) {
                 _messages.unauthorized(
                     res,
@@ -1226,7 +1238,7 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'users',
-                'recoveryPassword'
+                'changePassword'
             );
         }
     },
@@ -1235,11 +1247,12 @@ module.exports = {
         try {
             const { password_new, password_newConfirm } = req.body;
             const { data } = decodeToken(req.headers.authorization);
-            const { _id, password_old } = data;
-            const user = await User.findOne({ _id: _id }, ['password']);
 
-            var pass = user.password.filter(function (obj) {
-                if (obj.valid === true && bcrypt.compareSync(password_old, obj.hash)) {
+            const { _id, password_old } = data;
+            const user = await User.findOne({ _id: _id });
+
+            var pass = user?.password?.filter(function (obj) {
+                if (obj?.valid === true && bcrypt.compareSync(password_old, obj.hash)) {
                     return true;
                 }
 
@@ -1253,7 +1266,6 @@ module.exports = {
 
                 return false;
             });
-
             if (pass.length === 0 || password_new !== password_newConfirm) {
                 _messages.unauthorized(
                     res,
@@ -1298,6 +1310,9 @@ module.exports = {
                 password: newPass,
                 passwordValid: true,
             });
+            if (data.partner_token) {
+                await updateUserByPartnerToken(req, user, data.partner_token);
+            }
 
             _messages.success(
                 res,
@@ -1349,6 +1364,8 @@ module.exports = {
 
         const connectMap = await getConnectMap(true);
 
+        let replaceMap = null;
+
         if (connectMap) {
             const errors = [];
 
@@ -1365,15 +1382,28 @@ module.exports = {
             if (errors.length > 0) {
                 throw new ApiError('Erro ao importar usuários', 400, errors, { skipDbLog: true });
             }
+
+            replaceMap = getConnectMapReplacers(connectMap);
         }
 
         for (const result of results) {
-            const existingUser = await User.findOne({
-                $or: [{ networkLogin: result.networkLogin }, { networkLogin: result.cpf }],
-            });
-
-            const processedUser = await processUsersLoad(result, fieldsForElegibility);
-            const account = await processUserAccount(processedUser);
+            const processedUser = await processUsersLoad(
+                result,
+                fieldsForElegibility,
+                false,
+                false,
+                replaceMap
+            );
+            
+            const [account, existingUser] = await Promise.all([
+                processUserAccount(processedUser),
+                User.findOne({
+                    $or: [
+                        { networkLogin: processedUser.networkLogin },
+                        { networkLogin: processedUser.cpf }
+                    ]
+                })
+            ]);
 
             processedUser.password = existingUser ? existingUser.password : processedUser.password;
 
@@ -1501,13 +1531,21 @@ module.exports = {
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
             const messengerConfig = await getMessengerConfig();
+            const usersDataConfig = await getUsersDataConfig();
+
+            const preventOnboardingGroupAdd = usersDataConfig?.preventOnboardingGroupAdd ?? false;
 
             for (const result of results) {
                 const existingUser = await User.findOne({
                     networkLogin: result.cpf,
                 });
 
-                const processedUser = await processUsersLoad(result, fieldsForElegibility, onboarding);
+                const processedUser = await processUsersLoad(
+                    result,
+                    fieldsForElegibility,
+                    onboarding,
+                    preventOnboardingGroupAdd
+                );
 
                 const account = await processUserAccount(processedUser);
 
@@ -1574,71 +1612,120 @@ module.exports = {
     },
 
     async returnUsers(req, res) {
-        try {
-            const { skip, limit } = pagination(req);
-            const { order, sort } = ordernation(req);
+        const { skip, limit } = pagination(req);
+        const { order, sort } = ordernation(req);
 
-            const searchBy = req.query.searchBy;
+        const searchBy = req.query?.searchBy ?? null;
+        const isOnboarding = req.query.onboarding === 'true' || req.query.onboarding === true;
+        const isPartner = req.query.partner === 'true' || req.query.partner === true;
 
-            const isOnboarding = req.query.onboarding === 'true' || req.query.onboarding === true;
-            const isPartner = req.query.partner === 'true' || req.query.partner === true;
+        const query = {
+            $and: [
+                {
+                    onboarding: isOnboarding ? true : { $ne: true },
+                    partner: isPartner ? { $exists: true } : { $exists: false },
+                },
+            ],
+        };
 
-            const query = {
-                $and: [
-                    {
-                        onboarding: isOnboarding ? true : { $ne: true },
-                        partner: isPartner ? { $exists: true } : { $exists: false },
-                    },
-                ],
-            };
-
-            if (req?.segmentation) {
-                handleSegmentationOnQuery(req, 'issuer', query);
-            }
-
-            const totalActive = await User.find({
-                status: 'ATIVO',
-                ...query,
-            }).countDocuments();
-
-            const totalInactive = await User.find({
-                status: 'INATIVO',
-                ...query,
-            }).countDocuments();
-
-            if (searchBy) {
-                query.$and.push({
-                    $or: [
-                        { name: { $regex: searchBy, $options: 'i' } },
-                        { registration: { $regex: searchBy, $options: 'i' } },
-                        { email: { $regex: searchBy, $options: 'i' } },
-                        { cpf: { $regex: searchBy, $options: 'i' } },
-                    ],
-                });
-            }
-
-            const total = await User.countDocuments(query);
-            const users = await User.find(query)
-                .sort({ [order]: sort })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit));
-
-            _messages.success(res, req, {
-                data: users,
-                total,
-                totalActive,
-                totalInactive,
-            });
-        } catch (error) {
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'users',
-                'returnUsers'
-            );
+        if (req?.segmentation) {
+            handleSegmentationOnQuery(req, 'issuer', query);
         }
+
+        if (searchBy?.length) {
+            query.$and.push({
+                $or: [
+                    { name: { $regex: searchBy, $options: 'i' } },
+                    { registration: { $regex: searchBy, $options: 'i' } },
+                    { email: { $regex: searchBy, $options: 'i' } },
+                    { cpf: { $regex: searchBy, $options: 'i' } },
+                ],
+            });
+        }
+
+        const totalActive = await User.find({
+            status: 'ATIVO',
+            ...query,
+        }).countDocuments();
+
+        const totalInactive = await User.find({
+            status: 'INATIVO',
+            ...query,
+        }).countDocuments();
+
+        const total = await User.countDocuments(query);
+
+        const users = await User.find(query)
+            .sort({ [order]: sort })
+            .skip(parseInt(skip))
+            .limit(parseInt(limit));
+
+        return _messages.success(res, req, {
+            data: users,
+            total,
+            totalActive,
+            totalInactive,
+        });
+    },
+
+    async returnManagers(req, res) {
+        const { skip, limit } = pagination(req);
+        const { order, sort } = ordernation(req);
+
+        const searchBy = req.query.searchBy;
+        const filterManager = req.query.filterManager;
+
+        const profiles = await Profile.find({ title: { $ne: 'PERFIL_Aluno' } }).sort({
+            label: 'asc',
+        });
+
+        let query = {
+            groupsAD: { $in: profiles.map((profile) => profile.title) },
+        };
+
+        if (filterManager) {
+            query.groupsAD = { $in: [filterManager] };
+        }
+
+        if (req?.segmentation) {
+            handleSegmentationOnQuery(req, 'issuer', query);
+        }
+
+        if (searchBy) {
+            query.$or = [
+                { name: { $regex: searchBy, $options: 'i' } },
+                { registration: { $regex: searchBy, $options: 'i' } },
+                { email: { $regex: searchBy, $options: 'i' } },
+                { cpf: { $regex: searchBy, $options: 'i' } },
+            ];
+        }
+        const managersCounters = [];
+
+        for (const profile of profiles) {
+            const queryProfile = { groupsAD: profile.title };
+            if (searchBy) {
+                queryProfile.$or = [
+                    { name: { $regex: searchBy, $options: 'i' } },
+                    { registration: { $regex: searchBy, $options: 'i' } },
+                    { email: { $regex: searchBy, $options: 'i' } },
+                    { cpf: { $regex: searchBy, $options: 'i' } },
+                ];
+            }
+            const count = await User.countDocuments(queryProfile);
+            managersCounters.push({ label: profile.label, title: profile.title, count });
+        }
+
+        const total = await User.countDocuments(query);
+        const users = await User.find(query)
+            .sort({ [order]: sort })
+            .skip(parseInt(skip))
+            .limit(parseInt(limit));
+
+        return _messages.success(res, req, {
+            data: users,
+            total,
+            managersCounters,
+        });
     },
 
     async returnUsersOnboarding(req, res) {
@@ -1782,20 +1869,20 @@ module.exports = {
     },
 
     async isAuthenticated(req, res) {
-        if (await validateToken(req)) {
+        if (req.user && (await validateToken(req))) {
             await addSASTokenToResponse(res);
 
-            _messages.success(res, req, true);
-        } else {
-            _messages.forbidden(
-                res,
-                req,
-                'Sem permissão de acesso',
-                false,
-                'users',
-                'isAuthenticated'
-            );
+            return _messages.success(res, req, true);
         }
+
+        _messages.unauthorized(
+            res,
+            req,
+            'Sessão inválida ou expirada',
+            false,
+            'users',
+            'isAuthenticated'
+        );
     },
 
     async isAuthenticatedNginx(req, res) {
@@ -1960,6 +2047,9 @@ module.exports = {
     async emulation(req, res) {
         try {
             const { body } = req;
+            const completeUser = await User.findById(body._id).lean();
+            const isManager = await managerBusiness.isUserManager(completeUser);
+
             const {
                 groupsAD,
                 name,
@@ -1970,7 +2060,7 @@ module.exports = {
                 profiles,
                 email,
                 ...user
-            } = await User.findById(body._id).lean();
+            } = completeUser;
 
             const isEmulatingSuperAdmin = groupsAD?.some(
                 (profile) => profile === 'PERFIL_Super_Admin' || profile === 'PERFIL_Gestor_Usuario'
@@ -1989,7 +2079,7 @@ module.exports = {
 
             const namesProfiles = [];
             const namesGroups = [];
-            const dashboardFilters = await processDashFilters(user);
+            const dashboardFilters = await processDashFilters(completeUser);
 
             for (const p in groupsAD) {
                 const cnSplit =
@@ -2047,6 +2137,7 @@ module.exports = {
                 _messages.success(res, req, {
                     SAS,
                     token,
+                    email,
                     accept: acceptTerms,
                     acceptCollaboration: acceptTermsCollaboration,
                     numbers: result.token.numbers,
@@ -2054,6 +2145,7 @@ module.exports = {
                     name,
                     profilePhoto,
                     tokenAnalytics: token_analytics,
+                    isManager,
                 });
             } else {
                 _messages.badRequest(
@@ -2105,7 +2197,12 @@ module.exports = {
             message: 'SSO_CALLBACK',
             component: 'users',
             route: 'ssoCallback',
-            dataNew: JSON.stringify({ samlObj: req.samlUserObject, samlUser: req.user }),
+            dataNew: JSON.stringify({
+                user: req.user,
+                samlUserObject: req.samlUserObject,
+                session: req.session,
+                sessionID: req.sessionID,
+            }),
         });
 
         const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
@@ -2113,14 +2210,17 @@ module.exports = {
         const ssoForm = await getLoginFormByStrategyName(strategyName);
 
         const claim = ssoForm?.claim ?? 'networkLogin';
+
         const claimKey = ssoForm?.claimKey ?? 'no-claim-key-value';
 
-        const value =
+        const claimValue =
             claimKey.split(',').reduce((acc, key) => {
                 if (acc !== null && acc !== undefined && acc !== '') return acc;
 
-                return deepGet(req.samlUserObject, key, null);
-            }, null) ?? req.user?.nameID;
+                return _.get(req.user, key, null) || _.get(req.samlUserObject, key, null);
+            }, null)
+            ?? req.user?.nameID
+            ?? null;
 
         await Log.create({
             type: 'SSO_CALLBACK_INFOS',
@@ -2133,12 +2233,12 @@ module.exports = {
                 ssoForm: ssoForm ? { ...ssoForm, certifier: undefined } : 'FORM NOT FOUND',
                 claim,
                 claimKey,
-                value
+                claimValue,
             }),
         });
 
-        if (value === undefined || value === null) {
-            console.log('ssoCallback req.samlUserObject', req.samlUserObject);
+        if (claimValue === undefined || claimValue === null) {
+            // console.log('ssoCallback req.samlUserObject', req.samlUserObject);
 
             return _messages.internalServer(
                 res,
@@ -2157,56 +2257,14 @@ module.exports = {
 
         const token = jwt.sign(
             {
-                [claim]: value,
+                [claim]: claimValue,
                 strategyName,
                 idpProfiles,
             },
             process.env.PROJECT_SECRET_KEY
         );
 
-        res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
-    },
-
-    async openIdCallback(req, res) {
-        await Log.create({
-            type: 'OPENID_CALLBACK',
-            message: 'OPENID_CALLBACK',
-            component: 'users',
-            route: 'openidCallback',
-            dataNew: { openidObject: req.user },
-            dataOld: null,
-        });
-
-        const { strategyName } = req.cookies;
-        const form = await getLoginFormByStrategyName(strategyName);
-        const claimValue = _.get(req.user, form.claimKey);
-
-        const { idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
-
-        await Log.create({
-            type: 'SSO_CALLBACK_INFOS',
-            message: 'SSO_CALLBACK',
-            component: 'users',
-            route: 'ssoCallback',
-            dataNew: {
-                strategyName,
-                idpProfiles,
-                form,
-                claimKey: form?.claimKey,
-                value: claimValue,
-            },
-        });
-
-        const token = jwt.sign(
-            {
-                [form.claim]: claimValue,
-                strategyName,
-                idpProfiles,
-            },
-            process.env.PROJECT_SECRET_KEY
-        );
-
-        res.redirect(302, `${process.env.DOMAIN}/login/entrar/sso?token=${token}`);
+        res.redirect(302, `${environment.DOMAIN}/login/entrar/sso?token=${token}`);
     },
 
     async updateDeviceId(req, res) {
@@ -2558,7 +2616,7 @@ module.exports = {
                 res,
                 req,
                 'Sem permissão de acesso',
-                'Você não tem permissão para adicionar esta TAG enquanto a configuração de IDP estiver ativa',
+                'O perfil de acesso atual não permite adicionar esta TAG enquanto a configuração de IDP estiver ativa.',
                 'users',
                 'addGroups'
             );
@@ -2603,11 +2661,17 @@ module.exports = {
     },
 
     async deleteClassTag(req, res) {
-        const { tag, userId } = req.body;
+        const { tag, userId, classIdentifier } = req.body;
+        const classGroups = classIdentifier
+            ? {
+                groupCode: tag,
+                classIdentifier: { $in: [classIdentifier, new ObjectId(classIdentifier)] },
+            }
+            : { groupCode: tag, classIdentifier: { $exists: false } };
 
         try {
             await User.findByIdAndUpdate(userId, {
-                $pull: { classGroups: { groupCode: tag } },
+                $pull: { classGroups: classGroups },
             });
             _messages.success(res, req, { message: 'Tag de curso removida' });
         } catch (error) {
@@ -2618,10 +2682,13 @@ module.exports = {
     async addClassTag(req, res) {
         const { tag, userId } = req.body;
         try {
+            const classIdentifier = new ObjectId();
+            // console.log('classIdentifier', classIdentifier);
             await User.findByIdAndUpdate(userId, {
                 $addToSet: {
                     classGroups: {
                         ...tag,
+                        classIdentifier,
                         startDate: new Date(tag.startDate),
                         limitDate: new Date(tag.limitDate),
                     },
@@ -2637,33 +2704,38 @@ module.exports = {
 
     async updateClassTag(req, res) {
         const { tag, _id } = req.body;
-        try {
-            const { classGroups } = await User.findOne({ _id });
-            const newTags = [];
-            for (group of classGroups) {
-                if (group._id == tag._id) {
-                    group = tag;
-                    newTags.push({
-                        ...group,
-                        startDate: new Date(group.startDate),
-                        limitDate: new Date(group.limitDate),
-                    });
-                } else {
-                    newTags.push({
-                        ...group,
-                        startDate: new Date(group.startDate),
-                        limitDate: new Date(group.limitDate),
-                    });
-                }
-            }
-            await User.findByIdAndUpdate(_id, { classGroups: newTags });
 
-            _messages.success(res, req, {
-                message: 'Tag de curso atualizada no usuário',
+        const { classGroups } = await User.findById(_id);
+
+        const foundTag = classGroups.find(
+            (group) => String(group._id) === String(tag._id)
+        );
+
+        if (!foundTag) {
+            await User.findByIdAndUpdate(_id, {
+                $addToSet: {
+                    classGroups: {
+                        ...tag,
+                        startDate: new Date(tag.startDate),
+                        limitDate: new Date(tag.limitDate),
+                    },
+                },
             });
-        } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users');
+        } else {
+            await User.findByIdAndUpdate(_id, {
+                $set: {
+                    'classGroups.$[elem].startDate': new Date(tag.startDate),
+                    'classGroups.$[elem].limitDate': new Date(tag.limitDate),
+                    'classGroups.$[elem].groupCode': tag.groupCode,
+                },
+            }, {
+                arrayFilters: [{ 'elem._id': new mongoose.Types.ObjectId(tag._id) }],
+            });
         }
+
+        _messages.success(res, req, {
+            message: 'Tag de curso atualizada no usuário',
+        });
     },
 
     async evaluationProgress(req, res) {
@@ -2902,10 +2974,12 @@ module.exports = {
         try {
             const connectMap = await getConnectMap(true);
 
-            const fields = Object.entries(connectMap).map(([key, value]) => ({
-                display: defaultUserMap[key]?.label ?? key ?? value?.label,
-                value: key
-            })).filter((field) => field.value !== 'elegibility');
+            const fields = Object.entries(connectMap)
+                .map(([key, value]) => ({
+                    display: defaultUserMap[key]?.label ?? key ?? value?.label,
+                    value: key,
+                }))
+                .filter((field) => field.value !== 'elegibility');
 
             const eligibilityData = await getConnectEligibilities();
 
@@ -2914,7 +2988,7 @@ module.exports = {
             _messages.success(res, req, {
                 map: connectMap,
                 fields,
-                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd'],  // Campos que não devem ser alterados
+                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd', 'manager'], // Campos que não devem ser alterados
                 eligibility,
             });
         } catch (error) {
@@ -2986,5 +3060,10 @@ module.exports = {
                 'readSheetHeaders'
             );
         }
+    },
+
+    async logout(req, res) {
+        await clearAuthCookies(req, res);
+        res.status(200).json({ ok: true });
     },
 };

@@ -77,7 +77,7 @@ module.exports = {
                 handleSegmentationOnQuery(req, 'owner', query)
             }
 
-            console.log({ query: JSON.stringify(query, null, 2)})
+            // console.log({ query: JSON.stringify(query, null, 2)})
 
             const total = await Group.find(query).countDocuments();
 
@@ -584,7 +584,7 @@ module.exports = {
                 { 'tags.display': tag },
                 { $pull: { tags: { display: tag } } }
             );
-            console.log(removeGroup)
+            // console.log(removeGroup)
 
             _messages.success(
                 res,

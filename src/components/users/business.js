@@ -25,8 +25,34 @@ const { Tracking } = require('../tracking/model');
 const { ConfigLogin } = require('../theme/login-config/model');
 const ApiError = require('../../errors/ApiError');
 const { getMessengerConfig } = require('../config/business');
-const { getConnectMap } = require('../../utils/connect');
-require('dotenv').config();
+const { getConnectMap, setReplacedValuesFromConnectMap } = require('../../utils/connect');
+const { getCookieProps } = require('../../utils/cookies');
+const PartnerBusiness = require('../partners/business');
+const { createSessionStore } = require('../../utils/session');
+const { Types } = require('mongoose');
+
+async function createGroupsByGroupsAD(groupsAD) {
+    const groupsDb = await Group.find({ name: { $in: groupsAD } })
+        .select('name')
+        .lean();
+
+    const allGroups = new Set(groupsDb.map((group) => group.name));
+
+    const createGroups = groupsAD.filter((groupName) => {
+        if (groupName.startsWith('PERFIL_')) return false;
+
+        return !allGroups.has(groupName);
+    });
+
+    return await Group.insertMany(
+        createGroups.map(
+            (groupName) => ({
+                name: groupName,
+                tags: [],
+            })
+        )
+    );
+}
 
 module.exports = {
     async getLoginConfig(selectFields) {
@@ -71,44 +97,44 @@ module.exports = {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                      {
-                          $or: [
-                              {
-                                  onboarding: { $exists: false },
-                                  groupsAD: { $in: tag },
-                              },
-                              {
-                                  onboarding: { $eq: onboarding },
-                                  groupsAD: { $in: tag },
-                              },
-                          ],
-                      },
-                  ];
+                    {
+                        $or: [
+                            {
+                                onboarding: { $exists: false },
+                                groupsAD: { $in: tag },
+                            },
+                            {
+                                onboarding: { $eq: onboarding },
+                                groupsAD: { $in: tag },
+                            },
+                        ],
+                    },
+                ];
         } else {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                      {
-                          $or: [
-                              { onboarding: { $exists: false } },
-                              { onboarding: { $eq: onboarding } },
-                          ],
-                      },
-                  ];
+                    {
+                        $or: [
+                            { onboarding: { $exists: false } },
+                            { onboarding: { $eq: onboarding } },
+                        ],
+                    },
+                ];
         }
 
         const searchByQuery = searchBy
             ? {
-                  $or: [
-                      { name: { $regex: searchBy, $options: 'i' } },
-                      { registration: { $regex: searchBy, $options: 'i' } },
-                      { email: { $regex: searchBy, $options: 'i' } },
-                  ],
-                  $and: onboardingQuery,
-              }
+                $or: [
+                    { name: { $regex: searchBy, $options: 'i' } },
+                    { registration: { $regex: searchBy, $options: 'i' } },
+                    { email: { $regex: searchBy, $options: 'i' } },
+                ],
+                $and: onboardingQuery,
+            }
             : {
-                  $and: onboardingQuery,
-              };
+                $and: onboardingQuery,
+            };
 
         const users = await User.find(searchByQuery)
             .sort({ [order]: sort })
@@ -347,69 +373,91 @@ module.exports = {
         const userMap = Object.entries(connectMap).map(([key, value]) => {
             return { value: key, description: value.label, field: value.field };
         });
-        const dashboardFilters = [];
-        const dashConfig = await DashConfig.find();
+
         function isSameField(userField, mapItem) {
             return (
-                mapItem.description === userField ||
-                mapItem.field === userField ||
-                mapItem.value === userField
+                mapItem.field !== 'NÃO MAPEAR' &&
+                (mapItem.field === userField || mapItem.value === userField)
             );
         }
 
-        try {
-            if (dashConfig) {
-                let dashFilters = dashConfig.map((x) => {
-                    return x.fields;
-                });
-                dashFilters = dashFilters.flat(2);
-                for (let filter of dashFilters) {
-                    for (const map of userMap) {
-                        filter.userField = isSameField(filter.userField, map)
-                            ? map.value
-                            : filter.userField;
-                        filter.dashFilter = isSameField(filter.dashFilter, map)
-                            ? map.value
-                            : filter.dashFilter;
-                    }
+        const dashboardFilters = [];
 
-                    const userHasValidFieldValue =
-                        user[filter.userField] === filter.fieldValue &&
-                        user[filter.dashFilter] != undefined &&
-                        user[filter.dashFilter] != 'undefined' &&
-                        user[filter.dashFilter] != null &&
-                        user[filter.dashFilter] != 'null' &&
-                        user[filter.dashFilter] != '';
-                    if (userHasValidFieldValue) {
-                        if (dashboardFilters.length == 0) {
-                            dashboardFilters.push({
-                                field: filter.dashFilter,
-                                value: user[filter.dashFilter],
-                                pages: filter.pages,
-                            });
-                        }
+        const dashConfig = await DashConfig.find();
+
+        dashConfig.forEach((config) => {
+            config.fields?.forEach((config) => {
+                if (!config.userField || !config.fieldValue) return;
+
+                const currentUserDashValue = String(user[config.dashFilter] || '').trim();
+
+                const matchedMaps = userMap.filter((map) => isSameField(config.userField, map));
+
+                matchedMaps.forEach((map) => {
+                    const currentUserFieldValue = String(user[map.value] || null).trim();
+
+                    if (
+                        currentUserFieldValue &&
+                        currentUserFieldValue === config.fieldValue &&
+                        currentUserDashValue !== 'undefined' &&
+                        currentUserDashValue !== 'null'
+                    ) {
+                        dashboardFilters.push({
+                            field: config.dashFilter || null,
+                            value: currentUserDashValue || null,
+                            pages: config.pages,
+                            // config,
+                            // map,
+                        });
                     }
-                }
-                return dashboardFilters;
-            }
-        } catch (error) {
-            console.log(error);
-            return error;
-        }
+                });
+            });
+        });
+
+        // console.log(JSON.stringify(dashboardFilters, null, 2));
+
+        return dashboardFilters;
     },
 
-    processUsersLoad(data, elegibilityFields = [], onboarding = false) {
+    /**
+     * Processes user data for loading into the system, handling authentication, group assignments, and data formatting.
+     * 
+     * @async
+     * @param {Object} data - The user data object to be processed
+     * @param {Array<string>} [elegibilityFields=[]] - Array of field names to use for eligibility group assignment
+     * @param {boolean} [onboarding=false] - Whether this is an onboarding user
+     * @param {boolean} [preventOnboardingGroupAdd=false] - Whether to prevent adding onboarding groups
+     * @param {Map} [replaceMap=null] - Map for replacing values using connect map
+     * @returns {Promise<Object>} The processed user data object with additional fields:
+     *   - clientUserKey: Generated client user key
+     *   - password: Array with hashed password object
+     *   - groupsAD: Array of Active Directory groups
+     *   - enabled: Set to true
+     *   - onboarding: Boolean indicating onboarding status
+     * @description
+     * This function performs the following operations:
+     * - Removes empty fields (networkLogin, name, password)
+     * - Generates initial password based on first name and CPF
+     * - Parses and formats date fields
+     * - Creates hashed password with salt
+     * - Assigns appropriate AD groups based on user type and eligibility
+     * - Creates missing groups in the database
+     * - Handles role-based group assignments
+     * - Sanitizes CPF format
+     * - Applies replacement mappings if provided
+     */
+    async processUsersLoad(data, elegibilityFields = [], onboarding = false, preventOnboardingGroupAdd = false, replaceMap = null) {
+
+        ['networkLogin', 'name', 'password'].forEach((field) => {
+            if (!data[field]) {
+                delete data[field];
+            }
+        });
+
         const salt = bcrypt.genSaltSync(10);
-        const firstName = String(data.name.split(' ')[0]).trim().toLowerCase();
+        const firstName = String(data.name?.split(' ')[0]).trim().toLowerCase();
         const firstThreeCpf = sanitizeCpf(data.cpf).slice(0, 3);
         const initialPassword = !onboarding ? '1234' : `${firstName}${firstThreeCpf}`;
-        data.password = [
-            {
-                hash: bcrypt.hashSync(String(data?.password ?? initialPassword), salt),
-                valid: true,
-                createdAt: new Date(Date.now()),
-            },
-        ];
 
         function parseDate(date) {
             if (!date) return null;
@@ -424,42 +472,63 @@ module.exports = {
                 }
             }
 
-            console.log(date, parsedDate.format('DD/MM/YYYY'));
-
             return parsedDate.format('DD/MM/YYYY');
         }
 
         data.clientUserKey = CLIENT_ID + '@@' + data.networkLogin;
-
         data.birthDate = parseDate(data.birthDate);
         data.admission = parseDate(data.admission);
         data.createDate = parseDate(data.createDate);
         data.terminationDate = parseDate(data.terminationDate);
         data.vacationStartDate = parseDate(data.vacationStartDate);
         data.vacationEndDate = parseDate(data.vacationEndDate);
-
         data.enabled = true;
         data.onboarding = onboarding;
+        data.password = [
+            {
+                hash: bcrypt.hashSync(String(data?.password ?? initialPassword), salt),
+                valid: true,
+                createdAt: new Date(Date.now()),
+            },
+        ];
 
-        const groupsAD =
-            onboarding === true
-                ? ['PERFIL_Aluno', 'ELEGE_ONBOARDING']
-                : ['PERFIL_Aluno', 'ELEGE_CURSO'];
+        // Default Fields
+        data.status = _functions.isPositiveValue(data.status) ? 'ATIVO' : 'INATIVO';
+        if (data.cpf) data.cpf = _functions.parseDocument(data.cpf);
+        if (data.cnpj) data.cnpj = _functions.parseDocument(data.cnpj);
+        if (data.pcd) data.pcd = _functions.isPositiveValue(data.pcd) ? 'SIM' : 'NAO';
+        if (data.manager) data.manager = _functions.isPositiveValue(data.manager) ? 'SIM' : 'NAO';
+        if (data.loginType) data.loginType = _functions.getLoginType(data.loginType);
 
-        if (elegibilityFields && elegibilityFields.length > 0 && onboarding == false) {
+        if (onboarding) {
+            data.networkLogin = data.cpf;
+            data.onboarding = true;
+        }
+
+        const groupsAD = ['PERFIL_Aluno'];
+
+        if (onboarding && !preventOnboardingGroupAdd) {
+            groupsAD.push('ELEGE_ONBOARDING');
+        } else if (!onboarding) {
+            groupsAD.push('ELEGE_CURSO');
+        }
+
+        if (elegibilityFields && elegibilityFields.length > 0 && !onboarding) {
             for (const field of elegibilityFields) {
                 if (data[field]) {
                     const fieldType = typeof data[field];
+
                     if (fieldType === 'object') continue;
 
-                    const value =
-                        fieldType !== 'string' ? data[field] : _functions.clearString(data[field]);
+                    const value = fieldType !== 'string'
+                        ? data[field]
+                        : _functions.clearString(data[field]);
 
                     groupsAD.push(`ELEGE_${value}`);
                 }
             }
         } else {
-            if (!!data.company && !!data.office) {
+            if (data.company && data.office) {
                 groupsAD.push(`ELEGE_${_functions.clearString(data.company)}`);
                 groupsAD.push(`ELEGE_${_functions.clearString(data.office)}`);
             }
@@ -479,34 +548,33 @@ module.exports = {
                 !!data[optional] && groupsAD.push(`ELEGE_${_functions.clearString(data[optional])}`)
         );
 
-        groupsAD.forEach(async (groupName) => {
-            const group = await Group.findOne({ name: groupName });
-            if (!group) {
-                await Group.create({
-                    name: groupName,
-                    tags: [],
-                });
-            }
-        });
-
         const roles = data.roles ? data.roles.split(',').map((item) => item.trim()) : [];
 
-        if (roles.includes('Analista')) {
-            groupsAD.push('PERFIL_Analista');
-        }
-        if (roles.includes('Conteudista')) {
-            groupsAD.push('PERFIL_Conteudista');
-        }
+        const availableRolesSet = new Set([
+            'Conteudista',
+            'Analista',
+            'Integrador',
+            'Instrutor',
+            'Colaborador',
+            'Gestor_Elegibilidade',
+            'Gestor_Engajamento',
+            'Gestor_Usuario',
+            'Gestor_Matriz',
+            'Aplicador_Matriz',
+        ]);
 
-        data.groupsAD = groupsAD;
+        roles.forEach((role) => {
+            if (availableRolesSet.has(role)) groupsAD.push(`PERFIL_${role}`);
+        });
 
-        if (data.cpf) {
-            data.cpf = String(data.cpf).replace(/[^a-z0-9]/gi, '');
-        }
+        const uniqueGroupsAD = [...new Set(groupsAD)];
 
-        if (onboarding) {
-            data.networkLogin = data.cpf;
-            data.onboarding = true;
+        await createGroupsByGroupsAD(uniqueGroupsAD);
+
+        data.groupsAD = uniqueGroupsAD;
+
+        if (replaceMap?.size) {
+            setReplacedValuesFromConnectMap(data, replaceMap);
         }
 
         return data;
@@ -678,18 +746,43 @@ module.exports = {
         }
     },
 
+    async getTagsByUserIds(userIds) {
+        const arrayIds = Array.isArray(userIds) ? userIds : [userIds];
+        if (arrayIds.length === 0) return [];
+
+        const users = await User.find({ _id: { $in: arrayIds?.map((id) => new Types.ObjectId(id)) } }).lean();
+        if (users.length === 0) return [];
+
+
+        const groups = await Group.find({ name: { $in: users?.flatMap((u) => u?.groupsAD) } }, 'tags').lean();
+        const tags = groups?.flatMap((group) => group?.tags);
+        return [users, tags];
+    },
+
     async getFirstTenUsersByGroup(groups) {
         try {
-            const users = await User.find({ groupsAD: { $in: groups } }, [
-                'networkLogin',
-                'name',
-                'office',
-            ])
-                .limit(10)
-                .lean();
-            return users;
+            // Aggregate para pegar 10 usuários aleatórios de cada grupo
+            return await User.aggregate([
+                {
+                    $match: {
+                        status: /^ativo$/i,
+                        groupsAD: { $in: groups },
+                    },
+                },
+                {
+                    $sample: { size: 10 },
+                },
+                {
+                    $project: {
+                        networkLogin: 1,
+                        name: 1,
+                        office: 1,
+                    },
+                },
+            ]);
         } catch (error) {
-            return error;
+            console.log(error);
+            return [];
         }
     },
 
@@ -700,15 +793,10 @@ module.exports = {
     async getUsersByTags(tags) {
         try {
             let groups = [];
-
-            for (const tag of tags) {
-                const group = await Group.find({ tags: { $in: tag } });
-                groups.push(...group);
-            }
-            groups = groups.map((group) => group.name);
+            const group = await Group.find({ 'tags.value': { $in: tags } });
+            groups = group.map((group) => group.name);
 
             const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin']);
-
             return users;
         } catch (error) {
             return error;
@@ -813,4 +901,146 @@ module.exports = {
         }
         return `${maskedEmail}@${emailParts[1]}`;
     },
+
+    async getProcessedTags(user) {
+        const { groupsAD = [], classGroups = [] } = user;
+
+        const groups = await Group.find({ name: { $in: groupsAD } });
+
+        const groupTags = groups.flatMap((group) => group.tags.map((tag) => tag.value ?? tag));
+
+        const currentDate = new Date();
+
+        const allTags = groupsAD
+            .concat(groupTags)
+            .concat(
+                classGroups
+                    .filter(
+                        (classGroup) =>
+                            classGroup.status === 2 &&
+                            new Date(classGroup.startDate) <= currentDate &&
+                            new Date(classGroup.limitDate) >= currentDate
+                    )
+                    .map((classGroup) => classGroup.groupCode)
+            )
+            .filter((t) => !String(t).startsWith('PERFIL_'));
+
+        return allTags;
+    },
+
+    async updateUserByPartnerToken(req, user, tk = null) {
+        const token = tk || req.body?.token || req.query?.token;
+        const partner = await PartnerBusiness.getPartnersByToken(token);
+        const usedToken = validatePartnerToken(partner, token);
+
+        if (!usedToken.updatable) return user;
+        if (user.origin?.type === 'PARTNER_TOKEN' && user.origin?.info === usedToken.key)
+            return user;
+
+        const [newGroupsAd, tokenBlockedFields, newClassGroups] =
+            await getPartnerTokenNewInformations(usedToken, user);
+
+        const update = {
+            groupsAD: newGroupsAd,
+            classGroups: newClassGroups,
+            origin: {
+                type: 'PARTNER_TOKEN',
+                info: usedToken.key,
+            },
+            partner: `${partner.title} - ${usedToken.title}`,
+            ...tokenBlockedFields,
+        };
+
+        const [updatedUser] = await Promise.all([
+            User.findOneAndUpdate({ _id: user._id }, { $set: update }, { new: true }).exec(),
+            Log.create({
+                dataNew: update,
+                dataOld: user,
+                groups: newGroupsAd ?? [],
+                user: user._id,
+                type: 'UPDATE',
+                message: `Atualização de dados por token de parceiro ${partner.title} - ${usedToken.key}`,
+                component: 'users',
+                route: '/users/auth',
+                ip: req.ip,
+                login: user.networkLogin,
+                browserDetails: req.headers['user-agent'],
+            }),
+        ]);
+        return updatedUser;
+    },
+
+    async clearAuthCookies(req, res) {
+        if (req.sessionID) await createSessionStore().destroy(req.sessionID);
+        res.clearCookie('connect.sid', getCookieProps());
+        res.clearCookie('SAS', getCookieProps());
+        res.clearCookie('strategyName', getCookieProps());
+    },
+};
+
+const getPartnerTokenNewInformations = async (usedToken, user) => {
+    // -------------- LOOKUP EM INFORMAÇÕES QUE O TOKEN POSSUI (classes, eligibilidades e turmas) --------------
+    const tokenEligibilities = usedToken?.elegibilityResult
+        ?.map((key) => key?.value)
+        ?.filter(Boolean);
+
+    const tokenBlockedFields = usedToken?.defaultField?.reduce((acc, key) => {
+        const { key: tokenKey, value: tokenValue } = key;
+        if (tokenKey && tokenValue && user[tokenKey] !== tokenValue) {
+            acc[tokenKey] = tokenValue;
+        }
+        return acc;
+    }, {});
+
+    const tokenClasses = usedToken?.classGroupResult?.classGroups || [];
+    // -------------- MONTANDO O QUE SERÁ ATUALIZADO NO USUARIO --------------
+    // utilizando os lookups criados acima, montamos o que será atualizado no usuário seguindo as flags do token
+    let newGroupsAD =
+        usedToken?.overwriteEligibility === false
+            ? (user?.groupsAD || [])?.concat(tokenEligibilities || [])
+            : (user?.groupsAD || [])
+                ?.filter((value) => value.includes('PERFIL_'))
+                ?.concat(tokenEligibilities);
+
+    const classes =
+        usedToken?.classGroupResult?.overwriteClassGroup === false
+            ? (user?.classGroups || [])?.map((classGroup) => classGroup._id)?.concat(tokenClasses)
+            : tokenClasses;
+
+    let newClassGroups = await ClassGroup.find({ _id: { $in: classes } });
+    const today = moment(new Date());
+    const partnerDays = usedToken?.classGroupResult?.days || 10;
+    const DATA_INICIO = today.startOf('day');
+    const DATA_FIM = moment().add(partnerDays, 'days');
+    const { startDate, limitDate } = _functions.getDates(DATA_INICIO, DATA_FIM);
+
+    for (const _class of newClassGroups) {
+        if (tokenClasses.includes(_class._id.toString())) {
+            _class.startDate = startDate;
+            _class.limitDate = limitDate;
+            _class.updatedAt = moment(new Date());
+        } else {
+            const existantGroup = user?.classGroups?.find(
+                (classGroup) => classGroup?._id?.toString() === _class?._id?.toString()
+            );
+            _class.startDate = existantGroup?.startDate || null;
+            _class.limitDate = existantGroup?.limitDate || null;
+            _class.updatedAt = existantGroup?.updatedAt || null;
+        }
+
+    }
+
+    return [newGroupsAD, tokenBlockedFields, newClassGroups];
+};
+
+const validatePartnerToken = (partner, token) => {
+    if (!partner) {
+        throw new ApiError('Token inválido ou parceiro não encontrado', 404);
+    }
+    const usedToken = partner?.keys.find((key) => key.key === token);
+    if (Date.now() > usedToken?.endDate) {
+        throw new ApiError('Token expirado', 403);
+    }
+
+    return usedToken;
 };

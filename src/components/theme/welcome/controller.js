@@ -1,6 +1,7 @@
 const _messages = require('../../../utils/messages')
 const { uploadVimeoAsync } = require('../../../utils/files')
 const { Welcome } = require('./model')
+const { removeFromCache } = require('../../../utils/cache/store')
 
 module.exports = {
     async getConfig(req, res) {
@@ -25,6 +26,8 @@ module.exports = {
         }
 
         await welcome.save();
+
+        removeFromCache('/theme/welcome');
 
         return _messages.success(res, req, welcome);
     }

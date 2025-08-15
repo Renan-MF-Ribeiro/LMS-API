@@ -58,7 +58,7 @@ module.exports = {
         try {
             const { trailId, userId } = req.query;
             const padlets = await Padlet.find({ trailId: String(trailId), userId: String(userId) }).select('text type userId createdAt')
-            console.log(trailId, userId, padlets)
+            // console.log(trailId, userId, padlets)
             _messages.success(res, req, padlets)
         } catch (error) {
             _messages.internalServer(

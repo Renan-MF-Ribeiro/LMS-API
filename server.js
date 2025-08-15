@@ -2,9 +2,8 @@ require('dotenv').config()
 const { createTerminus } = require('@godaddy/terminus')
 const { ldapClient } = require('./src/utils/auth')
 const { log, error } = require('./src/utils/logger')
+const { connectDatabase } = require('./src/utils/db')
 const app = require('./src/index')
-const port = process.env.PORT || 3000
-const HOSTNAME = process.env.HOSTNAME
 
 const {
     updateAverageCourses,
@@ -27,67 +26,82 @@ const {
     getMessengerConfig,
     getCronConfig,
     getUsersDataConfig,
-    getCompanyConfig
+    getCompanyConfig,
+    getChatIAConfig,
+    getDashboardConfig
 } = require('./src/components/config/business')
 const GamificationKafka = require('./src/components/gamification/kafka/broker');
 
-const server = app.listen(port, async () => {
-    try {
-        await GamificationKafka.start();
-    } catch (err) {
-        error('Error on connecting GamificationKafka: ' + err);
-        await GamificationKafka.stop();
-    }
+const environment = require('./src/environment');
 
-    try {
-        // Cria as configs caso não existam
-        await getMessengerConfig();
-        await getCronConfig();
-        await getUsersDataConfig();
-        await getCompanyConfig();
-    } catch (err) {
-        error('Error setting configs: ' + err);
-    }
+const port = environment.PORT || 3000;
+const HOSTNAME = environment.HOSTNAME;
 
-    if (HOSTNAME) {
-        const lastIndex = HOSTNAME.lastIndexOf('-');
-        const result = HOSTNAME.substring(lastIndex + 1);
+async function startApp() {
+    await connectDatabase();
 
-        if (result == "0") {
-            await cronNotifyResponsibleUsers()
-            await updateAverageCourses()
-            await updateAverageRatings()
-            await sendCourseReleaseNotification()
-            await sendCourseChargeNotification()
-            await deleteReprovedExamTracking()
-            await cronRevokeTrail()
-            await cronUpdateRecommendedTrails()
-            await getUsersLoadCron()
-            await executeInactiveOldOnboardingUsers()
-            await executeRemoveAutomaticEligibilityTags()
-            updateUserTemporaryTags()
-            executeCronAverageCourses()
-            startUpdateTrailsViewsCron()
+    const server = app.listen(port, async () => {
+        try {
+            await GamificationKafka.start();
+        } catch (err) {
+            error('Error on connecting GamificationKafka: ' + err);
+            await GamificationKafka.stop();
         }
-    }
 
-    log('Host: ' + HOSTNAME)
-    log('Listening on port: ' + port)
-})
+        try {
+            // Cria as configs caso não existam
+            await getMessengerConfig();
+            await getCronConfig();
+            await getUsersDataConfig();
+            await getCompanyConfig();
+            await getChatIAConfig();
+            await getDashboardConfig();
+        } catch (err) {
+            error('Error setting configs: ' + err);
+        }
 
-createTerminus(server, {
-    async healthCheck() {
-        return Promise.resolve('👩‍⚕️✅')
-    },
+        if (HOSTNAME) {
+            const lastIndex = HOSTNAME.lastIndexOf('-');
+            const result = HOSTNAME.substring(lastIndex + 1);
 
-    async onSignal() {
-        log('starting cleanup')
-        return Promise.all([
-            ldapClient.unbind(),
-        ])
-    },
+            if (result == "0") {
+                await cronNotifyResponsibleUsers()
+                await updateAverageCourses()
+                await updateAverageRatings()
+                await sendCourseReleaseNotification()
+                await sendCourseChargeNotification()
+                await deleteReprovedExamTracking()
+                await cronRevokeTrail()
+                await cronUpdateRecommendedTrails()
+                await getUsersLoadCron()
+                await executeInactiveOldOnboardingUsers()
+                await executeRemoveAutomaticEligibilityTags()
+                updateUserTemporaryTags()
+                executeCronAverageCourses()
+                startUpdateTrailsViewsCron()
+            }
+        }
 
-    onShutdown() {
-        log('cleanup finished, server is shutting down')
-    },
-})
+        log('Host: ' + HOSTNAME)
+        log('Listening on port: ' + port)
+    })
+
+    createTerminus(server, {
+        async healthCheck() {
+            return Promise.resolve('👩‍⚕️✅')
+        },
+
+        async onSignal() {
+            log('starting cleanup')
+            return Promise.all([
+                ldapClient.unbind(),
+            ])
+        },
+
+        onShutdown() {
+            log('cleanup finished, server is shutting down')
+        },
+    })
+}
+
+startApp();

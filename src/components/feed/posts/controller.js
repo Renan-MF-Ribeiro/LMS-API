@@ -1,19 +1,24 @@
 const { getUserByToken } = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
-const { populateUserFields, createNotification, getSegFieldsFromUser } = require('../buisiness');
 const {
-    sendMessageToKafka,
-    processTargetUsers,
-    sendCustomMessageToKafka,
-} = require('../../new-messages/business');
+    populateUserFields,
+    createNotification,
+    getSegFieldsFromUser,
+    populateSingleData,
+} = require('../buisiness');
+const { sendMessageToKafka, processTargetUsers } = require('../../new-messages/business');
 const fs = require('fs');
-const mime = require('mime-types');
 const FormData = require('form-data');
-const { getSegmentation, isSegmentationException, getMessengerConfig } = require('../../config/business');
+const {
+    getSegmentation,
+    isSegmentationException,
+    getMessengerConfig,
+} = require('../../config/business');
 
 const GamificationKafka = require('../../gamification/kafka/broker');
 const { EVENT_CATEGORY } = require('../../gamification/model');
+const { getUsersByTags } = require('../../users/business');
 
 module.exports = {
     async create(req, res) {
@@ -37,21 +42,21 @@ module.exports = {
             const uri = 'posts';
             const { data } = await socialApi.post(uri, body);
 
-             if (Object.keys(req?.files).length > 0) {
+            if (req?.files && Object.keys(req?.files)?.length > 0) {
                 const uploadContent = `posts/${data.post._id}/content`;
 
                 const formData = new FormData();
 
-                 Object.keys(req?.files).forEach((key, i) => {
-                     const file = req?.files[key];
+                Object.keys(req?.files).forEach((key, i) => {
+                    const file = req?.files[key];
 
-                     const filename = `${i}-${file.name.replace(/ /g, '-')}`;
+                    const filename = `${i}-${file.name.replace(/ /g, '-')}`;
 
-                     formData.append(filename, fs.createReadStream(file.path), {
-                         filename,
-                         contentType: file.type,
-                     });
-                 });
+                    formData.append(filename, fs.createReadStream(file.path), {
+                        filename,
+                        contentType: file.type,
+                    });
+                });
 
                 const result = await socialApi.patch(uploadContent, formData, {
                     headers: {
@@ -60,43 +65,23 @@ module.exports = {
                     },
                 });
 
-                 if (result?.data && data?.post) {
-                     data.post.content = result.data;
-                 }
+                if (result?.data && data?.post) {
+                    data.post.content = result.data;
+                }
             }
 
             if (body.notifyUsers === true && (body?.elegibilities || body?.elegibilitiesAnd)) {
-                const { _id, name } = await getUserByToken(req);
-                const title = 'Novo post publicado pela administração!';
-                const texthtml = '<br> <p>Olá! A administração publicou um novo post!</p> <br>';
-                const text = `${name}: ${body.title}`;
+                const users = await getUsersByTags(body.elegibilities);
 
-                const messengerConfig = await getMessengerConfig();
-
-                const messageList = {
-                    user: true,
-                    trail: false,
-                    listName: title,
-                    client: process.env.CLIENT_ID,
-                    userId: _id,
-                    elegibilities: body?.elegibilities,
-                    elegibilitiesAnd: body?.elegibilitiesAnd,
-                    sendToKafka: {
-                        category: 'notify',
-                        type: ['notification'],
-                        title: title,
-                        text: text,
-                        texthtml: texthtml,
-                        thumbnail: messengerConfig.emailTemplate.thumbnail,
-                        notificationlink: {
-                            url: 'https://v2.staging.happlearning.com.br/login/entrar?redirectTo=/home',
-                            trailid: '',
-                            item: '',
-                        },
-                    },
+                const config = {
+                    reqUser: 'equipe de comunicação',
+                    communication: ['notification'],
+                    type: 'admin_post',
+                    contentType: 'post',
+                    contentId: data?.post?._id,
+                    targetType: 'tag',
                 };
-
-                sendCustomMessageToKafka(messageList, process.env.TOPIC_MSG_LIST);
+                await createNotification(config, users);
             }
 
             return _messages.success(res, req, data);
@@ -281,7 +266,7 @@ module.exports = {
             const user = await getUserByToken(req);
             const userField = user[expectedField]?.toLowerCase();
 
-            const isAnException = isSegmentationException(user, segmentation.value)
+            const isAnException = isSegmentationException(user, segmentation.value);
             if (userField && !isAnException) {
                 queryParams.append('owner', userField);
             }
@@ -386,22 +371,28 @@ module.exports = {
             const { name, _id, networkLogin } = await getUserByToken(req);
 
             const uri = 'posts/comments';
-            const { data } = await socialApi.put(uri, req.body);
-            const PopulatedData = await populateUserFields('user', 'userId', data.data);
+            const [{ data }, originalPost] = await Promise.all([
+                socialApi.put(uri, req.body),
+                socialApi.get(`posts/${req.body.postId}`),
+            ]);
+
+            const PopulatedData = await populateSingleData('user', 'userId', data.data);
             const response = { data: PopulatedData, total: data.total };
 
-            const { userId: postOwnerId } = await socialApi.get(`posts/${req.body.postId}`);
-            const isReplyingOwnPost = _id === postOwnerId;
+            const originalPostOwnerId = originalPost.data?.userId;
+            const isReplyingOwnPost = _id === originalPostOwnerId;
 
             if (isMentioningSomeone) {
-                const mentionedUsers = isMentioningSomeone.filter((user) => user !== postOwnerId);
+                const mentionedUsers = isMentioningSomeone.filter(
+                    (user) => user !== originalPostOwnerId
+                );
 
                 const config = {
                     reqUser: name,
                     communication: ['notification'],
                     type: 'mention',
                     contentType: 'comentário',
-                    contentId: PopulatedData._id,
+                    contentId: data?.data?.postId,
                 };
                 await createNotification(config, mentionedUsers);
             }
@@ -412,19 +403,20 @@ module.exports = {
                     communication: ['notification'],
                     type: 'comment',
                     contentType: isReplyingPost ? 'post' : 'comentário',
+                    contentId: data?.data?.postId,
                 };
-                await createNotification(config, postOwnerId);
+                await createNotification(config, originalPostOwnerId);
             }
 
-            if(!isReplyingOwnPost) {
+            if (!isReplyingOwnPost) {
                 await GamificationKafka.publishEventRuleValidation({
                     events: [EVENT_CATEGORY.FEED_COMMENT, EVENT_CATEGORY.FEED_COMMENT_OWNER],
                     identifier: networkLogin,
                     meta: {
                         postId: req.body.postId,
-                        comment: req.body.comment
-                    }
-                })
+                        comment: req.body.comment,
+                    },
+                });
             }
 
             return _messages.success(res, req, response);
@@ -468,15 +460,15 @@ module.exports = {
             const { data } = await socialApi.put(uri, req.body);
 
             if (req?.body?.target && req?.body?.postId) {
-                const user = await getUserByToken(req)
+                const user = await getUserByToken(req);
 
                 await GamificationKafka.publishEventRuleValidation({
                     events: [EVENT_CATEGORY.FEED_LIKE, EVENT_CATEGORY.FEED_LIKE_OWNER],
                     identifier: user.networkLogin,
                     meta: {
-                        postId: req.body.postId
-                    }
-                })
+                        postId: req.body.postId,
+                    },
+                });
             }
 
             return _messages.success(res, req, data);
@@ -500,8 +492,8 @@ module.exports = {
 
             req.body.sharedBy = {
                 userId: _id,
-                userName: networkLogin
-            }
+                userName: networkLogin,
+            };
 
             const uri = 'posts/shares';
             const { data } = await socialApi.post(uri, req.body);
@@ -521,9 +513,9 @@ module.exports = {
                     identifier: networkLogin,
                     meta: {
                         postId: req.body.postId,
-                        usersWhoShared: users
-                    }
-                })
+                        usersWhoShared: users,
+                    },
+                });
             }
 
             return _messages.success(res, req, data);
@@ -617,21 +609,3 @@ module.exports = {
         }
     },
 };
-
-async function createMessagesFromBackend(body) {
-    try {
-        const campaign = body;
-        const target = campaign.target;
-        let targetUsers = [];
-
-        if (!target.value.user) {
-            targetUsers = await processTargetUsers(target, campaign.category);
-        } else {
-            targetUsers.push({ ...target.value.user });
-        }
-
-        await sendMessageToKafka(campaign, targetUsers);
-    } catch (error) {
-        console.log(error);
-    }
-}

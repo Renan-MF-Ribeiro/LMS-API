@@ -91,6 +91,37 @@ async function populateUserFields(fieldName, reference, data) {
 
     return processData(data, userMap, avatarMap, true);
 }
+async function populateSingleData(fieldName, reference, data) {
+    // Salva todos os ID's de usuários que devem ser populado de 'data'
+    const ids = new Set();
+    const avatarIds = new Set();
+
+    if (data[reference]) {
+        ids.add(data[reference].toString());
+        if (data.avatar) avatarIds.add(data.avatar.toString());
+    }
+
+    // Consultar usuários e avatares no banco em paralelo
+    const [users, avatars] = await Promise.all([
+        User.find({ _id: { $in: [...ids] } }, '_id name profilePhoto').lean(),
+        Avatar.find({ _id: { $in: [...avatarIds] } }, '_id name image').lean(),
+    ]);
+
+    const userMap = new Map(users.map((user) => [user._id.toString(), user]));
+    const avatarMap = new Map(avatars.map((avatar) => [avatar._id.toString(), avatar]));
+
+    const user = userMap.get(data[reference]?.toString());
+    if (!user) return null;
+
+    const populatedItem = {
+        [fieldName]: user,
+        ...data,
+        [reference]: undefined,
+        avatar: avatarMap.get(data.avatar?.toString()) || null,
+    };
+
+    return populatedItem;
+}
 
 async function populateMembers(data) {
     const ids = data.data;
@@ -106,34 +137,37 @@ async function populateTrailFields(data) {
 }
 
 async function createNotification(config, users) {
-    let text,
-        texthtml,
-        title = undefined;
 
-    // Config.TYPE
-    // Valores que podem ser recebidos em "config.type" ('mention', 'comment', 'share')
-    // É a AÇÃO que está sendo notificada.
-    const shareContent = config.contentType === 'post' ? 'um post' : 'uma trilha';
-    const typesOfNotification = {
-        mention: 'mencionou você em um',
-        comment: 'respondeu seu',
-        share: `compartilhou ${shareContent} com você`,
-    };
-
-    // Config.CONTENT
-    // Valores que podem ser recebidos em "config.contetType" ("post", "comentário", "trilha")
-    // É a ENTIDADADE que está sendo compartilhada
-
-    // As frases são criadas concatenando a ação e o objeto do que está sendo notificado.
-    text = `Olá! O usuário ${config.reqUser} ${typesOfNotification[config.type]} ${
-        config.type !== 'share' ? config.contentType : ''
-    }!`;
-    texthtml = `<br> <p>Olá! O usuário ${config.reqUser} ${typesOfNotification[config.type]} ${
-        config.type !== 'share' ? config.contentType : ''
-    }!</p> <br>`;
-    title = `Happlearning - ${config.reqUser} ${typesOfNotification[config.type]} ${
-        config.type !== 'share' ? config.contentType : ''
-    }!`;
+    const shareText = config.contentType === 'post' ? `${config.reqUser} compartilhou um post. Clique e confira!` : `${config.reqUser} compartilhou uma trilha: ${config.contentName}. Clique e confira!`
+    const shareTitle = config.contentType === 'post' ? `${config.reqUser} compartilhou um post.` : `${config.reqUser} compartilhou uma trilha: ${config.contentName}.`
+    const values =
+    {
+        admin_post: {
+            text: 'Uma nova publicação foi feita pela equipe de comunicação. Clique e confira!',
+            texthtml:
+                'Novo post da equipe de comunicação.',
+            title: 'Novo post da equipe de comunicação',
+        },
+        mention: {
+            text: 'Mençionou você em um comentário. Clique e confira!',
+            texthtml: 'Mençionou você em um comentário. Clique e confira!',
+            title: 'Nova menção em comentário.',
+        },
+        comment: {
+            text: 'Comentou sua publicação. Clique e confira!',
+            texthtml: 'Comentou sua publicação. Clique e confira!',
+            title: 'Novo comentário.',
+        },
+        share: {
+            text: shareText,
+            texthtml: shareText,
+            title: shareTitle,
+        },
+    }
+        ;
+    const text = values[config?.type]?.text;
+    const texthtml = values[config?.type]?.texthtml;
+    const title = values[config?.type]?.title;
 
     const messengerConfig = await getMessengerConfig();
 
@@ -145,7 +179,7 @@ async function createNotification(config, users) {
         category: 'notify',
         mode: 'manual',
         target: {
-            type: 'users',
+            type: config.targetType || 'users',
             value: {
                 users,
             },
@@ -156,22 +190,21 @@ async function createNotification(config, users) {
         },
         thumbnail: messengerConfig.emailTemplate.thumbnail,
     };
-
     try {
         async function createMessagesFromBackend(campaign) {
             const target = campaign.target;
 
             let targetUsers = [];
 
-            if (!target.value.user) {
+            if (!target.value.users) {
                 targetUsers = await processTargetUsers(target, campaign.category);
             } else {
-                targetUsers.push({ ...target.value.user });
+                Array.isArray(target?.value?.users)
+                    ? targetUsers.push(...target.value.users)
+                    : targetUsers.push(target.value.users);
             }
-
             await sendMessageToKafka(campaign, targetUsers);
         }
-
         await createMessagesFromBackend(message);
     } catch (error) {
         console.log(error);
@@ -218,4 +251,5 @@ module.exports = {
     populateMembers,
     createNotification,
     getSegFieldsFromUser,
+    populateSingleData,
 };

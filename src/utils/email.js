@@ -4,6 +4,8 @@ const sgMail = require('@sendgrid/mail')
 const { sendMfaToKafka, sendMessageToKafka, sendRecoveryMessageToKafka } = require('../components/new-messages/business')
 const { processTargetUsers } = require('../components/new-messages/business')
 const { getCompanyConfig } = require('../components/config/business')
+const { i18nBusiness } = require('../components/i18n/business')
+const { LOCALE } = require('../components/i18n/model')
 sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
 module.exports = {
@@ -13,9 +15,9 @@ module.exports = {
                 let message
 
                 if (hasEmail) {
-                    message = `Olá ${userData.name}, você solicitou a recuperação da sua senha!<br> Acesse a <a href="${resetPasswordUrl}">plataforma</a> e bons estudos.`
+                    message = `Olá ${userData.name}, foi solicitada a recuperação de senha!<br> Acesse a <a href="${resetPasswordUrl}">plataforma</a> e bons estudos.`
                 } else {
-                    message = `Olá, o usuário ${userData.name} com número de CPF ${userData.cpf} requisitou troca de senha. A nova senha gerada para o usuário é: <b> ${newPass} </b> <br> Ao entrar na plataforma o mesmo deverá obrigatoriamente trocar a senha <br> Acesse a <a href="${resetPasswordUrl}">plataforma</a> e bons estudos.`
+                    message = `Olá, foi requisitada a troca de senha para o usuário ${userData.name} com número de CPF ${userData.cpf}. A nova senha gerada para o usuário é: <b> ${newPass} </b> <br> Ao entrar na plataforma o mesmo deverá obrigatoriamente trocar a senha <br> Acesse a <a href="${resetPasswordUrl}">plataforma</a> e bons estudos.`
                 }
                 const html = `<html>
                                 <head></head>
@@ -54,7 +56,7 @@ module.exports = {
     sendResetedPasswordToUser (strTo, newPass = '', domain = '', userData) {
         return new Promise(async (resolve, reject) => {
             try {
-                const message = `Olá ${userData.name}, um administrador gerou uma nova senha para você. Sua nova senha é: <b> ${newPass} </b> <br> Acesse a <a href="${domain}">plataforma</a> e bons estudos.`
+                const message = `Olá ${userData.name}, um administrador gerou uma nova senha. A nova senha é: <b> ${newPass} </b> <br> Acesse a <a href="${domain}">plataforma</a> e bons estudos.`
 
                 const html = `<html>
                                 <head></head>
@@ -99,8 +101,25 @@ module.exports = {
             try {
                 const { companyName, mfaSupportEmail } = await getCompanyConfig();
 
-                let message;
-                message = `Olá, ${userData.name}! Seu token de acesso ao portal ${companyName} é <b>${token}</b>. <br> <br> Com ele, você pode ingressar na sua conta com segurança. <br> <br> Em caso de dúvidas ou dificuldades para fazer seu login, entre em contato conosco pelo e-mail ${mfaSupportEmail}. Teremos prazer em ajudá-lo(a)!`;
+                const title = await i18nBusiness.translate({
+                    locale: LOCALE.BR,
+                    key: 'utils.email.sendMultiFactor.title',
+                    vars: {
+                        companyName
+                    }
+                })
+                
+                const message = await i18nBusiness.translate({
+                    locale: LOCALE.BR,
+                    key: 'utils.email.sendMultiFactor.message',
+                    vars: {
+                        userName: userData.name,
+                        companyName,
+                        token,
+                        mfaSupportEmail
+                    }
+                })
+
                 const body = {
                     category: "notify",
                     communication: ["email"],
@@ -115,7 +134,7 @@ module.exports = {
                     },
                     text: message,
                     texthtml: message,
-                    title: `Seu token de acesso ao portal ${companyName} foi gerado com sucesso!`,
+                    title,
                     multifactor: true,
                     resetPasswordUrl
                 };
@@ -156,7 +175,7 @@ module.exports = {
                           </tr>
                           <tr>
                            <td style="padding: 20px 0 30px 0;">
-                            Para começar a utilizar sua conta na plataforma, clique no botão abaixo
+                            Para começar a utilizar na plataforma, clique no botão abaixo
                            </td>
                           </tr>
                           <tr>
@@ -178,7 +197,7 @@ module.exports = {
                 await sgMail.send({
                     from: 'Happlearning <suporte.happlearning@happmobi.com.br>',
                     to: strTo,
-                    subject: 'Ativação da sua conta para treinamento sobre Happlearning',
+                    subject: 'Ativação da conta para treinamento sobre Happlearning',
                     text: 'Ativação de conta',
                     category: `${process.env.CLIENT_ID}`,
                     html,

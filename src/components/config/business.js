@@ -7,6 +7,9 @@ const {
     CompanyConfigModel,
     MatrixConfigModel,
     MATRIX_VISIBILITY_MODE,
+    ChatIAConfigModel,
+    DashboardConfigModel,
+    ConfigTypes,
 } = require('./model');
 
 const { getUserByToken } = require('../../utils/functions');
@@ -84,12 +87,32 @@ module.exports = {
         }
     },
 
+    async getManagerRule() {
+        let rule = await ConfigModel.findOne({
+            type: ConfigTypes.ManagerRule,
+        });
+        if (!rule) {
+            rule = await ConfigModel.findOneAndUpdate(
+                { type: ConfigTypes.ManagerRule },
+                {
+                    value: {
+                        rules: [],
+                        useIsManagerFlag: true,
+                    }
+                },
+                { new: true, upsert: true }
+            );
+        }
+
+        return rule.value;
+    },
+
     async getMessengerConfig() {
         const config = await MessengerConfigModel.findOne().sort({ _id: -1 });
 
         if (config) return config.value;
 
-        console.log('Creating messenger config');
+        // console.log('Creating messenger config');
         return (await MessengerConfigModel.create({}))?.value;
     },
 
@@ -98,7 +121,7 @@ module.exports = {
 
         if (config) return config.value;
 
-        console.log('Creating cron config');
+        // console.log('Creating cron config');
         return (await CronConfigModel.create({}))?.value;
     },
 
@@ -107,7 +130,7 @@ module.exports = {
 
         if (config) return config.value;
 
-        console.log('Creating users data config');
+        // console.log('Creating users data config');
         return (await UsersDataConfigModel.create({}))?.value;
     },
 
@@ -116,7 +139,7 @@ module.exports = {
 
         if (config) return config.value;
 
-        console.log('Creating company config');
+        // console.log('Creating company config');
         return (await CompanyConfigModel.create({}))?.value;
     },
 
@@ -126,8 +149,26 @@ module.exports = {
         return config || (await MatrixConfigModel.create({}));
     },
 
-    async findUsersByMatrixConfig(applier, searchBy) {
-        const { value } = await module.exports.getMatrixConfig();
+    async getChatIAConfig() {
+        const config = await ChatIAConfigModel.findOne();
+
+        return config || (await ChatIAConfigModel.create({}));
+    },
+
+    async getDashboardConfig() {
+        const config = await DashboardConfigModel.findOne();
+
+        return config || (await DashboardConfigModel.create({}));
+    },
+
+    async findUsersByMatrixConfig(req) {
+        const [rule, applier] = await Promise.all([
+            module.exports.getMatrixConfig(),
+            getUserByToken(req),
+        ]);
+        const { value } = rule;
+        const limit = Number(req.query?.pageSize) || 10;
+
         const query = {
             $and: [
                 {
@@ -139,16 +180,17 @@ module.exports = {
             ],
         };
 
-        if (searchBy) {
+        if (req.query?.searchBy) {
+            const q = req.query.searchBy.replace(/[^a-zA-Z0-9 ]/g, "")
             query.$and.push({
                 $or: [
-                    { name: { $regex: searchBy, $options: 'i' } },
-                    { email: { $regex: searchBy, $options: 'i' } },
-                    { networkLogin: { $regex: searchBy, $options: 'i' } },
+                    { name: { $regex: q, $options: 'i' } },
+                    { email: { $regex: q, $options: 'i' } },
+                    { networkLogin: { $regex: q, $options: 'i' } },
                 ],
             });
         }
-        
+
         if (value.visibilityMode === MATRIX_VISIBILITY_MODE.MANAGER) {
             query.$and.push({ managerRegistration: applier.registration });
         }
@@ -157,7 +199,9 @@ module.exports = {
         //     const tags = applier.groupsAD.filter((tag) => !String(tag).startsWith('PERFIL_'));
         //     query.$and.push({ groupsAD: { $in: tags } });
         // }
-
+        if (limit) {
+            return User.find(query).limit(limit);
+        }
         return User.find(query);
     },
 };

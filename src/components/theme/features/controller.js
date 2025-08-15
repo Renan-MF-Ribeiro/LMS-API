@@ -2,6 +2,8 @@ const { Features } = require('./model')
 const _messages = require('../../../utils/messages')
 const { getDbCurrentFeatures } = require('../../../utils/features')
 const { getAppMaxFileSize } = require('../../../utils/files');
+const { removeFromCache } = require('../../../utils/cache/store');
+const { Channel } = require('../../channels/model');
 
 module.exports = {
     async update(req, res) {
@@ -11,6 +13,32 @@ module.exports = {
             features = await Features.findByIdAndUpdate(features._id, req.body, { new: true })
         } else {
             features = await Features.create(req.body)
+        }
+
+        removeFromCache('/theme/features');
+
+        if (features.mentoring && !(await Channel.countDocuments({ type: 'mentoring' }))) {
+            await Channel.create({
+                enabled: true,
+                tags: ['ELEGE_geral'],
+                banners: [],
+                idSections: [],
+                title: 'Mentorias',
+                position: 99,
+                type: 'mentoring'
+            });
+        }
+
+        if (features.news && !(await Channel.countDocuments({ type: 'news' }))) {
+            await Channel.create({
+                enabled: true,
+                tags: ['ELEGE_geral'],
+                banners: [],
+                idSections: [],
+                title: 'Notícias',
+                position: 99,
+                type: 'news'
+            });
         }
 
         return _messages.success(res, req, features)

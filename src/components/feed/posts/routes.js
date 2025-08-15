@@ -18,10 +18,11 @@ module.exports = express
     .get('/:postId/comments', _controller.loadMoreComments)
     .put('/likes', _controller.like)
     .post('/shares', _controller.share)
+    .get('/:postId', _controller.findPostById)
 
     // Rotas de admin
     .get('/admin', isEngagementManager, _controller.listPostToBeModerated)
-    .get('/:postId', isEngagementManager, _controller.findPostById)
+    
     .post('/report/handle/:postId', isEngagementManager, _controller.handleReportedPost)
     .put('/moderate/:postId', formidable(), isEngagementManager, _controller.updatePost)
     .delete('/:postId', isEngagementManager, _controller.delete)
