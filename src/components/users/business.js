@@ -54,9 +54,6 @@ async function createGroupsByGroupsAD(groupsAD) {
     );
 }
 
-/**
- * touch dots .
- */
 module.exports = {
     async getLoginConfig(selectFields) {
         const lastConfigurationQuery = ConfigLogin.findOne().sort({ createdAt: -1 });
