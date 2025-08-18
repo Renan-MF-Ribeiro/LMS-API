@@ -54,6 +54,9 @@ async function createGroupsByGroupsAD(groupsAD) {
     );
 }
 
+/**
+ * touch dots .
+ */
 module.exports = {
     async getLoginConfig(selectFields) {
         const lastConfigurationQuery = ConfigLogin.findOne().sort({ createdAt: -1 });
@@ -421,7 +424,7 @@ module.exports = {
 
     /**
      * Processes user data for loading into the system, handling authentication, group assignments, and data formatting.
-     * 
+     *
      * @async
      * @param {Object} data - The user data object to be processed
      * @param {Array<string>} [elegibilityFields=[]] - Array of field names to use for eligibility group assignment
