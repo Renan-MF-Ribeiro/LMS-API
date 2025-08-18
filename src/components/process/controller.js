@@ -51,7 +51,7 @@ const processController = {
 
         const file = req.files?.file
         if (file) {
-            body.file = await azureBlob(banner, 'process/banners');
+            //body.file = await azureBlob(banner, 'process/files');
         }
 
         try {
