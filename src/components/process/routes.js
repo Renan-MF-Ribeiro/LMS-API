@@ -10,5 +10,5 @@ module.exports = express
 
     //.get('/user/:id', _controller.findByUserId)
 
-    .post('/', _controller.create)
+    .post('/', formidable(), _controller.create)
     .delete('/:id', _controller.delete);
