@@ -1805,8 +1805,7 @@ module.exports = {
                 await sendAccountsToKafka([account]);
             }
             await User.findByIdAndUpdate(_id, req.body);
-
-            const foundUser = await User.findById(_id).lean();
+            const foundUser = await User.findOne({_id}).lean();
 
             WebhooksController.dispatch('update', 'users', false, {
                 ...foundUser,
