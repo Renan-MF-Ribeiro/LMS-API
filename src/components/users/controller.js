@@ -145,7 +145,8 @@ async function handleBlockUser(user) {
                 'Conta bloqueada',
                 `Olá ${user.name}, uma nova tentativa de acesso a conta não foi permita pois a conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
             );
-            return 'Usuário bloqueado temporariamente';
+            
+            throw new ApiError('Usuário bloqueado temporariamente', 403);
         }
     }
 }
