@@ -41,14 +41,9 @@ module.exports = {
     async update(req, res) {
         try {
             const body = req.body
-            let webhooks = await Webhooks.findOne({ _id: body._id }).sort({ createdAt: -1 })
-            if (webhooks) {
-                webhooks = await Webhooks.findByIdAndUpdate(webhooks._id, req.body)
-            } else {
-                webhooks = await Webhooks.create(req.body)
-            }
+            const webhook = await Webhooks.findOneAndUpdate({ _id: body._id }, body, { new: true, upsert: true })
 
-            return _messages.success(res, req, webhooks)
+            return _messages.success(res, req, webhook)
 
         } catch (error) {
             _messages.internalServer(

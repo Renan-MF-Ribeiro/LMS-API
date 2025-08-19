@@ -716,7 +716,7 @@ module.exports = {
 
             const firstLogin = !user?.passwordValid && !entryRecord;
 
-            WebhooksController.dispatch('APASlogin', 'users', false, {
+            WebhooksController.dispatch('auth', 'users', false, {
                 ...user,
                 password: undefined,
             });

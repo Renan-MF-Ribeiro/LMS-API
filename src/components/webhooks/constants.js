@@ -145,6 +145,14 @@ const WebhooksDefault = [
         target: "users",
         action: "create",
 
+    },
+    {
+        status: false,
+        label: "Autenticação",
+        endpoint: "http://localhost:5000/webhook",
+        target: "users",
+        action: "auth",
+
     }
 ]
 
