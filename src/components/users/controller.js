@@ -249,7 +249,7 @@ async function generateTokens(user, login, password, tokenIdpProfiles, res) {
 }
 
 module.exports = {
-    async create (req, res) {
+    async create(req, res) {
         try {
             const isOnboarding = Boolean(req.body?.onboarding)
 
@@ -292,7 +292,7 @@ module.exports = {
                 );
             }
 
-            if (isOnboarding && !req.body?.cpf)  {
+            if (isOnboarding && !req.body?.cpf) {
                 return _messages.forbidden(
                     res,
                     req,
@@ -908,7 +908,7 @@ module.exports = {
                     );
                 }
             }
-          
+
             const [tokens, isManager, entryRecord] = await Promise.all([
                 generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', tokenIdpProfiles, res),
                 managerBusiness.isUserManager(user),
@@ -1394,7 +1394,7 @@ module.exports = {
                 false,
                 replaceMap
             );
-            
+
             const [account, existingUser] = await Promise.all([
                 processUserAccount(processedUser),
                 User.findOne({
@@ -1456,7 +1456,6 @@ module.exports = {
             await User.findByIdAndUpdate(user._id, {
                 ...user.processedUser,
             });
-
             WebhooksController.dispatch('update', 'users', false, {
                 ...user.processedUser,
                 password: undefined,
@@ -1489,8 +1488,12 @@ module.exports = {
             );
 
             await User.insertMany(newUsers);
-
-            WebhooksController.dispatch('create', 'users', true, newUsers);
+            for (const user of newUsers) {
+                WebhooksController.dispatch('update', 'users', false, {
+                    ...user,
+                    password: undefined,
+                });
+            }
 
             if (messengerConfig.sendUsersToMicrosservice) {
                 await sendAccountsToKafka(usersToSend);
