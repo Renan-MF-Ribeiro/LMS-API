@@ -7,6 +7,9 @@ const { WebhooksDefault } = require('./constants')
 module.exports = {
     async dispatch(action, target, load = false, data) {
         try {
+            if (target === 'users' && !Array.isArray(data) && data.password)
+                delete data.password
+
             const webhook = await Webhooks.findOne({ target, action }).lean()
             if (webhook?.status) {
                 // console.log('DISPARANDO WEBHOOK')
@@ -63,7 +66,7 @@ module.exports = {
 
     },
 
-    async getWebhooks (req, res) {
+    async getWebhooks(req, res) {
         try {
 
             const data = await Webhooks.find()
