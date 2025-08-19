@@ -7,6 +7,9 @@ const { WebhooksDefault } = require('./constants')
 module.exports = {
     async dispatch(action, target, load = false, data) {
         try {
+            if (target === 'users' && !Array.isArray(data) && data.password)
+                delete data.password
+
             const webhook = await Webhooks.findOne({ target, action }).lean()
             if (webhook?.status) {
                 // console.log('DISPARANDO WEBHOOK')
@@ -41,9 +44,14 @@ module.exports = {
     async update(req, res) {
         try {
             const body = req.body
-            const webhook = await Webhooks.findOneAndUpdate({ _id: body._id }, body, { new: true, upsert: true })
+            let webhooks = await Webhooks.findOne({ _id: body._id }).sort({ createdAt: -1 })
+            if (webhooks) {
+                webhooks = await Webhooks.findByIdAndUpdate(webhooks._id, req.body)
+            } else {
+                webhooks = await Webhooks.create(req.body)
+            }
 
-            return _messages.success(res, req, webhook)
+            return _messages.success(res, req, webhooks)
 
         } catch (error) {
             _messages.internalServer(
@@ -58,7 +66,7 @@ module.exports = {
 
     },
 
-    async getWebhooks (req, res) {
+    async getWebhooks(req, res) {
         try {
 
             const data = await Webhooks.find()
