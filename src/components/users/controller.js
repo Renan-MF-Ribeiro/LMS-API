@@ -1488,8 +1488,8 @@ module.exports = {
                 `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
             );
 
-            await User.insertMany(newUsers);
-            for (const user of newUsers) {
+            const insertedUsers = await User.insertMany(newUsers);
+            for (const user of insertedUsers) {
                 WebhooksController.dispatch('update', 'users', false, {
                     ...user,
                     password: undefined,
