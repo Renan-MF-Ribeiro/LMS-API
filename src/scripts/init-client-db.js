@@ -12,6 +12,7 @@ async function updateMonolitoIds(connection, { clientId, domainToReplace, domain
     const sectionsMap = new Map();
     const trailsMap = new Map();
     const itemsMap = new Map();
+    const coursesMap = new Map();
 
     const { db } = connection;
 
@@ -134,6 +135,25 @@ async function updateMonolitoIds(connection, { clientId, domainToReplace, domain
         await db.collection('items').deleteOne({ _id: item._id });
     }
 
+    console.log('Atualizando cursos');
+
+    const courses = await db.collection('courses').find().toArray();
+
+    for await (const course of courses) {
+        const newCourseId = new ObjectId();
+
+        coursesMap.set(String(course._id), String(newCourseId));
+
+        await db.collection('courses').insertOne({
+            ...course,
+            _id: newCourseId,
+            oldId: course._id,
+            thumbPath: course.thumbPath?.replace(domainToReplace, domainToReplaceWith) ?? null,
+        });
+
+        await db.collection('courses').deleteOne({ _id: course._id });
+    }
+
     console.log('Atualizando sessoes nos canais');
 
     // Atualiza ID das sessoes nos canais
@@ -213,6 +233,7 @@ async function updateMonolitoIds(connection, { clientId, domainToReplace, domain
     await db.collection('sections').updateMany({}, { $unset: { oldId: '', oldID: '' } });
     await db.collection('trails').updateMany({}, { $unset: { oldId: '', oldID: '' } });
     await db.collection('items').updateMany({}, { $unset: { oldId: '', oldID: '' } });
+    await db.collection('courses').updateMany({}, { $unset: { oldId: '', oldID: '' } });
 
     console.log('Gerando relatorios');
 
@@ -262,6 +283,18 @@ async function updateMonolitoIds(connection, { clientId, domainToReplace, domain
             { header: 'New ID', key: 'newId' },
         ],
         { fileName: reportName + '_items' }
+    );
+
+    await generateReport(
+        Array.from(coursesMap.entries()).map(([oldId, newId]) => ({
+            oldId: String(oldId),
+            newId: String(newId),
+        })),
+        [
+            { header: 'Old ID', key: 'oldId' },
+            { header: 'New ID', key: 'newId' },
+        ],
+        { fileName: reportName + '_courses' }
     );
 
     return {
