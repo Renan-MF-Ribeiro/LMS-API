@@ -10,11 +10,12 @@ module.exports = {
             if (target === 'users' && !Array.isArray(data) && data.password)
                 delete data.password
 
+            const { password, ...dataWithoutPassword } = data
             const webhook = await Webhooks.findOne({ target, action }).lean()
             if (webhook?.status) {
                 // console.log('DISPARANDO WEBHOOK')
                 const body = {
-                    data,
+                    data: dataWithoutPassword,
                     label: webhook.label,
                     endpoint: webhook.endpoint,
                     target: webhook.target,

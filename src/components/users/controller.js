@@ -343,7 +343,7 @@ module.exports = {
 
             const created = await User.findOne({ networkLogin: processedUser.networkLogin }).lean();
 
-            WebhooksController.dispatch('create', 'users', false, {
+             WebhooksController.dispatch('create', 'users', false, {
                 ...created,
                 password: undefined,
             });
@@ -572,7 +572,7 @@ module.exports = {
 
             const newUser = await User.create(userData);
 
-            WebhooksController.dispatch('create', 'users', false, {
+           WebhooksController.dispatch('create', 'users', false, {
                 ...newUser.toObject(),
                 password: undefined,
             });
@@ -668,7 +668,7 @@ module.exports = {
         }
         let user = await User.findOne({
             _id: new mongoose.Types.ObjectId(req.user._id),
-        });
+        }).lean();
         if (user.loginType && user.loginType !== 'FORM' && user.loginType !== 'BOTH') {
             return _messages.forbidden(
                 res,
@@ -1456,11 +1456,10 @@ module.exports = {
         for (const user of existingUsers) {
             const updatedUser = await User.findOneAndUpdate({ _id: user._id }, {
                 ...user.processedUser,
-            }, { $new: true });
-            WebhooksController.dispatch('update', 'users', false, {
-                ...updatedUser,
-                password: undefined,
-            });
+            }, { $new: true }).lean();
+
+            const { password, ...userWithoutPassword } = updatedUser
+            WebhooksController.dispatch('update', 'users', false, userWithoutPassword);
 
             await Tracking.updateMany(
                 { userLogin: user.processedUser.cpf },
@@ -1490,10 +1489,8 @@ module.exports = {
 
             const insertedUsers = await User.insertMany(newUsers);
             for (const user of insertedUsers) {
-                WebhooksController.dispatch('update', 'users', false, {
-                    ...user,
-                    password: undefined,
-                });
+                const { password, ...userWithoutPassword } = user
+                WebhooksController.dispatch('update', 'users', false, userWithoutPassword);
             }
 
             if (messengerConfig.sendUsersToMicrosservice) {
@@ -1811,10 +1808,8 @@ module.exports = {
             await User.findByIdAndUpdate(_id, req.body);
             const foundUser = await User.findOne({ _id }).lean();
 
-            WebhooksController.dispatch('update', 'users', false, {
-                ...foundUser,
-                password: undefined,
-            });
+            const { password, ...userWithoutPassword } = foundUser
+            WebhooksController.dispatch('update', 'users', false, userWithoutPassword);
 
             if (userUpdated?.status) {
                 await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status);
