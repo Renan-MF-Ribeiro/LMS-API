@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const bcrypt = require('bcryptjs');
 
 const { getSectionTrailId, isSectionTrailInfo } = require("../components/sections/business");
 
@@ -271,6 +272,27 @@ async function updateMonolitoIds(connection, { clientId, domainToReplace, domain
     }
 }
 
+async function updateDefaultUsers(connection, clientId) {
+    const salt = bcrypt.genSaltSync(10);
+    const defaultPasswordHash = bcrypt.hashSync('Minhasenha@1', salt);
+
+    const { db } = connection;
+
+    await db.collection('users')
+        .updateMany({}, {
+            $set: {
+                clientId,
+                passwordValid: true,
+                password: [{
+                    hash: defaultPasswordHash,
+                    valid: true,
+                    createdAt: new Date()
+                }]
+            }
+        });
+
+}
+
 async function run() {
     console.log('DB', process.env.DB_HOST);
 
@@ -279,12 +301,16 @@ async function run() {
         useUnifiedTopology: true,
     });
 
+    const clientId = 0;
+
     await updateMonolitoIds(connection, {
-        clientId: 0,
+        clientId,
         domainToReplace: 'lms.experimente1.happmobi.com.br',
         domainToReplaceWith: 'lms.cliente.happlearning.com.br',
         reportName: 'monolito_ids'
     });
+
+    await updateDefaultUsers(connection, clientId);
 
     console.log('Script concluído com sucesso!');
 
