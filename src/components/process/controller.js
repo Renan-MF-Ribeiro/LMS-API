@@ -46,6 +46,35 @@ const processController = {
         }
     },
 
+    // Manual trigger for testing
+    generateRecords: async (req, res) => {
+        try {
+            const id = req.params.id;
+            const { data } = await processApi.get(`/process/generate-records/${id}`,);
+            res.status(data.statusCode).json(data.data);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    // Manual trigger for testing
+    processRecords: async (req, res) => {
+        try {
+            const id = req.params.id;
+            const { data } = await processApi.get(`/process/process-records/${id}`,);
+            res.status(data.statusCode).json(data.data);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+
     create: async (req, res) => {
         const body = req.fields?.payload ? JSON.parse(req.fields?.payload) : req.body;
 
