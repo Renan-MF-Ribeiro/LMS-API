@@ -383,7 +383,7 @@ module.exports = {
                     text: text,
                     texthtml: texthtml,
                     thumbnail: messengerConfig.emailTemplate.thumbnail,
-                    title: `Aviso Happlearning`
+                    title: messengerConfig.emailTemplate.title || `Aviso Happlearning`
                 };
                 createMessagesFromBackend(message);
 
@@ -409,7 +409,7 @@ module.exports = {
                     text: text,
                     texthtml: texthtml,
                     thumbnail: messengerConfig.emailTemplate.thumbnail,
-                    title: `Aviso Happlearning`
+                    title: messengerConfig.emailTemplate.title || `Aviso Happlearning`
                 };
                 createMessagesFromBackend(message);
             }
