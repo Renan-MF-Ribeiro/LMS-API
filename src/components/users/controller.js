@@ -145,7 +145,8 @@ async function handleBlockUser(user) {
                 'Conta bloqueada',
                 `Olá ${user.name}, uma nova tentativa de acesso a conta não foi permita pois a conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
             );
-            return 'Usuário bloqueado temporariamente';
+            
+            throw new ApiError('Usuário bloqueado temporariamente', 403);
         }
     }
 }
@@ -716,7 +717,7 @@ module.exports = {
 
             const firstLogin = !user?.passwordValid && !entryRecord;
 
-            WebhooksController.dispatch('APASlogin', 'users', false, {
+            WebhooksController.dispatch('auth', 'users', false, {
                 ...user,
                 password: undefined,
             });
@@ -1808,8 +1809,7 @@ module.exports = {
                 await sendAccountsToKafka([account]);
             }
             await User.findByIdAndUpdate(_id, req.body);
-
-            const foundUser = await User.findById(_id).lean();
+            const foundUser = await User.findOne({_id}).lean();
 
             WebhooksController.dispatch('update', 'users', false, {
                 ...foundUser,
