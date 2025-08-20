@@ -145,7 +145,7 @@ async function handleBlockUser(user) {
                 'Conta bloqueada',
                 `Olá ${user.name}, uma nova tentativa de acesso a conta não foi permita pois a conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
             );
-            
+
             throw new ApiError('Usuário bloqueado temporariamente', 403);
         }
     }
@@ -1454,11 +1454,11 @@ module.exports = {
             `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
         );
         for (const user of existingUsers) {
-            await User.findByIdAndUpdate(user._id, {
+            const updatedUser = await User.findOneAndUpdate({ _id: user._id }, {
                 ...user.processedUser,
-            });
+            }, { $new: true });
             WebhooksController.dispatch('update', 'users', false, {
-                ...user.processedUser,
+                ...updatedUser,
                 password: undefined,
             });
 
@@ -1473,7 +1473,7 @@ module.exports = {
         if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
             console.log('Inativando usuários não presentes na planilha');
 
-            await User.updateMany(
+            const updatedUsers = await User.updateMany(
                 {
                     onboarding: { $ne: true },
                     ignoreLoadInactivation: { $ne: true },
@@ -1809,7 +1809,7 @@ module.exports = {
                 await sendAccountsToKafka([account]);
             }
             await User.findByIdAndUpdate(_id, req.body);
-            const foundUser = await User.findOne({_id}).lean();
+            const foundUser = await User.findOne({ _id }).lean();
 
             WebhooksController.dispatch('update', 'users', false, {
                 ...foundUser,
