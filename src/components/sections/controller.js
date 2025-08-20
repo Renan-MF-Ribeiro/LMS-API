@@ -336,158 +336,163 @@ module.exports = {
             delete req.query.channel;
         }
 
-        const query = {
-            enabled: true,
-            startDate: { $lte: now },
-            endDate: { $gte: now },
-            $or: [
-                { tags: { $in: tags, } },
-                { tagsAnd: { $in: tags, } },
-            ],
-        };
-
-        if (channelId) {
-            query['_id'] = { $in: trailsIdArr };
-        }
-
-        const [trails, allTrackingUser] = await Promise.all([
-            populateTrails(true, query),
-            Tracking.find({
+        if (tags.length > 0) {
+            const query = {
+                enabled: true,
+                $or: [
+                    {
+                        tags: {
+                            $in: tags,
+                        },
+                    },
+                    {
+                        tagsAnd: {
+                            $in: tags,
+                        },
+                    },
+                ],
+            };
+            if (channelId) {
+                query['_id'] = { $in: trailsIdArr };
+            }
+            console.log(query)
+            let trails = await populateTrails(true, query);
+            const allTrackingUser = await Tracking.find({
                 userLogin: { $eq: user.networkLogin },
                 $or: [
                     { expiredCompletion: { $exists: false } },
                     { expiredCompletion: { $eq: null } },
                 ],
-            }).sort({ _id: -1 }).lean()
-        ]);
+            });
 
-        for (let trail of trails) {
-            const processedTrail = processTrailTrackingV2(trail, allTrackingUser);
+            for (let trail of trails) {
+                const processedTrail = processTrailTrackingV2(trail, allTrackingUser);
 
-            if (trail.expirationType) {
-                trail = processExpirationDate(trail, user);
-            }
+                if (trail.expirationType) {
+                    trail = processExpirationDate(trail, user);
+                }
 
-            trail = processedTrail.trail;
+                trail = processedTrail.trail;
 
-            for (const tag of trail.tags) {
-                const groupsForTag = classGroupsMap.get(tag.value);
-                if (groupsForTag?.length) {
-                    trail.classGroup = findObjectInRange(groupsForTag, now);
-                    if (trail.classGroup) break; // Exit early once classGroup is found
+                for (const tag of trail.tags) {
+                    const groupsForTag = classGroupsMap.get(tag.value);
+                    if (groupsForTag?.length) {
+                        trail.classGroup = findObjectInRange(groupsForTag, now);
+                        if (trail.classGroup) break; // Exit early once classGroup is found
+                    }
                 }
             }
-        }
 
-        const filteredTrails = trails.filter(checkIfTheTrackIsValid);
+            const filteredTrails = trails.filter(checkIfTheTrackIsValid);
 
-        let arrSections = await elegiblesContents(filteredTrails);
+            let arrSections = await elegiblesContents(filteredTrails);
 
-        const sectionToShow = {
-            mandatorySectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.MANDATORY),
-            recentSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.RECENTS),
-            keepLearningSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.KEEP_LEARNING),
-            concludedSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.CONCLUDED),
-            coursesSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.COURSES),
-            favoriteSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.FAVORITES),
-            mostSeenSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.MOST_SEEN),
-            recommendedTrailsSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.RECOMMENDED_TRAILS),
-            recommendedCoursesSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.RECOMMENDED_COURSES),
-        }
-
-        const [
-            arrMandatorySections,
-            arrRecentsSections,
-            arrKeepLearningSections,
-            arrConcludedSections,
-            arrFavoriteSections,
-            arrMostSeenSections,
-            arrCoursesSections,
-            arrRecommendedCoursesSections,
-            arrRecommendedTrailsSections
-        ] = await Promise.all([
-            sectionToShow.mandatorySectionInfo ? mandatorySections(filteredTrails, tags, sectionToShow.mandatorySectionInfo) : Promise.resolve([]),
-            sectionToShow.recentSectionInfo ? recentsSections(filteredTrails, tags, sectionToShow.recentSectionInfo) : Promise.resolve([]),
-            sectionToShow.keepLearningSectionInfo ? keepLearningSections(filteredTrails, tags, sectionToShow.keepLearningSectionInfo) : Promise.resolve([]),
-            sectionToShow.concludedSectionInfo ? concludedSections(filteredTrails, tags, sectionToShow.concludedSectionInfo) : Promise.resolve([]),
-            sectionToShow.favoriteSectionInfo ? favoriteSections(filteredTrails, user._id, sectionToShow.favoriteSectionInfo) : Promise.resolve([]),
-            sectionToShow.mostSeenSectionInfo ? mostSeenSections(filteredTrails, tags, sectionToShow.mostSeenSectionInfo) : Promise.resolve([]),
-            sectionToShow.coursesSectionInfo ? courseInSections(tags, user._id, sectionToShow.coursesSectionInfo) : Promise.resolve([]),
-            sectionToShow.recommendedCoursesSectionInfo ? recommendedCoursesSections(user._id, sectionToShow.recommendedCoursesSectionInfo) : Promise.resolve([]),
-            sectionToShow.recommendedTrailsSectionInfo ? recommendedTrailsSections(filteredTrails, user._id, sectionToShow.recommendedTrailsSectionInfo) : Promise.resolve([]),
-        ]);
-
-        function limitArray(section) {
-            if (!section) return [];
-
-            if (!trailLimit) return section;
-
-            if (Array.isArray(section) && section.length > 0) {
-                return section.map((section) => {
-                    return {
-                        ...section,
-                        trails: section.trails?.slice(0, trailLimit) ?? []
-                    };
-                })
+            const sectionToShow = {
+                mandatorySectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.MANDATORY),
+                recentSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.RECENTS),
+                keepLearningSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.KEEP_LEARNING),
+                concludedSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.CONCLUDED),
+                coursesSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.COURSES),
+                favoriteSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.FAVORITES),
+                mostSeenSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.MOST_SEEN),
+                recommendedTrailsSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.RECOMMENDED_TRAILS),
+                recommendedCoursesSectionInfo: sectionInfos.find(section => section.defaultType === DEFAULT_TYPES.RECOMMENDED_COURSES),
             }
 
-            return {
-                ...section,
-                trails: section.trails?.slice(0, trailLimit) ?? []
-            };
-        }
+            const [
+                arrMandatorySections,
+                arrRecentsSections,
+                arrKeepLearningSections,
+                arrConcludedSections,
+                arrFavoriteSections,
+                arrMostSeenSections,
+                arrCoursesSections,
+                arrRecommendedCoursesSections,
+                arrRecommendedTrailsSections
+            ] = await Promise.all([
+                sectionToShow.mandatorySectionInfo ? mandatorySections(filteredTrails, tags, sectionToShow.mandatorySectionInfo) : Promise.resolve([]),
+                sectionToShow.recentSectionInfo ? recentsSections(filteredTrails, tags, sectionToShow.recentSectionInfo) : Promise.resolve([]),
+                sectionToShow.keepLearningSectionInfo ? keepLearningSections(filteredTrails, tags, sectionToShow.keepLearningSectionInfo) : Promise.resolve([]),
+                sectionToShow.concludedSectionInfo ? concludedSections(filteredTrails, tags, sectionToShow.concludedSectionInfo) : Promise.resolve([]),
+                sectionToShow.favoriteSectionInfo ? favoriteSections(filteredTrails, user._id, sectionToShow.favoriteSectionInfo) : Promise.resolve([]),
+                sectionToShow.mostSeenSectionInfo ? mostSeenSections(filteredTrails, tags, sectionToShow.mostSeenSectionInfo) : Promise.resolve([]),
+                sectionToShow.coursesSectionInfo ? courseInSections(tags, user._id, sectionToShow.coursesSectionInfo) : Promise.resolve([]),
+                sectionToShow.recommendedCoursesSectionInfo ? recommendedCoursesSections(user._id, sectionToShow.recommendedCoursesSectionInfo) : Promise.resolve([]),
+                sectionToShow.recommendedTrailsSectionInfo ? recommendedTrailsSections(filteredTrails, user._id, sectionToShow.recommendedTrailsSectionInfo) : Promise.resolve([]),
+            ]);
 
-        let resultSections = [
-            arrSections,
-            arrMandatorySections,
-            arrRecentsSections,
-            arrKeepLearningSections,
-            arrConcludedSections,
-            arrCoursesSections,
-            arrFavoriteSections,
-            arrMostSeenSections,
-            arrRecommendedTrailsSections || [],
-            arrRecommendedCoursesSections || [],
-        ].flatMap(limitArray);
+            function limitArray(section) {
+                if (!section) return [];
 
-        if (channelId) {
-            resultSections = resultSections.filter((obj) =>
-                obj ? sectionsIdArr.includes(obj._id) : false
-            );
-        }
+                if (!trailLimit) return section;
 
-        resultSections = resultSections.filter(Boolean);
+                if (Array.isArray(section) && section.length > 0) {
+                    return section.map((section) => {
+                        return {
+                            ...section,
+                            trails: section.trails?.slice(0, trailLimit) ?? []
+                        };
+                    })
+                }
 
-        if (resultSections.length > 0) {
-            resultSections.sort((a, b) => (a.position < b.position ? -1 : 1));
-        }
+                return {
+                    ...section,
+                    trails: section.trails?.slice(0, trailLimit) ?? []
+                };
+            }
 
-        if (filter && Object.values(filter).length > 0) {
-            const arrResultSections = [];
+            let resultSections = [
+                arrSections,
+                arrMandatorySections,
+                arrRecentsSections,
+                arrKeepLearningSections,
+                arrConcludedSections,
+                arrCoursesSections,
+                arrFavoriteSections,
+                arrMostSeenSections,
+                arrRecommendedTrailsSections || [],
+                arrRecommendedCoursesSections || [],
+            ].flatMap(limitArray);
+
+            if (channelId) {
+                resultSections = resultSections.filter((obj) =>
+                    obj ? sectionsIdArr.includes(obj._id) : false
+                );
+            }
+
+            resultSections = resultSections.filter(Boolean);
+
+            if (resultSections.length > 0) {
+                resultSections.sort((a, b) => (a.position < b.position ? -1 : 1));
+            }
+
+            if (filter && Object.values(filter).length > 0) {
+                const arrResultSections = [];
+                for (const section of resultSections) {
+                    section.trails = filterTrails(filter, section.trails, tags);
+                    if (section.trails.length > 0) {
+                        // Verifica a obrigatoriedade da trilha.
+                        arrResultSections.push(section);
+                    }
+                }
+
+                resultSections = arrResultSections;
+            }
+
             for (const section of resultSections) {
-                section.trails = filterTrails(filter, section.trails, tags);
-                if (section.trails.length > 0) {
-                    // Verifica a obrigatoriedade da trilha.
-                    arrResultSections.push(section);
+                for (const trail of section.trails) {
+                    setTrailMandatory(trail, tags);
                 }
             }
 
-            resultSections = arrResultSections;
-        }
+            const hasSomeTrainingSection = resultSections.some(section => section.isTraining);
 
-        for (const section of resultSections) {
-            for (const trail of section.trails) {
-                setTrailMandatory(trail, tags);
+            if (hasSomeTrainingSection) {
+                resultSections = await setAssessmentHistoricOnSections(user._id, resultSections, tags);
             }
+
+            _messages.success(res, req, resultSections);
         }
-
-        const hasSomeTrainingSection = resultSections.some(section => section.isTraining);
-
-        if (hasSomeTrainingSection) {
-            resultSections = await setAssessmentHistoricOnSections(user._id, resultSections, tags);
-        }
-
-        _messages.success(res, req, resultSections);
     },
 
     async getCollaborationSectionDetail(req, res) {

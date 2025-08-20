@@ -37,7 +37,6 @@ module.exports = {
         let listId = null;
         let messageList = new MessageList();
 
-
         try {
             const user = await getUserByToken(req);
 
