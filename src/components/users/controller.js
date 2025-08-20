@@ -343,7 +343,7 @@ module.exports = {
 
             const created = await User.findOne({ networkLogin: processedUser.networkLogin }).lean();
 
-             WebhooksController.dispatch('create', 'users', false, {
+            WebhooksController.dispatch('create', 'users', false, {
                 ...created,
                 password: undefined,
             });
@@ -572,7 +572,7 @@ module.exports = {
 
             const newUser = await User.create(userData);
 
-           WebhooksController.dispatch('create', 'users', false, {
+            WebhooksController.dispatch('create', 'users', false, {
                 ...newUser.toObject(),
                 password: undefined,
             });
@@ -1340,7 +1340,8 @@ module.exports = {
     },
 
     async import(req, res) {
-        var file = null;
+        let file = null;
+        let replaceMap = null;
         const newUsers = [];
         const existingUsers = [];
         const usersToSend = [];
@@ -1349,23 +1350,21 @@ module.exports = {
         } else {
             file = req.files.content;
         }
-        const results = await _files.readXLSXUsers(file.path);
 
-        const elegibilityResponse = await axios.get(
-            `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
-            {
-                headers: {
-                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
-                },
-            }
-        );
-        const fieldsForElegibility = elegibilityResponse.data.fields;
-
-        const messengerConfig = await getMessengerConfig();
-
-        const connectMap = await getConnectMap(true);
-
-        let replaceMap = null;
+        const [results, elegibilityResponse, messengerConfig, connectMap] = await Promise.all([
+            _files.readXLSXUsers(file.path),
+            axios.get(
+                `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+                {
+                    headers: {
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                    },
+                }
+            ),
+            await getMessengerConfig(),
+            await getConnectMap(true),
+        ])
+        const fieldsForElegibility = elegibilityResponse.data?.fields;
 
         if (connectMap) {
             const errors = [];
@@ -1453,26 +1452,33 @@ module.exports = {
         console.log(
             `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
         );
-        for (const user of existingUsers) {
-            const updatedUser = await User.findOneAndUpdate({ _id: user._id }, {
-                ...user.processedUser,
-            }, { $new: true }).lean();
 
-            const { password, ...userWithoutPassword } = updatedUser
-            WebhooksController.dispatch('update', 'users', false, userWithoutPassword);
+        // TODO: Não disparar mudança de trackings para usuários que não tiveram mudança em seus networkLogin
+        const concurrencyLimit = Array(10).fill(null)
+        const tracking_user_webhook = existingUsers.map((user) => {
+            const dto = { ...user.processedUser, _id: user._id }
+            const { password, ...userWithoutPassword } = dto
+            const promises = [
+                User.findOneAndUpdate({ _id: user._id }, dto),
+                Tracking.updateMany(
+                    { userLogin: user.processedUser.cpf },
+                    { $set: { userLogin: user.processedUser.networkLogin } }
+                )]
 
-            await Tracking.updateMany(
-                { userLogin: user.processedUser.cpf },
-                { $set: { userLogin: user.processedUser.networkLogin } }
-            );
-        }
+
+            if (req.features.webhook) {
+                promises.push(WebhooksController.dispatch('update', 'users', false, userWithoutPassword))
+            }
+
+            return promises
+        })
+        await Promise.all(concurrencyLimit.map(() => tracking_user_webhook))
 
         const usersDataConfig = await getUsersDataConfig();
 
         if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
             console.log('Inativando usuários não presentes na planilha');
-
-            const updatedUsers = await User.updateMany(
+            await User.updateMany(
                 {
                     onboarding: { $ne: true },
                     ignoreLoadInactivation: { $ne: true },
@@ -1487,17 +1493,21 @@ module.exports = {
                 `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
             );
 
+            const concurrencyLimit = Array(10).fill(null)
             const insertedUsers = await User.insertMany(newUsers);
-            for (const user of insertedUsers) {
+            const webhooks = insertedUsers?.map((user) => {
                 const { password, ...userWithoutPassword } = user.toObject()
-                WebhooksController.dispatch('update', 'users', false, userWithoutPassword);
-            }
+                WebhooksController.dispatch('create', 'users', false, userWithoutPassword);
+            })
+            await Promise.all(concurrencyLimit.map(() => webhooks))
 
             if (messengerConfig.sendUsersToMicrosservice) {
-                await sendAccountsToKafka(usersToSend);
                 const campaign = createWelcomeCampaign();
-                await sendMessageToKafka(campaign, newUsers);
-                await NewMessage.create(campaign);
+                await Promise.all([
+                    await sendAccountsToKafka(usersToSend),
+                    await sendMessageToKafka(campaign, newUsers),
+                    await NewMessage.create(campaign)
+                ])
             }
         }
 
@@ -1537,16 +1547,15 @@ module.exports = {
             const preventOnboardingGroupAdd = usersDataConfig?.preventOnboardingGroupAdd ?? false;
 
             for (const result of results) {
-                const existingUser = await User.findOne({
-                    networkLogin: result.cpf,
-                });
-
-                const processedUser = await processUsersLoad(
+                const [existingUser, processedUser] = await Promise.all([User.findOne({
+                    networkLogin: result.cpf
+                }),
+                processUsersLoad(
                     result,
                     fieldsForElegibility,
                     onboarding,
                     preventOnboardingGroupAdd
-                );
+                )])
 
                 const account = await processUserAccount(processedUser);
 
@@ -1577,11 +1586,17 @@ module.exports = {
                 `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
             );
 
-            for (const user of existingUsers) {
-                await User.findByIdAndUpdate(user._id, {
-                    ...user.processedUser,
-                });
-            }
+            const concurrencyLimit = Array(10).fill(null)
+            const user_and_webhooks = existingUsers.map((user) => {
+                const dto = { ...user.processedUser, _id: user._id }
+                const { password, ...userWithoutPassword } = user.toObject()
+                const promises = [User.findOneAndUpdate({ _id: user._id }, dto)]
+
+                if (req.features.webhook) {
+                    promises.push(WebhooksController.dispatch('create', 'users', false, userWithoutPassword))
+                }
+            })
+            await Promise.all(concurrencyLimit.map(() => user_and_webhooks))
 
             if (newUsers.length > 0) {
                 console.log(
