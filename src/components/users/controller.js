@@ -1454,25 +1454,22 @@ module.exports = {
         );
 
         // TODO: Não disparar mudança de trackings para usuários que não tiveram mudança em seus networkLogin
-        const concurrencyLimit = Array(10).fill(null)
-        const tracking_user_webhook = existingUsers.map((user) => {
-            const dto = { ...user.processedUser, _id: user._id }
-            const { password, ...userWithoutPassword } = dto
-            const promises = [
-                User.findOneAndUpdate({ _id: user._id }, dto),
+        for (const user of existingUsers) {
+            const dto = { ...user.processedUser, _id: user._id };
+            const { password, ...userWithoutPassword } = dto;
+
+            const ops = [
+                User.findByIdAndUpdate(user._id, dto).exec(),
                 Tracking.updateMany(
                     { userLogin: user.processedUser.cpf },
                     { $set: { userLogin: user.processedUser.networkLogin } }
-                )]
+                ).exec()
+            ]
+            if (req.features.webhook) WebhooksController.dispatch('update', 'users', false, userWithoutPassword);
 
+            await Promise.all(ops)
+        }
 
-            if (req.features.webhook) {
-                promises.push(WebhooksController.dispatch('update', 'users', false, userWithoutPassword))
-            }
-
-            return promises
-        })
-        await Promise.all(concurrencyLimit.map(() => tracking_user_webhook))
 
         const usersDataConfig = await getUsersDataConfig();
 
@@ -1493,13 +1490,12 @@ module.exports = {
                 `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
             );
 
-            const concurrencyLimit = Array(10).fill(null)
             const insertedUsers = await User.insertMany(newUsers);
             const webhooks = insertedUsers?.map((user) => {
                 const { password, ...userWithoutPassword } = user.toObject()
                 WebhooksController.dispatch('create', 'users', false, userWithoutPassword);
             })
-            await Promise.all(concurrencyLimit.map(() => webhooks))
+            await Promise.all(webhooks)
 
             if (messengerConfig.sendUsersToMicrosservice) {
                 const campaign = createWelcomeCampaign();
@@ -1586,17 +1582,20 @@ module.exports = {
                 `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
             );
 
-            const concurrencyLimit = Array(10).fill(null)
-            const user_and_webhooks = existingUsers.map((user) => {
-                const dto = { ...user.processedUser, _id: user._id }
-                const { password, ...userWithoutPassword } = user.toObject()
-                const promises = [User.findOneAndUpdate({ _id: user._id }, dto)]
+            for (const user of existingUsers) {
+                const dto = { ...user.processedUser, _id: user._id };
+                const { password, ...userWithoutPassword } = dto;
 
-                if (req.features.webhook) {
-                    promises.push(WebhooksController.dispatch('create', 'users', false, userWithoutPassword))
-                }
-            })
-            await Promise.all(concurrencyLimit.map(() => user_and_webhooks))
+                const ops = [
+                    User.findByIdAndUpdate(user._id, dto).exec(),
+                    Tracking.updateMany(
+                        { userLogin: user.processedUser.cpf },
+                        { $set: { userLogin: user.processedUser.networkLogin } }
+                    ).exec()
+                ]
+                if (req.features.webhook) WebhooksController.dispatch('update', 'users', false, userWithoutPassword);
+                await Promise.all(ops)
+            }
 
             if (newUsers.length > 0) {
                 console.log(
