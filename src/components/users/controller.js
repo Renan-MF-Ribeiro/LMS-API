@@ -1491,11 +1491,13 @@ module.exports = {
             );
 
             const insertedUsers = await User.insertMany(newUsers);
-            const webhooks = insertedUsers?.map((user) => {
-                const { password, ...userWithoutPassword } = user.toObject()
-                WebhooksController.dispatch('create', 'users', false, userWithoutPassword);
-            })
-            await Promise.all(webhooks)
+            if (req.features.webhook) {
+                const webhooks = insertedUsers?.map((user) => {
+                    const { password, ...userWithoutPassword } = user.toObject()
+                    WebhooksController.dispatch('create', 'users', false, userWithoutPassword);
+                })
+                await Promise.all(webhooks)
+            }
 
             if (messengerConfig.sendUsersToMicrosservice) {
                 const campaign = createWelcomeCampaign();
