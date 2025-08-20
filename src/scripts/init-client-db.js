@@ -7,14 +7,45 @@ const { runScript, generateReport } = require("./utils");
 
 const ObjectId = mongoose.Types.ObjectId;
 
+const GENERATE_REPORTS = false;
+
 async function updateMonolitoIds(connection, { clientId, domainToReplace, domainToReplaceWith, reportName = 'updated_ids' }) {
     const channelsMap = new Map();
     const sectionsMap = new Map();
     const trailsMap = new Map();
     const itemsMap = new Map();
     const coursesMap = new Map();
+    const usersMap = new Map();
 
     const { db } = connection;
+
+    console.log('Atualizando users');
+
+    const currentUsers = await db.collection('users').find().toArray();
+
+    for await (const user of currentUsers) {
+        const newUserId = new ObjectId();
+        const salt = bcrypt.genSaltSync(10);
+        const defaultPasswordHash = bcrypt.hashSync('Minhasenha@1', salt);
+
+        usersMap.set(String(user._id), String(newUserId));
+
+        await db.collection('users').deleteOne({ _id: user._id });
+
+        await db.collection('users').insertOne({
+            ...user,
+            _id: newUserId,
+            oldId: user._id,
+            clientId,
+            passwordValid: true,
+            password: [{
+                hash: defaultPasswordHash,
+                valid: true,
+                createdAt: new Date()
+            }],
+            profilePhoto: user.profilePhoto?.replace(domainToReplace, domainToReplaceWith) ?? null
+        });
+    }
 
     console.log('Mudando trailIdentifier e courseIdentifier');
 
@@ -229,6 +260,7 @@ async function updateMonolitoIds(connection, { clientId, domainToReplace, domain
         );
     }
 
+    await db.collection('users').updateMany({}, { $unset: { oldId: '', oldID: '' } });
     await db.collection('channels').updateMany({}, { $unset: { oldId: '', oldID: '' } });
     await db.collection('sections').updateMany({}, { $unset: { oldId: '', oldID: '' } });
     await db.collection('trails').updateMany({}, { $unset: { oldId: '', oldID: '' } });
@@ -237,65 +269,79 @@ async function updateMonolitoIds(connection, { clientId, domainToReplace, domain
 
     console.log('Gerando relatorios');
 
-    await generateReport(
-        Array.from(channelsMap.entries()).map(([oldId, newId]) => ({
-            oldId: String(oldId),
-            newId: String(newId),
-        })),
-        [
-            { header: 'Old ID', key: 'oldId' },
-            { header: 'New ID', key: 'newId' },
-        ],
-        { fileName: reportName + '_channels' }
-    );
+    if (GENERATE_REPORTS) {
+        await generateReport(
+            Array.from(usersMap.entries()).map(([oldId, newId]) => ({
+                oldId: String(oldId),
+                newId: String(newId),
+            })),
+            [
+                { header: 'Old ID', key: 'oldId' },
+                { header: 'New ID', key: 'newId' },
+            ],
+            { fileName: reportName + '_users' }
+        );
 
-    await generateReport(
-        Array.from(sectionsMap.entries()).map(([oldId, newId]) => ({
-            oldId: String(oldId),
-            newId: String(newId),
-        })),
-        [
-            { header: 'Old ID', key: 'oldId' },
-            { header: 'New ID', key: 'newId' },
-        ],
-        { fileName: reportName + '_sections' }
-    );
+        await generateReport(
+            Array.from(channelsMap.entries()).map(([oldId, newId]) => ({
+                oldId: String(oldId),
+                newId: String(newId),
+            })),
+            [
+                { header: 'Old ID', key: 'oldId' },
+                { header: 'New ID', key: 'newId' },
+            ],
+            { fileName: reportName + '_channels' }
+        );
 
-    await generateReport(
-        Array.from(trailsMap.entries()).map(([oldId, newId]) => ({
-            oldId: String(oldId),
-            newId: String(newId),
-        })),
-        [
-            { header: 'Old ID', key: 'oldId' },
-            { header: 'New ID', key: 'newId' },
-        ],
-        { fileName: reportName + '_trails' }
-    );
+        await generateReport(
+            Array.from(sectionsMap.entries()).map(([oldId, newId]) => ({
+                oldId: String(oldId),
+                newId: String(newId),
+            })),
+            [
+                { header: 'Old ID', key: 'oldId' },
+                { header: 'New ID', key: 'newId' },
+            ],
+            { fileName: reportName + '_sections' }
+        );
 
-    await generateReport(
-        Array.from(itemsMap.entries()).map(([oldId, newId]) => ({
-            oldId: String(oldId),
-            newId: String(newId),
-        })),
-        [
-            { header: 'Old ID', key: 'oldId' },
-            { header: 'New ID', key: 'newId' },
-        ],
-        { fileName: reportName + '_items' }
-    );
+        await generateReport(
+            Array.from(trailsMap.entries()).map(([oldId, newId]) => ({
+                oldId: String(oldId),
+                newId: String(newId),
+            })),
+            [
+                { header: 'Old ID', key: 'oldId' },
+                { header: 'New ID', key: 'newId' },
+            ],
+            { fileName: reportName + '_trails' }
+        );
 
-    await generateReport(
-        Array.from(coursesMap.entries()).map(([oldId, newId]) => ({
-            oldId: String(oldId),
-            newId: String(newId),
-        })),
-        [
-            { header: 'Old ID', key: 'oldId' },
-            { header: 'New ID', key: 'newId' },
-        ],
-        { fileName: reportName + '_courses' }
-    );
+        await generateReport(
+            Array.from(itemsMap.entries()).map(([oldId, newId]) => ({
+                oldId: String(oldId),
+                newId: String(newId),
+            })),
+            [
+                { header: 'Old ID', key: 'oldId' },
+                { header: 'New ID', key: 'newId' },
+            ],
+            { fileName: reportName + '_items' }
+        );
+
+        await generateReport(
+            Array.from(coursesMap.entries()).map(([oldId, newId]) => ({
+                oldId: String(oldId),
+                newId: String(newId),
+            })),
+            [
+                { header: 'Old ID', key: 'oldId' },
+                { header: 'New ID', key: 'newId' },
+            ],
+            { fileName: reportName + '_courses' }
+        );
+    }
 
     return {
         channelsMap,
@@ -303,27 +349,6 @@ async function updateMonolitoIds(connection, { clientId, domainToReplace, domain
         trailsMap,
         itemsMap,
     }
-}
-
-async function updateDefaultUsers(connection, clientId) {
-    const salt = bcrypt.genSaltSync(10);
-    const defaultPasswordHash = bcrypt.hashSync('Minhasenha@1', salt);
-
-    const { db } = connection;
-
-    await db.collection('users')
-        .updateMany({}, {
-            $set: {
-                clientId,
-                passwordValid: true,
-                password: [{
-                    hash: defaultPasswordHash,
-                    valid: true,
-                    createdAt: new Date()
-                }]
-            }
-        });
-
 }
 
 async function run() {
@@ -338,12 +363,10 @@ async function run() {
 
     await updateMonolitoIds(connection, {
         clientId,
-        domainToReplace: 'lms.experimente1.happmobi.com.br',
+        domainToReplace: 'v2.happlearning.happmobi.com.br',
         domainToReplaceWith: 'lms.cliente.happlearning.com.br',
         reportName: 'monolito_ids'
     });
-
-    await updateDefaultUsers(connection, clientId);
 
     console.log('Script concluído com sucesso!');
 
