@@ -1489,7 +1489,7 @@ module.exports = {
 
             const insertedUsers = await User.insertMany(newUsers);
             for (const user of insertedUsers) {
-                const { password, ...userWithoutPassword } = user
+                const { password, ...userWithoutPassword } = user.toObject()
                 WebhooksController.dispatch('update', 'users', false, userWithoutPassword);
             }
 
