@@ -4,12 +4,20 @@ const migrationsFolder = './src/migrations';
 
 const scriptsFolder = `${migrationsFolder}/scripts`;
 
-const migrationTemplate = `module.exports = {
+const migrationTemplate = `const mongoose = require('mongoose')
+
+module.exports = {
+    /**
+     * @param {typeof mongoose.connection.db} db MongoDB connection instance
+     */
     async up(db) {
-        console.log('up migration');
+        console.log('up action');
     },
+    /**
+     * @param {typeof mongoose.connection.db} db MongoDB connection instance
+     */
     async down(db) {
-        console.log('down migration');
+        console.log('down action');
     }
 };
 `;
