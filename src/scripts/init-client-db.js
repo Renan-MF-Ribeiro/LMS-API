@@ -27,6 +27,7 @@ async function updateMonolitoIds(connection, { clientId, domainToReplace, domain
         const newUserId = new ObjectId();
         const salt = bcrypt.genSaltSync(10);
         const defaultPasswordHash = bcrypt.hashSync('Minhasenha@1', salt);
+        const isHappmobiUser = user.email?.endsWith('@happmobi.com.br') || false;
 
         usersMap.set(String(user._id), String(newUserId));
 
@@ -37,13 +38,15 @@ async function updateMonolitoIds(connection, { clientId, domainToReplace, domain
             _id: newUserId,
             oldId: user._id,
             clientId,
-            passwordValid: true,
-            password: [{
-                hash: defaultPasswordHash,
-                valid: true,
-                createdAt: new Date()
-            }],
-            profilePhoto: user.profilePhoto?.replace(domainToReplace, domainToReplaceWith) ?? null
+            profilePhoto: user.profilePhoto?.replace(domainToReplace, domainToReplaceWith) ?? null,
+            ...(isHappmobiUser && {
+                passwordValid: true,
+                password: [{
+                    hash: defaultPasswordHash,
+                    valid: true,
+                    createdAt: new Date()
+                }]
+            }),
         });
     }
 
