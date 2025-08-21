@@ -2,7 +2,6 @@ const mongoose = require('mongoose')
 
 module.exports = {
     /**
-     * 
      * @param {typeof mongoose.connection.db} db MongoDB connection instance
      */
     async up(db) {
@@ -56,7 +55,6 @@ module.exports = {
         console.log('userInfo view created');
     },
     /**
-     * 
      * @param {typeof mongoose.connection.db} db MongoDB connection instance
      */
     async down(db) {
