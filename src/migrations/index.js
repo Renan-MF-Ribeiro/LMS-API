@@ -39,6 +39,12 @@ module.exports = {
     async runMigrations(dbConnection) {
         console.log('RUNNING MIGRATIONS');
 
+        const scriptsFolderExists = await fs.access('./src/migrations/scripts').then(() => true).catch(() => false);
+
+        if (!scriptsFolderExists) {
+            await fs.mkdir('./src/migrations/scripts', { recursive: true });
+        }
+
         const migrationFiles = await fs.readdir('./src/migrations/scripts');
 
         const currentMigrations = await Migrations.find().lean();

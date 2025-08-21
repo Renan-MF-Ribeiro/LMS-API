@@ -46,9 +46,9 @@ async function startApp() {
     const currentHost = HOSTNAME?.substring(lastIndex + 1) ?? null;
     const isPrimaryHost = currentHost === "0";
 
-    // if (isPrimaryHost) {
+    if (isPrimaryHost) {
         await runMigrations(dbConnection);
-    // }
+    }
 
     const server = app.listen(port, async () => {
         try {
