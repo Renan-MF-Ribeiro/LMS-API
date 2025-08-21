@@ -9,7 +9,8 @@
         "release": "release-it",
         "lint": "eslint --fix ./src ./test",
         "test": "npm run lint && cross-env DEBUG=happlearning:error,warn NODE_ENV=test DB_NAME=test_happmobi PUBLIC_PATH=. UPLOADS_PATH=tmp jest",
-        "test:watch": "cross-env DEBUG=happlearning:error,warn NODE_ENV=test DB_NAME=test_happmobi PUBLIC_PATH=. UPLOADS_PATH=tmp jest --watch"
+        "test:watch": "cross-env DEBUG=happlearning:error,warn NODE_ENV=test DB_NAME=test_happmobi PUBLIC_PATH=. UPLOADS_PATH=tmp jest --watch",
+        "migration:create": "node ./infra/database/create-migration.js"
     },
     "author": "Happmobi <contato@happmobi.com.br>",
     "license": "UNLICENSED",
