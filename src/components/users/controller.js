@@ -1772,6 +1772,11 @@ module.exports = {
             const user = await User.findOne({
                 _id: { $eq: _id },
             });
+
+            if(user && user.origin.type === 'INTEGRATOR'){
+                return _messages.unauthorized(res, req, 'Usuário de integração, não pode ser editado via painel');
+            }
+
             if (tags && tags.length > 0) {
                 for (const tag of tags) {
                     const filter = user.tags.filter((val) => {
