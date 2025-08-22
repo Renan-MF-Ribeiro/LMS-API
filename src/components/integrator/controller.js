@@ -1,26 +1,17 @@
 const axios = require('axios');
 
 const _messages = require('../../utils/messages');
+const { getIntegratorConfig } = require('./business');
 
 module.exports = {
     async getUsersProviderConfig(req, res) {
         try {
-            const url = `${process.env.API_INTEGRATOR}/connection/config/${process.env.CLIENT_ID}`;
-
-            const headers = {
-                'x-api-key': process.env.API_KEY_INTEGRATOR,
-            };
-
-            const response = await axios({
-                method: 'get',
-                url,
-                headers,
-            });
+            const config = await getIntegratorConfig();
 
             return _messages.success(
                 res,
                 req,
-                response.data,
+                config,
                 'Sucesso',
                 'support',
                 'createTicket'
