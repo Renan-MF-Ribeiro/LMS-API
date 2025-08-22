@@ -9,6 +9,8 @@ const _files = require('../../utils/files');
 const { NewMessage } = require('../new-messages/model');
 const { User, UserTest, Block, defaultUserMap } = require('./model');
 const managerBusiness = require('../managers/business');
+const { getIntegratorConfig } = require('../integrator/business');
+
 const {
     generateToken,
     generateMfaToken,
@@ -1789,8 +1791,16 @@ module.exports = {
                 _id: { $eq: _id },
             });
 
-            if(user && user.origin.type === 'INTEGRATOR'){
-                return _messages.unauthorized(res, req, 'Usuário de integração, não pode ser editado via painel');
+            const { data: integratorConfig } = await getIntegratorConfig()
+            if (
+                user?.origin?.type === 'INTEGRATOR' &&
+                !integratorConfig?.allowUserEdit
+            ) {
+                return _messages.unauthorized(
+                    res,
+                    req,
+                    'Usuário de integração, não pode ser editado via painel'
+                );
             }
 
             if (tags && tags.length > 0) {
