@@ -73,4 +73,74 @@ module.exports = {
             );
         }
     },
+
+    async getUsersProviderCredentials(req, res) {
+        try {
+            const url = `${process.env.API_INTEGRATOR}/connection/options/${process.env.CLIENT_ID}`;
+
+            const headers = {
+                'x-api-key': process.env.API_KEY_INTEGRATOR,
+            };
+
+            const response = await axios({
+                method: 'get',
+                url,
+                headers,
+            });
+
+            return _messages.success(
+                res,
+                req,
+                response.data,
+                'Sucesso',
+                'support',
+                'createTicket'
+            );
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'support',
+                'createTicket'
+            );
+        }
+    },
+
+    async updateUsersProviderCredentials(req, res) {
+        try {
+            const url = `${process.env.API_INTEGRATOR}/connection/options/${process.env.CLIENT_ID}`;
+
+            const headers = {
+                'x-api-key': process.env.API_KEY_INTEGRATOR,
+            };
+
+            const response = await axios({
+                method: 'put',
+                url,
+                headers,
+                data: req.body,
+            });
+            
+            return _messages.success(
+                res,
+                req,
+                response.data,
+                'Sucesso',
+                'support',
+                'createTicket'
+            );
+        } catch (error) {
+            console.log(error)
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'support',
+                'createTicket'
+            );
+        }
+    },
 };
