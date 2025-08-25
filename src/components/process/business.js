@@ -14,7 +14,8 @@ const ProcessBusiness = {
     },
 
     sendKafkaMessage: async (message) => {
-        const topic = process.env.TOPIC_PROCESSES
+        // todo: change here
+        const topic = process.env.TOPIC_PROCESSES || "processes-process-records"
 
         const producer = kafka.producer()
         await producer.connect()
