@@ -86,12 +86,18 @@ const processController = {
             const originalUrl = await azureBlob(file, `process/${fileName}/files`)
             body.file = {
                 size: file.size,
-                originalUrl
+                originalUrl,
+                name: file.name
             };
         }
 
         try {
             const { data } = await processApi.post('/process', body);
+
+            if (data?.data?._id) {
+                const message = data?.data?._id
+                await business.sendKafkaMessage(message)
+            }
             res.status(data.statusCode).json(data.data);
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;

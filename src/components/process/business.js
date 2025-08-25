@@ -1,3 +1,4 @@
+const kafka = require('../../utils/kafka');
 const ProcessBusiness = {
     normalize: (str) => {
         return str
@@ -10,6 +11,15 @@ const ProcessBusiness = {
             ?.replace(/[^a-zA-Z0-9_]/g, '') // remove any other special chars
             ?.toUpperCase()
             ?.trim();
+    },
+
+    sendKafkaMessage: async (message) => {
+        const topic = process.env.TOPIC_PROCESSES
+
+        const producer = kafka.producer()
+        await producer.connect()
+        await producer.send({ topic, messages: [{ value: message }] })
+        await producer.disconnect()
     }
 }
 
