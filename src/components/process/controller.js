@@ -1,5 +1,6 @@
 const { processApi } = require('./http-adapter');
 const { azureBlob } = require('../../utils/files');
+const business = require('./business');
 
 const processController = {
     findAllPaginated: async (req, res) => {
@@ -77,10 +78,16 @@ const processController = {
 
     create: async (req, res) => {
         const body = req.fields?.payload ? JSON.parse(req.fields?.payload) : req.body;
-
+        //const body = req.fields ? req.fields : req.body;
         const file = req.files?.file
+
         if (file) {
-            //body.file = await azureBlob(banner, 'process/files');
+            const fileName = business.normalize(body.identifier)
+            const originalUrl = await azureBlob(file, `process/${fileName}/files`)
+            body.file = {
+                size: file.size,
+                originalUrl
+            };
         }
 
         try {
