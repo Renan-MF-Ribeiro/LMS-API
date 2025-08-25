@@ -6,7 +6,10 @@ module.exports = express
     .Router()
     .get('/', _controller.findAllPaginated)
     .get('/status', _controller.getStatus)
+    .get('/generate-records/:id', _controller.generateRecords)
+    .get('/process-records/:id', _controller.processRecords)
     .get('/:id', _controller.findOne)
+    
 
     //.get('/user/:id', _controller.findByUserId)
 

@@ -1,5 +1,6 @@
 const { processApi } = require('./http-adapter');
 const { azureBlob } = require('../../utils/files');
+const business = require('./business');
 
 const processController = {
     findAllPaginated: async (req, res) => {
@@ -46,12 +47,47 @@ const processController = {
         }
     },
 
+    // Manual trigger for testing
+    generateRecords: async (req, res) => {
+        try {
+            const id = req.params.id;
+            const { data } = await processApi.get(`/process/generate-records/${id}`,);
+            res.status(data.statusCode).json(data.data);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    // Manual trigger for testing
+    processRecords: async (req, res) => {
+        try {
+            const id = req.params.id;
+            const { data } = await processApi.get(`/process/process-records/${id}`,);
+            res.status(data.statusCode).json(data.data);
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+
     create: async (req, res) => {
         const body = req.fields?.payload ? JSON.parse(req.fields?.payload) : req.body;
-
+        //const body = req.fields ? req.fields : req.body;
         const file = req.files?.file
+
         if (file) {
-            //body.file = await azureBlob(banner, 'process/files');
+            const fileName = business.normalize(body.identifier)
+            const originalUrl = await azureBlob(file, `process/${fileName}/files`)
+            body.file = {
+                size: file.size,
+                originalUrl
+            };
         }
 
         try {
