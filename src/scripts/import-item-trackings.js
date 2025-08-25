@@ -265,7 +265,7 @@ async function run() {
     console.log('Total de usuários não encontrados', notFoundUsers.size);
 
     console.log('Total de items', mappedItems.length);
-    console.log('Total de items não encontradas', notFoundItems.length);
+    console.log('Total de items não encontrados', notFoundItems.length);
 
     console.log(`Total de trackings: ${trackings.length}`);
     console.log(`Total de trackings a serem criados: ${trackingsToCreate.length}`);
