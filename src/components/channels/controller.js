@@ -88,7 +88,7 @@ module.exports = {
             if (feature === 'mentoring') {
                 if (!features?.mentoring) query.$and.push({ type: { $ne: 'mentoring' } });
 
-                const mentoringBlocked = await mentorConfigController.isBlocked(user._id);
+                const mentoringBlocked = await mentorConfigController.isBlocked(user._id, req);
 
                 if (mentoringBlocked) query.$and.push({ type: { $ne: 'mentoring' } });
 
