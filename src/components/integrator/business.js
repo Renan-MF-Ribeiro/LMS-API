@@ -12,6 +12,7 @@ module.exports = {
       method: 'get',
       url,
       headers,
+      validateStatus: () => true,
     });
     return response.data;
   }

@@ -1791,16 +1791,16 @@ module.exports = {
                 _id: { $eq: _id },
             });
 
-            const { data: integratorConfig } = await getIntegratorConfig()
-            if (
-                user?.origin?.type === 'INTEGRATOR' &&
-                !integratorConfig?.allowUserEdit
-            ) {
-                return _messages.unauthorized(
-                    res,
-                    req,
-                    'Usuário de integração, não pode ser editado via painel'
-                );
+            if (user?.origin?.type === 'INTEGRATOR') {
+                const { data: integratorConfig } = await getIntegratorConfig()
+
+                if (integratorConfig && !integratorConfig.allowUserEdit) {
+                    return _messages.unauthorized(
+                        res,
+                        req,
+                        'Usuário de integração, não pode ser editado via painel'
+                    );
+                }
             }
 
             if (tags && tags.length > 0) {
