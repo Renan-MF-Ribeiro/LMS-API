@@ -30,6 +30,7 @@ const { getCookieProps } = require('../../utils/cookies');
 const PartnerBusiness = require('../partners/business');
 const { createSessionStore } = require('../../utils/session');
 const { Types } = require('mongoose');
+const { log } = require('../../utils/logger');
 
 async function createGroupsByGroupsAD(groupsAD) {
     const groupsDb = await Group.find({ name: { $in: groupsAD } })
@@ -371,13 +372,13 @@ module.exports = {
         const connectMap = await getConnectMap(true);
 
         const userMap = Object.entries(connectMap).map(([key, value]) => {
-            return { value: key, description: value.label, field: value.field };
+            return { value: key, field: value.field };
         });
 
         function isSameField(userField, mapItem) {
             return (
                 mapItem.field !== 'NÃO MAPEAR' &&
-                (mapItem.field === userField || mapItem.value === userField)
+                (mapItem.value === userField || mapItem.field === userField)
             );
         }
 
@@ -389,32 +390,29 @@ module.exports = {
             config.fields?.forEach((config) => {
                 if (!config.userField || !config.fieldValue) return;
 
-                const currentUserDashValue = String(user[config.dashFilter] || '').trim();
+                const userField = userMap.find((map) => isSameField(config.userField, map));
 
-                const matchedMaps = userMap.filter((map) => isSameField(config.userField, map));
+                if (!userField) return;
 
-                matchedMaps.forEach((map) => {
-                    const currentUserFieldValue = String(user[map.value] || null).trim();
+                const userUserFieldValue = user[userField.value];
 
-                    if (
-                        currentUserFieldValue &&
-                        currentUserFieldValue === config.fieldValue &&
-                        currentUserDashValue !== 'undefined' &&
-                        currentUserDashValue !== 'null'
-                    ) {
-                        dashboardFilters.push({
-                            field: config.dashFilter || null,
-                            value: currentUserDashValue || null,
-                            pages: config.pages,
-                            // config,
-                            // map,
-                        });
-                    }
+                if (userUserFieldValue !== config.fieldValue) {
+                    log(`User field value ${userUserFieldValue} does not match config value ${config.fieldValue}`);
+                    return;
+                }
+
+                const dashboardField = userMap.find((map) => isSameField(config.dashFilter, map));
+                const userDashFieldValue = dashboardField ? user[dashboardField.value] : null;
+
+                dashboardFilters.push({
+                    field: dashboardField?.value || null,
+                    value: userDashFieldValue,
+                    pages: config.pages,
                 });
             });
         });
 
-        // console.log(JSON.stringify(dashboardFilters, null, 2));
+        log(JSON.stringify(dashboardFilters, null, 2));
 
         return dashboardFilters;
     },
