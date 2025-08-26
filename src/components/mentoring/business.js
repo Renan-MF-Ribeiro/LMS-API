@@ -47,11 +47,11 @@ async function populateUserFields(mappings, data) {
     };
 }
 
-async function populateBlockedUserFields(mappings, data) {
-    const isArray = Array.isArray(data.data);
-    const dataToProcess = isArray ? data.data : [data.data];
+async function populateBlockedUserFields(data) {
+    const isArray = Array.isArray(data);
+    const dataToProcess = isArray ? data : [data];
 
-    const ids = collectBlockedIds(dataToProcess, mappings);
+    const ids = collectBlockedIds(dataToProcess);
     if (ids.length === 0) return data;
 
     const users = await User.find(
