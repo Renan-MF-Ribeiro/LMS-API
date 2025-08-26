@@ -3,7 +3,7 @@ const rateLimit = require('express-rate-limit');
 const _controller = require('./controller');
 const multiparty = require('connect-multiparty');
 const formidable = require('express-formidable');
-const { authenticatePassport, parseSamlResponse } = require('../../utils/sso/passport');
+const { authenticatePassport, parseSamlResponse } = require('../../utils/passport');
 const {
     validateTokenRoute,
     isUserManager,

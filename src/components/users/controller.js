@@ -9,6 +9,8 @@ const _files = require('../../utils/files');
 const { NewMessage } = require('../new-messages/model');
 const { User, UserTest, Block, defaultUserMap } = require('./model');
 const managerBusiness = require('../managers/business');
+const { getIntegratorConfig } = require('../integrator/business');
+
 const {
     generateToken,
     generateMfaToken,
@@ -145,7 +147,8 @@ async function handleBlockUser(user) {
                 'Conta bloqueada',
                 `Olá ${user.name}, uma nova tentativa de acesso a conta não foi permita pois a conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
             );
-            return 'Usuário bloqueado temporariamente';
+
+            throw new ApiError('Usuário bloqueado temporariamente', 403);
         }
     }
 }
@@ -249,7 +252,7 @@ async function generateTokens(user, login, password, tokenIdpProfiles, res) {
 }
 
 module.exports = {
-    async create (req, res) {
+    async create(req, res) {
         try {
             const isOnboarding = Boolean(req.body?.onboarding)
 
@@ -292,7 +295,7 @@ module.exports = {
                 );
             }
 
-            if (isOnboarding && !req.body?.cpf)  {
+            if (isOnboarding && !req.body?.cpf) {
                 return _messages.forbidden(
                     res,
                     req,
@@ -667,7 +670,7 @@ module.exports = {
         }
         let user = await User.findOne({
             _id: new mongoose.Types.ObjectId(req.user._id),
-        });
+        }).lean();
         if (user.loginType && user.loginType !== 'FORM' && user.loginType !== 'BOTH') {
             return _messages.forbidden(
                 res,
@@ -716,7 +719,7 @@ module.exports = {
 
             const firstLogin = !user?.passwordValid && !entryRecord;
 
-            WebhooksController.dispatch('APASlogin', 'users', false, {
+            WebhooksController.dispatch('auth', 'users', false, {
                 ...user,
                 password: undefined,
             });
@@ -908,7 +911,7 @@ module.exports = {
                     );
                 }
             }
-          
+
             const [tokens, isManager, entryRecord] = await Promise.all([
                 generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', tokenIdpProfiles, res),
                 managerBusiness.isUserManager(user),
@@ -1339,7 +1342,8 @@ module.exports = {
     },
 
     async import(req, res) {
-        var file = null;
+        let file = null;
+        let replaceMap = null;
         const newUsers = [];
         const existingUsers = [];
         const usersToSend = [];
@@ -1348,23 +1352,21 @@ module.exports = {
         } else {
             file = req.files.content;
         }
-        const results = await _files.readXLSXUsers(file.path);
 
-        const elegibilityResponse = await axios.get(
-            `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
-            {
-                headers: {
-                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
-                },
-            }
-        );
-        const fieldsForElegibility = elegibilityResponse.data.fields;
-
-        const messengerConfig = await getMessengerConfig();
-
-        const connectMap = await getConnectMap(true);
-
-        let replaceMap = null;
+        const [results, elegibilityResponse, messengerConfig, connectMap] = await Promise.all([
+            _files.readXLSXUsers(file.path),
+            axios.get(
+                `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+                {
+                    headers: {
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                    },
+                }
+            ),
+            await getMessengerConfig(),
+            await getConnectMap(true),
+        ])
+        const fieldsForElegibility = elegibilityResponse.data?.fields;
 
         if (connectMap) {
             const errors = [];
@@ -1394,7 +1396,7 @@ module.exports = {
                 false,
                 replaceMap
             );
-            
+
             const [account, existingUser] = await Promise.all([
                 processUserAccount(processedUser),
                 User.findOne({
@@ -1452,27 +1454,29 @@ module.exports = {
         console.log(
             `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
         );
+
+        // TODO: Não disparar mudança de trackings para usuários que não tiveram mudança em seus networkLogin
         for (const user of existingUsers) {
-            await User.findByIdAndUpdate(user._id, {
-                ...user.processedUser,
-            });
+            const dto = { ...user.processedUser, _id: user._id };
+            const { password, ...userWithoutPassword } = dto;
 
-            WebhooksController.dispatch('update', 'users', false, {
-                ...user.processedUser,
-                password: undefined,
-            });
+            const ops = [
+                User.findByIdAndUpdate(user._id, dto).exec(),
+                Tracking.updateMany(
+                    { userLogin: user.processedUser.cpf },
+                    { $set: { userLogin: user.processedUser.networkLogin } }
+                ).exec()
+            ]
+            if (req.features.webhook) WebhooksController.dispatch('update', 'users', false, userWithoutPassword);
 
-            await Tracking.updateMany(
-                { userLogin: user.processedUser.cpf },
-                { $set: { userLogin: user.processedUser.networkLogin } }
-            );
+            await Promise.all(ops)
         }
+
 
         const usersDataConfig = await getUsersDataConfig();
 
         if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
             console.log('Inativando usuários não presentes na planilha');
-
             await User.updateMany(
                 {
                     onboarding: { $ne: true },
@@ -1488,15 +1492,22 @@ module.exports = {
                 `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
             );
 
-            await User.insertMany(newUsers);
-
-            WebhooksController.dispatch('create', 'users', true, newUsers);
+            const insertedUsers = await User.insertMany(newUsers);
+            if (req.features.webhook) {
+                const webhooks = insertedUsers?.map((user) => {
+                    const { password, ...userWithoutPassword } = user.toObject()
+                    WebhooksController.dispatch('create', 'users', false, userWithoutPassword);
+                })
+                await Promise.all(webhooks)
+            }
 
             if (messengerConfig.sendUsersToMicrosservice) {
-                await sendAccountsToKafka(usersToSend);
                 const campaign = createWelcomeCampaign();
-                await sendMessageToKafka(campaign, newUsers);
-                await NewMessage.create(campaign);
+                await Promise.all([
+                    await sendAccountsToKafka(usersToSend),
+                    await sendMessageToKafka(campaign, newUsers),
+                    await NewMessage.create(campaign)
+                ])
             }
         }
 
@@ -1536,16 +1547,15 @@ module.exports = {
             const preventOnboardingGroupAdd = usersDataConfig?.preventOnboardingGroupAdd ?? false;
 
             for (const result of results) {
-                const existingUser = await User.findOne({
-                    networkLogin: result.cpf,
-                });
-
-                const processedUser = await processUsersLoad(
+                const [existingUser, processedUser] = await Promise.all([User.findOne({
+                    networkLogin: result.cpf
+                }),
+                processUsersLoad(
                     result,
                     fieldsForElegibility,
                     onboarding,
                     preventOnboardingGroupAdd
-                );
+                )])
 
                 const account = await processUserAccount(processedUser);
 
@@ -1577,9 +1587,18 @@ module.exports = {
             );
 
             for (const user of existingUsers) {
-                await User.findByIdAndUpdate(user._id, {
-                    ...user.processedUser,
-                });
+                const dto = { ...user.processedUser, _id: user._id };
+                const { password, ...userWithoutPassword } = dto;
+
+                const ops = [
+                    User.findByIdAndUpdate(user._id, dto).exec(),
+                    Tracking.updateMany(
+                        { userLogin: user.processedUser.cpf },
+                        { $set: { userLogin: user.processedUser.networkLogin } }
+                    ).exec()
+                ]
+                if (req.features.webhook) WebhooksController.dispatch('update', 'users', false, userWithoutPassword);
+                await Promise.all(ops)
             }
 
             if (newUsers.length > 0) {
@@ -1771,6 +1790,19 @@ module.exports = {
             const user = await User.findOne({
                 _id: { $eq: _id },
             });
+
+            const { data: integratorConfig } = await getIntegratorConfig()
+            if (
+                user?.origin?.type === 'INTEGRATOR' &&
+                !integratorConfig?.allowUserEdit
+            ) {
+                return _messages.unauthorized(
+                    res,
+                    req,
+                    'Usuário de integração, não pode ser editado via painel'
+                );
+            }
+
             if (tags && tags.length > 0) {
                 for (const tag of tags) {
                     const filter = user.tags.filter((val) => {
@@ -1805,13 +1837,10 @@ module.exports = {
                 await sendAccountsToKafka([account]);
             }
             await User.findByIdAndUpdate(_id, req.body);
+            const foundUser = await User.findOne({ _id }).lean();
 
-            const foundUser = await User.findById(_id).lean();
-
-            WebhooksController.dispatch('update', 'users', false, {
-                ...foundUser,
-                password: undefined,
-            });
+            const { password, ...userWithoutPassword } = foundUser
+            WebhooksController.dispatch('update', 'users', false, userWithoutPassword);
 
             if (userUpdated?.status) {
                 await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status);

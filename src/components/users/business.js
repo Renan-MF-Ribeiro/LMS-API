@@ -48,7 +48,7 @@ async function createGroupsByGroupsAD(groupsAD) {
         createGroups.map(
             (groupName) => ({
                 name: groupName,
-                tags: [{ display: groupName, value: groupName }],
+                tags: [],
             })
         )
     );
@@ -421,7 +421,7 @@ module.exports = {
 
     /**
      * Processes user data for loading into the system, handling authentication, group assignments, and data formatting.
-     * 
+     *
      * @async
      * @param {Object} data - The user data object to be processed
      * @param {Array<string>} [elegibilityFields=[]] - Array of field names to use for eligibility group assignment
@@ -457,7 +457,7 @@ module.exports = {
         const salt = bcrypt.genSaltSync(10);
         const firstName = String(data.name?.split(' ')[0]).trim().toLowerCase();
         const firstThreeCpf = sanitizeCpf(data.cpf).slice(0, 3);
-        const initialPassword = !onboarding ? '1234' : `${firstName}${firstThreeCpf}`;
+        const initialPassword = !onboarding ? 'Minhasenha@1' : `${firstName}${firstThreeCpf}`;
 
         function parseDate(date) {
             if (!date) return null;
