@@ -174,12 +174,11 @@ const mentorConfigController = {
         }
     },
 
-    async isBlocked(id) {
+    async isBlocked(id, req) {
         try {
-            const { data } = await mentoringApi.get(`/config/blocked/${id}`);
+            const { data } = await mentoringApi.get(`/config/blocked/${id}`, { headers: { Authorization: `Bearer ${req.headers.authorization}`} });
             return data.data;
         } catch (error) {
-            // console.log(error)
         }
     },
 };
