@@ -350,7 +350,13 @@ const business = {
                 alreadyConcluded: alreadyConcluded.has(user._id?.toString())
             };
         }).filter((user) => !user.alreadyConcluded);
+
         return userData;
+        // return {
+        //     users: userData,
+        //     limit: classFound?.limit,
+        //     spots: classFound?.limit - classFound?.users?.length,
+        // };
     },
 };
 
