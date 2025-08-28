@@ -163,7 +163,7 @@ const managersUsersController = {
                 }
 
                 const classId = dto.recommendedCourses[0]?.classId;
-                console.log({ classId });
+
                 const classToJoin = await ClassModel.findOne({ _id: classId });
                 const hasLimit = typeof classToJoin.limit === 'number' && classToJoin.limit > 0;
 
