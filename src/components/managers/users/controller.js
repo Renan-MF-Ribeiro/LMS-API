@@ -172,11 +172,11 @@ const managersUsersController = {
                     const availableSpots = classToJoin.limit - currentStudentsCount;
 
                     if (users.length > availableSpots) {
-                        throw new ApiError(`Não é possível adicionar ${users.length} usuários. Vagas disponíveis: ${availableSpots} de ${classToJoin.limit} total.`);
+                        throw new ApiError(`Não é possível adicionar ${users.length} usuários. Vagas disponíveis: ${availableSpots} de ${classToJoin.limit} total.`, 409);
                     }
 
                     if (availableSpots <= 0) {
-                        throw new ApiError(`Classe está cheia. Limite: ${classToJoin.limit}, Usuários atuais: ${currentStudentsCount}`);
+                        throw new ApiError(`Classe está cheia. Limite: ${classToJoin.limit}, Usuários atuais: ${currentStudentsCount}`, 409);
                     }
                 }
 
