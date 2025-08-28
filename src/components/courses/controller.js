@@ -698,7 +698,7 @@ module.exports = {
                 if (dateApplicationInitial && dateApplicationFinal === '') {
                     flagDate = true;
                 } else {
-                    if (dateApplicationInitial >= dateApplicationFinal) flagDate = false;
+                    if (moment(dateApplicationInitial).isSameOrAfter(moment(dateApplicationFinal))) flagDate = false;
                 }
             }
 
@@ -707,7 +707,7 @@ module.exports = {
                     res,
                     req,
                     'A data final da aplicação tem que ser maior que a inicial!',
-                    'A data final da aplicação tem que ser maior que a inicial!!',
+                    'A data final da aplicação tem que ser maior que a inicial!',
                     'courses',
                     '/createClass'
                 );
