@@ -96,7 +96,7 @@ const business = {
         });
     },
 
-    paginateUsers(req, users) {
+    paginateUsers (req, users) {
         const { skip, limit } = pagination(req);
         if (!users?.[0]?.user) {
             // Tratando objeto para que seja compativel com objeto gerado na matriz ativa
@@ -351,12 +351,11 @@ const business = {
             };
         }).filter((user) => !user.alreadyConcluded);
 
-        return userData;
-        // return {
-        //     users: userData,
-        //     limit: classFound?.limit,
-        //     spots: classFound?.limit - classFound?.users?.length,
-        // };
+        return {
+            users: userData,
+            limit: classFound?.limit,
+            spots: classFound?.limit - classFound?.users?.length,
+        };
     },
 };
 
