@@ -621,6 +621,61 @@ module.exports = {
         return course;
     },
 
+    /**
+     * Processes location data and determines if it's a URL or physical location
+     * @param {string} location - The location string to process
+     * @returns {Object} Processed location data
+     */
+    async processLocation(location) {
+        const LINK_REGEX = /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
+
+        if (!location) {
+            return {
+                isLocationUrl: false,
+                onlineLink: null,
+                displayLocation: '',
+                processedLocation: location
+            };
+        }
+
+        const isLocationUrl = LINK_REGEX.test(location);
+        
+        return {
+            isLocationUrl,
+            onlineLink: isLocationUrl ? location : null,
+            displayLocation: isLocationUrl ? 'Online' : location,
+            processedLocation: isLocationUrl ? null : location
+        };
+    }
+
+    /**
+     * Prepares class/course body for message sending by handling location appropriately
+     * @param {Object} bodyData - The class or course data
+     * @param {string} location - The location string
+     * @returns {Object} Processed body data for messaging
+     */
+    async prepareBodyForMessage(bodyData, location) {
+        const { isLocationUrl, onlineLink } = processLocation(location);
+        const processedBody = { ...bodyData };
+        
+        if (isLocationUrl) {
+            delete processedBody.location;
+            processedBody.onlineLink = onlineLink;
+        }
+        
+        return processedBody;
+    }
+
+    /**
+     * Gets display text for location in messages
+     * @param {string} location - The location string
+     * @returns {string} Display text for the location
+     */
+    async getLocationDisplayText(location) {
+        const { displayLocation } = processLocation(location);
+        return displayLocation;
+    }
+
 
     /**
      * @param {Array} data

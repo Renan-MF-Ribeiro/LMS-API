@@ -35,7 +35,9 @@ const {
     getClassByID,
     returnProgramaID,
     processAttendanceListImport,
-    enrichCoursesWithClasses
+    enrichCoursesWithClasses,
+    prepareBodyForMessage,
+
 } = require('./business');
 
 const {
@@ -620,18 +622,8 @@ module.exports = {
 
                         const messengerConfig = await getMessengerConfig();
 
-                        const linkRegex = /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
-
-                        const isLocationUrl = linkRegex.test(location);
-                        const onlineLink = isLocationUrl ? location : null;
-
-                        // Assign classBody after class creation
                         const classBody = createdClass.toObject ? createdClass.toObject() : createdClass;
-                        const classBodyForMessage = { ...classBody };
-                        if (isLocationUrl) {
-                            delete classBodyForMessage.location;
-                            classBodyForMessage.onlineLink = onlineLink;
-                        }
+                        const classBodyForMessage = prepareBodyForMessage(classBody, location);
 
                         for (const user of newUsers) {
                             const message = {
@@ -870,16 +862,8 @@ module.exports = {
 
                         const messengerConfig = await getMessengerConfig();
 
-                        const linkRegex = /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
+                        const classBodyForMessage = prepareBodyForMessage(classBody, location);
 
-                        const isLocationUrl = linkRegex.test(location);
-                        const onlineLink = isLocationUrl ? location : null;
-
-                        const classBodyForMessage = { ...classBody };
-                        if (isLocationUrl) {
-                            delete classBodyForMessage.location;
-                            classBodyForMessage.onlineLink = onlineLink;
-                        }
 
                         for (const user of addedUsers) {
                             const message = {
@@ -1559,6 +1543,8 @@ module.exports = {
 
             const messengerConfig = await getMessengerConfig();
 
+            const classBodyForMessage = prepareBodyForMessage(course, course.location);
+
             const message = {
                 category: 'notify',
                 communication: ['notification', 'email'],
@@ -1569,11 +1555,11 @@ module.exports = {
                         users: [userID],
                     },
                 },
-                text: `${user.name}, você foi inscrito com sucesso na turma "${course.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.`,
-                textHtml: `<p>${user.name}, você foi inscrito com sucesso na turma "${course.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.</p>`,
+                text: `${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.`,
+                textHtml: `<p>${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.</p>`,
                 thumbnail: messengerConfig.emailTemplate.thumbnail,
                 title: `Treinamentos: ${course.name}`,
-                class: course,
+                class: classBodyForMessage,
             };
             await createMessagesFromBackend(message);
 
