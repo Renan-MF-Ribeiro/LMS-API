@@ -666,7 +666,7 @@ module.exports = {
         return displayLocation;
     },
 
-    enrichCoursesWithClasses(data, classesFromUser, userId) {
+    enrichCoursesWithClasses (data, classesFromUser, userId) {
         return data.map((course) => {
             let classes = classesFromUser.filter(c => c.courseID.toString() == course._id.toString());
             classes = classes.map(c => {
