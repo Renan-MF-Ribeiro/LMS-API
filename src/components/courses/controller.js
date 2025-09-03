@@ -633,7 +633,7 @@ module.exports = {
                                 target: {
                                     type: 'users',
                                     value: {
-                                        users: arrUserId,
+                                        users: [user._id],
                                     },
                                 },
                                 text: `${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.`,
@@ -857,14 +857,9 @@ module.exports = {
                             $push: { users: { $each: addedUsers } },
                         });
 
-                        // Dispara notificações para usuários adicionados
-                        const arrUserId = addedUsers.map((user) => user._id);
-
                         const messengerConfig = await getMessengerConfig();
 
                         const classBodyForMessage = await prepareBodyForMessage(classBody, location);
-
-
                         for (const user of addedUsers) {
                             const message = {
                                 category: 'notify',
@@ -873,7 +868,7 @@ module.exports = {
                                 target: {
                                     type: 'users',
                                     value: {
-                                        users: arrUserId,
+                                        users: [user._id],
                                     },
                                 },
                                 text: `${user.name}, sua inscrição na turma "${classBodyForMessage.name}" foi atualizada! veja os detalhes abaixo.`,
@@ -883,8 +878,6 @@ module.exports = {
                                 class: classBodyForMessage,
                                 courses: true,
                             };
-
-                            console.log(JSON.stringify(message, null, 2));
 
                             await createMessagesFromBackend(message);
                         }
@@ -1552,7 +1545,7 @@ module.exports = {
                 target: {
                     type: 'users',
                     value: {
-                        users: [userID],
+                        users: [user._id],
                     },
                 },
                 text: `${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.`,

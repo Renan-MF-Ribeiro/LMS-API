@@ -634,7 +634,7 @@ module.exports = {
         }
 
         const isLocationUrl = LINK_REGEX.test(location);
-        
+
         return {
             isLocationUrl,
             onlineLink: isLocationUrl ? location : null,
@@ -642,24 +642,26 @@ module.exports = {
             processedLocation: isLocationUrl ? null : location
         };
     },
-
     
     async prepareBodyForMessage(bodyData, location) {
-        const { isLocationUrl, onlineLink } = module.exports.processLocation(location);
-        const processedBody = { ...bodyData };
+        const dateApplicationInitial = moment(bodyData.dateApplicationInitial);
+        const dateApplicationFinal = moment(bodyData.dateApplicationFinal);
+        const formattedDateInitial = dateApplicationInitial.isValid() ? dateApplicationInitial.format('DD/MM/YYYY HH:mm') : '';
+        const formattedDateFinal = dateApplicationFinal.isValid() ? dateApplicationFinal.format('DD/MM/YYYY HH:mm') : '';
+
+        const { isLocationUrl, onlineLink } = await module.exports.processLocation(location);
         
+        const processedBody = { ...bodyData, dateApplicationInitial: formattedDateInitial, dateApplicationFinal: formattedDateFinal };
         if (isLocationUrl) {
             delete processedBody.location;
             processedBody.onlineLink = onlineLink;
         }
+
+        console.log('Processed Body for Message:', processedBody);
         
         return processedBody;
     },
 
-    async getLocationDisplayText(location) {
-        const { displayLocation } = module.exports.processLocation(location);
-        return displayLocation;
-    },
     enrichCoursesWithClasses (data, classesFromUser, userId) {
         return data.map((course) => {
             let classes = classesFromUser.filter(c => c.courseID.toString() == course._id.toString());
