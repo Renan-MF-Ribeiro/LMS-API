@@ -633,7 +633,7 @@ module.exports = {
                             classBodyForMessage.onlineLink = onlineLink;
                         }
 
-                        for (const user of addedUsers) {
+                        for (const user of newUsers) {
                             const message = {
                                 category: 'notify',
                                 communication: ['notification', 'email'],
@@ -644,8 +644,8 @@ module.exports = {
                                         users: arrUserId,
                                     },
                                 },
-                                text: `${user.name}, você foi inscrito com sucesso na turma "${name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.`,
-                                textHtml: `<p>${user.name}, você foi inscrito com sucesso na turma "${name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.</p>`,
+                                text: `${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.`,
+                                textHtml: `<p>${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.</p>`,
                                 thumbnail: messengerConfig.emailTemplate.thumbnail,
                                 title: `Treinamentos: ${name}`,
                                 class: classBodyForMessage,
@@ -892,13 +892,15 @@ module.exports = {
                                         users: arrUserId,
                                     },
                                 },
-                                text: `${user.name}, sua inscrição na turma "${course.name}" foi atualizada! veja os detalhes abaixo.`,
-                                textHtml: `<p>${user.name}, sua inscrição na turma "${course.name}" foi atualizada! veja os detalhes abaixo.</p>`,
+                                text: `${user.name}, sua inscrição na turma "${classBodyForMessage.name}" foi atualizada! veja os detalhes abaixo.`,
+                                textHtml: `<p>${user.name}, sua inscrição na turma "${classBodyForMessage.name}" foi atualizada! veja os detalhes abaixo.</p>`,
                                 thumbnail: messengerConfig.emailTemplate.thumbnail,
                                 title: `Treinamentos: ${name}`,
                                 class: classBodyForMessage,
                                 courses: true,
                             };
+
+                            console.log(JSON.stringify(message, null, 2));
 
                             await createMessagesFromBackend(message);
                         }
