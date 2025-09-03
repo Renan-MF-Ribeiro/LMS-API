@@ -1560,6 +1560,7 @@ module.exports = {
                 thumbnail: messengerConfig.emailTemplate.thumbnail,
                 title: `Treinamentos: ${course.name}`,
                 class: classBodyForMessage,
+                courses: true,
             };
             await createMessagesFromBackend(message);
 

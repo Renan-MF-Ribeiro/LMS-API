@@ -621,11 +621,6 @@ module.exports = {
         return course;
     },
 
-    /**
-     * Processes location data and determines if it's a URL or physical location
-     * @param {string} location - The location string to process
-     * @returns {Object} Processed location data
-     */
     async processLocation(location) {
         const LINK_REGEX = /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
 
@@ -650,7 +645,7 @@ module.exports = {
 
     
     async prepareBodyForMessage(bodyData, location) {
-        const { isLocationUrl, onlineLink } = processLocation(location);
+        const { isLocationUrl, onlineLink } = module.exports.processLocation(location);
         const processedBody = { ...bodyData };
         
         if (isLocationUrl) {
@@ -662,7 +657,7 @@ module.exports = {
     },
 
     async getLocationDisplayText(location) {
-        const { displayLocation } = processLocation(location);
+        const { displayLocation } = module.exports.processLocation(location);
         return displayLocation;
     },
     enrichCoursesWithClasses (data, classesFromUser, userId) {
