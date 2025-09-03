@@ -665,7 +665,6 @@ module.exports = {
         const { displayLocation } = processLocation(location);
         return displayLocation;
     },
-
     enrichCoursesWithClasses (data, classesFromUser, userId) {
         return data.map((course) => {
             let classes = classesFromUser.filter(c => c.courseID.toString() == course._id.toString());
