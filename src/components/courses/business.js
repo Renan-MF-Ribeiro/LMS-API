@@ -646,14 +646,9 @@ module.exports = {
             displayLocation: isLocationUrl ? 'Online' : location,
             processedLocation: isLocationUrl ? null : location
         };
-    }
+    },
 
-    /**
-     * Prepares class/course body for message sending by handling location appropriately
-     * @param {Object} bodyData - The class or course data
-     * @param {string} location - The location string
-     * @returns {Object} Processed body data for messaging
-     */
+    
     async prepareBodyForMessage(bodyData, location) {
         const { isLocationUrl, onlineLink } = processLocation(location);
         const processedBody = { ...bodyData };
@@ -664,25 +659,13 @@ module.exports = {
         }
         
         return processedBody;
-    }
+    },
 
-    /**
-     * Gets display text for location in messages
-     * @param {string} location - The location string
-     * @returns {string} Display text for the location
-     */
     async getLocationDisplayText(location) {
         const { displayLocation } = processLocation(location);
         return displayLocation;
-    }
+    },
 
-
-    /**
-     * @param {Array} data
-     * @param {Array} classesFromUser
-     * @param {string} userId
-     * @returns {Array}
-     */
     enrichCoursesWithClasses(data, classesFromUser, userId) {
         return data.map((course) => {
             let classes = classesFromUser.filter(c => c.courseID.toString() == course._id.toString());

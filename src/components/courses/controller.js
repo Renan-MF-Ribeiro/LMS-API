@@ -623,7 +623,7 @@ module.exports = {
                         const messengerConfig = await getMessengerConfig();
 
                         const classBody = createdClass.toObject ? createdClass.toObject() : createdClass;
-                        const classBodyForMessage = prepareBodyForMessage(classBody, location);
+                        const classBodyForMessage = await prepareBodyForMessage(classBody, location);
 
                         for (const user of newUsers) {
                             const message = {
@@ -862,7 +862,7 @@ module.exports = {
 
                         const messengerConfig = await getMessengerConfig();
 
-                        const classBodyForMessage = prepareBodyForMessage(classBody, location);
+                        const classBodyForMessage = await prepareBodyForMessage(classBody, location);
 
 
                         for (const user of addedUsers) {
@@ -1543,7 +1543,7 @@ module.exports = {
 
             const messengerConfig = await getMessengerConfig();
 
-            const classBodyForMessage = prepareBodyForMessage(course, course.location);
+            const classBodyForMessage = await prepareBodyForMessage(course, course.location);
 
             const message = {
                 category: 'notify',
