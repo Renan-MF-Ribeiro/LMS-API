@@ -229,6 +229,8 @@ const mentorController = {
                 data.data
             );
 
+            populatedData.data = populatedData.data.filter(m => m.user.status !== "INATIVO");
+
             return _messages.success(res, req, populatedData, 'ok', 'mentoring', 'searchMentors');
         } catch (error) {
             return _messages.internalServer(
