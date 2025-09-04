@@ -11,10 +11,12 @@ const { HistoricEvaluation } = require('../components/assessments/model');
 const { Tracking } = require('../components/tracking/model');
 const { Trail } = require('../components/trails/model');
 const { Item } = require('../components/items/model');
-const { getCompanyConfig } = require('../components/config/business');
+const { getCompanyConfig } = require('../components/config/utils');
 const { htmlToText } = require('html-to-text');
 const tlds = require('tlds');
 const mongoose = require('mongoose');
+const { CompanyConfigModel } = require('../components/config/model');
+
 
 module.exports = {
     getDateToday() {
@@ -766,8 +768,8 @@ module.exports = {
     },
 
     isDateOutOfRange(initialDate, finalDate) {
-        const initial = moment(new Date(initialDate)).subtract(3, 'hours').startOf('day').toDate().getTime(); 
-        const final = moment(new Date(finalDate)).subtract(3, 'hours').endOf('day').toDate().getTime(); 
+        const initial = moment(new Date(initialDate)).subtract(3, 'hours').startOf('day').toDate().getTime();
+        const final = moment(new Date(finalDate)).subtract(3, 'hours').endOf('day').toDate().getTime();
         const today = new Date().getTime();
 
         return initial > today || final < today;
@@ -844,7 +846,7 @@ module.exports = {
     async handleStudentTrailsV2(user, trails, onlyExpired = false) {
         const completedTrails = [];
         const inProgressTrails = [];
-        
+
         const allTrackingUser = await Tracking.find({
             userLogin: { $eq: user.networkLogin },
             ...(!onlyExpired
@@ -886,19 +888,19 @@ module.exports = {
             const trailItemsDb = await Item.find({
                 _id: { $in: trailItems.map((item) => new mongoose.Types.ObjectId(item.itemID._id)) },
             }).select('_id titleURL').lean();
-            
+
             let nextItem = null;
-            
+
             const item = trailItems.find(({ itemID }) => !itemID?.completion);
-            
+
             const progress =
                 (trailItems.filter(({ itemID }) => itemID?.completion === 1).length *
                     100) /
                 trailItems.length;
-            
+
             if (item) {
                 const foundItem = trailItemsDb.find(({ _id }) => String(_id) === String(item.itemID._id));
-                
+
                 nextItem = {
                     _id: foundItem?._id,
                     titleURL: foundItem?.titleURL,
@@ -1018,9 +1020,9 @@ module.exports = {
             }
             return acc;
         }, 0);
-        
+
         trail.completionPercentage = +((completionTotal / trail.items.length) * 100).toFixed(2);
-        
+
         return { trail, containsACompletedItem };
     },
 
