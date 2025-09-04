@@ -12,6 +12,7 @@ const { Trail } = require('../../trails/model');
 const { ClassModel, CourseModel } = require('../../courses/model');
 const courseBusiness = require('../../courses/business');
 const { Types } = require('mongoose');
+const ApiError = require('../../../errors/ApiError');
 
 const managersUsersController = {
     findUserById: async (req, res) => {
@@ -161,6 +162,24 @@ const managersUsersController = {
                     throw new ApiError('Usuário(s) não encontrado', 404);
                 }
 
+                const classId = dto.recommendedCourses[0]?.classId;
+
+                const classToJoin = await ClassModel.findOne({ _id: classId });
+                const hasLimit = typeof classToJoin.limit === 'number' && classToJoin.limit > 0;
+
+                if (hasLimit) {
+                    const currentStudentsCount = classToJoin.users ? classToJoin.users.length : 0;
+                    const availableSpots = classToJoin.limit - currentStudentsCount;
+
+                    if (users.length > availableSpots) {
+                        throw new ApiError(`Não é possível adicionar ${users.length} usuários. Vagas disponíveis: ${availableSpots} de ${classToJoin.limit} total.`, 409);
+                    }
+
+                    if (availableSpots <= 0) {
+                        throw new ApiError(`Classe está cheia. Limite: ${classToJoin.limit}, Usuários atuais: ${currentStudentsCount}`, 409);
+                    }
+                }
+
                 // Em nosso fluxo atual, apenas um curso pode ser recomendado por vez.
                 // Portanto, não é necessário iterar sobre recommendedCourses (ainda).
                 //for await (const recommendedCourse of dto.recommendedCourses) {
@@ -168,6 +187,7 @@ const managersUsersController = {
                     await courseBusiness.listJoin(user, dto.recommendedCourses[0].classId);
                 }
                 //}
+                return res.status(200).json("Usuário(s) adicionado(s) com sucesso");
             }
 
             return res.status(200).json("Recomendado com sucesso");
@@ -209,7 +229,7 @@ const managersUsersController = {
                 return res.status(400).json('Class ID and user IDs are required');
             }
             const usersArray = Array.isArray(userIds) ? userIds : [userIds];
-            
+
             await courseBusiness.removeUsersFromClass(classId, usersArray);
             res.status(200).json('Usuário(s) removido(s) com sucesso');
         } catch (error) {
