@@ -11,23 +11,12 @@ const { HistoricEvaluation } = require('../components/assessments/model');
 const { Tracking } = require('../components/tracking/model');
 const { Trail } = require('../components/trails/model');
 const { Item } = require('../components/items/model');
-// const { getCompanyConfig } = require('../components/config/business');
+const { getCompanyConfig } = require('../components/config/utils');
 const { htmlToText } = require('html-to-text');
 const tlds = require('tlds');
 const mongoose = require('mongoose');
 const { CompanyConfigModel } = require('../components/config/model');
 
-/**
- * @fixme código duplicado de business.js
- * @returns {Promise<*>}
- */
-async function getCompanyConfig() {
-    const config = await CompanyConfigModel.findOne().sort({ _id: -1 });
-
-    if (config) return config.value;
-
-    return (await CompanyConfigModel.create({}))?.value;
-}
 
 module.exports = {
     getDateToday() {

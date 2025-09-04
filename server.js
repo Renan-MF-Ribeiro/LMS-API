@@ -26,10 +26,10 @@ const {
     getMessengerConfig,
     getCronConfig,
     getUsersDataConfig,
-    getCompanyConfig,
     getChatIAConfig,
     getDashboardConfig
 } = require('./src/components/config/business')
+const { getCompanyConfig } = require('./src/components/config/utils');
 const GamificationKafka = require('./src/components/gamification/kafka/broker');
 
 const environment = require('./src/environment');

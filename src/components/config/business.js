@@ -134,15 +134,6 @@ module.exports = {
         return (await UsersDataConfigModel.create({}))?.value;
     },
 
-    async getCompanyConfig() {
-        const config = await CompanyConfigModel.findOne().sort({ _id: -1 });
-
-        if (config) return config.value;
-
-        // console.log('Creating company config');
-        return (await CompanyConfigModel.create({}))?.value;
-    },
-
     async getMatrixConfig() {
         const config = await MatrixConfigModel.findOne();
 
