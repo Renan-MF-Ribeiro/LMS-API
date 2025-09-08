@@ -1,8 +1,11 @@
 const path = require('node:path');
 const ExcelJS = require('exceljs');
+const { uniq } = require('lodash');
 
 async function setSheetResponse(fileName, fieldMap, res) {
-    const headers = Object.values(fieldMap).filter(value => !['não mapear'].includes(String(value).toLowerCase()));
+    const headers = uniq(
+        Object.values(fieldMap).filter(value => !['não mapear'].includes(String(value).toLowerCase()))
+    );
 
     const workbook = new ExcelJS.Workbook();
 
