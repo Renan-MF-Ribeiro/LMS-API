@@ -633,6 +633,26 @@ module.exports = {
             );
         }
     },
+
+    async incrementViews (req, res) {
+        try {
+            const { postId } = req.params;
+            const uri = `posts/${postId}/views`;
+
+            await socialApi.patch(uri);
+
+            return _messages.successEmpty(res, req);
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'feed/posts',
+                'incrementViews'
+            );
+        }
+    }
 };
 
 async function createMessagesFromBackend(body) {

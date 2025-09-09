@@ -20,6 +20,7 @@ module.exports = express
     .get('/admin', isEngagementManager, _controller.listPostToBeModerated)
     .post('/shares', _controller.share)
     .get('/:postId', _controller.listPostToBeModerated)
+    .patch('/:postId/views', _controller.incrementViews)
 
     // Rotas de admin
     .post('/report/handle/:postId', isEngagementManager, _controller.handleReportedPost)
