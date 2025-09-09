@@ -5,7 +5,18 @@ module.exports = {
     listReasons: async (req, res) => {
         try {
             const uri = 'reports/reasons';
-            const { data } = await socialApi.get(uri, { params: req?.query });
+            const { data } = await socialApi.get(uri, { params: req.query });
+
+            return _messages.success(res, req, data, 'ok', 'feed', 'reports/reasons');
+        } catch (error) {
+            _messages.badRequest(res, req, error.message, error.message, 'feed', 'reports/reasons');
+        }
+    },
+
+    listActiveReasons: async (req, res) => {
+        try {
+            const uri = 'reports/reasons/active';
+            const { data } = await socialApi.get(uri);
 
             return _messages.success(res, req, data, 'ok', 'feed', 'reports/reasons');
         } catch (error) {
@@ -28,7 +39,7 @@ module.exports = {
         try {
             const { reasonId } = req.params;
             const uri = `reports/reasons/${reasonId}`;
-            const { data } = await socialApi.post(uri, req.body);
+            const { data } = await socialApi.put(uri, req.body);
 
             return _messages.success(res, req, data, 'ok', 'feed', 'reports/reasons/:reasonId');
         } catch (error) {
@@ -47,9 +58,9 @@ module.exports = {
         try {
             const { reasonId } = req.params;
             const uri = `reports/reasons/${reasonId}`;
-            const { data } = await socialApi.delete(uri);
+            await socialApi.delete(uri);
 
-            return _messages.success(res, req, data, 'ok', 'feed', 'reports/reasons/:reasonId');
+            return _messages.successEmpty(res, req, 'ok', 'feed', 'reports/reasons/:reasonId');
         } catch (error) {
             _messages.badRequest(
                 res,

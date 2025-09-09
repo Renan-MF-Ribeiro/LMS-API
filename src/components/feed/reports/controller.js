@@ -51,14 +51,14 @@ module.exports = {
         }
     },
 
-    createPostReport: async (req, res) => {
+    createReport: async (req, res) => {
         try {
-            const uri = 'reports/posts';
+            const uri = 'reports';
             const { data } = await socialApi.post(uri, req.body);
 
-            return _messages.success(res, req, data, 'ok', 'feed', 'reports/posts');
+            return _messages.success(res, req, data, 'ok', 'feed', 'reports');
         } catch (error) {
-            _messages.badRequest(res, req, error.message, error.message, 'feed', 'reports/posts');
+            _messages.badRequest(res, req, error.message, error.message, 'feed', 'reports');
         }
     },
 
