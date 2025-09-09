@@ -92,7 +92,7 @@ async function populateUserFields(fieldName, reference, data) {
 
     return processData(data, userMap, avatarMap, true);
 }
-async function populateSingleData(fieldName, reference, data){
+async function populateSingleData(fieldName, reference, data) {
     // Salva todos os ID's de usuários que devem ser populado de 'data'
     const ids = new Set();
     const avatarIds = new Set();
@@ -121,7 +121,7 @@ async function populateSingleData(fieldName, reference, data){
         avatar: avatarMap.get(data.avatar?.toString()) || null,
     };
 
-    return populatedItem
+    return populatedItem;
 }
 
 async function populateMembers(data) {
@@ -180,7 +180,7 @@ async function createNotification(config, users) {
         category: 'notify',
         mode: 'manual',
         target: {
-            type: 'users',
+            type: config.targetType || 'users',
             value: {
                 users,
             },
@@ -191,22 +191,21 @@ async function createNotification(config, users) {
         },
         thumbnail: messengerConfig.emailTemplate.thumbnail,
     };
-
     try {
         async function createMessagesFromBackend(campaign) {
             const target = campaign.target;
 
             let targetUsers = [];
 
-            if (!target.value.user) {
+            if (!target.value.users) {
                 targetUsers = await processTargetUsers(target, campaign.category);
             } else {
-                targetUsers.push({ ...target.value.user });
+                Array.isArray(target?.value?.users)
+                    ? targetUsers.push(...target.value.users)
+                    : targetUsers.push(target.value.users);
             }
-
             await sendMessageToKafka(campaign, targetUsers);
         }
-
         await createMessagesFromBackend(message);
     } catch (error) {
         console.log(error);

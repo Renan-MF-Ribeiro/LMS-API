@@ -43,82 +43,95 @@ module.exports = {
         }
     },
 
-    async returnEvaluation (req, res) {
+    async returnEvaluation(req, res) {
         try {
-            const { id } = req.params
-            const user = await _functions.getUserByToken(req)
-            const { order, sort } = _functions.ordernation(req)
-            const { idEvaluation } = await Item.findOne({ _id: { $eq: id } }, 'idEvaluation')
+            const { id } = req.params;
+            const user = await _functions.getUserByToken(req);
+            const { order, sort } = _functions.ordernation(req);
+            const { idEvaluation } = await Item.findOne({ _id: { $eq: id } }, 'idEvaluation');
 
             const query = {
-                $and: [
-                    { _id: { $eq: idEvaluation } },
-                    { deleted: { $eq: 0 } }
-                ]
-            }
+                $and: [{ _id: { $eq: idEvaluation } }, { deleted: { $eq: 0 } }],
+            };
 
             // if (req?.segmentation) {
             //     handleSegmentationOnQuery(req, 'owner', query)
             // }
 
-            const { description, attempts, duration, categories } = await Evaluation
-                .findOne(query)
-                .populate({ path: 'categories', match: { deleted: { $eq: 0 }, active: { $eq: 1 }, } })
+            const { description, attempts, duration, categories } = await Evaluation.findOne(
+                query
+            ).populate({ path: 'categories', match: { deleted: { $eq: 0 }, active: { $eq: 1 } } });
 
-            const timeDuration = await HistoricEvaluation.find({
+            const historicEvaluation = await HistoricEvaluation.find({
                 user: { $eq: user._id },
                 idEvaluation: { $eq: idEvaluation },
                 item: { $eq: id },
                 $or: [
                     { expiredCompletion: { $exists: false } },
                     { expiredCompletion: { $eq: null } },
-                ]
-            })
-                .sort({ [order]: sort })
+                ],
+            }).sort({ [order]: sort });
 
-            let result = null
-            let amountOfQuestions = null
+            let result = null;
+            let amountOfQuestions = null;
             const totalQuestions = await Question.countDocuments({
                 idEvaluation: { $eq: idEvaluation },
                 deleted: { $eq: false },
-            })
+            });
 
-            if (timeDuration.length) {
-                const { amountQuestionsCorrect } = timeDuration[0]
-                amountOfQuestions = timeDuration[0].amountOfQuestions
-                result = await _business.calculateRatingEvaluation(amountQuestionsCorrect, amountOfQuestions)
+            if (historicEvaluation.length) {
+                const { amountQuestionsCorrect } = historicEvaluation[0];
+                amountOfQuestions = historicEvaluation[0].amountOfQuestions;
+                console.log({ amountOfQuestions });
+                result = await _business.calculateRatingEvaluation(
+                    amountQuestionsCorrect,
+                    amountOfQuestions
+                );
             } else {
-                amountOfQuestions = 0
+                amountOfQuestions = 0;
                 for (const category of categories) {
                     if (category.amountOfQuestions < 0) {
                         const amountOfQuestionsByCategory = await Question.countDocuments({
                             idCategory: { $eq: category._id },
                             deleted: { $eq: 0 },
-                            active: { $eq: 1 }
-                        })
-                        amountOfQuestions += amountOfQuestionsByCategory
+                            active: { $eq: 1 },
+                        });
+                        amountOfQuestions += amountOfQuestionsByCategory;
                     } else {
-                        amountOfQuestions += category.amountOfQuestions
+                        amountOfQuestions += category.amountOfQuestions;
                     }
                 }
             }
-            const attemptsNotCompleted = timeDuration.filter(historic => historic.lessonStatus == SCORMLessonStatus.NOT_ATTEMPTED)
-            const attemptsCompleted = timeDuration.filter(historic => historic.lessonStatus != SCORMLessonStatus.NOT_ATTEMPTED)
+            const attemptsNotCompleted = historicEvaluation.filter(
+                (historic) => historic.lessonStatus == SCORMLessonStatus.NOT_ATTEMPTED
+            );
+            const attemptsCompleted = historicEvaluation.filter(
+                (historic) => historic.lessonStatus != SCORMLessonStatus.NOT_ATTEMPTED
+            );
 
             const obj = {
                 description,
                 attempts,
                 duration,
-                amountOfQuestions: amountOfQuestions > totalQuestions ? totalQuestions : amountOfQuestions,
+                amountOfQuestions:
+                    amountOfQuestions > totalQuestions ? totalQuestions : amountOfQuestions,
                 attemptsHistory: attemptsCompleted.length,
-                historicDuration: attemptsNotCompleted.length > 0 ? attemptsNotCompleted[0].duration : null,
+                historicDuration:
+                    attemptsNotCompleted.length > 0 ? attemptsNotCompleted[0].duration : null,
                 values: result != null ? result.values : { correct: 0, incorrect: 0 },
-            }
+            };
 
-            _messages.success(res, req, obj)
+            _messages.success(res, req, obj);
         } catch (error) {
-            console.error(error)
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'returnEvaluation')
+            console.error(error);
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'evaluations',
+                'returnEvaluation'
+            );
         }
     },
 
@@ -417,57 +430,57 @@ module.exports = {
         }
     },
 
-
-
-    async questionResponse (req, res) {
+    async questionResponse(req, res) {
         try {
-            const { _id, idQuestion, idAlternative } = req.body
-            const { answers, amountQuestionsCorrect } = await HistoricEvaluation.findOne({ _id: { $eq: _id } })
-            const { rigthAnswer } = await Question.findOne({ _id: { $eq: idQuestion } })
-            let arrAnswers = [...answers]
-            let correct = false
-            let amountCorrect = amountQuestionsCorrect
+            const { _id, idQuestion, idAlternative } = req.body;
 
-            if (idAlternative === rigthAnswer?.toString()) {
-                correct = true
-                amountCorrect++
+            const historic = await HistoricEvaluation.findOne({ _id });
+            const question = await Question.findOne({ _id: idQuestion });
+
+            if (!historic || !question) {
+                return _messages.badRequest(res, req, 'Histórico ou questão não encontrados.');
             }
 
-            const questionAnswered = arrAnswers.find(answer => answer.idQuestion == idQuestion)
-            if (questionAnswered) {
+            const isCorrect = idAlternative === question.rigthAnswer?.toString();
+            const updatedAnswers = [...historic.answers];
+            const existingAnswerIndex = updatedAnswers.findIndex((a) => a.idQuestion == idQuestion);
+            const today = _functions.getDateToday();
 
-                arrAnswers = arrAnswers.map(answer => {
-                    if (answer.idQuestion == idQuestion) {
-                        answer.idAlternative = idAlternative
-                        answer.updatedAt = _functions.getDateToday()
-                        answer.correct = correct
-                    }
-                    return answer
-                })
-
-                amountCorrect = arrAnswers.filter((answer) => answer.correct).length
+            if (existingAnswerIndex !== -1) {
+                updatedAnswers[existingAnswerIndex] = {
+                    ...updatedAnswers[existingAnswerIndex],
+                    idAlternative,
+                    updatedAt: today,
+                    correct: isCorrect,
+                };
             } else {
-
-                arrAnswers.push({
+                updatedAnswers.push({
                     idQuestion,
                     idAlternative,
-                    correct,
-                    createdAt: _functions.getDateToday(),
-                })
-
+                    correct: isCorrect,
+                    createdAt: today,
+                });
             }
 
+            const amountCorrect = updatedAnswers.filter((a) => a.correct).length;
+
             await HistoricEvaluation.findByIdAndUpdate(_id, {
-                answers: arrAnswers,
-                amountQuestionsAnswered: arrAnswers.length,
+                answers: updatedAnswers,
+                amountQuestionsAnswered: updatedAnswers.length,
                 amountQuestionsCorrect: amountCorrect,
-            })
+            });
 
-
-            return _messages.success(res, req, null)
+            return _messages.success(res, req, null);
         } catch (error) {
-            console.error(error)
-            return _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'questionResponse')
+            console.error(error);
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'evaluations',
+                'questionResponse'
+            );
         }
     },
 
@@ -550,7 +563,7 @@ module.exports = {
             const { id, idItem } = req.params
             const user = await _functions.getUserByToken(req)
 
-            const historicEvaluationArray = await HistoricEvaluation.find({
+            const historicEvaluation = await HistoricEvaluation.findOne({
                 item: idItem,
                 user: user._id,
                 lessonStatus: { $eq: SCORMLessonStatus.NOT_ATTEMPTED }
@@ -558,7 +571,6 @@ module.exports = {
                 .sort({ createdAt: 'desc' })
                 .limit(1)
 
-            const historicEvaluation = historicEvaluationArray[0]
             if (historicEvaluation) {
                 const sortedQuestions = await _business.returnQuestionsByCategoryFromHistoric(historicEvaluation.questions)
 
@@ -589,13 +601,8 @@ module.exports = {
                 }
 
                 const { questions, amount } = await _business.returnQuestionsByCategory(categories)
-
-                const questionHistoric = []
-                for (let question of questions) {
-                    const categories = question.filter(q => q._id)
-
-                    questionHistoric.push(...categories)
-                }
+                
+                const questionHistoric = questions.flatMap(question => question.filter(q => q._id));
 
                 const { _id } = await HistoricEvaluation.create({
                     idEvaluation: id,

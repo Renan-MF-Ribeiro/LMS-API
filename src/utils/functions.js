@@ -11,9 +11,12 @@ const { HistoricEvaluation } = require('../components/assessments/model');
 const { Tracking } = require('../components/tracking/model');
 const { Trail } = require('../components/trails/model');
 const { Item } = require('../components/items/model');
+const { getCompanyConfig } = require('../components/config/utils');
 const { htmlToText } = require('html-to-text');
 const tlds = require('tlds');
 const mongoose = require('mongoose');
+const { CompanyConfigModel } = require('../components/config/model');
+
 
 module.exports = {
     getDateToday() {
@@ -634,6 +637,39 @@ module.exports = {
         trail.completionPercentage = +((completionTotal / trail.items.length) * 100).toFixed(2);
         return { trail, containsACompletedItem };
     },
+    async validateUniqueEmail(email, user) {
+        const { customEmail } = await module.exports.getCustomEmail(user);
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (!email || email === "null" || !emailRegex.test(email)) {
+            return customEmail;
+        }
+
+        const count = await User.countDocuments({ email });
+        if (count > 1) {
+            return customEmail;
+        }
+        return email;
+    },
+
+     async getCustomEmail(user){
+        const companyConfig = await getCompanyConfig();
+        const supportFormConfig = companyConfig?.supportFormCustomEmail || null;
+        if (!supportFormConfig || supportFormConfig.length < 2) {
+            return { customEmail: null, domain: null };
+        }
+        const domain = supportFormConfig.pop().replace('@', '').trim();
+        const customEmail = supportFormConfig.map((field) => {
+            if (user[field]) {
+                return String(user[field]).trim()
+            }
+
+            return null;
+        }).filter(Boolean).join('_');
+
+        return { customEmail: `${module.exports.slugify(customEmail)}@${domain}`, domain };
+    },
+
 
     processExpirationDate(trail, user) {
         const expirationType = trail.expirationType;
@@ -732,8 +768,8 @@ module.exports = {
     },
 
     isDateOutOfRange(initialDate, finalDate) {
-        const initial = moment(new Date(initialDate)).subtract(3, 'hours').startOf('day').toDate().getTime(); 
-        const final = moment(new Date(finalDate)).subtract(3, 'hours').endOf('day').toDate().getTime(); 
+        const initial = moment(new Date(initialDate)).subtract(3, 'hours').startOf('day').toDate().getTime();
+        const final = moment(new Date(finalDate)).subtract(3, 'hours').endOf('day').toDate().getTime();
         const today = new Date().getTime();
 
         return initial > today || final < today;

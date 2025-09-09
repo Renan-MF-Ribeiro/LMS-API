@@ -6,7 +6,6 @@ const {
 } = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
-const { populateUserFields, createNotification, getSegFieldsFromUser, populateSingleData } = require('../buisiness');
 const {
     populateUserFields,
     createNotification,
@@ -15,7 +14,6 @@ const {
     handleUserPostNotification,
 } = require('../business');
 const fs = require('fs');
-const mime = require('mime-types');
 const FormData = require('form-data');
 const { getSegmentation, isSegmentationException } = require('../../config/business');
 
@@ -51,16 +49,16 @@ module.exports = {
 
                 const formData = new FormData();
 
-                 Object.keys(req?.files).forEach((key, i) => {
-                     const file = req?.files[key];
+                Object.keys(req?.files).forEach((key, i) => {
+                    const file = req?.files[key];
 
-                     const filename = `${i}-${file.name.replace(/ /g, '-')}`;
+                    const filename = `${i}-${file.name.replace(/ /g, '-')}`;
 
-                     formData.append(filename, fs.createReadStream(file.path), {
-                         filename,
-                         contentType: file.type,
-                     });
-                 });
+                    formData.append(filename, fs.createReadStream(file.path), {
+                        filename,
+                        contentType: file.type,
+                    });
+                });
 
                 const result = await socialApi.patch(uploadContent, formData, {
                     headers: {
@@ -69,9 +67,9 @@ module.exports = {
                     },
                 });
 
-                 if (result?.data && data?.post) {
-                     data.post.content = result.data;
-                 }
+                if (result?.data && data?.post) {
+                    data.post.content = result.data;
+                }
             }
 
             if (body.notifyUsers === true && (body?.elegibilities || body?.elegibilitiesAnd)) {
@@ -85,7 +83,6 @@ module.exports = {
                     contentId: data?.post?._id,
                     targetType: 'tag',
                 };
-
                 await createNotification(config, users);
             }
 
@@ -227,7 +224,7 @@ module.exports = {
             const user = await getUserByToken(req);
             const userField = user[expectedField]?.toLowerCase();
 
-            const isAnException = isSegmentationException(user, segmentation.value)
+            const isAnException = isSegmentationException(user, segmentation.value);
             if (userField && !isAnException) {
                 queryParams.owner = userField;
             }
@@ -348,21 +345,28 @@ module.exports = {
             const { name, _id, networkLogin } = await getUserByToken(req);
 
             const uri = 'posts/comments';
-            const { data } = await socialApi.put(uri, req.body);
+            const [{ data }, originalPost] = await Promise.all([
+                socialApi.put(uri, req.body),
+                socialApi.get(`posts/${req.body.postId}`),
+            ]);
+
             const PopulatedData = await populateSingleData('user', 'userId', data.data);
             const response = { data: PopulatedData, total: data.total };
-            const { userId: postOwnerId } = await socialApi.get(`posts/${req.body.postId}`);
-            const isReplyingOwnPost = _id === postOwnerId;
+
+            const originalPostOwnerId = originalPost.data?.userId;
+            const isReplyingOwnPost = _id === originalPostOwnerId;
 
             if (isMentioningSomeone) {
-                const mentionedUsers = isMentioningSomeone.filter((user) => user !== postOwnerId);
+                const mentionedUsers = isMentioningSomeone.filter(
+                    (user) => user !== originalPostOwnerId
+                );
 
                 const config = {
                     reqUser: name,
                     communication: ['notification'],
                     type: 'mention',
                     contentType: 'comentário',
-                    contentId: PopulatedData?._id,
+                    contentId: data?.data?.postId,
                 };
                 await createNotification(config, mentionedUsers);
             }
@@ -373,19 +377,20 @@ module.exports = {
                     communication: ['notification'],
                     type: 'comment',
                     contentType: isReplyingPost ? 'post' : 'comentário',
+                    contentId: data?.data?.postId,
                 };
-                await createNotification(config, postOwnerId);
+                await createNotification(config, originalPostOwnerId);
             }
 
-            if(!isReplyingOwnPost) {
+            if (!isReplyingOwnPost) {
                 await GamificationKafka.publishEventRuleValidation({
                     events: [EVENT_CATEGORY.FEED_COMMENT, EVENT_CATEGORY.FEED_COMMENT_OWNER],
                     identifier: networkLogin,
                     meta: {
                         postId: req.body.postId,
-                        comment: req.body.comment
-                    }
-                })
+                        comment: req.body.comment,
+                    },
+                });
             }
 
             return _messages.success(res, req, response);
@@ -429,15 +434,15 @@ module.exports = {
             const { data } = await socialApi.put(uri, req.body);
 
             if (req?.body?.target && req?.body?.postId) {
-                const user = await getUserByToken(req)
+                const user = await getUserByToken(req);
 
                 await GamificationKafka.publishEventRuleValidation({
                     events: [EVENT_CATEGORY.FEED_LIKE, EVENT_CATEGORY.FEED_LIKE_OWNER],
                     identifier: user.networkLogin,
                     meta: {
-                        postId: req.body.postId
-                    }
-                })
+                        postId: req.body.postId,
+                    },
+                });
             }
 
             return _messages.success(res, req, data);
@@ -461,8 +466,8 @@ module.exports = {
 
             req.body.sharedBy = {
                 userId: _id,
-                userName: networkLogin
-            }
+                userName: networkLogin,
+            };
 
             const uri = 'posts/shares';
             const { data } = await socialApi.post(uri, req.body);
@@ -482,9 +487,9 @@ module.exports = {
                     identifier: networkLogin,
                     meta: {
                         postId: req.body.postId,
-                        usersWhoShared: users
-                    }
-                })
+                        usersWhoShared: users,
+                    },
+                });
             }
 
             return _messages.success(res, req, data);

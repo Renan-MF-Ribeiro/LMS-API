@@ -69,21 +69,58 @@ module.exports = {
         }
     },
 
-    async updateCategory (req, res) {
+    async updateCategory(req, res) {
         try {
-            const { _id } = req.body
-            const questionsOfCategory = await Question
-                .find(
-                    { idCategory: { $eq: req.body._id }, repealed: { $eq: 0 }, deleted: { $eq: 0 }, active: { $eq: 1 } }
-                ).countDocuments()
+            const { _id } = req.body;
+            const questionsOfCategory = await Question.find({
+                idCategory: { $eq: req.body._id },
+                repealed: { $eq: 0 },
+                deleted: { $eq: 0 },
+                active: { $eq: 1 },
+            }).countDocuments();
+
             if (req.body.amountOfQuestions > questionsOfCategory) {
-                return _messages.badRequest(res, req, 'Questões insuficientes', 'Não é possível cadastras uma quantidade de questões maior que as questões cadastradas', 'categories', 'deleteCategory')
+                return _messages.badRequest(
+                    res,
+                    req,
+                    'Questões insuficientes',
+                    'Não é possível cadastras uma quantidade de questões maior que as questões cadastradas',
+                    'categories',
+                    'deleteCategory'
+                );
             }
-            const oldData = await Category.findByIdAndUpdate(_id, req.body)
-            const newData = await Category.find({ _id: { $eq: _id } })
-            _messages.success(res, req, 'Atualizado com sucesso', 'Atualização de dados', 'categories', 'updateCategory', newData, oldData, true, 'UPDATE')
+
+            const payload = {
+                ...req.body,
+                ...(Number.isNaN(Number(req.body?.amountOfQuestions)) && {
+                    amountOfQuestions: -1,
+                }),
+            };
+            
+            const oldData = await Category.findByIdAndUpdate(_id, payload);
+            const newData = await Category.find({ _id: { $eq: _id } });
+            _messages.success(
+                res,
+                req,
+                'Atualizado com sucesso',
+                'Atualização de dados',
+                'categories',
+                'updateCategory',
+                newData,
+                oldData,
+                true,
+                'UPDATE'
+            );
         } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'categories', 'updateCategory')
+            console.log({ error });
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'categories',
+                'updateCategory'
+            );
         }
     },
 

@@ -53,6 +53,7 @@ const { handleSegmentationOnCreate, handleSegmentationOnQuery, getChatIAConfig }
 const ApiError = require('../../errors/ApiError');
 const GamificationKafka = require('../gamification/kafka/broker');
 const { dispatchChatItemKafkaEvent, isFeatEnabled } = require('../chat/business');
+const { escapeString } = require('../../utils/strings');
 
 const ITEM_KINDS = Object.freeze({
     DocumentItem: DocumentItem,
@@ -1449,93 +1450,77 @@ const ItemController = {
         }
     },
 
-    async findAll (req, res) {
-        try {
-            const { skip, limit } = _functions.pagination(req);
-            const { sort, order } = _functions.ordernation(req);
+    async findAll(req, res) {
+        const { skip, limit } = _functions.pagination(req);
+        const { sort = 'desc', order = 'createdAt' } = _functions.ordernation(req);
+        const { searchBy, archive, collaborative, filterNotRelated } = req.query;
 
-            const q = {};
-            if (req.query.enabled !== undefined) q.enabled = true;
-            const searchBy = req.query.searchBy;
-            const archive = req.query.archive;
-            const collaborative = req.query.collaborative;
-            const query = searchBy
-                ? {
-                    $or: [
-                        {
-                            description: {
-                                $regex: searchBy,
-                                $options: 'i',
-                            },
-                        },
-                        { title: { $regex: searchBy, $options: 'i' } },
-                        { notes: { $regex: searchBy, $options: 'i' } },
-                        { alias: { $regex: searchBy, $options: 'i' } },
-                        { keywords: { $regex: searchBy, $options: 'i' } },
-                        {
-                            responsible: {
-                                $regex: searchBy,
-                                $options: 'i',
-                            },
-                        },
-                    ],
-                    deleted: { $eq: 0 },
-                }
-                : {
-                    deleted: { $eq: 0 },
-                }
+        const scapedSearchBy = escapeString(searchBy);
 
-            query['archive'] = archive ? { $eq: archive === 'true' } : { $ne: true };
-            query['kind'] = { $nin: ['PostItem', 'AluraItem'] };
-            query['collaborative'] = collaborative ? { $eq: collaborative === 'true' } : { $ne: true };
+        const query = {
+            deleted: 0,
+            archive: archive ? archive === 'true' : { $ne: true },
+            collaborative: collaborative ? collaborative === 'true' : { $ne: true },
+            kind: { $nin: ['PostItem', 'AluraItem'] },
+            ...(scapedSearchBy?.length && {
+                $or: [
+                    { title: { $regex: scapedSearchBy, $options: 'i' } },
+                    { notes: { $regex: scapedSearchBy, $options: 'i' } },
+                    { alias: { $regex: scapedSearchBy, $options: 'i' } },
+                    { keywords: { $regex: scapedSearchBy, $options: 'i' } },
+                    { responsible: { $regex: scapedSearchBy, $options: 'i' } },
+                ],
+            })
+        };
 
-            if (req?.segmentation) {
-                handleSegmentationOnQuery(req, 'owner', query)
-            }
-
-            let total = await Item.find(query).count();
-
-            let itens = await Item.find(query)
-                .populate('idEvaluation', ['description', 'duration'])
-                .skip(parseInt(skip))
-                .limit(parseInt(limit))
-                .sort({ [order]: sort });
-
-
-            if (req.query.filterNotRelated === 'true') {
-                const dataItens = [];
-                const filterItens = await Item.find(query);
-
-                await Promise.all(
-                    filterItens.map(async (item) => {
-                        const trail = await Trail.find({
-                            'items.itemID': { $in: item._id },
-                        }).countDocuments();
-
-                        if (trail === 0) dataItens.push(item);
-                    })
-                );
-                total = dataItens.length;
-                itens = dataItens
-                    .reverse()
-                    .slice(parseInt(skip))
-                    .slice(0, parseInt(limit));
-            }
-
-            _messages.success(res, req, {
-                data: itens,
-                total,
-            });
-        } catch (error) {
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'items',
-                'findAll'
-            );
+        if (req?.segmentation) {
+            handleSegmentationOnQuery(req, 'owner', query)
         }
+
+
+        if (filterNotRelated === 'true') {
+            const items = await Item
+                .find(query)
+                .populate('idEvaluation', ['description', 'duration'])
+                .lean();
+
+            if (!items.length) {
+                return _messages.success(res, req, {
+                    data: [],
+                    total: 0,
+                });
+            }
+
+            const trailsWithItems = await Trail.find({
+                'items.itemID': { $in: items.map(item => item._id) }
+            }).lean();
+
+            const relatedItemsId = trailsWithItems.flatMap(trail => trail.items.map(item => String(item.itemID)));
+
+            const filteredItems = items
+                .filter(item => !relatedItemsId.includes(String(item._id)))
+                .slice(parseInt(skip), parseInt(skip) + parseInt(limit));
+
+            return _messages.success(res, req, {
+                data: filteredItems,
+                total: filteredItems.length,
+            });
+        }
+
+        const items = await Item
+            .find(query)
+            .populate('idEvaluation', ['description', 'duration'])
+            .skip(parseInt(skip))
+            .limit(parseInt(limit))
+            .sort({ [order]: sort })
+            .lean();
+
+        const total = await Item.countDocuments(query);
+
+        return _messages.success(res, req, {
+            data: items,
+            total,
+        });
     },
 
     async findItensActives (req, res) {

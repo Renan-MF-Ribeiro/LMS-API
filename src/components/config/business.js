@@ -134,15 +134,6 @@ module.exports = {
         return (await UsersDataConfigModel.create({}))?.value;
     },
 
-    async getCompanyConfig() {
-        const config = await CompanyConfigModel.findOne().sort({ _id: -1 });
-
-        if (config) return config.value;
-
-        // console.log('Creating company config');
-        return (await CompanyConfigModel.create({}))?.value;
-    },
-
     async getMatrixConfig() {
         const config = await MatrixConfigModel.findOne();
 
@@ -181,11 +172,12 @@ module.exports = {
         };
 
         if (req.query?.searchBy) {
+            const q = req.query.searchBy.replace(/[^a-zA-Z0-9 ]/g, "")
             query.$and.push({
                 $or: [
-                    { name: { $regex: req.query.searchBy, $options: 'i' } },
-                    { email: { $regex: req.query.searchBy, $options: 'i' } },
-                    { networkLogin: { $regex: req.query.searchBy, $options: 'i' } },
+                    { name: { $regex: q, $options: 'i' } },
+                    { email: { $regex: q, $options: 'i' } },
+                    { networkLogin: { $regex: q, $options: 'i' } },
                 ],
             });
         }

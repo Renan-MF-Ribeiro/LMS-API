@@ -689,6 +689,10 @@ async function processUserLoadFile(directory, fileName, isProduction, usersDataC
                 );
             }
 
+            if (usersDataConfig?.inactivateIfNotInSpreadsheet && !user.status) {
+                user.status = 'ATIVO';
+            }
+
             const processedUser = await processUsersLoad(
                 user,
                 fieldsForEligibility,

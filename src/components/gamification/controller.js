@@ -39,6 +39,16 @@ const GamificationController = {
         }
     },
 
+    async getClientNiveis(req, res) {
+        try {
+            const data = await GamificationBusiness.getClientNiveis();
+
+            return _messages.success(res, req, data);
+        } catch (error) {
+            return _messages.badRequest(res, req, error);
+        }
+    },
+
     async updateClient(req, res) {
         try {
             const requestUserLogin = await getUserByToken(req);

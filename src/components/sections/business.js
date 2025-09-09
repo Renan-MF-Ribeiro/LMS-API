@@ -111,7 +111,12 @@ async function setAssessmentHistoricOnSections(userId, sections) {
                 ?.filter(trail => !trail.isCertificateException)
                 ?? [];
 
-            const isCompleted = filteredTrails.every(trail => trail.completion === 1);
+            const isCompleted = filteredTrails
+                ?.filter(trail => {
+                    const exceptionCertificateTrails = section?.exceptionCertificateTrails?.map(exceptionCertificateTrail => String(exceptionCertificateTrail));
+                    return !exceptionCertificateTrails?.includes(String(trail._id));
+                })
+                ?.every(trail => trail.completion === 1);
 
             const messages = trainingSectionInfo.messages ?? [];
 
@@ -146,6 +151,10 @@ async function setAssessmentHistoricOnSections(userId, sections) {
                         return !includes;
                     }
                 )
+                ?.filter(trail => {
+                    const exceptionCertificateTrails = section?.exceptionCertificateTrails?.map(exceptionCertificateTrail => String(exceptionCertificateTrail));
+                    return !exceptionCertificateTrails?.includes(String(trail._id));
+                })
                 ?.every((trail) => trail.completion === 1);
 
             section.hasAssessment = false;

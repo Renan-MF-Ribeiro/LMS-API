@@ -200,12 +200,12 @@ module.exports = {
                 trailBlocked = data.blockedTrails.some((trail) => {
                     return trail.trailId === req.query.trailId;
                 });
-                tagBlocked = data.tagsLists.blocked.some((tag) => {
-                    return userTags.some((t) => {
-                        return t.value === tag;
-                    });
-                });
             }
+            tagBlocked = data.tagsLists.blocked.some((tag) => {
+                return userTags.some((t) => {
+                    return t.value === tag;
+                });
+            });
             if (data.usersLists.blocked.length > 0) {
                 userBlocked = data.usersLists.blocked.some((u) => {
                     return u.userId == user._id;
@@ -939,6 +939,7 @@ module.exports = {
                     communication: ['notification', 'email'],
                     type: 'share',
                     contentType: 'trail',
+                    contentName: trail.title,
                     contentId: trail._id,
                 };
                 await createNotification(config, users);
