@@ -4,10 +4,12 @@ const { getSegmentation, isSegmentationException } = require('../../config/busin
 const GamificationKafka = require('../../gamification/kafka/broker');
 const { EVENT_CATEGORY } = require('../../gamification/model');
 const { socialApi } = require('../../social/http-adapter');
-const { populateUserFields, populateMembers, getSegFieldsFromUser } = require('../buisiness');
+const { populateUserFields, populateMembers, getSegFieldsFromUser } = require('../business');
 const FormData = require('form-data');
 const fs = require('fs');
 const mime = require('mime-types');
+const { User } = require('../../users/model');
+const _functions = require('../../../utils/functions');
 
 const GroupController = {
     async getAllGroups(req, res) {
@@ -164,7 +166,7 @@ const GroupController = {
                 const expectedField = segmentation.value.rule.issuer;
                 const user = await getUserByToken(req);
                 const userField = user[expectedField];
-                
+
                 if (userField) {
                     body.owner = userField.toLowerCase();
                 }
@@ -332,6 +334,56 @@ const GroupController = {
                 'Erro interno no servidor',
                 'feed',
                 'deleteUserFromGroup'
+            );
+        }
+    },
+
+    async listLogs(req, res) {
+        const { groupId } = req.params;
+        const { searchBy } = req.query;
+
+        try {
+            const uri = `/groups/logs/${groupId}`;
+            const { data } = await socialApi.get(uri, {
+                params: { direction: req.query.direction },
+            });
+
+            const users = await User.find({ _id: { $in: data.map((log) => log.user.userId) } });
+            const usersMap = new Map(users.map((user) => [user._id.toString(), user.name]));
+
+            let logs = data.map((log) => ({
+                ...log,
+                user: {
+                    userId: log.user.userId,
+                    userName: usersMap.get(log.user.userId),
+                },
+            }));
+
+            const { skip, limit } = _functions.pagination(req);
+
+            if (searchBy) {
+                logs = logs.filter((log) => {
+                    const userName = log.user.userName.toLowerCase();
+                    const groupName = log.group.groupName.toLowerCase();
+                    const _searchBy = searchBy.toLowerCase();
+                    
+                    return userName.includes(_searchBy) || groupName.includes(_searchBy);
+                });
+            }
+
+            return _messages.success(res, req, {
+                data: logs.slice(skip, skip + limit),
+                total: logs.length,
+            });
+        } catch (error) {
+            console.log({ error });
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'feed/groups',
+                'listLogs'
             );
         }
     },

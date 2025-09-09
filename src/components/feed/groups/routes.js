@@ -11,12 +11,13 @@ module.exports = express
     .get('/user/:userId', _controller.findUsersGroup)
     .get('/info/:groupId', _controller.getGroupById)
     .get('/members/:groupId', _controller.getGroupMembers)
-    .delete('quit/:groupId', _controller.quitFromGroup)
-    .put('/:groupId', formidable(),  _controller.updateGroup)
-    
+    .delete('/quit/:groupId', _controller.quitFromGroup)
+    .put('/:groupId', formidable(), _controller.updateGroup)
+
     // Rotas de admin
     .get('/', isEngagementManager, _controller.getAllGroups)
-    .put('/:groupId', formidable(), isEngagementManager,  _controller.updateGroup)
+    .put('/:groupId', formidable(), isEngagementManager, _controller.updateGroup)
     .patch('/members/:groupId', isEngagementManager, _controller.updateElegibleMembers)
     .delete('/:groupId/:userId', isEngagementManager, _controller.deleteUserFromGroup)
-    .delete('/:groupId', isEngagementManager, _controller.deleteGroup);
+    .delete('/:groupId', isEngagementManager, _controller.deleteGroup)
+    .get('/logs/:groupId', isEngagementManager, _controller.listLogs);
