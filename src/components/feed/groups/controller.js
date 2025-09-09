@@ -13,7 +13,7 @@ const _functions = require('../../../utils/functions');
 
 const GroupController = {
     async getAllGroups(req, res) {
-        const queryParams = new URLSearchParams();
+        const queryParams = new URLSearchParams(req.query);
 
         try {
             //Apply segmentation rule
@@ -33,7 +33,7 @@ const GroupController = {
             const query = `?${searchQuery}`;
 
             const uri = `groups${query}`;
-            const { data } = await socialApi.get(uri, { params: req.query });
+            const { data } = await socialApi.get(uri);
 
             const PopulatedData = await populateUserFields('owner', 'ownerId', data);
             const response = { data: PopulatedData, total: data.total };
