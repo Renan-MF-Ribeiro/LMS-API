@@ -205,11 +205,11 @@ module.exports = {
     async getUsersLoadCron () {
         const cronConfig = await getCronConfig();
 
-        console.log('Starting getUsersLoadCron', cronConfig.userFTP.active);
+        console.log('Starting getUsersLoadCron', cronConfig?.userFTP?.active);
 
-        if (cronConfig.userFTP.active) {
+        if (cronConfig?.userFTP?.active) {
             new CronJob(
-                '00 19 * * * ',
+                cronConfig?.userFTP?.cronExpression ?? '00 19 * * *',
                 () => {
                     getUsersLoad();
                 },
