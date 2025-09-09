@@ -111,10 +111,10 @@ module.exports = {
         const limitYear = limitDate.getFullYear();
 
         const startString = `${startYear}-${startMonth >= 10 ? startMonth : '0' + startMonth}-${startDay >= 10 ? startDay : '0' + startDay
-            }T00:00:00.000-03:00`;
+        }T00:00:00.000-03:00`;
 
         const limitString = `${limitYear}-${limitMonth >= 10 ? limitMonth : '0' + limitMonth}-${limitDay >= 10 ? limitDay : '0' + limitDay
-            }T23:59:59.000-03:00`;
+        }T23:59:59.000-03:00`;
 
         return {
             startDate: new Date(startString),
@@ -406,17 +406,17 @@ module.exports = {
                     userLogin: { $eq: user.networkLogin },
                     ...(!onlyExpired
                         ? {
-                            $or: [
-                                { expiredCompletion: { $exists: false } },
-                                { expiredCompletion: { $eq: null } },
-                            ],
-                        }
+                              $or: [
+                                  { expiredCompletion: { $exists: false } },
+                                  { expiredCompletion: { $eq: null } },
+                              ],
+                          }
                         : {
-                            $and: [
-                                { expiredCompletion: { $exists: true } },
-                                { expiredCompletion: { $ne: null } },
-                            ],
-                        }),
+                              $and: [
+                                  { expiredCompletion: { $exists: true } },
+                                  { expiredCompletion: { $ne: null } },
+                              ],
+                          }),
                 });
                 for (const t of trails) {
                     const { trail } = module.exports.processTrailTracking(t, allTrackingUser, true);
@@ -694,9 +694,9 @@ module.exports = {
         query = Array.isArray(query)
             ? query
             : query
-                .replace(/(\[(\d)\])/g, '.$2')
-                .replace(/^\./, '')
-                .split('.');
+                  .replace(/(\[(\d)\])/g, '.$2')
+                  .replace(/^\./, '')
+                  .split('.');
         if (!(query[0] in obj)) {
             return defaultVal;
         }
@@ -806,26 +806,25 @@ module.exports = {
         return preserveLinks(html);
     },
 
-
     async handleStudentTrailsV2(user, trails, onlyExpired = false) {
         const completedTrails = [];
         const inProgressTrails = [];
-        
+
         const allTrackingUser = await Tracking.find({
             userLogin: { $eq: user.networkLogin },
             ...(!onlyExpired
                 ? {
-                    $or: [
-                        { expiredCompletion: { $exists: false } },
-                        { expiredCompletion: { $eq: null } },
-                    ],
-                }
+                      $or: [
+                          { expiredCompletion: { $exists: false } },
+                          { expiredCompletion: { $eq: null } },
+                      ],
+                  }
                 : {
-                    $and: [
-                        { expiredCompletion: { $exists: true } },
-                        { expiredCompletion: { $ne: null } },
-                    ],
-                }),
+                      $and: [
+                          { expiredCompletion: { $exists: true } },
+                          { expiredCompletion: { $ne: null } },
+                      ],
+                  }),
         }).lean();
 
         const trackingMap = new Map();
@@ -852,19 +851,19 @@ module.exports = {
             const trailItemsDb = await Item.find({
                 _id: { $in: trailItems.map((item) => new mongoose.Types.ObjectId(item.itemID._id)) },
             }).select('_id titleURL').lean();
-            
+
             let nextItem = null;
-            
+
             const item = trailItems.find(({ itemID }) => !itemID?.completion);
-            
+
             const progress =
                 (trailItems.filter(({ itemID }) => itemID?.completion === 1).length *
                     100) /
                 trailItems.length;
-            
+
             if (item) {
                 const foundItem = trailItemsDb.find(({ _id }) => String(_id) === String(item.itemID._id));
-                
+
                 nextItem = {
                     _id: foundItem?._id,
                     titleURL: foundItem?.titleURL,
@@ -984,9 +983,9 @@ module.exports = {
             }
             return acc;
         }, 0);
-        
+
         trail.completionPercentage = +((completionTotal / trail.items.length) * 100).toFixed(2);
-        
+
         return { trail, containsACompletedItem };
     },
 
@@ -1009,8 +1008,82 @@ module.exports = {
         if (String(loginType).toUpperCase() === 'FORM') return 'FORM';
 
         return 'BOTH';
-    }
+    },
 
+    /**
+     * Helper para acessar propriedades aninhadas em objetos
+     * @param {Object} obj - Objeto para acessar
+     * @param {string} path - Caminho aninhado (ex: 'user.profile.name')
+     * @returns {*} Valor encontrado ou undefined
+     */
+    getNestedValue(obj, path) {
+        if (!obj || !path) return undefined;
+        return path.split('.').reduce((curr, prop) => curr?.[prop], obj);
+    },
+
+    /**
+     * Função core que compara dois valores de forma universal
+     * @param {*} valueA - Primeiro valor para comparação
+     * @param {*} valueB - Segundo valor para comparação
+     * @param {string} direction - Direção da ordenação ('asc' ou 'desc')
+     * @returns {number} -1, 0 ou 1 para ordenação
+     */
+    universalSort(valueA, valueB, direction = 'asc') {
+        if (valueA == null && valueB == null) return 0;
+        if (valueA == null) return direction === 'asc' ? 1 : -1;
+        if (valueB == null) return direction === 'asc' ? -1 : 1;
+
+        const isISODate = (str) => {
+            return typeof str === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(str);
+        };
+
+        if (isISODate(valueA)) valueA = new Date(valueA);
+        if (isISODate(valueB)) valueB = new Date(valueB);
+
+        let comparison;
+
+        if (typeof valueA === 'number' && typeof valueB === 'number') {
+            comparison = valueA - valueB;
+        } else if (valueA instanceof Date && valueB instanceof Date) {
+            comparison = valueA.getTime() - valueB.getTime();
+        } else if (typeof valueA === 'string' && typeof valueB === 'string') {
+            comparison = valueA.toLowerCase().localeCompare(valueB.toLowerCase());
+        } else {
+            comparison = String(valueA).toLowerCase().localeCompare(String(valueB).toLowerCase());
+        }
+
+        return direction === 'asc' ? comparison : -comparison;
+    },
+
+    /**
+     * Ordena array por campo (simples ou aninhado) ou função customizada
+     * @param {Array} data - Array de objetos para ordenar
+     * @param {string|Function} fieldOrExtractor - Campo (simples/aninhado) ou função de extração
+     * @param {string} direction - Direção da ordenação ('asc' ou 'desc')
+     * @returns {Array} Array ordenado (modifica o array original)
+     */
+    sortByField(data, fieldOrExtractor, direction = 'asc') {
+        if (!Array.isArray(data) || !fieldOrExtractor) {
+            console.warn('sortByField: dados inválidos');
+            return data;
+        }
+
+        let getValue;
+
+        if (typeof fieldOrExtractor === 'function') {
+            getValue = fieldOrExtractor;
+        } else if (typeof fieldOrExtractor === 'string' && fieldOrExtractor.includes('.')) {
+            getValue = (item) => module.exports.getNestedValue(item, fieldOrExtractor);
+        } else {
+            getValue = (item) => item[fieldOrExtractor];
+        }
+
+        return [...data].sort((a, b) => {
+            const valueA = getValue(a);
+            const valueB = getValue(b);
+            return module.exports.universalSort(valueA, valueB, direction);
+        });
+    },
 };
 
 function nameMonth(month) {
