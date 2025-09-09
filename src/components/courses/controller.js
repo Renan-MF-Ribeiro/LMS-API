@@ -35,7 +35,9 @@ const {
     getClassByID,
     returnProgramaID,
     processAttendanceListImport,
-    enrichCoursesWithClasses
+    enrichCoursesWithClasses,
+    prepareBodyForMessage,
+
 } = require('./business');
 
 const {
@@ -620,22 +622,30 @@ module.exports = {
 
                         const messengerConfig = await getMessengerConfig();
 
-                        const message = {
-                            category: 'notify',
-                            communication: ['notification', 'email'],
-                            mode: 'manual',
-                            target: {
-                                type: 'users',
-                                value: {
-                                    users: arrUserId,
+                        const classBody = createdClass.toObject ? createdClass.toObject() : createdClass;
+                        const classBodyForMessage = await prepareBodyForMessage(classBody, location);
+
+                        for (const user of newUsers) {
+                            const message = {
+                                category: 'notify',
+                                communication: ['notification', 'email'],
+                                mode: 'manual',
+                                target: {
+                                    type: 'users',
+                                    value: {
+                                        users: [user._id],
+                                    },
                                 },
-                            },
-                            text: `O usuário ${user.name} está na turma ${name}!\n O local do treinamento será em: ${location}`,
-                            textHtml: `<p>O usuário ${user.name} está na turma ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
-                            thumbnail: messengerConfig.emailTemplate.thumbnail,
-                            title: `Treinamentos: ${name}`,
-                        };
-                        await createMessagesFromBackend(message);
+                                text: `${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.`,
+                                textHtml: `<p>${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.</p>`,
+                                thumbnail: messengerConfig.emailTemplate.thumbnail,
+                                title: `Treinamentos: ${name}`,
+                                class: classBodyForMessage,
+                                courses: true,
+                            }
+
+                            await createMessagesFromBackend(message);
+                        }
 
                         success(res, req, 'Criado com sucesso!');
                         return;
@@ -847,11 +857,9 @@ module.exports = {
                             $push: { users: { $each: addedUsers } },
                         });
 
-                        // Dispara notificações para usuários adicionados
-                        const arrUserId = addedUsers.map((user) => user._id);
-
                         const messengerConfig = await getMessengerConfig();
 
+                        const classBodyForMessage = await prepareBodyForMessage(classBody, location);
                         for (const user of addedUsers) {
                             const message = {
                                 category: 'notify',
@@ -860,13 +868,15 @@ module.exports = {
                                 target: {
                                     type: 'users',
                                     value: {
-                                        users: arrUserId,
+                                        users: [user._id],
                                     },
                                 },
-                                text: `O usuário ${user.name} está na turma ${name}!\n O local do treinamento será em: ${location} `,
-                                textHtml: `<p>O usuário ${user.name} está na turma ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
+                                text: `${user.name}, sua inscrição na turma "${classBodyForMessage.name}" foi atualizada! veja os detalhes abaixo.`,
+                                textHtml: `<p>${user.name}, sua inscrição na turma "${classBodyForMessage.name}" foi atualizada! veja os detalhes abaixo.</p>`,
                                 thumbnail: messengerConfig.emailTemplate.thumbnail,
                                 title: `Treinamentos: ${name}`,
+                                class: classBodyForMessage,
+                                courses: true,
                             };
 
                             await createMessagesFromBackend(message);
@@ -1100,7 +1110,7 @@ module.exports = {
             const { id } = req.params;
             usersInClass = usersInClass.map((userID) => mongoose.Types.ObjectId(userID));
 
-            // Buscar o curso e pegar os valores de tags e mandatory
+            // Buscar o curso e pegar os valores de tags e obrigatoriedades
             const course = await CourseModel.findOne(
                 { _id: id },
                 { title: 1, tags: "$tags.value", mandatory: "$mandatory.value" }
@@ -1526,6 +1536,8 @@ module.exports = {
 
             const messengerConfig = await getMessengerConfig();
 
+            const classBodyForMessage = await prepareBodyForMessage(course, course.location);
+
             const message = {
                 category: 'notify',
                 communication: ['notification', 'email'],
@@ -1533,13 +1545,15 @@ module.exports = {
                 target: {
                     type: 'users',
                     value: {
-                        users: [userID],
+                        users: [user._id],
                     },
                 },
-                text: `O usuário ${user.name} está na turma ${course.name}!\n O local do treinamento será em: ${course.location}`,
-                textHtml: `<p>O usuário ${user.name} está na turma ${course.name}!</p> <p>O local do treinamento será em: ${course.location}</p>`,
+                text: `${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.`,
+                textHtml: `<p>${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.</p>`,
                 thumbnail: messengerConfig.emailTemplate.thumbnail,
                 title: `Treinamentos: ${course.name}`,
+                class: classBodyForMessage,
+                courses: true,
             };
             await createMessagesFromBackend(message);
 
