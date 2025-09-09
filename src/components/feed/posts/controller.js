@@ -17,13 +17,12 @@ const {
 const fs = require('fs');
 const mime = require('mime-types');
 const FormData = require('form-data');
-const {
-    getSegmentation,
-    isSegmentationException,
-} = require('../../config/business');
+const { getSegmentation, isSegmentationException } = require('../../config/business');
 
 const GamificationKafka = require('../../gamification/kafka/broker');
 const { EVENT_CATEGORY } = require('../../gamification/model');
+const { getUsersByTags } = require('../../users/business');
+const { User } = require('../../users/model');
 
 module.exports = {
     async create(req, res) {
@@ -47,7 +46,7 @@ module.exports = {
             const uri = 'posts';
             const { data } = await socialApi.post(uri, body);
 
-             if (Object.keys(req?.files).length > 0) {
+            if (req?.files && Object.keys(req?.files)?.length > 0) {
                 const uploadContent = `posts/${data.post._id}/content`;
 
                 const formData = new FormData();
@@ -90,7 +89,7 @@ module.exports = {
                 await createNotification(config, users);
             }
 
-            await handleUserPostNotification(data?.post);            
+            await handleUserPostNotification(data?.post);
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -290,10 +289,10 @@ module.exports = {
             const uri = `posts/admin`;
             const data = await socialApi.get(uri, { params: queryParams });
 
-            let populatedData = await populateUserFields('user', 'userId', data);
+            let posts = await populateUserFields('user', 'userId', data);
 
             if (searchBy) {
-                populatedData = populatedData.filter((populatedPost) => {
+                posts = posts.filter((populatedPost) => {
                     const userName = populatedPost.user.name.toLowerCase();
                     const post = populatedPost.post.toLowerCase();
                     const _searchBy = searchBy.toLowerCase();
@@ -303,13 +302,32 @@ module.exports = {
             }
 
             if (orderBy) {
-                const field = orderBy === 'username' ? 'user.name' : orderBy
-                populatedData = sortByField(populatedData, field, direction);
+                const field = orderBy === 'username' ? 'user.name' : orderBy;
+                posts = sortByField(posts, field, direction);
+            }
+
+            if (reports) {
+                const userIds = [...new Set(posts.flatMap((p) => p.reports.map((r) => r.userId)))];
+                const foundUsersReports = await User.find({ _id: { $in: userIds } });
+                const foundUsersReportsMap = new Map(
+                    foundUsersReports.map((user) => [
+                        user._id.toString(),
+                        { userId: user._id.toString(), userName: user.name },
+                    ])
+                );
+
+                posts = posts.map((post) => ({
+                    ...post,
+                    reports: post.reports.map((report) => ({
+                        reason: report.reason,
+                        author: foundUsersReportsMap.get(report.userId) || report.userId,
+                    })),
+                }));
             }
 
             const response = {
-                data: populatedData.slice(skip, skip + limit),
-                total: populatedData.length,
+                data: posts.slice(skip, skip + limit),
+                total: posts.length,
             };
 
             return _messages.success(res, req, response);
@@ -556,7 +574,7 @@ module.exports = {
             const { postId } = req.params;
             const uri = `posts/${postId}`;
 
-            const { data: oldData } = await socialApi.get(uri)
+            const { data: oldData } = await socialApi.get(uri);
             const { data: newData } = await socialApi.put(uri, body);
 
             if (!newData) {
@@ -599,7 +617,7 @@ module.exports = {
             }
 
             if (oldData?.status !== 'ACTIVE' && body?.status === 'ACTIVE') {
-                await handleUserPostNotification(newData)
+                await handleUserPostNotification(newData);
             }
 
             return _messages.success(res, req, newData);
@@ -634,7 +652,7 @@ module.exports = {
         }
     },
 
-    async incrementViews (req, res) {
+    async incrementViews(req, res) {
         try {
             const { postId } = req.params;
             const uri = `posts/${postId}/views`;
@@ -652,7 +670,7 @@ module.exports = {
                 'incrementViews'
             );
         }
-    }
+    },
 };
 
 async function createMessagesFromBackend(body) {
