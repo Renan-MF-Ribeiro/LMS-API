@@ -35,7 +35,9 @@ const {
     getClassByID,
     returnProgramaID,
     processAttendanceListImport,
-    enrichCoursesWithClasses
+    enrichCoursesWithClasses,
+    prepareBodyForMessage,
+
 } = require('./business');
 
 const {
@@ -137,7 +139,7 @@ module.exports = {
                     await CourseModel.findByIdAndUpdate(courseCreated._id, {
                         materials: arrMaterials,
                     });
-                    success(res, req, 'Curso criado com sucesso!');
+                    success(res, req, 'Curso criado com sucesso!', 'Curso criado com sucesso!', 'courses', '/create-course', courseCreated, null, true, 'create');
                 }
             } else {
                 badRequest(
@@ -340,7 +342,7 @@ module.exports = {
                         );
                     }
 
-                    success(res, req, 'Atualizado com sucesso');
+                    success(res, req, 'Atualizado com sucesso', 'Atualizado com sucesso', 'courses', '/update-course', body, currentCourse, true, 'update');
                 }
             }
         } catch (error) {
@@ -355,7 +357,7 @@ module.exports = {
             await CourseModel.findByIdAndUpdate(id, { deleted: 1 });
             await dispatch('delete', 'course', { id });
 
-            success(res, req, 'Curso excluído com sucesso!');
+            success(res, req, 'Curso excluído com sucesso!', 'Curso excluído com sucesso!', 'courses', '/delete-course', { courseId: id }, null, true, 'delete');
         } catch (error) {
             internalServer(
                 res,
@@ -620,24 +622,32 @@ module.exports = {
 
                         const messengerConfig = await getMessengerConfig();
 
-                        const message = {
-                            category: 'notify',
-                            communication: ['notification', 'email'],
-                            mode: 'manual',
-                            target: {
-                                type: 'users',
-                                value: {
-                                    users: arrUserId,
-                                },
-                            },
-                            text: `O usuário ${user.name} está na turma ${name}!\n O local do treinamento será em: ${location}`,
-                            textHtml: `<p>O usuário ${user.name} está na turma ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
-                            thumbnail: messengerConfig.emailTemplate.thumbnail,
-                            title: `Treinamentos: ${name}`,
-                        };
-                        await createMessagesFromBackend(message);
+                        const classBody = createdClass.toObject ? createdClass.toObject() : createdClass;
+                        const classBodyForMessage = await prepareBodyForMessage(classBody, location);
 
-                        success(res, req, 'Criado com sucesso!');
+                        for (const user of newUsers) {
+                            const message = {
+                                category: 'notify',
+                                communication: ['notification', 'email'],
+                                mode: 'manual',
+                                target: {
+                                    type: 'users',
+                                    value: {
+                                        users: [user._id],
+                                    },
+                                },
+                                text: `${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.`,
+                                textHtml: `<p>${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.</p>`,
+                                thumbnail: messengerConfig.emailTemplate.thumbnail,
+                                title: `Treinamentos: ${name}`,
+                                class: classBodyForMessage,
+                                courses: true,
+                            }
+
+                            await createMessagesFromBackend(message);
+                        }
+
+                        success(res, req, 'Criado com sucesso!', 'Criado com sucesso!', 'courses', '/instructor/create-class', createdClass, null, true, 'create');
                         return;
                     }
                 } else {
@@ -698,7 +708,7 @@ module.exports = {
                 if (dateApplicationInitial && dateApplicationFinal === '') {
                     flagDate = true;
                 } else {
-                    if (dateApplicationInitial >= dateApplicationFinal) flagDate = false;
+                    if (moment(dateApplicationInitial).isSameOrAfter(moment(dateApplicationFinal))) flagDate = false;
                 }
             }
 
@@ -707,7 +717,7 @@ module.exports = {
                     res,
                     req,
                     'A data final da aplicação tem que ser maior que a inicial!',
-                    'A data final da aplicação tem que ser maior que a inicial!!',
+                    'A data final da aplicação tem que ser maior que a inicial!',
                     'courses',
                     '/createClass'
                 );
@@ -847,11 +857,9 @@ module.exports = {
                             $push: { users: { $each: addedUsers } },
                         });
 
-                        // Dispara notificações para usuários adicionados
-                        const arrUserId = addedUsers.map((user) => user._id);
-
                         const messengerConfig = await getMessengerConfig();
 
+                        const classBodyForMessage = await prepareBodyForMessage(classBody, location);
                         for (const user of addedUsers) {
                             const message = {
                                 category: 'notify',
@@ -860,13 +868,15 @@ module.exports = {
                                 target: {
                                     type: 'users',
                                     value: {
-                                        users: arrUserId,
+                                        users: [user._id],
                                     },
                                 },
-                                text: `O usuário ${user.name} está na turma ${name}!\n O local do treinamento será em: ${location} `,
-                                textHtml: `<p>O usuário ${user.name} está na turma ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
+                                text: `${user.name}, sua inscrição na turma "${classBodyForMessage.name}" foi atualizada! veja os detalhes abaixo.`,
+                                textHtml: `<p>${user.name}, sua inscrição na turma "${classBodyForMessage.name}" foi atualizada! veja os detalhes abaixo.</p>`,
                                 thumbnail: messengerConfig.emailTemplate.thumbnail,
                                 title: `Treinamentos: ${name}`,
+                                class: classBodyForMessage,
+                                courses: true,
                             };
 
                             await createMessagesFromBackend(message);
@@ -885,7 +895,7 @@ module.exports = {
                         });
                     }
 
-                    success(res, req, 'Atualizado com sucesso!');
+                    success(res, req, 'Atualizado com sucesso!', 'Atualizado com sucesso!', 'courses', '/instructor/update-class', classBody, currentMaterials, true, 'update');
                 } else {
                     badRequest(
                         res,
@@ -1049,7 +1059,8 @@ module.exports = {
                 materials: arrMaterials,
             });
             await MaterialModel.findByIdAndRemove(materialID);
-            success(res, req, 'Material Excluído com sucesso!');
+
+            success(res, req, 'Material Excluído com sucesso!', 'Material Excluído com sucesso!', 'courses', '/instructor/delete-material', null, null, true, 'delete');
         } catch (error) {
             internalServer(
                 res,
@@ -1079,7 +1090,7 @@ module.exports = {
             });
             await MaterialModel.findByIdAndRemove(materialID);
 
-            success(res, req, 'Material Excluído com sucesso!');
+            success(res, req, 'Material Excluído com sucesso!', 'Material Excluído com sucesso!', 'courses', '/delete-material', { courseId: courseID }, null, true, 'delete');
         } catch (error) {
             internalServer(
                 res,
@@ -1100,7 +1111,7 @@ module.exports = {
             const { id } = req.params;
             usersInClass = usersInClass.map((userID) => mongoose.Types.ObjectId(userID));
 
-            // Buscar o curso e pegar os valores de tags e mandatory
+            // Buscar o curso e pegar os valores de tags e obrigatoriedades
             const course = await CourseModel.findOne(
                 { _id: id },
                 { title: 1, tags: "$tags.value", mandatory: "$mandatory.value" }
@@ -1193,7 +1204,8 @@ module.exports = {
             for (const material of materials) {
                 await MaterialModel.findByIdAndRemove(material._id);
             }
-            success(res, req, 'Excluído com sucesso');
+
+            success(res, req, 'Excluído com sucesso', 'Excluído com sucesso', 'courses', '/instructor/delete-class', null, null, true, 'delete');
         } catch (error) {
             internalServer(
                 res,
@@ -1526,6 +1538,8 @@ module.exports = {
 
             const messengerConfig = await getMessengerConfig();
 
+            const classBodyForMessage = await prepareBodyForMessage(course, course.location);
+
             const message = {
                 category: 'notify',
                 communication: ['notification', 'email'],
@@ -1533,13 +1547,15 @@ module.exports = {
                 target: {
                     type: 'users',
                     value: {
-                        users: [userID],
+                        users: [user._id],
                     },
                 },
-                text: `O usuário ${user.name} está na turma ${course.name}!\n O local do treinamento será em: ${course.location}`,
-                textHtml: `<p>O usuário ${user.name} está na turma ${course.name}!</p> <p>O local do treinamento será em: ${course.location}</p>`,
+                text: `${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.`,
+                textHtml: `<p>${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.</p>`,
                 thumbnail: messengerConfig.emailTemplate.thumbnail,
                 title: `Treinamentos: ${course.name}`,
+                class: classBodyForMessage,
+                courses: true,
             };
             await createMessagesFromBackend(message);
 

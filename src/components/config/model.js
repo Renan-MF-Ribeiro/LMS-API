@@ -95,6 +95,7 @@ const MessengerConfigModel = ConfigModel.discriminator(
                         thumbnail:
                             'https://happlearning.blob.core.windows.net/logo/thumbnailHapp.png',
                         footer: 'https://happlearning.blob.core.windows.net/logo/footerHapp.png',
+                        title: 'Aviso Happlearning',
                     },
                 },
                 type: new mongoose.Schema(
@@ -152,6 +153,13 @@ const MessengerConfigModel = ConfigModel.discriminator(
                                 trim: true,
                                 default:
                                     'https://happlearning.blob.core.windows.net/logo/footerHapp.png',
+                            },
+                            title: {
+                                type: String,
+                                required: true,
+                                trim: true,
+                                default:
+                                    'Aviso Happlearning',
                             },
                         },
                     },

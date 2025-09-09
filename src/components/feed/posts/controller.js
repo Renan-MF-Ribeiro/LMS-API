@@ -1,4 +1,9 @@
-const { getUserByToken } = require('../../../utils/functions');
+const {
+    getUserByToken,
+    pagination,
+    ordernation,
+    sortByField,
+} = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
 const {
@@ -6,19 +11,16 @@ const {
     createNotification,
     getSegFieldsFromUser,
     populateSingleData,
-} = require('../buisiness');
-const { sendMessageToKafka, processTargetUsers } = require('../../new-messages/business');
+    handleUserPostNotification,
+} = require('../business');
 const fs = require('fs');
 const FormData = require('form-data');
-const {
-    getSegmentation,
-    isSegmentationException,
-    getMessengerConfig,
-} = require('../../config/business');
+const { getSegmentation, isSegmentationException } = require('../../config/business');
 
 const GamificationKafka = require('../../gamification/kafka/broker');
 const { EVENT_CATEGORY } = require('../../gamification/model');
 const { getUsersByTags } = require('../../users/business');
+const { User } = require('../../users/model');
 
 module.exports = {
     async create(req, res) {
@@ -71,11 +73,11 @@ module.exports = {
             }
 
             if (body.notifyUsers === true && (body?.elegibilities || body?.elegibilitiesAnd)) {
-                const users = await getUsersByTags(body.elegibilities);
+                const users = await getUsersByTags(body.elegibilities, body?.elegibilitiesAnd);
 
                 const config = {
-                    reqUser: 'equipe de comunicação',
-                    communication: ['notification'],
+                    reqUser: 'Equipe de comunicação',
+                    communication: ['notification', 'email'],
                     type: 'admin_post',
                     contentType: 'post',
                     contentId: data?.post?._id,
@@ -83,6 +85,8 @@ module.exports = {
                 };
                 await createNotification(config, users);
             }
+
+            await handleUserPostNotification(data?.post);
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -108,54 +112,6 @@ module.exports = {
         }
 
         return _messages.success(res, req, response);
-    },
-
-    async reportPost(req, res) {
-        const { postId } = req.params;
-        const uri = `posts/report/${postId}`;
-
-        try {
-            const { data } = await socialApi.post(uri, req.body);
-
-            return _messages.success(res, req, data);
-        } catch (error) {
-            if (error.response?.status === 401) {
-                return _messages.unauthorized(
-                    res,
-                    req,
-                    error.message,
-                    error.response?.data?.message,
-                    'reportPost'
-                );
-            }
-
-            return _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'feed',
-                'reportPost'
-            );
-        }
-    },
-    async handleReportedPost(req, res) {
-        const { postId } = req.params;
-        const uri = `posts/report/handle/${postId}`;
-
-        try {
-            const { data } = await socialApi.post(uri);
-            return _messages.success(res, req, data);
-        } catch (error) {
-            return _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'feed',
-                'reportPost'
-            );
-        }
     },
 
     async findAllPosts(req, res) {
@@ -257,8 +213,10 @@ module.exports = {
         }
     },
     async listPostToBeModerated(req, res) {
-        const { status, type, reports } = req.query;
-        const queryParams = new URLSearchParams();
+        const { status, type, searchBy, orderBy, direction, ...query } = req.query;
+        const queryParams = { ...query };
+        const { skip, limit } = pagination(req);
+        const { sort, order } = ordernation(req);
         const segmentation = await getSegmentation();
 
         if (segmentation.value?.rule?.issuer) {
@@ -268,22 +226,38 @@ module.exports = {
 
             const isAnException = isSegmentationException(user, segmentation.value);
             if (userField && !isAnException) {
-                queryParams.append('owner', userField);
+                queryParams.owner = userField;
             }
         }
 
-        if (status) queryParams.append('status', status.toUpperCase());
-        if (type) queryParams.append('type', type.toUpperCase());
-        if (reports) queryParams.append('reports', reports.toUpperCase());
+        if (status) queryParams.status = status.toUpperCase();
+        if (type) queryParams.type = type.toUpperCase();
 
-        const searchQuery = queryParams.toString();
         try {
-            const query = `?${searchQuery}`;
-            const uri = `posts/admin${query}`;
-            const { data } = await socialApi.get(uri, { params: req.query });
+            const uri = `posts/admin`;
+            const data = await socialApi.get(uri, { params: queryParams });
 
-            const PopulatedData = await populateUserFields('user', 'userId', data);
-            const response = { data: PopulatedData, total: data.total };
+            let posts = await populateUserFields('user', 'userId', data);
+
+            if (searchBy) {
+                posts = posts.filter((populatedPost) => {
+                    const userName = populatedPost.user.name.toLowerCase();
+                    const post = populatedPost.post.toLowerCase();
+                    const _searchBy = searchBy.toLowerCase();
+
+                    return userName.includes(_searchBy) || post.includes(_searchBy);
+                });
+            }
+
+            if (orderBy) {
+                const field = orderBy === 'username' ? 'user.name' : orderBy;
+                posts = sortByField(posts, field, direction);
+            }
+
+            const response = {
+                data: posts.slice(skip, skip + limit),
+                total: posts.length,
+            };
 
             return _messages.success(res, req, response);
         } catch (error) {
@@ -536,9 +510,11 @@ module.exports = {
         try {
             const { postId } = req.params;
             const uri = `posts/${postId}`;
-            const { data } = await socialApi.put(uri, body);
 
-            if (!data) {
+            const { data: oldData } = await socialApi.get(uri);
+            const { data: newData } = await socialApi.put(uri, body);
+
+            if (!newData) {
                 return _messages.internalServer(
                     res,
                     req,
@@ -550,7 +526,7 @@ module.exports = {
             }
 
             if (Object.keys(req?.files).length > 0) {
-                const uploadContent = `posts/${data._id}/content`;
+                const uploadContent = `posts/${newData._id}/content`;
 
                 const formData = new FormData();
 
@@ -572,12 +548,16 @@ module.exports = {
                     },
                 });
 
-                if (result?.data && data?.post) {
-                    data.post.content = result.data;
+                if (result?.data && newData?.post) {
+                    newData.post.content = result.data;
                 }
             }
 
-            return _messages.success(res, req, data);
+            if (oldData?.status !== 'ACTIVE' && body?.status === 'ACTIVE') {
+                await handleUserPostNotification(newData);
+            }
+
+            return _messages.success(res, req, newData);
         } catch (error) {
             return _messages.internalServer(
                 res,
@@ -608,4 +588,42 @@ module.exports = {
             );
         }
     },
+
+    async incrementViews(req, res) {
+        try {
+            const { postId } = req.params;
+            const uri = `posts/${postId}/views`;
+
+            await socialApi.patch(uri);
+
+            return _messages.successEmpty(res, req);
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'feed/posts',
+                'incrementViews'
+            );
+        }
+    },
 };
+
+async function createMessagesFromBackend(body) {
+    try {
+        const campaign = body;
+        const target = campaign.target;
+        let targetUsers = [];
+
+        if (!target.value.user) {
+            targetUsers = await processTargetUsers(target, campaign.category);
+        } else {
+            targetUsers.push({ ...target.value.user });
+        }
+
+        await sendMessageToKafka(campaign, targetUsers);
+    } catch (error) {
+        console.log(error);
+    }
+}
