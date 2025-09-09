@@ -5,7 +5,7 @@ const { isEngagementManager } = require('../../../../utils/middlewares');
 module.exports = express
     .Router()
     .get('/', isEngagementManager, _controller.listReasons)
-    .get('/active', isEngagementManager, _controller.listActiveReasons)
+    .get('/active', _controller.listActiveReasons)
     .post('/', isEngagementManager, _controller.createReason)
     .put('/:reasonId', isEngagementManager, _controller.updateReason)
     .delete('/:reasonId', isEngagementManager, _controller.deleteReason);

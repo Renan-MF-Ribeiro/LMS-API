@@ -1,5 +1,6 @@
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
+const { User } = require('../../users/model');
 
 module.exports = {
     listPostReports: async (req, res) => {
@@ -15,11 +16,11 @@ module.exports = {
 
     findRelatedReports: async (req, res) => {
         try {
-            const { postId } = req.params;
-            const uri = `reports/posts/${postId}/users`;
+            const { reportId } = req.params;
+            const uri = `reports/posts/${reportId}/users`;
             const { data } = await socialApi.get(uri);
 
-            return _messages.success(res, req, data, 'ok', 'feed', 'reports/posts/:postId/users');
+            return _messages.success(res, req, data, 'ok', 'feed', 'reports/posts/:reportId/users');
         } catch (error) {
             _messages.badRequest(
                 res,
@@ -27,7 +28,7 @@ module.exports = {
                 error.message,
                 error.message,
                 'feed',
-                'reports/posts/:postId/users'
+                'reports/posts/:reportId/users'
             );
         }
     },
@@ -37,6 +38,14 @@ module.exports = {
             const { reportId } = req.params;
             const uri = `reports/posts/${reportId}`;
             const { data } = await socialApi.get(uri);
+
+            const user = await User.findById(data.post.user);
+
+            data.post.user = {
+                _id: user._id,
+                name: user.name,
+                profilePhoto: user?.profilePhoto,
+            };
 
             return _messages.success(res, req, data, 'ok', 'feed', 'reports/posts');
         } catch (error) {

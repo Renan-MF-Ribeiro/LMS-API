@@ -5,7 +5,7 @@ const { isEngagementManager } = require('../../../utils/middlewares');
 
 module.exports = express
     .Router()
-    .post('', _controller.createReport)
+    .post('/', _controller.createReport)
     .get('/posts', isEngagementManager, _controller.listPostReports)
     .get('/posts/:postId/users', isEngagementManager, _controller.findRelatedReports)
     .get('/posts/:reportId', isEngagementManager, _controller.getPostReport)
