@@ -5,7 +5,7 @@ const { isEngagementManager } = require('../../../utils/middlewares');
 
 module.exports = express
     .Router()
-    
+
     // Rotas públicas
     .post('/', formidable(), _controller.create)
     .get('/', _controller.findAllPosts)
@@ -13,17 +13,15 @@ module.exports = express
     .get('/public', _controller.findAllPublic)
     .get('/new', _controller.findRecentPosts)
     .get('/me', _controller.findMyPosts)
-    .post('/report/:postId', _controller.reportPost)
     .put('/comments', _controller.comment)
     .get('/:postId/comments', _controller.loadMoreComments)
     .put('/likes', _controller.like)
+    .get('/admin', isEngagementManager, _controller.listPostToBeModerated)
     .post('/shares', _controller.share)
     .get('/:postId', _controller.findPostById)
+    .patch('/:postId/views', _controller.incrementViews)
 
     // Rotas de admin
-    .get('/admin', isEngagementManager, _controller.listPostToBeModerated)
-    
-    .post('/report/handle/:postId', isEngagementManager, _controller.handleReportedPost)
     .put('/moderate/:postId', formidable(), isEngagementManager, _controller.updatePost)
     .delete('/:postId', isEngagementManager, _controller.delete)
 

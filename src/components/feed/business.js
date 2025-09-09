@@ -6,6 +6,7 @@ const { default: axios } = require('axios');
 const { Group } = require('../groups/model');
 const { getUserByToken } = require('../../utils/functions');
 const { getMessengerConfig } = require('../config/business');
+const { socialApi } = require('../social/http-adapter');
 
 /* 
  Função recursiva pra popular usuários de arrays ou objetos vindos do SocialApi
@@ -245,6 +246,67 @@ async function getSegFieldsFromUser(req) {
     return userCustomElegeFields;
 }
 
+/**
+ * Dispara a notificação de um post para os usuários relevantes.
+ *
+ * @param {Object} post - Post que será notificado.
+ */
+async function handleUserPostNotification(post) {
+    if (!(post && post.type === 'USER')) {
+        return;
+    }
+
+    console.log({ post })
+
+    const uriConfig = `config/${process.env.CLIENT_ID}`;
+    const { data: { config: feedConfig } } = await socialApi.get(uriConfig);
+
+    if (!feedConfig?.notifyUsers ||(feedConfig?.moderationPosts && post.status !== 'ACTIVE')) {
+        return;
+    }
+
+    const user = await User.findById(post?.userId, ['_id', 'name', 'groupsAD']);
+    if (!user) {
+        return 
+    }
+
+    let query = {
+        _id: { $ne: user._id },
+        groupsAD: { $in: user.groupsAD },
+    };
+
+    const groupId = post?.groupId || post?.group?._id;
+    if (groupId) {
+        const groupInfoUri = `/groups/info/${groupId}`;
+        const { data: feedGroup } = await socialApi.get(groupInfoUri);
+
+        if (!feedGroup?.members || feedGroup.members.length === 0) {
+            return;
+        }
+
+        query = {
+            _id: { $in: feedGroup.members },
+        };
+    }
+
+    const users = await User.find(query);
+
+    if (users.length === 0) {
+        return;
+    }
+
+    const config = {
+        reqUser: user.name,
+        communication: ['notification', 'email'],
+        type: 'user_post',
+        contentType: 'post',
+        contentId: post._id,
+    };
+
+    await createNotification(config, users);
+}
+
+
 module.exports = {
     populateUserFields,
     populateTrailFields,
@@ -252,4 +314,5 @@ module.exports = {
     createNotification,
     getSegFieldsFromUser,
     populateSingleData,
+    handleUserPostNotification
 };
