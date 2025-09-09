@@ -1,5 +1,5 @@
-const _messages = require('../../../utils/messages');
-const { socialApi } = require('../../social/http-adapter');
+const _messages = require('../../../../utils/messages');
+const { socialApi } = require('../../../social/http-adapter');
 
 module.exports = {
     listReasons: async (req, res) => {

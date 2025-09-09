@@ -4,7 +4,7 @@ const groupRoutes = require('./groups/routes');
 const postRoutes = require('./posts/routes');
 const solicitationRoutes = require('./solicitations/routes');
 const configRoutes = require('./config/routes');
-const reportRoutes = require('./report/routes');
+const reportRoutes = require('./reports/routes');
 
 module.exports = express
     .Router()
