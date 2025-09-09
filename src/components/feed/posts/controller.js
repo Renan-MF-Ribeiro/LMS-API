@@ -117,54 +117,6 @@ module.exports = {
         return _messages.success(res, req, response);
     },
 
-    async reportPost(req, res) {
-        const { postId } = req.params;
-        const uri = `posts/report/${postId}`;
-
-        try {
-            const { data } = await socialApi.post(uri, req.body);
-
-            return _messages.success(res, req, data);
-        } catch (error) {
-            if (error.response?.status === 401) {
-                return _messages.unauthorized(
-                    res,
-                    req,
-                    error.message,
-                    error.response?.data?.message,
-                    'reportPost'
-                );
-            }
-
-            return _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'feed',
-                'reportPost'
-            );
-        }
-    },
-    async handleReportedPost(req, res) {
-        const { postId } = req.params;
-        const uri = `posts/report/handle/${postId}`;
-
-        try {
-            const { data } = await socialApi.post(uri);
-            return _messages.success(res, req, data);
-        } catch (error) {
-            return _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'feed',
-                'reportPost'
-            );
-        }
-    },
-
     async findAllPosts(req, res) {
         try {
             const { myPosts, groupId } = req.query;
@@ -264,7 +216,7 @@ module.exports = {
         }
     },
     async listPostToBeModerated(req, res) {
-        const { status, type, reports, searchBy, orderBy, direction, ...query } = req.query;
+        const { status, type, searchBy, orderBy, direction, ...query } = req.query;
         const queryParams = { ...query };
         const { skip, limit } = pagination(req);
         const { sort, order } = ordernation(req);
@@ -283,7 +235,6 @@ module.exports = {
 
         if (status) queryParams.status = status.toUpperCase();
         if (type) queryParams.type = type.toUpperCase();
-        if (reports) queryParams.reports = reports.toUpperCase();
 
         try {
             const uri = `posts/admin`;
@@ -304,25 +255,6 @@ module.exports = {
             if (orderBy) {
                 const field = orderBy === 'username' ? 'user.name' : orderBy;
                 posts = sortByField(posts, field, direction);
-            }
-
-            if (reports) {
-                const userIds = [...new Set(posts.flatMap((p) => p.reports.map((r) => r.userId)))];
-                const foundUsersReports = await User.find({ _id: { $in: userIds } });
-                const foundUsersReportsMap = new Map(
-                    foundUsersReports.map((user) => [
-                        user._id.toString(),
-                        { userId: user._id.toString(), userName: user.name },
-                    ])
-                );
-
-                posts = posts.map((post) => ({
-                    ...post,
-                    reports: post.reports.map((report) => ({
-                        reason: report.reason,
-                        author: foundUsersReportsMap.get(report.userId) || report.userId,
-                    })),
-                }));
             }
 
             const response = {

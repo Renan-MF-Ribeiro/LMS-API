@@ -13,7 +13,6 @@ module.exports = express
     .get('/public', _controller.findAllPublic)
     .get('/new', _controller.findRecentPosts)
     .get('/me', _controller.findMyPosts)
-    .post('/report/:postId', _controller.reportPost)
     .put('/comments', _controller.comment)
     .get('/:postId/comments', _controller.loadMoreComments)
     .put('/likes', _controller.like)
@@ -23,7 +22,6 @@ module.exports = express
     .patch('/:postId/views', _controller.incrementViews)
 
     // Rotas de admin
-    .post('/report/handle/:postId', isEngagementManager, _controller.handleReportedPost)
     .put('/moderate/:postId', formidable(), isEngagementManager, _controller.updatePost)
     .delete('/:postId', isEngagementManager, _controller.delete)
 
