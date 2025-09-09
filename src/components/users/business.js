@@ -790,17 +790,42 @@ module.exports = {
         return LastLogin.findOne({ user: userId });
     },
 
-    async getUsersByTags(tags) {
+    async getUsersByTags(tags, tagsAnd = []) {
         try {
-            let groups = [];
+            const allTags = [...new Set([...tags, ...tagsAnd])];
+            const groups = await Group.find({ 'tags.value': { $in: allTags } });
 
-            for (const tag of tags) {
-                const group = await Group.find({ tags: { $in: tag } });
-                groups.push(...group);
+            const groupsOr = [];
+            const groupsAnd = [];
+
+            for (const g of groups) {
+                const groupTags = g.tags.map(t => t.value);
+                
+                if (tags.some(t => groupTags.includes(t))) {
+                    groupsOr.push(g.name);
+                }
+
+                if (tagsAnd.some(t => groupTags.includes(t))) {
+                    groupsAnd.push(g.name);
+                }
             }
-            groups = groups.map((group) => group.name);
 
-            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin']);
+            const query = {
+                $or: []
+            };
+
+            if (groupsOr.length > 0) {
+                query.$or.push({ groupsAD: { $in: groupsOr } });
+            }
+            if (groupsAnd.length > 0) {
+                query.$or.push({ groupsAD: { $all: groupsAnd } });
+            }
+
+            if (query.$or.length === 0) {
+                return [];
+            }
+
+            const users = await User.find(query, ['networkLogin', 'status', 'groupsAD']);
 
             return users;
         } catch (error) {
