@@ -1,16 +1,26 @@
-const { getUserByToken } = require('../../../utils/functions');
+const {
+    getUserByToken,
+    pagination,
+    ordernation,
+    sortByField,
+} = require('../../../utils/functions');
 const _messages = require('../../../utils/messages');
 const { socialApi } = require('../../social/http-adapter');
 const { populateUserFields, createNotification, getSegFieldsFromUser, populateSingleData } = require('../buisiness');
 const {
-    sendMessageToKafka,
-    processTargetUsers,
-    sendCustomMessageToKafka,
-} = require('../../new-messages/business');
+    populateUserFields,
+    createNotification,
+    getSegFieldsFromUser,
+    populateSingleData,
+    handleUserPostNotification,
+} = require('../business');
 const fs = require('fs');
 const mime = require('mime-types');
 const FormData = require('form-data');
-const { getSegmentation, isSegmentationException, getMessengerConfig } = require('../../config/business');
+const {
+    getSegmentation,
+    isSegmentationException,
+} = require('../../config/business');
 
 const GamificationKafka = require('../../gamification/kafka/broker');
 const { EVENT_CATEGORY } = require('../../gamification/model');
@@ -66,38 +76,21 @@ module.exports = {
             }
 
             if (body.notifyUsers === true && (body?.elegibilities || body?.elegibilitiesAnd)) {
-                const { _id, name } = await getUserByToken(req);
-                const title = 'Novo post publicado pela administração!';
-                const texthtml = '<br> <p>Olá! A administração publicou um novo post!</p> <br>';
-                const text = `${name}: ${body.title}`;
+                const users = await getUsersByTags(body.elegibilities, body?.elegibilitiesAnd);
 
-                const messengerConfig = await getMessengerConfig();
-
-                const messageList = {
-                    user: true,
-                    trail: false,
-                    listName: title,
-                    client: process.env.CLIENT_ID,
-                    userId: _id,
-                    elegibilities: body?.elegibilities,
-                    elegibilitiesAnd: body?.elegibilitiesAnd,
-                    sendToKafka: {
-                        category: 'notify',
-                        type: ['notification'],
-                        title: title,
-                        text: text,
-                        texthtml: texthtml,
-                        thumbnail: messengerConfig.emailTemplate.thumbnail,
-                        notificationlink: {
-                            url: 'https://v2.staging.happlearning.com.br/login/entrar?redirectTo=/home',
-                            trailid: '',
-                            item: '',
-                        },
-                    },
+                const config = {
+                    reqUser: 'Equipe de comunicação',
+                    communication: ['notification', 'email'],
+                    type: 'admin_post',
+                    contentType: 'post',
+                    contentId: data?.post?._id,
+                    targetType: 'tag',
                 };
 
-                sendCustomMessageToKafka(messageList, process.env.TOPIC_MSG_LIST);
+                await createNotification(config, users);
             }
+
+            await handleUserPostNotification(data?.post);            
 
             return _messages.success(res, req, data);
         } catch (error) {
@@ -272,8 +265,10 @@ module.exports = {
         }
     },
     async listPostToBeModerated(req, res) {
-        const { status, type, reports } = req.query;
-        const queryParams = new URLSearchParams();
+        const { status, type, reports, searchBy, orderBy, direction, ...query } = req.query;
+        const queryParams = { ...query };
+        const { skip, limit } = pagination(req);
+        const { sort, order } = ordernation(req);
         const segmentation = await getSegmentation();
 
         if (segmentation.value?.rule?.issuer) {
@@ -283,22 +278,39 @@ module.exports = {
 
             const isAnException = isSegmentationException(user, segmentation.value)
             if (userField && !isAnException) {
-                queryParams.append('owner', userField);
+                queryParams.owner = userField;
             }
         }
 
-        if (status) queryParams.append('status', status.toUpperCase());
-        if (type) queryParams.append('type', type.toUpperCase());
-        if (reports) queryParams.append('reports', reports.toUpperCase());
+        if (status) queryParams.status = status.toUpperCase();
+        if (type) queryParams.type = type.toUpperCase();
+        if (reports) queryParams.reports = reports.toUpperCase();
 
-        const searchQuery = queryParams.toString();
         try {
-            const query = `?${searchQuery}`;
-            const uri = `posts/admin${query}`;
-            const { data } = await socialApi.get(uri, { params: req.query });
+            const uri = `posts/admin`;
+            const data = await socialApi.get(uri, { params: queryParams });
 
-            const PopulatedData = await populateUserFields('user', 'userId', data);
-            const response = { data: PopulatedData, total: data.total };
+            let populatedData = await populateUserFields('user', 'userId', data);
+
+            if (searchBy) {
+                populatedData = populatedData.filter((populatedPost) => {
+                    const userName = populatedPost.user.name.toLowerCase();
+                    const post = populatedPost.post.toLowerCase();
+                    const _searchBy = searchBy.toLowerCase();
+
+                    return userName.includes(_searchBy) || post.includes(_searchBy);
+                });
+            }
+
+            if (orderBy) {
+                const field = orderBy === 'username' ? 'user.name' : orderBy
+                populatedData = sortByField(populatedData, field, direction);
+            }
+
+            const response = {
+                data: populatedData.slice(skip, skip + limit),
+                total: populatedData.length,
+            };
 
             return _messages.success(res, req, response);
         } catch (error) {
@@ -543,9 +555,11 @@ module.exports = {
         try {
             const { postId } = req.params;
             const uri = `posts/${postId}`;
-            const { data } = await socialApi.put(uri, body);
 
-            if (!data) {
+            const { data: oldData } = await socialApi.get(uri)
+            const { data: newData } = await socialApi.put(uri, body);
+
+            if (!newData) {
                 return _messages.internalServer(
                     res,
                     req,
@@ -557,7 +571,7 @@ module.exports = {
             }
 
             if (Object.keys(req?.files).length > 0) {
-                const uploadContent = `posts/${data._id}/content`;
+                const uploadContent = `posts/${newData._id}/content`;
 
                 const formData = new FormData();
 
@@ -579,12 +593,16 @@ module.exports = {
                     },
                 });
 
-                if (result?.data && data?.post) {
-                    data.post.content = result.data;
+                if (result?.data && newData?.post) {
+                    newData.post.content = result.data;
                 }
             }
 
-            return _messages.success(res, req, data);
+            if (oldData?.status !== 'ACTIVE' && body?.status === 'ACTIVE') {
+                await handleUserPostNotification(newData)
+            }
+
+            return _messages.success(res, req, newData);
         } catch (error) {
             return _messages.internalServer(
                 res,
