@@ -338,7 +338,8 @@ module.exports = {
                     networkLogin: req.body[loginField],
                 },
                 fieldsForElegibility,
-                isOnboarding
+                isOnboarding,
+                'ADMIN'
             );
 
             await User.create(processedUser);
@@ -1394,7 +1395,8 @@ module.exports = {
                 fieldsForElegibility,
                 false,
                 false,
-                replaceMap
+                replaceMap,
+                'LOAD_ADMIN'
             );
 
             const [account, existingUser] = await Promise.all([
@@ -1475,7 +1477,7 @@ module.exports = {
 
         const usersDataConfig = await getUsersDataConfig();
         if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
-            console.log('Inativando usuários não presentes na planilha');
+            
             await User.updateMany(
                 {
                     onboarding: { $ne: true },

@@ -702,7 +702,8 @@ async function processUserLoadFile(directory, fileName, isProduction, usersDataC
                 fieldsForEligibility,
                 false,
                 false,
-                replaceMap
+                replaceMap,
+                'LOAD_SFTP'
             );
 
             const [account, existingUser] = await Promise.all([

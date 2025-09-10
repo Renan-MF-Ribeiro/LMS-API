@@ -157,7 +157,9 @@ const userSchema = new mongoose.Schema(
                 enum: ['LOAD_ADMIN', 'LOAD_SFTP', 'CONNECT', 'INTEGRATOR', 'ADMIN', 'SELF', 'PARTNER_TOKEN'],
                 required: false,
             },
-            info: { type: String, required: false, trim: true }
+            info: { type: String, required: false, trim: true },
+            updatedAt: { type: Date, required: false },
+            recievedData: { type: Object, required: false }
         },
         loginType: {
             type: mongoose.Schema.Types.Mixed,

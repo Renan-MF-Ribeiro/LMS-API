@@ -444,7 +444,7 @@ module.exports = {
      * - Sanitizes CPF format
      * - Applies replacement mappings if provided
      */
-    async processUsersLoad(data, elegibilityFields = [], onboarding = false, preventOnboardingGroupAdd = false, replaceMap = null) {
+    async processUsersLoad(data, elegibilityFields = [], onboarding = false, preventOnboardingGroupAdd = false, replaceMap = null, origin = null) {
 
         ['networkLogin', 'name', 'password'].forEach((field) => {
             if (!data[field]) {
@@ -482,6 +482,11 @@ module.exports = {
         data.vacationEndDate = parseDate(data.vacationEndDate);
         data.enabled = true;
         data.onboarding = onboarding;
+        data.origin = {
+            type: origin,
+            updatedAt: new Date(),
+        }
+
         data.password = [
             {
                 hash: bcrypt.hashSync(String(data?.password ?? initialPassword), salt),
