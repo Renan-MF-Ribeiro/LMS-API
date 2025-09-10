@@ -311,7 +311,7 @@ async function handleUserPostNotification(post) {
         contentId: post._id,
     };
 
-    await createNotification(config, users);
+    createNotification(config, users);
 }
 
 
