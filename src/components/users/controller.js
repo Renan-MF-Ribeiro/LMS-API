@@ -1492,7 +1492,6 @@ module.exports = {
                 { multi: true },
             );
         }
-        console.log(newUsers)
         if (newUsers.length > 0) {
             console.log(
                 `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
