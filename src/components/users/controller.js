@@ -1354,23 +1354,6 @@ module.exports = {
             file = req.files.content;
         }
 
-        const usersDataConfig = await getUsersDataConfig();
-        if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
-            await User.updateMany(
-                {
-                    onboarding: { $ne: true },
-                    ignoreLoadInactivation: { $ne: true },
-                    $or: [
-                        { 'origin': null },
-                        { 'origin': { $exists: false } },
-                        { 'origin.type': { $ne: 'INTEGRATOR'}}
-                    ]
-                },
-                { $set: { status: 'INATIVO' } },
-                { multi: true },
-            );
-        }
-
         const [results, elegibilityResponse, messengerConfig, connectMap] = await Promise.all([
             _files.readXLSXUsers(file.path),
             axios.get(
@@ -1472,6 +1455,23 @@ module.exports = {
         console.log(
             `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
         );
+
+        const usersDataConfig = await getUsersDataConfig();
+        if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
+            await User.updateMany(
+                {
+                    onboarding: { $ne: true },
+                    ignoreLoadInactivation: { $ne: true },
+                    $or: [
+                        { 'origin': null },
+                        { 'origin': { $exists: false } },
+                        { 'origin.type': { $ne: 'INTEGRATOR'}}
+                    ]
+                },
+                { $set: { status: 'INATIVO' } },
+                { multi: true },
+            );
+        }
 
         // TODO: Não disparar mudança de trackings para usuários que não tiveram mudança em seus networkLogin
         for (const user of existingUsers) {
