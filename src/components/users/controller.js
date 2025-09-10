@@ -1354,6 +1354,23 @@ module.exports = {
             file = req.files.content;
         }
 
+        const usersDataConfig = await getUsersDataConfig();
+        if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
+            await User.updateMany(
+                {
+                    onboarding: { $ne: true },
+                    ignoreLoadInactivation: { $ne: true },
+                    $or: [
+                        { 'origin': null },
+                        { 'origin': { $exists: false } },
+                        { 'origin.type': { $ne: 'INTEGRATOR'}}
+                    ]
+                },
+                { $set: { status: 'INATIVO' } },
+                { multi: true },
+            );
+        }
+
         const [results, elegibilityResponse, messengerConfig, connectMap] = await Promise.all([
             _files.readXLSXUsers(file.path),
             axios.get(
@@ -1388,7 +1405,6 @@ module.exports = {
 
             replaceMap = getConnectMapReplacers(connectMap);
         }
-
         for (const result of results) {
             const processedUser = await processUsersLoad(
                 result,
@@ -1475,23 +1491,7 @@ module.exports = {
         }
 
 
-        const usersDataConfig = await getUsersDataConfig();
-        if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
-            
-            await User.updateMany(
-                {
-                    onboarding: { $ne: true },
-                    ignoreLoadInactivation: { $ne: true },
-                    $or: [
-                        { 'origin': null },
-                        { 'origin': { $exists: false } },
-                        { 'origin.type': { $ne: 'INTEGRATOR'}}
-                    ]
-                },
-                { $set: { status: 'INATIVO' } },
-                { multi: true },
-            );
-        }
+        
         if (newUsers.length > 0) {
             console.log(
                 `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
