@@ -1474,7 +1474,6 @@ module.exports = {
 
 
         const usersDataConfig = await getUsersDataConfig();
-
         if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
             console.log('Inativando usuários não presentes na planilha');
             await User.updateMany(
@@ -1488,10 +1487,10 @@ module.exports = {
                     ]
                 },
                 { $set: { status: 'INATIVO' } },
-                { multi: true }
+                { multi: true },
             );
         }
-
+        console.log(newUsers)
         if (newUsers.length > 0) {
             console.log(
                 `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
