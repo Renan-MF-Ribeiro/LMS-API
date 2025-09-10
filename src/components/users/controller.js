@@ -1462,11 +1462,8 @@ module.exports = {
                 {
                     onboarding: { $ne: true },
                     ignoreLoadInactivation: { $ne: true },
-                    $or: [
-                        { 'origin': null },
-                        { 'origin': { $exists: false } },
-                        { 'origin.type': { $ne: 'INTEGRATOR'}}
-                    ]
+                    'origin.type': 'LOAD_ADMIN',
+                    status: 'ATIVO',
                 },
                 { $set: { status: 'INATIVO' } },
                 { multi: true },

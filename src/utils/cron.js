@@ -768,11 +768,8 @@ async function processUserLoadFile(directory, fileName, isProduction, usersDataC
                 {
                     onboarding: { $ne: true },
                     ignoreLoadInactivation: { $ne: true },
-                    $or: [
-                        { 'origin': null },
-                        { 'origin': { $exists: false } },
-                        { 'origin.type': { $ne: 'INTEGRATOR'}}
-                    ]
+                    'origin.type': 'LOAD_SFTP',
+                    status: 'ATIVO',
                 },
                 { $set: { status: 'INATIVO' } },
                 { multi: true }
