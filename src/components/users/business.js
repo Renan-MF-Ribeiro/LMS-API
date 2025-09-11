@@ -444,7 +444,7 @@ module.exports = {
      * - Sanitizes CPF format
      * - Applies replacement mappings if provided
      */
-    async processUsersLoad(data, elegibilityFields = [], onboarding = false, preventOnboardingGroupAdd = false, replaceMap = null, origin = null) {
+    async processUsersLoad(data, elegibilityFields = [], onboarding = false, preventOnboardingGroupAdd = false, replaceMap = null, origin = undefined) {
 
         ['networkLogin', 'name', 'password'].forEach((field) => {
             if (!data[field]) {
