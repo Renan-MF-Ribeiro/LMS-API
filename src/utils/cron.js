@@ -702,7 +702,8 @@ async function processUserLoadFile(directory, fileName, isProduction, usersDataC
                 fieldsForEligibility,
                 false,
                 false,
-                replaceMap
+                replaceMap,
+                'LOAD_SFTP'
             );
 
             const [account, existingUser] = await Promise.all([
@@ -767,6 +768,8 @@ async function processUserLoadFile(directory, fileName, isProduction, usersDataC
                 {
                     onboarding: { $ne: true },
                     ignoreLoadInactivation: { $ne: true },
+                    'origin.type': 'LOAD_SFTP',
+                    status: 'ATIVO',
                 },
                 { $set: { status: 'INATIVO' } },
                 { multi: true }

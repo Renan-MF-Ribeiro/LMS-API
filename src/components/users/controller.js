@@ -338,7 +338,8 @@ module.exports = {
                     networkLogin: req.body[loginField],
                 },
                 fieldsForElegibility,
-                isOnboarding
+                isOnboarding,
+                'ADMIN'
             );
 
             await User.create(processedUser);
@@ -1387,14 +1388,14 @@ module.exports = {
 
             replaceMap = getConnectMapReplacers(connectMap);
         }
-
         for (const result of results) {
             const processedUser = await processUsersLoad(
                 result,
                 fieldsForElegibility,
                 false,
                 false,
-                replaceMap
+                replaceMap,
+                'LOAD_ADMIN'
             );
 
             const [account, existingUser] = await Promise.all([
@@ -1455,6 +1456,20 @@ module.exports = {
             `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
         );
 
+        const usersDataConfig = await getUsersDataConfig();
+        if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
+            await User.updateMany(
+                {
+                    onboarding: { $ne: true },
+                    ignoreLoadInactivation: { $ne: true },
+                    'origin.type': 'LOAD_ADMIN',
+                    status: 'ATIVO',
+                },
+                { $set: { status: 'INATIVO' } },
+                { multi: true },
+            );
+        }
+
         // TODO: Não disparar mudança de trackings para usuários que não tiveram mudança em seus networkLogin
         for (const user of existingUsers) {
             const dto = { ...user.processedUser, _id: user._id };
@@ -1473,20 +1488,7 @@ module.exports = {
         }
 
 
-        const usersDataConfig = await getUsersDataConfig();
-
-        if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
-            console.log('Inativando usuários não presentes na planilha');
-            await User.updateMany(
-                {
-                    onboarding: { $ne: true },
-                    ignoreLoadInactivation: { $ne: true },
-                },
-                { $set: { status: 'INATIVO' } },
-                { multi: true }
-            );
-        }
-
+        
         if (newUsers.length > 0) {
             console.log(
                 `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
