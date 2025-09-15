@@ -1417,6 +1417,7 @@ module.exports = {
 
             return success(res, req, {
                 title: classCourse.courseID.title,
+                signup: classCourse.signup,
                 inClass: !!user,
                 _id: classCourse._id,
                 registered: user?.presence,
