@@ -58,9 +58,9 @@ async function checkEvaluationAttempts(userId, idEvaluation, idItem) {
                 { expiredCompletion: { $exists: false } },
                 { expiredCompletion: { $eq: null } },
             ],
-        })
+        });
 
-    if (totalUserAttempts >= attempts) throw new ApiError('Número máximo de tentativas atingido', 403);
+    if (attempts && attempts > 0 && totalUserAttempts >= attempts) throw new ApiError('Número máximo de tentativas atingido', 403);
 
     return { attempts, totalUserAttempts };
 }
@@ -466,57 +466,49 @@ module.exports = {
     },
 
     async questionResponse(req, res) {
-        try {
-            const { _id, idQuestion, idAlternative } = req.body;
+        const { _id, idQuestion, idAlternative } = req.body;
 
-            const historic = await HistoricEvaluation.findOne({ _id });
-            const question = await Question.findOne({ _id: idQuestion });
+        const user = await _functions.getUserByToken(req);
+        
+        const [historic, question] = await Promise.all([
+            HistoricEvaluation.findOne({ _id, user: user._id }),
+            Question.findOne({ _id: idQuestion })
+        ]);
 
-            if (!historic || !question) {
-                return _messages.badRequest(res, req, 'Histórico ou questão não encontrados.');
-            }
-
-            const isCorrect = idAlternative === question.rigthAnswer?.toString();
-            const updatedAnswers = [...historic.answers];
-            const existingAnswerIndex = updatedAnswers.findIndex((a) => a.idQuestion == idQuestion);
-            const today = _functions.getDateToday();
-
-            if (existingAnswerIndex !== -1) {
-                updatedAnswers[existingAnswerIndex] = {
-                    ...updatedAnswers[existingAnswerIndex],
-                    idAlternative,
-                    updatedAt: today,
-                    correct: isCorrect,
-                };
-            } else {
-                updatedAnswers.push({
-                    idQuestion,
-                    idAlternative,
-                    correct: isCorrect,
-                    createdAt: today,
-                });
-            }
-
-            const amountCorrect = updatedAnswers.filter((a) => a.correct).length;
-
-            await HistoricEvaluation.findByIdAndUpdate(_id, {
-                answers: updatedAnswers,
-                amountQuestionsAnswered: updatedAnswers.length,
-                amountQuestionsCorrect: amountCorrect,
-            });
-
-            return _messages.success(res, req, null);
-        } catch (error) {
-            console.error(error);
-            return _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'evaluations',
-                'questionResponse'
-            );
+        if (!historic || !question) {
+            throw new ApiError('Histórico ou questão não encontrados.', 404);
         }
+
+        const isCorrect = idAlternative === question.rigthAnswer?.toString();
+        const updatedAnswers = [...historic.answers];
+        const existingAnswerIndex = updatedAnswers.findIndex((a) => a.idQuestion == idQuestion);
+        const today = _functions.getDateToday();
+
+        if (existingAnswerIndex !== -1) {
+            updatedAnswers[existingAnswerIndex] = {
+                ...updatedAnswers[existingAnswerIndex],
+                idAlternative,
+                updatedAt: today,
+                correct: isCorrect,
+            };
+        } else {
+            updatedAnswers.push({
+                idQuestion,
+                idAlternative,
+                correct: isCorrect,
+                createdAt: today,
+            });
+        }
+
+        const amountCorrect = updatedAnswers.filter((a) => a.correct).length;
+
+        await HistoricEvaluation.findByIdAndUpdate(_id, {
+            answers: updatedAnswers,
+            amountQuestionsAnswered: updatedAnswers.length,
+            amountQuestionsCorrect: amountCorrect,
+        });
+
+        return _messages.success(res, req, null);
     },
 
     async nextQuestion (req, res) {
