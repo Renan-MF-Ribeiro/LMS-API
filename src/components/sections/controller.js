@@ -28,7 +28,8 @@ const {
     recommendedTrailsSections,
     recommendedCoursesSections,
     getContentEligibilityParameterByUserId,
-    retrieveUserContent
+    retrieveUserContent,
+    getBannersFromContent
 } = require('./business');
 
 const { getStudentCourses } = require('../home/business');
@@ -228,7 +229,7 @@ module.exports = {
                 );
             }
         } catch (error) {
-            console.log(error);
+            console.error(error);
             _messages.internalServer(
                 res,
                 req,
@@ -357,7 +358,6 @@ module.exports = {
             if (channelId) {
                 query['_id'] = { $in: trailsIdArr };
             }
-            console.log(query)
             let trails = await populateTrails(true, query);
             const allTrackingUser = await Tracking.find({
                 userLogin: { $eq: user.networkLogin },
@@ -499,11 +499,11 @@ module.exports = {
 
     async getUserAccessibleContent (req, res) {
         try {
-            const { userId, channelId } = req.query;
+            const { userId } = req.query;
 
             const { user, tags } = await getContentEligibilityParameterByUserId(userId);
 
-            const userContent = await retrieveUserContent(channelId, tags, user);
+            const userContent = await retrieveUserContent(tags, user);
 
             _messages.success(res, req, userContent);
         } catch (error) {
@@ -524,10 +524,36 @@ module.exports = {
             const { channelId } = req.query;
             const user = getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
+            let sectionInfos = [];
+            let trailsIdArr = [];
+            let cBanners = [];
 
-            const userContent = await retrieveUserContent(channelId, tags, user);
+            if (channelId) {
+                const { idSections, banners: channelBanners } = await Channel.findById(channelId).select('idSections banners  -_id');
 
+                const dbSections = await Section.find({ _id: { $in: idSections }, active: 1 });
 
+                sectionInfos = await populateSectionTrails(
+                    dbSections,
+                    { select: 'tags tagsAnd _id collaborative' }
+                );
+
+                const trailsInSections = sectionInfos.map(({ trails }) => {
+                    return {
+                        trails: trails.filter(
+                            (trail) => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative
+                        ).map(trail => trail._id)
+                    };
+                });
+                cBanners = channelBanners || [];
+                trailsIdArr = trailsInSections.flatMap((e) => e.trails);
+            }
+
+            const userContent = await retrieveUserContent(tags, user, trailsIdArr);
+            const itemBanners = getBannersFromContent(userContent);
+            const banners = [...cBanners, ...itemBanners];
+
+            _messages.success(res, req, banners);
         } catch (error) {
             console.log(error);
             _messages.internalServer(

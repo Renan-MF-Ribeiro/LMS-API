@@ -7,6 +7,7 @@ const {
     getUserByToken,
     getTagsGroups,
     isSCORMCompleted,
+    slugify
 } = require('../../utils/functions');
 const { Group } = require('../groups/model');
 const { CourseModel, WaitListModel, ClassModel, UsersWithProcessedTags } = require('../courses/model');
@@ -15,6 +16,7 @@ const { Section, DEFAULT_TYPES } = require('./model');
 const { default: axios } = require('axios');
 const moment = require('moment');
 const { TrailViews } = require('../trails/trail-views.model');
+const { populateTrails } = require('../trails/business');
 const { listTrainingSectionsStatus, getAllHistoricsSectionsByUser } = require('../assessment/business');
 const { Trail } = require('../trails/model');
 const { cloneDeep } = require('lodash');
@@ -1211,7 +1213,8 @@ module.exports = {
     populateSectionTrails,
     setAssessmentHistoricOnSections,
     setCerticateHistoricOnSections,
-    retrieveUserContent
+    retrieveUserContent,
+    getBannersFromContent
 
 
 };
@@ -1533,31 +1536,8 @@ function calculateTotalDuration (trails, exceptionIds = []) {
     }, 0);
 }
 
-async function retrieveUserContent (channelId, tags, user) {
-    let trailsIdArr = [];
-    let sectionInfos = [];
+async function retrieveUserContent (tags, user, trailsIdArr) {
 
-    if (channelId) {
-        let { idSections } = await Channel.findById(channelId).select('idSections -_id');
-
-        const dbSections = await Section.find({ _id: { $in: idSections }, active: 1 });
-
-        sectionInfos = await populateSectionTrails(
-            dbSections,
-            { select: 'tags tagsAnd _id collaborative' }
-        );
-
-        const trailsInSections = sectionInfos.map(({ trails }) => {
-            return {
-                trails: trails.filter(
-                    (trail) => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative
-                ).map(trail => trail._id)
-            };
-        });
-
-        trailsIdArr = trailsInSections.flatMap((e) => e.trails);
-
-    }
 
     let resultSections = [];
 
@@ -1567,21 +1547,21 @@ async function retrieveUserContent (channelId, tags, user) {
             $or: [{ tags: { $in: tags, } }, { tagsAnd: { $in: tags, } }]
         };
 
-        if (channelId) {
+        if (trailsIdArr.length > 0) {
             query['_id'] = { $in: trailsIdArr };
         }
         let trails = await populateTrails(true, query);
 
         trails = trails.filter(checkIfTheTrackIsValid);
 
-        resultSections = (await elegiblesContents(trails))
-            .concat(await mandatorySections(trails, tags))
-            .concat(await recentsSections(trails))
-            .concat(await keepLearningSections(trails))
-            .concat(await concludedSections(trails))
-            .concat(await favoriteSections(trails, user._id))
-            .concat(await mostSeenSections(trails))
-            .concat(await courseInSections(tags, user._id));
+        resultSections = (await module.exports.elegiblesContents(trails))
+            .concat(await module.exports.mandatorySections(trails, tags))
+            .concat(await module.exports.recentsSections(trails))
+            .concat(await module.exports.keepLearningSections(trails))
+            .concat(await module.exports.concludedSections(trails))
+            .concat(await module.exports.favoriteSections(trails, user._id))
+            .concat(await module.exports.mostSeenSections(trails))
+            .concat(await module.exports.courseInSections(tags, user._id));
 
         resultSections = resultSections.filter((val) => {
             return val != null;
@@ -1598,7 +1578,7 @@ async function retrieveUserContent (channelId, tags, user) {
     return resultSections;
 }
 
-function setBannersFromContent (sections) {
+function getBannersFromContent (sections) {
     const banners = [];
 
     sections.forEach((section) => {
@@ -1609,15 +1589,11 @@ function setBannersFromContent (sections) {
         if (section.defaultType === 'courses') {
             section.trails.forEach((courseItem) => {
                 if (courseItem?.highlighted) {
-                    const sectionParam = this._routerParams.setTitleURL(
-                        section.title ?? ''
-                    );
-                    const trailParam = this._routerParams.setTitleURL(
-                        courseItem?.title ?? ''
-                    );
+                    const sectionParam = slugify(section.title ?? '');
+                    const trailParam = slugify(courseItem?.title ?? '');
                     const bannerItem = {
                         path: courseItem.banner,
-                        link: `${window.location.pathname}`,
+                        link: process.env.BASE_URL,
                         queryParams: { section: sectionParam, trail: trailParam },
                         internal: true
                     };
@@ -1641,7 +1617,8 @@ function setBannersFromContent (sections) {
 
         section.trails.forEach((trailItem) => {
             if (trailItem?.items?.length) {
-                trailItem.items.forEach((item) => {
+                trailItem.items.forEach((i) => {
+                    const item = i.itemID;
                     if (item?.bannerPath) {
                         const bannerItem = {
                             path: item.bannerPath,
