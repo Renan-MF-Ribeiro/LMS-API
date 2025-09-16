@@ -9,6 +9,8 @@ const _files = require('../../utils/files');
 const { NewMessage } = require('../new-messages/model');
 const { User, UserTest, Block, defaultUserMap } = require('./model');
 const managerBusiness = require('../managers/business');
+const { getIntegratorConfig } = require('../integrator/business');
+
 const {
     generateToken,
     generateMfaToken,
@@ -106,6 +108,7 @@ const {
     getConnectMap,
     validateDataByConnectMap,
     getConnectEligibilities,
+    getConnectMapReplacers,
 } = require('../../utils/connect');
 const {
     getFormErrorsByMapConfig,
@@ -144,7 +147,8 @@ async function handleBlockUser(user) {
                 'Conta bloqueada',
                 `Olá ${user.name}, uma nova tentativa de acesso a conta não foi permita pois a conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
             );
-            return 'Usuário bloqueado temporariamente';
+
+            throw new ApiError('Usuário bloqueado temporariamente', 403);
         }
     }
 }
@@ -248,7 +252,7 @@ async function generateTokens(user, login, password, tokenIdpProfiles, res) {
 }
 
 module.exports = {
-    async create (req, res) {
+    async create(req, res) {
         try {
             const isOnboarding = Boolean(req.body?.onboarding)
 
@@ -291,7 +295,7 @@ module.exports = {
                 );
             }
 
-            if (isOnboarding && !req.body?.cpf)  {
+            if (isOnboarding && !req.body?.cpf) {
                 return _messages.forbidden(
                     res,
                     req,
@@ -328,15 +332,18 @@ module.exports = {
 
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
-            const processedUser = await processUsersLoad({
-                networkLogin: req.body[loginField],
-                ...req.body
-            }, fieldsForElegibility, isOnboarding);
+            const processedUser = await processUsersLoad(
+                {
+                    ...req.body,
+                    networkLogin: req.body[loginField],
+                },
+                fieldsForElegibility,
+                isOnboarding,
+                null,
+                'ADMIN'
+            );
 
-            await User.create({
-                ...processedUser,
-                networkLogin: req.body[loginField],
-            });
+            await User.create(processedUser);
 
             const created = await User.findOne({ networkLogin: processedUser.networkLogin }).lean();
 
@@ -665,7 +672,7 @@ module.exports = {
         }
         let user = await User.findOne({
             _id: new mongoose.Types.ObjectId(req.user._id),
-        });
+        }).lean();
         if (user.loginType && user.loginType !== 'FORM' && user.loginType !== 'BOTH') {
             return _messages.forbidden(
                 res,
@@ -714,7 +721,7 @@ module.exports = {
 
             const firstLogin = !user?.passwordValid && !entryRecord;
 
-            WebhooksController.dispatch('APASlogin', 'users', false, {
+            WebhooksController.dispatch('auth', 'users', false, {
                 ...user,
                 password: undefined,
             });
@@ -907,46 +914,41 @@ module.exports = {
                 }
             }
 
-            const {
-                SAS,
-                tk,
-                key,
-                tokenAnalytics,
-                tokenHappPlace,
-                mfaToken,
-                authwebPush,
-                profilesIDS,
-                namesProfiles,
-                namesGroups,
-            } = await generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', tokenIdpProfiles, res);
-
-            const entryRecord = await returnDateSinceFirstLogin(user?._id);
+            const [tokens, isManager, entryRecord] = await Promise.all([
+                generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', tokenIdpProfiles, res),
+                managerBusiness.isUserManager(user),
+                returnDateSinceFirstLogin(user?._id),
+                updateLastLoginUser(user?._id),
+                GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.LOGIN],
+                    identifier: user.networkLogin,
+                }),
+            ]);
 
             const firstLogin = !user.passwordValid && !entryRecord;
-
-            await updateLastLoginUser(user._id);
 
             _messages.success(
                 res,
                 req,
                 {
-                    SAS,
-                    tk,
-                    key,
+                    SAS: tokens?.SAS,
+                    tk: tokens?.tk,
+                    key: tokens?.key,
+                    numbers: tokens?.profilesIDS.numbers,
+                    tokenAnalytics: tokens?.tokenAnalytics,
+                    tokenHappPlace: tokens?.tokenHappPlace,
+                    mfaToken: tokens?.mfaToken,
+                    authwebPush: tokens?.authwebPush?.keys.auth,
                     firstLogin,
                     accept: user.acceptTerms,
                     acceptCollaboration: user.acceptTermsCollaboration,
                     passwordValid: true,
-                    numbers: profilesIDS.numbers,
                     name: user.name,
                     profilePhoto: user.profilePhoto,
-                    tokenAnalytics,
-                    tokenHappPlace,
-                    mfaToken,
                     networkLogin: user.networkLogin,
                     userId: user._id,
-                    authwebPush: authwebPush?.keys.auth,
                     email: user.email,
+                    isManager
                 },
                 'Sucesso ao logar',
                 'users',
@@ -955,7 +957,7 @@ module.exports = {
                 [],
                 true,
                 'LOGIN',
-                namesProfiles.concat(namesGroups)
+                tokens?.namesProfiles.concat(tokens?.namesGroups)
             );
         } catch (error) {
             console.log(error);
@@ -1342,7 +1344,8 @@ module.exports = {
     },
 
     async import(req, res) {
-        var file = null;
+        let file = null;
+        let replaceMap = null;
         const newUsers = [];
         const existingUsers = [];
         const usersToSend = [];
@@ -1351,21 +1354,21 @@ module.exports = {
         } else {
             file = req.files.content;
         }
-        const results = await _files.readXLSXUsers(file.path);
 
-        const elegibilityResponse = await axios.get(
-            `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
-            {
-                headers: {
-                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
-                },
-            }
-        );
-        const fieldsForElegibility = elegibilityResponse.data.fields;
-
-        const messengerConfig = await getMessengerConfig();
-
-        const connectMap = await getConnectMap(true);
+        const [results, elegibilityResponse, messengerConfig, connectMap] = await Promise.all([
+            _files.readXLSXUsers(file.path),
+            axios.get(
+                `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+                {
+                    headers: {
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                    },
+                }
+            ),
+            await getMessengerConfig(),
+            await getConnectMap(true),
+        ])
+        const fieldsForElegibility = elegibilityResponse.data?.fields;
 
         if (connectMap) {
             const errors = [];
@@ -1383,15 +1386,28 @@ module.exports = {
             if (errors.length > 0) {
                 throw new ApiError('Erro ao importar usuários', 400, errors, { skipDbLog: true });
             }
+
+            replaceMap = getConnectMapReplacers(connectMap);
         }
-
         for (const result of results) {
-            const existingUser = await User.findOne({
-                $or: [{ networkLogin: result.networkLogin }, { networkLogin: result.cpf }],
-            });
+            const processedUser = await processUsersLoad(
+                result,
+                fieldsForElegibility,
+                false,
+                false,
+                replaceMap,
+                'LOAD_ADMIN'
+            );
 
-            const processedUser = await processUsersLoad(result, fieldsForElegibility);
-            const account = await processUserAccount(processedUser);
+            const [account, existingUser] = await Promise.all([
+                processUserAccount(processedUser),
+                User.findOne({
+                    $or: [
+                        { networkLogin: processedUser.networkLogin },
+                        { networkLogin: processedUser.cpf }
+                    ]
+                })
+            ]);
 
             processedUser.password = existingUser ? existingUser.password : processedUser.password;
 
@@ -1440,51 +1456,61 @@ module.exports = {
         console.log(
             `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
         );
-        for (const user of existingUsers) {
-            await User.findByIdAndUpdate(user._id, {
-                ...user.processedUser,
-            });
-
-            WebhooksController.dispatch('update', 'users', false, {
-                ...user.processedUser,
-                password: undefined,
-            });
-
-            await Tracking.updateMany(
-                { userLogin: user.processedUser.cpf },
-                { $set: { userLogin: user.processedUser.networkLogin } }
-            );
-        }
 
         const usersDataConfig = await getUsersDataConfig();
-
         if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
-            console.log('Inativando usuários não presentes na planilha');
-
             await User.updateMany(
                 {
                     onboarding: { $ne: true },
                     ignoreLoadInactivation: { $ne: true },
+                    'origin.type': 'LOAD_ADMIN',
+                    status: 'ATIVO',
                 },
                 { $set: { status: 'INATIVO' } },
-                { multi: true }
+                { multi: true },
             );
         }
 
+        // TODO: Não disparar mudança de trackings para usuários que não tiveram mudança em seus networkLogin
+        for (const user of existingUsers) {
+            const dto = { ...user.processedUser, _id: user._id };
+            const { password, ...userWithoutPassword } = dto;
+
+            const ops = [
+                User.findByIdAndUpdate(user._id, dto).exec(),
+                Tracking.updateMany(
+                    { userLogin: user.processedUser.cpf },
+                    { $set: { userLogin: user.processedUser.networkLogin } }
+                ).exec()
+            ]
+            if (req.features.webhook) WebhooksController.dispatch('update', 'users', false, userWithoutPassword);
+
+            await Promise.all(ops)
+        }
+
+
+        
         if (newUsers.length > 0) {
             console.log(
                 `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
             );
 
-            await User.insertMany(newUsers);
-
-            WebhooksController.dispatch('create', 'users', true, newUsers);
+            const insertedUsers = await User.insertMany(newUsers);
+            if (req.features.webhook) {
+                const webhooks = insertedUsers?.map((user) => {
+                    const { password, ...userWithoutPassword } = user.toObject()
+                    WebhooksController.dispatch('create', 'users', false, userWithoutPassword);
+                })
+                await Promise.all(webhooks)
+            }
 
             if (messengerConfig.sendUsersToMicrosservice) {
-                await sendAccountsToKafka(usersToSend);
                 const campaign = createWelcomeCampaign();
-                await sendMessageToKafka(campaign, newUsers);
-                await NewMessage.create(campaign);
+                await Promise.all([
+                    await sendAccountsToKafka(usersToSend),
+                    await sendMessageToKafka(campaign, newUsers),
+                    await NewMessage.create(campaign)
+                ])
             }
         }
 
@@ -1519,17 +1545,20 @@ module.exports = {
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
             const messengerConfig = await getMessengerConfig();
+            const usersDataConfig = await getUsersDataConfig();
+
+            const preventOnboardingGroupAdd = usersDataConfig?.preventOnboardingGroupAdd ?? false;
 
             for (const result of results) {
-                const existingUser = await User.findOne({
-                    networkLogin: result.cpf,
-                });
-
-                const processedUser = await processUsersLoad(
+                const [existingUser, processedUser] = await Promise.all([User.findOne({
+                    networkLogin: result.cpf
+                }),
+                processUsersLoad(
                     result,
                     fieldsForElegibility,
-                    onboarding
-                );
+                    onboarding,
+                    preventOnboardingGroupAdd
+                )])
 
                 const account = await processUserAccount(processedUser);
 
@@ -1561,9 +1590,18 @@ module.exports = {
             );
 
             for (const user of existingUsers) {
-                await User.findByIdAndUpdate(user._id, {
-                    ...user.processedUser,
-                });
+                const dto = { ...user.processedUser, _id: user._id };
+                const { password, ...userWithoutPassword } = dto;
+
+                const ops = [
+                    User.findByIdAndUpdate(user._id, dto).exec(),
+                    Tracking.updateMany(
+                        { userLogin: user.processedUser.cpf },
+                        { $set: { userLogin: user.processedUser.networkLogin } }
+                    ).exec()
+                ]
+                if (req.features.webhook) WebhooksController.dispatch('update', 'users', false, userWithoutPassword);
+                await Promise.all(ops)
             }
 
             if (newUsers.length > 0) {
@@ -1596,142 +1634,120 @@ module.exports = {
     },
 
     async returnUsers(req, res) {
-        try {
-            const { skip, limit } = pagination(req);
-            const { order, sort } = ordernation(req);
+        const { skip, limit } = pagination(req);
+        const { order, sort } = ordernation(req);
 
-            const searchBy = req.query.searchBy;
+        const searchBy = req.query?.searchBy ?? null;
+        const isOnboarding = req.query.onboarding === 'true' || req.query.onboarding === true;
+        const isPartner = req.query.partner === 'true' || req.query.partner === true;
 
-            const isOnboarding = req.query.onboarding === 'true' || req.query.onboarding === true;
-            const isPartner = req.query.partner === 'true' || req.query.partner === true;
+        const query = {
+            $and: [
+                {
+                    onboarding: isOnboarding ? true : { $ne: true },
+                    partner: isPartner ? { $exists: true } : { $exists: false },
+                },
+            ],
+        };
 
-            const query = {
-                $and: [
-                    {
-                        onboarding: isOnboarding ? true : { $ne: true },
-                        partner: isPartner ? { $exists: true } : { $exists: false },
-                    },
-                ],
-            };
-
-            if (req?.segmentation) {
-                handleSegmentationOnQuery(req, 'issuer', query);
-            }
-
-            const totalActive = await User.find({
-                status: 'ATIVO',
-                ...query,
-            }).countDocuments();
-
-            const totalInactive = await User.find({
-                status: 'INATIVO',
-                ...query,
-            }).countDocuments();
-
-            if (searchBy) {
-                query.$and.push({
-                    $or: [
-                        { name: { $regex: searchBy, $options: 'i' } },
-                        { registration: { $regex: searchBy, $options: 'i' } },
-                        { email: { $regex: searchBy, $options: 'i' } },
-                        { cpf: { $regex: searchBy, $options: 'i' } },
-                    ],
-                });
-            }
-
-            const total = await User.countDocuments(query);
-            const users = await User.find(query)
-                .sort({ [order]: sort })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit));
-
-            _messages.success(res, req, {
-                data: users,
-                total,
-                totalActive,
-                totalInactive,
-            });
-        } catch (error) {
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'users',
-                'returnUsers'
-            );
+        if (req?.segmentation) {
+            handleSegmentationOnQuery(req, 'issuer', query);
         }
+
+        if (searchBy?.length) {
+            query.$and.push({
+                $or: [
+                    { name: { $regex: searchBy, $options: 'i' } },
+                    { registration: { $regex: searchBy, $options: 'i' } },
+                    { email: { $regex: searchBy, $options: 'i' } },
+                    { cpf: { $regex: searchBy, $options: 'i' } },
+                ],
+            });
+        }
+
+        const totalActive = await User.find({
+            status: 'ATIVO',
+            ...query,
+        }).countDocuments();
+
+        const totalInactive = await User.find({
+            status: 'INATIVO',
+            ...query,
+        }).countDocuments();
+
+        const total = await User.countDocuments(query);
+
+        const users = await User.find(query)
+            .sort({ [order]: sort })
+            .skip(parseInt(skip))
+            .limit(parseInt(limit));
+
+        return _messages.success(res, req, {
+            data: users,
+            total,
+            totalActive,
+            totalInactive,
+        });
     },
 
     async returnManagers(req, res) {
-        try {
-            const { skip, limit } = pagination(req);
-            const { order, sort } = ordernation(req);
+        const { skip, limit } = pagination(req);
+        const { order, sort } = ordernation(req);
 
-            const searchBy = req.query.searchBy;
-            const filterManager = req.query.filterManager;
+        const searchBy = req.query.searchBy;
+        const filterManager = req.query.filterManager;
 
-            const profiles = await Profile.find({ title: { $ne: 'PERFIL_Aluno' } }).sort({
-                label: 'asc',
-            });
+        const profiles = await Profile.find({ title: { $ne: 'PERFIL_Aluno' } }).sort({
+            label: 'asc',
+        });
 
-            let query = {
-                groupsAD: { $in: profiles.map((profile) => profile.title) },
-            };
+        let query = {
+            groupsAD: { $in: profiles.map((profile) => profile.title) },
+        };
 
-            if (filterManager) {
-                query.groupsAD = { $in: [filterManager] };
-            }
+        if (filterManager) {
+            query.groupsAD = { $in: [filterManager] };
+        }
 
-            if (req?.segmentation) {
-                handleSegmentationOnQuery(req, 'issuer', query);
-            }
+        if (req?.segmentation) {
+            handleSegmentationOnQuery(req, 'issuer', query);
+        }
 
+        if (searchBy) {
+            query.$or = [
+                { name: { $regex: searchBy, $options: 'i' } },
+                { registration: { $regex: searchBy, $options: 'i' } },
+                { email: { $regex: searchBy, $options: 'i' } },
+                { cpf: { $regex: searchBy, $options: 'i' } },
+            ];
+        }
+        const managersCounters = [];
+
+        for (const profile of profiles) {
+            const queryProfile = { groupsAD: profile.title };
             if (searchBy) {
-                query.$or = [
+                queryProfile.$or = [
                     { name: { $regex: searchBy, $options: 'i' } },
                     { registration: { $regex: searchBy, $options: 'i' } },
                     { email: { $regex: searchBy, $options: 'i' } },
                     { cpf: { $regex: searchBy, $options: 'i' } },
                 ];
             }
-            const managersCounters = [];
-
-            for (const profile of profiles) {
-                const queryProfile = { groupsAD: profile.title };
-                if (searchBy) {
-                    queryProfile.$or = [
-                        { name: { $regex: searchBy, $options: 'i' } },
-                        { registration: { $regex: searchBy, $options: 'i' } },
-                        { email: { $regex: searchBy, $options: 'i' } },
-                        { cpf: { $regex: searchBy, $options: 'i' } },
-                    ];
-                }
-                const count = await User.countDocuments(queryProfile);
-                managersCounters.push({ label: profile.label, title: profile.title, count });
-            }
-
-            const total = await User.countDocuments(query);
-            const users = await User.find(query)
-                .sort({ [order]: sort })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit));
-
-            _messages.success(res, req, {
-                data: users,
-                total,
-                managersCounters,
-            });
-        } catch (error) {
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'users',
-                'returnUsers'
-            );
+            const count = await User.countDocuments(queryProfile);
+            managersCounters.push({ label: profile.label, title: profile.title, count });
         }
+
+        const total = await User.countDocuments(query);
+        const users = await User.find(query)
+            .sort({ [order]: sort })
+            .skip(parseInt(skip))
+            .limit(parseInt(limit));
+
+        return _messages.success(res, req, {
+            data: users,
+            total,
+            managersCounters,
+        });
     },
 
     async returnUsersOnboarding(req, res) {
@@ -1777,6 +1793,19 @@ module.exports = {
             const user = await User.findOne({
                 _id: { $eq: _id },
             });
+
+            if (user?.origin?.type === 'INTEGRATOR') {
+                const { data: integratorConfig } = await getIntegratorConfig()
+
+                if (integratorConfig && !integratorConfig.allowUserEdit) {
+                    return _messages.unauthorized(
+                        res,
+                        req,
+                        'Usuário de integração, não pode ser editado via painel'
+                    );
+                }
+            }
+
             if (tags && tags.length > 0) {
                 for (const tag of tags) {
                     const filter = user.tags.filter((val) => {
@@ -1811,13 +1840,10 @@ module.exports = {
                 await sendAccountsToKafka([account]);
             }
             await User.findByIdAndUpdate(_id, req.body);
+            const foundUser = await User.findOne({ _id }).lean();
 
-            const foundUser = await User.findById(_id).lean();
-
-            WebhooksController.dispatch('update', 'users', false, {
-                ...foundUser,
-                password: undefined,
-            });
+            const { password, ...userWithoutPassword } = foundUser
+            WebhooksController.dispatch('update', 'users', false, userWithoutPassword);
 
             if (userUpdated?.status) {
                 await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status);
@@ -2994,7 +3020,7 @@ module.exports = {
             _messages.success(res, req, {
                 map: connectMap,
                 fields,
-                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd'], // Campos que não devem ser alterados
+                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd', 'manager'], // Campos que não devem ser alterados
                 eligibility,
             });
         } catch (error) {

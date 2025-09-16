@@ -25,11 +25,35 @@ const { Tracking } = require('../tracking/model');
 const { ConfigLogin } = require('../theme/login-config/model');
 const ApiError = require('../../errors/ApiError');
 const { getMessengerConfig } = require('../config/business');
-const { getConnectMap } = require('../../utils/connect');
+const { getConnectMap, setReplacedValuesFromConnectMap } = require('../../utils/connect');
 const { getCookieProps } = require('../../utils/cookies');
 const PartnerBusiness = require('../partners/business');
 const { createSessionStore } = require('../../utils/session');
 const { Types } = require('mongoose');
+const { log } = require('../../utils/logger');
+
+async function createGroupsByGroupsAD(groupsAD) {
+    const groupsDb = await Group.find({ name: { $in: groupsAD } })
+        .select('name')
+        .lean();
+
+    const allGroups = new Set(groupsDb.map((group) => group.name));
+
+    const createGroups = groupsAD.filter((groupName) => {
+        if (groupName.startsWith('PERFIL_')) return false;
+
+        return !allGroups.has(groupName);
+    });
+
+    return await Group.insertMany(
+        createGroups.map(
+            (groupName) => ({
+                name: groupName,
+                tags: [],
+            })
+        )
+    );
+}
 
 module.exports = {
     async getLoginConfig(selectFields) {
@@ -74,44 +98,44 @@ module.exports = {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                      {
-                          $or: [
-                              {
-                                  onboarding: { $exists: false },
-                                  groupsAD: { $in: tag },
-                              },
-                              {
-                                  onboarding: { $eq: onboarding },
-                                  groupsAD: { $in: tag },
-                              },
-                          ],
-                      },
-                  ];
+                    {
+                        $or: [
+                            {
+                                onboarding: { $exists: false },
+                                groupsAD: { $in: tag },
+                            },
+                            {
+                                onboarding: { $eq: onboarding },
+                                groupsAD: { $in: tag },
+                            },
+                        ],
+                    },
+                ];
         } else {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                      {
-                          $or: [
-                              { onboarding: { $exists: false } },
-                              { onboarding: { $eq: onboarding } },
-                          ],
-                      },
-                  ];
+                    {
+                        $or: [
+                            { onboarding: { $exists: false } },
+                            { onboarding: { $eq: onboarding } },
+                        ],
+                    },
+                ];
         }
 
         const searchByQuery = searchBy
             ? {
-                  $or: [
-                      { name: { $regex: searchBy, $options: 'i' } },
-                      { registration: { $regex: searchBy, $options: 'i' } },
-                      { email: { $regex: searchBy, $options: 'i' } },
-                  ],
-                  $and: onboardingQuery,
-              }
+                $or: [
+                    { name: { $regex: searchBy, $options: 'i' } },
+                    { registration: { $regex: searchBy, $options: 'i' } },
+                    { email: { $regex: searchBy, $options: 'i' } },
+                ],
+                $and: onboardingQuery,
+            }
             : {
-                  $and: onboardingQuery,
-              };
+                $and: onboardingQuery,
+            };
 
         const users = await User.find(searchByQuery)
             .sort({ [order]: sort })
@@ -348,13 +372,13 @@ module.exports = {
         const connectMap = await getConnectMap(true);
 
         const userMap = Object.entries(connectMap).map(([key, value]) => {
-            return { value: key, description: value.label, field: value.field };
+            return { value: key, field: value.field };
         });
 
         function isSameField(userField, mapItem) {
             return (
                 mapItem.field !== 'NÃO MAPEAR' &&
-                (mapItem.field === userField || mapItem.value === userField)
+                (mapItem.value === userField || mapItem.field === userField)
             );
         }
 
@@ -366,37 +390,61 @@ module.exports = {
             config.fields?.forEach((config) => {
                 if (!config.userField || !config.fieldValue) return;
 
-                const currentUserDashValue = String(user[config.dashFilter] || '').trim();
+                const userField = userMap.find((map) => isSameField(config.userField, map));
 
-                const matchedMaps = userMap.filter((map) => isSameField(config.userField, map));
+                if (!userField) return;
 
-                matchedMaps.forEach((map) => {
-                    const currentUserFieldValue = String(user[map.value] || null).trim();
+                const userUserFieldValue = user[userField.value];
 
-                    if (
-                        currentUserFieldValue &&
-                        currentUserFieldValue === config.fieldValue &&
-                        currentUserDashValue !== 'undefined' &&
-                        currentUserDashValue !== 'null'
-                    ) {
-                        dashboardFilters.push({
-                            field: config.dashFilter || null,
-                            value: currentUserDashValue || null,
-                            pages: config.pages,
-                            // config,
-                            // map,
-                        });
-                    }
+                if (userUserFieldValue !== config.fieldValue) {
+                    log(`User field value ${userUserFieldValue} does not match config value ${config.fieldValue}`);
+                    return;
+                }
+
+                const dashboardField = userMap.find((map) => isSameField(config.dashFilter, map));
+                const userDashFieldValue = dashboardField ? user[dashboardField.value] : null;
+
+                dashboardFilters.push({
+                    field: dashboardField?.value || null,
+                    value: userDashFieldValue,
+                    pages: config.pages,
                 });
             });
         });
 
-        // console.log(JSON.stringify(dashboardFilters, null, 2));
+        log(JSON.stringify(dashboardFilters, null, 2));
 
         return dashboardFilters;
     },
 
-    processUsersLoad(data, elegibilityFields = [], onboarding = false) {
+    /**
+     * Processes user data for loading into the system, handling authentication, group assignments, and data formatting.
+     *
+     * @async
+     * @param {Object} data - The user data object to be processed
+     * @param {Array<string>} [elegibilityFields=[]] - Array of field names to use for eligibility group assignment
+     * @param {boolean} [onboarding=false] - Whether this is an onboarding user
+     * @param {boolean} [preventOnboardingGroupAdd=false] - Whether to prevent adding onboarding groups
+     * @param {Map} [replaceMap=null] - Map for replacing values using connect map
+     * @returns {Promise<Object>} The processed user data object with additional fields:
+     *   - clientUserKey: Generated client user key
+     *   - password: Array with hashed password object
+     *   - groupsAD: Array of Active Directory groups
+     *   - enabled: Set to true
+     *   - onboarding: Boolean indicating onboarding status
+     * @description
+     * This function performs the following operations:
+     * - Removes empty fields (networkLogin, name, password)
+     * - Generates initial password based on first name and CPF
+     * - Parses and formats date fields
+     * - Creates hashed password with salt
+     * - Assigns appropriate AD groups based on user type and eligibility
+     * - Creates missing groups in the database
+     * - Handles role-based group assignments
+     * - Sanitizes CPF format
+     * - Applies replacement mappings if provided
+     */
+    async processUsersLoad(data, elegibilityFields = [], onboarding = false, preventOnboardingGroupAdd = false, replaceMap = null, origin = undefined) {
 
         ['networkLogin', 'name', 'password'].forEach((field) => {
             if (!data[field]) {
@@ -407,14 +455,7 @@ module.exports = {
         const salt = bcrypt.genSaltSync(10);
         const firstName = String(data.name?.split(' ')[0]).trim().toLowerCase();
         const firstThreeCpf = sanitizeCpf(data.cpf).slice(0, 3);
-        const initialPassword = !onboarding ? '1234' : `${firstName}${firstThreeCpf}`;
-        data.password = [
-            {
-                hash: bcrypt.hashSync(String(data?.password ?? initialPassword), salt),
-                valid: true,
-                createdAt: new Date(Date.now()),
-            },
-        ];
+        const initialPassword = !onboarding ? 'Minhasenha@1' : `${firstName}${firstThreeCpf}`;
 
         function parseDate(date) {
             if (!date) return null;
@@ -429,43 +470,70 @@ module.exports = {
                 }
             }
 
-            // console.log(date, parsedDate.format('DD/MM/YYYY'));
-
             return parsedDate.format('DD/MM/YYYY');
         }
 
         data.clientUserKey = CLIENT_ID + '@@' + data.networkLogin;
-
         data.birthDate = parseDate(data.birthDate);
         data.admission = parseDate(data.admission);
         data.createDate = parseDate(data.createDate);
         data.terminationDate = parseDate(data.terminationDate);
         data.vacationStartDate = parseDate(data.vacationStartDate);
         data.vacationEndDate = parseDate(data.vacationEndDate);
-        data.loginType = data.loginType == 'AMBOS' ? 'BOTH' : data.loginType;
-
         data.enabled = true;
         data.onboarding = onboarding;
+        data.origin = {
+            type: origin,
+            updatedAt: new Date(),
+            info: null,
+            recievedData: { ...data, password: undefined },
+        }
 
-        const groupsAD =
-            onboarding === true
-                ? ['PERFIL_Aluno', 'ELEGE_ONBOARDING']
-                : ['PERFIL_Aluno', 'ELEGE_CURSO'];
+        data.password = [
+            {
+                hash: bcrypt.hashSync(String(data?.password ?? initialPassword), salt),
+                valid: true,
+                createdAt: new Date(Date.now()),
+            },
+        ];
 
-        if (elegibilityFields && elegibilityFields.length > 0 && onboarding == false) {
+        // Default Fields
+        data.status = _functions.isPositiveValue(data.status) ? 'ATIVO' : 'INATIVO';
+        if (data.cpf) data.cpf = _functions.parseDocument(data.cpf);
+        if (data.cnpj) data.cnpj = _functions.parseDocument(data.cnpj);
+        if (data.pcd) data.pcd = _functions.isPositiveValue(data.pcd) ? 'SIM' : 'NAO';
+        if (data.manager) data.manager = _functions.isPositiveValue(data.manager) ? 'SIM' : 'NAO';
+        if (data.loginType) data.loginType = _functions.getLoginType(data.loginType);
+
+        if (onboarding) {
+            data.networkLogin = data.cpf;
+            data.onboarding = true;
+        }
+
+        const groupsAD = ['PERFIL_Aluno'];
+
+        if (onboarding && !preventOnboardingGroupAdd) {
+            groupsAD.push('ELEGE_ONBOARDING');
+        } else if (!onboarding) {
+            groupsAD.push('ELEGE_CURSO');
+        }
+
+        if (elegibilityFields && elegibilityFields.length > 0 && !onboarding) {
             for (const field of elegibilityFields) {
                 if (data[field]) {
                     const fieldType = typeof data[field];
+
                     if (fieldType === 'object') continue;
 
-                    const value =
-                        fieldType !== 'string' ? data[field] : _functions.clearString(data[field]);
+                    const value = fieldType !== 'string'
+                        ? data[field]
+                        : _functions.clearString(data[field]);
 
                     groupsAD.push(`ELEGE_${value}`);
                 }
             }
         } else {
-            if (!!data.company && !!data.office) {
+            if (data.company && data.office) {
                 groupsAD.push(`ELEGE_${_functions.clearString(data.company)}`);
                 groupsAD.push(`ELEGE_${_functions.clearString(data.office)}`);
             }
@@ -485,34 +553,33 @@ module.exports = {
                 !!data[optional] && groupsAD.push(`ELEGE_${_functions.clearString(data[optional])}`)
         );
 
-        groupsAD.forEach(async (groupName) => {
-            const group = await Group.findOne({ name: groupName });
-            if (!group) {
-                await Group.create({
-                    name: groupName,
-                    tags: [],
-                });
-            }
-        });
-
         const roles = data.roles ? data.roles.split(',').map((item) => item.trim()) : [];
 
-        if (roles.includes('Analista')) {
-            groupsAD.push('PERFIL_Analista');
-        }
-        if (roles.includes('Conteudista')) {
-            groupsAD.push('PERFIL_Conteudista');
-        }
+        const availableRolesSet = new Set([
+            'Conteudista',
+            'Analista',
+            'Integrador',
+            'Instrutor',
+            'Colaborador',
+            'Gestor_Elegibilidade',
+            'Gestor_Engajamento',
+            'Gestor_Usuario',
+            'Gestor_Matriz',
+            'Aplicador_Matriz',
+        ]);
 
-        data.groupsAD = groupsAD;
+        roles.forEach((role) => {
+            if (availableRolesSet.has(role)) groupsAD.push(`PERFIL_${role}`);
+        });
 
-        if (data.cpf) {
-            data.cpf = String(data.cpf).replace(/[^a-z0-9]/gi, '');
-        }
+        const uniqueGroupsAD = [...new Set(groupsAD)];
 
-        if (onboarding) {
-            data.networkLogin = data.cpf;
-            data.onboarding = true;
+        await createGroupsByGroupsAD(uniqueGroupsAD);
+
+        data.groupsAD = uniqueGroupsAD;
+
+        if (replaceMap?.size) {
+            setReplacedValuesFromConnectMap(data, replaceMap);
         }
 
         return data;
@@ -688,7 +755,7 @@ module.exports = {
         const arrayIds = Array.isArray(userIds) ? userIds : [userIds];
         if (arrayIds.length === 0) return [];
 
-        const users = await User.find({ _id: { $in: arrayIds?.map((id)=> new Types.ObjectId(id)) } }).lean();
+        const users = await User.find({ _id: { $in: arrayIds?.map((id) => new Types.ObjectId(id)) } }).lean();
         if (users.length === 0) return [];
 
 
@@ -728,17 +795,42 @@ module.exports = {
         return LastLogin.findOne({ user: userId });
     },
 
-    async getUsersByTags(tags) {
+    async getUsersByTags(tags, tagsAnd = []) {
         try {
-            let groups = [];
+            const allTags = [...new Set([...tags, ...tagsAnd])];
+            const groups = await Group.find({ 'tags.value': { $in: allTags } });
 
-            for (const tag of tags) {
-                const group = await Group.find({ tags: { $in: tag } });
-                groups.push(...group);
+            const groupsOr = [];
+            const groupsAnd = [];
+
+            for (const g of groups) {
+                const groupTags = g.tags.map(t => t.value);
+                
+                if (tags.some(t => groupTags.includes(t))) {
+                    groupsOr.push(g.name);
+                }
+
+                if (tagsAnd.some(t => groupTags.includes(t))) {
+                    groupsAnd.push(g.name);
+                }
             }
-            groups = groups.map((group) => group.name);
 
-            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin']);
+            const query = {
+                $or: []
+            };
+
+            if (groupsOr.length > 0) {
+                query.$or.push({ groupsAD: { $in: groupsOr } });
+            }
+            if (groupsAnd.length > 0) {
+                query.$or.push({ groupsAD: { $all: groupsAnd } });
+            }
+
+            if (query.$or.length === 0) {
+                return [];
+            }
+
+            const users = await User.find(query, ['networkLogin', 'status', 'groupsAD']);
 
             return users;
         } catch (error) {

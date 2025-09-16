@@ -82,6 +82,11 @@ const newsController = {
                             return base;
                         });
                     }
+
+                    if (newsData?.author) {
+                        const user = await User.findOne({ _id: newsData.author });
+                        populatedNews.author = user ? user.name : null;
+                    }
                     news.push(populatedNews);
                 }
             } else {

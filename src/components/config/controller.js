@@ -1,7 +1,8 @@
 const ApiError = require('../../errors/ApiError');
-const { removeAccents } = require('../../utils/functions');
+const { removeAccents, getUserByToken, slugify, getCustomEmail } = require('../../utils/functions');
 const { Group } = require('../groups/model');
 const _business = require('./business');
+const { getCompanyConfig } = require('./utils');
 const {
     ConfigTypes,
     ConfigModel,
@@ -311,4 +312,25 @@ module.exports = {
 
         return _messages.success(res, req, updated.value);
     },
+
+    async getCompanySupportFormConfig(req, res) {
+        const companyConfig = await getCompanyConfig();
+
+        const supportFormConfig = companyConfig?.supportFormCustomEmail || null;
+
+        if (!supportFormConfig || !Array.isArray(supportFormConfig) || supportFormConfig.length < 2 || !req.headers?.authorization) {
+            return _messages.success(res, req, {
+                supportFormConfig,
+                customEmail: null,
+            });
+        }
+
+        const user = await getUserByToken(req);
+        const { customEmail, domain } = await getCustomEmail(user);
+
+        return _messages.success(res, req, {
+            supportFormConfig: [supportFormConfig, domain],
+            customEmail: customEmail ? customEmail : null,
+        });
+    }
 };

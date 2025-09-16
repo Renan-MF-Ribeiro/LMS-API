@@ -98,50 +98,44 @@ module.exports = {
         })
     },
 
-    returnQuestionsByCategory (categories) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const questionsOfEvaluations = []
+    async returnQuestionsByCategory(categories) {
+        try {
+            const questionsOfEvaluations = [];
 
-                for (const category of categories) {
-                    let amountOfQuestions = 0
+            for (const category of categories) {
+                const questionsOfCategory = await Question.find({
+                    idCategory: category._id,
+                    repealed: 0,
+                    deleted: 0,
+                    active: 1,
+                }).select('_id');
 
-                    const questionsOfCategory = await Question
-                        .find(
-                            { idCategory: { $eq: category._id }, repealed: { $eq: 0 }, deleted: { $eq: 0 }, active: { $eq: 1 } }
-                        ).select('_id')
+                const totalAvailable = questionsOfCategory.length;
+                const requestedAmount =
+                    category.amountOfQuestions >= 0
+                        ? Math.min(category.amountOfQuestions, totalAvailable)
+                        : totalAvailable;
 
+                const selectedQuestions = (
+                    category.randomQuestions
+                        ? returnSliceDataRandom(questionsOfCategory, 0, requestedAmount)
+                        : questionsOfCategory.slice(0, requestedAmount)
+                ).map((q) => ({ _id: q._id, type: 'question' }));
 
-                    if (category.amountOfQuestions >= 0) {
-
-                        amountOfQuestions += Math.min(category.amountOfQuestions, questionsOfCategory.length)
-                    } else {
-                        //all questions
-                        amountOfQuestions += questionsOfCategory.length
-
-                    }
-                    const questions =
-                        (category.randomQuestions
-                            ? returnSliceDataRandom(questionsOfCategory, 0, amountOfQuestions)
-                            : questionsOfCategory.slice(0, amountOfQuestions)
-                        ).map(question => ({ _id: question._id, type: 'question' }))
-
-                    if (category.case) {
-                        category.case['type'] = 'case'
-                        questions.unshift(category.case)
-                    }
-
-                    questionsOfEvaluations.push(questions)
-
+                if (category.case && requestedAmount > 0) {
+                    selectedQuestions.unshift({ ...category.case, type: 'case' });
                 }
-                const questions = questionsOfEvaluations.filter((q) => q.length)
-                const amount = questions.flat().length
 
-                resolve({ questions, amount })
-            } catch (error) {
-                reject(error)
+                questionsOfEvaluations.push(selectedQuestions);
             }
-        })
+
+            const questions = questionsOfEvaluations.filter((q) => q.length);
+            const amount = questions.flat().filter((q) => q.type === 'question').length;
+
+            return { questions, amount };
+        } catch (error) {
+            throw error;
+        }
     },
 
     returnQuestionsByCategoryFromHistoric (questions) {

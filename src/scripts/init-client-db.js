@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const bcrypt = require('bcryptjs');
 
 const { getSectionTrailId, isSectionTrailInfo } = require("../components/sections/business");
 
@@ -6,13 +7,48 @@ const { runScript, generateReport } = require("./utils");
 
 const ObjectId = mongoose.Types.ObjectId;
 
+const GENERATE_REPORTS = false;
+
 async function updateMonolitoIds(connection, { clientId, domainToReplace, domainToReplaceWith, reportName = 'updated_ids' }) {
     const channelsMap = new Map();
     const sectionsMap = new Map();
     const trailsMap = new Map();
     const itemsMap = new Map();
+    const coursesMap = new Map();
+    const usersMap = new Map();
 
     const { db } = connection;
+
+    console.log('Atualizando users');
+
+    const currentUsers = await db.collection('users').find().toArray();
+
+    for await (const user of currentUsers) {
+        const newUserId = new ObjectId();
+        const salt = bcrypt.genSaltSync(10);
+        const defaultPasswordHash = bcrypt.hashSync('Minhasenha@1', salt);
+        const isHappmobiUser = user.email?.endsWith('@happmobi.com.br') || false;
+
+        usersMap.set(String(user._id), String(newUserId));
+
+        await db.collection('users').deleteOne({ _id: user._id });
+
+        await db.collection('users').insertOne({
+            ...user,
+            _id: newUserId,
+            oldId: user._id,
+            clientId,
+            profilePhoto: user.profilePhoto?.replace(domainToReplace, domainToReplaceWith) ?? null,
+            ...(isHappmobiUser && {
+                passwordValid: true,
+                password: [{
+                    hash: defaultPasswordHash,
+                    valid: true,
+                    createdAt: new Date()
+                }]
+            }),
+        });
+    }
 
     console.log('Mudando trailIdentifier e courseIdentifier');
 
@@ -133,6 +169,25 @@ async function updateMonolitoIds(connection, { clientId, domainToReplace, domain
         await db.collection('items').deleteOne({ _id: item._id });
     }
 
+    console.log('Atualizando cursos');
+
+    const courses = await db.collection('courses').find().toArray();
+
+    for await (const course of courses) {
+        const newCourseId = new ObjectId();
+
+        coursesMap.set(String(course._id), String(newCourseId));
+
+        await db.collection('courses').insertOne({
+            ...course,
+            _id: newCourseId,
+            oldId: course._id,
+            thumbPath: course.thumbPath?.replace(domainToReplace, domainToReplaceWith) ?? null,
+        });
+
+        await db.collection('courses').deleteOne({ _id: course._id });
+    }
+
     console.log('Atualizando sessoes nos canais');
 
     // Atualiza ID das sessoes nos canais
@@ -208,55 +263,88 @@ async function updateMonolitoIds(connection, { clientId, domainToReplace, domain
         );
     }
 
+    await db.collection('users').updateMany({}, { $unset: { oldId: '', oldID: '' } });
+    await db.collection('channels').updateMany({}, { $unset: { oldId: '', oldID: '' } });
+    await db.collection('sections').updateMany({}, { $unset: { oldId: '', oldID: '' } });
+    await db.collection('trails').updateMany({}, { $unset: { oldId: '', oldID: '' } });
+    await db.collection('items').updateMany({}, { $unset: { oldId: '', oldID: '' } });
+    await db.collection('courses').updateMany({}, { $unset: { oldId: '', oldID: '' } });
+
     console.log('Gerando relatorios');
 
-    await generateReport(
-        Array.from(channelsMap.entries()).map(([oldId, newId]) => ({
-            oldId: String(oldId),
-            newId: String(newId),
-        })),
-        [
-            { header: 'Old ID', key: 'oldId' },
-            { header: 'New ID', key: 'newId' },
-        ],
-        { fileName: reportName + '_channels' }
-    );
+    if (GENERATE_REPORTS) {
+        await generateReport(
+            Array.from(usersMap.entries()).map(([oldId, newId]) => ({
+                oldId: String(oldId),
+                newId: String(newId),
+            })),
+            [
+                { header: 'Old ID', key: 'oldId' },
+                { header: 'New ID', key: 'newId' },
+            ],
+            { fileName: reportName + '_users' }
+        );
 
-    await generateReport(
-        Array.from(sectionsMap.entries()).map(([oldId, newId]) => ({
-            oldId: String(oldId),
-            newId: String(newId),
-        })),
-        [
-            { header: 'Old ID', key: 'oldId' },
-            { header: 'New ID', key: 'newId' },
-        ],
-        { fileName: reportName + '_sections' }
-    );
+        await generateReport(
+            Array.from(channelsMap.entries()).map(([oldId, newId]) => ({
+                oldId: String(oldId),
+                newId: String(newId),
+            })),
+            [
+                { header: 'Old ID', key: 'oldId' },
+                { header: 'New ID', key: 'newId' },
+            ],
+            { fileName: reportName + '_channels' }
+        );
 
-    await generateReport(
-        Array.from(trailsMap.entries()).map(([oldId, newId]) => ({
-            oldId: String(oldId),
-            newId: String(newId),
-        })),
-        [
-            { header: 'Old ID', key: 'oldId' },
-            { header: 'New ID', key: 'newId' },
-        ],
-        { fileName: reportName + '_trails' }
-    );
+        await generateReport(
+            Array.from(sectionsMap.entries()).map(([oldId, newId]) => ({
+                oldId: String(oldId),
+                newId: String(newId),
+            })),
+            [
+                { header: 'Old ID', key: 'oldId' },
+                { header: 'New ID', key: 'newId' },
+            ],
+            { fileName: reportName + '_sections' }
+        );
 
-    await generateReport(
-        Array.from(itemsMap.entries()).map(([oldId, newId]) => ({
-            oldId: String(oldId),
-            newId: String(newId),
-        })),
-        [
-            { header: 'Old ID', key: 'oldId' },
-            { header: 'New ID', key: 'newId' },
-        ],
-        { fileName: reportName + '_items' }
-    );
+        await generateReport(
+            Array.from(trailsMap.entries()).map(([oldId, newId]) => ({
+                oldId: String(oldId),
+                newId: String(newId),
+            })),
+            [
+                { header: 'Old ID', key: 'oldId' },
+                { header: 'New ID', key: 'newId' },
+            ],
+            { fileName: reportName + '_trails' }
+        );
+
+        await generateReport(
+            Array.from(itemsMap.entries()).map(([oldId, newId]) => ({
+                oldId: String(oldId),
+                newId: String(newId),
+            })),
+            [
+                { header: 'Old ID', key: 'oldId' },
+                { header: 'New ID', key: 'newId' },
+            ],
+            { fileName: reportName + '_items' }
+        );
+
+        await generateReport(
+            Array.from(coursesMap.entries()).map(([oldId, newId]) => ({
+                oldId: String(oldId),
+                newId: String(newId),
+            })),
+            [
+                { header: 'Old ID', key: 'oldId' },
+                { header: 'New ID', key: 'newId' },
+            ],
+            { fileName: reportName + '_courses' }
+        );
+    }
 
     return {
         channelsMap,
@@ -274,9 +362,11 @@ async function run() {
         useUnifiedTopology: true,
     });
 
+    const clientId = 0;
+
     await updateMonolitoIds(connection, {
-        clientId: 0,
-        domainToReplace: 'lms.experimente1.happmobi.com.br',
+        clientId,
+        domainToReplace: 'v2.happlearning.happmobi.com.br',
         domainToReplaceWith: 'lms.cliente.happlearning.com.br',
         reportName: 'monolito_ids'
     });

@@ -4,8 +4,6 @@ const { ldapClient } = require('./src/utils/auth')
 const { log, error } = require('./src/utils/logger')
 const { connectDatabase } = require('./src/utils/db')
 const app = require('./src/index')
-const port = process.env.PORT || 3000
-const HOSTNAME = process.env.HOSTNAME
 
 const {
     updateAverageCourses,
@@ -28,14 +26,29 @@ const {
     getMessengerConfig,
     getCronConfig,
     getUsersDataConfig,
-    getCompanyConfig,
     getChatIAConfig,
     getDashboardConfig
 } = require('./src/components/config/business')
+const { getCompanyConfig } = require('./src/components/config/utils');
 const GamificationKafka = require('./src/components/gamification/kafka/broker');
 
+const environment = require('./src/environment');
+
+const { runMigrations } = require('./src/migrations')
+
+const port = environment.PORT || 3000;
+const HOSTNAME = environment.HOSTNAME;
+
 async function startApp() {
-    await connectDatabase();
+    const dbConnection = await connectDatabase();
+
+    const lastIndex = HOSTNAME?.lastIndexOf('-') ?? -1;
+    const currentHost = HOSTNAME?.substring(lastIndex + 1) ?? null;
+    const isPrimaryHost = currentHost === "0";
+
+    if (isPrimaryHost) {
+        await runMigrations(dbConnection);
+    }
 
     const server = app.listen(port, async () => {
         try {
@@ -45,43 +58,39 @@ async function startApp() {
             await GamificationKafka.stop();
         }
 
-        try {
-            // Cria as configs caso não existam
-            await getMessengerConfig();
-            await getCronConfig();
-            await getUsersDataConfig();
-            await getCompanyConfig();
-            await getChatIAConfig();
-            await getDashboardConfig();
-        } catch (err) {
-            error('Error setting configs: ' + err);
-        }
 
-        if (HOSTNAME) {
-            const lastIndex = HOSTNAME.lastIndexOf('-');
-            const result = HOSTNAME.substring(lastIndex + 1);
-
-            if (result == "0") {
-                await cronNotifyResponsibleUsers()
-                await updateAverageCourses()
-                await updateAverageRatings()
-                await sendCourseReleaseNotification()
-                await sendCourseChargeNotification()
-                await deleteReprovedExamTracking()
-                await cronRevokeTrail()
-                await cronUpdateRecommendedTrails()
-                await getUsersLoadCron()
-                await executeInactiveOldOnboardingUsers()
-                await executeRemoveAutomaticEligibilityTags()
-                updateUserTemporaryTags()
-                executeCronAverageCourses()
-                startUpdateTrailsViewsCron()
+        if (isPrimaryHost) {
+            try {
+                // Cria as configs caso não existam
+                await getMessengerConfig();
+                await getCronConfig();
+                await getUsersDataConfig();
+                await getCompanyConfig();
+                await getChatIAConfig();
+                await getDashboardConfig();
+            } catch (err) {
+                error('Error setting configs: ' + err);
             }
+
+            await cronNotifyResponsibleUsers();
+            await updateAverageCourses();
+            await updateAverageRatings();
+            await sendCourseReleaseNotification();
+            await sendCourseChargeNotification();
+            await deleteReprovedExamTracking();
+            await cronRevokeTrail();
+            await cronUpdateRecommendedTrails();
+            await getUsersLoadCron();
+            await executeInactiveOldOnboardingUsers();
+            await executeRemoveAutomaticEligibilityTags();
+            updateUserTemporaryTags();
+            executeCronAverageCourses();
+            startUpdateTrailsViewsCron();
         }
 
         log('Host: ' + HOSTNAME)
         log('Listening on port: ' + port)
-    })
+    });
 
     createTerminus(server, {
         async healthCheck() {
@@ -98,7 +107,7 @@ async function startApp() {
         onShutdown() {
             log('cleanup finished, server is shutting down')
         },
-    })
+    });
 }
 
 startApp();

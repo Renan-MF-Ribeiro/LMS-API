@@ -6,7 +6,7 @@ const {
     processTrailTracking,
 } = require('../../utils/functions');
 const configBusiness = require('../config/business');
-const { getCoursesByIds, getCoursesByUserID } = require('../courses/business');
+const { getCoursesByIds, isUserPresent, userHasSomePresence } = require('../courses/business');
 const { ClassModel } = require('../courses/model');
 const { matricesApi } = require('../matrices/http-adapter');
 const { Features } = require('../theme/features/model');
@@ -25,13 +25,17 @@ const business = {
 
         const matchingRules = await module.exports.getMatchingRules(user, rules);
 
-        if (!matchingRules?.[0]) {
+        if (!matchingRules?.[0] && rules?.rules?.length > 0) {
             return [];
         }
 
         let query = matchingRules?.map((rule) => {
-            const usersField = rule?.usersField
+            const usersField = rule?.usersField;
             const managerField = rule?.managerField;
+
+            if (!user[usersField]) {
+                return;
+            }
 
             return {
                 [usersField]: user[usersField],
@@ -42,9 +46,9 @@ const business = {
 
         if (rules?.useIsManagerFlag) {
             query.push({
-                managerRegistration: user?.registration
+                managerRegistration: user?.registration,
+                enabled: true,
             });
-
         }
 
         if (req.query?.searchBy) {
@@ -58,12 +62,22 @@ const business = {
                 ],
             }));
         }
-        return await User.find({ $or: query }, '_id name networkLogin office').lean();
+
+        query = query.filter(Boolean);
+        if (!query?.length) {
+            return [];
+        }
+
+        const finalQuery = rules?.useIsManagerFlag ? { $or: query } : { $and: query };
+        return await User.find(finalQuery, `_id name networkLogin office`).lean();
     },
 
     isUserManager: async (user) => {
         if (!user) return false;
+
         const rules = await configBusiness.getManagerRule();
+        if (user?.manager?.toLowerCase() !== 'nao' && rules.useIsManagerFlag) return true;
+
         for (const rule of rules?.rules || []) {
             if (rule?.managerValues?.some((v) => user?.[rule?.managerField] === v)) {
                 return true;
@@ -76,15 +90,17 @@ const business = {
     getMatchingRules: async (user, rules) => {
         if (!user || !rules) return [];
         return rules?.rules?.filter((rule) => {
-            return rule?.managerValues?.some((value) => user?.[rule?.managerField] === value);
+            return rule?.managerValues?.some(
+                (value) => user?.[rule?.managerField]?.toLowerCase() === value?.toLowerCase()
+            );
         });
     },
 
-    paginateUsers(req, users) {
+    paginateUsers (req, users) {
         const { skip, limit } = pagination(req);
-        if(!users?.[0]?.user){
+        if (!users?.[0]?.user) {
             // Tratando objeto para que seja compativel com objeto gerado na matriz ativa
-            users = users.map((user) => ({ user: {...user, userId: user._id, _id: undefined} }));
+            users = users.map((user) => ({ user: { ...user, userId: user._id, _id: undefined } }));
         }
         const { orderBy = 'name', direction = 'asc' } = req?.query;
         const { sort, order } = ordernation({ query: { orderBy, direction } });
@@ -174,10 +190,10 @@ const business = {
     },
 
     handleUsersWhenMatrixIsActive: async (query, users, target = null) => {
-        if(!users?.length || !users[0]) {
+        if (!users?.length || !users[0]) {
             return [];
         }
-        
+
         const { data } = await matricesApi.get('/users/detailed-info', {
             params: {
                 ...query,
@@ -185,22 +201,23 @@ const business = {
             },
         });
 
-        const responseUsers = data?.data?.map((user) => {
-            const foundUser = users?.find((u) => u?._id?.toString() === user?.userId);
-            return {
-                user: {
-                    userId: foundUser?._id,
-                    networkLogin: foundUser?.networkLogin,
-                    name: foundUser?.name,
-                    office: foundUser?.office,
-                    profilePhoto: foundUser?.profilePhoto,
-                },
-                lastApplicationAt: user?.lastApplicationAt,
-                hasLowScore: user?.hasLowScore,
-                performance: user?.performance,
-                hasPendingActions: user?.hasPendingActions,
-            };
-        }) || [];
+        const responseUsers =
+            data?.data?.map((user) => {
+                const foundUser = users?.find((u) => u?._id?.toString() === user?.userId);
+                return {
+                    user: {
+                        userId: foundUser?._id,
+                        networkLogin: foundUser?.networkLogin,
+                        name: foundUser?.name,
+                        office: foundUser?.office,
+                        profilePhoto: foundUser?.profilePhoto,
+                    },
+                    lastApplicationAt: user?.lastApplicationAt,
+                    hasLowScore: user?.hasLowScore,
+                    performance: user?.performance,
+                    hasPendingActions: user?.hasPendingActions,
+                };
+            }) || [];
         return await business.handleReqTarget(responseUsers, target);
     },
 
@@ -273,7 +290,7 @@ const business = {
                 item: { $in: allItemIds },
             }),
             RecommendedContent.find({
-                userId: { $in: users.map((u) => u._id) }
+                userId: { $in: users.map((u) => u._id) },
             }),
         ]);
 
@@ -281,7 +298,9 @@ const business = {
             // Se volumetria for grande (+100 usuários em uma turma), começar a pensar em modificar esta lógica:
             const userStartedTrail = trackings?.some((t) => t?.userLogin === user?.networkLogin);
             const trailWasRecommended = userRecommendations?.some((rec) => {
-                return rec?.recommendedTrails?.some((recTrail) => recTrail?.id?.toString() === trailId);
+                return rec?.recommendedTrails?.some(
+                    (recTrail) => recTrail?.id?.toString() === trailId
+                );
             });
 
             return {
@@ -289,35 +308,38 @@ const business = {
                 name: user?.name,
                 networkLogin: user?.networkLogin,
                 office: user?.office,
-                status: trailWasRecommended || userStartedTrail ? 'started' : undefined
+                status: trailWasRecommended || userStartedTrail ? 'started' : undefined,
             };
         });
-        return usersData
+        return usersData;
     },
 
     getAvailableUsersByCourse: async (req) => {
         const classId = req.query?.id || req.query?.classId;
         const [users, classFound] = await Promise.all([
             module.exports.findManagedUsers(req),
-            ClassModel.findOne({ _id: new Types.ObjectId(classId) }).populate('courseID').lean()
+            ClassModel.findOne({ _id: new Types.ObjectId(classId) })
+                .populate('courseID')
+                .lean(),
         ]);
         if (!classFound || !users[0]) {
             return [];
         }
-
         // Lógica para verificar se o usuário já concluiu o curso anteriormente:
 
-        /* const alreadyConcluded = new Set();
+        const alreadyConcluded = new Set();
         for (const user of users) {
-            const concluded = await getCoursesByUserID(user._id)
-            if (concluded?.some((c) => c.id.toString() === classId)) {
-                alreadyConcluded.add(user._id.toString());
+            const present = await userHasSomePresence(user._id, classFound?.courseID?._id, classFound._id)
+            if (present) {
+                alreadyConcluded.add(user._id?.toString());
             }
-        } */
+        }
 
         const userData = users?.map((user) => {
             // Se volumetria for grande (+100 usuários em uma turma), começar a pensar em modificar esta lógica:
-            const userInClass = classFound?.users?.some((u) => u.userID.toString() === user._id.toString());
+            const userInClass = classFound?.users?.some(
+                (u) => u.userID.toString() === user._id.toString()
+            );
 
             return {
                 userId: user?._id,
@@ -325,11 +347,16 @@ const business = {
                 networkLogin: user?.networkLogin,
                 office: user?.office,
                 status: userInClass ? 'registered' : undefined,
-                //alreadyConcluded: alreadyConcluded.has(user._id?.toString())
+                alreadyConcluded: alreadyConcluded.has(user._id?.toString())
             };
-        })
-        return userData
-    }
-}
+        }).filter((user) => !user.alreadyConcluded);
 
-module.exports = business
+        return {
+            users: userData,
+            limit: classFound?.limit,
+            spots: classFound?.limit - classFound?.users?.length,
+        };
+    },
+};
+
+module.exports = business;

@@ -35,7 +35,9 @@ const {
     getClassByID,
     returnProgramaID,
     processAttendanceListImport,
-    enrichCoursesWithClasses
+    enrichCoursesWithClasses,
+    prepareBodyForMessage,
+
 } = require('./business');
 
 const {
@@ -53,7 +55,7 @@ const { getMessengerConfig } = require('../config/business');
 const _business = require('./business');
 
 module.exports = {
-    async createCourse(req, res) {
+    async createCourse (req, res) {
         try {
             const materials = JSON.parse(req.fields.materials);
             const files = req.files;
@@ -137,7 +139,7 @@ module.exports = {
                     await CourseModel.findByIdAndUpdate(courseCreated._id, {
                         materials: arrMaterials,
                     });
-                    success(res, req, 'Curso criado com sucesso!');
+                    success(res, req, 'Curso criado com sucesso!', 'Curso criado com sucesso!', 'courses', '/create-course', courseCreated, null, true, 'create');
                 }
             } else {
                 badRequest(
@@ -162,7 +164,7 @@ module.exports = {
         }
     },
 
-    async allCourses(req, res) {
+    async allCourses (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -219,7 +221,7 @@ module.exports = {
         }
     },
 
-    async getPrograms(req, res) {
+    async getPrograms (req, res) {
         try {
             const programs = await ProgramModel.find().select('title');
             success(res, req, programs);
@@ -235,7 +237,7 @@ module.exports = {
         }
     },
 
-    async updateCourse(req, res) {
+    async updateCourse (req, res) {
         try {
             const materials = req.fields.materials ? JSON.parse(req.fields.materials) : null;
             const body = req.fields;
@@ -340,7 +342,7 @@ module.exports = {
                         );
                     }
 
-                    success(res, req, 'Atualizado com sucesso');
+                    success(res, req, 'Atualizado com sucesso', 'Atualizado com sucesso', 'courses', '/update-course', body, currentCourse, true, 'update');
                 }
             }
         } catch (error) {
@@ -349,13 +351,13 @@ module.exports = {
         }
     },
 
-    async deleteCourse(req, res) {
+    async deleteCourse (req, res) {
         try {
             const { id } = req.params;
             await CourseModel.findByIdAndUpdate(id, { deleted: 1 });
             await dispatch('delete', 'course', { id });
 
-            success(res, req, 'Curso excluído com sucesso!');
+            success(res, req, 'Curso excluído com sucesso!', 'Curso excluído com sucesso!', 'courses', '/delete-course', { courseId: id }, null, true, 'delete');
         } catch (error) {
             internalServer(
                 res,
@@ -368,25 +370,25 @@ module.exports = {
         }
     },
 
-    async instructorAllCourses(req, res) {
+    async instructorAllCourses (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
             const searchBy = req.query.searchBy;
             let arrCoursesFinal;
 
-            const courses = await CourseModel.find(
-                searchBy
-                    ? {
-                        title: { $regex: '' || searchBy, $options: 'i' },
-                        deleted: 0,
-                        status: 1,
-                    }
-                    : {
-                        deleted: 0,
-                        status: 1,
-                    }
-            )
+            const query = searchBy
+                ? {
+                    title: { $regex: '' || searchBy, $options: 'i' },
+                    deleted: 0,
+                    status: 1,
+                }
+                : {
+                    deleted: 0,
+                    status: 1,
+                }
+            const total = await CourseModel.find(query).countDocuments();
+            const courses = await CourseModel.find(query)
                 .populate({
                     path: 'materials',
                     match: { author: 'CONTEUDISTA' },
@@ -406,7 +408,7 @@ module.exports = {
 
             success(res, req, {
                 data: arrCoursesFinal,
-                total: arrCoursesFinal.length,
+                total
             });
         } catch (error) {
             internalServer(
@@ -420,7 +422,7 @@ module.exports = {
         }
     },
 
-    async getCourseById(req, res) {
+    async getCourseById (req, res) {
         try {
             const { id } = req.params;
             const course = await CourseModel.findById(id)
@@ -443,7 +445,7 @@ module.exports = {
         }
     },
 
-    async getUsers(req, res) {
+    async getUsers (req, res) {
         try {
             const user = await getUserByToken(req);
             const storeUsers = await getStoreUSers(user.store);
@@ -460,7 +462,7 @@ module.exports = {
         }
     },
 
-    async createClass(req, res) {
+    async createClass (req, res) {
         try {
             let {
                 courseID,
@@ -620,24 +622,32 @@ module.exports = {
 
                         const messengerConfig = await getMessengerConfig();
 
-                        const message = {
-                            category: 'notify',
-                            communication: ['notification', 'email'],
-                            mode: 'manual',
-                            target: {
-                                type: 'users',
-                                value: {
-                                    users: arrUserId,
-                                },
-                            },
-                            text: `O usuário ${user.name} está na turma ${name}!\n O local do treinamento será em: ${location}`,
-                            textHtml: `<p>O usuário ${user.name} está na turma ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
-                            thumbnail: messengerConfig.emailTemplate.thumbnail,
-                            title: `Treinamentos: ${name}`,
-                        };
-                        await createMessagesFromBackend(message);
+                        const classBody = createdClass.toObject ? createdClass.toObject() : createdClass;
+                        const classBodyForMessage = await prepareBodyForMessage(classBody, location);
 
-                        success(res, req, 'Criado com sucesso!');
+                        for (const user of newUsers) {
+                            const message = {
+                                category: 'notify',
+                                communication: ['notification', 'email'],
+                                mode: 'manual',
+                                target: {
+                                    type: 'users',
+                                    value: {
+                                        users: [user._id],
+                                    },
+                                },
+                                text: `${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.`,
+                                textHtml: `<p>${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.</p>`,
+                                thumbnail: messengerConfig.emailTemplate.thumbnail,
+                                title: `Treinamentos: ${name}`,
+                                class: classBodyForMessage,
+                                courses: true,
+                            }
+
+                            await createMessagesFromBackend(message);
+                        }
+
+                        success(res, req, 'Criado com sucesso!', 'Criado com sucesso!', 'courses', '/instructor/create-class', createdClass, null, true, 'create');
                         return;
                     }
                 } else {
@@ -665,7 +675,7 @@ module.exports = {
         }
     },
 
-    async updateClass(req, res) {
+    async updateClass (req, res) {
         try {
             let {
                 courseID,
@@ -698,7 +708,7 @@ module.exports = {
                 if (dateApplicationInitial && dateApplicationFinal === '') {
                     flagDate = true;
                 } else {
-                    if (dateApplicationInitial >= dateApplicationFinal) flagDate = false;
+                    if (moment(dateApplicationInitial).isSameOrAfter(moment(dateApplicationFinal))) flagDate = false;
                 }
             }
 
@@ -707,7 +717,7 @@ module.exports = {
                     res,
                     req,
                     'A data final da aplicação tem que ser maior que a inicial!',
-                    'A data final da aplicação tem que ser maior que a inicial!!',
+                    'A data final da aplicação tem que ser maior que a inicial!',
                     'courses',
                     '/createClass'
                 );
@@ -847,11 +857,9 @@ module.exports = {
                             $push: { users: { $each: addedUsers } },
                         });
 
-                        // Dispara notificações para usuários adicionados
-                        const arrUserId = addedUsers.map((user) => user._id);
-
                         const messengerConfig = await getMessengerConfig();
 
+                        const classBodyForMessage = await prepareBodyForMessage(classBody, location);
                         for (const user of addedUsers) {
                             const message = {
                                 category: 'notify',
@@ -860,13 +868,15 @@ module.exports = {
                                 target: {
                                     type: 'users',
                                     value: {
-                                        users: arrUserId,
+                                        users: [user._id],
                                     },
                                 },
-                                text: `O usuário ${user.name} está na turma ${name}!\n O local do treinamento será em: ${location} `,
-                                textHtml: `<p>O usuário ${user.name} está na turma ${name}!</p> <p>O local do treinamento será em: ${location}</p>`,
+                                text: `${user.name}, sua inscrição na turma "${classBodyForMessage.name}" foi atualizada! veja os detalhes abaixo.`,
+                                textHtml: `<p>${user.name}, sua inscrição na turma "${classBodyForMessage.name}" foi atualizada! veja os detalhes abaixo.</p>`,
                                 thumbnail: messengerConfig.emailTemplate.thumbnail,
                                 title: `Treinamentos: ${name}`,
+                                class: classBodyForMessage,
+                                courses: true,
                             };
 
                             await createMessagesFromBackend(message);
@@ -885,7 +895,7 @@ module.exports = {
                         });
                     }
 
-                    success(res, req, 'Atualizado com sucesso!');
+                    success(res, req, 'Atualizado com sucesso!', 'Atualizado com sucesso!', 'courses', '/instructor/update-class', classBody, currentMaterials, true, 'update');
                 } else {
                     badRequest(
                         res,
@@ -910,7 +920,7 @@ module.exports = {
         }
     },
 
-    async appliedCourses(req, res) {
+    async appliedCourses (req, res) {
         try {
             const user = await getUserByToken(req);
             const { skip, limit } = pagination(req);
@@ -942,7 +952,7 @@ module.exports = {
         }
     },
 
-    async appliedCourse(req, res) {
+    async appliedCourse (req, res) {
         try {
             const { courseID, classID } = req.params;
             const course = await CourseModel.findById(courseID)
@@ -967,7 +977,7 @@ module.exports = {
         }
     },
 
-    async printAttendanceList(req, res) {
+    async printAttendanceList (req, res) {
         try {
             const { courseId, classId } = req.params;
             const onlyPresenceFlag = req.query?.onlyPresence !== undefined;
@@ -1032,7 +1042,7 @@ module.exports = {
         }
     },
 
-    async deleteMaterial(req, res) {
+    async deleteMaterial (req, res) {
         try {
             const arrMaterials = [];
             const { materialID, classID } = req.params;
@@ -1049,7 +1059,8 @@ module.exports = {
                 materials: arrMaterials,
             });
             await MaterialModel.findByIdAndRemove(materialID);
-            success(res, req, 'Material Excluído com sucesso!');
+
+            success(res, req, 'Material Excluído com sucesso!', 'Material Excluído com sucesso!', 'courses', '/instructor/delete-material', null, null, true, 'delete');
         } catch (error) {
             internalServer(
                 res,
@@ -1062,7 +1073,7 @@ module.exports = {
         }
     },
 
-    async deleteMaterialCourse(req, res) {
+    async deleteMaterialCourse (req, res) {
         try {
             const arrMaterials = [];
             const { materialID, courseID } = req.params;
@@ -1079,7 +1090,7 @@ module.exports = {
             });
             await MaterialModel.findByIdAndRemove(materialID);
 
-            success(res, req, 'Material Excluído com sucesso!');
+            success(res, req, 'Material Excluído com sucesso!', 'Material Excluído com sucesso!', 'courses', '/delete-material', { courseId: courseID }, null, true, 'delete');
         } catch (error) {
             internalServer(
                 res,
@@ -1092,7 +1103,7 @@ module.exports = {
         }
     },
 
-    async searchUser(req, res) {
+    async searchUser (req, res) {
         try {
             const { searchBy } = req.query;
             let { usersInClass } = req.body;
@@ -1100,7 +1111,7 @@ module.exports = {
             const { id } = req.params;
             usersInClass = usersInClass.map((userID) => mongoose.Types.ObjectId(userID));
 
-            // Buscar o curso e pegar os valores de tags e mandatory
+            // Buscar o curso e pegar os valores de tags e obrigatoriedades
             const course = await CourseModel.findOne(
                 { _id: id },
                 { title: 1, tags: "$tags.value", mandatory: "$mandatory.value" }
@@ -1184,7 +1195,7 @@ module.exports = {
         }
     },
 
-    async deleteClass(req, res) {
+    async deleteClass (req, res) {
         try {
             const { classID } = req.params;
             const { materials } = await ClassModel.findById(classID);
@@ -1193,7 +1204,8 @@ module.exports = {
             for (const material of materials) {
                 await MaterialModel.findByIdAndRemove(material._id);
             }
-            success(res, req, 'Excluído com sucesso');
+
+            success(res, req, 'Excluído com sucesso', 'Excluído com sucesso', 'courses', '/instructor/delete-class', null, null, true, 'delete');
         } catch (error) {
             internalServer(
                 res,
@@ -1206,7 +1218,7 @@ module.exports = {
         }
     },
 
-    async courseEvaluation(req, res) {
+    async courseEvaluation (req, res) {
         try {
             const { classID, answers } = req.body;
             const student = await getUserByToken(req);
@@ -1248,7 +1260,7 @@ module.exports = {
         }
     },
 
-    async verifyCourseEvaluation(req, res) {
+    async verifyCourseEvaluation (req, res) {
         try {
             const { classID } = req.params;
             const student = await getUserByToken(req);
@@ -1301,7 +1313,7 @@ module.exports = {
         }
     },
 
-    async getCourseEvaluations(req, res) {
+    async getCourseEvaluations (req, res) {
         try {
             const { classID } = req.params;
             const student = await getUserByToken(req);
@@ -1323,7 +1335,7 @@ module.exports = {
         }
     },
 
-    async getCourseByQrCode(req, res) {
+    async getCourseByQrCode (req, res) {
         try {
             const body = req.body;
             const course = await ClassModel.findOne({
@@ -1343,7 +1355,7 @@ module.exports = {
         }
     },
 
-    async getCourseByQrCodeSelfRegistration(req, res) {
+    async getCourseByQrCodeSelfRegistration (req, res) {
         try {
             const { body } = req;
             const { _id, name } = await getUserByToken(req);
@@ -1455,7 +1467,7 @@ module.exports = {
         }
     },
 
-    async getCourseDetailByQrCode(req, res) {
+    async getCourseDetailByQrCode (req, res) {
         try {
             const { body } = req;
             const course = await CourseModel.findOne({
@@ -1475,7 +1487,7 @@ module.exports = {
         }
     },
 
-    async selfRegistration(req, res) {
+    async selfRegistration (req, res) {
         try {
             const { body } = req;
             const user = await getUserByToken(req);
@@ -1515,7 +1527,7 @@ module.exports = {
         }
     },
 
-    async listJoin(req, res) {
+    async listJoin (req, res) {
         try {
             const { body } = req;
             const user = await getUserByToken(req);
@@ -1526,6 +1538,8 @@ module.exports = {
 
             const messengerConfig = await getMessengerConfig();
 
+            const classBodyForMessage = await prepareBodyForMessage(course, course.location);
+
             const message = {
                 category: 'notify',
                 communication: ['notification', 'email'],
@@ -1533,13 +1547,15 @@ module.exports = {
                 target: {
                     type: 'users',
                     value: {
-                        users: [userID],
+                        users: [user._id],
                     },
                 },
-                text: `O usuário ${user.name} está na turma ${course.name}!\n O local do treinamento será em: ${course.location}`,
-                textHtml: `<p>O usuário ${user.name} está na turma ${course.name}!</p> <p>O local do treinamento será em: ${course.location}</p>`,
+                text: `${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.`,
+                textHtml: `<p>${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.</p>`,
                 thumbnail: messengerConfig.emailTemplate.thumbnail,
                 title: `Treinamentos: ${course.name}`,
+                class: classBodyForMessage,
+                courses: true,
             };
             await createMessagesFromBackend(message);
 
@@ -1566,7 +1582,7 @@ module.exports = {
         }
     },
 
-    async listLeave(req, res) {
+    async listLeave (req, res) {
         const { classesID } = req.body;
         const user = await getUserByToken(req);
 
@@ -1587,7 +1603,7 @@ module.exports = {
         success(res, req, classUpdated)
     },
 
-    async getInstructorByInstructorGroup(req, res) {
+    async getInstructorByInstructorGroup (req, res) {
         try {
             const { params } = req;
             const tags = [];
@@ -1645,7 +1661,7 @@ module.exports = {
         }
     },
 
-    async verifyInstructor(req, res) {
+    async verifyInstructor (req, res) {
         try {
             const { params } = req;
             const trails = [];
@@ -1743,7 +1759,7 @@ module.exports = {
         }
     },
 
-    async joinWaitList(req, res) {
+    async joinWaitList (req, res) {
         try {
             let { body } = req;
             const user = await getUserByToken(req);
@@ -1780,7 +1796,7 @@ module.exports = {
         }
     },
 
-    async getWaitListByUser(req, res) {
+    async getWaitListByUser (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1823,7 +1839,7 @@ module.exports = {
         }
     },
 
-    async getWaitListByCourse(req, res) {
+    async getWaitListByCourse (req, res) {
         try {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
@@ -1864,7 +1880,7 @@ module.exports = {
         }
     },
 
-    async getWaitlistAndElegibleUsersByCourse(req, res) {
+    async getWaitlistAndElegibleUsersByCourse (req, res) {
         try {
             const courseId = req.query.courseId;
             const elegibleUsers = [];
@@ -1937,7 +1953,7 @@ module.exports = {
      * @param {Express.Request} req
      * @param {Express.Response} res
      */
-    async importAttendanceList(req, res) {
+    async importAttendanceList (req, res) {
         const file = req.files?.file;
         const { courseId, classId } = req.params;
 
@@ -2000,7 +2016,7 @@ module.exports = {
         }
     },
 
-    async historicByUser(req, res) {
+    async historicByUser (req, res) {
         try {
             const userId = req.params.userId;
             const { skip, limit } = pagination(req);
@@ -2078,7 +2094,7 @@ module.exports = {
 
     },
 
-    async removeUserClass(req, res) {
+    async removeUserClass (req, res) {
         try {
             const { classeId, userId } = req.params;
             const classUpdated = await ClassModel.findOneAndUpdate(
@@ -2106,7 +2122,7 @@ module.exports = {
 
 };
 
-async function createMessagesFromBackend(body) {
+async function createMessagesFromBackend (body) {
     try {
         const campaign = body;
         const target = campaign.target;

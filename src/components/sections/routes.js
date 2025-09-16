@@ -6,11 +6,11 @@ const {
     isAccountant,
     isUserManagerOrSuperAdminOrElegibilityManager,
 } = require('../../utils/middlewares')
-const { cacheRequestOnClient } = require('../../utils/cache/helpers')
+const { cacheRequestOnClient } = require('../../utils/cache/middlewares')
 
 router
     .get('/', isStudent, _controller.returnSections)
-    .get('/elegibles-contents', isStudent, cacheRequestOnClient(15 * 1000), _controller.getSectionsElegibles) // Cache for 15 seconds
+    .get('/elegibles-contents', isStudent, cacheRequestOnClient(15), _controller.getSectionsElegibles) // Cache for 15 seconds
     .get('/user-accessible-content', isUserManagerOrSuperAdminOrElegibilityManager, _controller.getUserAccessibleContent)
     .get('/formation', isStudent, _controller.getSectionsFormation)
     .get('/banners', isStudent, _controller.getChannelBanners)

@@ -6,6 +6,7 @@ const { default: axios } = require('axios');
 const { Group } = require('../groups/model');
 const { getUserByToken } = require('../../utils/functions');
 const { getMessengerConfig } = require('../config/business');
+const { socialApi } = require('../social/http-adapter');
 
 /* 
  Função recursiva pra popular usuários de arrays ou objetos vindos do SocialApi
@@ -91,7 +92,7 @@ async function populateUserFields(fieldName, reference, data) {
 
     return processData(data, userMap, avatarMap, true);
 }
-async function populateSingleData(fieldName, reference, data){
+async function populateSingleData(fieldName, reference, data) {
     // Salva todos os ID's de usuários que devem ser populado de 'data'
     const ids = new Set();
     const avatarIds = new Set();
@@ -120,7 +121,7 @@ async function populateSingleData(fieldName, reference, data){
         avatar: avatarMap.get(data.avatar?.toString()) || null,
     };
 
-    return populatedItem
+    return populatedItem;
 }
 
 async function populateMembers(data) {
@@ -137,34 +138,46 @@ async function populateTrailFields(data) {
 }
 
 async function createNotification(config, users) {
-    let text,
-        texthtml,
-        title = undefined;
+    const shareText =
+        config.contentType === 'post'
+            ? `${config.reqUser} compartilhou um post. Clique e confira!`
+            : `${config.reqUser} compartilhou uma trilha: ${config.contentName}. Clique e confira!`;
+    const shareTitle =
+        config.contentType === 'post'
+            ? `${config.reqUser} compartilhou um post.`
+            : `${config.reqUser} compartilhou uma trilha: ${config.contentName}.`;
 
-    // Config.TYPE
-    // Valores que podem ser recebidos em "config.type" ('mention', 'comment', 'share')
-    // É a AÇÃO que está sendo notificada.
-    const shareContent = config.contentType === 'post' ? 'um post' : 'uma trilha';
-    const typesOfNotification = {
-        mention: 'mencionou este perfil em um',
-        comment: 'respondeu o',
-        share: `compartilhou ${shareContent}`,
+    const values = {
+        admin_post: {
+            text: 'Uma nova publicação foi feita pela equipe de comunicação. Clique e confira!',
+            texthtml: 'Novo post da equipe de comunicação.',
+            title: 'Novo post da equipe de comunicação',
+        },
+        mention: {
+            text: 'Mencionou você em um comentário. Clique e confira!',
+            texthtml: 'Mencionou você em um comentário. Clique e confira!',
+            title: 'Nova menção em comentário.',
+        },
+        comment: {
+            text: 'Comentou sua publicação. Clique e confira!',
+            texthtml: 'Comentou sua publicação. Clique e confira!',
+            title: 'Novo comentário.',
+        },
+        share: {
+            text: shareText,
+            texthtml: shareText,
+            title: shareTitle,
+        },
+        user_post: {
+            text: `Uma nova publicação foi feita por ${config.reqUser}. Clique e confira!`,
+            texthtml: `Uma nova publicação foi feita por ${config.reqUser}. Clique e confira!`,
+            title: `${config.reqUser} publicou um novo post.`,
+        },
     };
 
-    // Config.CONTENT
-    // Valores que podem ser recebidos em "config.contetType" ("post", "comentário", "trilha")
-    // É a ENTIDADADE que está sendo compartilhada
-
-    // As frases são criadas concatenando a ação e o objeto do que está sendo notificado.
-    text = `Olá! O usuário ${config.reqUser} ${typesOfNotification[config.type]} ${
-        config.type !== 'share' ? config.contentType : ''
-    }!`;
-    texthtml = `<br> <p>Olá! O usuário ${config.reqUser} ${typesOfNotification[config.type]} ${
-        config.type !== 'share' ? config.contentType : ''
-    }!</p> <br>`;
-    title = `Happlearning - ${config.reqUser} ${typesOfNotification[config.type]} ${
-        config.type !== 'share' ? config.contentType : ''
-    }!`;
+    const text = values[config?.type]?.text;
+    const texthtml = values[config?.type]?.texthtml;
+    const title = values[config?.type]?.title;
 
     const messengerConfig = await getMessengerConfig();
 
@@ -176,7 +189,7 @@ async function createNotification(config, users) {
         category: 'notify',
         mode: 'manual',
         target: {
-            type: 'users',
+            type: config.targetType || 'users',
             value: {
                 users,
             },
@@ -187,22 +200,22 @@ async function createNotification(config, users) {
         },
         thumbnail: messengerConfig.emailTemplate.thumbnail,
     };
-
+    
     try {
         async function createMessagesFromBackend(campaign) {
             const target = campaign.target;
 
             let targetUsers = [];
 
-            if (!target.value.user) {
+            if (!target.value.users) {
                 targetUsers = await processTargetUsers(target, campaign.category);
             } else {
-                targetUsers.push({ ...target.value.user });
+                Array.isArray(target?.value?.users)
+                    ? targetUsers.push(...target.value.users)
+                    : targetUsers.push(target.value.users);
             }
-
             await sendMessageToKafka(campaign, targetUsers);
         }
-
         await createMessagesFromBackend(message);
     } catch (error) {
         console.log(error);
@@ -243,11 +256,71 @@ async function getSegFieldsFromUser(req) {
     return userCustomElegeFields;
 }
 
+/**
+ * Dispara a notificação de um post para os usuários relevantes.
+ *
+ * @param {Object} post - Post que será notificado.
+ */
+async function handleUserPostNotification(post) {
+    if (!(post && post.type === 'USER')) {
+        return;
+    }
+
+    const uriConfig = `config/${process.env.CLIENT_ID}`;
+    const { data: { config: feedConfig } } = await socialApi.get(uriConfig);
+
+    if (!feedConfig?.notifyUsers || (feedConfig?.moderationPosts && post.status !== 'ACTIVE')) {
+        return;
+    }
+
+    const user = await User.findById(post?.userId, ['_id', 'name', 'groupsAD']);
+    if (!user) {
+        return 
+    }
+
+    let query = {
+        _id: { $ne: user._id },
+        groupsAD: { $in: user.groupsAD.filter((tag) => !tag.includes('PERFIL_')) },
+    };
+
+    const groupId = post?.groupId || post?.group?._id;
+    if (groupId) {
+        const groupInfoUri = `/groups/info/${groupId}`;
+        const { data: feedGroup } = await socialApi.get(groupInfoUri);
+
+        if (!feedGroup?.members || feedGroup.members.length === 0) {
+            return;
+        }
+
+        query = {
+            _id: { $in: feedGroup.members },
+        };
+    }
+
+    const users = await User.find(query);
+
+    if (users.length === 0) {
+        return;
+    }
+
+    const config = {
+        reqUser: user.name,
+        communication: ['notification', 'email'],
+        type: 'user_post',
+        contentType: 'post',
+        contentId: post._id,
+    };
+
+    createNotification(config, users);
+}
+
+
 module.exports = {
     populateUserFields,
     populateTrailFields,
     populateMembers,
     createNotification,
     getSegFieldsFromUser,
-    populateSingleData
+    populateSingleData,
+    handleUserPostNotification
 };
