@@ -546,47 +546,62 @@ module.exports = {
     },
 
     async finalizeEvaluation (req, res) {
-        try {
-            const { itemID } = req.body
-            const user = await _functions.getUserByToken(req)
-            const { passingScore, idEvaluation, title } = await Item.findOne({ _id: { $eq: itemID } })
+        const { itemID } = req.body
+        
+        const [user, item] = await Promise.all([
+            _functions.getUserByToken(req),
+            Item.findOne({ _id: { $eq: itemID } })
+        ]);
 
-            const history = await HistoricEvaluation.find({ user: { $eq: user._id }, idEvaluation: { $eq: idEvaluation } }).sort({ createdAt: 'desc' })
-            const historic = history[0]
-            const { attempts, feedback } = await Evaluation.findOne({ _id: { $eq: idEvaluation } })
-            const result = await _business.calculateRatingEvaluation(historic.amountQuestionsCorrect, historic.amountOfQuestions)
-            const questions = await _business.returnsQuestionsAnswered(historic.answers, feedback)
-            result.questions = questions
-            result.finished = true
-            result.passingScore = passingScore
-            result.attemptsHistory = history.length
-            result.attempts = attempts
-            result.title = title
+        if (!item) throw new ApiError('Item não encontrado', 404);
 
+        const { passingScore, idEvaluation, title } = item;
 
-            const tracking = await Tracking.findOne({
-                item: itemID,
-                userLogin: user.networkLogin,
-                $or: [
-                    { expiredCompletion: { $exists: false } },
-                    { expiredCompletion: { $eq: null } },
-                ]
-            });
-            const evaluationResult = await processExamTracking(historic, passingScore, attempts, tracking)
+        const [history, evaluation] = await Promise.all([
+            HistoricEvaluation.find({ user: { $eq: user._id }, idEvaluation: { $eq: idEvaluation } }).sort({ createdAt: 'desc' }),
+            Evaluation.findOne({ _id: { $eq: idEvaluation } })
+        ]);
 
-            await GamificationKafka.publishEventRuleValidation({
-                events: [EVENT_CATEGORY.FINISHED_ITEM, EVENT_CATEGORY.FINISHED_EXAM_ITEM],
-                identifier: user.networkLogin,
-                meta: {
-                    tracking,
-                    evaluationResult,
-                },
-            });
+        if (!history.length) throw new ApiError('Histórico de avaliação não encontrado', 404);
+        
+        if (!evaluation) throw new ApiError('Avaliação não encontrada', 404);
 
-            _messages.success(res, req, result)
-        } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'evaluations', 'finalizeEvaluation')
-        }
+        const historic = history[0];
+        const { attempts, feedback } = evaluation;
+        
+        const [result, questions] = await Promise.all([
+            _business.calculateRatingEvaluation(historic.amountQuestionsCorrect, historic.amountOfQuestions),
+            _business.returnsQuestionsAnswered(historic.answers, feedback)
+        ]);
+        
+        result.questions = questions
+        result.finished = true
+        result.passingScore = passingScore
+        result.attemptsHistory = history.length
+        result.attempts = attempts
+        result.title = title
+
+        const tracking = await Tracking.findOne({
+            item: itemID,
+            userLogin: user.networkLogin,
+            $or: [
+                { expiredCompletion: { $exists: false } },
+                { expiredCompletion: { $eq: null } },
+            ]
+        });
+        
+        const evaluationResult = await processExamTracking(historic, passingScore, attempts, tracking)
+
+        await GamificationKafka.publishEventRuleValidation({
+            events: [EVENT_CATEGORY.FINISHED_ITEM, EVENT_CATEGORY.FINISHED_EXAM_ITEM],
+            identifier: user.networkLogin,
+            meta: {
+                tracking,
+                evaluationResult,
+            },
+        });
+
+        _messages.success(res, req, result)
     },
 
     async getAllQuestions(req, res) {
