@@ -1547,7 +1547,7 @@ async function retrieveUserContent (tags, user, trailsIdArr) {
             $or: [{ tags: { $in: tags, } }, { tagsAnd: { $in: tags, } }]
         };
 
-        if (trailsIdArr.length > 0) {
+        if (trailsIdArr?.length > 0) {
             query['_id'] = { $in: trailsIdArr };
         }
         let trails = await populateTrails(true, query);
