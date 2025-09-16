@@ -1355,6 +1355,85 @@ module.exports = {
         }
     },
 
+    async getSelfRegistrationClass (req, res) {
+        try {
+            const { qrcode } = req.params;
+            const { _id, name } = await getUserByToken(req);
+            const tags = await getTagsElegiblesByToken(req);
+            const classCourse = await ClassModel.findOne({
+                qrCodeSelfRegistration: { $eq: qrcode },
+            }).populate('courseID', ['title', 'tags', 'mandatory']);
+
+            if (!classCourse) {
+                return badRequest(
+                    res,
+                    req,
+                    'Não foi possível encontrar uma turma correspondente ao QRCode informado.',
+                    'Não foi possível encontrar uma turma correspondente ao QRCode informado.',
+                    'courses',
+                    '/getCourseByQrCodeSelfRegistration'
+                );
+            }
+
+            const eligibility = checkEligibilityTagsAnd(
+                tags ?? [],
+                classCourse.courseID?.mandatory ?? [],
+                classCourse.courseID?.tags ?? []
+            );
+
+            if (!eligibility) {
+                return badRequest(
+                    res,
+                    req,
+                    'O aluno não está elegível a este treinamento',
+                    `Atenção! O usuário ${name} não está elegível a este treinamento.`,
+                    'courses',
+                    '/getCourseByQrCodeSelfRegistration'
+                );
+            }
+
+            const course = await CourseModel.findById(classCourse.courseID._id)
+
+            const isCourseDateOutOfRange = isDateOutOfRange(course.dateInitial, course.dateFinal);
+            const isClassDateOutOfRange = isDateOutOfRange(
+                classCourse.dateApplicationInitial,
+                classCourse.dateApplicationFinal
+            );
+
+            if (isCourseDateOutOfRange || isClassDateOutOfRange) {
+                const reason = isCourseDateOutOfRange ? 'ao curso' : 'a turma'
+
+                return badRequest(
+                    res,
+                    req,
+                    `Não foi possível assinar presença devido ${reason} não estar com data vigente.`,
+                    `Não foi possível assinar presença devido ${reason} não estar com data vigente.`,
+                    'courses',
+                    '/getCourseByQrCodeSelfRegistration'
+                );
+            }
+
+            let user = classCourse.users.find((user) => String(user._id) === String(_id));
+
+            return success(res, req, {
+                title: classCourse.courseID.title,
+                signup: classCourse.signup,
+                inClass: !!user,
+                _id: classCourse._id,
+                registered: user?.presence,
+            });
+        } catch (error) {
+            internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'courses',
+                '/getCourseByQrCodeSelfRegistration'
+            );
+        }
+    },
+
     async getCourseByQrCodeSelfRegistration (req, res) {
         try {
             const { body } = req;

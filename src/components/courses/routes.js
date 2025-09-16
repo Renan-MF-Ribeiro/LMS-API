@@ -24,6 +24,10 @@ router
         '/course-by-qrcode-self-registration',
         _controller.getCourseByQrCodeSelfRegistration
     )
+    .get(
+        '/get-self-registration-class/:qrcode',
+        _controller.getSelfRegistrationClass
+    )
     .post('/course-detail-by-qrcode', _controller.getCourseDetailByQrCode)
     .post(
         '/create-course',
