@@ -27,7 +27,8 @@ const {
     isValidSectionTrailInfo,
     recommendedTrailsSections,
     recommendedCoursesSections,
-    getContentEligibilityParameterByUserId
+    getContentEligibilityParameterByUserId,
+    retrieveUserContent
 } = require('./business');
 
 const { getStudentCourses } = require('../home/business');
@@ -494,53 +495,13 @@ module.exports = {
 
     async getUserAccessibleContent (req, res) {
         try {
-            const { userId } = req.query;
+            const { userId, channelId } = req.query;
 
             const { user, tags } = await getContentEligibilityParameterByUserId(userId);
 
-            let resultSections = [];
+            const userContent = await retrieveUserContent(channelId, tags, user);
 
-            if (tags.length > 0) {
-                const query = {
-                    enabled: true,
-                    $or: [
-                        {
-                            tags: {
-                                $in: tags,
-                            },
-                        },
-                        {
-                            tagsAnd: {
-                                $in: tags,
-                            },
-                        },
-                    ],
-                };
-                let trails = await populateTrails(true, query);
-
-                trails = trails.filter(checkIfTheTrackIsValid);
-
-                resultSections = (await elegiblesContents(trails))
-                    .concat(await mandatorySections(trails, tags))
-                    .concat(await recentsSections(trails))
-                    .concat(await keepLearningSections(trails))
-                    .concat(await concludedSections(trails))
-                    .concat(await favoriteSections(trails, user._id))
-                    .concat(await mostSeenSections(trails))
-                    .concat(await courseInSections(tags, user._id))
-
-                resultSections = resultSections.filter((val) => {
-                    return val != null;
-                });
-
-                if (resultSections.length > 0) {
-                    resultSections.sort((a, b) => (a.position < b.position ? -1 : 1));
-                }
-
-
-
-            }
-            _messages.success(res, req, resultSections);
+            _messages.success(res, req, userContent);
         } catch (error) {
             console.log(error);
             _messages.internalServer(
@@ -550,6 +511,28 @@ module.exports = {
                 'Erro interno no servidor',
                 'sections',
                 '/elegiblesContents'
+            );
+        }
+    },
+
+    async getChannelBanners (req, res) {
+        try {
+            const { channelId } = req.query;
+            const user = getUserByToken(req);
+            const tags = await getTagsElegiblesByToken(req);
+
+            const userContent = await retrieveUserContent(channelId, tags, user);
+
+
+        } catch (error) {
+            console.log(error);
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'sections',
+                '/banners'
             );
         }
     },
@@ -1079,3 +1062,5 @@ module.exports = {
         _messages.success(res, req, 'Status alterado com sucesso');
     }
 };
+
+

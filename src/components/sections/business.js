@@ -1201,7 +1201,10 @@ module.exports = {
     isValidSectionTrailInfo,
     populateSectionTrails,
     setAssessmentHistoricOnSections,
-    setCerticateHistoricOnSections
+    setCerticateHistoricOnSections,
+    retrieveUserContent
+
+
 };
 
 function isNecessary (trail, tags) {
@@ -1520,3 +1523,142 @@ function calculateTotalDuration (trails, exceptionIds = []) {
         return total + itemsDuration;
     }, 0);
 }
+
+async function retrieveUserContent (channelId, tags, user) {
+    let trailsIdArr = [];
+    let sectionInfos = [];
+
+    if (channelId) {
+        let { idSections } = await Channel.findById(channelId).select('idSections -_id');
+
+        const dbSections = await Section.find({ _id: { $in: idSections }, active: 1 });
+
+        sectionInfos = await populateSectionTrails(
+            dbSections,
+            { select: 'tags tagsAnd _id collaborative' }
+        );
+
+        const trailsInSections = sectionInfos.map(({ trails }) => {
+            return {
+                trails: trails.filter(
+                    (trail) => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative
+                ).map(trail => trail._id)
+            };
+        });
+
+        trailsIdArr = trailsInSections.flatMap((e) => e.trails);
+
+    }
+
+    let resultSections = [];
+
+    if (tags.length > 0) {
+        const query = {
+            enabled: true,
+            $or: [{ tags: { $in: tags, } }, { tagsAnd: { $in: tags, } }]
+        };
+
+        if (channelId) {
+            query['_id'] = { $in: trailsIdArr };
+        }
+        let trails = await populateTrails(true, query);
+
+        trails = trails.filter(checkIfTheTrackIsValid);
+
+        resultSections = (await elegiblesContents(trails))
+            .concat(await mandatorySections(trails, tags))
+            .concat(await recentsSections(trails))
+            .concat(await keepLearningSections(trails))
+            .concat(await concludedSections(trails))
+            .concat(await favoriteSections(trails, user._id))
+            .concat(await mostSeenSections(trails))
+            .concat(await courseInSections(tags, user._id));
+
+        resultSections = resultSections.filter((val) => {
+            return val != null;
+        });
+
+        if (resultSections.length > 0) {
+            resultSections.sort((a, b) => (a.position < b.position ? -1 : 1));
+        }
+
+
+
+    }
+
+    return resultSections;
+}
+
+function setBannersFromContent (sections) {
+    const banners = [];
+
+    sections.forEach((section) => {
+        if (section.sectionType === 'alura') {
+            return;
+        }
+
+        if (section.defaultType === 'courses') {
+            section.trails.forEach((courseItem) => {
+                if (courseItem?.highlighted) {
+                    const sectionParam = this._routerParams.setTitleURL(
+                        section.title ?? ''
+                    );
+                    const trailParam = this._routerParams.setTitleURL(
+                        courseItem?.title ?? ''
+                    );
+                    const bannerItem = {
+                        path: courseItem.banner,
+                        link: `${window.location.pathname}`,
+                        queryParams: { section: sectionParam, trail: trailParam },
+                        internal: true
+                    };
+
+                    const isBannerNotDuplicate = banners.every(
+                        (b) => b.path !== bannerItem.path
+                    );
+
+                    if (
+                        courseItem?.highlighted &&
+                        moment(courseItem.startDate).isSameOrBefore(moment()) &&
+                        moment(courseItem.endDate).isSameOrAfter(moment()) &&
+                        isBannerNotDuplicate
+                    ) {
+                        banners.push(bannerItem);
+                    }
+                }
+            });
+            return;
+        }
+
+        section.trails.forEach((trailItem) => {
+            if (trailItem?.items?.length) {
+                trailItem.items.forEach((item) => {
+                    if (item?.bannerPath) {
+                        const bannerItem = {
+                            path: item.bannerPath,
+                            link: `app/player/${trailItem._id}/${item._id}`,
+                            internal: true
+                        };
+
+                        const isBannerNotDuplicate = banners.every(
+                            (b) => b.path !== bannerItem.path
+                        );
+
+                        if (
+                            item.highlighted &&
+                            moment(item.startDate).isSameOrBefore(moment()) &&
+                            moment(item.endDate).isSameOrAfter(moment()) &&
+                            isBannerNotDuplicate
+
+                        ) {
+                            banners.push(bannerItem);
+                        }
+                    }
+                });
+            }
+        });
+    });
+
+    return banners;
+}
+
