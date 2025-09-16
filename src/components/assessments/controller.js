@@ -14,7 +14,56 @@ const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../co
 const { orderBy } = require('lodash')
 const GamificationKafka = require('../gamification/kafka/broker')
 const { EVENT_CATEGORY } = require('../gamification/model')
+const { Trail } = require('../trails/model');
+const { Types } = require('mongoose');
+const ApiError = require('../../errors/ApiError');
+const { userHasEligibilityForTrails } = require('../../utils/user');
 
+async function checkEvaluationEligibility(userId, idEvaluation) {
+    const items = await Item
+        .find({ idEvaluation: new Types.ObjectId(idEvaluation), enabled: true, archive: { $ne: true } })
+        .sort({ _id: -1 })
+        .lean();
+
+    if (!items?.length) throw new ApiError('Usuário não possui elegibilidade e/ou item indisponível', 403);
+
+    const trailsWithItem = await Trail.find({
+        'items.itemID': { $in: items.map(i => i._id) },
+    });
+
+    if (!trailsWithItem.length) throw new ApiError('Usuário não possui elegibilidade e/ou item indisponível', 403);
+
+    const { hasEligibility, trails } = await userHasEligibilityForTrails(userId, trailsWithItem.map(t => t._id));
+
+    if (!hasEligibility) throw new ApiError('Usuário não possui elegibilidade e/ou item indisponível', 403);
+
+    return { hasEligibility, trails };
+}
+
+async function checkEvaluationAttempts(userId, idEvaluation, idItem) {
+    const { attempts } = await Evaluation
+        .findOne({
+            _id: new Types.ObjectId(idEvaluation),
+            deleted: 0
+        })
+        .select('attempts');
+
+    const totalUserAttempts = await HistoricEvaluation
+        .countDocuments({
+            user: new Types.ObjectId(userId),
+            idEvaluation: new Types.ObjectId(idEvaluation),
+            item: new Types.ObjectId(idItem),
+            lessonStatus: { $ne: 'not attempted' },
+            $or: [
+                { expiredCompletion: { $exists: false } },
+                { expiredCompletion: { $eq: null } },
+            ],
+        })
+
+    if (totalUserAttempts >= attempts) throw new ApiError('Número máximo de tentativas atingido', 403);
+
+    return { attempts, totalUserAttempts };
+}
 
 module.exports = {
     async createEvaluation (req, res) {
@@ -44,95 +93,81 @@ module.exports = {
     },
 
     async returnEvaluation(req, res) {
-        try {
-            const { id } = req.params;
-            const user = await _functions.getUserByToken(req);
-            const { order, sort } = _functions.ordernation(req);
-            const { idEvaluation } = await Item.findOne({ _id: { $eq: id } }, 'idEvaluation');
+        const { id } = req.params;
 
-            const query = {
-                $and: [{ _id: { $eq: idEvaluation } }, { deleted: { $eq: 0 } }],
-            };
+        const user = await _functions.getUserByToken(req);
+        const { order, sort } = _functions.ordernation(req);
+        const { idEvaluation } = await Item.findOne({ _id: { $eq: id } }, 'idEvaluation');
 
-            // if (req?.segmentation) {
-            //     handleSegmentationOnQuery(req, 'owner', query)
-            // }
+        await checkEvaluationEligibility(user._id, idEvaluation);
 
-            const { description, attempts, duration, categories } = await Evaluation.findOne(
-                query
-            ).populate({ path: 'categories', match: { deleted: { $eq: 0 }, active: { $eq: 1 } } });
+        const query = {
+            $and: [{ _id: { $eq: idEvaluation } }, { deleted: { $eq: 0 } }],
+        };
 
-            const historicEvaluation = await HistoricEvaluation.find({
-                user: { $eq: user._id },
-                idEvaluation: { $eq: idEvaluation },
-                item: { $eq: id },
-                $or: [
-                    { expiredCompletion: { $exists: false } },
-                    { expiredCompletion: { $eq: null } },
-                ],
-            }).sort({ [order]: sort });
+        const { description, attempts, duration, categories } = await Evaluation.findOne(
+            query
+        ).populate({ path: 'categories', match: { deleted: { $eq: 0 }, active: { $eq: 1 } } });
 
-            let result = null;
-            let amountOfQuestions = null;
-            const totalQuestions = await Question.countDocuments({
-                idEvaluation: { $eq: idEvaluation },
-                deleted: { $eq: false },
-            });
+        const historicEvaluation = await HistoricEvaluation.find({
+            user: { $eq: user._id },
+            idEvaluation: { $eq: idEvaluation },
+            item: { $eq: id },
+            $or: [
+                { expiredCompletion: { $exists: false } },
+                { expiredCompletion: { $eq: null } },
+            ],
+        }).sort({ [order]: sort });
 
-            if (historicEvaluation.length) {
-                const { amountQuestionsCorrect } = historicEvaluation[0];
-                amountOfQuestions = historicEvaluation[0].amountOfQuestions;
-                console.log({ amountOfQuestions });
-                result = await _business.calculateRatingEvaluation(
-                    amountQuestionsCorrect,
-                    amountOfQuestions
-                );
-            } else {
-                amountOfQuestions = 0;
-                for (const category of categories) {
-                    if (category.amountOfQuestions < 0) {
-                        const amountOfQuestionsByCategory = await Question.countDocuments({
-                            idCategory: { $eq: category._id },
-                            deleted: { $eq: 0 },
-                            active: { $eq: 1 },
-                        });
-                        amountOfQuestions += amountOfQuestionsByCategory;
-                    } else {
-                        amountOfQuestions += category.amountOfQuestions;
-                    }
+        let result = null;
+        let amountOfQuestions = null;
+        const totalQuestions = await Question.countDocuments({
+            idEvaluation: { $eq: idEvaluation },
+            deleted: { $eq: false },
+        });
+
+        if (historicEvaluation.length) {
+            const { amountQuestionsCorrect } = historicEvaluation[0];
+            amountOfQuestions = historicEvaluation[0].amountOfQuestions;
+            result = await _business.calculateRatingEvaluation(
+                amountQuestionsCorrect,
+                amountOfQuestions
+            );
+        } else {
+            amountOfQuestions = 0;
+            for (const category of categories) {
+                if (category.amountOfQuestions < 0) {
+                    const amountOfQuestionsByCategory = await Question.countDocuments({
+                        idCategory: { $eq: category._id },
+                        deleted: { $eq: 0 },
+                        active: { $eq: 1 },
+                    });
+                    amountOfQuestions += amountOfQuestionsByCategory;
+                } else {
+                    amountOfQuestions += category.amountOfQuestions;
                 }
             }
-            const attemptsNotCompleted = historicEvaluation.filter(
-                (historic) => historic.lessonStatus == SCORMLessonStatus.NOT_ATTEMPTED
-            );
-            const attemptsCompleted = historicEvaluation.filter(
-                (historic) => historic.lessonStatus != SCORMLessonStatus.NOT_ATTEMPTED
-            );
-
-            const obj = {
-                description,
-                attempts,
-                duration,
-                amountOfQuestions:
-                    amountOfQuestions > totalQuestions ? totalQuestions : amountOfQuestions,
-                attemptsHistory: attemptsCompleted.length,
-                historicDuration:
-                    attemptsNotCompleted.length > 0 ? attemptsNotCompleted[0].duration : null,
-                values: result != null ? result.values : { correct: 0, incorrect: 0 },
-            };
-
-            _messages.success(res, req, obj);
-        } catch (error) {
-            console.error(error);
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'evaluations',
-                'returnEvaluation'
-            );
         }
+        const attemptsNotCompleted = historicEvaluation.filter(
+            (historic) => historic.lessonStatus == SCORMLessonStatus.NOT_ATTEMPTED
+        );
+        const attemptsCompleted = historicEvaluation.filter(
+            (historic) => historic.lessonStatus != SCORMLessonStatus.NOT_ATTEMPTED
+        );
+
+        const obj = {
+            description,
+            attempts,
+            duration,
+            amountOfQuestions:
+                amountOfQuestions > totalQuestions ? totalQuestions : amountOfQuestions,
+            attemptsHistory: attemptsCompleted.length,
+            historicDuration:
+                attemptsNotCompleted.length > 0 ? attemptsNotCompleted[0].duration : null,
+            values: result != null ? result.values : { correct: 0, incorrect: 0 },
+        };
+
+        _messages.success(res, req, obj);
     },
 
     async returnEvaluationWithDetails (req, res) {
@@ -498,9 +533,6 @@ module.exports = {
         }
     },
 
-
-
-
     async countdownEvaluation (req, res) {
         try {
             const { evaluationID, duration } = req.body
@@ -557,111 +589,94 @@ module.exports = {
         }
     },
 
+    async getAllQuestions(req, res) {
+        const { id: idEvaluation, idItem } = req.params;
 
-    async getAllQuestions (req, res) {
-        try {
-            const { id, idItem } = req.params
-            const user = await _functions.getUserByToken(req)
+        const user = await _functions.getUserByToken(req)
 
-            const historicEvaluation = await HistoricEvaluation.findOne({
-                item: idItem,
-                user: user._id,
-                lessonStatus: { $eq: SCORMLessonStatus.NOT_ATTEMPTED }
-            })
-                .sort({ createdAt: 'desc' })
-                .limit(1)
+        await checkEvaluationEligibility(user._id, idEvaluation);
 
-            if (historicEvaluation) {
-                const sortedQuestions = await _business.returnQuestionsByCategoryFromHistoric(historicEvaluation.questions)
+        await checkEvaluationAttempts(user._id, idEvaluation, idItem);
 
-                questionsAnswers = historicEvaluation.answers
-                    .map(answer => ({
-                        question: answer.idQuestion,
-                        alternative: answer.idAlternative
-                    }))
+        const historicEvaluation = await HistoricEvaluation.findOne({
+            item: idItem,
+            user: user._id,
+            lessonStatus: { $eq: SCORMLessonStatus.NOT_ATTEMPTED }
+        })
+            .sort({ createdAt: 'desc' })
+            .limit(1)
 
-                const result = {
-                    questions: sortedQuestions,
-                    amount: historicEvaluation.amountOfQuestions,
-                    questionsAnswers: questionsAnswers,
-                    historicEvaluationId: historicEvaluation._id
-                }
+        if (historicEvaluation) {
+            const sortedQuestions = await _business.returnQuestionsByCategoryFromHistoric(historicEvaluation.questions)
 
-                return _messages.success(res, req, result)
+            questionsAnswers = historicEvaluation.answers
+                .map(answer => ({
+                    question: answer.idQuestion,
+                    alternative: answer.idAlternative
+                }))
 
-            } else {
-                let categories = await Category.find({ idEvaluation: id, deleted: 0, active: 1 })
-
-                let questionsAnswers = null
-
-                const evaluation = await Evaluation.findById(id)
-
-                if (evaluation.randomQuestions) {
-                    categories = _functions.returnSliceDataRandom(categories, 0, categories.length)
-                }
-
-                const { questions, amount } = await _business.returnQuestionsByCategory(categories)
-                
-                const questionHistoric = questions.flatMap(question => question.filter(q => q._id));
-
-                const { _id } = await HistoricEvaluation.create({
-                    idEvaluation: id,
-                    amountOfQuestions: amount,
-                    questions: questionHistoric,
-                    item: idItem,
-                    user: user._id,
-                    duration: evaluation.duration,
-                })
-
-                await LogsEvaluation.create({ idHistoricEvaluation: _id })
-
-                const result = { questions, amount, questionsAnswers, historicEvaluationId: _id }
-
-                return _messages.success(res, req, result)
-
+            const result = {
+                questions: sortedQuestions,
+                amount: historicEvaluation.amountOfQuestions,
+                questionsAnswers: questionsAnswers,
+                historicEvaluationId: historicEvaluation._id
             }
 
-        }
-        catch (error) {
-            console.error(error)
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'evaluations',
-                'getAllQuestions')
+            return _messages.success(res, req, result)
+
+        } else {
+            let categories = await Category.find({ idEvaluation, deleted: 0, active: 1 })
+
+            let questionsAnswers = null
+
+            const evaluation = await Evaluation.findById(idEvaluation)
+
+            if (evaluation.randomQuestions) {
+                categories = _functions.returnSliceDataRandom(categories, 0, categories.length)
+            }
+
+            const { questions, amount } = await _business.returnQuestionsByCategory(categories)
+
+            const questionHistoric = questions.flatMap(question => question.filter(q => q._id));
+
+            const { _id } = await HistoricEvaluation.create({
+                idEvaluation,
+                amountOfQuestions: amount,
+                questions: questionHistoric,
+                item: idItem,
+                user: user._id,
+                duration: evaluation.duration,
+            })
+
+            await LogsEvaluation.create({ idHistoricEvaluation: _id })
+
+            const result = { questions, amount, questionsAnswers, historicEvaluationId: _id }
+
+            return _messages.success(res, req, result)
+
         }
     },
 
-    async getQuestionById (req, res) {
-        try {
-            const { id } = req.params
-            const question = await Question
-                .findOne(
-                    { _id: { $eq: id } },
-                    ['description', 'idCategory'],
-                )
-                .populate({ path: 'alternatives', match: { deleted: { $eq: 0 }, active: { $eq: 1 }, }, select: 'description' })
+    async getQuestionById(req, res) {
+        const { id } = req.params
 
-            const { randomQuestions } = await Category.findById(question.idCategory).select('randomQuestions')
+        const question = await Question
+            .findOne(
+                { _id: { $eq: id } },
+                ['description', 'idCategory'],
+            )
+            .populate({ path: 'alternatives', match: { deleted: { $eq: 0 }, active: { $eq: 1 }, }, select: 'description' })
 
-            if (randomQuestions) {
-                question['alternatives'] = _functions.returnSliceDataRandom(question['alternatives'], 0, question['alternatives'].length)
-            }
+        const { randomQuestions, idEvaluation } = await Category.findById(question.idCategory).select('randomQuestions idEvaluation');
 
-            return _messages.success(res, req, question)
-        }
-        catch (error) {
-            console.error(error)
-            return _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'evaluations',
-                'getQuestionById')
+        const user = await _functions.getUserByToken(req);
+        
+        await checkEvaluationEligibility(user._id, idEvaluation);
+
+        if (randomQuestions) {
+            question['alternatives'] = _functions.returnSliceDataRandom(question['alternatives'], 0, question['alternatives'].length)
         }
 
+        return _messages.success(res, req, question)
     }
 }
