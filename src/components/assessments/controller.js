@@ -41,24 +41,29 @@ async function checkEvaluationEligibility(userId, idEvaluation) {
 }
 
 async function checkEvaluationAttempts(userId, idEvaluation, idItem) {
-    const { attempts } = await Evaluation
-        .findOne({
-            _id: new Types.ObjectId(idEvaluation),
-            deleted: 0
-        })
-        .select('attempts');
+    const [evaluation, totalUserAttempts] = await Promise.all([
+        Evaluation
+            .findOne({
+                _id: new Types.ObjectId(idEvaluation),
+                deleted: 0
+            })
+            .select('attempts'),
+        HistoricEvaluation
+            .countDocuments({
+                user: new Types.ObjectId(userId),
+                idEvaluation: new Types.ObjectId(idEvaluation),
+                item: new Types.ObjectId(idItem),
+                lessonStatus: { $ne: 'not attempted' },
+                $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } },
+                ],
+            })
+    ]);
 
-    const totalUserAttempts = await HistoricEvaluation
-        .countDocuments({
-            user: new Types.ObjectId(userId),
-            idEvaluation: new Types.ObjectId(idEvaluation),
-            item: new Types.ObjectId(idItem),
-            lessonStatus: { $ne: 'not attempted' },
-            $or: [
-                { expiredCompletion: { $exists: false } },
-                { expiredCompletion: { $eq: null } },
-            ],
-        });
+    if(!evaluation) throw new ApiError('Avaliação não encontrada', 404);
+
+    const { attempts = 0 } = evaluation;
 
     if (attempts && attempts > 0 && totalUserAttempts >= attempts) throw new ApiError('Número máximo de tentativas atingido', 403);
 
@@ -466,18 +471,22 @@ module.exports = {
     },
 
     async questionResponse(req, res) {
-        const { _id, idQuestion, idAlternative } = req.body;
+        const { _id: historicEvaluationId, idQuestion, idAlternative } = req.body;
 
         const user = await _functions.getUserByToken(req);
         
         const [historic, question] = await Promise.all([
-            HistoricEvaluation.findOne({ _id, user: user._id }),
+            HistoricEvaluation.findOne({ _id: historicEvaluationId, user: user._id }),
             Question.findOne({ _id: idQuestion })
         ]);
 
         if (!historic || !question) {
             throw new ApiError('Histórico ou questão não encontrados.', 404);
         }
+
+        if (historic.lessonStatus !== 'not attempted') throw new ApiError('Avaliação já finalizada', 403);
+
+        await checkEvaluationAttempts(user._id, historic.idEvaluation, historic.idItem);
 
         const isCorrect = idAlternative === question.rigthAnswer?.toString();
         const updatedAnswers = [...historic.answers];
@@ -502,7 +511,7 @@ module.exports = {
 
         const amountCorrect = updatedAnswers.filter((a) => a.correct).length;
 
-        await HistoricEvaluation.findByIdAndUpdate(_id, {
+        await HistoricEvaluation.findByIdAndUpdate(historicEvaluationId, {
             answers: updatedAnswers,
             amountQuestionsAnswered: updatedAnswers.length,
             amountQuestionsCorrect: amountCorrect,
@@ -559,6 +568,9 @@ module.exports = {
         if (!evaluation) throw new ApiError('Avaliação não encontrada', 404);
 
         const historic = history[0];
+        
+        if (historic.lessonStatus !== 'not attempted') throw new ApiError('Avaliação já finalizada', 403);
+        
         const { attempts, feedback } = evaluation;
         
         const [result, questions] = await Promise.all([
