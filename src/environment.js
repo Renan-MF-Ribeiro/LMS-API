@@ -107,6 +107,9 @@ const environmentSchema = z.object({
     // API_VERSION é Setado no processo de build
     API_VERSION: z.string().optional().default('no-info'),
 
+    // System environment variables
+    HOSTNAME: z.string().optional().default(process.env.HOSTNAME || 'localhost'),
+
     /**
      *! Environments possivelmente não utilizados mais
      * Marcados como opcional e valor default vazio para evitar erros
