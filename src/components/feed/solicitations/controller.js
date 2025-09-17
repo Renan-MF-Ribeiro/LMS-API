@@ -2,7 +2,7 @@ const _messages = require('../../../utils/messages');
 const GamificationKafka = require('../../gamification/kafka/broker');
 const { EVENT_CATEGORY } = require('../../gamification/model');
 const { socialApi } = require('../../social/http-adapter');
-const { populateUserFields } = require('../buisiness');
+const { populateUserFields } = require('../business');
 
 module.exports = {
     async createSolicitation(req, res) {
@@ -69,7 +69,7 @@ module.exports = {
     },
     async acceptGroupSolicitation(req, res) {
         const { groupId } = req.params;
-        console.log(groupId)
+        // console.log(groupId)
         try {
             const uri = `/solicitations/group/accept/${groupId}`;
             const { data } = await socialApi.post(uri);

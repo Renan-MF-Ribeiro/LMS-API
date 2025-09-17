@@ -235,7 +235,7 @@ module.exports = {
             const body = req.body;
             const sectionId = body._id;
 
-            console.log(body);
+            // console.log(body);
             const findSection = await Showcase.find({ _id: sectionId });
             if (findSection.length) {
                 await Showcase.findOneAndUpdate({ _id: sectionId }, { enabled: body.enabled });

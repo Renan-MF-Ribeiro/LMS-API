@@ -127,6 +127,8 @@ module.exports = {
         data
       );
 
+        populatedData.data.mentors = populatedData.data.mentors.filter(m => m.user.status !== "INATIVO");
+
       return _messages.success(res, req, populatedData.data, 'ok', 'mentoring', 'program details retrieved successfully');
     } catch (error) {
       return _messages.internalServer(

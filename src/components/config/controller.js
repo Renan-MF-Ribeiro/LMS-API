@@ -1,18 +1,17 @@
 const ApiError = require('../../errors/ApiError');
-const { removeAccents } = require('../../utils/functions');
+const { removeAccents, getUserByToken, slugify, getCustomEmail } = require('../../utils/functions');
 const { Group } = require('../groups/model');
 const _business = require('./business');
+const { getCompanyConfig } = require('./utils');
 const {
     ConfigTypes,
     ConfigModel,
     SegmentationConfigModel,
-    SegmentationRuleSchema,
     MATRIX_VISIBILITY_MODE,
     MatrixConfigModel,
 } = require('./model');
 const _messages = require('../../utils/messages');
 const { Types } = require('mongoose');
-const { User } = require('../users/model');
 
 module.exports = {
     async getAutomaticEligibilityOnboardConfig(req, res) {
@@ -87,8 +86,45 @@ module.exports = {
             },
             { new: true }
         );
-        
+
         return _messages.success(res, req, created.value);
+    },
+
+    async setManagerRule(req, res) {
+        const rules = req.body;
+
+        if (!rules) {
+
+            const emptyRule = {
+                rules: [],
+                useIsManagerFlag: true,
+            }
+
+            ConfigModel.findOneAndUpdate(
+                { type: ConfigTypes.ManagerRule },
+                { value: emptyRule },
+                { new: true }
+            );
+            return _messages.successEmpty(res, req, 'Regra de gestores aplicada com sucesso.');
+        }
+
+        await ConfigModel.findOneAndUpdate(
+            { type: ConfigTypes.ManagerRule },
+            {
+                value: {
+                    rules: rules.rules || [],
+                    useIsManagerFlag: rules.useIsManagerFlag ?? true,
+                }
+            },
+            { new: true, upsert: true }
+        );
+
+        return _messages.success(res, req, 'Regra de gestores aplicada com sucesso');
+    },
+
+    async getManagerRule(req, res) {
+        const rule = await _business.getManagerRule();
+        return _messages.success(res, req, rule);
     },
 
     async updateRule(req, res) {
@@ -246,7 +282,7 @@ module.exports = {
     },
 
     async getMatrixUserVisibility(req, res) {
-        const config = await _business.getMatrixConfig()
+        const config = await _business.getMatrixConfig();
 
         return _messages.success(res, req, config.value);
     },
@@ -276,4 +312,25 @@ module.exports = {
 
         return _messages.success(res, req, updated.value);
     },
+
+    async getCompanySupportFormConfig(req, res) {
+        const companyConfig = await getCompanyConfig();
+
+        const supportFormConfig = companyConfig?.supportFormCustomEmail || null;
+
+        if (!supportFormConfig || !Array.isArray(supportFormConfig) || supportFormConfig.length < 2 || !req.headers?.authorization) {
+            return _messages.success(res, req, {
+                supportFormConfig,
+                customEmail: null,
+            });
+        }
+
+        const user = await getUserByToken(req);
+        const { customEmail, domain } = await getCustomEmail(user);
+
+        return _messages.success(res, req, {
+            supportFormConfig: [supportFormConfig, domain],
+            customEmail: customEmail ? customEmail : null,
+        });
+    }
 };

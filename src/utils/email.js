@@ -3,7 +3,7 @@
 const sgMail = require('@sendgrid/mail')
 const { sendMfaToKafka, sendMessageToKafka, sendRecoveryMessageToKafka } = require('../components/new-messages/business')
 const { processTargetUsers } = require('../components/new-messages/business')
-const { getCompanyConfig } = require('../components/config/business')
+const { getCompanyConfig } = require('../components/config/utils')
 const { i18nBusiness } = require('../components/i18n/business')
 const { LOCALE } = require('../components/i18n/model')
 sgMail.setApiKey(process.env.SENDGRID_API_KEY)
@@ -64,7 +64,7 @@ module.exports = {
                                     ${message}
                                 </body>
                               </html>`
-                              
+
                 const body = {
                     category: "notify",
                     communication: ["email"],
@@ -108,7 +108,7 @@ module.exports = {
                         companyName
                     }
                 })
-                
+
                 const message = await i18nBusiness.translate({
                     locale: LOCALE.BR,
                     key: 'utils.email.sendMultiFactor.message',

@@ -2,6 +2,7 @@ const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
 const { handleUserEligibilitiesGamification } = require('./utils');
+const { User } = require('../users/model');
 
 const host = process.env.API_GAMIFICATION;
 const clientId = process.env.CLIENT_ID;
@@ -40,6 +41,13 @@ const GamificationBusiness = {
 
     async getClientEvents(networkLogin) {
         const uri = `${host}/clients/${clientId}/events/${networkLogin}`;
+        const { data } = await axios.get(uri, { headers });
+
+        return data;
+    },
+
+    async getClientNiveis() {
+        const uri = `${host}/clients/${clientId}/niveis`;
         const { data } = await axios.get(uri, { headers });
 
         return data;
@@ -96,13 +104,56 @@ const GamificationBusiness = {
         const uri = `${host}/ranking-users/${clientId}/${networkLogin}`;
         const { data } = await axios.get(uri, { headers });
 
-        return data;
+        const rankingUsers = [
+            ...new Set(
+                data.flatMap((ranking) =>
+                    ranking.rankingUsers.map((rankingUser) => rankingUser.networkLogin)
+                )
+            ),
+        ];
+        const users = await User.find({ networkLogin: { $in: rankingUsers } });
+        const usersMap = new Map(
+            users.map((user) => [
+                user.networkLogin,
+                { name: user.name, profilePhoto: user.profilePhoto },
+            ])
+        );
+
+        return data.map((ranking) => ({
+            ...ranking,
+            rankingUsers: ranking.rankingUsers.map((rankingUser) => ({
+                ...usersMap.get(rankingUser.networkLogin),
+                ...rankingUser,
+            })),
+        }));
     },
 
-    async getClientRankingUsersDetails(_id, query) {
-        const searchParams = new URLSearchParams(query);
+    async getClientRankingUsersDetails(_id, { pageIndex = 0, pageSize = 10, ...query }) {
+        const searchParams = new URLSearchParams({ ...query, pageSize: 'all' });
         const uri = `${host}/ranking-users/${clientId}/${_id}/details?${searchParams}`;
         const { data } = await axios.get(uri, { headers });
+
+        const skip = +pageIndex * +pageSize
+        const limit = +skip + +pageSize
+
+        const rankingUsers = data.data.rankingUsers.map((ru) => ru.networkLogin);
+        const users = await User.find({ status: 'ATIVO', networkLogin: { $in: rankingUsers }});
+        const usersMap = new Map(
+            users.map((user) => [
+                user.networkLogin,
+                { name: user.name, profilePhoto: user.profilePhoto },
+            ])
+        );
+
+        data.data.rankingUsers = data.data.rankingUsers
+            .map((rankingUser) => ({
+                ...usersMap.get(rankingUser.networkLogin),
+                ...rankingUser,
+            }))
+            .slice(skip, limit);
+
+
+        data.total = users.length
 
         return data;
     },
@@ -139,7 +190,7 @@ const GamificationBusiness = {
 
     async getClientRewards() {
         const uri = `${host}/rewards/${clientId}`;
-        console.log(uri)
+        // console.log(uri)
         const { data } = await axios.get(uri, { headers });
 
         return data;

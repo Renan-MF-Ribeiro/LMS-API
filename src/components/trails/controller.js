@@ -51,6 +51,7 @@ const GamificationKafka = require('../gamification/kafka/broker');
 const { EVENT_CATEGORY } = require('../gamification/model');
 const { LOCALE } = require('../i18n/model');
 const { i18nBusiness } = require('../i18n/business');
+const { escapeString } = require('../../utils/strings');
 
 module.exports = {
     async getCollaborative (req, res) {
@@ -708,7 +709,8 @@ module.exports = {
                 body.collaborative = false
             }
 
-            const docClone = new Trail(body);
+            const user = await getUserByToken(req)
+            const docClone = new Trail({ ...body, author: user._id });
             const newDbTrail = await docClone.save();
 
             if (oldTrailId) {
@@ -723,7 +725,7 @@ module.exports = {
                                 return {
                                     ...item,
                                     urlItem,
-                                    urlTrail,
+                                    urlTrail
                                 }
                             }) ?? [],
                         }
@@ -739,6 +741,7 @@ module.exports = {
                 'trails',
             );
         } catch (error) {
+            console.log({error})
             _messages.internalServer(
                 res,
                 req,
@@ -1310,7 +1313,7 @@ module.exports = {
                 });
 
             } else {
-                const escapedSearchBy = searchBy ? searchBy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
+                const escapedSearchBy = searchBy ? escapeString(searchBy) : '';
                 const query = {
                     $and: [{
                         archive: archive ? { $eq: archive === 'true' } : { $ne: true }

@@ -13,16 +13,16 @@ module.exports = {
         const { order, sort } = ordernation(req);
         const searchBy = req.query.searchBy;
 
-        const query = { $and: [{}] }
+        const query = { $and: [{}] };
 
-        if(searchBy) {
+        if (searchBy) {
             query.$and.push({
-                $or: [{ title: { $regex: searchBy, $options: 'i' } }]
-            })
+                $or: [{ title: { $regex: searchBy, $options: 'i' } }],
+            });
         }
 
-        if(req?.segmentation) {
-            handleSegmentationOnQuery(req, 'owner', query)
+        if (req?.segmentation) {
+            handleSegmentationOnQuery(req, 'owner', query);
         }
 
         try {
@@ -161,7 +161,7 @@ module.exports = {
             }
 
             const partner = await Partner.findByIdAndUpdate(_id, body);
-            _messages.success(
+            return _messages.success(
                 res,
                 req,
                 partner,
@@ -174,7 +174,8 @@ module.exports = {
                 'UPDATE'
             );
         } catch (error) {
-            _messages.internalServer(
+            console.log(error);
+            return _messages.internalServer(
                 res,
                 req,
                 error.message,

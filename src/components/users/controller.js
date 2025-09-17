@@ -7,15 +7,9 @@ const { CLIENT_ID } = process.env;
 const _messages = require('../../utils/messages');
 const _files = require('../../utils/files');
 const { NewMessage } = require('../new-messages/model');
-const {
-    User,
-    UserTest,
-    Block,
-    userSchema,
-    userProjection,
-    defaultUserMap,
-    groups,
-} = require('./model');
+const { User, UserTest, Block, defaultUserMap } = require('./model');
+const managerBusiness = require('../managers/business');
+const { getIntegratorConfig } = require('../integrator/business');
 
 const {
     generateToken,
@@ -53,6 +47,7 @@ const {
     maskEmail,
     getLoginFormByStrategyName,
     clearAuthCookies,
+    updateUserByPartnerToken,
 } = require('./business');
 
 const {
@@ -88,12 +83,9 @@ const { Question } = require('../assessments/questions/model');
 const { Alternative } = require('../assessments/alternatives/model');
 
 const { EVENT_CATEGORY } = require('../gamification/model');
-const AssessmentController = require('../assessment/controller');
 const GamificationBusiness = require('../gamification/business');
 const { Group } = require('../groups/model');
 const { handleUserEligibilitiesGamification } = require('../gamification/utils');
-const AssessmentBusiness = require('../assessment/business');
-const { Features } = require('../theme/features/model');
 const { Partner } = require('../partners/model');
 const { Log } = require('../logs/model');
 const { Tracking } = require('../tracking/model');
@@ -108,12 +100,22 @@ const { fetchIdpProfilesFromRequestObject } = require('../idp-integration/busine
 const { log } = require('../../utils/logger');
 const WebhooksController = require('../webhooks/controller');
 const ApiError = require('../../errors/ApiError');
-const { addSASTokenToResponse } = require('../../utils/cookies');
+const { addSASTokenToResponse, getCookieProps } = require('../../utils/cookies');
 const GamificationKafka = require('../gamification/kafka/broker');
 
 const { FormModel } = require('../forms/model');
-const { getConnectMap, validateDataByConnectMap, getConnectEligibilities } = require('../../utils/connect');
-const { getFormErrorsByMapConfig, getDefaultForm, getAdminForm, getFormErrorsByFormValidation } = require('../forms/business');
+const {
+    getConnectMap,
+    validateDataByConnectMap,
+    getConnectEligibilities,
+    getConnectMapReplacers,
+} = require('../../utils/connect');
+const {
+    getFormErrorsByMapConfig,
+    getDefaultForm,
+    getAdminForm,
+    getFormErrorsByFormValidation,
+} = require('../forms/business');
 
 const { getDbCurrentFeatures } = require('../../utils/features');
 const { ObjectId } = require('mongoose').Types;
@@ -138,20 +140,31 @@ async function handleBlockUser(user) {
 
         // 30min
         if (resultDiff >= 1) {
-            await Block.updateMany({ user: { $eq: user._id } }, { unblocked: true });
+            Block.updateMany({ user: { $eq: user._id } }, { unblocked: true });
         } else {
             sendNotificationEmail(
                 user.email,
                 'Conta bloqueada',
                 `Olá ${user.name}, uma nova tentativa de acesso a conta não foi permita pois a conta está bloqueda. <br/> O desbloqueio é feito automaticamente, por favor, tente fazer um novo acesso dentro de 1h.`
             );
-            return 'Usuário bloqueado temporariamente';
+
+            throw new ApiError('Usuário bloqueado temporariamente', 403);
         }
     }
 }
 
-async function generateTokens(user, login, password, res) {
-    const groups = user.groupsAD;
+async function generateTokens(user, login, password, tokenIdpProfiles, res) {
+    const groups = Array.from(
+        new Set([
+            ...(tokenIdpProfiles ?? []),
+            ...(user.groupsAD?.filter((group) =>
+                tokenIdpProfiles
+                    ? group === 'PERFIL_Aluno' || !group.startsWith('PERFIL')
+                    : true
+            ) ?? []),
+        ])
+    );
+
     const namesProfiles = [];
     const namesGroups = [];
     let tokenAnalytics, tokenHappPlace;
@@ -164,9 +177,12 @@ async function generateTokens(user, login, password, res) {
             namesGroups.push(strGroup);
         }
     }
+    const [profilesIDS, groupsIDS, _] = await Promise.all([
+        returnIdProfileUser(namesProfiles),
+        returnIdGroupUser(namesGroups),
+        updateGroupsOfUser(user._id, namesProfiles.concat(namesGroups))
+    ]);
 
-    const profilesIDS = await returnIdProfileUser(namesProfiles);
-    const groupsIDS = await returnIdGroupUser(namesGroups);
     const userGroups = await Group.find({ name: { $in: namesGroups } });
     const eligibilities = userGroups.flatMap((group) =>
         group.tags.flatMap((tag) => tag?.value || tag.display)
@@ -183,7 +199,7 @@ async function generateTokens(user, login, password, res) {
     if (namesProfiles.includes('PERFIL_Analista')) {
         const dashboardFilters = await processDashFilters(user);
         tokenAnalytics = generateTokenAnalytics({
-            perfil: profilesIDS.numbers,
+            perfil: profilesIDS?.numbers,
             clientID: CLIENT_ID,
             filters: dashboardFilters,
         });
@@ -200,8 +216,8 @@ async function generateTokens(user, login, password, res) {
         networkLogin: user.networkLogin,
         email: user.email,
         userTags: eligibilities,
-        profiles: profilesIDS.result,
-        numbers: profilesIDS.numbers,
+        profiles: profilesIDS?.result,
+        numbers: profilesIDS?.numbers,
         groups: groupsIDS,
         welcomeVideoWatched: user?.welcomeVideoWatched,
     });
@@ -238,6 +254,8 @@ async function generateTokens(user, login, password, res) {
 module.exports = {
     async create(req, res) {
         try {
+            const isOnboarding = Boolean(req.body?.onboarding)
+
             const form = await getAdminForm();
 
             const errors = getFormErrorsByFormValidation(form, req.body);
@@ -277,10 +295,19 @@ module.exports = {
                 );
             }
 
+            if (isOnboarding && !req.body?.cpf) {
+                return _messages.forbidden(
+                    res,
+                    req,
+                    'CPF é obrigatório para usuário avulso',
+                    { error: 'CPF é obrigatório para usuário avulso' },
+                    'users',
+                    'create'
+                )
+            }
+
             const userExists = await User.findOne({
-                $or: [
-                    { networkLogin: req.body[loginField] },
-                ]
+                $or: [{ networkLogin: req.body[loginField] }],
             });
 
             if (userExists) {
@@ -305,21 +332,25 @@ module.exports = {
 
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
-            const processedUser = await processUsersLoad({
-                networkLogin: req.body[loginField],
-                ...req.body
-            }, fieldsForElegibility);
+            const processedUser = await processUsersLoad(
+                {
+                    ...req.body,
+                    networkLogin: req.body[loginField],
+                },
+                fieldsForElegibility,
+                isOnboarding,
+                null,
+                'ADMIN'
+            );
 
-            await User.create({
-                ...processedUser,
-                networkLogin: req.body[loginField],
+            await User.create(processedUser);
+
+            const created = await User.findOne({ networkLogin: processedUser.networkLogin }).lean();
+
+            WebhooksController.dispatch('create', 'users', false, {
+                ...created,
+                password: undefined,
             });
-
-            const created = await User.findOne(
-                { networkLogin: processedUser.networkLogin },
-            ).lean();
-
-            WebhooksController.dispatch('create', 'users', false, { ...created, password: undefined });
 
             return _messages.success(res, req, created);
         } catch (error) {
@@ -398,7 +429,8 @@ module.exports = {
         let networkLogin = data.cpf;
 
         if (data.email) data.email = String(data.email).toLowerCase();
-        if (data.alternativeEmail) data.alternativeEmail = String(data.alternativeEmail).toLowerCase();
+        if (data.alternativeEmail)
+            data.alternativeEmail = String(data.alternativeEmail).toLowerCase();
 
         if (form) {
             const connectMap = await getConnectMap(true);
@@ -430,14 +462,28 @@ module.exports = {
         let defaultFields;
         let partnerDays = 0;
         let classGroupsIDs;
+        let origin = {
+            type: 'SELF',
+            info: 'Cadastro vitrine',
+        };
 
         const { sendSignUpActivationEmail } = await getUsersDataConfig();
 
         try {
             // Validação de usuário já criado
-            const userExists = await User.findOne({ networkLogin });
+            const userExists = await User.exists({ networkLogin });
             if (userExists) {
-                _messages.badRequest(
+                if (!token)
+                    return _messages.badRequest(
+                        res,
+                        req,
+                        'Usuário já cadastrado',
+                        'Já existe um usuário cadastrado',
+                        'users',
+                        'signup'
+                    );
+
+                return _messages.unprocessableEntity(
                     res,
                     req,
                     'Usuário já cadastrado',
@@ -445,7 +491,6 @@ module.exports = {
                     'users',
                     'signup'
                 );
-                return;
             }
 
             // Encripta senha
@@ -476,7 +521,7 @@ module.exports = {
                 const selectedKey = partner.keys?.find((key) => key?.key === token);
 
                 if (selectedKey.endDate < today) {
-                    _messages.unauthorized(
+                    return _messages.unauthorized(
                         res,
                         req,
                         new Error('DataInvalida'),
@@ -484,7 +529,7 @@ module.exports = {
                         'users',
                         'signup'
                     );
-                    return;
+
                 }
 
                 // Concatena todas as elegibilidades padrões e "do seu partner"
@@ -505,6 +550,10 @@ module.exports = {
                 // Gera array de objetos referentes a "_id" de classGroups
                 classGroupsIDs = selectedKey.classGroupResult?.classGroups?.map((x) => x);
                 defaultFields.partner = `${partner.title} - ${selectedKey.title}`;
+                origin = {
+                    type: 'PARTNER_TOKEN',
+                    info: selectedKey.key,
+                }
             } else {
                 groupsAD.push('ELEGE_CURSO');
             }
@@ -521,12 +570,16 @@ module.exports = {
                 ...data,
                 birthDate: formatedDate,
                 groupsAD,
+                origin,
                 ...defaultFields,
             };
 
             const newUser = await User.create(userData);
 
-            WebhooksController.dispatch('create', 'users', false, { ...newUser.toObject(), password: undefined });
+            WebhooksController.dispatch('create', 'users', false, {
+                ...newUser.toObject(),
+                password: undefined,
+            });
 
             if (token) {
                 const DATA_INICIO = today.startOf('day');
@@ -550,7 +603,7 @@ module.exports = {
                 await sendSignupActivationEmail(newUser.email, activationLink);
             }
 
-            const tokens = await generateTokens(newUser, networkLogin, password, res);
+            const tokens = await generateTokens(newUser, networkLogin, password, null, res);
 
             if (newUser && form?.autoLogin) {
                 await Log.create({
@@ -558,10 +611,10 @@ module.exports = {
                     dataOld: [],
                     groups: groupsAD ?? [],
                     user: newUser._id,
-                    type: "LOGIN",
-                    message: "Sucesso ao se cadastrar",
-                    component: "users",
-                    route: "signup",
+                    type: 'LOGIN',
+                    message: 'Sucesso ao se cadastrar',
+                    component: 'users',
+                    route: 'signup',
                     ip: req.ip,
                     login: newUser.networkLogin,
                     browserDetails: req.headers['user-agent'],
@@ -617,10 +670,10 @@ module.exports = {
                 'ldapSignIn'
             );
         }
-
-        const user = await User.findOne({
+        let user = await User.findOne({
             _id: new mongoose.Types.ObjectId(req.user._id),
-        });
+        }).lean();
+
         if (user.loginType && user.loginType !== 'FORM' && user.loginType !== 'BOTH') {
             return _messages.forbidden(
                 res,
@@ -631,65 +684,73 @@ module.exports = {
                 'ldapSignIn'
             );
         }
-        const { login, password } = req.body;
 
+        const { login, password, token } = req.body;
+        if (token) {
+            user = await updateUserByPartnerToken(req, user);
+        }
         try {
             await handleBlockUser(user);
-
-            if (new Date(user.password[user.password.length - 1].createdAt).getTime() < Date.now() - 90 * 24 * 60 * 60 * 1000) {
+            if (
+                new Date(user?.password?.[user?.password?.length - 1]?.createdAt)?.getTime() <
+                Date.now() - 90 * 24 * 60 * 60 * 1000
+            ) {
                 user.passwordValid = false;
             }
 
-            const entryRecord = await returnDateSinceFirstLogin(user?._id);
-            const firstLogin = !user.passwordValid && !entryRecord
-
+            if (user && user.origin && user.origin.type === 'INTEGRATOR') {
+                return _messages.forbidden(
+                    res,
+                    req,
+                    'Utilize a gestão de login externa para fazer seu acesso.',
+                    'Utilize a gestão de login externa para fazer seu acesso.',
+                    'users',
+                    'ldapSignIn'
+                );
+            }
             // Gera todos os tokens necessários
-            const {
-                tokenAnalytics,
-                tokenHappPlace,
-                mfaToken,
-                key,
-                authwebPush,
-                SAS,
-                tk,
-                profilesIDS,
-                namesProfiles,
-                namesGroups,
-            } = await generateTokens(user, login, password, res);
+            const [tokens, entryRecord, isUserManager] = await Promise.all([
+                generateTokens(user, login, password, null, res),
+                returnDateSinceFirstLogin(user?._id),
+                managerBusiness.isUserManager(user),
+                updateLastLoginUser(user?._id),
+                GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.LOGIN],
+                    identifier: login,
+                }),
+            ]);
 
-            await GamificationKafka.publishEventRuleValidation({
-                events: [EVENT_CATEGORY.LOGIN],
-                identifier: login
-            })
+            const firstLogin = !user?.passwordValid && !entryRecord;
 
-            await updateLastLoginUser(user?._id)
-
-            WebhooksController.dispatch('APASlogin', 'users', false, {
+            WebhooksController.dispatch('auth', 'users', false, {
                 ...user,
                 password: undefined,
-            })
+            });
 
             return _messages.success(
                 res,
                 req,
                 {
-                    SAS,
-                    tk,
-                    key,
-                    firstLogin,
+                    // tokens
+                    SAS: tokens.SAS,
+                    tk: tokens?.tk,
+                    key: tokens?.key,
+                    tokenAnalytics: tokens?.tokenAnalytics,
+                    tokenHappPlace: tokens?.tokenHappPlace,
+                    mfaToken: tokens?.mfaToken,
+                    authwebPush: tokens?.authwebPush?.keys.auth,
+                    //user data
                     accept: user.acceptTerms,
                     acceptCollaboration: user.acceptTermsCollaboration,
                     passwordValid: user.passwordValid,
-                    numbers: profilesIDS.numbers,
+                    numbers: tokens?.profilesIDS?.numbers,
                     name: user.name,
                     profilePhoto: user.profilePhoto,
-                    tokenAnalytics,
-                    tokenHappPlace,
-                    mfaToken,
                     networkLogin: user.networkLogin,
                     userId: user._id,
-                    authwebPush: authwebPush?.keys.auth,
                     email: user.email,
+                    firstLogin,
+                    isManager: isUserManager,
                 },
                 'Sucesso ao logar',
                 'users',
@@ -698,13 +759,13 @@ module.exports = {
                 [],
                 true,
                 'LOGIN',
-                namesProfiles.concat(namesGroups)
+                tokens?.namesProfiles?.concat(tokens?.namesGroups)
             );
         } catch (error) {
             console.log({ error });
-            if (user.id)
+            if (user?.id)
                 await Block.create({
-                    user: user._id,
+                    user: user?._id,
                     dateTimeBlock: getDateToday(),
                     ip: req.ip,
                 });
@@ -764,6 +825,13 @@ module.exports = {
         try {
             const data = jwt.verify(token, secret);
 
+            // Need to create the session when using monitoring login
+            if (data.monitoringLogin) {
+                req.session.passport = { user: data };
+                res.cookie('connect.sid', req.sessionID, getCookieProps());
+                await addSASTokenToResponse(res);
+            }
+
             const tokenIdpProfiles = data?.idpProfiles;
             const tokenStrategyName = data?.strategyName ?? undefined;
 
@@ -794,8 +862,8 @@ module.exports = {
                     identifier: claim,
                     meta: {
                         trailTitle: data?.trailTitle || data?.data?.trailTitle,
-                    }
-                })
+                    },
+                });
             }
 
             const query = { status: 'ATIVO' };
@@ -804,7 +872,10 @@ module.exports = {
 
             const user = await User.findOne(query).lean();
 
-            if (!user || (user.loginType && (user.loginType !== 'SSO' && user.loginType !== 'BOTH'))) {
+            if (
+                !user ||
+                (user.loginType && user.loginType !== 'SSO' && user.loginType !== 'BOTH')
+            ) {
                 await sleep(3000);
 
                 return _messages.forbidden(
@@ -826,10 +897,7 @@ module.exports = {
 
                 // 30min
                 if (resultDiff >= 1) {
-                    await Block.updateMany(
-                        { user: { $eq: user._id } },
-                        { unblocked: true }
-                    );
+                    await Block.updateMany({ user: { $eq: user._id } }, { unblocked: true });
                 } else {
                     sendNotificationEmail(
                         user.email,
@@ -847,46 +915,41 @@ module.exports = {
                 }
             }
 
-            const {
-                SAS,
-                tk,
-                key,
-                tokenAnalytics,
-                tokenHappPlace,
-                mfaToken,
-                authwebPush,
-                profilesIDS,
-                namesProfiles,
-                namesGroups,
-            } = await generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', res);
-
-            const entryRecord = await returnDateSinceFirstLogin(user?._id);
+            const [tokens, isManager, entryRecord] = await Promise.all([
+                generateTokens(user, 'happlearning', '25KP76yNnhiGH9bSj', tokenIdpProfiles, res),
+                managerBusiness.isUserManager(user),
+                returnDateSinceFirstLogin(user?._id),
+                updateLastLoginUser(user?._id),
+                GamificationKafka.publishEventRuleValidation({
+                    events: [EVENT_CATEGORY.LOGIN],
+                    identifier: user.networkLogin,
+                }),
+            ]);
 
             const firstLogin = !user.passwordValid && !entryRecord;
-
-            await updateLastLoginUser(user._id);
 
             _messages.success(
                 res,
                 req,
                 {
-                    SAS,
-                    tk,
-                    key,
+                    SAS: tokens?.SAS,
+                    tk: tokens?.tk,
+                    key: tokens?.key,
+                    numbers: tokens?.profilesIDS.numbers,
+                    tokenAnalytics: tokens?.tokenAnalytics,
+                    tokenHappPlace: tokens?.tokenHappPlace,
+                    mfaToken: tokens?.mfaToken,
+                    authwebPush: tokens?.authwebPush?.keys.auth,
                     firstLogin,
                     accept: user.acceptTerms,
                     acceptCollaboration: user.acceptTermsCollaboration,
                     passwordValid: true,
-                    numbers: profilesIDS.numbers,
                     name: user.name,
                     profilePhoto: user.profilePhoto,
-                    tokenAnalytics,
-                    tokenHappPlace,
-                    mfaToken,
                     networkLogin: user.networkLogin,
                     userId: user._id,
-                    authwebPush: authwebPush?.keys.auth,
                     email: user.email,
+                    isManager
                 },
                 'Sucesso ao logar',
                 'users',
@@ -895,9 +958,8 @@ module.exports = {
                 [],
                 true,
                 'LOGIN',
-                namesProfiles.concat(namesGroups)
+                tokens?.namesProfiles.concat(tokens?.namesGroups)
             );
-
         } catch (error) {
             console.log(error);
             _messages.internalServer(
@@ -1012,19 +1074,35 @@ module.exports = {
 
         if (search.birthDate || search.birthday) {
             const birthDateValue = search.birthDate || search.birthday;
-
+            const strBirthdate = body.birthDate || body.birthday;
             const birthDateQuery = {
-                $or: [{ birthDate: birthDateValue }, { birthday: birthDateValue }],
-            };
+                $or: [
+                    // lida com strings 28/12/2001
+                    { birthDate: birthDateValue },
+                    { birthday: birthDateValue },
 
+                    // lida com ISODates '2001-12-28T00:00:00.000Z'
+                    {
+                        birthDate: {
+                            $gte: moment(strBirthdate, 'DD/MM/YYYY').toISOString(),
+                            $lt: moment(strBirthdate, 'DD/MM/YYYY').add(1, 'days').toISOString(),
+                        },
+                    },
+                    {
+                        birthday: {
+                            $gte: moment(strBirthdate, 'DD/MM/YYYY').toISOString(),
+                            $lt: moment(strBirthdate, 'DD/MM/YYYY').add(1, 'days').toISOString(),
+                        },
+                    },
+                ],
+            };
             search.$or = search.$or ? [...search.$or, ...birthDateQuery.$or] : birthDateQuery.$or;
 
             delete search.birthDate;
             delete search.birthday;
         }
-
+        delete search.token;
         const user = await User.findOne(search);
-
         if (!user) {
             if (changeByEmail) {
                 return _messages.success(res, req, { status: 'Sucesso' });
@@ -1049,11 +1127,10 @@ module.exports = {
                 networkLogin: user.networkLogin,
                 _id: user._id,
                 password_old: password_new,
+                partner_token: body.token,
             });
 
             const resetPasswordUrl = `${domain}/login/troca-senha?token=${token}`;
-
-            console.log(user.email, password_new, resetPasswordUrl);
 
             await sendEmailRecoveryPassword(user.email, true, password_new, resetPasswordUrl, user);
 
@@ -1112,7 +1189,7 @@ module.exports = {
             });
 
             if (password_new !== password_newConfirm) {
-                _messages.unauthorized(
+                return _messages.unauthorized(
                     res,
                     req,
                     new Error('ErrorAoTrocarSenha'),
@@ -1120,7 +1197,6 @@ module.exports = {
                     'users',
                     'changePassword'
                 );
-                return;
             } else if (Oldpass.length > 0) {
                 _messages.unauthorized(
                     res,
@@ -1178,7 +1254,7 @@ module.exports = {
                 error.message,
                 'Erro interno no servidor',
                 'users',
-                'recoveryPassword'
+                'changePassword'
             );
         }
     },
@@ -1187,11 +1263,12 @@ module.exports = {
         try {
             const { password_new, password_newConfirm } = req.body;
             const { data } = decodeToken(req.headers.authorization);
-            const { _id, password_old } = data;
-            const user = await User.findOne({ _id: _id }, ['password']);
 
-            var pass = user.password.filter(function (obj) {
-                if (obj.valid === true && bcrypt.compareSync(password_old, obj.hash)) {
+            const { _id, password_old } = data;
+            const user = await User.findOne({ _id: _id });
+
+            var pass = user?.password?.filter(function (obj) {
+                if (obj?.valid === true && bcrypt.compareSync(password_old, obj.hash)) {
                     return true;
                 }
 
@@ -1205,7 +1282,6 @@ module.exports = {
 
                 return false;
             });
-
             if (pass.length === 0 || password_new !== password_newConfirm) {
                 _messages.unauthorized(
                     res,
@@ -1250,6 +1326,9 @@ module.exports = {
                 password: newPass,
                 passwordValid: true,
             });
+            if (data.partner_token) {
+                await updateUserByPartnerToken(req, user, data.partner_token);
+            }
 
             _messages.success(
                 res,
@@ -1276,7 +1355,8 @@ module.exports = {
     },
 
     async import(req, res) {
-        var file = null;
+        let file = null;
+        let replaceMap = null;
         const newUsers = [];
         const existingUsers = [];
         const usersToSend = [];
@@ -1285,21 +1365,21 @@ module.exports = {
         } else {
             file = req.files.content;
         }
-        const results = await _files.readXLSXUsers(file.path);
 
-        const elegibilityResponse = await axios.get(
-            `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
-            {
-                headers: {
-                    'connect-client-key': process.env.CONNECT_CLIENT_KEY,
-                },
-            }
-        );
-        const fieldsForElegibility = elegibilityResponse.data.fields;
-
-        const messengerConfig = await getMessengerConfig();
-
-        const connectMap = await getConnectMap(true);
+        const [results, elegibilityResponse, messengerConfig, connectMap] = await Promise.all([
+            _files.readXLSXUsers(file.path),
+            axios.get(
+                `${process.env.API_CONNECT}/maps/elegibility/${process.env.CLIENT_ID}`,
+                {
+                    headers: {
+                        'connect-client-key': process.env.CONNECT_CLIENT_KEY,
+                    },
+                }
+            ),
+            await getMessengerConfig(),
+            await getConnectMap(true),
+        ])
+        const fieldsForElegibility = elegibilityResponse.data?.fields;
 
         if (connectMap) {
             const errors = [];
@@ -1317,15 +1397,28 @@ module.exports = {
             if (errors.length > 0) {
                 throw new ApiError('Erro ao importar usuários', 400, errors, { skipDbLog: true });
             }
+
+            replaceMap = getConnectMapReplacers(connectMap);
         }
-
         for (const result of results) {
-            const existingUser = await User.findOne({
-                $or: [{ networkLogin: result.networkLogin }, { networkLogin: result.cpf }],
-            });
+            const processedUser = await processUsersLoad(
+                result,
+                fieldsForElegibility,
+                false,
+                false,
+                replaceMap,
+                'LOAD_ADMIN'
+            );
 
-            const processedUser = await processUsersLoad(result, fieldsForElegibility);
-            const account = await processUserAccount(processedUser);
+            const [account, existingUser] = await Promise.all([
+                processUserAccount(processedUser),
+                User.findOne({
+                    $or: [
+                        { networkLogin: processedUser.networkLogin },
+                        { networkLogin: processedUser.cpf }
+                    ]
+                })
+            ]);
 
             processedUser.password = existingUser ? existingUser.password : processedUser.password;
 
@@ -1374,51 +1467,61 @@ module.exports = {
         console.log(
             `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
         );
-        for (const user of existingUsers) {
-            await User.findByIdAndUpdate(user._id, {
-                ...user.processedUser,
-            });
-
-            WebhooksController.dispatch('update', 'users', false, {
-                ...user.processedUser,
-                password: undefined,
-            });
-
-            await Tracking.updateMany(
-                { userLogin: user.processedUser.cpf },
-                { $set: { userLogin: user.processedUser.networkLogin } }
-            );
-        }
 
         const usersDataConfig = await getUsersDataConfig();
-
         if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
-            console.log('Inativando usuários não presentes na planilha');
-
             await User.updateMany(
                 {
                     onboarding: { $ne: true },
                     ignoreLoadInactivation: { $ne: true },
+                    'origin.type': 'LOAD_ADMIN',
+                    status: 'ATIVO',
                 },
                 { $set: { status: 'INATIVO' } },
-                { multi: true }
+                { multi: true },
             );
         }
 
+        // TODO: Não disparar mudança de trackings para usuários que não tiveram mudança em seus networkLogin
+        for (const user of existingUsers) {
+            const dto = { ...user.processedUser, _id: user._id };
+            const { password, ...userWithoutPassword } = dto;
+
+            const ops = [
+                User.findByIdAndUpdate(user._id, dto).exec(),
+                Tracking.updateMany(
+                    { userLogin: user.processedUser.cpf },
+                    { $set: { userLogin: user.processedUser.networkLogin } }
+                ).exec()
+            ]
+            if (req.features.webhook) WebhooksController.dispatch('update', 'users', false, userWithoutPassword);
+
+            await Promise.all(ops)
+        }
+
+
+        
         if (newUsers.length > 0) {
             console.log(
                 `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
             );
 
-            await User.insertMany(newUsers);
-
-            WebhooksController.dispatch('create', 'users', true, newUsers);
+            const insertedUsers = await User.insertMany(newUsers);
+            if (req.features.webhook) {
+                const webhooks = insertedUsers?.map((user) => {
+                    const { password, ...userWithoutPassword } = user.toObject()
+                    WebhooksController.dispatch('create', 'users', false, userWithoutPassword);
+                })
+                await Promise.all(webhooks)
+            }
 
             if (messengerConfig.sendUsersToMicrosservice) {
-                await sendAccountsToKafka(usersToSend);
                 const campaign = createWelcomeCampaign();
-                await sendMessageToKafka(campaign, newUsers);
-                await NewMessage.create(campaign);
+                await Promise.all([
+                    await sendAccountsToKafka(usersToSend),
+                    await sendMessageToKafka(campaign, newUsers),
+                    await NewMessage.create(campaign)
+                ])
             }
         }
 
@@ -1453,13 +1556,20 @@ module.exports = {
             const fieldsForElegibility = elegibilityResponse.data.fields;
 
             const messengerConfig = await getMessengerConfig();
+            const usersDataConfig = await getUsersDataConfig();
+
+            const preventOnboardingGroupAdd = usersDataConfig?.preventOnboardingGroupAdd ?? false;
 
             for (const result of results) {
-                const existingUser = await User.findOne({
-                    networkLogin: result.cpf,
-                });
-
-                const processedUser = await processUsersLoad(result, fieldsForElegibility, onboarding);
+                const [existingUser, processedUser] = await Promise.all([User.findOne({
+                    networkLogin: result.cpf
+                }),
+                processUsersLoad(
+                    result,
+                    fieldsForElegibility,
+                    onboarding,
+                    preventOnboardingGroupAdd
+                )])
 
                 const account = await processUserAccount(processedUser);
 
@@ -1491,9 +1601,18 @@ module.exports = {
             );
 
             for (const user of existingUsers) {
-                await User.findByIdAndUpdate(user._id, {
-                    ...user.processedUser,
-                });
+                const dto = { ...user.processedUser, _id: user._id };
+                const { password, ...userWithoutPassword } = dto;
+
+                const ops = [
+                    User.findByIdAndUpdate(user._id, dto).exec(),
+                    Tracking.updateMany(
+                        { userLogin: user.processedUser.cpf },
+                        { $set: { userLogin: user.processedUser.networkLogin } }
+                    ).exec()
+                ]
+                if (req.features.webhook) WebhooksController.dispatch('update', 'users', false, userWithoutPassword);
+                await Promise.all(ops)
             }
 
             if (newUsers.length > 0) {
@@ -1526,143 +1645,120 @@ module.exports = {
     },
 
     async returnUsers(req, res) {
-        try {
-            const { skip, limit } = pagination(req);
-            const { order, sort } = ordernation(req);
+        const { skip, limit } = pagination(req);
+        const { order, sort } = ordernation(req);
 
-            const searchBy = req.query.searchBy;
+        const searchBy = req.query?.searchBy ?? null;
+        const isOnboarding = req.query.onboarding === 'true' || req.query.onboarding === true;
+        const isPartner = req.query.partner === 'true' || req.query.partner === true;
 
-            const isOnboarding = req.query.onboarding === 'true' || req.query.onboarding === true;
-            const isPartner = req.query.partner === 'true' || req.query.partner === true;
+        const query = {
+            $and: [
+                {
+                    onboarding: isOnboarding ? true : { $ne: true },
+                    partner: isPartner ? { $exists: true } : { $exists: false },
+                },
+            ],
+        };
 
-            const query = {
-                $and: [
-                    {
-                        onboarding: isOnboarding ? true : { $ne: true },
-                        partner: isPartner ? { $exists: true } : { $exists: false },
-                    },
-                ],
-            };
-
-            if (req?.segmentation) {
-                handleSegmentationOnQuery(req, 'issuer', query);
-            }
-
-            const totalActive = await User.find({
-                status: 'ATIVO',
-                ...query,
-            }).countDocuments();
-
-            const totalInactive = await User.find({
-                status: 'INATIVO',
-                ...query,
-            }).countDocuments();
-
-            if (searchBy) {
-                query.$and.push({
-                    $or: [
-                        { name: { $regex: searchBy, $options: 'i' } },
-                        { registration: { $regex: searchBy, $options: 'i' } },
-                        { email: { $regex: searchBy, $options: 'i' } },
-                        { cpf: { $regex: searchBy, $options: 'i' } },
-                    ],
-                });
-            }
-
-            const total = await User.countDocuments(query);
-            const users = await User.find(query)
-                .sort({ [order]: sort })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit));
-
-            _messages.success(res, req, {
-                data: users,
-                total,
-                totalActive,
-                totalInactive,
-            });
-        } catch (error) {
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'users',
-                'returnUsers'
-            );
+        if (req?.segmentation) {
+            handleSegmentationOnQuery(req, 'issuer', query);
         }
-    },
 
-    async returnManagers(req, res) {
-        try {
-            const { skip, limit } = pagination(req);
-            const { order, sort } = ordernation(req);
-
-            const searchBy = req.query.searchBy;
-            const filterManager = req.query.filterManager;
-
-            const profiles = await Profile.find({ 'title': { $ne: 'PERFIL_Aluno' } }).sort({ label: 'asc' })
-
-
-            let query = {
-                groupsAD: { $in: profiles.map((profile) => profile.title) },
-            };
-
-            if (filterManager) {
-                query.groupsAD = { $in: [filterManager] };
-            }
-
-            if (req?.segmentation) {
-                handleSegmentationOnQuery(req, 'issuer', query);
-            }
-
-
-
-            if (searchBy) {
-                query.$or = [
+        if (searchBy?.length) {
+            query.$and.push({
+                $or: [
                     { name: { $regex: searchBy, $options: 'i' } },
                     { registration: { $regex: searchBy, $options: 'i' } },
                     { email: { $regex: searchBy, $options: 'i' } },
                     { cpf: { $regex: searchBy, $options: 'i' } },
-                ]
-            }
-            const managersCounters = []
-
-            for (const profile of profiles) {
-                const queryProfile = { groupsAD: profile.title }
-                if (searchBy) {
-                    queryProfile.$or = [
-                        { name: { $regex: searchBy, $options: 'i' } },
-                        { registration: { $regex: searchBy, $options: 'i' } },
-                        { email: { $regex: searchBy, $options: 'i' } },
-                        { cpf: { $regex: searchBy, $options: 'i' } },
-                    ]
-                }
-                const count = await User.countDocuments(queryProfile);
-                managersCounters.push({ label: profile.label, title: profile.title, count });
-            }
-
-            const total = await User.countDocuments(query);
-            const users = await User.find(query)
-                .sort({ [order]: sort })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit));
-
-            _messages.success(res, req, {
-                data: users,
-                total,
-                managersCounters
+                ],
             });
-        } catch (error) {
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'users',
-                'returnUsers'
-            );
         }
+
+        const totalActive = await User.find({
+            status: 'ATIVO',
+            ...query,
+        }).countDocuments();
+
+        const totalInactive = await User.find({
+            status: 'INATIVO',
+            ...query,
+        }).countDocuments();
+
+        const total = await User.countDocuments(query);
+
+        const users = await User.find(query)
+            .sort({ [order]: sort })
+            .skip(parseInt(skip))
+            .limit(parseInt(limit));
+
+        return _messages.success(res, req, {
+            data: users,
+            total,
+            totalActive,
+            totalInactive,
+        });
+    },
+
+    async returnManagers(req, res) {
+        const { skip, limit } = pagination(req);
+        const { order, sort } = ordernation(req);
+
+        const searchBy = req.query.searchBy;
+        const filterManager = req.query.filterManager;
+
+        const profiles = await Profile.find({ title: { $ne: 'PERFIL_Aluno' } }).sort({
+            label: 'asc',
+        });
+
+        let query = {
+            groupsAD: { $in: profiles.map((profile) => profile.title) },
+        };
+
+        if (filterManager) {
+            query.groupsAD = { $in: [filterManager] };
+        }
+
+        if (req?.segmentation) {
+            handleSegmentationOnQuery(req, 'issuer', query);
+        }
+
+        if (searchBy) {
+            query.$or = [
+                { name: { $regex: searchBy, $options: 'i' } },
+                { registration: { $regex: searchBy, $options: 'i' } },
+                { email: { $regex: searchBy, $options: 'i' } },
+                { cpf: { $regex: searchBy, $options: 'i' } },
+            ];
+        }
+        const managersCounters = [];
+
+        for (const profile of profiles) {
+            const queryProfile = { groupsAD: profile.title };
+            if (searchBy) {
+                queryProfile.$or = [
+                    { name: { $regex: searchBy, $options: 'i' } },
+                    { registration: { $regex: searchBy, $options: 'i' } },
+                    { email: { $regex: searchBy, $options: 'i' } },
+                    { cpf: { $regex: searchBy, $options: 'i' } },
+                ];
+            }
+            const count = await User.countDocuments(queryProfile);
+            managersCounters.push({ label: profile.label, title: profile.title, count });
+        }
+
+        const total = await User.countDocuments(query);
+        const users = await User.find(query)
+            .sort({ [order]: sort })
+            .skip(parseInt(skip))
+            .limit(parseInt(limit));
+
+        return _messages.success(res, req, {
+            data: users,
+            total,
+            managersCounters,
+        });
     },
 
     async returnUsersOnboarding(req, res) {
@@ -1708,6 +1804,19 @@ module.exports = {
             const user = await User.findOne({
                 _id: { $eq: _id },
             });
+
+            if (user?.origin?.type === 'INTEGRATOR') {
+                const { data: integratorConfig } = await getIntegratorConfig()
+
+                if (integratorConfig && !integratorConfig.allowUserEdit) {
+                    return _messages.unauthorized(
+                        res,
+                        req,
+                        'Usuário de integração, não pode ser editado via painel'
+                    );
+                }
+            }
+
             if (tags && tags.length > 0) {
                 for (const tag of tags) {
                     const filter = user.tags.filter((val) => {
@@ -1742,13 +1851,10 @@ module.exports = {
                 await sendAccountsToKafka([account]);
             }
             await User.findByIdAndUpdate(_id, req.body);
+            const foundUser = await User.findOne({ _id }).lean();
 
-            const foundUser = await User.findById(_id).lean();
-
-            WebhooksController.dispatch('update', 'users', false, {
-                ...foundUser,
-                password: undefined,
-            });
+            const { password, ...userWithoutPassword } = foundUser
+            WebhooksController.dispatch('update', 'users', false, userWithoutPassword);
 
             if (userUpdated?.status) {
                 await GamificationBusiness.setUserStatus(user.networkLogin, userUpdated.status);
@@ -1806,7 +1912,7 @@ module.exports = {
     },
 
     async isAuthenticated(req, res) {
-        if (req.user && await validateToken(req)) {
+        if (req.user && (await validateToken(req))) {
             await addSASTokenToResponse(res);
 
             return _messages.success(res, req, true);
@@ -1985,6 +2091,7 @@ module.exports = {
         try {
             const { body } = req;
             const completeUser = await User.findById(body._id).lean();
+            const isManager = await managerBusiness.isUserManager(completeUser);
 
             const {
                 groupsAD,
@@ -2081,6 +2188,7 @@ module.exports = {
                     name,
                     profilePhoto,
                     tokenAnalytics: token_analytics,
+                    isManager,
                 });
             } else {
                 _messages.badRequest(
@@ -2132,7 +2240,12 @@ module.exports = {
             message: 'SSO_CALLBACK',
             component: 'users',
             route: 'ssoCallback',
-            dataNew: JSON.stringify({ samlObj: req.samlUserObject, samlUser: req.user, session: req.session, sessionID: req.sessionID }),
+            dataNew: JSON.stringify({
+                user: req.user,
+                samlUserObject: req.samlUserObject,
+                session: req.session,
+                sessionID: req.sessionID,
+            }),
         });
 
         const { strategyName, idpProfiles } = await fetchIdpProfilesFromRequestObject(req);
@@ -2147,8 +2260,10 @@ module.exports = {
             claimKey.split(',').reduce((acc, key) => {
                 if (acc !== null && acc !== undefined && acc !== '') return acc;
 
-                return _.get(req.samlUserObject ?? req.user, key, null);
-            }, null) ?? req.user?.nameID ?? null;
+                return _.get(req.user, key, null) || _.get(req.samlUserObject, key, null);
+            }, null)
+            ?? req.user?.nameID
+            ?? null;
 
         await Log.create({
             type: 'SSO_CALLBACK_INFOS',
@@ -2166,7 +2281,7 @@ module.exports = {
         });
 
         if (claimValue === undefined || claimValue === null) {
-            console.log('ssoCallback req.samlUserObject', req.samlUserObject);
+            // console.log('ssoCallback req.samlUserObject', req.samlUserObject);
 
             return _messages.internalServer(
                 res,
@@ -2590,7 +2705,12 @@ module.exports = {
 
     async deleteClassTag(req, res) {
         const { tag, userId, classIdentifier } = req.body;
-        const classGroups = classIdentifier ? { groupCode: tag, classIdentifier: { $in: [classIdentifier, new ObjectId(classIdentifier)] } } : { groupCode: tag, classIdentifier: { $exists: false } };
+        const classGroups = classIdentifier
+            ? {
+                groupCode: tag,
+                classIdentifier: { $in: [classIdentifier, new ObjectId(classIdentifier)] },
+            }
+            : { groupCode: tag, classIdentifier: { $exists: false } };
 
         try {
             await User.findByIdAndUpdate(userId, {
@@ -2606,7 +2726,7 @@ module.exports = {
         const { tag, userId } = req.body;
         try {
             const classIdentifier = new ObjectId();
-            console.log('classIdentifier', classIdentifier);
+            // console.log('classIdentifier', classIdentifier);
             await User.findByIdAndUpdate(userId, {
                 $addToSet: {
                     classGroups: {
@@ -2627,34 +2747,38 @@ module.exports = {
 
     async updateClassTag(req, res) {
         const { tag, _id } = req.body;
-        try {
-            const { classGroups } = await User.findOne({ _id });
-            const newTags = [];
-            for (group of classGroups) {
-                console.log('group', group.classIdentifier, tag.classIdentifier);
-                if (group.classIdentifier == tag.classIdentifier) {
-                    group = tag;
-                    newTags.push({
-                        ...group,
-                        startDate: new Date(group.startDate),
-                        limitDate: new Date(group.limitDate),
-                    });
-                } else {
-                    newTags.push({
-                        ...group,
-                        startDate: new Date(group.startDate),
-                        limitDate: new Date(group.limitDate),
-                    });
-                }
-            }
-            await User.findByIdAndUpdate(_id, { classGroups: newTags });
 
-            _messages.success(res, req, {
-                message: 'Tag de curso atualizada no usuário',
+        const { classGroups } = await User.findById(_id);
+
+        const foundTag = classGroups.find(
+            (group) => String(group._id) === String(tag._id)
+        );
+
+        if (!foundTag) {
+            await User.findByIdAndUpdate(_id, {
+                $addToSet: {
+                    classGroups: {
+                        ...tag,
+                        startDate: new Date(tag.startDate),
+                        limitDate: new Date(tag.limitDate),
+                    },
+                },
             });
-        } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users');
+        } else {
+            await User.findByIdAndUpdate(_id, {
+                $set: {
+                    'classGroups.$[elem].startDate': new Date(tag.startDate),
+                    'classGroups.$[elem].limitDate': new Date(tag.limitDate),
+                    'classGroups.$[elem].groupCode': tag.groupCode,
+                },
+            }, {
+                arrayFilters: [{ 'elem._id': new mongoose.Types.ObjectId(tag._id) }],
+            });
         }
+
+        _messages.success(res, req, {
+            message: 'Tag de curso atualizada no usuário',
+        });
     },
 
     async evaluationProgress(req, res) {
@@ -2893,10 +3017,12 @@ module.exports = {
         try {
             const connectMap = await getConnectMap(true);
 
-            const fields = Object.entries(connectMap).map(([key, value]) => ({
-                display: defaultUserMap[key]?.label ?? key ?? value?.label,
-                value: key
-            })).filter((field) => field.value !== 'elegibility');
+            const fields = Object.entries(connectMap)
+                .map(([key, value]) => ({
+                    display: defaultUserMap[key]?.label ?? key ?? value?.label,
+                    value: key,
+                }))
+                .filter((field) => field.value !== 'elegibility');
 
             const eligibilityData = await getConnectEligibilities();
 
@@ -2905,7 +3031,7 @@ module.exports = {
             _messages.success(res, req, {
                 map: connectMap,
                 fields,
-                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd'],  // Campos que não devem ser alterados
+                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd', 'manager'], // Campos que não devem ser alterados
                 eligibility,
             });
         } catch (error) {
@@ -2982,5 +3108,5 @@ module.exports = {
     async logout(req, res) {
         await clearAuthCookies(req, res);
         res.status(200).json({ ok: true });
-    }
+    },
 };

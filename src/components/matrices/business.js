@@ -4,6 +4,7 @@ const { getTrailByIds, getTrailsWithTrackings } = require('../trails/business');
 const { User } = require('../users/model');
 const { string } = require('zod');
 const { ClassModel } = require('../courses/model');
+const RecommendedContent = require('../managers/schema/model');
 
 const business = {
     populateCoursesAndTrails: async (data) => {
@@ -37,29 +38,6 @@ const business = {
         return response;
     },
 
-    buildCoursesResponse: async (courses) => {
-        const response = courses.map((course) => {
-            return {
-                _id: course.courseID?.id,
-                title: course.courseID?.title,
-                description: course.courseID?.description,
-                concludedAt: course.users?.[0]?.presenceAt,
-                location: course.location,
-                type: 'Presencial',
-            };
-        });
-
-        return response;
-    },
-
-    sortCoursesByConcludedAt: async (courses) => {
-        return courses.sort((a, b) => {
-            const dateA = new Date(a.concludedAt).getTime();
-            const dateB = new Date(b.concludedAt).getTime();
-            return dateB - dateA; // Ordena do mais recente para o mais antigo
-        });
-    },
-
     populateUserFields: async (mappings, data) => {
         const isArray = Array.isArray(data.data);
         const dataToProcess = isArray ? data.data : [data.data];
@@ -90,8 +68,11 @@ const business = {
     },
 
     buildEvaluationsResultSuggestions: async (data, userNetworkLogin, userId) => {
+        //TODO: refatorar este código pois ao longo do tempo sua função foi mudando e agora está muito grande e confuso.
         if (!data?.skill_recommendations?.length) return [];
-
+        console.log(userId)
+        // uso de sets pois pode haver duplicatas dentre as recomendações
+        // e não faz sentido retornar o mesmo curso/trilha mais de uma vez
         const trailIds = new Set();
         const courseIds = new Set();
         for (const skill of data.skill_recommendations) {
@@ -99,11 +80,11 @@ const business = {
             (skill.coursesIds || []).forEach((c) => courseIds.add(c.courseId));
         }
 
-        const [trails, courses] = await Promise.all([
+        const [trails, courses, userRecommendations] = await Promise.all([
             getTrailsWithTrackings(Array.from(trailIds), userNetworkLogin),
             getCoursesByIds(Array.from(courseIds)),
+            module.exports.getUserRecommendations(userId)
         ]);
-
         const trailMap = new Map(trails.map((t) => [t._id.toString(), t]));
 
         const courseMap = new Map(
@@ -130,18 +111,25 @@ const business = {
             .select('_id name dateApplicationFinal courseID users.userID users.presence users.presenceAt')
             .sort({ _id: -1 })
             .lean();
-
         return data.skill_recommendations.map((skill) => {
+
             const skillTrails = (skill.trailIds || [])
-                .map(({ trailId, released }) => {
+                // Em caso de alta volumetria, modificar logica abaixo
+                .map(({ trailId, released: wasReleased }) => {
                     const trail = trailMap.get(trailId);
+                    const released = wasReleased || userRecommendations?.recommendedTrails?.some(
+                        (trail) => trail?.id?.toString() === trailId?.toString()
+                    ) || trail?.status === 'completed' || false;
                     return trail ? { ...trail, released } : null;
                 })
                 .filter(Boolean);
 
             const skillCourses = (skill.coursesIds || [])
-                .map(({ courseId, released }) => {
+                .map(({ courseId, released: wasReleased }) => {
                     const course = courseMap.get(courseId);
+                    const released = wasReleased || userRecommendations?.recommendedCourses?.some(
+                        (course) => course?.courseId?.toString() === courseId?.toString()
+                    ) || false;
                     const courseClass = courseClassesWithUsers.find(
                         (courseClass) => String(courseClass.courseID) === String(courseId)
                             && courseClass.users.some((user) => String(user.userID) === String(userId))
@@ -202,7 +190,30 @@ const business = {
             })),
         ];
     },
+
+    getUserLastPresenceInCourse: async (userId) => {
+        const classes = await getCoursesByUserID(userId);
+
+        return classes?.reduce((latestPresence, classItem) => {
+            classItem.users.forEach((user) => {
+                if (user._id.toString() === userId.toString() && user.presenceAt) {
+                    if (!latestPresence || user.presenceAt > latestPresence) {
+                        latestPresence = user.presenceAt;
+                    }
+                }
+            });
+            return latestPresence;
+        }, null);
+    },
+
+    getUserRecommendations: async (userId) => {
+        if (!userId) return [];
+
+        return await RecommendedContent.findOne({ userId }, 'recommendedCourses recommendedTrails userId');
+
+    }
 };
+
 const collectIds = (data, mappings) => {
     const ids = [];
     const traverse = (obj) => {
@@ -261,5 +272,7 @@ const processData = async (data, mappings, userMap) => {
     };
 
     return process(data);
+
+
 };
 module.exports = business;

@@ -8,6 +8,7 @@ const {
     ProgramModel,
     UsersWithProcessedTags,
     CourseModel,
+    CourseEvaluationModel,
 } = require('./model');
 const moment = require('moment');
 const mongoose = require('mongoose');
@@ -16,12 +17,13 @@ const {
     getDateTodayWithoutHours,
     addHours,
 } = require('../../utils/functions');
-const { checkEligibilityTagsAnd } = require('../sections/business');
+const { checkEligibilityTagsAnd, canRegisterOrCancel } = require('../sections/business');
 const eventsController = require('../calendar/events/controller');
 const { Group } = require('../groups/model');
+const ApiError = require('../../errors/ApiError');
 
 module.exports = {
-    uploadMaterial (material, author, folder) {
+    uploadMaterial(material, author, folder) {
         return new Promise(async (resolve, reject) => {
             try {
                 const nameFile = material.name.split('.');
@@ -38,7 +40,7 @@ module.exports = {
         });
     },
 
-    queryInstructorCourses (searchBy) {
+    queryInstructorCourses(searchBy) {
         const today = getDateTodayWithoutHours();
 
         const searchByClasule = searchBy ? { $text: { $search: searchBy } } : {};
@@ -63,7 +65,7 @@ module.exports = {
         };
     },
 
-    verifyValidity (dateInitial, dateFinal) {
+    verifyValidity(dateInitial, dateFinal) {
         const startDate = formatDateWithoutHours(dateInitial);
         const endDate = formatDateWithoutHours(dateFinal);
         const today = getDateTodayWithoutHours();
@@ -74,7 +76,7 @@ module.exports = {
         return false;
     },
 
-    getStoreUSers (store) {
+    getStoreUSers(store) {
         return new Promise(async (resolve, reject) => {
             try {
                 const users = await User.find(
@@ -92,7 +94,7 @@ module.exports = {
         });
     },
 
-    getCeaUsers () {
+    getCeaUsers() {
         return new Promise(async (resolve, reject) => {
             try {
                 const users = await User.find(
@@ -109,7 +111,7 @@ module.exports = {
         });
     },
 
-    getAppliedCourses (instructor, order, sort, skip, limit, searchBy, isAdmin) {
+    getAppliedCourses(instructor, order, sort, skip, limit, searchBy, isAdmin) {
         return new Promise(async (resolve, reject) => {
             try {
                 const query = isAdmin
@@ -159,7 +161,7 @@ module.exports = {
         });
     },
 
-    getClassByID (classID) {
+    getClassByID(classID) {
         return new Promise(async (resolve, reject) => {
             try {
                 const { _doc } = await ClassModel.findById(classID)
@@ -176,7 +178,7 @@ module.exports = {
         });
     },
 
-    returnProgramaID (programTitle) {
+    returnProgramaID(programTitle) {
         return new Promise(async (resolve, reject) => {
             try {
                 let programID;
@@ -199,7 +201,24 @@ module.exports = {
         });
     },
 
-    getCoursesByUserID (userID) {
+    async userHasSomePresence(userId, courseId, classId) {
+        return await ClassModel.findOne({
+            courseID: new mongoose.Types.ObjectId(courseId),
+            _id: { $ne: classId },
+            users: {
+                $elemMatch: {
+                    presence: true,
+                    $or: [
+                        { userID: userId },
+                        { _id: userId },
+                        { _id: mongoose.Types.ObjectId(userId) },
+                    ],
+                },
+            }
+        })
+    },
+
+    getCoursesByUserID(userID) {
         return new Promise(async (resolve, reject) => {
             try {
                 const classes = await ClassModel.find(
@@ -232,27 +251,39 @@ module.exports = {
                         match: { author: 'INSTRUTOR' },
                     })
                     .populate('instructor', ['name']);
-                const classesFilter = classes.filter((item) => {
-                    const usersFilter = item.users.filter((user) => {
-                        if (
-                            user.presence &&
-                            (user.userID === userID || user._id?.toString() === userID.toString())
-                        ) {
-                            return user;
+
+
+                const classesFilter = await Promise.all(
+                    classes.map(async (item) => {
+                        const usersFilter = item.users.filter((user) => {
+                            if (
+                                user.presence &&
+                                (user.userID === userID || user._id?.toString() === userID.toString())
+                            ) {
+                                return user;
+                            }
+                        });
+
+                        if (usersFilter.length > 0) {
+                            const evaluationVerify = await CourseEvaluationModel.find({
+                                classID: { $eq: item._id },
+                                studentID: { $eq: usersFilter[0]._id },
+                            });
+                            return { ...item._doc, evaluationAnswered: evaluationVerify.length > 0 };
                         }
-                    });
+                        return null;
+                    })
+                );
 
-                    if (usersFilter.length > 0) return item;
-                });
-
-                resolve(classesFilter);
+                // Remove nulls (classes that didn't match)
+                resolve(classesFilter.filter(Boolean));
             } catch (error) {
                 reject(error);
             }
         });
     },
 
-    checkEligibility (eligibilityUser, tagsAnd, tagsOr) {
+    checkEligibility(eligibilityUser, tagsAnd, tagsOr) {
         const eligibilitytagsAnd = eligibilityUser.map((eligibility) => eligibility.value);
 
         if (tagsAnd.length > 0) {
@@ -280,7 +311,7 @@ module.exports = {
      * @param {Record<string, string>[]} items
      * @returns {Promise<Record<string, string>[]>}
      */
-    async processAttendanceListImport (courseId, classId, items) {
+    async processAttendanceListImport(courseId, classId, items) {
         const nowDate = new Date();
 
         const courseInfo = await CourseModel.findById(courseId);
@@ -475,13 +506,12 @@ module.exports = {
         return { results, classInfo, courseInfo };
     },
 
-    async searchCourseBy (user, tags, start, end, courseId) {
+    async searchCourseBy(user, tags, start, end, courseId) {
         if (!user) {
             return [];
         }
 
         const events = await eventsController.getCalendarEventsByDate(start, end, user, tags);
-
         let calendarEvents = events;
 
         if (courseId) {
@@ -493,7 +523,7 @@ module.exports = {
         return calendarEvents;
     },
 
-    async getCoursesByIds (courseIds) {
+    async getCoursesByIds(courseIds) {
         const query = {
             deleted: 0,
             $or: [{ datefinal: null }, { datefinal: { $gte: new Date() } }],
@@ -505,8 +535,66 @@ module.exports = {
         return await CourseModel.find(query, 'title thumbPath banner').lean();
     },
 
-    async listJoin (user, classId) {
-        let course = null;
+    async listJoin(user, classId) {
+        let course = await ClassModel.findOne({ _id: classId });;
+
+        if (!course) {
+            throw new ApiError('Turma não encontrada.', 404);
+        }
+
+        const hasLimit = typeof course.limit === 'number' && course.limit > 0;
+
+        if (hasLimit && course.users.length >= course.limit) {
+            throw new ApiError('Não foi possível se inscrever: turma cheia.', 409);
+        }
+
+        const classesFromCourse = await ClassModel.find({
+            courseID: course.courseID,
+        });
+
+        const currentClasses = classesFromCourse.filter((c) => {
+            const canRegister = canRegisterOrCancel(c.dateApplicationInitial, c.registrationDeadline)
+            const canCancel = canRegisterOrCancel(c.dateApplicationInitial, c.cancellationDeadline)
+
+            return canRegister && canCancel
+        })
+
+        const removalPromises = currentClasses.map(async (classFromCourse) => {
+            if (classFromCourse._id.equals(classId)) {
+                return Promise.resolve();
+            }
+
+            const userInClass = classFromCourse.users.find(
+                (u) =>
+                    (u._id && u._id.toString() === user._id.toString()) ||
+                    (u.userID && u.userID.toString() === user._id.toString())
+            );
+
+            if (!userInClass) {
+                return Promise.resolve();
+            }
+
+            if (userInClass.presence === true) {
+                throw new ApiError('Não é possível mais cancelar sua inscrição nesta turma.', 400);
+            }
+
+            return ClassModel.findOneAndUpdate(
+                { _id: classFromCourse._id },
+                {
+                    $pull: {
+                        users: {
+                            $or: [
+                                { _id: user._id, presence: false },
+                                { userID: user._id, presence: false },
+                            ],
+                        },
+                    },
+                }
+            );
+        });
+
+        await Promise.all(removalPromises);
+
         course = await ClassModel.findOneAndUpdate(
             {
                 _id: classId,
@@ -530,41 +618,50 @@ module.exports = {
             { new: true }
         );
 
-        if (!course) {
-            course = await ClassModel.findOne({ _id: classId });
-        }
-
-        const classesFromCourse = await ClassModel.find({
-            courseID: course.courseID,
-        });
-
-        const removalPromises = classesFromCourse.map((classFromCourse) => {
-            const inClass = classFromCourse.users.some(
-                (u) => u._id == user._id || u.userID == user._id
-            );
-
-            if (classFromCourse._id.equals(classId) || !inClass) {
-                return Promise.resolve();
-            }
-            //SÓ REMOVER SE PRESENCE FOR FALSE
-
-            return ClassModel.findOneAndUpdate(
-                { _id: classFromCourse._id },
-                { $pull: { users: { _id: user._id, presence: false } } }
-            );
-        });
-
-        await Promise.all(removalPromises);
-
         return course;
     },
 
-    /**
-     * @param {Array} data
-     * @param {Array} classesFromUser
-     * @param {string} userId
-     * @returns {Array}
-     */
+    async processLocation(location) {
+        const LINK_REGEX = /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
+
+        if (!location) {
+            return {
+                isLocationUrl: false,
+                onlineLink: null,
+                displayLocation: '',
+                processedLocation: location
+            };
+        }
+
+        const isLocationUrl = LINK_REGEX.test(location);
+
+        return {
+            isLocationUrl,
+            onlineLink: isLocationUrl ? location : null,
+            displayLocation: isLocationUrl ? 'Online' : location,
+            processedLocation: isLocationUrl ? null : location
+        };
+    },
+    
+    async prepareBodyForMessage(bodyData, location) {
+        const dateApplicationInitial = moment(bodyData.dateApplicationInitial).subtract(3, 'hours');
+        const dateApplicationFinal = moment(bodyData.dateApplicationFinal).subtract(3, 'hours');
+        const formattedDateInitial = dateApplicationInitial.isValid() ? dateApplicationInitial.format('DD/MM/YYYY HH:mm') : '';
+        const formattedDateFinal = dateApplicationFinal.isValid() ? dateApplicationFinal.format('DD/MM/YYYY HH:mm') : '';
+
+        const { isLocationUrl, onlineLink } = await module.exports.processLocation(location);
+        
+        const processedBody = { ...bodyData, dateApplicationInitial: formattedDateInitial, dateApplicationFinal: formattedDateFinal };
+        if (isLocationUrl) {
+            delete processedBody.location;
+            processedBody.onlineLink = onlineLink;
+        }
+
+        console.log('Processed Body for Message:', processedBody);
+        
+        return processedBody;
+    },
+
     enrichCoursesWithClasses (data, classesFromUser, userId) {
         return data.map((course) => {
             let classes = classesFromUser.filter(c => c.courseID.toString() == course._id.toString());
@@ -590,5 +687,13 @@ module.exports = {
                 classes
             };
         });
+    },
+
+    async removeUsersFromClass(classId, userIds) {
+        //must receive array of userIds
+        return await ClassModel.findOneAndUpdate(
+            { _id: classId },
+            { $pull: { users: { _id: { $in: userIds.map((id) => mongoose.Types.ObjectId(id)) } } } }
+        );
     }
 };

@@ -33,12 +33,13 @@ formsRouter.get('/default', async (req, res) => {
     res.json(formWithConnectFields);
 });
 
-formsRouter.get('/admin', async (req, res) => {
+formsRouter.get('/admin/:readonly?', async (req, res) => {
+    const { readonly } = req.params;
     const form = await getAdminForm();
 
     const connectMap = await getConnectMap(true);
 
-    const formWithConnectFields = setConnectMapInForm(connectMap, form);
+    const formWithConnectFields = setConnectMapInForm(connectMap, form, readonly === 'true');
 
     res.json(formWithConnectFields);
 });

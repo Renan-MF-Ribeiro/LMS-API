@@ -1,20 +1,23 @@
 const passport = require('passport');
 const passportSaml = require('passport-saml');
-const OpenIDConnectStrategy = require('passport-openidconnect');
 const LocalStrategy = require('passport-local');
 
 const bcrypt = require('bcryptjs');
 const cryptoJS = require('crypto-js');
+const jwt = require('jsonwebtoken');
 
-const { log } = require('./logger');
-const { getRequestStrategyName } = require('./auth');
-const { session } = require('./session');
+const { log } = require('../logger');
+const { getRequestStrategyName } = require('../auth');
+const { session } = require('../session');
 
-const ApiError = require('../errors/ApiError');
+const ApiError = require('../../errors/ApiError');
 
-const { getLoginConfig } = require('../components/users/business');
-const { Log } = require('../components/logs/model');
-const { User } = require('../components/users/model');
+const { getLoginConfig } = require('../../components/users/business');
+const { Log } = require('../../components/logs/model');
+const { User } = require('../../components/users/model');
+const environment = require('../../environment');
+
+const CustomOAuth2Strategy = require('./strategies/customOauth2Strategy');
 
 passport.serializeUser((user, done) => {
     done(null, user);
@@ -50,29 +53,77 @@ async function createSamlPassportStrategy(config) {
     passport.use(strategy);
 }
 
+async function oauth2LogFunction(type, data) {
+    if (!environment.OAUTH2_LOG) return;
+
+    return Log.create({
+        type: `PASSPORT_${type.toUpperCase()}`,
+        component: `${data.step || 'oauth2LogFunction'}`,
+        route: `sso`,
+        dataNew: data
+    });
+}
+
 async function createOpenIdConnectStrategy(config) {
     log('createOpenIdConnectStrategy config', config);
     const strategyName = config.strategyName;
 
-    const strategy = new OpenIDConnectStrategy(
+    const strategy = new CustomOAuth2Strategy(
         {
-            issuer: config.issuer,
+            isOIDC: true,
             authorizationURL: config.authorizationUrl,
             tokenURL: config.tokenUrl,
-            userInfoURL: config.userInfoUrl,
+            userInfoUrl: config.userInfoUrl || null,
+            tokenType: config.tokenType || 'Bearer',
             clientID: config.clientId,
-            clientSecret: config.clientSecret,
+            clientSecret: config.clientSecret || undefined,
             callbackURL: config.callbackUrl,
-            authorizationParams: {
-                prompt: config.forceAuth ? 'login' : 'none',
-            },
-            scope: config.scope?.length ? config.scope : ['openid', 'profile'],
-
+            scope: config.scope?.length ? config.scope : ['openid'],
+            state: true,
+            proxy: true,
+            pkce: config.pkce || false,
+            forceAuth: config.forceAuth || false,
+            logFunction: async (data) => oauth2LogFunction('oidc', { strategyName, ...data }),
         },
-        async (issuer, profile, done) => {
-            profile.strategyName = strategyName;
-            profile.issuer = issuer;
+        async (accessToken, idToken, profile, done) => {
+            const decoded = jwt.decode(idToken, { complete: true });
+            const { alg, iss, sub, aud, exp, ...user } = decoded.payload;
 
+            if (user.email && !user.emails) {
+                user.emails = [{ value: user.email }]
+            }
+
+            await oauth2LogFunction('oidc', { step: 'result', strategyName, accessToken, idToken, profile, user, decoded });
+
+            return done(null, { ...user, ...profile });
+        }
+    );
+
+    passport.use(strategyName, strategy);
+}
+
+async function createOauth2Strategy(config) {
+    log('createOauth2Strategy config', config);
+    const strategyName = config.strategyName;
+
+    const strategy = new CustomOAuth2Strategy(
+        {
+            authorizationURL: config.authorizationUrl,
+            tokenURL: config.tokenUrl,
+            userInfoUrl: config.userInfoUrl || null,
+            tokenType: config.tokenType || 'Bearer',
+            clientID: config.clientId,
+            clientSecret: config.clientSecret || undefined,
+            callbackURL: config.callbackUrl,
+            scope: config.scope?.length ? config.scope : ['email'],
+            state: true,
+            proxy: true,
+            pkce: config.pkce || false,
+            forceAuth: config.forceAuth || false,
+            logFunction: async (data) => oauth2LogFunction('oauth2', { strategyName, ...data }),
+        },
+        async (accessToken, refreshToken, profile, done) => {
+            await oauth2LogFunction('oauth2', { step: 'result', strategyName, accessToken, refreshToken, profile });
             return done(null, profile);
         }
     );
@@ -155,13 +206,16 @@ async function authenticatePassport(req, res, next) {
 async function strategyHandler(config) {
     const strategyCreators = {
         saml: createSamlPassportStrategy,
-        openid: createOpenIdConnectStrategy
+        openid: createOpenIdConnectStrategy,
+        oauth2: createOauth2Strategy,
     };
 
     const createStrategy = strategyCreators[config.strategyType ?? 'saml'];
+
     if (!createStrategy) {
         throw new Error(`Estratégia desconhecida: ${config.strategyType}`);
     }
+
     return await createStrategy(config);
 }
 
