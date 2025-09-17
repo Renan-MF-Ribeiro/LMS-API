@@ -198,7 +198,7 @@ async function getInfoByUserId(
  * @function userHasEligibilityForTrails
  * @param {string|Types.ObjectId} userId - ID of the user to check eligibility for
  * @param {string[]} trailsIds - Array of trail IDs to check eligibility for
- * @param {string} [eligibilityType='some'] - Type of eligibility check: 'some' (at least one trail) or 'every' (all trails)
+ * @param {string} [eligibilityType='some'] - Type of eligibility check: 'some' (at least one trail) or 'every' (all trails) - default is 'some'
  * @returns {Promise<Object>} Object containing eligibility status and eligible trails
  * @returns {Promise<boolean>} returns.hasEligibility - Whether the user has eligibility based on the specified type
  * @returns {Promise<Object[]>} returns.trails - Array of eligible trail objects with populated items and evaluations
@@ -210,18 +210,18 @@ async function getInfoByUserId(
  * 3. Queries enabled, non-archived trails within the valid date range that match user tags
  * 4. Populates trail items and their evaluations (filtering for enabled/active records)
  * 5. Filters trails based on tag eligibility and excludes collaborative trails
- * 6. Determines eligibility based on the specified type (every/some matching trail IDs)
+ * 6. Determines eligibility based on the specified type (some/every matching trail IDs)
  * 
  * @example
  * // Check if user has eligibility for all specified trails
- * const result = await userHasEligibilityForTrails(req, ['trail1', 'trail2'], 'every');
+ * const result = await userHasEligibilityForTrails(userId, ['trail1', 'trail2'], 'every');
  * 
  * @example
  * // Check if user has eligibility for at least one trail
- * const result = await userHasEligibilityForTrails(req, ['trail1', 'trail2'], 'some');
+ * const result = await userHasEligibilityForTrails(userId, ['trail1', 'trail2'], 'some');
  */
 async function userHasEligibilityForTrails(userId, trailsIds, eligibilityType = 'some') {
-    if (!trailsIds?.length) return { hasEligibility: true, trails: [] };
+    if (!trailsIds?.length) return { hasEligibility: false, trails: [] };
 
     const user = await User.findById(new Types.ObjectId(userId)).lean();
 
@@ -249,6 +249,7 @@ async function userHasEligibilityForTrails(userId, trailsIds, eligibilityType = 
     }
 
     const trails = await Trail.find({
+        _id: { $in: trailsIds.map(id => new Types.ObjectId(id)) },
         enabled: true,
         archive: { $ne: true },
         startDate: { $lte: new Date() },
@@ -259,25 +260,15 @@ async function userHasEligibilityForTrails(userId, trailsIds, eligibilityType = 
         ],
     })
         .select({ _id: 1, title: 1, tags: 1, tagsAnd: 1 })
-        .populate({
-            path: 'items.itemID',
-            match: { enabled: true, archive: { $ne: true } },
-            select: { _id: 1, title: 1 },
-            populate: {
-                path: 'idEvaluation',
-                match: { active: 1, deleted: 0 },
-                select: { _id: 1, description: 1 },
-            },
-        })
         .lean();
 
     const eligibleTrails = trails.filter(trail => checkEligibilityTagsAnd(userTags, trail.tagsAnd, trail.tags) && !trail.collaborative);
 
-    const eligibleTrailsMap = eligibleTrails.map(trail => String(trail._id));
+    const eligibleTrailsSet = new Set(eligibleTrails.map(trail => String(trail._id)));
 
     const hasEligibility = eligibilityType === 'some'
-        ? trailsIds.some(id => eligibleTrailsMap.includes(String(id)))
-        : trailsIds.every(id => eligibleTrailsMap.includes(String(id)));
+        ? trailsIds.some(id => eligibleTrailsSet.has(String(id)))
+        : trailsIds.every(id => eligibleTrailsSet.has(String(id)));
 
     return { hasEligibility, trails: eligibleTrails };
 }

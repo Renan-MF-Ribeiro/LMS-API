@@ -25,17 +25,17 @@ async function checkEvaluationEligibility(userId, idEvaluation) {
         .sort({ _id: -1 })
         .lean();
 
-    if (!items?.length) throw new ApiError('Usuário não possui elegibilidade e/ou item indisponível', 403);
+    if (!items?.length) throw new ApiError('Não possui elegibilidade e/ou item indisponível', 403);
 
     const trailsWithItem = await Trail.find({
         'items.itemID': { $in: items.map(i => i._id) },
-    });
+    }).lean();
 
-    if (!trailsWithItem.length) throw new ApiError('Usuário não possui elegibilidade e/ou item indisponível', 403);
+    if (!trailsWithItem.length) throw new ApiError('Não possui elegibilidade e/ou item indisponível', 403);
 
     const { hasEligibility, trails } = await userHasEligibilityForTrails(userId, trailsWithItem.map(t => t._id));
 
-    if (!hasEligibility) throw new ApiError('Usuário não possui elegibilidade e/ou item indisponível', 403);
+    if (!hasEligibility) throw new ApiError('Não possui elegibilidade e/ou item indisponível', 403);
 
     return { hasEligibility, trails };
 }
