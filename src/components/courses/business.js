@@ -644,8 +644,8 @@ module.exports = {
     },
     
     async prepareBodyForMessage(bodyData, location) {
-        const dateApplicationInitial = moment(bodyData.dateApplicationInitial);
-        const dateApplicationFinal = moment(bodyData.dateApplicationFinal);
+        const dateApplicationInitial = moment(bodyData.dateApplicationInitial).subtract(3, 'hours');
+        const dateApplicationFinal = moment(bodyData.dateApplicationFinal).subtract(3, 'hours');
         const formattedDateInitial = dateApplicationInitial.isValid() ? dateApplicationInitial.format('DD/MM/YYYY HH:mm') : '';
         const formattedDateFinal = dateApplicationFinal.isValid() ? dateApplicationFinal.format('DD/MM/YYYY HH:mm') : '';
 
