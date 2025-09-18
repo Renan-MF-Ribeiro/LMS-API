@@ -614,11 +614,10 @@ module.exports = {
                         origin: 'user',
                     },
                 },
-            },
-            { new: true }
+            }
         );
 
-        return course;
+        return course ? course._doc : null;
     },
 
     async processLocation(location) {
