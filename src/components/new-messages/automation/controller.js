@@ -22,23 +22,13 @@ module.exports = {
                 searchBy,
             });
 
-            await _functions.recordLog(
-                req,
-                'SUCCESS',
-                `Listagem de automações realizada com sucesso. Total: ${total}`,
-                'messages/automations',
-                'listMessageAutomations',
-                { total, searchBy },
-                null
-            );
-
             _messages.success(res, req, { data, total });
         } catch (error) {
             console.log(error);
             
             await _functions.recordLog(
                 req,
-                'ERROR',
+                'AUTOMATION_ERROR',
                 `Erro ao listar automações: ${error.message}`,
                 'messages/automations',
                 'listMessageAutomations',
@@ -63,7 +53,7 @@ module.exports = {
             
             await _functions.recordLog(
                 req,
-                'CREATE',
+                'AUTOMATION_CREATE',
                 `Automação criada com sucesso: ${automation.name}`,
                 'messages/automations',
                 'createMessageAutomation',
@@ -80,7 +70,7 @@ module.exports = {
             
             await _functions.recordLog(
                 req,
-                'ERROR',
+                'AUTOMATION_ERROR',
                 `Erro ao criar automação: ${error.message}`,
                 'messages/automations',
                 'createMessageAutomation',
@@ -122,7 +112,7 @@ module.exports = {
 
             await _functions.recordLog(
                 req,
-                'UPDATE',
+                'AUTOMATION_UPDATE',
                 `Automação atualizada com sucesso: ${messageAutomation.name || id}`,
                 'messages/automations',
                 'updateMessageAutomation',
@@ -139,7 +129,7 @@ module.exports = {
             
             await _functions.recordLog(
                 req,
-                'ERROR',
+                'AUTOMATION_ERROR',
                 `Erro ao atualizar automação ${req.params.id}: ${error.message}`,
                 'messages/automations',
                 'updateMessageAutomation',
@@ -178,7 +168,7 @@ module.exports = {
 
             await _functions.recordLog(
                 req,
-                'UPDATE',
+                'AUTOMATION_UPDATE',
                 `Status da automação alterado: ${currentAutomation?.name || messageAutomationId} - ${previousStatus ? 'ATIVO' : 'INATIVO'} → ${newActiveStatus ? 'ATIVO' : 'INATIVO'}`,
                 'messages/automations',
                 'toggleActive',
@@ -186,7 +176,7 @@ module.exports = {
                 { isActive: previousStatus, automationId: messageAutomationId },
                 null,
                 true,
-                'UPDATE'
+                'AUTOMATION_UPDATE'
             );
 
             _messages.success(res, req, newActiveStatus);
@@ -195,7 +185,7 @@ module.exports = {
             
             await _functions.recordLog(
                 req,
-                'ERROR',
+                'AUTOMATION_ERROR',
                 `Erro ao alterar status da automação ${req.params.messageAutomationId}: ${error.message}`,
                 'messages/automations',
                 'toggleActive',
