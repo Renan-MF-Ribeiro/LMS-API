@@ -3031,7 +3031,7 @@ module.exports = {
             _messages.success(res, req, {
                 map: connectMap,
                 fields,
-                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd', 'manager'], // Campos que não devem ser alterados
+                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd', 'manager', 'loginType'], // Campos que não devem ser alterados
                 eligibility,
             });
         } catch (error) {

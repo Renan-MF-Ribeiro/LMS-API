@@ -486,7 +486,7 @@ module.exports = {
             type: origin,
             updatedAt: new Date(),
             info: null,
-            recievedData: { ...data, password: undefined },
+            receivedData: { ...data, password: undefined },
         }
 
         data.password = [
