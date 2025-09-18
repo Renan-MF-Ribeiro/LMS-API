@@ -126,7 +126,7 @@ module.exports = {
                 `Automação atualizada com sucesso: ${messageAutomation.name || id}`,
                 'messages/automations',
                 'updateMessageAutomation',
-                messageAutomation,
+                req.body,
                 currentAutomation,
                 null,
                 true,
