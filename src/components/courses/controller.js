@@ -1636,7 +1636,8 @@ module.exports = {
                 class: classBodyForMessage,
                 courses: true,
             };
-            await createMessagesFromBackend(message);
+
+            if(course) await createMessagesFromBackend(message);
 
             success(res, req, course);
         } catch (error) {
