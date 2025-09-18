@@ -27,7 +27,7 @@ const statuses = Object.freeze({
 });
 
 const optionsSchema = {
-    strict: 'throw',
+    strict: false,
     timestamps: true,
     collation: { locale: 'en_US', strength: 1 },
 };
@@ -93,7 +93,6 @@ const userSchema = new mongoose.Schema(
         postalCode: { type: String, trim: true },
         district: { type: String, trim: true },
         tags: { type: Array, default: [] },
-        roles: { type: String, trim: true },
         profilePhoto: { type: String, trim: true, required: false },
         acceptTerms: { type: Boolean, default: false },
         acceptTermsCollaboration: { type: Boolean, default: false },
@@ -167,10 +166,15 @@ const userSchema = new mongoose.Schema(
             required: false,
             default: 'BOTH',
         },
+        
+        reasonCode: { type: String, default: null, required: false },
+        initials: { type: String, default: null, required: false },
+        deviceId: { type: String, default: null, required: false },
+        enrollManager: { type: String, default: null, required: false },
+        civilName: { type: String, default: null, required: false },
+
     },
-    {
-        ...optionsSchema,
-    }
+    optionsSchema
 );
 
 const blockLoginSchema = new mongoose.Schema(
@@ -231,62 +235,6 @@ userSchema.index({
     registration: 'text',
     status: 'text',
 });
-
-const mapUserOld = {
-    LOGIN: 'networkLogin',
-    SENHA: 'password',
-    DATA_CRIACAO: 'createDate',
-    NOME: 'name',
-    EMAIL: 'email',
-    MATRICULA: 'registration',
-    STATUS: 'status',
-    CPF: 'cpf',
-    DATA_NASC: 'birthDate',
-    IDENTIDADE_DE_GENERO: 'genderIdentity',
-    PAIS: 'country',
-    CIDADE: 'city',
-    ESTADO: 'state',
-    UF: 'state',
-    EMPRESA: 'company',
-    ADMISSAO: 'admission',
-    LOCALIDADE: 'locality',
-    CARGO: 'office',
-    NIVEL_HIERARQUICO: 'hierarchicalLevel',
-    TAREFA: 'task',
-    CENTRO_DE_CUSTO: 'costCenter',
-    DESCRICAO_CENTRO_DE_CUSTO: 'costCenterDescription',
-    LOJA: 'store',
-    IDENTIFICACAO_LOJA: 'storeCode',
-    GRUPO_LOJA: 'storeGroup',
-    DISTRITAL: 'plant',
-    GESTOR: 'manager',
-    MATRICULA_GESTOR: 'managerRegistration',
-    NOME_GESTOR: 'managerName',
-    AREA: 'area',
-    DEPARTAMENTO: 'department',
-    ORIENTACAO_SEXUAL: 'sexualIdentity',
-    SEXO: 'gender',
-    RACE: 'race',
-    TELEFONE: 'phone',
-    NACIONALIDADE: 'nationality',
-    PCD: 'pcd',
-    DEFICIENCIA: 'disability',
-    CODIGO_CARGO: 'officeCode',
-    ENDERECO: 'address',
-    NUMERO: 'number',
-    COMPLEMENTO: 'complement',
-    BAIRRO: 'district',
-    CEP: 'postalCode',
-    CODIGO_POSICAO: 'positionCode',
-    TIPO_POSICAO: 'typePosition',
-    TEMPO_FUNCAO: 'timeFunction',
-    PAPEL: 'roles',
-    VP: 'vp',
-    NEGOCIO: 'business',
-    OPCIONAL_ELEGIBILIDADE1: 'optionalEligibility1',
-    OPCIONAL_ELEGIBILIDADE2: 'optionalEligibility2',
-    OPCIONAL_ELEGIBILIDADE3: 'optionalEligibility3',
-};
 
 const defaultUserMap = {
     networkLogin: {
@@ -652,6 +600,13 @@ const defaultUserMap = {
         type: 'string',
         config: null,
     },
+    initials: {
+        field: 'INICIAIS',
+        label: 'Iniciais',
+        activeInForms: true,
+        type: 'string',
+        config: null,
+    },
     n1: {
         field: 'N1',
         label: 'N1',
@@ -740,8 +695,10 @@ const defaultUserMap = {
         field: 'TIPO_LOGIN',
         label: 'Tipo de login',
         activeInForms: true,
-        type: 'string',
-        config: null,
+        type: 'selection',
+        config: {
+            options: ['SSO', 'FORM', 'BOTH'],
+        },
     },
 };
 
@@ -891,7 +848,6 @@ const userProjection = {
 
 const User = mongoose.model('users', userSchema);
 const UserTest = mongoose.model('users_test', userTestSchema);
-// const UserVolume = mongoose.model('users_volume', userSchemaVolume)
 const Block = mongoose.model('block_login', blockLoginSchema);
 const LastLogin = mongoose.model('last_login', lastLoginSchema);
 
@@ -903,7 +859,6 @@ module.exports = {
     UserTest,
     defaultUserMap,
     defaultOnboardingUserMap,
-    mapUserOld,
     Block,
     LastLogin,
     userSchema,
