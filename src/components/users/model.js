@@ -158,7 +158,7 @@ const userSchema = new mongoose.Schema(
             },
             info: { type: String, required: false, trim: true },
             updatedAt: { type: Date, required: false },
-            recievedData: { type: Object, required: false }
+            receivedData: { type: Object, required: false }
         },
         loginType: {
             type: mongoose.Schema.Types.Mixed,
