@@ -241,6 +241,7 @@ const CronConfigModel = ConfigModel.discriminator(
                         },
                         userFTP: {
                             active: { type: Boolean, default: false },
+                            cronExpression: { type: String, default: '00 19 * * *' },
                         },
                         courseRelease: {
                             active: { type: Boolean, default: false },
