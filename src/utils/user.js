@@ -233,7 +233,7 @@ async function userHasEligibilityForTrails(userId, trailsIds, eligibilityType = 
 
     const currentDate = new Date();
 
-    if (user.classGroups.length > 0) {
+    if (user.classGroups?.length > 0) {
         for (const classGroup of user.classGroups) {
             if (
                 classGroup.status === 2 &&
