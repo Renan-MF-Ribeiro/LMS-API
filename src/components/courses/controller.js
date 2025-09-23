@@ -26,7 +26,7 @@ const { sendMessageToKafka, processTargetUsers } = require('../new-messages/busi
 
 const { internalServer, success, badRequest } = require('../../utils/messages');
 
-const { pagination, ordernation, getUserByToken, isDateOutOfRange } = require('../../utils/functions');
+const { pagination, ordernation, getUserByToken, isDateOutOfRange, slugify } = require('../../utils/functions');
 
 const {
     uploadMaterial,
@@ -1027,7 +1027,7 @@ module.exports = {
             const file = Buffer.from(data, 'binary');
 
             res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `attachment; filename=${course.title}.pdf`);
+            res.setHeader('Content-Disposition', `attachment; filename=${slugify(course.title)}.pdf`);
             res.send(file);
         } catch (error) {
             console.error(error);
