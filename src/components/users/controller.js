@@ -673,6 +673,7 @@ module.exports = {
         let user = await User.findOne({
             _id: new mongoose.Types.ObjectId(req.user._id),
         }).lean();
+
         if (user.loginType && user.loginType !== 'FORM' && user.loginType !== 'BOTH') {
             return _messages.forbidden(
                 res,
@@ -1139,17 +1140,27 @@ module.exports = {
                 res,
                 req,
                 { status: 'Sucesso', userEmail },
-                'Email para recupera senha disparado',
+                'Email para recuperação de senha disparado',
                 'users',
                 'recoveryPassword',
-                [],
+                [{ userId: user._id, email: user.email }],
                 [],
                 true,
                 'RECOVERY PASSWORD'
             );
         }
 
-        return _messages.success(res, req, password_new);
+        return _messages.success(
+            res,
+            req,
+            password_new,
+            'Sucesso',
+            'users',
+            'recoveryPassword',
+            [{ userId: user._id, email: user.email }],
+            [],
+            true,
+            'RECOVERY PASSWORD');
     },
 
     async changePassword(req, res) {
@@ -3020,7 +3031,7 @@ module.exports = {
             _messages.success(res, req, {
                 map: connectMap,
                 fields,
-                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd', 'manager'], // Campos que não devem ser alterados
+                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd', 'manager', 'loginType'], // Campos que não devem ser alterados
                 eligibility,
             });
         } catch (error) {

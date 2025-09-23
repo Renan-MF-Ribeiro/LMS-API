@@ -13,7 +13,7 @@ const mentorConfigController = require('../mentoring/config/controller');
 
 
 module.exports = {
-    async getChannels (req, res) {
+    async getChannels(req, res) {
         try {
             const { sort, order } = _functions.ordernation(req);
             const { skip, limit } = _functions.pagination(req);
@@ -24,36 +24,38 @@ module.exports = {
             const features = await getDbCurrentFeatures(req);
 
             if (!features?.alura) {
-                OptionalChannel.push({ type: { $ne: 'alura' } })
+                OptionalChannel.push({ type: { $ne: 'alura' } });
             }
 
             if (!features?.collaborationComponent) {
-                OptionalChannel.push({ type: { $ne: 'collaboration' } })
+                OptionalChannel.push({ type: { $ne: 'collaboration' } });
             }
 
             const query = {
                 $and: [
                     ...OptionalChannel
                 ]
-            }
+
+            };
+
 
             if (searchBy) {
                 query.$and.push({
                     title: { $regex: searchBy, $options: 'i' }
-                })
+                });
             }
 
             if (req?.segmentation) {
-                handleSegmentationOnQuery(req, 'owner', query)
+                handleSegmentationOnQuery(req, 'owner', query);
             }
 
             const total = await Channel.find(query).countDocuments();
 
-            const channels = await Channel.find(query).sort({ [order]: sort })
+            const channels = await Channel.find(query).sort({ [order]: sort });
 
             _messages.success(res, req, {
                 data: channels,
-                total,
+                total
             });
         } catch (error) {
             _messages.internalServer(
@@ -79,10 +81,17 @@ module.exports = {
         const user = await _functions.getUserByToken(req);
         const features = await getDbCurrentFeatures(req);
 
+        const tagsIn = tags.map((tag) => tag.value);
+
         const query = {
             $and: [
-                { tags: { $in: tags.map((tag) => tag.value) } },
-                { enabled: true }
+                { enabled: true },
+                {
+                    $or: [
+                        { tags: { $in: tagsIn } },
+                        { tagsAnd: { $in: tagsIn } }
+                    ]
+                }
             ]
         };
 
@@ -122,7 +131,7 @@ module.exports = {
                 $and: [
                     { _id: { $in: channel.idSections } }
                 ]
-            }
+            };
 
             const sections = await Section.find(sectionQuery).select('trails');
 
@@ -136,7 +145,7 @@ module.exports = {
                 $and: [
                     { _id: { $in: trailsIds } }
                 ]
-            }
+            };
 
             const trails = await Trail.find(trailQuery);
 
@@ -152,7 +161,7 @@ module.exports = {
         return _messages.success(res, req, channels);
     },
 
-    async create (req, res) {
+    async create(req, res) {
         try {
             let body = JSON.parse(req.fields.payload);
 
@@ -177,7 +186,7 @@ module.exports = {
             }
 
             if (req?.segmentation) {
-                await handleSegmentationOnCreate(req, body)
+                await handleSegmentationOnCreate(req, body);
             }
 
             const channel = await Channel.create(body);
@@ -205,7 +214,7 @@ module.exports = {
         }
     },
 
-    async update (req, res) {
+    async update(req, res) {
         try {
             let body = JSON.parse(req.fields.payload);
             const channelId = body.channelId;
@@ -216,13 +225,13 @@ module.exports = {
                     (key) => req.files[key]
                 );
 
-                let indexBannersWithNoPath = body.banners.reduce(function (
-                    r,
-                    v,
-                    i
-                ) {
-                    return r.concat(typeof v.path != 'string' ? i : []);
-                },
+                let indexBannersWithNoPath = body.banners.reduce(function(
+                        r,
+                        v,
+                        i
+                    ) {
+                        return r.concat(typeof v.path != 'string' ? i : []);
+                    },
                     []);
 
                 for (let index in indexBannersWithNoPath) {
@@ -272,7 +281,7 @@ module.exports = {
         }
     },
 
-    async delete (req, res) {
+    async delete(req, res) {
         try {
             const findChannel = await Channel.find({ _id: req.params.id });
             if (findChannel.length) {
@@ -311,7 +320,7 @@ module.exports = {
         }
     },
 
-    async updatePosition (req, res) {
+    async updatePosition(req, res) {
         try {
             const channels = req.body;
 
@@ -331,5 +340,5 @@ module.exports = {
                 '/updatePosition'
             );
         }
-    },
+    }
 };

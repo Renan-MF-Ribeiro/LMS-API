@@ -614,11 +614,10 @@ module.exports = {
                         origin: 'user',
                     },
                 },
-            },
-            { new: true }
+            }
         );
 
-        return course;
+        return course ? course._doc : null;
     },
 
     async processLocation(location) {
@@ -644,8 +643,8 @@ module.exports = {
     },
     
     async prepareBodyForMessage(bodyData, location) {
-        const dateApplicationInitial = moment(bodyData.dateApplicationInitial);
-        const dateApplicationFinal = moment(bodyData.dateApplicationFinal);
+        const dateApplicationInitial = moment(bodyData.dateApplicationInitial).subtract(3, 'hours');
+        const dateApplicationFinal = moment(bodyData.dateApplicationFinal).subtract(3, 'hours');
         const formattedDateInitial = dateApplicationInitial.isValid() ? dateApplicationInitial.format('DD/MM/YYYY HH:mm') : '';
         const formattedDateFinal = dateApplicationFinal.isValid() ? dateApplicationFinal.format('DD/MM/YYYY HH:mm') : '';
 

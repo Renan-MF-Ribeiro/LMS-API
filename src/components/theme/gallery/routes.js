@@ -7,4 +7,5 @@ module.exports = express.Router()
     .put('/', formidable(), validateTokenRoute, _controller.create)
     .put('/setDefault', validateTokenRoute, isEngagementManager, _controller.setDefault)
     .get('/', _controller.list)
+    .delete('/:imageId', _controller.deleteImage)
 

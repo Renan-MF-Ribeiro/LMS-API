@@ -358,6 +358,7 @@ module.exports = {
             if (channelId) {
                 query['_id'] = { $in: trailsIdArr };
             }
+
             let trails = await populateTrails(true, query);
             const allTrackingUser = await Tracking.find({
                 userLogin: { $eq: user.networkLogin },

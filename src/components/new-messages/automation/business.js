@@ -111,6 +111,15 @@ module.exports = {
 
         return messageAutomation.isActive;
     },
+
+    async getMessageAutomationById(id) {
+        try {
+            return await MessageAutomation.findById(id);
+        } catch (error) {
+            console.log('Error getting automation by ID:', error);
+            return null;
+        }
+    },
 };
 
 async function toggleCronsIsActive(cronIds) {

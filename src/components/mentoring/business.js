@@ -28,7 +28,7 @@ async function populateUserFields(mappings, data) {
     // Buscar usuários de uma só vez
     const users = await User.find(
         { _id: { $in: ids } },
-        '_id name profilePhoto email office'
+        '_id name profilePhoto email office status'
     ).lean();
 
     const usersWithStringIds = users.map((user) => ({
@@ -56,7 +56,7 @@ async function populateBlockedUserFields(data) {
 
     const users = await User.find(
         { _id: { $in: ids } },
-        '_id name profilePhoto email office'
+        '_id name profilePhoto email office status'
     ).lean();
 
     const usersWithBlockedAt = users.map(user => {
