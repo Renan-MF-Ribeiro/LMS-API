@@ -459,70 +459,18 @@ const TrackingController = {
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
-            if (filterByEligibility === 'true') {
-                console.log('APLICANDO FILTRO');
-                try {
-                    const user = await User.findOne({ networkLogin: userLogin });
-                    if (user) {
-                        // Get user tags
-                        const userTags = [];
+            const trailPromises = trails.map((t) => processTrailTracking(t, allTrackingUser));
 
-                        if (user.groupsAD && user.groupsAD.length > 0) {
-                            const groups = await Group.find({ name: { $in: user.groupsAD } });
-                            for (const group of groups) {
-                                if (group.tags && group.tags.length > 0) {
-                                    userTags.push(...group.tags);
-                                }
-                            }
-                        }
+            const trailsWithTracking = await Promise.all(trailPromises);
+            const totalTrails = await Trail.find(query).countDocuments();
 
-                        if (user.tags && user.tags.length > 0) {
-                            userTags.push(...user.tags);
-                        }
-
-                        trails = trails.filter(trail => {
-                            // Check if user has any matching tag with the trail
-                            if (trail.tags && trail.tags.length > 0) {
-                                for (const trailTag of trail.tags) {
-                                    for (const userTag of userTags) {
-                                        if (userTag.value === trailTag.value) {
-                                            return true;
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Check tagsAnd if present
-                            if (trail.tagsAnd && trail.tagsAnd.length > 0) {
-                                const isEligible = trail.tagsAnd.every(trailTag => {
-                                    return userTags.some(userTag => userTag.value === trailTag.value);
-                                });
-                                if (isEligible) {
-                                    return true;
-                                }
-                            }
-
-                            return false;
-                        });
-                    }
-                } catch (error) {
-                    console.error('Error filtering trails by eligibility:', error);
-                }
+            if (trailsWithTracking.length === 0) {
+                return _messages.success(res, req, {
+                    totalTrails,
+                    processedTrailsWithTracking,
+                });
             }
 
-            for (const trail of trails) {
-                const processedTrail = processTrailTracking(
-                    trail,
-                    allTrackingUser
-                );
-                trailsWithTracking.push(processedTrail);
-            }
-
-            let totalTrails;
-            if (filterByEligibility === 'true' && trails.length < await Trail.find({ ...query }).countDocuments()) {
-            } else {
-                totalTrails = await Trail.find({ ...query }).countDocuments();
-            }
 
             for (const { trail } of trailsWithTracking) {
                 const trailItems = trail?.items;
