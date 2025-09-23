@@ -26,7 +26,10 @@ const {
     isSectionTrailInfo,
     isValidSectionTrailInfo,
     recommendedTrailsSections,
-    recommendedCoursesSections
+    recommendedCoursesSections,
+    getContentEligibilityParameterByUserId,
+    retrieveUserContent,
+    getBannersFromContent
 } = require('./business');
 
 const { getStudentCourses } = require('../home/business');
@@ -45,7 +48,7 @@ const { matricesApi } = require('../matrices/http-adapter');
 
 const { ObjectId } = require('mongoose').Types;
 
-function parseSectionBodyTrails(req) {
+function parseSectionBodyTrails (req) {
     return req.body.trails?.map(trail => {
         const trailId = getSectionTrailId(trail);
 
@@ -64,7 +67,7 @@ function parseSectionBodyTrails(req) {
     }) ?? [];
 }
 
-async function fetchMatricesData(authorization, userId) {
+async function fetchMatricesData (authorization, userId) {
     try {
         const { data } = await matricesApi.get(`/users/${userId}`, {
             headers: {
@@ -82,7 +85,7 @@ async function fetchMatricesData(authorization, userId) {
 }
 
 module.exports = {
-    async returnSections(req, res) {
+    async returnSections (req, res) {
         try {
             const searchBy = req.query.searchBy;
 
@@ -126,7 +129,7 @@ module.exports = {
         }
     },
 
-    async createSection(req, res) {
+    async createSection (req, res) {
         try {
             const verify = await Section.find({
                 title: { $eq: req.body.title },
@@ -187,7 +190,7 @@ module.exports = {
         }
     },
 
-    async updateSection(req, res) {
+    async updateSection (req, res) {
         try {
             const { _id } = req.body;
             const verify = await Section.find({
@@ -226,7 +229,7 @@ module.exports = {
                 );
             }
         } catch (error) {
-            console.log(error);
+            console.error(error);
             _messages.internalServer(
                 res,
                 req,
@@ -238,7 +241,7 @@ module.exports = {
         }
     },
 
-    async deleteSection(req, res) {
+    async deleteSection (req, res) {
         try {
             const { id } = req.params;
             const section = await Section.findById(id);
@@ -281,7 +284,7 @@ module.exports = {
         }
     },
 
-    async getSectionsElegibles(req, res) {
+    async getSectionsElegibles (req, res) {
         const { trailLimit: queryTrailLimit = '25', channel: channelId, networkLogin, ...filter } = req.query;
 
         const trailLimit = queryTrailLimit ? Number(queryTrailLimit) : null;
@@ -421,7 +424,7 @@ module.exports = {
                 sectionToShow.recommendedTrailsSectionInfo ? recommendedTrailsSections(filteredTrails, user._id, sectionToShow.recommendedTrailsSectionInfo) : Promise.resolve([]),
             ]);
 
-            function limitArray(section) {
+            function limitArray (section) {
                 if (!section) return [];
 
                 if (!trailLimit) return section;
@@ -495,7 +498,77 @@ module.exports = {
         }
     },
 
-    async getCollaborationSectionDetail(req, res) {
+    async getUserAccessibleContent (req, res) {
+        try {
+            const { userId } = req.query;
+
+            const { user, tags } = await getContentEligibilityParameterByUserId(userId);
+
+            const userContent = await retrieveUserContent(tags, user);
+
+            _messages.success(res, req, userContent);
+        } catch (error) {
+            console.log(error);
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'sections',
+                '/elegiblesContents'
+            );
+        }
+    },
+
+    async getChannelBanners (req, res) {
+        try {
+            const { channelId } = req.query;
+            const user = getUserByToken(req);
+            const tags = await getTagsElegiblesByToken(req);
+            let sectionInfos = [];
+            let trailsIdArr = [];
+            let cBanners = [];
+
+            if (channelId) {
+                const { idSections, banners: channelBanners } = await Channel.findById(channelId).select('idSections banners  -_id');
+
+                const dbSections = await Section.find({ _id: { $in: idSections }, active: 1 });
+
+                sectionInfos = await populateSectionTrails(
+                    dbSections,
+                    { select: 'tags tagsAnd _id collaborative' }
+                );
+
+                const trailsInSections = sectionInfos.map(({ trails }) => {
+                    return {
+                        trails: trails.filter(
+                            (trail) => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative
+                        ).map(trail => trail._id)
+                    };
+                });
+                cBanners = channelBanners || [];
+                trailsIdArr = trailsInSections.flatMap((e) => e.trails);
+            }
+
+            const userContent = await retrieveUserContent(tags, user, trailsIdArr);
+            const itemBanners = getBannersFromContent(userContent);
+            const banners = [...cBanners, ...itemBanners];
+
+            _messages.success(res, req, banners);
+        } catch (error) {
+            console.log(error);
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'sections',
+                '/banners'
+            );
+        }
+    },
+
+    async getCollaborationSectionDetail (req, res) {
         try {
             const sectionId = req.params.id;
 
@@ -577,7 +650,7 @@ module.exports = {
         }
     },
 
-    async getSectionDetail(req, res) {
+    async getSectionDetail (req, res) {
         const sectionId = req.params.id;
         const channelId = req.query?.channel ?? null;
 
@@ -705,7 +778,7 @@ module.exports = {
 
         let responseSection;
 
-        function setResponse(fnResponse) {
+        function setResponse (fnResponse) {
             if (Array.isArray(fnResponse)) {
                 return fnResponse.find((e) => String(e._id) === String(section._id))
                     ?? { ...section, trails: [] };
@@ -805,7 +878,7 @@ module.exports = {
         res.json(filteredTrails);
     },
 
-    async getSectionsFormation(req, res) {
+    async getSectionsFormation (req, res) {
         try {
             const searchBy = req.query.searchBy;
             const query = searchBy
@@ -845,7 +918,7 @@ module.exports = {
         }
     },
 
-    async getSectionsElegiblesNew(req, res) {
+    async getSectionsElegiblesNew (req, res) {
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
@@ -982,7 +1055,7 @@ module.exports = {
         }
     },
 
-    async updatePosition(req, res) {
+    async updatePosition (req, res) {
         try {
             const sections = req.body;
 
@@ -1004,7 +1077,7 @@ module.exports = {
         }
     },
 
-    async changeStatus(req, res) {
+    async changeStatus (req, res) {
         const { id, status } = req.params;
 
         const section = await Section.findById(id);
@@ -1020,3 +1093,5 @@ module.exports = {
         _messages.success(res, req, 'Status alterado com sucesso');
     }
 };
+
+
