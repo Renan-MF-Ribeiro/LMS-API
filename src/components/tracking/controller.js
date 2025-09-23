@@ -426,7 +426,7 @@ const TrackingController = {
                     { expiredCompletion: { $exists: false } },
                     { expiredCompletion: { $eq: null } },
                 ],
-            })
+            }, '-__v -lastState -isAllowedToSendXAPI -interactions -suspendedData')
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));;
@@ -456,9 +456,7 @@ const TrackingController = {
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
-            const trailPromises = trails.map((t) => processTrailTracking(t, allTrackingUser));
-
-            const trailsWithTracking = await Promise.all(trailPromises);
+            const trailsWithTracking = trails?.map((t) => processTrailTracking(t, allTrackingUser));
             const totalTrails = await Trail.find(query).countDocuments();
 
             if (trailsWithTracking.length === 0) {
@@ -482,7 +480,7 @@ const TrackingController = {
                         acc.completedItems++;
                     }
 
-                    acc.itemDataArr.push({ ...item, completion });
+                    acc.itemDataArr.push({ ...item, completion, process: i.process || null });
                     acc.fullCourseLoad += item.durationHours;
 
                     return acc;
