@@ -614,21 +614,54 @@ module.exports = {
                         origin: 'user',
                     },
                 },
-            },
-            { new: true }
+            }
         );
 
-        return course;
+        return course ? course._doc : null;
     },
 
+    async processLocation(location) {
+        const LINK_REGEX = /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
 
-    /**
-     * @param {Array} data
-     * @param {Array} classesFromUser
-     * @param {string} userId
-     * @returns {Array}
-     */
-    enrichCoursesWithClasses(data, classesFromUser, userId) {
+        if (!location) {
+            return {
+                isLocationUrl: false,
+                onlineLink: null,
+                displayLocation: '',
+                processedLocation: location
+            };
+        }
+
+        const isLocationUrl = LINK_REGEX.test(location);
+
+        return {
+            isLocationUrl,
+            onlineLink: isLocationUrl ? location : null,
+            displayLocation: isLocationUrl ? 'Online' : location,
+            processedLocation: isLocationUrl ? null : location
+        };
+    },
+    
+    async prepareBodyForMessage(bodyData, location) {
+        const dateApplicationInitial = moment(bodyData.dateApplicationInitial).subtract(3, 'hours');
+        const dateApplicationFinal = moment(bodyData.dateApplicationFinal).subtract(3, 'hours');
+        const formattedDateInitial = dateApplicationInitial.isValid() ? dateApplicationInitial.format('DD/MM/YYYY HH:mm') : '';
+        const formattedDateFinal = dateApplicationFinal.isValid() ? dateApplicationFinal.format('DD/MM/YYYY HH:mm') : '';
+
+        const { isLocationUrl, onlineLink } = await module.exports.processLocation(location);
+        
+        const processedBody = { ...bodyData, dateApplicationInitial: formattedDateInitial, dateApplicationFinal: formattedDateFinal };
+        if (isLocationUrl) {
+            delete processedBody.location;
+            processedBody.onlineLink = onlineLink;
+        }
+
+        console.log('Processed Body for Message:', processedBody);
+        
+        return processedBody;
+    },
+
+    enrichCoursesWithClasses (data, classesFromUser, userId) {
         return data.map((course) => {
             let classes = classesFromUser.filter(c => c.courseID.toString() == course._id.toString());
             classes = classes.map(c => {

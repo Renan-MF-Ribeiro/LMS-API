@@ -30,6 +30,7 @@ const { getCookieProps } = require('../../utils/cookies');
 const PartnerBusiness = require('../partners/business');
 const { createSessionStore } = require('../../utils/session');
 const { Types } = require('mongoose');
+const { log } = require('../../utils/logger');
 
 async function createGroupsByGroupsAD(groupsAD) {
     const groupsDb = await Group.find({ name: { $in: groupsAD } })
@@ -371,13 +372,13 @@ module.exports = {
         const connectMap = await getConnectMap(true);
 
         const userMap = Object.entries(connectMap).map(([key, value]) => {
-            return { value: key, description: value.label, field: value.field };
+            return { value: key, field: value.field };
         });
 
         function isSameField(userField, mapItem) {
             return (
                 mapItem.field !== 'NÃO MAPEAR' &&
-                (mapItem.field === userField || mapItem.value === userField)
+                (mapItem.value === userField || mapItem.field === userField)
             );
         }
 
@@ -389,32 +390,29 @@ module.exports = {
             config.fields?.forEach((config) => {
                 if (!config.userField || !config.fieldValue) return;
 
-                const currentUserDashValue = String(user[config.dashFilter] || '').trim();
+                const userField = userMap.find((map) => isSameField(config.userField, map));
 
-                const matchedMaps = userMap.filter((map) => isSameField(config.userField, map));
+                if (!userField) return;
 
-                matchedMaps.forEach((map) => {
-                    const currentUserFieldValue = String(user[map.value] || null).trim();
+                const userUserFieldValue = user[userField.value];
 
-                    if (
-                        currentUserFieldValue &&
-                        currentUserFieldValue === config.fieldValue &&
-                        currentUserDashValue !== 'undefined' &&
-                        currentUserDashValue !== 'null'
-                    ) {
-                        dashboardFilters.push({
-                            field: config.dashFilter || null,
-                            value: currentUserDashValue || null,
-                            pages: config.pages,
-                            // config,
-                            // map,
-                        });
-                    }
+                if (userUserFieldValue !== config.fieldValue) {
+                    log(`User field value ${userUserFieldValue} does not match config value ${config.fieldValue}`);
+                    return;
+                }
+
+                const dashboardField = userMap.find((map) => isSameField(config.dashFilter, map));
+                const userDashFieldValue = dashboardField ? user[dashboardField.value] : null;
+
+                dashboardFilters.push({
+                    field: dashboardField?.value || null,
+                    value: userDashFieldValue,
+                    pages: config.pages,
                 });
             });
         });
 
-        // console.log(JSON.stringify(dashboardFilters, null, 2));
+        log(JSON.stringify(dashboardFilters, null, 2));
 
         return dashboardFilters;
     },
@@ -446,7 +444,7 @@ module.exports = {
      * - Sanitizes CPF format
      * - Applies replacement mappings if provided
      */
-    async processUsersLoad(data, elegibilityFields = [], onboarding = false, preventOnboardingGroupAdd = false, replaceMap = null) {
+    async processUsersLoad(data, elegibilityFields = [], onboarding = false, preventOnboardingGroupAdd = false, replaceMap = null, origin = undefined) {
 
         ['networkLogin', 'name', 'password'].forEach((field) => {
             if (!data[field]) {
@@ -484,6 +482,13 @@ module.exports = {
         data.vacationEndDate = parseDate(data.vacationEndDate);
         data.enabled = true;
         data.onboarding = onboarding;
+        data.origin = {
+            type: origin,
+            updatedAt: new Date(),
+            info: null,
+            receivedData: { ...data, password: undefined },
+        }
+
         data.password = [
             {
                 hash: bcrypt.hashSync(String(data?.password ?? initialPassword), salt),
@@ -790,13 +795,43 @@ module.exports = {
         return LastLogin.findOne({ user: userId });
     },
 
-    async getUsersByTags(tags) {
+    async getUsersByTags(tags, tagsAnd = []) {
         try {
-            let groups = [];
-            const group = await Group.find({ 'tags.value': { $in: tags } });
-            groups = group.map((group) => group.name);
+            const allTags = [...new Set([...tags, ...tagsAnd])];
+            const groups = await Group.find({ 'tags.value': { $in: allTags } });
 
-            const users = await User.find({ groupsAD: { $in: groups } }, ['networkLogin']);
+            const groupsOr = [];
+            const groupsAnd = [];
+
+            for (const g of groups) {
+                const groupTags = g.tags.map(t => t.value);
+                
+                if (tags.some(t => groupTags.includes(t))) {
+                    groupsOr.push(g.name);
+                }
+
+                if (tagsAnd.some(t => groupTags.includes(t))) {
+                    groupsAnd.push(g.name);
+                }
+            }
+
+            const query = {
+                $or: []
+            };
+
+            if (groupsOr.length > 0) {
+                query.$or.push({ groupsAD: { $in: groupsOr } });
+            }
+            if (groupsAnd.length > 0) {
+                query.$or.push({ groupsAD: { $all: groupsAnd } });
+            }
+
+            if (query.$or.length === 0) {
+                return [];
+            }
+
+            const users = await User.find(query, ['networkLogin', 'status', 'groupsAD']);
+
             return users;
         } catch (error) {
             return error;

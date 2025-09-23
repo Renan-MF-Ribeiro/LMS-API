@@ -17,6 +17,7 @@ const target = Object.freeze({
 })
 
 const myGallerySchema = new mongoose.Schema({
+    deletedAt: { type: Date, default: null },
     url: { type: String, required: true },
 }, {
     ...schemaOptions,

@@ -338,7 +338,9 @@ module.exports = {
                     networkLogin: req.body[loginField],
                 },
                 fieldsForElegibility,
-                isOnboarding
+                isOnboarding,
+                null,
+                'ADMIN'
             );
 
             await User.create(processedUser);
@@ -671,6 +673,7 @@ module.exports = {
         let user = await User.findOne({
             _id: new mongoose.Types.ObjectId(req.user._id),
         }).lean();
+
         if (user.loginType && user.loginType !== 'FORM' && user.loginType !== 'BOTH') {
             return _messages.forbidden(
                 res,
@@ -1137,17 +1140,27 @@ module.exports = {
                 res,
                 req,
                 { status: 'Sucesso', userEmail },
-                'Email para recupera senha disparado',
+                'Email para recuperação de senha disparado',
                 'users',
                 'recoveryPassword',
-                [],
+                [{ userId: user._id, email: user.email }],
                 [],
                 true,
                 'RECOVERY PASSWORD'
             );
         }
 
-        return _messages.success(res, req, password_new);
+        return _messages.success(
+            res,
+            req,
+            password_new,
+            'Sucesso',
+            'users',
+            'recoveryPassword',
+            [{ userId: user._id, email: user.email }],
+            [],
+            true,
+            'RECOVERY PASSWORD');
     },
 
     async changePassword(req, res) {
@@ -1387,14 +1400,14 @@ module.exports = {
 
             replaceMap = getConnectMapReplacers(connectMap);
         }
-
         for (const result of results) {
             const processedUser = await processUsersLoad(
                 result,
                 fieldsForElegibility,
                 false,
                 false,
-                replaceMap
+                replaceMap,
+                'LOAD_ADMIN'
             );
 
             const [account, existingUser] = await Promise.all([
@@ -1455,6 +1468,20 @@ module.exports = {
             `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
         );
 
+        const usersDataConfig = await getUsersDataConfig();
+        if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
+            await User.updateMany(
+                {
+                    onboarding: { $ne: true },
+                    ignoreLoadInactivation: { $ne: true },
+                    'origin.type': 'LOAD_ADMIN',
+                    status: 'ATIVO',
+                },
+                { $set: { status: 'INATIVO' } },
+                { multi: true },
+            );
+        }
+
         // TODO: Não disparar mudança de trackings para usuários que não tiveram mudança em seus networkLogin
         for (const user of existingUsers) {
             const dto = { ...user.processedUser, _id: user._id };
@@ -1473,20 +1500,7 @@ module.exports = {
         }
 
 
-        const usersDataConfig = await getUsersDataConfig();
-
-        if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
-            console.log('Inativando usuários não presentes na planilha');
-            await User.updateMany(
-                {
-                    onboarding: { $ne: true },
-                    ignoreLoadInactivation: { $ne: true },
-                },
-                { $set: { status: 'INATIVO' } },
-                { multi: true }
-            );
-        }
-
+        
         if (newUsers.length > 0) {
             console.log(
                 `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
@@ -1791,16 +1805,16 @@ module.exports = {
                 _id: { $eq: _id },
             });
 
-            const { data: integratorConfig } = await getIntegratorConfig()
-            if (
-                user?.origin?.type === 'INTEGRATOR' &&
-                !integratorConfig?.allowUserEdit
-            ) {
-                return _messages.unauthorized(
-                    res,
-                    req,
-                    'Usuário de integração, não pode ser editado via painel'
-                );
+            if (user?.origin?.type === 'INTEGRATOR') {
+                const { data: integratorConfig } = await getIntegratorConfig()
+
+                if (integratorConfig && !integratorConfig.allowUserEdit) {
+                    return _messages.unauthorized(
+                        res,
+                        req,
+                        'Usuário de integração, não pode ser editado via painel'
+                    );
+                }
             }
 
             if (tags && tags.length > 0) {
@@ -3017,7 +3031,7 @@ module.exports = {
             _messages.success(res, req, {
                 map: connectMap,
                 fields,
-                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd', 'manager'], // Campos que não devem ser alterados
+                exceptions: ['status', 'cpf', 'cnpj', 'postalCode', 'pcd', 'manager', 'loginType'], // Campos que não devem ser alterados
                 eligibility,
             });
         } catch (error) {

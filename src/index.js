@@ -80,6 +80,8 @@ const newsRoutes = require('./components/news/routes');
 const i18nRoutes = require('./components/i18n/routes');
 const managerRoutes = require('./components/managers/routes');
 const processRoutes = require('./components/process/routes')
+const downloadsRouter = require('./components/downloads/routes');
+const { cacheRouter } = require('./utils/cache/router');
 
 const environment = require('./environment');
 const { matricesApiMiddleware } = require('./components/matrices/http-adapter');
@@ -87,7 +89,6 @@ const { newsApiMiddleware } = require('./components/news/http-adapter');
 const { i18nApiMiddleware } = require('./components/i18n/http-adapter');
 const { processApiMiddleware } = require('./components/process/http-adapter');
 const { cacheRequestOnClient } = require('./utils/cache/middlewares');
-const { cacheRouter } = require('./utils/cache/router');
 
 const corsOptions = {
     origin: [environment.DOMAIN, 'https://monitoring.happlearning.com.br'],
@@ -98,7 +99,6 @@ const corsOptions = {
 
 if (environment.NODE_ENV !== 'production') {
     corsOptions.origin.push('http://localhost:4200');
-    corsOptions.origin.push('http://192.168.1.5:4200');
 }
 
 app.disable('x-powered-by');
@@ -212,6 +212,7 @@ app.use('/items', validateTokenRoute, itemsRoutes)
     .use('/chat', chatIaRoutes)
     .use('/integrator', integratorRoutes)
     .use('/i18n', i18nRoutes)
+    .use('/downloads', downloadsRouter)
     .use('/manager', validateTokenRoute, managerRoutes)
     .use('/news', validateTokenRoute, newsRoutes)
     .use('/process', validateTokenRoute, processRoutes);

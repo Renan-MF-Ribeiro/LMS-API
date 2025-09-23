@@ -6,6 +6,7 @@ const { default: axios } = require('axios');
 const { Group } = require('../groups/model');
 const { getUserByToken } = require('../../utils/functions');
 const { getMessengerConfig } = require('../config/business');
+const { socialApi } = require('../social/http-adapter');
 
 /* 
  Função recursiva pra popular usuários de arrays ou objetos vindos do SocialApi
@@ -137,20 +138,24 @@ async function populateTrailFields(data) {
 }
 
 async function createNotification(config, users) {
+    const shareText =
+        config.contentType === 'post'
+            ? `${config.reqUser} compartilhou um post. Clique e confira!`
+            : `${config.reqUser} compartilhou uma trilha: ${config.contentName}. Clique e confira!`;
+    const shareTitle =
+        config.contentType === 'post'
+            ? `${config.reqUser} compartilhou um post.`
+            : `${config.reqUser} compartilhou uma trilha: ${config.contentName}.`;
 
-    const shareText = config.contentType === 'post' ? `${config.reqUser} compartilhou um post. Clique e confira!` : `${config.reqUser} compartilhou uma trilha: ${config.contentName}. Clique e confira!`
-    const shareTitle = config.contentType === 'post' ? `${config.reqUser} compartilhou um post.` : `${config.reqUser} compartilhou uma trilha: ${config.contentName}.`
-    const values =
-    {
+    const values = {
         admin_post: {
             text: 'Uma nova publicação foi feita pela equipe de comunicação. Clique e confira!',
-            texthtml:
-                'Novo post da equipe de comunicação.',
+            texthtml: 'Novo post da equipe de comunicação.',
             title: 'Novo post da equipe de comunicação',
         },
         mention: {
-            text: 'Mençionou você em um comentário. Clique e confira!',
-            texthtml: 'Mençionou você em um comentário. Clique e confira!',
+            text: 'Mencionou você em um comentário. Clique e confira!',
+            texthtml: 'Mencionou você em um comentário. Clique e confira!',
             title: 'Nova menção em comentário.',
         },
         comment: {
@@ -163,8 +168,13 @@ async function createNotification(config, users) {
             texthtml: shareText,
             title: shareTitle,
         },
-    }
-        ;
+        user_post: {
+            text: `Uma nova publicação foi feita por ${config.reqUser}. Clique e confira!`,
+            texthtml: `Uma nova publicação foi feita por ${config.reqUser}. Clique e confira!`,
+            title: `${config.reqUser} publicou um novo post.`,
+        },
+    };
+
     const text = values[config?.type]?.text;
     const texthtml = values[config?.type]?.texthtml;
     const title = values[config?.type]?.title;
@@ -190,6 +200,7 @@ async function createNotification(config, users) {
         },
         thumbnail: messengerConfig.emailTemplate.thumbnail,
     };
+    
     try {
         async function createMessagesFromBackend(campaign) {
             const target = campaign.target;
@@ -245,6 +256,65 @@ async function getSegFieldsFromUser(req) {
     return userCustomElegeFields;
 }
 
+/**
+ * Dispara a notificação de um post para os usuários relevantes.
+ *
+ * @param {Object} post - Post que será notificado.
+ */
+async function handleUserPostNotification(post) {
+    if (!(post && post.type === 'USER')) {
+        return;
+    }
+
+    const uriConfig = `config/${process.env.CLIENT_ID}`;
+    const { data: { config: feedConfig } } = await socialApi.get(uriConfig);
+
+    if (!feedConfig?.notifyUsers || (feedConfig?.moderationPosts && post.status !== 'ACTIVE')) {
+        return;
+    }
+
+    const user = await User.findById(post?.userId, ['_id', 'name', 'groupsAD']);
+    if (!user) {
+        return 
+    }
+
+    let query = {
+        _id: { $ne: user._id },
+        groupsAD: { $in: user.groupsAD.filter((tag) => !tag.includes('PERFIL_')) },
+    };
+
+    const groupId = post?.groupId || post?.group?._id;
+    if (groupId) {
+        const groupInfoUri = `/groups/info/${groupId}`;
+        const { data: feedGroup } = await socialApi.get(groupInfoUri);
+
+        if (!feedGroup?.members || feedGroup.members.length === 0) {
+            return;
+        }
+
+        query = {
+            _id: { $in: feedGroup.members },
+        };
+    }
+
+    const users = await User.find(query);
+
+    if (users.length === 0) {
+        return;
+    }
+
+    const config = {
+        reqUser: user.name,
+        communication: ['notification', 'email'],
+        type: 'user_post',
+        contentType: 'post',
+        contentId: post._id,
+    };
+
+    createNotification(config, users);
+}
+
+
 module.exports = {
     populateUserFields,
     populateTrailFields,
@@ -252,4 +322,5 @@ module.exports = {
     createNotification,
     getSegFieldsFromUser,
     populateSingleData,
+    handleUserPostNotification
 };

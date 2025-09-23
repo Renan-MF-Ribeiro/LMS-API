@@ -2,6 +2,7 @@ const ApiError = require('../../errors/ApiError');
 const { removeAccents, getUserByToken, slugify, getCustomEmail } = require('../../utils/functions');
 const { Group } = require('../groups/model');
 const _business = require('./business');
+const { getCompanyConfig } = require('./utils');
 const {
     ConfigTypes,
     ConfigModel,
@@ -313,7 +314,7 @@ module.exports = {
     },
 
     async getCompanySupportFormConfig(req, res) {
-        const companyConfig = await _business.getCompanyConfig();
+        const companyConfig = await getCompanyConfig();
 
         const supportFormConfig = companyConfig?.supportFormCustomEmail || null;
 
