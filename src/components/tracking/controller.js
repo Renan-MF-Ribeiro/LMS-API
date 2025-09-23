@@ -519,9 +519,9 @@ const TrackingController = {
             }
 
             let totalTrails;
-            if (filterByEligibility === 'true' && trails.length < await Trail.find({...query}).countDocuments()) {
+            if (filterByEligibility === 'true' && trails.length < await Trail.find({ ...query }).countDocuments()) {
             } else {
-                totalTrails = await Trail.find({...query}).countDocuments();
+                totalTrails = await Trail.find({ ...query }).countDocuments();
             }
 
             for (const { trail } of trailsWithTracking) {
