@@ -1171,14 +1171,14 @@ module.exports = {
         }));
         const tags = tagsTemp.flat()
 
-        user.classGroups.forEach(classGroup => {
+        user.classGroups?.forEach(classGroup => {
             tags.push({
                 display: classGroup.groupCode,
                 value: classGroup.groupCode,
             });
         });
 
-        user.tags.forEach(tag => {
+        user.tags?.forEach(tag => {
             const diff = calculateDiffDate(
                 today,
                 formatDateWithoutHours(tag.createdAt),
