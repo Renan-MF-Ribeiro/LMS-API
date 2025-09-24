@@ -1580,8 +1580,8 @@ async function retrieveUserContent (tags, user, trailsIdArr) {
 
 function getBannersFromContent (sections) {
     const banners = [];
-
     sections.forEach((section) => {
+        if (!section._id) return;
         if (section.sectionType === 'alura') {
             return;
         }
@@ -1615,7 +1615,8 @@ function getBannersFromContent (sections) {
             return;
         }
 
-        section.trails.forEach((trailItem) => {
+
+        section.trails?.forEach((trailItem) => {
             if (trailItem?.items?.length) {
                 trailItem.items.forEach((i) => {
                     const item = i.itemID;
