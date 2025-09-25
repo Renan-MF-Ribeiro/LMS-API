@@ -1593,7 +1593,7 @@ function getBannersFromContent (sections) {
                     const trailParam = slugify(courseItem?.title ?? '');
                     const bannerItem = {
                         path: courseItem.banner,
-                        link: process.env.BASE_URL,
+                        link: process.env.DOMAIN,
                         queryParams: { section: sectionParam, trail: trailParam },
                         internal: true
                     };
