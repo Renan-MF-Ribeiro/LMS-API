@@ -5,7 +5,7 @@ const { azureBlob } = require('../../utils/files');
 const { DOMAIN, AZURE_BLOB_URL } = process.env;
 const { Section } = require('../sections/model');
 const { Trail } = require('../trails/model');
-const { getTagsElegiblesByToken, checkEligibilityTagsAnd, getSectionTrailId } = require('../sections/business');
+const { getTagsElegiblesByToken, checkEligibilityTagsAnd, getSectionTrailId, getContentEligibilityParameterByUserId } = require('../sections/business');
 const { Theme } = require('../theme/palette/model');
 const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business');
 const { getDbCurrentFeatures } = require('../../utils/features');
@@ -35,7 +35,9 @@ module.exports = {
                 $and: [
                     ...OptionalChannel
                 ]
+
             };
+
 
             if (searchBy) {
                 query.$and.push({
@@ -66,8 +68,16 @@ module.exports = {
             );
         }
     },
-    async getChannelsElegibles(req, res) {
-        const tags = await getTagsElegiblesByToken(req);
+    async getChannelsElegibles (req, res) {
+        const { userId } = req.query;
+        let tags
+        if (userId) {
+            const { tags: newTags } = await getContentEligibilityParameterByUserId(userId)
+            tags = newTags
+        }
+        else {
+            tags = await getTagsElegiblesByToken(req);
+        }
         const user = await _functions.getUserByToken(req);
         const features = await getDbCurrentFeatures(req);
 
