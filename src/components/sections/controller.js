@@ -314,9 +314,11 @@ module.exports = {
         let trailsIdArr = [];
         let sectionsIdArr = [];
         let sectionInfos = [];
+        let channelBanners = [];
 
         if (channelId) {
-            let { idSections } = await Channel.findById(channelId).select('idSections -_id');
+            let { idSections, banners } = await Channel.findById(channelId).select('idSections banners -_id');
+            channelBanners = banners || [];
 
             const dbSections = await Section.find({ _id: { $in: idSections }, active: 1 });
 
@@ -424,6 +426,28 @@ module.exports = {
                 sectionToShow.recommendedTrailsSectionInfo ? recommendedTrailsSections(filteredTrails, user._id, sectionToShow.recommendedTrailsSectionInfo) : Promise.resolve([]),
             ]);
 
+            const userContent = [
+                arrSections,
+                arrMandatorySections,
+                arrRecentsSections,
+                arrKeepLearningSections,
+                arrConcludedSections,
+                arrCoursesSections,
+                arrFavoriteSections,
+                arrMostSeenSections,
+                arrRecommendedTrailsSections || [],
+                arrRecommendedCoursesSections || [],
+            ]
+
+
+            const banners = getBannersFromContent(userContent
+                .flat()
+                .filter((obj) => {
+                    if (!sectionsIdArr.length) return obj
+                    return obj ? sectionsIdArr.includes(obj._id) : null
+                }
+                )).filter(Boolean);
+
             function limitArray (section) {
                 if (!section) return [];
 
@@ -444,18 +468,7 @@ module.exports = {
                 };
             }
 
-            let resultSections = [
-                arrSections,
-                arrMandatorySections,
-                arrRecentsSections,
-                arrKeepLearningSections,
-                arrConcludedSections,
-                arrCoursesSections,
-                arrFavoriteSections,
-                arrMostSeenSections,
-                arrRecommendedTrailsSections || [],
-                arrRecommendedCoursesSections || [],
-            ].flatMap(limitArray);
+            let resultSections = userContent.flatMap(limitArray);
 
             if (channelId) {
                 resultSections = resultSections.filter((obj) =>
@@ -494,7 +507,7 @@ module.exports = {
                 resultSections = await setAssessmentHistoricOnSections(user._id, resultSections, tags);
             }
 
-            _messages.success(res, req, resultSections);
+            _messages.success(res, req, { sections: resultSections, banners: [...channelBanners, ...banners] });
         }
     },
 
@@ -516,54 +529,6 @@ module.exports = {
                 'Erro interno no servidor',
                 'sections',
                 '/elegiblesContents'
-            );
-        }
-    },
-
-    async getChannelBanners (req, res) {
-        try {
-            const { channelId } = req.query;
-            const user = getUserByToken(req);
-            const tags = await getTagsElegiblesByToken(req);
-            let sectionInfos = [];
-            let trailsIdArr = [];
-            let cBanners = [];
-
-            if (channelId) {
-                const { idSections, banners: channelBanners } = await Channel.findById(channelId).select('idSections banners  -_id');
-
-                const dbSections = await Section.find({ _id: { $in: idSections }, active: 1 });
-
-                sectionInfos = await populateSectionTrails(
-                    dbSections,
-                    { select: 'tags tagsAnd _id collaborative' }
-                );
-
-                const trailsInSections = sectionInfos.map(({ trails }) => {
-                    return {
-                        trails: trails.filter(
-                            (trail) => checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative
-                        ).map(trail => trail._id)
-                    };
-                });
-                cBanners = channelBanners || [];
-                trailsIdArr = trailsInSections.flatMap((e) => e.trails);
-            }
-
-            const userContent = await retrieveUserContent(tags, user, trailsIdArr);
-            const itemBanners = getBannersFromContent(userContent);
-            const banners = [...cBanners, ...itemBanners];
-
-            _messages.success(res, req, banners);
-        } catch (error) {
-            console.log(error);
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'sections',
-                '/banners'
             );
         }
     },

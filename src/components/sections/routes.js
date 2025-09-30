@@ -13,7 +13,6 @@ router
     .get('/elegibles-contents', isStudent, cacheRequestOnClient(15), _controller.getSectionsElegibles) // Cache for 15 seconds
     .get('/user-accessible-content', isUserManagerOrSuperAdminOrElegibilityManager, _controller.getUserAccessibleContent)
     .get('/formation', isStudent, _controller.getSectionsFormation)
-    .get('/banners', isStudent, _controller.getChannelBanners)
     .get('/:id', isStudent, _controller.getSectionDetail)
     .patch('/:id/:status', isAccountant, _controller.changeStatus)
     .post('/', isAccountant, _controller.createSection)
