@@ -9,8 +9,8 @@ const FILE_PROCESSOR_EVENT_TYPES = {
 };
 
 async function dispatchFileProcessorKafkaMessage(type, databaseId) {
-    if (!environment.FILE_PROCESSOR_KAFKA_TOPIC) {
-        console.log('Skipping file-processor message dispatch: FILE_PROCESSOR_KAFKA_TOPIC is not set.');
+    if (!environment.FILE_PROCESSOR_KAFKA_IMAGES_TOPIC) {
+        console.log('Skipping file-processor message dispatch: FILE_PROCESSOR_KAFKA_IMAGES_TOPIC is not set.');
         return;
     }
 
@@ -41,7 +41,7 @@ async function dispatchFileProcessorKafkaMessage(type, databaseId) {
         const kafkaProducer = kafka.producer();
         await kafkaProducer.connect();
         await kafkaProducer.send({
-            topic: environment.FILE_PROCESSOR_KAFKA_TOPIC,
+            topic: environment.FILE_PROCESSOR_KAFKA_IMAGES_TOPIC,
             messages: [
                 {
                     value: JSON.stringify({

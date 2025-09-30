@@ -104,7 +104,7 @@ const environmentSchema = z.object({
     // Logs
     OAUTH2_LOG: z.string().optional().default('0').transform(transformBoolean),
 
-    FILE_PROCESSOR_KAFKA_TOPIC: z.string().optional().nullish().default(null),
+    FILE_PROCESSOR_KAFKA_IMAGES_TOPIC: z.string().optional().nullish().default(null),
     FILE_PROCESSOR_MESSAGE_SIGNATURE: z.string().optional().nullish().default(null),
 
     // API_VERSION é Setado no processo de build
