@@ -1,3 +1,4 @@
+const crypto = require("node:crypto");
 const kafka = require("./kafka");
 const environment = require("../environment");
 
@@ -13,10 +14,27 @@ async function dispatchFileProcessorKafkaMessage(type, databaseId) {
         return;
     }
 
+    if (!environment.FILE_PROCESSOR_MESSAGE_SIGNATURE) {
+        console.log('Skipping file-processor message dispatch: FILE_PROCESSOR_MESSAGE_SIGNATURE is not set.');
+        return;
+    }
+
     if (!Object.values(FILE_PROCESSOR_EVENT_TYPES).includes(type)) {
         console.error(`Invalid file-processor event type: ${type}`);
         return;
     }
+
+    const signatureSecret = environment.FILE_PROCESSOR_MESSAGE_SIGNATURE;
+
+    const hmac = crypto.createHmac('sha256', signatureSecret);
+
+    hmac.update(JSON.stringify([
+        String(environment.CLIENT_ID),
+        String(String(databaseId)),
+        String(type),
+    ]));
+
+    const signature = hmac.digest('hex');
 
     try {
         console.log(`Dispatching file-processor message: ${type} - ${databaseId} `);
@@ -27,10 +45,13 @@ async function dispatchFileProcessorKafkaMessage(type, databaseId) {
             messages: [
                 {
                     value: JSON.stringify({
-                        type,
-                        databaseId: String(databaseId),
                         clientId: environment.CLIENT_ID,
+                        databaseId: String(databaseId),
+                        type,
                     }),
+                    headers: {
+                        signature,
+                    },
                 }
             ]
         });
