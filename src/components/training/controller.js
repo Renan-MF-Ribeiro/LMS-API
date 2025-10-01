@@ -6,6 +6,7 @@ const { setAssessmentHistoricOnSections, populateSectionTrails, getTagsElegibles
 const { Section } = require("../sections/model");
 const { Trail } = require("../trails/model");
 const { getEligibilityInfoByUserId, getInfoByUserId } = require("../../utils/user");
+const moment = require('moment-timezone');
 
 async function listTrainingSections(req, res) {
     const sections = await Section
@@ -177,6 +178,8 @@ async function generateTrainingSectionCertificate(req, res) {
         }
     }
 
+    const completionDateWithTz = moment(completionDate).tz('America/Sao_Paulo').toDate();
+
     const body = {
         clientId: Number(process.env.CLIENT_ID),
         userId: user.networkLogin,
@@ -187,7 +190,7 @@ async function generateTrainingSectionCertificate(req, res) {
         layoutId: section.certificateLayout,
         certificateDue: section.certificateDue,
         expirationDate,
-        completionDate,
+        completionDate: completionDateWithTz,
         courseLoad: courseLoadStr,
         workload: null,
         initialDate,
