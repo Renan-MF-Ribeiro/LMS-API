@@ -14,12 +14,10 @@ const createObjectCsvStringifier =
     require('csv-writer').createObjectCsvStringifier;
 const aws = require('aws-sdk');
 const { BlobServiceClient } = require('@azure/storage-blob');
-const { ShareServiceClient } = require('@azure/storage-file-share');
 const momentz = require('moment-timezone');
 const ExcelJS = require('exceljs');
-const axios = require('axios');
-const _functions = require('./functions');
-const { mapUserOld, defaultUserMap, defaultOnboardingUserMap } = require('./../components/users/model');
+
+const { defaultOnboardingUserMap } = require('./../components/users/model');
 const { Item, MediaItem } = require('../components/items/model');
 const { sleep } = require('./functions');
 const {

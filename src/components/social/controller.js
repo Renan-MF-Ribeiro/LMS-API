@@ -8,7 +8,7 @@ const { User } = require('../users/model');
 const { getTagsElegiblesByToken, checkEligibilityTagsAnd } = require('../sections/business');
 const { ConfigModel, ConfigTypes } = require('../config/model');
 const { Group } = require('../groups/model');
-const { createNotification } = require('../feed/buisiness');
+const { createNotification } = require('../feed/business');
 const GamificationKafka = require('../gamification/kafka/broker');
 const { EVENT_CATEGORY } = require('../gamification/model');
 const { COMMENT_STATUS } = require('./model');
@@ -200,12 +200,12 @@ module.exports = {
                 trailBlocked = data.blockedTrails.some((trail) => {
                     return trail.trailId === req.query.trailId;
                 });
-                tagBlocked = data.tagsLists.blocked.some((tag) => {
-                    return userTags.some((t) => {
-                        return t.value === tag;
-                    });
-                });
             }
+            tagBlocked = data.tagsLists.blocked.some((tag) => {
+                return userTags.some((t) => {
+                    return t.value === tag;
+                });
+            });
             if (data.usersLists.blocked.length > 0) {
                 userBlocked = data.usersLists.blocked.some((u) => {
                     return u.userId == user._id;
@@ -939,6 +939,7 @@ module.exports = {
                     communication: ['notification', 'email'],
                     type: 'share',
                     contentType: 'trail',
+                    contentName: trail.title,
                     contentId: trail._id,
                 };
                 await createNotification(config, users);

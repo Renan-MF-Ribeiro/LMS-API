@@ -28,7 +28,7 @@ async function populateUserFields(mappings, data) {
     // Buscar usuários de uma só vez
     const users = await User.find(
         { _id: { $in: ids } },
-        '_id name profilePhoto email office'
+        '_id name profilePhoto email office status'
     ).lean();
 
     const usersWithStringIds = users.map((user) => ({
@@ -47,36 +47,24 @@ async function populateUserFields(mappings, data) {
     };
 }
 
-async function populateBlockedUserFields(mappings, data) {
-    const isArray = Array.isArray(data.data);
-    const dataToProcess = isArray ? data.data : [data.data];
+async function populateBlockedUserFields(data) {
+    const isArray = Array.isArray(data);
+    const dataToProcess = isArray ? data : [data];
 
-    const ids = collectBlockedIds(dataToProcess, mappings);
+    const ids = dataToProcess.map(item => item._id.toString());
     if (ids.length === 0) return data;
 
     const users = await User.find(
         { _id: { $in: ids } },
-        '_id name profilePhoto email office'
+        '_id name profilePhoto email office status'
     ).lean();
 
-    const usersWithBlockedAt = users.map((user) => {
-        const blockedUser = dataToProcess.find((item) => {
-            return item.blockedMentees?.some((blocked) => {
-                const isMatch = blocked._id.toString() === user._id.toString();
-                return isMatch;
-            });
-        });
-        const blockedAt = blockedUser?.blockedMentees?.find((blocked) => {
-            const isMatch = blocked._id.toString() === user._id.toString();
-            return isMatch;
-        })?.blockedAt || null;
-
+    const usersWithBlockedAt = users.map(user => {
         return {
             ...user,
-            blockedAt,
+            blockedAt: dataToProcess.find(item => item._id.toString() === user._id.toString())?.blockedAt || null
         };
     });
-
     return usersWithBlockedAt;
 }
 
@@ -108,24 +96,28 @@ function collectIds(data, mappings) {
 function collectBlockedIds(data) {
     const ids = [];
 
-    const traverse = (obj) => {
+    const traverse = (obj, path = '') => {
         if (Array.isArray(obj)) {
-            obj.forEach(traverse);
+            console.log('Traversing array at path:', path);
+            obj.forEach((item, idx) => traverse(item, `${path}[${idx}]`));
         } else if (obj && typeof obj === 'object') {
             if (obj.blockedMentees && Array.isArray(obj.blockedMentees)) {
-                obj.blockedMentees.forEach((blockedMentee) => {
+                obj.blockedMentees.forEach((blockedMentee, idx) => {
                     if (blockedMentee._id) {
+                        console.log(`Found blockedMentee._id at ${path}.blockedMentees[${idx}]:`, blockedMentee._id);
                         ids.push(blockedMentee._id.toString());
                     }
                 });
             }
-
-            Object.values(obj).forEach(traverse);
+            Object.entries(obj).forEach(([key, value]) => traverse(value, path ? `${path}.${key}` : key));
         }
     };
 
+    console.log('Starting collectBlockedIds with data:', data);
     traverse(data);
-    return [...new Set(ids)];
+    const uniqueIds = [...new Set(ids)];
+    console.log('Collected blocked IDs:', uniqueIds);
+    return uniqueIds;
 }
 
 async function processData(data, mappings, userMap) {

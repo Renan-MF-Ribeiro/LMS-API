@@ -53,6 +53,7 @@ const { handleSegmentationOnCreate, handleSegmentationOnQuery, getChatIAConfig }
 const ApiError = require('../../errors/ApiError');
 const GamificationKafka = require('../gamification/kafka/broker');
 const { dispatchChatItemKafkaEvent, isFeatEnabled } = require('../chat/business');
+const { escapeString } = require('../../utils/strings');
 
 const ITEM_KINDS = Object.freeze({
     DocumentItem: DocumentItem,
@@ -67,7 +68,7 @@ const ITEM_KINDS = Object.freeze({
 });
 
 const ItemController = {
-    async itemColaborativo (req, res) {
+    async itemColaborativo(req, res) {
         let payload = {};
         if (req.fields.payload) {
             try {
@@ -246,7 +247,7 @@ const ItemController = {
                 }
 
                 //Evento novo conteúdo colaborativo
-                _messages.success(res, req, item._id);
+                _messages.success(res, req, item._id, `Criação de novo item colaborativo com sucesso`, 'items', '/collaboration', [], [], true, 'CREATE');
             } catch (error) {
                 if (error.message === 'Something went wrong') {
                     _messages.internalServer(
@@ -303,7 +304,7 @@ const ItemController = {
 
     },
 
-    async create (req, res) {
+    async create(req, res) {
         const ItemModel = ITEM_KINDS[req.body.kind] || Item;
 
         try {
@@ -319,7 +320,7 @@ const ItemController = {
 
             if (isFeatEnabled(chatConfig)) await dispatchChatItemKafkaEvent(_id);
 
-            _messages.success(res, req, { _id });
+            _messages.success(res, req, { _id }, `Item do tipo ${req.body?.kind} criado com sucesso`, 'items', '/create', [], [], true, 'CREATE');
         } catch (error) {
             _messages.internalServer(
                 res,
@@ -332,7 +333,7 @@ const ItemController = {
         }
     },
 
-    async multiUploadCreate (req, res) {
+    async multiUploadCreate(req, res) {
         let payload = {};
         if (req.fields.payload) {
             try {
@@ -558,7 +559,7 @@ const ItemController = {
         }
     },
 
-    async update (req, res) {
+    async update(req, res) {
         let payload = {};
         if (req.fields.payload) {
             try {
@@ -813,13 +814,15 @@ const ItemController = {
         }
     },
 
-    async updateById (req, res) {
+    async updateById(req, res) {
         const ItemModel = ITEM_KINDS[req.body.kind] || Item;
 
         try {
             const _id = req.params.itemId;
-            await ItemModel.findOneAndUpdate({ _id }, req.body);
+            const newItem = await ItemModel.findOneAndUpdate({ _id }, req.body);
             await dispatch('update', 'item', { _id, ...req.body });
+
+            await _functions.recordLog(req, 'NO_CONTENT_SUCCES', `Update do item ${_id} realizado com sucesso`, 'items', '/update', newItem);
             res.status(httpStatus.NO_CONTENT).send();
         } catch (error) {
             _messages.internalServer(
@@ -833,7 +836,7 @@ const ItemController = {
         }
     },
 
-    async updateStatus (req, res) {
+    async updateStatus(req, res) {
         try {
             const { _id, enabled } = req.body;
             const item = await Item.findOne({ _id });
@@ -842,14 +845,14 @@ const ItemController = {
                 (item.title && item.description && item.durationHours) ||
                 item.kind === 'SoonItem'
             ) {
-                await Item.findByIdAndUpdate(_id, { enabled });
+                const newItem = await Item.findByIdAndUpdate(_id, { enabled });
                 await dispatch('update', 'item', { _id, enabled });
 
                 const chatConfig = await getChatIAConfig();
 
                 if (isFeatEnabled(chatConfig)) await dispatchChatItemKafkaEvent(_id, enabled ? 'UPSERT' : 'DELETE');
 
-                _messages.success(res, req, 'Atualizado com sucesso');
+                _messages.success(res, req, 'Atualizado com sucesso', `Status do item de id: ${_id} atualizado com sucesso`, 'items', '/update-status', newItem, item, true, 'UPDATE');
             } else {
                 _messages.badRequest(
                     res,
@@ -870,7 +873,7 @@ const ItemController = {
         }
     },
 
-    async findItemTrails (req, res) {
+    async findItemTrails(req, res) {
         try {
             const _id = req.params.itemId;
             const trails = await Trail.find(
@@ -890,11 +893,11 @@ const ItemController = {
         }
     },
 
-    async disableById (req, res) {
+    async disableById(req, res) {
         ItemController.updateById({ ...req, body: { enabled: false } }, res);
     },
 
-    async findById (req, res) {
+    async findById(req, res) {
         try {
             const findValue = req.params.itemId;
 
@@ -925,7 +928,7 @@ const ItemController = {
         }
     },
 
-    async findItemById (req, res) {
+    async findItemById(req, res) {
         try {
             const findItemValue = req.params.itemId;
             const findITrailValue = req.params.trailId;
@@ -1006,27 +1009,27 @@ const ItemController = {
         }
     },
 
-    async createDocument (req, res) {
+    async createDocument(req, res) {
         req.body.kind = 'DocumentItem';
         ItemController.create(req, res);
     },
 
-    async multiUploadDocument (req, res) {
+    async multiUploadDocument(req, res) {
         req.body.kind = 'DocumentItem';
         ItemController.multiUploadCreate(req, res);
     },
 
-    async createMedia (req, res) {
+    async createMedia(req, res) {
         req.body.kind = 'MediaItem';
         ItemController.create(req, res);
     },
 
-    async multiUploadMedia (req, res) {
+    async multiUploadMedia(req, res) {
         req.body.kind = 'MediaItem';
         ItemController.multiUploadCreate(req, res);
     },
 
-    async uploadSCORM (req, res) {
+    async uploadSCORM(req, res) {
         const user = await getUserByToken(req);
         if (req.method !== 'POST') {
             return res.status(httpStatus.NOT_FOUND).send();
@@ -1226,7 +1229,7 @@ const ItemController = {
                     })
                 );
 
-                _messages.success(res, req, items);
+                _messages.success(res, req, items, 'Upload SCORM item realizado com sucesso', 'items', '/scorm', [], [], true);
             } catch (err) {
                 throw _errors.SCORM_UPLOAD.INVALID_MANIFEST;
             }
@@ -1247,7 +1250,7 @@ const ItemController = {
         }
     },
 
-    async updateSCORM (req, res) {
+    async updateSCORM(req, res) {
 
         if (req.method !== 'PUT') {
             return res.status(httpStatus.NOT_FOUND).send();
@@ -1425,7 +1428,7 @@ const ItemController = {
                     })
                 );
 
-                return _messages.success(res, req, items);
+                return _messages.success(res, req, items, `Item SCORM ${_id} atualizado com sucesso`, 'items', '/updateSCORM');
             } catch (err) {
                 if (err) {
                     throw _errors.SCORM_UPLOAD.UNEXPECTED_IDENTIFIER;
@@ -1449,96 +1452,80 @@ const ItemController = {
         }
     },
 
-    async findAll (req, res) {
-        try {
-            const { skip, limit } = _functions.pagination(req);
-            const { sort, order } = _functions.ordernation(req);
+    async findAll(req, res) {
+        const { skip, limit } = _functions.pagination(req);
+        const { sort = 'desc', order = 'createdAt' } = _functions.ordernation(req);
+        const { searchBy, archive, collaborative, filterNotRelated } = req.query;
 
-            const q = {};
-            if (req.query.enabled !== undefined) q.enabled = true;
-            const searchBy = req.query.searchBy;
-            const archive = req.query.archive;
-            const collaborative = req.query.collaborative;
-            const query = searchBy
-                ? {
-                    $or: [
-                        {
-                            description: {
-                                $regex: searchBy,
-                                $options: 'i',
-                            },
-                        },
-                        { title: { $regex: searchBy, $options: 'i' } },
-                        { notes: { $regex: searchBy, $options: 'i' } },
-                        { alias: { $regex: searchBy, $options: 'i' } },
-                        { keywords: { $regex: searchBy, $options: 'i' } },
-                        {
-                            responsible: {
-                                $regex: searchBy,
-                                $options: 'i',
-                            },
-                        },
-                    ],
-                    deleted: { $eq: 0 },
-                }
-                : {
-                    deleted: { $eq: 0 },
-                }
+        const scapedSearchBy = escapeString(searchBy);
 
-            query['archive'] = archive ? { $eq: archive === 'true' } : { $ne: true };
-            query['kind'] = { $nin: ['PostItem', 'AluraItem'] };
-            query['collaborative'] = collaborative ? { $eq: collaborative === 'true' } : { $ne: true };
+        const query = {
+            deleted: 0,
+            archive: archive ? archive === 'true' : { $ne: true },
+            collaborative: collaborative ? collaborative === 'true' : { $ne: true },
+            kind: { $nin: ['PostItem', 'AluraItem'] },
+            ...(scapedSearchBy?.length && {
+                $or: [
+                    { title: { $regex: scapedSearchBy, $options: 'i' } },
+                    { notes: { $regex: scapedSearchBy, $options: 'i' } },
+                    { alias: { $regex: scapedSearchBy, $options: 'i' } },
+                    { keywords: { $regex: scapedSearchBy, $options: 'i' } },
+                    { responsible: { $regex: scapedSearchBy, $options: 'i' } },
+                ],
+            })
+        };
 
-            if (req?.segmentation) {
-                handleSegmentationOnQuery(req, 'owner', query)
-            }
-
-            let total = await Item.find(query).count();
-
-            let itens = await Item.find(query)
-                .populate('idEvaluation', ['description', 'duration'])
-                .skip(parseInt(skip))
-                .limit(parseInt(limit))
-                .sort({ [order]: sort });
-
-
-            if (req.query.filterNotRelated === 'true') {
-                const dataItens = [];
-                const filterItens = await Item.find(query);
-
-                await Promise.all(
-                    filterItens.map(async (item) => {
-                        const trail = await Trail.find({
-                            'items.itemID': { $in: item._id },
-                        }).countDocuments();
-
-                        if (trail === 0) dataItens.push(item);
-                    })
-                );
-                total = dataItens.length;
-                itens = dataItens
-                    .reverse()
-                    .slice(parseInt(skip))
-                    .slice(0, parseInt(limit));
-            }
-
-            _messages.success(res, req, {
-                data: itens,
-                total,
-            });
-        } catch (error) {
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'items',
-                'findAll'
-            );
+        if (req?.segmentation) {
+            handleSegmentationOnQuery(req, 'owner', query)
         }
+
+
+        if (filterNotRelated === 'true') {
+            const items = await Item
+                .find(query)
+                .populate('idEvaluation', ['description', 'duration'])
+                .lean();
+
+            if (!items.length) {
+                return _messages.success(res, req, {
+                    data: [],
+                    total: 0,
+                });
+            }
+
+            const trailsWithItems = await Trail.find({
+                'items.itemID': { $in: items.map(item => item._id) }
+            }).lean();
+
+            const relatedItemsId = trailsWithItems.flatMap(trail => trail.items.map(item => String(item.itemID)));
+
+            const filteredItems = items
+                .filter(item => !relatedItemsId.includes(String(item._id)))
+                .slice(parseInt(skip), parseInt(skip) + parseInt(limit));
+
+            return _messages.success(res, req, {
+                data: filteredItems,
+                total: filteredItems.length,
+            });
+        }
+
+        const items = await Item
+            .find(query)
+            .populate('idEvaluation', ['description', 'duration'])
+            .skip(parseInt(skip))
+            .limit(parseInt(limit))
+            .sort({ [order]: sort })
+            .lean();
+
+        const total = await Item.countDocuments(query);
+
+        return _messages.success(res, req, {
+            data: items,
+            total,
+        });
     },
 
-    async findItensActives (req, res) {
+    async findItensActives(req, res) {
         try {
             const itens = await Item.find({
                 enabled: { $eq: true },
@@ -1557,7 +1544,7 @@ const ItemController = {
         }
     },
 
-    async generateCertificate (req, res) {
+    async generateCertificate(req, res) {
         try {
             const { item } = req.params;
             const user = await _functions.getUserByToken(req);
@@ -1576,7 +1563,7 @@ const ItemController = {
                         course.durationHours
                     ),
                 };
-                _messages.success(res, req, certificate);
+                _messages.success(res, req, certificate, 'Certificado gerado com sucesso', 'items', '/generate-certificate/');
             } else {
                 _messages.badRequest(
                     res,
@@ -1584,7 +1571,7 @@ const ItemController = {
                     'Não foi possível gerar o certificado, pois o item não está concluído!',
                     'Conclua o item para gerar o certificado!',
                     'items',
-                    'generateCertificate'
+                    '/generate-certificate'
                 );
             }
         } catch (error) {
@@ -1599,7 +1586,7 @@ const ItemController = {
         }
     },
 
-    async getItemWithTracking (req, res) {
+    async getItemWithTracking(req, res) {
         try {
             const { itemId } = req.params;
             const user = await getUserByToken(req);
@@ -1651,7 +1638,7 @@ const ItemController = {
         }
     },
 
-    async getProviders (req, res) {
+    async getProviders(req, res) {
         try {
             const items = await Item.find({});
             const providers = items
@@ -1671,18 +1658,20 @@ const ItemController = {
         }
     },
 
-    async archive (req, res) {
+    async archive(req, res) {
         const itemId = req.params.itemId;
 
         await Item.findByIdAndUpdate(itemId, { $set: { enabled: false, archive: true, archivedAt: new Date() } });
+        await _functions.recordLog(req, 'NO_CONTENT_SUCCES', `Arquivamento do item ${itemId} realizado com sucesso`, 'items', '/archive');
 
         res.status(204).send();
     },
 
-    async unarchive (req, res) {
+    async unarchive(req, res) {
         const itemId = req.params.itemId;
 
         await Item.findByIdAndUpdate(itemId, { $set: { archive: false, archivedAt: null } });
+        await _functions.recordLog(req, 'NO_CONTENT_SUCCES', `Desarquivamento do item ${itemId} realizado com sucesso`, 'items', '/unarchive');
 
         res.status(204).send();
     }

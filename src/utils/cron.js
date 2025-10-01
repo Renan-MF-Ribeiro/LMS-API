@@ -205,11 +205,15 @@ module.exports = {
     async getUsersLoadCron () {
         const cronConfig = await getCronConfig();
 
-        console.log('Starting getUsersLoadCron', cronConfig.userFTP.active);
+        console.log(
+            'Starting getUsersLoadCron',
+            cronConfig?.userFTP?.active,
+            cronConfig?.userFTP?.cronExpression ?? '00 19 * * *'
+        );
 
-        if (cronConfig.userFTP.active) {
+        if (cronConfig?.userFTP?.active) {
             new CronJob(
-                '00 19 * * * ',
+                cronConfig?.userFTP?.cronExpression ?? '00 19 * * *',
                 () => {
                     getUsersLoad();
                 },
@@ -689,12 +693,17 @@ async function processUserLoadFile(directory, fileName, isProduction, usersDataC
                 );
             }
 
+            if (usersDataConfig?.inactivateIfNotInSpreadsheet && !user.status) {
+                user.status = 'ATIVO';
+            }
+
             const processedUser = await processUsersLoad(
                 user,
                 fieldsForEligibility,
                 false,
                 false,
-                replaceMap
+                replaceMap,
+                'LOAD_SFTP'
             );
 
             const [account, existingUser] = await Promise.all([
@@ -759,6 +768,8 @@ async function processUserLoadFile(directory, fileName, isProduction, usersDataC
                 {
                     onboarding: { $ne: true },
                     ignoreLoadInactivation: { $ne: true },
+                    'origin.type': 'LOAD_SFTP',
+                    status: 'ATIVO',
                 },
                 { $set: { status: 'INATIVO' } },
                 { multi: true }

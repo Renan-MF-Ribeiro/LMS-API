@@ -1,7 +1,8 @@
 const ApiError = require('../../errors/ApiError');
-const { removeAccents, getUserByToken, slugify } = require('../../utils/functions');
+const { removeAccents, getUserByToken, slugify, getCustomEmail } = require('../../utils/functions');
 const { Group } = require('../groups/model');
 const _business = require('./business');
+const { getCompanyConfig } = require('./utils');
 const {
     ConfigTypes,
     ConfigModel,
@@ -313,11 +314,11 @@ module.exports = {
     },
 
     async getCompanySupportFormConfig(req, res) {
-        const companyConfig = await _business.getCompanyConfig();
+        const companyConfig = await getCompanyConfig();
 
         const supportFormConfig = companyConfig?.supportFormCustomEmail || null;
 
-        if (!supportFormConfig || !Array.isArray(supportFormConfig) || supportFormConfig.length < 2) {
+        if (!supportFormConfig || !Array.isArray(supportFormConfig) || supportFormConfig.length < 2 || !req.headers?.authorization) {
             return _messages.success(res, req, {
                 supportFormConfig,
                 customEmail: null,
@@ -325,20 +326,11 @@ module.exports = {
         }
 
         const user = await getUserByToken(req);
-
-        const domain = supportFormConfig.pop().replace('@', '').trim();
-
-        const customEmail = supportFormConfig.map((field) => {
-            if (user[field]) {
-                return String(user[field]).trim()
-            }
-
-            return null;
-        }).filter(Boolean).join('_');
+        const { customEmail, domain } = await getCustomEmail(user);
 
         return _messages.success(res, req, {
             supportFormConfig: [supportFormConfig, domain],
-            customEmail: customEmail ? `${slugify(customEmail)}@${domain}` : null,
+            customEmail: customEmail ? customEmail : null,
         });
     }
 };

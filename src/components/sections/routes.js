@@ -4,12 +4,14 @@ const _controller = require('./controller')
 const {
     isStudent,
     isAccountant,
+    isUserManagerOrSuperAdminOrElegibilityManager,
 } = require('../../utils/middlewares')
 const { cacheRequestOnClient } = require('../../utils/cache/middlewares')
 
 router
     .get('/', isStudent, _controller.returnSections)
     .get('/elegibles-contents', isStudent, cacheRequestOnClient(15), _controller.getSectionsElegibles) // Cache for 15 seconds
+    .get('/user-accessible-content', isUserManagerOrSuperAdminOrElegibilityManager, _controller.getUserAccessibleContent)
     .get('/formation', isStudent, _controller.getSectionsFormation)
     .get('/:id', isStudent, _controller.getSectionDetail)
     .patch('/:id/:status', isAccountant, _controller.changeStatus)

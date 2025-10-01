@@ -95,6 +95,7 @@ const MessengerConfigModel = ConfigModel.discriminator(
                         thumbnail:
                             'https://happlearning.blob.core.windows.net/logo/thumbnailHapp.png',
                         footer: 'https://happlearning.blob.core.windows.net/logo/footerHapp.png',
+                        title: 'Aviso Happlearning',
                     },
                 },
                 type: new mongoose.Schema(
@@ -153,6 +154,13 @@ const MessengerConfigModel = ConfigModel.discriminator(
                                 default:
                                     'https://happlearning.blob.core.windows.net/logo/footerHapp.png',
                             },
+                            title: {
+                                type: String,
+                                required: true,
+                                trim: true,
+                                default:
+                                    'Aviso Happlearning',
+                            },
                         },
                     },
                     valueSchemaOptions
@@ -177,6 +185,7 @@ const CronConfigModel = ConfigModel.discriminator(
                     },
                     userFTP: {
                         active: false,
+                        cronExpression: '00 19 * * *',
                     },
                     courseRelease: {
                         active: false,
@@ -232,6 +241,7 @@ const CronConfigModel = ConfigModel.discriminator(
                         },
                         userFTP: {
                             active: { type: Boolean, default: false },
+                            cronExpression: { type: String, default: '00 19 * * *' },
                         },
                         courseRelease: {
                             active: { type: Boolean, default: false },

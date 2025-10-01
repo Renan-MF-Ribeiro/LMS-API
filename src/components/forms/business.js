@@ -86,7 +86,9 @@ function getDefaultConfigByKey(field) {
     }
 }
 
-function setConnectMapInForm(connectMap, form) {
+function setConnectMapInForm(connectMap, form, isReadOnly = false) {
+    const isUserReadOnly = isReadOnly
+
     return {
         ...form,
         sections: form.sections.map((section) => {
@@ -95,16 +97,20 @@ function setConnectMapInForm(connectMap, form) {
                 fields: section.fields.map((field) => {
                     const config = connectMap[field.key] ?? null;
 
-                    return {
-                        ...field,
-                        config: !config
-                            ? getDefaultConfigByKey(field.key)
-                            : (typeof config === 'string' ? {
+                    const baseConfig = !config
+                        ? getDefaultConfigByKey(field.key)
+                        : (typeof config === 'string'
+                            ? {
                                 label: field.key,
                                 field: config,
                                 activeInForms: true,
                                 type: 'string'
-                            } : config),
+                            }
+                            : config);
+
+                    return {
+                        ...field,
+                        config: { ...(baseConfig || {}), readonly: isUserReadOnly },
                     };
                 }),
             };

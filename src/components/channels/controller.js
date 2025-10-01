@@ -5,7 +5,7 @@ const { azureBlob } = require('../../utils/files');
 const { DOMAIN, AZURE_BLOB_URL } = process.env;
 const { Section } = require('../sections/model');
 const { Trail } = require('../trails/model');
-const { getTagsElegiblesByToken, checkEligibilityTagsAnd, getSectionTrailId } = require('../sections/business');
+const { getTagsElegiblesByToken, checkEligibilityTagsAnd, getSectionTrailId, getContentEligibilityParameterByUserId } = require('../sections/business');
 const { Theme } = require('../theme/palette/model');
 const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business');
 const { getDbCurrentFeatures } = require('../../utils/features');
@@ -13,7 +13,7 @@ const mentorConfigController = require('../mentoring/config/controller');
 
 
 module.exports = {
-    async getChannels (req, res) {
+    async getChannels(req, res) {
         try {
             const { sort, order } = _functions.ordernation(req);
             const { skip, limit } = _functions.pagination(req);
@@ -24,34 +24,38 @@ module.exports = {
             const features = await getDbCurrentFeatures(req);
 
             if (!features?.alura) {
-                OptionalChannel.push({ type: { $ne: 'alura' } })
+                OptionalChannel.push({ type: { $ne: 'alura' } });
             }
 
             if (!features?.collaborationComponent) {
-                OptionalChannel.push({ type: { $ne: 'collaboration' } })
+                OptionalChannel.push({ type: { $ne: 'collaboration' } });
             }
 
-            const query = { $and: [
-                ...OptionalChannel
-            ] }
+            const query = {
+                $and: [
+                    ...OptionalChannel
+                ]
+
+            };
+
 
             if (searchBy) {
                 query.$and.push({
                     title: { $regex: searchBy, $options: 'i' }
-                })
+                });
             }
 
             if (req?.segmentation) {
-                handleSegmentationOnQuery(req, 'owner', query)
+                handleSegmentationOnQuery(req, 'owner', query);
             }
 
             const total = await Channel.find(query).countDocuments();
 
-            const channels = await Channel.find(query).sort({ [order]: sort })
+            const channels = await Channel.find(query).sort({ [order]: sort });
 
             _messages.success(res, req, {
                 data: channels,
-                total,
+                total
             });
         } catch (error) {
             _messages.internalServer(
@@ -65,77 +69,99 @@ module.exports = {
         }
     },
     async getChannelsElegibles (req, res) {
-        const tags = await getTagsElegiblesByToken(req);
+        const { userId } = req.query;
+        let tags
+        if (userId) {
+            const { tags: newTags } = await getContentEligibilityParameterByUserId(userId)
+            tags = newTags
+        }
+        else {
+            tags = await getTagsElegiblesByToken(req);
+        }
         const user = await _functions.getUserByToken(req);
+        const features = await getDbCurrentFeatures(req);
 
-        try {
-            const features = await getDbCurrentFeatures(req);
-            const query = { $and: [
-                { tags: { $in: tags.map((tag) => tag.value) } },
-                { enabled: true }
-            ]}
+        const tagsIn = tags.map((tag) => tag.value);
 
-            if(features?.mentoring){
-                const mentoringBlocked = await mentorConfigController.isBlocked(user._id);
-                if (mentoringBlocked) {
-                    query.$and.push({ type: { $ne: 'mentoring' } });
+        const query = {
+            $and: [
+                { enabled: true },
+                {
+                    $or: [
+                        { tags: { $in: tagsIn } },
+                        { tagsAnd: { $in: tagsIn } }
+                    ]
                 }
+            ]
+        };
+
+        const defaultChannelsByFeature = {
+            alura: 'alura',
+            feed: 'feed',
+            news: 'news',
+            mentoring: 'mentoring',
+            collaborationComponent: 'collaboration',
+        };
+
+        for await (const [feature, channelType] of Object.entries(defaultChannelsByFeature)) {
+            if (feature === 'mentoring') {
+                if (!features?.mentoring) query.$and.push({ type: { $ne: 'mentoring' } });
+
+                const mentoringBlocked = await mentorConfigController.isBlocked(user._id, req);
+
+                if (mentoringBlocked) query.$and.push({ type: { $ne: 'mentoring' } });
+
+                continue;
             }
 
-            let channels = await Channel
-                .find(query)
-                .sort({ position: 'asc' })
-                .populate({ path: 'theme', match: { deleted: 0 }, })
-
-            channels = await Promise.all(channels.map(async (channel) => {
-                if (channel.type === 'alura') return channel;
-                if (channel.type === 'feed') return channel;
-                if (channel.type === 'news') return channel;
-                if(channel.type === 'mentoring') return channel;
-                if (channel.type === 'collaboration') return channel;
-
-                const sectionQuery = { $and: [
-                    { _id: { $in: channel.idSections } }
-                ] }
-
-                const sections = await Section.find(sectionQuery).select('trails');
-                
-                const trailsIds = sections.flatMap(
-                    (section) => section.trails
-                        ?.map(trail => getSectionTrailId(trail))
-                        .filter(Boolean)
-                );
-
-                const trailQuery = { $and: [
-                    { _id: { $in: trailsIds } }
-                ] }
-
-                const trails = await Trail.find(trailQuery);
-
-                const hasEligibleTrails = trails.some((trail) =>
-                    checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative
-                );
-
-                return hasEligibleTrails ? channel : null;
-            }));
-
-            channels = channels.filter((channel) => channel)
-
-            _messages.success(res, req, channels);
-        } catch (error) {
-            console.log(error)
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'channels',
-                'get'
-            );
+            if (!features?.[feature]) {
+                query.$and.push({ type: { $ne: channelType } });
+            }
         }
+
+        let channels = await Channel
+            .find(query)
+            .sort({ position: 'asc' })
+            .populate({ path: 'theme', match: { deleted: 0 } });
+
+        channels = await Promise.all(channels.map(async (channel) => {
+            if (Object.values(defaultChannelsByFeature).includes(channel.type)) return channel;
+
+            const sectionQuery = {
+                $and: [
+                    { _id: { $in: channel.idSections } }
+                ]
+            };
+
+            const sections = await Section.find(sectionQuery).select('trails');
+
+            const trailsIds = sections.flatMap(
+                (section) => section.trails
+                    ?.map(trail => getSectionTrailId(trail))
+                    .filter(Boolean)
+            );
+
+            const trailQuery = {
+                $and: [
+                    { _id: { $in: trailsIds } }
+                ]
+            };
+
+            const trails = await Trail.find(trailQuery);
+
+            const hasEligibleTrails = trails.some((trail) =>
+                checkEligibilityTagsAnd(tags, trail.tagsAnd, trail.tags) && !trail.collaborative
+            );
+
+            return hasEligibleTrails ? channel : null;
+        }));
+
+        channels = channels.filter(Boolean);
+
+        return _messages.success(res, req, channels);
     },
 
-    async create (req, res) {
+    async create(req, res) {
         try {
             let body = JSON.parse(req.fields.payload);
 
@@ -160,7 +186,7 @@ module.exports = {
             }
 
             if (req?.segmentation) {
-                await handleSegmentationOnCreate(req, body)
+                await handleSegmentationOnCreate(req, body);
             }
 
             const channel = await Channel.create(body);
@@ -188,7 +214,7 @@ module.exports = {
         }
     },
 
-    async update (req, res) {
+    async update(req, res) {
         try {
             let body = JSON.parse(req.fields.payload);
             const channelId = body.channelId;
@@ -199,13 +225,13 @@ module.exports = {
                     (key) => req.files[key]
                 );
 
-                let indexBannersWithNoPath = body.banners.reduce(function (
-                    r,
-                    v,
-                    i
-                ) {
-                    return r.concat(typeof v.path != 'string' ? i : []);
-                },
+                let indexBannersWithNoPath = body.banners.reduce(function(
+                        r,
+                        v,
+                        i
+                    ) {
+                        return r.concat(typeof v.path != 'string' ? i : []);
+                    },
                     []);
 
                 for (let index in indexBannersWithNoPath) {
@@ -255,7 +281,7 @@ module.exports = {
         }
     },
 
-    async delete (req, res) {
+    async delete(req, res) {
         try {
             const findChannel = await Channel.find({ _id: req.params.id });
             if (findChannel.length) {
@@ -294,7 +320,7 @@ module.exports = {
         }
     },
 
-    async updatePosition (req, res) {
+    async updatePosition(req, res) {
         try {
             const channels = req.body;
 
@@ -314,5 +340,5 @@ module.exports = {
                 '/updatePosition'
             );
         }
-    },
+    }
 };

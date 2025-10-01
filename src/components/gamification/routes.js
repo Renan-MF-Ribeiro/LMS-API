@@ -11,6 +11,7 @@ router
     // Not admin routes
     .get('/clients', _controller.getClient)
     .get('/clients/events', _controller.getClientEvents)
+    .get('/clients/niveis', _controller.getClientNiveis)
     .get('/event-users', _controller.getExtractByClient)
     .get('/event-users/:networkLogin', _controller.getExtractByUser)
     .get('/ranking-users/:networkLogin', _controller.listRankingByUser)

@@ -274,7 +274,24 @@ const MenuDefault = [
                 roles: [
                     "PERFIL_Gestor_Engajamento",
                 ],
-                index: 2
+                index: 3
+            },
+            {
+                button: "report",
+                roles: ["PERFIL_Gestor_Engajamento"],
+                index: 2,
+                subMenu: [
+                    {
+                        button: "feedReport",
+                        roles: ["PERFIL_Gestor_Engajamento"],
+                        index: 0
+                    },
+                    {
+                        button: "reasonReport",
+                        roles: ["PERFIL_Gestor_Engajamento"],
+                        index: 1
+                    }
+                ]
             },
         ],
         index: 5
@@ -939,7 +956,7 @@ const MenuDefault = [
                         ],
                         index: 6
                     },
-                    
+
                 ],
                 index: 3
             },

@@ -3,7 +3,10 @@ require('dotenv').config();
 const fs = require('fs/promises');
 
 const ExcelJS = require('exceljs');
+
 const { connectDatabase } = require('../utils/db');
+
+const environment = require('../environment');
 
 async function writeDebugJson(fileName, data) {
     await fs.writeFile(
@@ -54,11 +57,11 @@ async function runScript(functionToRun) {
     console.time('Total time');
     console.log('Running script...', functionToRun.name);
 
-    console.log('DB_HOST', process.env.DB_HOST);
-    console.log('AZURE_BLOBNAME', process.env.AZURE_BLOBNAME);
-    console.log('AZURE_BLOB_URL', process.env.AZURE_BLOB_URL);
-    console.log('DOMAIN', process.env.DOMAIN);
-    console.log('CLIENT_ID', process.env.CLIENT_ID);
+    console.log('DB_HOST', environment.DB_HOST);
+    console.log('AZURE_BLOBNAME', environment.AZURE_BLOBNAME);
+    console.log('AZURE_BLOB_URL', environment.AZURE_BLOB_URL);
+    console.log('DOMAIN', environment.DOMAIN);
+    console.log('CLIENT_ID', environment.CLIENT_ID);
 
     try {
         await fs.access('./src/scripts/debug');

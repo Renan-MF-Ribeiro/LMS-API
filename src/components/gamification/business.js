@@ -46,6 +46,13 @@ const GamificationBusiness = {
         return data;
     },
 
+    async getClientNiveis() {
+        const uri = `${host}/clients/${clientId}/niveis`;
+        const { data } = await axios.get(uri, { headers });
+
+        return data;
+    },
+
     async updateClient(body, requestUserLogin) {
         const uri = `${host}/clients/${clientId}`;
 
