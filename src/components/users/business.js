@@ -46,12 +46,10 @@ async function createGroupsByGroupsAD(groupsAD) {
     });
 
     return await Group.insertMany(
-        createGroups.map(
-            (groupName) => ({
-                name: groupName,
-                tags: [],
-            })
-        )
+        createGroups.map((groupName) => ({
+            name: groupName,
+            tags: [],
+        }))
     );
 }
 
@@ -98,44 +96,44 @@ module.exports = {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                    {
-                        $or: [
-                            {
-                                onboarding: { $exists: false },
-                                groupsAD: { $in: tag },
-                            },
-                            {
-                                onboarding: { $eq: onboarding },
-                                groupsAD: { $in: tag },
-                            },
-                        ],
-                    },
-                ];
+                      {
+                          $or: [
+                              {
+                                  onboarding: { $exists: false },
+                                  groupsAD: { $in: tag },
+                              },
+                              {
+                                  onboarding: { $eq: onboarding },
+                                  groupsAD: { $in: tag },
+                              },
+                          ],
+                      },
+                  ];
         } else {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                    {
-                        $or: [
-                            { onboarding: { $exists: false } },
-                            { onboarding: { $eq: onboarding } },
-                        ],
-                    },
-                ];
+                      {
+                          $or: [
+                              { onboarding: { $exists: false } },
+                              { onboarding: { $eq: onboarding } },
+                          ],
+                      },
+                  ];
         }
 
         const searchByQuery = searchBy
             ? {
-                $or: [
-                    { name: { $regex: searchBy, $options: 'i' } },
-                    { registration: { $regex: searchBy, $options: 'i' } },
-                    { email: { $regex: searchBy, $options: 'i' } },
-                ],
-                $and: onboardingQuery,
-            }
+                  $or: [
+                      { name: { $regex: searchBy, $options: 'i' } },
+                      { registration: { $regex: searchBy, $options: 'i' } },
+                      { email: { $regex: searchBy, $options: 'i' } },
+                  ],
+                  $and: onboardingQuery,
+              }
             : {
-                $and: onboardingQuery,
-            };
+                  $and: onboardingQuery,
+              };
 
         const users = await User.find(searchByQuery)
             .sort({ [order]: sort })
@@ -178,12 +176,15 @@ module.exports = {
     returnLastLoginAttemp(id) {
         return new Promise(async (resolve, reject) => {
             try {
-                const block = await Block.find({
+                const blocks = await Block.find({
                     user: { $eq: id },
                     unblocked: { $eq: false },
-                });
+                }).sort({ dateTimeBlock: 1 });
 
-                resolve(block[2].dateTimeBlock);
+                if (!blocks || blocks.length === 0) return resolve(null);
+
+                // Retorna o horário do último registro de tentativa
+                resolve(blocks[blocks.length - 1].dateTimeBlock);
             } catch (error) {
                 reject(error);
             }
@@ -397,7 +398,9 @@ module.exports = {
                 const userUserFieldValue = user[userField.value];
 
                 if (userUserFieldValue !== config.fieldValue) {
-                    log(`User field value ${userUserFieldValue} does not match config value ${config.fieldValue}`);
+                    log(
+                        `User field value ${userUserFieldValue} does not match config value ${config.fieldValue}`
+                    );
                     return;
                 }
 
@@ -444,8 +447,14 @@ module.exports = {
      * - Sanitizes CPF format
      * - Applies replacement mappings if provided
      */
-    async processUsersLoad(data, elegibilityFields = [], onboarding = false, preventOnboardingGroupAdd = false, replaceMap = null, origin = undefined) {
-
+    async processUsersLoad(
+        data,
+        elegibilityFields = [],
+        onboarding = false,
+        preventOnboardingGroupAdd = false,
+        replaceMap = null,
+        origin = undefined
+    ) {
         ['networkLogin', 'name', 'password'].forEach((field) => {
             if (!data[field]) {
                 delete data[field];
@@ -470,6 +479,8 @@ module.exports = {
                 }
             }
 
+            // console.log(date, parsedDate.format('DD/MM/YYYY'));
+
             return parsedDate.format('DD/MM/YYYY');
         }
 
@@ -480,13 +491,14 @@ module.exports = {
         data.terminationDate = parseDate(data.terminationDate);
         data.vacationStartDate = parseDate(data.vacationStartDate);
         data.vacationEndDate = parseDate(data.vacationEndDate);
+        data.loginType = data.loginType == 'AMBOS' ? 'BOTH' : data.loginType;
         data.enabled = true;
         data.onboarding = onboarding;
         data.origin = {
             type: origin,
             updatedAt: new Date(),
             info: null,
-        }
+        };
 
         data.password = [
             {
@@ -496,19 +508,6 @@ module.exports = {
             },
         ];
 
-        // Default Fields
-        data.status = _functions.isPositiveValue(data.status) ? 'ATIVO' : 'INATIVO';
-        if (data.cpf) data.cpf = _functions.parseDocument(data.cpf);
-        if (data.cnpj) data.cnpj = _functions.parseDocument(data.cnpj);
-        if (data.pcd) data.pcd = _functions.isPositiveValue(data.pcd) ? 'SIM' : 'NAO';
-        if (data.manager) data.manager = _functions.isPositiveValue(data.manager) ? 'SIM' : 'NAO';
-        if (data.loginType) data.loginType = _functions.getLoginType(data.loginType);
-
-        if (onboarding) {
-            data.networkLogin = data.cpf;
-            data.onboarding = true;
-        }
-
         const groupsAD = ['PERFIL_Aluno'];
 
         if (onboarding && !preventOnboardingGroupAdd) {
@@ -517,22 +516,20 @@ module.exports = {
             groupsAD.push('ELEGE_CURSO');
         }
 
-        if (elegibilityFields && elegibilityFields.length > 0 && !onboarding) {
+        if (elegibilityFields && elegibilityFields.length > 0 && onboarding == false) {
             for (const field of elegibilityFields) {
                 if (data[field]) {
                     const fieldType = typeof data[field];
-
                     if (fieldType === 'object') continue;
 
-                    const value = fieldType !== 'string'
-                        ? data[field]
-                        : _functions.clearString(data[field]);
+                    const value =
+                        fieldType !== 'string' ? data[field] : _functions.clearString(data[field]);
 
                     groupsAD.push(`ELEGE_${value}`);
                 }
             }
         } else {
-            if (data.company && data.office) {
+            if (!!data.company && !!data.office) {
                 groupsAD.push(`ELEGE_${_functions.clearString(data.company)}`);
                 groupsAD.push(`ELEGE_${_functions.clearString(data.office)}`);
             }
@@ -552,30 +549,38 @@ module.exports = {
                 !!data[optional] && groupsAD.push(`ELEGE_${_functions.clearString(data[optional])}`)
         );
 
+        for await (const groupName of groupsAD) {
+            if (groupName.startsWith('PERFIL_')) continue;
+
+            const group = await Group.findOne({ name: groupName });
+
+            if (!group) {
+                await Group.create({
+                    name: groupName,
+                    tags: [{ display: groupName, value: groupName }],
+                });
+            }
+        }
+
         const roles = data.roles ? data.roles.split(',').map((item) => item.trim()) : [];
 
-        const availableRolesSet = new Set([
-            'Conteudista',
-            'Analista',
-            'Integrador',
-            'Instrutor',
-            'Colaborador',
-            'Gestor_Elegibilidade',
-            'Gestor_Engajamento',
-            'Gestor_Usuario',
-            'Gestor_Matriz',
-            'Aplicador_Matriz',
-        ]);
+        if (roles.includes('Analista')) {
+            groupsAD.push('PERFIL_Analista');
+        }
+        if (roles.includes('Conteudista')) {
+            groupsAD.push('PERFIL_Conteudista');
+        }
 
-        roles.forEach((role) => {
-            if (availableRolesSet.has(role)) groupsAD.push(`PERFIL_${role}`);
-        });
+        data.groupsAD = groupsAD;
 
-        const uniqueGroupsAD = [...new Set(groupsAD)];
+        if (data.cpf) {
+            data.cpf = String(data.cpf).replace(/[^a-z0-9]/gi, '');
+        }
 
-        await createGroupsByGroupsAD(uniqueGroupsAD);
-
-        data.groupsAD = uniqueGroupsAD;
+        if (onboarding) {
+            data.networkLogin = data.cpf;
+            data.onboarding = true;
+        }
 
         if (replaceMap?.size) {
             setReplacedValuesFromConnectMap(data, replaceMap);
@@ -754,11 +759,15 @@ module.exports = {
         const arrayIds = Array.isArray(userIds) ? userIds : [userIds];
         if (arrayIds.length === 0) return [];
 
-        const users = await User.find({ _id: { $in: arrayIds?.map((id) => new Types.ObjectId(id)) } }).lean();
+        const users = await User.find({
+            _id: { $in: arrayIds?.map((id) => new Types.ObjectId(id)) },
+        }).lean();
         if (users.length === 0) return [];
 
-
-        const groups = await Group.find({ name: { $in: users?.flatMap((u) => u?.groupsAD) } }, 'tags').lean();
+        const groups = await Group.find(
+            { name: { $in: users?.flatMap((u) => u?.groupsAD) } },
+            'tags'
+        ).lean();
         const tags = groups?.flatMap((group) => group?.tags);
         return [users, tags];
     },
@@ -803,19 +812,19 @@ module.exports = {
             const groupsAnd = [];
 
             for (const g of groups) {
-                const groupTags = g.tags.map(t => t.value);
-                
-                if (tags.some(t => groupTags.includes(t))) {
+                const groupTags = g.tags.map((t) => t.value);
+
+                if (tags.some((t) => groupTags.includes(t))) {
                     groupsOr.push(g.name);
                 }
 
-                if (tagsAnd.some(t => groupTags.includes(t))) {
+                if (tagsAnd.some((t) => groupTags.includes(t))) {
                     groupsAnd.push(g.name);
                 }
             }
 
             const query = {
-                $or: []
+                $or: [],
             };
 
             if (groupsOr.length > 0) {
@@ -967,7 +976,7 @@ module.exports = {
         const partner = await PartnerBusiness.getPartnersByToken(token);
         const usedToken = validatePartnerToken(partner, token);
 
-        if (!usedToken.updatable) return user;
+        if (!usedToken?.updatable) return user;
         if (user.origin?.type === 'PARTNER_TOKEN' && user.origin?.info === usedToken.key)
             return user;
 
@@ -1033,8 +1042,8 @@ const getPartnerTokenNewInformations = async (usedToken, user) => {
         usedToken?.overwriteEligibility === false
             ? (user?.groupsAD || [])?.concat(tokenEligibilities || [])
             : (user?.groupsAD || [])
-                ?.filter((value) => value.includes('PERFIL_'))
-                ?.concat(tokenEligibilities);
+                  ?.filter((value) => value.includes('PERFIL_'))
+                  ?.concat(tokenEligibilities);
 
     const classes =
         usedToken?.classGroupResult?.overwriteClassGroup === false
@@ -1061,7 +1070,6 @@ const getPartnerTokenNewInformations = async (usedToken, user) => {
             _class.limitDate = existantGroup?.limitDate || null;
             _class.updatedAt = existantGroup?.updatedAt || null;
         }
-
     }
 
     return [newGroupsAD, tokenBlockedFields, newClassGroups];
@@ -1071,10 +1079,10 @@ const validatePartnerToken = (partner, token) => {
     if (!partner) {
         throw new ApiError('Token inválido ou parceiro não encontrado', 404);
     }
-    const usedToken = partner?.keys.find((key) => key.key === token);
-    if (Date.now() > usedToken?.endDate) {
-        throw new ApiError('Token expirado', 403);
-    }
 
-    return usedToken;
+    const usedToken = partner?.keys.find((key) => key.key === token);
+
+    if (Date.now() < usedToken?.endDate) {
+        return usedToken;
+    }
 };
