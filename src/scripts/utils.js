@@ -53,46 +53,58 @@ async function generateReport(
     await workbook.xlsx.writeFile(`./src/scripts/data/${fileName ?? `extracao_${new Date().getTime()}`}.xlsx`);
 }
 
-async function runScript(functionToRun) {
+async function runScript(
+    functionToRun,
+    options = {
+        skipCountdown: false,
+        database: {},
+    }
+) {
     console.time('Total time');
     console.log('Running script...', functionToRun.name);
 
-    console.log('DB_HOST', environment.DB_HOST);
-    console.log('AZURE_BLOBNAME', environment.AZURE_BLOBNAME);
-    console.log('AZURE_BLOB_URL', environment.AZURE_BLOB_URL);
-    console.log('DOMAIN', environment.DOMAIN);
-    console.log('CLIENT_ID', environment.CLIENT_ID);
+    console.log('\nEnvironment variables:');
+    console.log('DB_HOST:', environment.DB_HOST);
+    console.log('AZURE_BLOBNAME:', environment.AZURE_BLOBNAME);
+    console.log('AZURE_BLOB_URL:', environment.AZURE_BLOB_URL);
+    console.log('DOMAIN:', environment.DOMAIN);
+    console.log('CLIENT_ID:', environment.CLIENT_ID);
+    console.log('\n');
 
     try {
         await fs.access('./src/scripts/debug');
     } catch (error) {
         await fs.mkdir('./src/scripts/debug');
     }
-    
+
     try {
         await fs.access('./src/scripts/data');
     } catch (error) {
         await fs.mkdir('./src/scripts/data');
     }
 
-    await new Promise((resolve) => {
-        let count = 5;
+    if (!options.skipCountdown) {
+        await new Promise((resolve) => {
+            let count = 5;
 
-        const interval = setInterval(() => {
-            process.stdout.write(`\rScript will start in ${count} seconds`);
-            count--;
+            const interval = setInterval(() => {
+                process.stdout.write(`\rScript will start in ${count} seconds`);
+                count--;
 
-            if (count < 0) {
-                clearInterval(interval);
-                process.stdout.write('\n\n');
-                resolve();
-            }
-        }, 1000);
-    });
+                if (count < 0) {
+                    clearInterval(interval);
+                    process.stdout.write('\n\n');
+                    resolve();
+                }
+            }, 1000);
+        });
+    }
 
-    await connectDatabase();
+    console.log('Starting script...');
 
-    await functionToRun();
+    const connInfo = await connectDatabase(options?.database || {});
+
+    await functionToRun(connInfo);
 
     console.timeEnd('Total time');
     process.exit(0);
