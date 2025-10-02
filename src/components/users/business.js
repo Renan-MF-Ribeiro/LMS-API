@@ -176,12 +176,15 @@ module.exports = {
     returnLastLoginAttemp(id) {
         return new Promise(async (resolve, reject) => {
             try {
-                const block = await Block.find({
+                const blocks = await Block.find({
                     user: { $eq: id },
                     unblocked: { $eq: false },
-                });
+                }).sort({ dateTimeBlock: 1 });
 
-                resolve(block[2].dateTimeBlock);
+                if (!blocks || blocks.length === 0) return resolve(null);
+
+                // Retorna o horário do último registro de tentativa
+                resolve(blocks[blocks.length - 1].dateTimeBlock);
             } catch (error) {
                 reject(error);
             }
@@ -476,6 +479,8 @@ module.exports = {
                 }
             }
 
+            // console.log(date, parsedDate.format('DD/MM/YYYY'));
+
             return parsedDate.format('DD/MM/YYYY');
         }
 
@@ -486,6 +491,7 @@ module.exports = {
         data.terminationDate = parseDate(data.terminationDate);
         data.vacationStartDate = parseDate(data.vacationStartDate);
         data.vacationEndDate = parseDate(data.vacationEndDate);
+        data.loginType = data.loginType == 'AMBOS' ? 'BOTH' : data.loginType;
         data.enabled = true;
         data.onboarding = onboarding;
         data.origin = {
@@ -502,19 +508,6 @@ module.exports = {
             },
         ];
 
-        // Default Fields
-        data.status = _functions.isPositiveValue(data.status) ? 'ATIVO' : 'INATIVO';
-        if (data.cpf) data.cpf = _functions.parseDocument(data.cpf);
-        if (data.cnpj) data.cnpj = _functions.parseDocument(data.cnpj);
-        if (data.pcd) data.pcd = _functions.isPositiveValue(data.pcd) ? 'SIM' : 'NAO';
-        if (data.manager) data.manager = _functions.isPositiveValue(data.manager) ? 'SIM' : 'NAO';
-        if (data.loginType) data.loginType = _functions.getLoginType(data.loginType);
-
-        if (onboarding) {
-            data.networkLogin = data.cpf;
-            data.onboarding = true;
-        }
-
         const groupsAD = ['PERFIL_Aluno'];
 
         if (onboarding && !preventOnboardingGroupAdd) {
@@ -523,11 +516,10 @@ module.exports = {
             groupsAD.push('ELEGE_CURSO');
         }
 
-        if (elegibilityFields && elegibilityFields.length > 0 && !onboarding) {
+        if (elegibilityFields && elegibilityFields.length > 0 && onboarding == false) {
             for (const field of elegibilityFields) {
                 if (data[field]) {
                     const fieldType = typeof data[field];
-
                     if (fieldType === 'object') continue;
 
                     const value =
@@ -537,7 +529,7 @@ module.exports = {
                 }
             }
         } else {
-            if (data.company && data.office) {
+            if (!!data.company && !!data.office) {
                 groupsAD.push(`ELEGE_${_functions.clearString(data.company)}`);
                 groupsAD.push(`ELEGE_${_functions.clearString(data.office)}`);
             }
@@ -557,30 +549,38 @@ module.exports = {
                 !!data[optional] && groupsAD.push(`ELEGE_${_functions.clearString(data[optional])}`)
         );
 
+        for await (const groupName of groupsAD) {
+            if (groupName.startsWith('PERFIL_')) continue;
+
+            const group = await Group.findOne({ name: groupName });
+
+            if (!group) {
+                await Group.create({
+                    name: groupName,
+                    tags: [{ display: groupName, value: groupName }],
+                });
+            }
+        }
+
         const roles = data.roles ? data.roles.split(',').map((item) => item.trim()) : [];
 
-        const availableRolesSet = new Set([
-            'Conteudista',
-            'Analista',
-            'Integrador',
-            'Instrutor',
-            'Colaborador',
-            'Gestor_Elegibilidade',
-            'Gestor_Engajamento',
-            'Gestor_Usuario',
-            'Gestor_Matriz',
-            'Aplicador_Matriz',
-        ]);
+        if (roles.includes('Analista')) {
+            groupsAD.push('PERFIL_Analista');
+        }
+        if (roles.includes('Conteudista')) {
+            groupsAD.push('PERFIL_Conteudista');
+        }
 
-        roles.forEach((role) => {
-            if (availableRolesSet.has(role)) groupsAD.push(`PERFIL_${role}`);
-        });
+        data.groupsAD = groupsAD;
 
-        const uniqueGroupsAD = [...new Set(groupsAD)];
+        if (data.cpf) {
+            data.cpf = String(data.cpf).replace(/[^a-z0-9]/gi, '');
+        }
 
-        await createGroupsByGroupsAD(uniqueGroupsAD);
-
-        data.groupsAD = uniqueGroupsAD;
+        if (onboarding) {
+            data.networkLogin = data.cpf;
+            data.onboarding = true;
+        }
 
         if (replaceMap?.size) {
             setReplacedValuesFromConnectMap(data, replaceMap);
@@ -1079,11 +1079,11 @@ const validatePartnerToken = (partner, token) => {
     if (!partner) {
         throw new ApiError('Token inválido ou parceiro não encontrado', 404);
     }
-    
-    // retirado por conta do card HL-8661
 
-    /*     const usedToken = partner?.keys.find((key) => key.key === token);
-    if (Date.now() > usedToken?.endDate) {
+    const usedToken = partner?.keys.find((key) => key.key === token);
+
+    // retirado por conta do card HL-8661
+    /* if (Date.now() > usedToken?.endDate) {
         throw new ApiError('Token expirado', 403);
     } */
 
