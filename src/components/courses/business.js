@@ -420,7 +420,8 @@ module.exports = {
 
             const isPresence = ['SIM', 'S'].includes(item.presence?.toUpperCase());
 
-            const originalPresenceAt = moment.tz(item.presenceAt, "YYYY-MM-DD", "America/Sao_Paulo");
+            // @fixme verificar captura de data
+            const originalPresenceAt = moment.tz(item.presenceAt, "DD/MM/YYYY", "America/Sao_Paulo");
             const nowDate = moment.tz('America/Sao_Paulo');
 
             const presenceAtUFC = originalPresenceAt.clone().utc().toDate();
