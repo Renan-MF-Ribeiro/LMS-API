@@ -104,6 +104,11 @@ async function runScript(
 
     const connInfo = await connectDatabase(options?.database || {});
 
+    if (!connInfo) {
+        console.log('Failed to connect to the database. Exiting script.');
+        process.exit(1);
+    }
+
     await functionToRun(connInfo);
 
     console.timeEnd('Total time');
