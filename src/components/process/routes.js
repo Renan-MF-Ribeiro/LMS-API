@@ -8,7 +8,10 @@ module.exports = express
     .get('/', isSuperAdmin, _controller.findAllPaginated)
     .get('/status', isSuperAdmin, _controller.getStatus)
     .get('/generate-records/:id', isSuperAdmin, _controller.generateRecords)
-    .get('/process-records/:id', isSuperAdmin, _controller.processRecords)
+
+    //.get('/reprocess-result/:id', isSuperAdmin, _controller.reprocessResult)
+    //.get('/generate-process-test/:type', isSuperAdmin, _controller.generateProcessTestFile)
+
     .get('/:id', isSuperAdmin, _controller.findOne)
     .post('/', formidable(), isSuperAdmin, _controller.create)
     .delete('/:id', isSuperAdmin, _controller.delete);
