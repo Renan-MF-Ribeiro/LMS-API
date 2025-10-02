@@ -976,7 +976,7 @@ module.exports = {
         const partner = await PartnerBusiness.getPartnersByToken(token);
         const usedToken = validatePartnerToken(partner, token);
 
-        if (!usedToken.updatable) return user;
+        if (!usedToken?.updatable) return user;
         if (user.origin?.type === 'PARTNER_TOKEN' && user.origin?.info === usedToken.key)
             return user;
 
@@ -1082,10 +1082,7 @@ const validatePartnerToken = (partner, token) => {
 
     const usedToken = partner?.keys.find((key) => key.key === token);
 
-    // retirado por conta do card HL-8661
-    /* if (Date.now() > usedToken?.endDate) {
-        throw new ApiError('Token expirado', 403);
-    } */
-
-    return usedToken;
+    if (Date.now() < usedToken?.endDate) {
+        return usedToken;
+    }
 };
