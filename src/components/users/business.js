@@ -46,12 +46,10 @@ async function createGroupsByGroupsAD(groupsAD) {
     });
 
     return await Group.insertMany(
-        createGroups.map(
-            (groupName) => ({
-                name: groupName,
-                tags: [],
-            })
-        )
+        createGroups.map((groupName) => ({
+            name: groupName,
+            tags: [],
+        }))
     );
 }
 
@@ -98,44 +96,44 @@ module.exports = {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                    {
-                        $or: [
-                            {
-                                onboarding: { $exists: false },
-                                groupsAD: { $in: tag },
-                            },
-                            {
-                                onboarding: { $eq: onboarding },
-                                groupsAD: { $in: tag },
-                            },
-                        ],
-                    },
-                ];
+                      {
+                          $or: [
+                              {
+                                  onboarding: { $exists: false },
+                                  groupsAD: { $in: tag },
+                              },
+                              {
+                                  onboarding: { $eq: onboarding },
+                                  groupsAD: { $in: tag },
+                              },
+                          ],
+                      },
+                  ];
         } else {
             onboardingQuery = onboarding
                 ? [{ onboarding: { $eq: onboarding } }]
                 : [
-                    {
-                        $or: [
-                            { onboarding: { $exists: false } },
-                            { onboarding: { $eq: onboarding } },
-                        ],
-                    },
-                ];
+                      {
+                          $or: [
+                              { onboarding: { $exists: false } },
+                              { onboarding: { $eq: onboarding } },
+                          ],
+                      },
+                  ];
         }
 
         const searchByQuery = searchBy
             ? {
-                $or: [
-                    { name: { $regex: searchBy, $options: 'i' } },
-                    { registration: { $regex: searchBy, $options: 'i' } },
-                    { email: { $regex: searchBy, $options: 'i' } },
-                ],
-                $and: onboardingQuery,
-            }
+                  $or: [
+                      { name: { $regex: searchBy, $options: 'i' } },
+                      { registration: { $regex: searchBy, $options: 'i' } },
+                      { email: { $regex: searchBy, $options: 'i' } },
+                  ],
+                  $and: onboardingQuery,
+              }
             : {
-                $and: onboardingQuery,
-            };
+                  $and: onboardingQuery,
+              };
 
         const users = await User.find(searchByQuery)
             .sort({ [order]: sort })
@@ -397,7 +395,9 @@ module.exports = {
                 const userUserFieldValue = user[userField.value];
 
                 if (userUserFieldValue !== config.fieldValue) {
-                    log(`User field value ${userUserFieldValue} does not match config value ${config.fieldValue}`);
+                    log(
+                        `User field value ${userUserFieldValue} does not match config value ${config.fieldValue}`
+                    );
                     return;
                 }
 
@@ -444,8 +444,14 @@ module.exports = {
      * - Sanitizes CPF format
      * - Applies replacement mappings if provided
      */
-    async processUsersLoad(data, elegibilityFields = [], onboarding = false, preventOnboardingGroupAdd = false, replaceMap = null, origin = undefined) {
-
+    async processUsersLoad(
+        data,
+        elegibilityFields = [],
+        onboarding = false,
+        preventOnboardingGroupAdd = false,
+        replaceMap = null,
+        origin = undefined
+    ) {
         ['networkLogin', 'name', 'password'].forEach((field) => {
             if (!data[field]) {
                 delete data[field];
@@ -486,7 +492,7 @@ module.exports = {
             type: origin,
             updatedAt: new Date(),
             info: null,
-        }
+        };
 
         data.password = [
             {
@@ -524,9 +530,8 @@ module.exports = {
 
                     if (fieldType === 'object') continue;
 
-                    const value = fieldType !== 'string'
-                        ? data[field]
-                        : _functions.clearString(data[field]);
+                    const value =
+                        fieldType !== 'string' ? data[field] : _functions.clearString(data[field]);
 
                     groupsAD.push(`ELEGE_${value}`);
                 }
@@ -754,11 +759,15 @@ module.exports = {
         const arrayIds = Array.isArray(userIds) ? userIds : [userIds];
         if (arrayIds.length === 0) return [];
 
-        const users = await User.find({ _id: { $in: arrayIds?.map((id) => new Types.ObjectId(id)) } }).lean();
+        const users = await User.find({
+            _id: { $in: arrayIds?.map((id) => new Types.ObjectId(id)) },
+        }).lean();
         if (users.length === 0) return [];
 
-
-        const groups = await Group.find({ name: { $in: users?.flatMap((u) => u?.groupsAD) } }, 'tags').lean();
+        const groups = await Group.find(
+            { name: { $in: users?.flatMap((u) => u?.groupsAD) } },
+            'tags'
+        ).lean();
         const tags = groups?.flatMap((group) => group?.tags);
         return [users, tags];
     },
@@ -803,19 +812,19 @@ module.exports = {
             const groupsAnd = [];
 
             for (const g of groups) {
-                const groupTags = g.tags.map(t => t.value);
-                
-                if (tags.some(t => groupTags.includes(t))) {
+                const groupTags = g.tags.map((t) => t.value);
+
+                if (tags.some((t) => groupTags.includes(t))) {
                     groupsOr.push(g.name);
                 }
 
-                if (tagsAnd.some(t => groupTags.includes(t))) {
+                if (tagsAnd.some((t) => groupTags.includes(t))) {
                     groupsAnd.push(g.name);
                 }
             }
 
             const query = {
-                $or: []
+                $or: [],
             };
 
             if (groupsOr.length > 0) {
@@ -1033,8 +1042,8 @@ const getPartnerTokenNewInformations = async (usedToken, user) => {
         usedToken?.overwriteEligibility === false
             ? (user?.groupsAD || [])?.concat(tokenEligibilities || [])
             : (user?.groupsAD || [])
-                ?.filter((value) => value.includes('PERFIL_'))
-                ?.concat(tokenEligibilities);
+                  ?.filter((value) => value.includes('PERFIL_'))
+                  ?.concat(tokenEligibilities);
 
     const classes =
         usedToken?.classGroupResult?.overwriteClassGroup === false
@@ -1061,7 +1070,6 @@ const getPartnerTokenNewInformations = async (usedToken, user) => {
             _class.limitDate = existantGroup?.limitDate || null;
             _class.updatedAt = existantGroup?.updatedAt || null;
         }
-
     }
 
     return [newGroupsAD, tokenBlockedFields, newClassGroups];
@@ -1071,10 +1079,13 @@ const validatePartnerToken = (partner, token) => {
     if (!partner) {
         throw new ApiError('Token inválido ou parceiro não encontrado', 404);
     }
-    const usedToken = partner?.keys.find((key) => key.key === token);
+    
+    // retirado por conta do card HL-8661
+
+    /*     const usedToken = partner?.keys.find((key) => key.key === token);
     if (Date.now() > usedToken?.endDate) {
         throw new ApiError('Token expirado', 403);
-    }
+    } */
 
     return usedToken;
 };
