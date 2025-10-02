@@ -420,12 +420,16 @@ module.exports = {
 
             const isPresence = ['SIM', 'S'].includes(item.presence?.toUpperCase());
 
-            const nowDate = moment.tz('America/Sao_Paulo').toDate();
+            const originalPresenceAt = moment.tz(item.presenceAt, "YYYY-MM-DD", "America/Sao_Paulo");
+            const nowDate = moment.tz('America/Sao_Paulo');
+
+            const presenceAtUFC = originalPresenceAt.clone().utc().toDate();
+            const nowDateUFC = nowDate.clone().utc().toDate();
 
             let presenceDate = isPresence
                 ? item.presenceAt
-                    ? moment.tz(item.presenceAt, 'America/Sao_Paulo').toDate()
-                    : nowDate
+                    ? presenceAtUFC
+                    : nowDateUFC
                 : null;
 
             if (isPresence && presenceDate && !moment(presenceDate).isValid()) {
