@@ -1580,57 +1580,61 @@ async function inactiveOldOnboardingUsers() {
 }
 
 async function removeAutomaticEligibilityTags() {
-    console.log('Running removeAutomaticEligibilityTags');
-    const automaticEligibilityConfig = await getConfiguration(ConfigTypes.AutomaticEligibility.Onboard);
+    try {
+        console.log('Running removeAutomaticEligibilityTags');
+        const automaticEligibilityConfig = await getConfiguration(ConfigTypes.AutomaticEligibility.Onboard);
 
-    if (!automaticEligibilityConfig) {
-        throw new ApiError('No automatic eligibility configuration found');
-    }
+        if (!automaticEligibilityConfig) {
+            throw new ApiError('No automatic eligibility configuration found');
+        }
 
-    const { enabled, days, eligibility } = automaticEligibilityConfig;
+        const { enabled, days, eligibility } = automaticEligibilityConfig;
 
-    if (!enabled) {
-        throw new ApiError('Automatic eligibility tags are disabled');
-    }
+        if (!enabled) {
+            throw new ApiError('Automatic eligibility tags are disabled');
+        }
 
-    if (!eligibility?.length) {
-        throw new ApiError('No eligibility tags were configured');
-    }
+        if (!eligibility?.length) {
+            throw new ApiError('No eligibility tags were configured');
+        }
 
-    console.log('Days', days, 'Eligibility', eligibility);
+        console.log('Days', days, 'Eligibility', eligibility);
 
-    const users = await User
-        .find({
-            admission: { $exists: true },
-            status: 'ATIVO',
-            $or: [
-                { groupsAD: { $in: eligibility } },
-                { 'tags.value': { $in: eligibility } },
-            ]
-        })
-        .select('_id name groupsAD admission status')
-        .lean();
+        const users = await User
+            .find({
+                admission: { $exists: true },
+                status: 'ATIVO',
+                $or: [
+                    { groupsAD: { $in: eligibility } },
+                    { 'tags.value': { $in: eligibility } },
+                ]
+            })
+            .select('_id name groupsAD admission status')
+            .lean();
 
-    console.log('Users to check', users.length);
+        console.log('Users to check', users.length);
 
-    for await (const user of users) {
-        const { _id, name, groupsAD, admission } = user;
+        for await (const user of users) {
+            const { _id, name, groupsAD, admission } = user;
 
-        const admissionDate = moment(admission, 'DD/MM/YYYY');
-        const diffInDays = moment().diff(admissionDate, 'days');
+            const admissionDate = moment(admission, 'DD/MM/YYYY');
+            const diffInDays = moment().diff(admissionDate, 'days');
 
-        console.log('User', _id, name, 'Admission', admissionDate.format('DD/MM/YYYY'), 'Diff in days', diffInDays);
+            console.log('User', _id, name, 'Admission', admissionDate.format('DD/MM/YYYY'), 'Diff in days', diffInDays);
 
-        if (diffInDays > days) {
-            const newGroupsAD = groupsAD.filter(group => !eligibility.includes(group));
+            if (diffInDays > days) {
+                const newGroupsAD = groupsAD.filter(group => !eligibility.includes(group));
 
-            if (groupsAD.length !== newGroupsAD.length) {
-                console.log('Removing eligibility tags', _id, name, groupsAD, '>>', newGroupsAD);
-                await User.updateOne(
-                    { _id },
-                    { groupsAD: newGroupsAD }
-                );
+                if (groupsAD.length !== newGroupsAD.length) {
+                    console.log('Removing eligibility tags', _id, name, groupsAD, '>>', newGroupsAD);
+                    await User.updateOne(
+                        { _id },
+                        { groupsAD: newGroupsAD }
+                    );
+                }
             }
         }
+    } catch (error) {
+        console.log('Error in removeAutomaticEligibilityTags', error.message);
     }
 }

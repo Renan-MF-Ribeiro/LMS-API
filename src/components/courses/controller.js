@@ -620,31 +620,35 @@ module.exports = {
                             await Promise.all(removalPromises);
                         }
 
-                        const messengerConfig = await getMessengerConfig();
+                        try {
+                            const messengerConfig = await getMessengerConfig();
 
-                        const classBody = createdClass.toObject ? createdClass.toObject() : createdClass;
-                        const classBodyForMessage = await prepareBodyForMessage(classBody, location);
+                            const classBody = createdClass.toObject ? createdClass.toObject() : createdClass;
+                            const classBodyForMessage = await prepareBodyForMessage(classBody, location);
 
-                        for (const user of newUsers) {
-                            const message = {
-                                category: 'notify',
-                                communication: ['notification', 'email'],
-                                mode: 'manual',
-                                target: {
-                                    type: 'users',
-                                    value: {
-                                        users: [user._id],
+                            for (const user of newUsers) {
+                                const message = {
+                                    category: 'notify',
+                                    communication: ['notification', 'email'],
+                                    mode: 'manual',
+                                    target: {
+                                        type: 'users',
+                                        value: {
+                                            users: [user._id],
+                                        },
                                     },
-                                },
-                                text: `${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.`,
-                                textHtml: `<p>${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.</p>`,
-                                thumbnail: messengerConfig.emailTemplate.thumbnail,
-                                title: `Treinamentos: ${name}`,
-                                class: classBodyForMessage,
-                                courses: true,
-                            }
+                                    text: `${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.`,
+                                    textHtml: `<p>${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.</p>`,
+                                    thumbnail: messengerConfig.emailTemplate.thumbnail,
+                                    title: `Treinamentos: ${name}`,
+                                    class: classBodyForMessage,
+                                    courses: true,
+                                }
 
-                            await createMessagesFromBackend(message);
+                                await createMessagesFromBackend(message);
+                            }
+                        } catch (err) {
+                            console.log('Erro ao enviar mensagem de inscrição na turma', err);
                         }
 
                         success(res, req, 'Criado com sucesso!', 'Criado com sucesso!', 'courses', '/instructor/create-class', createdClass, null, true, 'create');
@@ -857,29 +861,33 @@ module.exports = {
                             $push: { users: { $each: addedUsers } },
                         });
 
-                        const messengerConfig = await getMessengerConfig();
+                        try {
+                            const messengerConfig = await getMessengerConfig();
 
-                        const classBodyForMessage = await prepareBodyForMessage(classBody, location);
-                        for (const user of addedUsers) {
-                            const message = {
-                                category: 'notify',
-                                communication: ['notification', 'email'],
-                                mode: 'manual',
-                                target: {
-                                    type: 'users',
-                                    value: {
-                                        users: [user._id],
+                            const classBodyForMessage = await prepareBodyForMessage(classBody, location);
+                            for (const user of addedUsers) {
+                                const message = {
+                                    category: 'notify',
+                                    communication: ['notification', 'email'],
+                                    mode: 'manual',
+                                    target: {
+                                        type: 'users',
+                                        value: {
+                                            users: [user._id],
+                                        },
                                     },
-                                },
-                                text: `${user.name}, sua inscrição na turma "${classBodyForMessage.name}" foi atualizada! veja os detalhes abaixo.`,
-                                textHtml: `<p>${user.name}, sua inscrição na turma "${classBodyForMessage.name}" foi atualizada! veja os detalhes abaixo.</p>`,
-                                thumbnail: messengerConfig.emailTemplate.thumbnail,
-                                title: `Treinamentos: ${name}`,
-                                class: classBodyForMessage,
-                                courses: true,
-                            };
+                                    text: `${user.name}, sua inscrição na turma "${classBodyForMessage.name}" foi atualizada! veja os detalhes abaixo.`,
+                                    textHtml: `<p>${user.name}, sua inscrição na turma "${classBodyForMessage.name}" foi atualizada! veja os detalhes abaixo.</p>`,
+                                    thumbnail: messengerConfig.emailTemplate.thumbnail,
+                                    title: `Treinamentos: ${name}`,
+                                    class: classBodyForMessage,
+                                    courses: true,
+                                };
 
-                            await createMessagesFromBackend(message);
+                                await createMessagesFromBackend(message);
+                            }
+                        } catch (err) {
+                            console.log('Erro ao enviar mensagem de inscrição na turma', err);
                         }
                     }
 
