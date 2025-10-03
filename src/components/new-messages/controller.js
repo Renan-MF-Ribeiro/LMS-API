@@ -448,8 +448,14 @@ module.exports = {
 
     async getListMessage(req, res) {
         try {
+            const user = await getUserByToken(req);
+            
+            if (!user) {
+                return _messages.unauthorized(res, req, 'Usuário não encontrado');
+            }
+
             const urlFetch = `${API_MESSENGER}/listmessage`;
-            const params = { skip: req.query.skip, limit: req.query.limit, clientid: +CLIENT_ID, identifier: req.query.identifier };
+            const params = { skip: req.query.skip, limit: req.query.limit, clientid: +CLIENT_ID, identifier: user.networkLogin };
             // console.log(params);
             const response = await axios.get(urlFetch, { headers: getHeaders(req), params });
 
