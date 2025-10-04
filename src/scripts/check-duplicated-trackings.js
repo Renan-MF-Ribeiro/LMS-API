@@ -9,31 +9,26 @@ const REMOVE_DOCUMENTS = false;
 
 const formatDate = (date) => moment(date).format('DD/MM/YYYY HH:mm:ss');
 
-async function run() {
+async function checkForDuplicatedTrackings() {
     console.log("Checking duplicated trackings...");
 
     console.time("total");
 
-    const totalTrackings = await Tracking.countDocuments({
+    const conditional = {
         $or: [
             { expiredCompletion: { $exists: false } },
             { expiredCompletion: { $eq: null } },
         ],
-    });
+    };
+
+    const totalTrackings = await Tracking.countDocuments(conditional);
 
     console.log(`Total trackings: ${totalTrackings}`);
 
     console.time("aggregation");
 
     const duplicatedTrackings = await Tracking.aggregate([
-        {
-            $match: {
-                $or: [
-                    { expiredCompletion: { $exists: false } },
-                    { expiredCompletion: { $eq: null } },
-                ],
-            }
-        },
+        { $match: conditional },
         {
             $group: {
                 _id: { item: "$item", userLogin: "$userLogin" },
@@ -142,4 +137,4 @@ async function run() {
     process.exit(0);
 }
 
-runScript(run);
+runScript(checkForDuplicatedTrackings);
