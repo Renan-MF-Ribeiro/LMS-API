@@ -932,7 +932,15 @@ module.exports = {
         );
 
         for (const item of trail.items) {
-            const objTracking = trackingMap.get(String(item?.itemID?._id));
+            let objTracking;
+            const trackingsForItem = allTrackingUser.filter(
+                (obj) => String(obj.item) === String(item?.itemID?._id)
+            );
+            if (trackingsForItem.length > 1) {
+                objTracking = trackingsForItem.find(t => t.completion === 1) || trackingsForItem[0];
+            } else {
+                objTracking = trackingMap.get(String(item?.itemID?._id));
+            }
 
             if (dashboard && objTracking) {
                 trail.notStarted = true;
