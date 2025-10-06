@@ -1171,14 +1171,14 @@ module.exports = {
         }));
         const tags = tagsTemp.flat()
 
-        user.classGroups.forEach(classGroup => {
+        user.classGroups?.forEach(classGroup => {
             tags.push({
                 display: classGroup.groupCode,
                 value: classGroup.groupCode,
             });
         });
 
-        user.tags.forEach(tag => {
+        user.tags?.forEach(tag => {
             const diff = calculateDiffDate(
                 today,
                 formatDateWithoutHours(tag.createdAt),
@@ -1580,8 +1580,8 @@ async function retrieveUserContent (tags, user, trailsIdArr) {
 
 function getBannersFromContent (sections) {
     const banners = [];
-
     sections.forEach((section) => {
+        if (!section._id) return;
         if (section.sectionType === 'alura') {
             return;
         }
@@ -1593,7 +1593,7 @@ function getBannersFromContent (sections) {
                     const trailParam = slugify(courseItem?.title ?? '');
                     const bannerItem = {
                         path: courseItem.banner,
-                        link: process.env.BASE_URL,
+                        link: process.env.DOMAIN,
                         queryParams: { section: sectionParam, trail: trailParam },
                         internal: true
                     };
@@ -1615,7 +1615,8 @@ function getBannersFromContent (sections) {
             return;
         }
 
-        section.trails.forEach((trailItem) => {
+
+        section.trails?.forEach((trailItem) => {
             if (trailItem?.items?.length) {
                 trailItem.items.forEach((i) => {
                     const item = i.itemID;

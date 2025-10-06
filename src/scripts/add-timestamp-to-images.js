@@ -7,29 +7,30 @@ const { User } = require("../components/users/model");
 const { CourseModel } = require("../components/courses/model");
 
 function clearQueryParams(url) {
+    if (!url) return url;
     const [baseUrl] = url.split('?');
     return baseUrl;
 }
 
 async function run() {
     const trails = await Trail.find({
-        thumbPath: { $exists: true }
+        thumbPath: { $exists: true, $ne: null }
     }).lean();
 
     const items = await Item.find({
-        thumbPath: { $exists: true }
+        thumbPath: { $exists: true, $ne: null }
     }).lean();
 
     const channels = await Channel.find({
-        'banners.path': { $exists: true }
+        'banners.path': { $exists: true, $ne: null }
     }).lean();
 
     const users = await User.find({
-        profilePhoto: { $exists: true }
+        profilePhoto: { $exists: true, $ne: null }
     }).lean();
 
     const courses = await CourseModel.find({
-        thumbPath: { $exists: true }
+        thumbPath: { $exists: true, $ne: null }
     })
 
     console.log('Trails:', trails.length);

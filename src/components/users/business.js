@@ -486,7 +486,6 @@ module.exports = {
             type: origin,
             updatedAt: new Date(),
             info: null,
-            receivedData: { ...data, password: undefined },
         }
 
         data.password = [
@@ -968,7 +967,7 @@ module.exports = {
         const partner = await PartnerBusiness.getPartnersByToken(token);
         const usedToken = validatePartnerToken(partner, token);
 
-        if (!usedToken.updatable) return user;
+        if (!usedToken?.updatable) return user;
         if (user.origin?.type === 'PARTNER_TOKEN' && user.origin?.info === usedToken.key)
             return user;
 
@@ -1072,10 +1071,8 @@ const validatePartnerToken = (partner, token) => {
     if (!partner) {
         throw new ApiError('Token inválido ou parceiro não encontrado', 404);
     }
-    const usedToken = partner?.keys.find((key) => key.key === token);
-    if (Date.now() > usedToken?.endDate) {
-        throw new ApiError('Token expirado', 403);
+    const usedToken = partner?.keys?.find((key) => key?.key === token);
+    if (Date.now() < usedToken?.endDate) {
+        return usedToken;
     }
-
-    return usedToken;
 };

@@ -171,29 +171,30 @@ module.exports = {
         });
     },
 
-    returnProfileByToken: (token) => {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const result = [];
-                let tk = token?.split(' ')[1] || token;
-                const data = jwt.decode(tk, PROJECT_SECRET_KEY);
-                const profiles = data.data.profiles;
+    returnProfileByToken: async (token) => {
+        try {
+            const result = [];
+            let tk = token?.split(' ')[1] || token;
+            const data = jwt.decode(tk, PROJECT_SECRET_KEY);
+            const profiles = data?.data?.profiles || [];
 
-                for (const p in profiles) {
-                    const profile = await Profile.findOne({
-                        _id: {
-                            $eq: profiles[p],
-                        },
-                    });
+            if (!profiles.length) return [];
 
-                    if (profile) result.push(profile.title);
-                }
+            for (const p in profiles) {
+                const profile = await Profile.findOne({
+                    _id: {
+                        $eq: profiles[p],
+                    },
+                });
 
-                resolve(result);
-            } catch (error) {
-                reject(error);
+                if (profile) result.push(profile.title);
             }
-        });
+
+            return result;
+        } catch (error) {
+            console.log('Erro ao retornar perfil pelo token', error);
+            return [];
+        }
     },
 
     validateToken: (req) => {

@@ -649,8 +649,10 @@ module.exports = {
         const formattedDateFinal = dateApplicationFinal.isValid() ? dateApplicationFinal.format('DD/MM/YYYY HH:mm') : '';
 
         const { isLocationUrl, onlineLink } = await module.exports.processLocation(location);
+
+        const { $set, ...restBody } = bodyData;
         
-        const processedBody = { ...bodyData, dateApplicationInitial: formattedDateInitial, dateApplicationFinal: formattedDateFinal };
+        const processedBody = { ...restBody, dateApplicationInitial: formattedDateInitial, dateApplicationFinal: formattedDateFinal };
         if (isLocationUrl) {
             delete processedBody.location;
             processedBody.onlineLink = onlineLink;

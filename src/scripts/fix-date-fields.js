@@ -33,7 +33,11 @@ function parseDateField(value) {
         return value;
     }
 
-    return parsed.toISOString().split('T')[0];
+    const date = parsed.toISOString().split('T')[0];
+
+    const formattedDate = date.split('-').reverse().join('/');
+
+    return formattedDate;
 }
 
 function parseUserFields(user) {
