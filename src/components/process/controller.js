@@ -62,12 +62,13 @@ const processController = {
     },
 
     // Manual trigger for testing
-    processRecords: async (req, res) => {
+    reprocessResult: async (req, res) => {
         try {
             const id = req.params.id;
-            const { data } = await processApi.get(`/process/process-records/${id}`,);
-            res.status(data.statusCode).json(data.data);
+            await processApi.get(`/process/reprocess-result/${id}`,);
+            res.status(204).json("Done")
         } catch (error) {
+            console.log(error)
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
             const errorMessage = message ?? 'Internal server error';
@@ -77,8 +78,8 @@ const processController = {
 
 
     create: async (req, res) => {
-        const body = req.fields?.payload ? JSON.parse(req.fields?.payload) : req.body;
-        //const body = req.fields ? req.fields : req.body;
+        //const body = req.fields?.payload ? JSON.parse(req.fields?.payload) : req.body;
+        const body = req.fields ? req.fields : req.body;
         const file = req.files?.file
 
         if (file) {
@@ -96,7 +97,7 @@ const processController = {
 
             if (data?.data?._id) {
                 const message = data?.data?._id
-                await business.sendKafkaMessage(message)
+                //await business.sendKafkaMessage(message)
             }
             res.status(data.statusCode).json(data.data);
         } catch (error) {
