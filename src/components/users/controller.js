@@ -1400,7 +1400,14 @@ module.exports = {
 
             replaceMap = getConnectMapReplacers(connectMap);
         }
+
+        const usersDataConfig = await getUsersDataConfig();
+
         for (const result of results) {
+            if (usersDataConfig?.inactivateIfNotInSpreadsheet && !result.status) {
+                result.status = 'ATIVO';
+            }
+
             const processedUser = await processUsersLoad(
                 result,
                 fieldsForElegibility,
@@ -1468,7 +1475,6 @@ module.exports = {
             `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
         );
 
-        const usersDataConfig = await getUsersDataConfig();
         if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
             await User.updateMany(
                 {
