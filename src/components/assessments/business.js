@@ -55,7 +55,8 @@ module.exports = {
                         idCategory: body.idCategory ? body.idCategory : question.idCategory,
                         idEvaluation: question.idEvaluation,
                         description: strDescription,
-                        rigthAnswer: body.idAlternative
+                        rigthAnswer: body.idAlternative || question.rigthAnswer,
+                        feedback: body.feedback || question.feedback
                     })
 
                     for (const alternative of question.alternatives) {
@@ -88,7 +89,22 @@ module.exports = {
                             }
                         }
 
-                        await Question.findByIdAndUpdate(id, { description: body.description ? body.description : question.description, idCategory: body.idCategory ? body.idCategory : question.idCategory, rigthAnswer: body.idAlternative })
+                        const updateData = {
+                            description: body.description ? body.description : question.description,
+                            idCategory: body.idCategory ? body.idCategory : question.idCategory
+                        };
+                        
+                        if (body.idAlternative) {
+                            updateData.rigthAnswer = body.idAlternative;
+                        } else if (idRigthAnswer) {
+                            updateData.rigthAnswer = idRigthAnswer;
+                        }
+                        
+                        if (body.feedback) {
+                            updateData.feedback = body.feedback;
+                        }
+                        
+                        await Question.findByIdAndUpdate(id, updateData)
                     }
                 }
                 resolve()
