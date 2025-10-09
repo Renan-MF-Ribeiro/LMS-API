@@ -157,11 +157,13 @@ async function processByPeriod(from, to) {
 }
 
 async function checkForDuplicatedTrackings() {
-    const startDate = moment('2024-01-01').startOf('day');
+    const startDate = moment('2019-01-01').startOf('day');
     const endDate = moment().endOf('day');
-    const period = 1;
-    const periodType = 'month';
+    const period = 10;
+    const periodType = 'years';
     const periodArray = [];
+
+    console.log('It will remove duplicated trackings?', REMOVE_DOCUMENTS);
 
     let currentStart = startDate.clone();
 
@@ -188,7 +190,6 @@ async function checkForDuplicatedTrackings() {
     for await (const period of periodArray) {
         await processByPeriod(period.from, period.to);
     }
-
 
     process.exit(0);
 }
