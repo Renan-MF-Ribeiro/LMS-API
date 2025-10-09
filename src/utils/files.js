@@ -675,21 +675,30 @@ module.exports = {
         });
     },
 
-    readXLSXAlternative(file) {
-        return new Promise((resolve, reject) => {
-            const workbook = new ExcelJS.Workbook();
-            workbook.xlsx.readFile(file).then(() => {
-                var worksheet = workbook.getWorksheet('Planilha1');
-                const rows = [];
-                worksheet.eachRow(
-                    { includeEmpty: false },
-                    function (row, rowNumber) {
-                        rows.push(row.values);
-                    }
-                );
-                resolve(rows);
+    async readXLSXAlternative(file) {
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.readFile(file);
+        const worksheet = workbook.getWorksheet(1);
+
+        const columnCount = worksheet.columnCount;
+        for (let i = 1; i <= columnCount; i++) {
+            const column = worksheet.getColumn(i);
+            column.numFmt = '@';
+        }
+
+        const rows = [];
+        worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+            const rowValues = [];
+
+            row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                const value = cell.text ?? cell.value ?? null;
+                rowValues[colNumber] = value;
             });
+
+            rows.push(rowValues);
         });
+
+        return rows;
     },
 
     readXLSXClassGroups(file) {
