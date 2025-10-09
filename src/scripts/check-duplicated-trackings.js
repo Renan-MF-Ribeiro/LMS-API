@@ -1,15 +1,18 @@
 const { orderBy } = require("lodash");
-const { Tracking } = require("../components/tracking/model");
 const moment = require("moment");
 
 const { runScript, generateReport, writeDebugJson } = require("./utils");
+
 const environment = require("../environment");
+
+const { Tracking } = require("../components/tracking/model");
+// const { Item } = require("../components/items/model");
 
 const REMOVE_DOCUMENTS = false;
 
 const formatDate = (date) => moment(date).format('DD/MM/YYYY HH:mm:ss');
 
-async function processByPeriod(from, to) {
+async function processByPeriod(from, to, items) {
     console.log(
         "\nChecking duplicated trackings from",
         moment(from).utc().format('DD/MM/YYYY'),
@@ -19,7 +22,10 @@ async function processByPeriod(from, to) {
 
     console.time("total");
 
+    if (items?.length) console.log(`Limiting to ${items.length} items`);
+
     const conditional = {
+        ...(items?.length && { item: { $in: items } }),
         createdAt: {
             $gte: from,
             $lte: to
@@ -34,7 +40,7 @@ async function processByPeriod(from, to) {
 
     console.log(`Total trackings: ${totalTrackings}`);
 
-    if(totalTrackings === 0) {
+    if (totalTrackings === 0) {
         console.log("No trackings found, skipping.");
         console.timeEnd("total");
         return;
@@ -187,8 +193,16 @@ async function checkForDuplicatedTrackings() {
 
     console.log(periodArray.length, 'periods to process:');
 
+    // const validItems = await Item.find({
+    //     enabled: true
+    // }).select('_id').lean();
+
     for await (const period of periodArray) {
-        await processByPeriod(period.from, period.to);
+        await processByPeriod(
+            period.from,
+            period.to,
+            // validItems.map(i => i._id)
+        );
     }
 
     process.exit(0);
