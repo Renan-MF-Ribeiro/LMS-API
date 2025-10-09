@@ -1,57 +1,85 @@
-const mongoose = require('mongoose')
-const { connect } = require('../../utils/db')
+const mongoose = require('mongoose');
+const { connect } = require('../../utils/db');
 
-connect()
+connect();
 
 const schemaOptions = {
     strict: false,
     timestamps: true,
     collation: { locale: 'en_US', strength: 1 },
-}
+};
 
-const TrackingSchema = new mongoose.Schema({
-    item: { type: 'ObjectId', ref: 'Item', required: true },
-    sessionTime: { type: Number, required: true },
-    totalTime: { type: Number, required: true, defaultValue: 0 },
-    userLogin: { type: String, required: true },
-    lastState: { type: String, required: false },
-    isAllowedToSendXAPI: { type: Boolean, required: false },
-    isXAPICompleteSent: { type: Boolean, required: false },
-    completionAt: { type: Date, required: true, default: null },
-    expiredCompletion: { type: Date, default: null }
-}, {
-    ...schemaOptions,
-    discriminatorKey: 'kind',
-})
+const TrackingSchema = new mongoose.Schema(
+    {
+        item: { type: 'ObjectId', ref: 'Item', required: true },
+        sessionTime: { type: Number, required: true },
+        totalTime: { type: Number, required: true, defaultValue: 0 },
+        userLogin: { type: String, required: true },
+        lastState: { type: String, required: false },
+        isAllowedToSendXAPI: { type: Boolean, required: false },
+        isXAPICompleteSent: { type: Boolean, required: false },
+        completionAt: { type: Date, required: true, default: null },
+        expiredCompletion: { type: Date, default: null },
+        process: { type: String, required: false },
+    },
+    {
+        ...schemaOptions,
+        discriminatorKey: 'kind',
+    }
+);
 
 TrackingSchema.index({
     userLogin: 'text',
-})
+});
 
-const Tracking = mongoose.model('Tracking', TrackingSchema)
+const Tracking = mongoose.model('Tracking', TrackingSchema);
 
-const DocumentTracking = Tracking.discriminator('DocumentTracking', new mongoose.Schema({
-    completion: { type: Number, min: 0, max: 1 },
-}, {
-    ...schemaOptions,
-}))
+const DocumentTracking = Tracking.discriminator(
+    'DocumentTracking',
+    new mongoose.Schema(
+        {
+            completion: { type: Number, min: 0, max: 1 },
+        },
+        {
+            ...schemaOptions,
+        }
+    )
+);
 
-const MediaTracking = Tracking.discriminator('MediaTracking', new mongoose.Schema({
-    completion: { type: Number, min: 0, max: 1 },
-}, {
-    ...schemaOptions,
-}))
+const MediaTracking = Tracking.discriminator(
+    'MediaTracking',
+    new mongoose.Schema(
+        {
+            completion: { type: Number, min: 0, max: 1 },
+        },
+        {
+            ...schemaOptions,
+        }
+    )
+);
 
-const AudioTracking = Tracking.discriminator('AudioTracking', new mongoose.Schema({
-    completion: { type: Number, min: 0, max: 1 },
-}, {
-    ...schemaOptions,
-}))
-const PostTracking = Tracking.discriminator('PostTracking', new mongoose.Schema({
-    completion: { type: Number, min: 0, max: 1 },
-}, {
-    ...schemaOptions,
-}))
+const AudioTracking = Tracking.discriminator(
+    'AudioTracking',
+    new mongoose.Schema(
+        {
+            completion: { type: Number, min: 0, max: 1 },
+        },
+        {
+            ...schemaOptions,
+        }
+    )
+);
+const PostTracking = Tracking.discriminator(
+    'PostTracking',
+    new mongoose.Schema(
+        {
+            completion: { type: Number, min: 0, max: 1 },
+        },
+        {
+            ...schemaOptions,
+        }
+    )
+);
 
 const AluraLessonStatus = Object.freeze({
     EmProgresso: 'Em progresso',
@@ -59,31 +87,43 @@ const AluraLessonStatus = Object.freeze({
     EmPausa: 'Em pausa',
     Concluido: 'Concluido',
     Cancelado: 'Cancelado',
-})
+});
 
-const AluraTracking = Tracking.discriminator('AluraTracking', new mongoose.Schema({
-    completion: { type: Number, min: 0, max: 1 },
-    progress: { type: Number, min: 0, max: 100 },
-    courseId: { type: Number, required: true },
-    lastAccess: { type: Date, required: true },
-    registrationDate: { type: Date, required: true },
-    lessonStatus: {
-        type: String,
-        required: true,
-        enum: Object.values(AluraLessonStatus),
-        default: AluraLessonStatus.NaoVisivel
-    },
+const AluraTracking = Tracking.discriminator(
+    'AluraTracking',
+    new mongoose.Schema(
+        {
+            completion: { type: Number, min: 0, max: 1 },
+            progress: { type: Number, min: 0, max: 100 },
+            courseId: { type: Number, required: true },
+            lastAccess: { type: Date, required: true },
+            registrationDate: { type: Date, required: true },
+            lessonStatus: {
+                type: String,
+                required: true,
+                enum: Object.values(AluraLessonStatus),
+                default: AluraLessonStatus.NaoVisivel,
+            },
+        },
+        {
+            ...schemaOptions,
+        }
+    )
+);
 
-}, {
-    ...schemaOptions,
-}))
-
-const EventTracking = Tracking.discriminator('EventTracking', new mongoose.Schema({
-    clickedStatus: [{ id: String, title: String, completion: Boolean }], default: [],
-    completion: { type: Number, min: 0, max: 1 },
-}, {
-    ...schemaOptions,
-}))
+const EventTracking = Tracking.discriminator(
+    'EventTracking',
+    new mongoose.Schema(
+        {
+            clickedStatus: [{ id: String, title: String, completion: Boolean }],
+            default: [],
+            completion: { type: Number, min: 0, max: 1 },
+        },
+        {
+            ...schemaOptions,
+        }
+    )
+);
 
 const SCORMLessonStatus = Object.freeze({
     NOT_ATTEMPTED: 'not attempted',
@@ -92,75 +132,122 @@ const SCORMLessonStatus = Object.freeze({
     COMPLETED: 'completed',
     FAILED: 'failed',
     PASSED: 'passed',
-})
+});
 
-const SCORMTracking = Tracking.discriminator('SCORMTracking', new mongoose.Schema({
-    lessonStatus: { type: String, enum: Object.values(SCORMLessonStatus), default: SCORMLessonStatus.NOT_ATTEMPTED },
-    interactions: { type: Array },
-    suspendData: { type: String },
-    score: { type: Number, min: 0, max: 100 },
-}, {
-    ...schemaOptions,
-}))
+const SCORMTracking = Tracking.discriminator(
+    'SCORMTracking',
+    new mongoose.Schema(
+        {
+            lessonStatus: {
+                type: String,
+                enum: Object.values(SCORMLessonStatus),
+                default: SCORMLessonStatus.NOT_ATTEMPTED,
+            },
+            interactions: { type: Array },
+            suspendData: { type: String },
+            score: { type: Number, min: 0, max: 100 },
+        },
+        {
+            ...schemaOptions,
+        }
+    )
+);
 
-const ExamTracking = Tracking.discriminator('ExamTracking', new mongoose.Schema({
-    lessonStatus: { type: String, enum: Object.values(SCORMLessonStatus), default: SCORMLessonStatus.NOT_ATTEMPTED },
-    suspendData: { type: String },
-    score: { type: Number, min: 0, max: 100 },
-    remainingAttempts: { type: Number, min: -1 }
-}, {
-    ...schemaOptions,
-}))
+const ExamTracking = Tracking.discriminator(
+    'ExamTracking',
+    new mongoose.Schema(
+        {
+            lessonStatus: {
+                type: String,
+                enum: Object.values(SCORMLessonStatus),
+                default: SCORMLessonStatus.NOT_ATTEMPTED,
+            },
+            suspendData: { type: String },
+            score: { type: Number, min: 0, max: 100 },
+            remainingAttempts: { type: Number, min: -1 },
+        },
+        {
+            ...schemaOptions,
+        }
+    )
+);
 
-const SCORMTrackingHistory = mongoose.model('SCORMTrackingHistory', new mongoose.Schema({
-    item: { type: 'ObjectId', ref: 'Item', required: true },
-    tracking: { type: 'ObjectId', ref: 'Item', required: true },
-    userLogin: { type: String, required: true },
-    lessonStatus: { type: String, enum: Object.values(SCORMLessonStatus), default: SCORMLessonStatus.NOT_ATTEMPTED },
-    score: { type: Number, min: 0, max: 100 },
-}, {
-    ...schemaOptions,
-}))
+const SCORMTrackingHistory = mongoose.model(
+    'SCORMTrackingHistory',
+    new mongoose.Schema(
+        {
+            item: { type: 'ObjectId', ref: 'Item', required: true },
+            tracking: { type: 'ObjectId', ref: 'Item', required: true },
+            userLogin: { type: String, required: true },
+            lessonStatus: {
+                type: String,
+                enum: Object.values(SCORMLessonStatus),
+                default: SCORMLessonStatus.NOT_ATTEMPTED,
+            },
+            score: { type: Number, min: 0, max: 100 },
+        },
+        {
+            ...schemaOptions,
+        }
+    )
+);
 
 const fileFormats = Object.freeze({
-    COMPACT_FILES: 'compact_files'
-})
+    COMPACT_FILES: 'compact_files',
+});
 const activityLessonStatus = Object.freeze({
     NOT_ATTEMPTED: 'not attempted',
     INCOMPLETE: 'incomplete',
     FAILED: 'failed',
     PASSED: 'passed',
-})
+});
 
-const ActivityTracking = Tracking.discriminator('ActivityTracking', new mongoose.Schema({
-    item: { type: 'ObjectId', ref: 'Item', required: true },
-    format: { type: String, enum: Object.values(fileFormats), default: fileFormats.COMPACT_FILES, required: true },
-    contentPath: { type: String, required: false },
-    completion: { type: Number, min: 0, max: 1 },
-    score: { type: Number, min: 0, max: 100 },
-    reviewerComment: { type: String },
-    reviewer: { type: String },
-    sentAt: { type: [{ type: Date }] },
-    correctedAt: { type: [{ type: Date }] },
-    lessonStatus: {
-        type: String,
-        enum: Object.values(activityLessonStatus),
-        default: activityLessonStatus.NOT_ATTEMPTED,
-        required: true
-    }
-}, {
-    ...schemaOptions
-}))
+const ActivityTracking = Tracking.discriminator(
+    'ActivityTracking',
+    new mongoose.Schema(
+        {
+            item: { type: 'ObjectId', ref: 'Item', required: true },
+            format: {
+                type: String,
+                enum: Object.values(fileFormats),
+                default: fileFormats.COMPACT_FILES,
+                required: true,
+            },
+            contentPath: { type: String, required: false },
+            completion: { type: Number, min: 0, max: 1 },
+            score: { type: Number, min: 0, max: 100 },
+            reviewerComment: { type: String },
+            reviewer: { type: String },
+            sentAt: { type: [{ type: Date }] },
+            correctedAt: { type: [{ type: Date }] },
+            lessonStatus: {
+                type: String,
+                enum: Object.values(activityLessonStatus),
+                default: activityLessonStatus.NOT_ATTEMPTED,
+                required: true,
+            },
+        },
+        {
+            ...schemaOptions,
+        }
+    )
+);
 
 const FormTracking = Tracking.discriminator(
-    "FormTracking",
+    'FormTracking',
     new mongoose.Schema(
         {
             completion: { type: Number, min: 0, max: 1 },
-            statements: [{
-                _id: { type: 'ObjectId', required: true, default: new mongoose.Types.ObjectId() },
-                reply: { type: mongoose.Schema.Types.Mixed }
-            }]
+            statements: [
+                {
+                    _id: {
+                        type: 'ObjectId',
+                        required: true,
+                        default: new mongoose.Types.ObjectId(),
+                    },
+                    reply: { type: mongoose.Schema.Types.Mixed },
+                },
+            ],
         },
         { ...schemaOptions }
     )
@@ -179,5 +266,5 @@ module.exports = {
     EventTracking,
     ActivityTracking,
     FormTracking,
-    AluraTracking
-}
+    AluraTracking,
+};

@@ -419,11 +419,8 @@ const TrackingController = {
 
             console.log('filterByEligibility', filterByEligibility);
 
-            const trailsWithTracking = [];
             const processedTrailsWithTracking = [];
-            let allItems = 0;
             let data;
-            const arrTrailsCompletedOrProgress = [];
 
             const allTrackingUser = await Tracking.find({
                 userLogin: { $eq: userLogin },
@@ -432,30 +429,31 @@ const TrackingController = {
                     { expiredCompletion: { $exists: false } },
                     { expiredCompletion: { $eq: null } },
                 ],
-            });
+            }, '-__v -lastState -isAllowedToSendXAPI -interactions -suspendedData')
+                .sort({ [order]: sort })
+                .skip(parseInt(skip))
+                .limit(parseInt(limit));;
 
-            const query = searchBy
-                ? {
-                    $or: [{ title: { $regex: searchBy, $options: 'i' } }],
-                    'items.itemID': {
-                        $in: allTrackingUser.map((v) => v.item),
-                    },
-                }
-                : {
-                    'items.itemID': {
-                        $in: allTrackingUser.map((v) => v.item),
-                    },
-                };
+            let query = {
+                'items.itemID': {
+                    $in: allTrackingUser.map((v) => v.item),
+                },
+            }
+            if (searchBy) {
+                query = { ...query, $or: [{ title: { $regex: searchBy, $options: 'i' } }] }
+            }
 
-            let trails = await Trail.find({
-                ...query
-            })
+            const trails = await Trail.find(query)
                 .populate({
-                    path: 'items',
-                    populate: {
-                        path: 'itemID',
-                        model: 'Item',
-                    },
+                    path: 'items.itemID',
+                    model: 'Item',
+                    select: '_id completion completionAt kind score createdAt updatedAt title',
+                    match: {
+                        enabled: true,
+                        archive: false,
+                        kind: { $nin: ['PostItem', 'SoonItem'] },
+                    }
+
                 })
                 .sort({ [order]: sort })
                 .skip(parseInt(skip))
@@ -521,49 +519,41 @@ const TrackingController = {
             }
 
             let totalTrails;
-            if (filterByEligibility === 'true' && trails.length < await Trail.find({...query}).countDocuments()) {
+            if (filterByEligibility === 'true' && trails.length < await Trail.find({ ...query }).countDocuments()) {
             } else {
-                totalTrails = await Trail.find({...query}).countDocuments();
+                totalTrails = await Trail.find({ ...query }).countDocuments();
             }
 
-            for (const v of trailsWithTracking) {
-                const trail = v.trail;
-                trail.items = v.trail.items.filter((i) => i.itemID.enabled && (!i.itemID.archive && i.itemID.enabled) && i.itemID.kind !== 'PostItem');
-                const completedTrails = [];
-                allItems = trail.items.length;
-                let itemData;
-                const itemDataArr = [];
+            for (const { trail } of trailsWithTracking) {
+                const trailItems = trail?.items;
+                const totalItems = trailItems.length;
 
-                for (const item in trail.items) {
-                    if (trail.items[item].itemID?.completion == 1) {
-                        completedTrails.push(trail.items[item]);
+                const { completedItems, itemDataArr, fullCourseLoad } = trailItems?.reduce((acc, i) => {
+                    const item = i?.itemID?.toObject();
+                    if (!item) return acc;
+
+                    const completion = i.completion === 1;
+                    if (completion) {
+                        acc.completedItems++;
                     }
-                    trail.items[item] = trail.items[item].itemID
-                    itemData = {
-                        completion: trail.items[item]?.completion === 1,
-                        completionAt: trail.items[item]?.completionAt,
-                        kind: trail.items[item]?.kind,
-                        _id: trail.items[item]?._id,
-                        score: trail.items[item]?.score,
-                        createdAt: trail.items[item]?.createdAt,
-                        updatedAt: trail.items[item]?.updatedAt,
-                        title: trail.items[item]?.title,
-                    };
-                    itemDataArr.push(itemData);
-                }
+
+                    acc.itemDataArr.push({ ...item, completion, process: i.process || null });
+                    acc.fullCourseLoad += item.durationHours;
+
+                    return acc;
+                }, { completedItems: 0, itemDataArr: [], fullCourseLoad: 0 });
+
 
                 let certificate = null
+                const mustGenerateCertificate = (completedItems == totalItems) && trail.certificate === 1;
 
-                const completed = completedTrails.length == allItems
-                if (trail.certificate === 1 && completed) {
-                    const userFind = await User.findOne({ networkLogin: userLogin });
+                if (mustGenerateCertificate) {
+                    const user = await User.findOne({ networkLogin: userLogin }, 'name');
                     certificate = {
                         clientId: process.env.CLIENT_ID,
                         completionDate: trail.completionAt,
-                        courseLoad: trail.items.reduce((accumulator, currentValue) => {
-                            return accumulator + (currentValue.durationHours || 0);
-                        }, 0),
-                        userName: userFind.name,
+                        courseLoad: fullCourseLoad,
+                        userName: user.name,
                         userId: userLogin,
                         expirationDate: trail.expirationDate,
                         certificateDue: trail.certificateDue,
@@ -573,7 +563,6 @@ const TrackingController = {
                         trailName: trail.title,
                         itemId: trail.itemId,
                         itemName: trail.title,
-
                     }
                 }
 
@@ -583,18 +572,19 @@ const TrackingController = {
                     scoreAverage: trail.scoreAverage,
                     completionAt: trail.completionAt,
                     updatedAt: trail.lastTrackingUpdate,
-                    completion: (100 * completedTrails.length) / allItems,
-                    hasCertificate: certificate !== null,
+                    completion: Math.round((100 * completedItems) / totalItems),
+                    hasCertificate: !!certificate,
                     certificate
                 };
                 processedTrailsWithTracking.push(data);
             }
-            _messages.success(res, req, {
+            return _messages.success(res, req, {
                 totalTrails,
                 processedTrailsWithTracking,
             });
         } catch (error) {
-            _messages.internalServer(
+            console.log(error)
+            return _messages.internalServer(
                 res,
                 req,
                 error.message,

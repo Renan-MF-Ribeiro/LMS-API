@@ -114,10 +114,10 @@ module.exports = {
         const limitYear = limitDate.getFullYear();
 
         const startString = `${startYear}-${startMonth >= 10 ? startMonth : '0' + startMonth}-${startDay >= 10 ? startDay : '0' + startDay
-        }T00:00:00.000-03:00`;
+            }T00:00:00.000-03:00`;
 
         const limitString = `${limitYear}-${limitMonth >= 10 ? limitMonth : '0' + limitMonth}-${limitDay >= 10 ? limitDay : '0' + limitDay
-        }T23:59:59.000-03:00`;
+            }T23:59:59.000-03:00`;
 
         return {
             startDate: new Date(startString),
@@ -409,17 +409,17 @@ module.exports = {
                     userLogin: { $eq: user.networkLogin },
                     ...(!onlyExpired
                         ? {
-                              $or: [
-                                  { expiredCompletion: { $exists: false } },
-                                  { expiredCompletion: { $eq: null } },
-                              ],
-                          }
+                            $or: [
+                                { expiredCompletion: { $exists: false } },
+                                { expiredCompletion: { $eq: null } },
+                            ],
+                        }
                         : {
-                              $and: [
-                                  { expiredCompletion: { $exists: true } },
-                                  { expiredCompletion: { $ne: null } },
-                              ],
-                          }),
+                            $and: [
+                                { expiredCompletion: { $exists: true } },
+                                { expiredCompletion: { $ne: null } },
+                            ],
+                        }),
                 });
                 for (const t of trails) {
                     const { trail } = module.exports.processTrailTracking(t, allTrackingUser, true);
@@ -609,6 +609,7 @@ module.exports = {
             }
 
             item.completion = tmpCompletion;
+            item.process = objTracking?.process || null;
             if (item.completion === 1) {
                 containsACompletedItem = true;
             }
@@ -652,7 +653,7 @@ module.exports = {
         return email;
     },
 
-     async getCustomEmail(user){
+    async getCustomEmail(user) {
         const companyConfig = await getCompanyConfig();
         const supportFormConfig = companyConfig?.supportFormCustomEmail || null;
         if (!supportFormConfig || supportFormConfig.length < 2) {
@@ -730,9 +731,9 @@ module.exports = {
         query = Array.isArray(query)
             ? query
             : query
-                  .replace(/(\[(\d)\])/g, '.$2')
-                  .replace(/^\./, '')
-                  .split('.');
+                .replace(/(\[(\d)\])/g, '.$2')
+                .replace(/^\./, '')
+                .split('.');
         if (!(query[0] in obj)) {
             return defaultVal;
         }
@@ -850,17 +851,17 @@ module.exports = {
             userLogin: { $eq: user.networkLogin },
             ...(!onlyExpired
                 ? {
-                      $or: [
-                          { expiredCompletion: { $exists: false } },
-                          { expiredCompletion: { $eq: null } },
-                      ],
-                  }
+                    $or: [
+                        { expiredCompletion: { $exists: false } },
+                        { expiredCompletion: { $eq: null } },
+                    ],
+                }
                 : {
-                      $and: [
-                          { expiredCompletion: { $exists: true } },
-                          { expiredCompletion: { $ne: null } },
-                      ],
-                  }),
+                    $and: [
+                        { expiredCompletion: { $exists: true } },
+                        { expiredCompletion: { $ne: null } },
+                    ],
+                }),
         }).lean();
 
         const trackingMap = new Map();
