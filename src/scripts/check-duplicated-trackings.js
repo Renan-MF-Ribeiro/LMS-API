@@ -9,8 +9,95 @@ const { Tracking } = require("../components/tracking/model");
 // const { Item } = require("../components/items/model");
 
 const REMOVE_DOCUMENTS = false;
+const BATCH_SIZE = 100000;
 
 const formatDate = (date) => moment(date).format('DD/MM/YYYY HH:mm:ss');
+
+async function processBatch(batch, { from, to, batchIndex }) {
+    const reportData = batch.map(dt => {
+        const orderedTrackings = orderBy(
+            dt.documents,
+            [
+                // First, keep completed ones first
+                doc => doc.completionAt ? 1 : 0,
+                // Then, order by completion date)
+                (doc) => doc.completionAt ? moment(doc.completionAt).valueOf() : 0,
+                // Then, order by creation date
+                (doc) => moment(doc.updatedAt).valueOf()
+            ],
+            [
+                'desc', // Completed first
+                'asc', // Earliest completion date first
+                'desc' // Latest updated date first
+            ]
+        );
+
+        const mostRecent = orderedTrackings.shift();
+
+        return {
+            item: dt._id.item,
+            userLogin: dt._id.userLogin,
+            count: dt.count,
+            mostRecentId: mostRecent._id,
+            mostRecentCompletionAt: mostRecent.completionAt ? formatDate(mostRecent.completionAt) : '',
+            mostRecentUpdatedAt: formatDate(mostRecent.updatedAt),
+            mostRecentCreatedAt: formatDate(mostRecent.createdAt),
+            documentsToRemoveIds: orderedTrackings.map(d => d._id).join(", "),
+            documentsToRemoveCompletionAt: orderedTrackings.map(d => d.completionAt ? formatDate(d.completionAt) : 'not completed').join(", "),
+            documentsToRemoveUpdatedAt: orderedTrackings.map(d => formatDate(d.updatedAt)).join(", "),
+            documentsToRemoveCreatedAt: orderedTrackings.map(d => formatDate(d.createdAt)).join(", "),
+            mostRecent,
+            documentsToRemove: orderedTrackings,
+        };
+    });
+
+    const reportName = `${environment.CLIENT_ID}-duplicated-trackings-from-${moment(from).format('YYYYMMDD')}-to-${moment(to).format('YYYYMMDD')}-batch-${batchIndex}`;
+
+    await generateReport(
+        reportData,
+        [
+            { header: 'Item', key: 'item' },
+            { header: 'User Login', key: 'userLogin' },
+            { header: 'Count', key: 'count' },
+            { header: 'Most Recent Tracking', key: 'mostRecentId' },
+            { header: 'Most Recent CompletionAt', key: 'mostRecentCompletionAt' },
+            { header: 'Most Recent UpdatedAt', key: 'mostRecentUpdatedAt' },
+            { header: 'Most Recent CreatedAt', key: 'mostRecentCreatedAt' },
+            { header: 'Trackings To Remove', key: 'documentsToRemoveIds' },
+            { header: 'Trackings To Remove CompletionAt', key: 'documentsToRemoveCompletionAt' },
+            { header: 'Trackings To Remove UpdatedAt', key: 'documentsToRemoveUpdatedAt' },
+            { header: 'Trackings To Remove CreatedAt', key: 'documentsToRemoveCreatedAt' },
+        ],
+        {
+            fileName: `${reportName}-report`,
+        }
+    )
+
+    await writeDebugJson(
+        `${reportName}-info`,
+        reportData.map(
+            info => ({
+                item: info.item,
+                userLogin: info.userLogin,
+                count: info.count,
+                mostRecent: info.mostRecent,
+                documentsToRemove: info.documentsToRemove,
+            })
+        )
+    );
+
+    if (REMOVE_DOCUMENTS) {
+        console.time(`delete-batch-${batchIndex}`);
+
+        const deleteIds = reportData.flatMap(r => r.documentsToRemove).map(d => d._id);
+
+        console.log(`Deleting ${deleteIds.length} duplicated trackings from batch ${batchIndex}...`);
+
+        await Tracking.deleteMany({ _id: { $in: deleteIds } });
+
+        console.timeEnd(`delete-batch-${batchIndex}`);
+    }
+}
 
 async function processByPeriod(from, to, items) {
     console.log(
@@ -72,90 +159,20 @@ async function processByPeriod(from, to, items) {
 
     console.time("report");
 
-    const reportData = duplicatedTrackings.map(dt => {
-        const orderedTrackings = orderBy(
-            dt.documents,
-            [
-                // First, keep completed ones first
-                doc => doc.completionAt ? 1 : 0,
-                // Then, order by completion date)
-                (doc) => doc.completionAt ? moment(doc.completionAt).valueOf() : 0,
-                // Then, order by creation date
-                (doc) => moment(doc.updatedAt).valueOf()
-            ],
-            [
-                'desc', // Completed first
-                'asc', // Earliest completion date first
-                'desc' // Latest updated date first
-            ]
-        );
+    let batchIndex = 0;
+    const totalBatches = Math.ceil(duplicatedTrackings.length / BATCH_SIZE);
 
-        const mostRecent = orderedTrackings.shift();
+    for (let i = 0; i < duplicatedTrackings.length; i += BATCH_SIZE) {
+        const batch = duplicatedTrackings.slice(i, i + BATCH_SIZE);
+        batchIndex++;
 
-        return {
-            item: dt._id.item,
-            userLogin: dt._id.userLogin,
-            count: dt.count,
-            mostRecentId: mostRecent._id,
-            mostRecentCompletionAt: mostRecent.completionAt ? formatDate(mostRecent.completionAt) : '',
-            mostRecentUpdatedAt: formatDate(mostRecent.updatedAt),
-            mostRecentCreatedAt: formatDate(mostRecent.createdAt),
-            documentsToRemoveIds: orderedTrackings.map(d => d._id).join(", "),
-            documentsToRemoveCompletionAt: orderedTrackings.map(d => d.completionAt ? formatDate(d.completionAt) : 'not completed').join(", "),
-            documentsToRemoveUpdatedAt: orderedTrackings.map(d => formatDate(d.updatedAt)).join(", "),
-            documentsToRemoveCreatedAt: orderedTrackings.map(d => formatDate(d.createdAt)).join(", "),
-            mostRecent,
-            documentsToRemove: orderedTrackings,
-        };
-    });
+        console.log(`Processing batch ${batchIndex}/${totalBatches} (${batch.length} duplicated trackings)...`);
 
-    const reportName = `${environment.CLIENT_ID}-duplicated-trackings-from-${moment(from).format('YYYYMMDD')}-to-${moment(to).format('YYYYMMDD')}`;
+        console.time(`batch-${batchIndex}`);
 
-    await generateReport(
-        reportData,
-        [
-            { header: 'Item', key: 'item' },
-            { header: 'User Login', key: 'userLogin' },
-            { header: 'Count', key: 'count' },
-            { header: 'Most Recent Tracking', key: 'mostRecentId' },
-            { header: 'Most Recent CompletionAt', key: 'mostRecentCompletionAt' },
-            { header: 'Most Recent UpdatedAt', key: 'mostRecentUpdatedAt' },
-            { header: 'Most Recent CreatedAt', key: 'mostRecentCreatedAt' },
-            { header: 'Trackings To Remove', key: 'documentsToRemoveIds' },
-            { header: 'Trackings To Remove CompletionAt', key: 'documentsToRemoveCompletionAt' },
-            { header: 'Trackings To Remove UpdatedAt', key: 'documentsToRemoveUpdatedAt' },
-            { header: 'Trackings To Remove CreatedAt', key: 'documentsToRemoveCreatedAt' },
-        ],
-        {
-            fileName: `${reportName}-report`,
-        }
-    )
+        await processBatch(batch, { from, to, batchIndex });
 
-    await writeDebugJson(
-        `${reportName}-info`,
-        reportData.map(
-            info => ({
-                item: info.item,
-                userLogin: info.userLogin,
-                count: info.count,
-                mostRecent: info.mostRecent,
-                documentsToRemove: info.documentsToRemove,
-            })
-        )
-    );
-
-    console.timeEnd("report");
-
-    if (REMOVE_DOCUMENTS) {
-        console.time('delete');
-
-        const deleteIds = reportData.flatMap(r => r.documentsToRemove).map(d => d._id);
-
-        console.log(`Deleting ${deleteIds.length} duplicated trackings...`);
-
-        await Tracking.deleteMany({ _id: { $in: deleteIds } });
-
-        console.timeEnd("delete");
+        console.timeEnd(`batch-${batchIndex}`);
     }
 
     console.log("Done");
