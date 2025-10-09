@@ -9,12 +9,21 @@ const REMOVE_DOCUMENTS = false;
 
 const formatDate = (date) => moment(date).format('DD/MM/YYYY HH:mm:ss');
 
-async function checkForDuplicatedTrackings() {
-    console.log("Checking duplicated trackings...");
+async function processByPeriod(from, to) {
+    console.log(
+        "\nChecking duplicated trackings from",
+        moment(from).utc().format('DD/MM/YYYY'),
+        "to",
+        moment(to).utc().format('DD/MM/YYYY')
+    );
 
     console.time("total");
 
     const conditional = {
+        createdAt: {
+            $gte: from,
+            $lte: to
+        },
         $or: [
             { expiredCompletion: { $exists: false } },
             { expiredCompletion: { $eq: null } },
@@ -24,6 +33,12 @@ async function checkForDuplicatedTrackings() {
     const totalTrackings = await Tracking.countDocuments(conditional);
 
     console.log(`Total trackings: ${totalTrackings}`);
+
+    if(totalTrackings === 0) {
+        console.log("No trackings found, skipping.");
+        console.timeEnd("total");
+        return;
+    }
 
     console.time("aggregation");
 
@@ -36,14 +51,18 @@ async function checkForDuplicatedTrackings() {
                 count: { $sum: 1 }
             }
         },
-        {
-            $match: { count: { $gt: 1 } }
-        }
+        { $match: { count: { $gt: 1 } } },
     ]);
 
     console.timeEnd("aggregation");
 
     console.log(`Found ${duplicatedTrackings.length} duplicated trackings.`);
+
+    if (duplicatedTrackings.length === 0) {
+        console.log("No duplicated trackings found, skipping.");
+        console.timeEnd("total");
+        return;
+    }
 
     console.time("report");
 
@@ -84,6 +103,8 @@ async function checkForDuplicatedTrackings() {
         };
     });
 
+    const reportName = `${environment.CLIENT_ID}-duplicated-trackings-from-${moment(from).format('YYYYMMDD')}-to-${moment(to).format('YYYYMMDD')}`;
+
     await generateReport(
         reportData,
         [
@@ -100,12 +121,12 @@ async function checkForDuplicatedTrackings() {
             { header: 'Trackings To Remove CreatedAt', key: 'documentsToRemoveCreatedAt' },
         ],
         {
-            fileName: `${environment.CLIENT_ID}-duplicated-trackings-report`,
+            fileName: `${reportName}-report`,
         }
     )
 
     await writeDebugJson(
-        `${environment.CLIENT_ID}-duplicated-trackings-info`,
+        `${reportName}-info`,
         reportData.map(
             info => ({
                 item: info.item,
@@ -133,6 +154,41 @@ async function checkForDuplicatedTrackings() {
 
     console.log("Done");
     console.timeEnd("total");
+}
+
+async function checkForDuplicatedTrackings() {
+    const startDate = moment('2024-01-01').startOf('day');
+    const endDate = moment().endOf('day');
+    const period = 1;
+    const periodType = 'month';
+    const periodArray = [];
+
+    let currentStart = startDate.clone();
+
+    while (currentStart.isBefore(endDate)) {
+        const currentEnd = moment.min(
+            currentStart
+                .clone()
+                .add(period, periodType)
+                .subtract(1, 'day')
+                .endOf('day'),
+            endDate
+        );
+
+        periodArray.push({
+            from: currentStart.clone().utc(true).toDate(),
+            to: currentEnd.clone().utc(true).toDate()
+        });
+
+        currentStart = currentEnd.clone().add(1, 'day').startOf('day');
+    }
+
+    console.log(periodArray.length, 'periods to process:');
+
+    for await (const period of periodArray) {
+        await processByPeriod(period.from, period.to);
+    }
+
 
     process.exit(0);
 }
