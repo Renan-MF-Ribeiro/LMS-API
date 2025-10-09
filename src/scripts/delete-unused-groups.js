@@ -109,8 +109,6 @@ async function deleteUnusedGroups() {
         { fileName: `${environment.CLIENT_ID}-tags-nao-utilizadas` }
     );
 
-    console.log(unusedTags[0]);
-
     if (EXECUTE_DELETE) {
         console.log('Iniciando remoção de tags não utilizadas dos grupos...');
 
