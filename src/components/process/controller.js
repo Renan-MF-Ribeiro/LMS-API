@@ -78,8 +78,8 @@ const processController = {
 
 
     create: async (req, res) => {
-        //const body = req.fields?.payload ? JSON.parse(req.fields?.payload) : req.body;
-        const body = req.fields ? req.fields : req.body;
+        const body = req.fields?.payload ? JSON.parse(req.fields?.payload) : req.body;
+        //const body = req.fields ? req.fields : req.body;
         const file = req.files?.file
 
         if (file) {
@@ -97,7 +97,7 @@ const processController = {
 
             if (data?.data?._id) {
                 const message = data?.data?._id
-                //await business.sendKafkaMessage(message)
+                await business.sendKafkaMessage(message)
             }
             res.status(data.statusCode).json(data.data);
         } catch (error) {
