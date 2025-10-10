@@ -234,9 +234,9 @@ const HomeController = {
 
                 await Log.create({
                     dataNew: { error: error.response?.data ?? error },
-                    groups: groupsAD ?? [],
-                    user: user._id,
-                    login: user.networkLogin,
+                    groups: user?.groupsAD ?? [],
+                    user: user?._id,
+                    login: user?.networkLogin,
                     type: "ERROR",
                     message: "Erro ao buscar cursos da Alura",
                     component: "home",
