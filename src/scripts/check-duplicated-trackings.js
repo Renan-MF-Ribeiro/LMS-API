@@ -157,6 +157,10 @@ async function processByPeriod(from, to, items) {
         return;
     }
 
+    const trackingsWillBeDeleted = duplicatedTrackings.reduce((acc, dt) => acc + (dt.count - 1), 0);
+
+    console.log(`A total of ${trackingsWillBeDeleted} duplicated trackings will be removed.`);
+
     console.time("report");
 
     let batchIndex = 0;
