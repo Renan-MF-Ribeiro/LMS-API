@@ -39,6 +39,7 @@ const { populateTrails } = require('../trails/business');
 const { Section } = require('../sections/model');
 const { maxBy } = require('lodash');
 const { getDbCurrentFeatures } = require('../../utils/features');
+const { Log } = require('../logs/model');
 
 const HomeController = {
     async searchBy(req, res) {
