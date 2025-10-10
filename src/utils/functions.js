@@ -16,7 +16,7 @@ const { htmlToText } = require('html-to-text');
 const tlds = require('tlds');
 const mongoose = require('mongoose');
 const { CompanyConfigModel } = require('../components/config/model');
-
+const orderBy = require('lodash/orderBy');
 
 module.exports = {
     getDateToday() {
@@ -928,12 +928,27 @@ module.exports = {
         trail.notStarted = false;
         let duration = 0;
 
-        const trackingMap = new Map(
-            allTrackingUser.map((obj) => [String(obj.item), obj])
-        );
+        const trackingMap = new Map();
+
+        allTrackingUser.forEach((obj) => {
+            if(!trackingMap.has(String(obj.item))){
+                trackingMap.set(String(obj.item), []);
+            }
+
+            trackingMap.get(String(obj.item)).push(obj);
+        })
+
 
         for (const item of trail.items) {
-            const objTracking = trackingMap.get(String(item?.itemID?._id));
+            const itemTrackings = trackingMap.get(String(item?.itemID?._id)) || [];
+
+            const arrayOrdenado = orderBy(
+                itemTrackings,
+                ['completionAt', 'updatedAt'],
+                ['asc', 'asc']
+            );
+
+            const objTracking = arrayOrdenado[0] || null;
 
             if (dashboard && objTracking) {
                 trail.notStarted = true;
