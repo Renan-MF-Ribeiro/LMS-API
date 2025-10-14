@@ -33,6 +33,11 @@ const EVENT_CATEGORY = Object.freeze({
     FEED_SHARE_OWNER: 'feed_share_owner',
 });
 
+const SYSTEM_EVENT_CATEGORY = Object.freeze({
+    MIGRATED_SCORE: 'migrated_score',
+});
+
 module.exports = {
     EVENT_CATEGORY,
+    SYSTEM_EVENT_CATEGORY
 };

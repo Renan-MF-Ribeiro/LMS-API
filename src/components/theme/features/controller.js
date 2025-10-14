@@ -4,6 +4,7 @@ const { getDbCurrentFeatures } = require('../../../utils/features')
 const { getAppMaxFileSize } = require('../../../utils/files');
 const { removeFromCache } = require('../../../utils/cache/store');
 const { Channel } = require('../../channels/model');
+const GamificationKafka = require('../../gamification/kafka/broker');
 
 module.exports = {
     async update(req, res) {
@@ -13,6 +14,12 @@ module.exports = {
             features = await Features.findByIdAndUpdate(features._id, req.body, { new: true })
         } else {
             features = await Features.create(req.body)
+        }
+
+        if (features?.gamefication) {
+            await GamificationKafka.start();
+        } else {
+            await GamificationKafka.stop();
         }
 
         removeFromCache('/theme/features');
