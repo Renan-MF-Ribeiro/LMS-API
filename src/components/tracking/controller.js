@@ -417,8 +417,6 @@ const TrackingController = {
             const { order, sort } = ordernation(req);
             const { userLogin, searchBy, filterByEligibility } = req.query;
 
-            console.log('filterByEligibility', filterByEligibility);
-
             const processedTrailsWithTracking = [];
             let data;
 
@@ -427,42 +425,59 @@ const TrackingController = {
                 kind: { $ne: 'PostTracking' },
                 $or: [
                     { expiredCompletion: { $exists: false } },
-                    { expiredCompletion: { $eq: null } },
-                ],
+                    { expiredCompletion: { $eq: null } }
+                ]
             }, '-__v -lastState -isAllowedToSendXAPI -interactions -suspendedData')
-                .sort({ [order]: sort })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit));;
 
             let query = {
                 'items.itemID': {
                     $in: allTrackingUser.map((v) => v.item),
                 },
             }
+
             if (searchBy) {
                 query = { ...query, $or: [{ title: { $regex: searchBy, $options: 'i' } }] }
             }
 
-            const trails = await Trail.find(query)
-                .populate({
-                    path: 'items.itemID',
-                    model: 'Item',
-                    select: '_id completion completionAt kind score createdAt updatedAt title',
-                    match: {
-                        enabled: true,
-                        archive: false,
-                        kind: { $nin: ['PostItem', 'SoonItem'] },
-                    }
+            if (filterByEligibility === 'true') {
+                try {
+                    const user = await User.findOne({ networkLogin: userLogin });
+                    if (user) {
+                        // Get user tags
+                        let userTags = [];
 
-                })
-                .sort({ [order]: sort })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit));
+                        const userGroups = await Group.find({ name: { $in: user?.groupsAD } }, 'name tags') || [];
+                        userTags = userGroups?.flatMap((group) => group?.tags?.map((tag) => tag?.value)) || [];
+
+                        query['tags.value'] = { $in: userTags };
+                    }
+                } catch (error) {
+                    console.error('Error filtering trails by eligibility:', error);
+                }
+            }
+
+            const [trails, totalTrails] = await Promise.all([
+                Trail.find(query)
+                    .populate({
+                        path: 'items.itemID',
+                        model: 'Item',
+                        select: '_id completion completionAt kind score createdAt updatedAt title',
+                        match: {
+                            enabled: true,
+                            archive: false,
+                            kind: { $nin: ['PostItem', 'SoonItem'] },
+                        }
+
+                    })
+                    .sort({ [order]: sort })
+                    .skip(parseInt(skip))
+                    .limit(parseInt(limit)),
+                Trail.find(query).countDocuments()
+            ]);
 
             const trailPromises = trails.map((t) => processTrailTracking(t, allTrackingUser));
 
             const trailsWithTracking = await Promise.all(trailPromises);
-            const totalTrails = await Trail.find(query).countDocuments();
 
             if (trailsWithTracking.length === 0) {
                 return _messages.success(res, req, {
@@ -470,7 +485,6 @@ const TrackingController = {
                     processedTrailsWithTracking,
                 });
             }
-
 
             for (const { trail } of trailsWithTracking) {
                 const trailItems = trail?.items;
@@ -526,6 +540,7 @@ const TrackingController = {
                 };
                 processedTrailsWithTracking.push(data);
             }
+
             return _messages.success(res, req, {
                 totalTrails,
                 processedTrailsWithTracking,
