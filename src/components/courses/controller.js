@@ -53,6 +53,7 @@ const { default: axios } = require('axios');
 const ApiError = require('../../errors/ApiError');
 const { getMessengerConfig } = require('../config/business');
 const _business = require('./business');
+const { ensureGroupsExist } = require('./business');
 
 module.exports = {
     async createCourse (req, res) {
@@ -116,6 +117,8 @@ module.exports = {
                 } else {
                     const programID = await returnProgramaID(body.program);
                     body.program = programID;
+
+                    await ensureGroupsExist(body.tags);
 
                     delete body.materials;
                     const courseCreated = await CourseModel.create(body);
@@ -307,6 +310,8 @@ module.exports = {
                 } else {
                     const programID = await returnProgramaID(body.program);
                     body.program = programID;
+
+                    await ensureGroupsExist(body.tags);
 
                     if (materials) {
                         const materialsArray = Array.isArray(materials)
@@ -2070,6 +2075,17 @@ module.exports = {
                     req,
                     'Arquivo inválido',
                     'Arquivo inválido',
+                    'courses',
+                    '/import-attendance-list'
+                );
+            }
+
+            if (data.length === 0) {
+                return badRequest(
+                    res,
+                    req,
+                    'Arquivo não possui dados',
+                    'Arquivo não possui dados',
                     'courses',
                     '/import-attendance-list'
                 );
