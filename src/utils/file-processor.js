@@ -1,6 +1,7 @@
 const crypto = require("node:crypto");
 const kafka = require("./kafka");
 const environment = require("../environment");
+const { log, error } = require("./logger");
 
 const FILE_PROCESSOR_EVENT_TYPES = {
     ITEM_THUMB: 'item-thumb',
@@ -10,17 +11,17 @@ const FILE_PROCESSOR_EVENT_TYPES = {
 
 async function dispatchFileProcessorKafkaMessage(type, databaseId) {
     if (!environment.FILE_PROCESSOR_KAFKA_IMAGES_TOPIC) {
-        console.log('Skipping file-processor message dispatch: FILE_PROCESSOR_KAFKA_IMAGES_TOPIC is not set.');
+        log('Skipping file-processor message dispatch: FILE_PROCESSOR_KAFKA_IMAGES_TOPIC is not set.');
         return;
     }
 
     if (!environment.FILE_PROCESSOR_MESSAGE_SIGNATURE) {
-        console.log('Skipping file-processor message dispatch: FILE_PROCESSOR_MESSAGE_SIGNATURE is not set.');
+        log('Skipping file-processor message dispatch: FILE_PROCESSOR_MESSAGE_SIGNATURE is not set.');
         return;
     }
 
     if (!Object.values(FILE_PROCESSOR_EVENT_TYPES).includes(type)) {
-        console.error(`Invalid file-processor event type: ${type}`);
+        error(`Invalid file-processor event type: ${type}`);
         return;
     }
 
@@ -37,7 +38,7 @@ async function dispatchFileProcessorKafkaMessage(type, databaseId) {
     const signature = hmac.digest('hex');
 
     try {
-        console.log(`Dispatching file-processor message: ${type} - ${databaseId} `);
+        log(`Dispatching file-processor message: ${type} - ${databaseId} `);
         const kafkaProducer = kafka.producer();
         await kafkaProducer.connect();
         await kafkaProducer.send({
