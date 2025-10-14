@@ -960,14 +960,24 @@ module.exports = {
         ]);
 
         section.trails = mostSeenTrails.map(({ trail, count }) => {
-            const completion = trails.find(t => t._id.toString() === trail._id.toString())?.completion || null;
+            const processedTrail = trails.find(t => t._id.toString() === trail._id.toString());
+            
+            if (!processedTrail) {
+                return {
+                    ...trail,
+                    count,
+                    completion: null,
+                    confidential: trail.confidential ?? false
+                };
+            }
+            
             return {
-                ...trail,
+                ...processedTrail,
                 count,
-                completion,
-                confidential: trail.confidential ?? false
+                confidential: processedTrail.confidential ?? false
             };
         })
+
         return trails.length > 0 ? section : [];
     },
     async recommendedTrailsSections (trails, userId) {
