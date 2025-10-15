@@ -560,7 +560,6 @@ async function* handleFinishedSharedTrail({ user, meta }) {
 
         const payload = {
             validated: isValidCompleted,
-            issuer: processedTrail?._id,
             meta: {
                 trailId: processedTrail?._id,
                 trailTitle: processedTrail?.title,

@@ -6,7 +6,6 @@ const { handleUserEligibilitiesGamification } = require('../utils');
 const GamificationEventBusiness = require('../events/business');
 const { getDbCurrentFeatures } = require('../../../utils/features');
 const { Types } = require('mongoose');
-const commandQueue = require('./command-queue');
 
 class GamificationKafkaSingleton {
     static instance;
@@ -205,16 +204,10 @@ const gamificationKafka = new GamificationKafkaSingleton();
 
 const GamificationKafka = {
     async start() {
-        return commandQueue.enqueue(async () => {
-            console.log('Starting GamificationKafka...');
-            await gamificationKafka.start();
-        });
+        await gamificationKafka.start();
     },
     async stop() {
-        return commandQueue.enqueue(async () => {
-            console.log('Stopping GamificationKafka...');
-            await gamificationKafka.stop();
-        });
+        await gamificationKafka.stop();
     },
 
     async publishEventRuleValidation({ events, identifier, meta }) {
