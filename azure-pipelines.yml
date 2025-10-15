@@ -14,7 +14,7 @@ resources:
   - repo: self
 
 variables:
-  tag: '2.13.0'
+  tag: "2.13.1"
   name: "happlearning-v2"
   dockerRegistryServiceConnection: "93b93a28-98a7-4844-b8f8-c35c737f6e02"
   stagingRunningPort: "3097"
@@ -22,12 +22,12 @@ variables:
   devApiRunningPort: "3094"
   devPainelRunningPort: "3093"
   devRunningPort: "3092"
-  imageRepositoryProd: '$(name)-backend-prod'
-  imageRepositoryStaging: '$(name)-backend-staging'
-  imageRepositoryImage: '$(name)-backend-image'
-  imageRepositoryDevApi: '$(name)-backend-dev-api'
-  imageRepositoryDevPainel: '$(name)-backend-dev-painel'
-  imageRepositoryDev: '$(name)-backend-dev'
+  imageRepositoryProd: "$(name)-backend-prod"
+  imageRepositoryStaging: "$(name)-backend-staging"
+  imageRepositoryImage: "$(name)-backend-image"
+  imageRepositoryDevApi: "$(name)-backend-dev-api"
+  imageRepositoryDevPainel: "$(name)-backend-dev-painel"
+  imageRepositoryDev: "$(name)-backend-dev"
   containerRegistry: "happlearning.azurecr.io"
   dockerfilePath: "$(Build.SourcesDirectory)/Dockerfile"
   dockerfilePathImage: "$(Build.SourcesDirectory)/DockerfileImage"
@@ -75,7 +75,7 @@ stages:
             inputs:
               secureFile: "$(name).env.dev"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
-          
+
           # Move secure files
           - task: CmdLine@2
             inputs:
@@ -97,7 +97,7 @@ stages:
             inputs:
               script: "mv $(dotenvdev.secureFilePath) $(System.DefaultWorkingDirectory)/.env"
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
-          
+
           # Set DEBUG environment variable
           - task: CmdLine@2
             displayName: "Set DEBUG environment variable"
@@ -189,14 +189,14 @@ stages:
               tags: |
                 $(tag)
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
-  
+
   - stage: Deploy
     displayName: Deploy to container instance
     jobs:
       - deployment: DeployStaging
         displayName: Deploy staging
         variables:
-        - group: DockerLogin
+          - group: DockerLogin
         environment:
           name: HomologVM_Test
           resourceType: VirtualMachine
@@ -219,7 +219,7 @@ stages:
       - deployment: DeployProd
         displayName: Deploy prod
         variables:
-        - group: DockerLogin
+          - group: DockerLogin
         environment:
           name: Production
           resourceType: VirtualMachine
@@ -243,7 +243,7 @@ stages:
       - deployment: DeployDevApi
         displayName: Deploy dev-api
         variables:
-        - group: DockerLogin
+          - group: DockerLogin
         environment:
           name: HomologVM_Test
           resourceType: VirtualMachine
@@ -266,7 +266,7 @@ stages:
       - deployment: DeployDevFront
         displayName: Deploy dev-painel
         variables:
-        - group: DockerLogin
+          - group: DockerLogin
         environment:
           name: HomologVM_Test
           resourceType: VirtualMachine
@@ -289,7 +289,7 @@ stages:
       - deployment: DeployDev
         displayName: Deploy dev
         variables:
-        - group: DockerLogin
+          - group: DockerLogin
         environment:
           name: HomologVM_Test
           resourceType: VirtualMachine
