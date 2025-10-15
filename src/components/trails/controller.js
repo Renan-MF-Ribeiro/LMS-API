@@ -52,6 +52,7 @@ const { EVENT_CATEGORY } = require('../gamification/model');
 const { LOCALE } = require('../i18n/model');
 const { i18nBusiness } = require('../i18n/business');
 const { escapeString } = require('../../utils/strings');
+const { dispatchFileProcessorKafkaMessage, FILE_PROCESSOR_EVENT_TYPES } = require('../../utils/file-processor');
 
 module.exports = {
     async getCollaborative (req, res) {
@@ -629,6 +630,13 @@ module.exports = {
                     trail,
                     { new: true }
                 );
+
+                if (thumbPath) {
+                    await dispatchFileProcessorKafkaMessage(
+                        FILE_PROCESSOR_EVENT_TYPES.TRAIL_THUMB,
+                        trail._id
+                    );
+                }
                 
                 _messages.success(
                     res,
@@ -1068,6 +1076,13 @@ module.exports = {
                 })
 
                 await updateCertificateExpirationDate(req)
+
+                if (thumbPath && thumbPath !== oldData.thumbPath) {
+                    await dispatchFileProcessorKafkaMessage(
+                        FILE_PROCESSOR_EVENT_TYPES.TRAIL_THUMB,
+                        oldData._id
+                    );
+                }
 
                 _messages.success(
                     res,

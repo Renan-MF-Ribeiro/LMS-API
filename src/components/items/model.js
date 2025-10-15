@@ -43,6 +43,8 @@ const ItemSchema = new mongoose.Schema(
             required: ifEnabled,
             default: '',
         },
+        blurThumbPath: { type: String, required: false, default: null },
+        fileProcessing: { type: Object, required: false, default: null },
         deleted: { type: Number, default: 0 },
         completion: { type: Number, default: null },
         completionAt: { type: Date, default: null, required: false },

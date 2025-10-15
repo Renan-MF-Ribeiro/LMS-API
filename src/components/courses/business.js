@@ -653,7 +653,9 @@ module.exports = {
 
         const { isLocationUrl, onlineLink } = await module.exports.processLocation(location);
 
-        const processedBody = { ...bodyData, dateApplicationInitial: formattedDateInitial, dateApplicationFinal: formattedDateFinal };
+        const { $set, ...restBody } = bodyData;
+
+        const processedBody = { ...restBody, dateApplicationInitial: formattedDateInitial, dateApplicationFinal: formattedDateFinal };
         if (isLocationUrl) {
             delete processedBody.location;
             processedBody.onlineLink = onlineLink;

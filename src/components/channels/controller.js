@@ -10,6 +10,7 @@ const { Theme } = require('../theme/palette/model');
 const { handleSegmentationOnCreate, handleSegmentationOnQuery } = require('../config/business');
 const { getDbCurrentFeatures } = require('../../utils/features');
 const mentorConfigController = require('../mentoring/config/controller');
+const { dispatchFileProcessorKafkaMessage, FILE_PROCESSOR_EVENT_TYPES } = require('../../utils/file-processor');
 
 
 module.exports = {
@@ -190,6 +191,12 @@ module.exports = {
             }
 
             const channel = await Channel.create(body);
+
+            await dispatchFileProcessorKafkaMessage(
+                FILE_PROCESSOR_EVENT_TYPES.CHANNEL_BANNER,
+                channel._id
+            );
+
             _messages.success(
                 res,
                 req,
@@ -247,6 +254,16 @@ module.exports = {
 
             if (findChannel.length) {
                 const channel = await Channel.findOneAndUpdate({ _id: channelId }, body, { new: true });
+
+                const hasSomeDifferenceInBanners = JSON.stringify(channel.banners) !== JSON.stringify(findChannel[0].banners);
+
+                if (hasSomeDifferenceInBanners) {
+                    await dispatchFileProcessorKafkaMessage(
+                        FILE_PROCESSOR_EVENT_TYPES.CHANNEL_BANNER,
+                        channel._id
+                    );
+                }
+
                 _messages.success(
                     res,
                     req,

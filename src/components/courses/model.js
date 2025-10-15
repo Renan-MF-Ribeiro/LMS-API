@@ -43,6 +43,7 @@ const CourseSChema = new mongoose.Schema(
         highlighted: { type: Boolean, default: false },
         startDate: { type: Date, required: false, default: null },
         endDate: { type: Date, required: false, default: null },
+        process: { type: String, required: false },
     },
     {
         ...schemaOptions,
@@ -111,6 +112,7 @@ const ClassSchema = new mongoose.Schema(
         name: { type: String, required: false },
         location: { type: String, required: true },
         costs: { type: [{ description: { type: String }, value: { type: Number } }], required: true },
+        process: { type: String, required: false },
     },
     {
         ...schemaOptions,
