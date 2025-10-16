@@ -464,7 +464,7 @@ const TrackingController = {
                         select: '_id completion completionAt kind score createdAt updatedAt title',
                         match: {
                             enabled: true,
-                            archive: false,
+                            $or: [{ archive: false }, { archive: { $exists: false } }],
                             kind: { $nin: ['PostItem', 'SoonItem'] },
                         }
 
@@ -475,9 +475,7 @@ const TrackingController = {
                 Trail.find(query).countDocuments()
             ]);
 
-            const trailPromises = trails.map((t) => processTrailTracking(t, allTrackingUser));
-
-            const trailsWithTracking = await Promise.all(trailPromises);
+            const trailsWithTracking = trails.map((t) => processTrailTracking(t, allTrackingUser));
 
             if (trailsWithTracking.length === 0) {
                 return _messages.success(res, req, {
@@ -489,6 +487,10 @@ const TrackingController = {
             for (const { trail } of trailsWithTracking) {
                 const trailItems = trail?.items;
                 const totalItems = trailItems.length;
+
+                if(totalItems === 0){
+                    continue;
+                }
 
                 const { completedItems, itemDataArr, fullCourseLoad } = trailItems?.reduce((acc, i) => {
                     const item = i?.itemID?.toObject();
