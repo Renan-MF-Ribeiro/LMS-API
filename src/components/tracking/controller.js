@@ -456,7 +456,7 @@ const TrackingController = {
                 }
             }
 
-            const [trails, totalTrails] = await Promise.all([
+            let [trails, totalTrails] = await Promise.all([
                 Trail.find(query)
                     .populate({
                         path: 'items.itemID',
@@ -488,9 +488,6 @@ const TrackingController = {
                 const trailItems = trail?.items;
                 const totalItems = trailItems.length;
 
-                if(totalItems === 0){
-                    continue;
-                }
 
                 const { completedItems, itemDataArr, fullCourseLoad } = trailItems?.reduce((acc, i) => {
                     const item = i?.itemID?.toObject();
@@ -506,6 +503,11 @@ const TrackingController = {
 
                     return acc;
                 }, { completedItems: 0, itemDataArr: [], fullCourseLoad: 0 });
+
+                if(itemDataArr.length === 0 ){
+                    totalTrails--;
+                    continue
+                }
 
 
                 let certificate = null
