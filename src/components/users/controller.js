@@ -1506,7 +1506,6 @@ module.exports = {
         }
 
 
-        
         if (newUsers.length > 0) {
             console.log(
                 `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
@@ -2862,32 +2861,21 @@ module.exports = {
     },
 
     async getAllConteudistas(req, res) {
-        try {
-            const query = {
-                $and: [
-                    {
-                        groupsAD: { $in: ['PERFIL_Conteudista'] },
-                    },
-                ],
-            };
+        const query = {
+            $and: [
+                {
+                    groupsAD: { $in: ['PERFIL_Conteudista'] },
+                },
+            ],
+        };
 
-            if (req?.segmentation) {
-                handleSegmentationOnQuery(req, 'issuer', query);
-            }
-
-            const users = await User.find(query);
-
-            _messages.success(res, req, users);
-        } catch (error) {
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'users',
-                'conteudistas'
-            );
+        if (req?.segmentation) {
+            handleSegmentationOnQuery(req, 'issuer', query);
         }
+
+        const users = await User.find(query).select('_id name');
+
+        _messages.success(res, req, users);
     },
 
     async handleNames(req, res) {
