@@ -445,11 +445,10 @@ const TrackingController = {
                     }
                 ],
                 kind: { $nin: ['PostItem', 'SoonItem'] },
-            }, '_id enabled archive kind');
+            });
 
             let query = {
                 'items.itemID': {
-                    // aplciar o retorno da busca de itens aqui
                     $in: items.map((i) => i._id),
                 },
             }
@@ -477,22 +476,27 @@ const TrackingController = {
 
             let [trails, totalTrails] = await Promise.all([
                 Trail.find(query)
-                    .populate({
-                        path: 'items.itemID',
-                        model: 'Item',
-                        select: '_id completion completionAt kind score createdAt updatedAt title',
-                        match: {
-                            enabled: true,
-                            $or: [{ archive: false }, { archive: { $exists: false } }],
-                            kind: { $nin: ['PostItem', 'SoonItem'] },
-                        }
-
-                    })
                     .sort({ [order]: sort })
                     .skip(parseInt(skip))
                     .limit(parseInt(limit)),
                 Trail.find(query).countDocuments()
             ]);
+
+            const itemsMap = items.reduce((acc, item) => {
+                acc[item._id.toString()] = item;
+                return acc;
+            }, {});
+
+            trails = trails.map(trail => {
+                const trailObj = trail.toObject();
+                trailObj.items = trailObj.items.map(item => {
+                    return {
+                        ...item,
+                        itemID: itemsMap[item.itemID.toString()]
+                    };
+                });
+                return trailObj;
+            });
 
             const trailsWithTracking = trails.map((t) => processTrailTracking(t, allTrackingUser));
 
