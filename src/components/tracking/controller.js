@@ -429,9 +429,28 @@ const TrackingController = {
                 ]
             }, '-__v -lastState -isAllowedToSendXAPI -interactions -suspendedData')
 
+            const items = await Item.find({
+                '_id': {
+                    $in: allTrackingUser.map((v) => v.item),
+                },
+                enabled: true,
+                $or: [
+                    {
+                        archive: false
+                    },
+                    {
+                        archive: {
+                            $exists: false
+                        }
+                    }
+                ],
+                kind: { $nin: ['PostItem', 'SoonItem'] },
+            }, '_id enabled archive kind');
+
             let query = {
                 'items.itemID': {
-                    $in: allTrackingUser.map((v) => v.item),
+                    // aplciar o retorno da busca de itens aqui
+                    $in: items.map((i) => i._id),
                 },
             }
 
