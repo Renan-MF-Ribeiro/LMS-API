@@ -429,9 +429,27 @@ const TrackingController = {
                 ]
             }, '-__v -lastState -isAllowedToSendXAPI -interactions -suspendedData')
 
+            const items = await Item.find({
+                '_id': {
+                    $in: allTrackingUser.map((v) => v.item),
+                },
+                enabled: true,
+                $or: [
+                    {
+                        archive: false
+                    },
+                    {
+                        archive: {
+                            $exists: false
+                        }
+                    }
+                ],
+                kind: { $nin: ['PostItem', 'SoonItem'] },
+            });
+
             let query = {
                 'items.itemID': {
-                    $in: allTrackingUser.map((v) => v.item),
+                    $in: items.map((i) => i._id),
                 },
             }
 
@@ -456,28 +474,31 @@ const TrackingController = {
                 }
             }
 
-            const [trails, totalTrails] = await Promise.all([
+            let [trails, totalTrails] = await Promise.all([
                 Trail.find(query)
-                    .populate({
-                        path: 'items.itemID',
-                        model: 'Item',
-                        select: '_id completion completionAt kind score createdAt updatedAt title',
-                        match: {
-                            enabled: true,
-                            archive: false,
-                            kind: { $nin: ['PostItem', 'SoonItem'] },
-                        }
-
-                    })
                     .sort({ [order]: sort })
                     .skip(parseInt(skip))
                     .limit(parseInt(limit)),
                 Trail.find(query).countDocuments()
             ]);
 
-            const trailPromises = trails.map((t) => processTrailTracking(t, allTrackingUser));
+            const itemsMap = items.reduce((acc, item) => {
+                acc[item._id.toString()] = item;
+                return acc;
+            }, {});
 
-            const trailsWithTracking = await Promise.all(trailPromises);
+            trails = trails.map(trail => {
+                const trailObj = trail.toObject();
+                trailObj.items = trailObj.items.map(item => {
+                    return {
+                        ...item,
+                        itemID: itemsMap[item.itemID.toString()]
+                    };
+                });
+                return trailObj;
+            });
+
+            const trailsWithTracking = trails.map((t) => processTrailTracking(t, allTrackingUser));
 
             if (trailsWithTracking.length === 0) {
                 return _messages.success(res, req, {
@@ -489,6 +510,7 @@ const TrackingController = {
             for (const { trail } of trailsWithTracking) {
                 const trailItems = trail?.items;
                 const totalItems = trailItems.length;
+
 
                 const { completedItems, itemDataArr, fullCourseLoad } = trailItems?.reduce((acc, i) => {
                     const item = i?.itemID?.toObject();
@@ -504,6 +526,11 @@ const TrackingController = {
 
                     return acc;
                 }, { completedItems: 0, itemDataArr: [], fullCourseLoad: 0 });
+
+                if(itemDataArr.length === 0 ){
+                    totalTrails--;
+                    continue
+                }
 
 
                 let certificate = null
