@@ -358,7 +358,7 @@ module.exports = {
             const { idEvaluation } = req.fields
 
             const file = req.files.file
-            const dataFile = await _files.readXLSX(file.path)
+            const dataFile = await _files.readXLSXAlternative(file.path)
             const header = dataFile[0] // GUARDA OS CAMPOS REFERENCE AO CABEÇALHO
             const positionQuestion = header.indexOf('Pergunta') // GUARDA POSIÇÃO APENAS PARA CONFERENCIA DA ESTRUTURA DO ARQUIVO
             const positionAlternative = header.indexOf('Alternativa A') // GUARDA POSIÇÃO APENAS PARA CONFERENCIA DA ESTRUTURA DO ARQUIVO
