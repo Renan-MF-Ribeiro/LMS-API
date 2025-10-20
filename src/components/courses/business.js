@@ -10,7 +10,7 @@ const {
     CourseModel,
     CourseEvaluationModel,
 } = require('./model');
-const moment = require('moment');
+const moment = require('moment-timezone');
 const mongoose = require('mongoose');
 const {
     formatDateWithoutHours,
@@ -419,17 +419,20 @@ module.exports = {
             );
 
             const isPresence = ['SIM', 'S'].includes(item.presence?.toUpperCase());
-            const presenceDate = isPresence
+
+            const originalPresenceAt =  moment(item.presenceAt, "DD/MM/YYYY");
+            const nowDate = moment();
+
+            let presenceDate = isPresence
                 ? item.presenceAt
-                    ? moment(item.presenceAt)
-                        .add(3, 'hours')
-                        .set({
-                            hour: nowDate.getHours(),
-                            minute: nowDate.getMinutes(),
-                        })
-                        .toDate()
+                    ? originalPresenceAt
                     : nowDate
                 : null;
+
+            if (isPresence && presenceDate && !moment(presenceDate).isValid()) {
+                presenceDate = nowDate;
+            }
+
             const grade = Number(item.grades ?? 0) > 100 ? 100 : Number(item.grades ?? 0);
 
             const commonData = {
@@ -641,7 +644,7 @@ module.exports = {
             processedLocation: isLocationUrl ? null : location
         };
     },
-    
+
     async prepareBodyForMessage(bodyData, location) {
         const dateApplicationInitial = moment(bodyData.dateApplicationInitial).subtract(3, 'hours');
         const dateApplicationFinal = moment(bodyData.dateApplicationFinal).subtract(3, 'hours');
@@ -651,7 +654,7 @@ module.exports = {
         const { isLocationUrl, onlineLink } = await module.exports.processLocation(location);
 
         const { $set, ...restBody } = bodyData;
-        
+
         const processedBody = { ...restBody, dateApplicationInitial: formattedDateInitial, dateApplicationFinal: formattedDateFinal };
         if (isLocationUrl) {
             delete processedBody.location;
@@ -659,7 +662,7 @@ module.exports = {
         }
 
         console.log('Processed Body for Message:', processedBody);
-        
+
         return processedBody;
     },
 

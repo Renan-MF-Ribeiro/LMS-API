@@ -1466,12 +1466,17 @@ async function processCourseInSections (elegibleCourses, userId) {
         const userInMostRecentClass = mostRecentClass?.users.find(matchUserInClass) ?? null;
 
         const presence = userInMostRecentClass?.presence || false;
-        const completionAt = mostRecentClass?.dateApplicationFinal || null;
+        const completionAt = course.certificateDateType === 2
+            ? (userInMostRecentClass?.presenceAt || mostRecentClass?.presenceAt || null)
+            : (mostRecentClass?.dateApplicationFinal || null);
         const instructor = mostRecentClass?.instructor || null;
         const certificateElegible = userInMostRecentClass?.presence && (userInMostRecentClass?.grades || 0) >= (course.passingScore || 0);
+
+
         const certificateData = certificateElegible ? {
             completionAt: course.certificateDateType === 2
-                ? mostRecentClass?.presenceAt : mostRecentClass?.dateApplicationFinal,
+                ? (userInMostRecentClass?.presenceAt || mostRecentClass?.presenceAt || null)
+                : (mostRecentClass?.dateApplicationFinal || null),
             qrcode: mostRecentClass?.qrcode || null,
             certificate: course.certificate || null,
             certificateLayout: course.certificateLayout || null,
