@@ -1,0 +1,106 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "ingress-{{CLIENT_NAME}}-proxy-headers"
+  namespace: happlearning-api
+  labels:
+    client: "{{CLIENT_NAME}}"
+data:
+  X-Real-IP: "$remote_addr"
+  X-Forwarded-For: "$proxy_add_x_forwarded_for"
+  X-Forwarded-Proto: "$scheme"
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    client: "{{CLIENT_NAME}}"
+  name: "{{CLIENT_NAME}}-ingress"
+  namespace: happlearning-api
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/client-max-body-size: "500M"
+    nginx.ingress.kubernetes.io/proxy-body-size: "500M"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/proxy-set-headers: "happlearning-api/ingress-{{CLIENT_NAME}}-proxy-headers"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      if ($request_uri ~* \.mjs$) {
+        more_set_headers "Content-Type: application/javascript";
+      }
+    nginx.ingress.kubernetes.io/server-snippet: |
+      proxy_cookie_path ~(.*) "$1; SameSite=strict; secure; httponly";
+      add_header "Referrer-Policy" "strict-origin";
+      add_header Permissions-Policy "accelerometer=(), autoplay=(*), camera=(), encrypted-media=(), fullscreen=(*), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(*), sync-xhr=(self), usb=()";
+      add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+      add_header "X-Permitted-Cross-Domain-Policies" "master-only";
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-Frame-Options SAMEORIGIN always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header Expect-CT "enforce, max-age=300, report-uri='https://{{CLIENT_DOMAIN}}'";
+      add_header Set-Cookie cip=$remote_addr;
+      add_header Set-Cookie chost=$Host;
+      add_header Content-Security-Policy "default-src 'self' blob: 'unsafe-eval' 'unsafe-inline' data: https://{{CLIENT_DOMAIN}} https://www.{{CLIENT_DOMAIN}} https://{{CLIENT_BLOBNAME}}.blob.core.windows.net https://{{CLIENT_BLOBNAME}}.privatelink.blob.core.windows.net https://*.happlearning.com.br https://*.happmobi.com.br https://happlearning.blob.core.windows.net https://fonts.googleapis.com https://vlibras.gov.br https://viacep.com.br https://images.unsplash.com https://cdn.jsdelivr.net https://fonts.gstatic.com https://www.gstatic.com https://youtube.com https://google-analytics.com https://gstatic.com https://assets.zendesk.com https://soundcloud.com https://googletagmanager.com https://www.googletagmanager.com https://vimeo.com https://*.vimeo.com https://i.vimeocdn.com https://firebaseinstallations.googleapis.com  https://fcmregistrations.googleapis.com https://cdnjs.cloudflare.com https://w.soundcloud.com https://www.youtube.com https://i.ytimg.com https://www.alura.com.br;";
+      add_header 'Access-Control-Allow-Origin' 'https://{{CLIENT_DOMAIN}}' always;
+
+      resolver 8.8.8.8;
+
+      location ^~ /showcase/ {
+        proxy_pass https://{{CLIENT_BLOBNAME}}.blob.core.windows.net/lmsassetsanon/showcase/;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+      }
+
+      location ~ ^/(scorm|photos|trails|items|channels|gamification|courses|dimensions|social|cycles|shop|avatars|mentoring|news)/ {
+        proxy_no_cache 1;
+        proxy_set_header Last-Modified $date_gmt;
+        proxy_set_header Cache-Control 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
+        if_modified_since off;
+        expires off;
+        etag off;
+        proxy_cache_key $scheme$proxy_host$request_uri$cookie_SAS;
+        set $delimeter "";
+
+        if ($is_args) {
+            set $delimeter "&";
+        }
+
+        set $args "?$args";
+
+        if ($uri !~ \.(html|htm|xhtml|js|css|svg)$) {
+            rewrite ^ https://{{CLIENT_BLOBNAME}}.blob.core.windows.net/lmsassets$uri$args$delimeter$cookie_SAS? permanent;
+            return 200;
+        }
+
+        proxy_pass https://{{CLIENT_BLOBNAME}}.blob.core.windows.net/lmsassets$uri$args$delimeter$cookie_SAS;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+      }
+spec:
+  ingressClassName: public
+  tls:
+    - hosts:
+        - "{{CLIENT_DOMAIN}}"
+      secretName: "tls-secret-{{CLIENT_NAME}}"
+  rules:
+    - host: "{{CLIENT_DOMAIN}}"
+      http:
+        paths:
+          - path: /api/(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: "{{CLIENT_NAME}}-backend-prod-service-headless"
+                port:
+                  number: 80
+          - path: /(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: "{{CLIENT_NAME}}-frontend-prod-service-headless"
+                port:
+                  number: 80
