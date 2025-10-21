@@ -13,6 +13,7 @@ router
     .get('/file', validateTokenRoute, _controller.downloadCertificate)
     .get('/preview', validateTokenRoute, _controller.previewCertificate)
     .post('/', validateTokenRoute, _controller.createCertificate)
+    .post('/trail', validateTokenRoute, _controller.createCertificateTrail)
     .delete('/:id', validateTokenRoute, _controller.deleteCertificate)
 
     // /certificates/layouts
