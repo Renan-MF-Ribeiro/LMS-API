@@ -10,6 +10,22 @@ module.exports = {
         try {
             const uri = `solicitations`;
             const { data } = await socialApi.post(uri, solicitationBody);
+
+            if (req.body?.author === 'USER') {
+                const { data: members } = await socialApi.get(`groups/members/${req.body.groupId}`)
+                const isMember = members?.data?.some((memberId) => memberId === req.body?.userId);
+
+                if (isMember) {
+                    await GamificationKafka.publishEventRuleValidation({
+                        events: [EVENT_CATEGORY.FEED_GROUP_JOIN, EVENT_CATEGORY.FEED_GROUP_PARTICIPANT],
+                        identifier: req.body?.userId,
+                        meta: {
+                            groupId: req.body?.groupId
+                        }
+                    })
+                }
+            }
+
             return _messages.success(res, req, data);
         } catch (error) {
             return _messages.internalServer(
