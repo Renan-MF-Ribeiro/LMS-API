@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: "{{DOCKER_IMAGE_NAME}}"
+  labels:
+    client: "{{CLIENT_NAME}}"
+spec:
+  serviceName: "{{DOCKER_IMAGE_NAME}}"
+  replicas: 2
+  selector:
+    matchLabels:
+      app: "{{DOCKER_IMAGE_NAME}}"
+  template:
+    metadata:
+      labels:
+        app: "{{DOCKER_IMAGE_NAME}}"
+    spec:
+      containers:
+        - name: "{{DOCKER_IMAGE_NAME}}"
+          imagePullPolicy: Always
+          image: "{{DOCKER_CONTAINER_REGISTRY}}/{{DOCKER_IMAGE_NAME}}:{{DOCKER_IMAGE_VERSION}}"
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: "0.5"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{DOCKER_IMAGE_NAME}}-service-headless"
+  labels:
+    client: "{{CLIENT_NAME}}"
+spec:
+  clusterIP: None
+  selector:
+    app: "{{DOCKER_IMAGE_NAME}}"
+  ports:
+    - port: 80
+      targetPort: 3000
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: "{{DOCKER_IMAGE_NAME}}-hpa"
+  labels:
+    client: "{{CLIENT_NAME}}"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: "{{DOCKER_IMAGE_NAME}}"
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 70

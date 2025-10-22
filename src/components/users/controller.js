@@ -239,6 +239,7 @@ async function generateTokens(user, login, password, tokenIdpProfiles, res) {
 
     return {
         SAS,
+        token,
         tk,
         key,
         tokenAnalytics,
@@ -605,6 +606,13 @@ module.exports = {
 
             const tokens = await generateTokens(newUser, networkLogin, password, null, res);
 
+            const secret = process.env.PROJECT_SECRET_KEY;
+            const sessionData = jwt.verify(tokens.token, secret);
+
+            req.session.passport = { user: sessionData };
+            res.cookie('connect.sid', req.sessionID, getCookieProps());
+            await addSASTokenToResponse(res);
+
             if (newUser && form?.autoLogin) {
                 await Log.create({
                     dataNew: [],
@@ -824,7 +832,7 @@ module.exports = {
 
         try {
             const data = jwt.verify(token, secret);
-
+            
             // Need to create the session when using monitoring login
             if (data.monitoringLogin) {
                 req.session.passport = { user: data };

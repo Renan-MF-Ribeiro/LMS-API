@@ -679,7 +679,7 @@ module.exports = {
         }
     },
 
-    async updateClass (req, res) {
+    async updateClass(req, res) {
         try {
             let {
                 courseID,
@@ -698,7 +698,7 @@ module.exports = {
                 location,
                 costs,
                 name,
-                signup,
+                signup
             } = req.fields;
             const materials = JSON.parse(req.fields.materials);
             const costsArray = JSON.parse(costs);
@@ -846,19 +846,30 @@ module.exports = {
                         costs: costsArray,
                         name,
                         signup,
-                        // Atualiza usuários
-                        $set: changedUsers.reduce((acc, { index, user }) => {
-                            acc[`users.${index}`] = user;
-                            return acc;
-                        }, {}),
-                    }
-                    // Atualiza classe e usuários
-                    await ClassModel.findByIdAndUpdate(classID, classBody);
+                    };
+
+                    const usersUpdate = changedUsers.reduce((acc, { index, user }) => {
+                        acc[`users.${index}`] = user;
+                        return acc;
+                    }, {});
+
+                    await ClassModel.findByIdAndUpdate(
+                        classID,
+                        {
+                            $set: {
+                                ...classBody,
+                                ...usersUpdate,
+                            },
+                        },
+                        { new: true } // retorna o documento atualizado
+                    );
+
                     await dispatch('update', 'class', { _id: classID, ...classBody });
+
                     // Adiciona usuários
                     if (addedUsers.length) {
                         await ClassModel.findByIdAndUpdate(classID, {
-                            $push: { users: { $each: addedUsers } },
+                            $push: { users: { $each: addedUsers } }
                         });
 
                         try {
