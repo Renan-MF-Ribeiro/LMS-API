@@ -434,17 +434,28 @@ async function* handleFinishedItem({ meta }) {
 async function* handleFinishedOptionalItem({ meta }) {
     const { tracking } = meta;
 
-    const trails = await Trail.find({ enabled: true, 'items.itemID': tracking.item });
+    const isOptional = await Trail.exists({
+        enabled: true,
+        items: {
+            $elemMatch: {
+                itemID: tracking.item,
+                optional: true
+            }
+        }
+    });
 
-    for (const trail of trails) {
-        const isValidCompleted = isValidCompletedItemGamification(tracking);
+    const item = await Item.findById(tracking.item);
 
-        const isOptional = trail.items.some((i) => i.itemID.equals(tracking.item) && i.optional);
+    const isValidCompleted = isValidCompletedItemGamification(tracking);
 
-        yield {
-            validated: isValidCompleted && isOptional,
-        };
-    }
+    return {
+        validated: isValidCompleted && isOptional,
+        meta: {
+            itemId: tracking.item,
+            itemTitle: item?.title,
+            itemThumbPath: item?.thumbPath,
+        },
+    };
 }
 
 async function* handleFinishedOptionalTrail({ user, meta }) {
