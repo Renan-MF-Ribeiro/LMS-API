@@ -12,10 +12,19 @@ const {
 } = require('./business');
 const moment = require('moment');
 const { Item } = require('../items/model');
-const { UsersWithProcessedTags } = require('../courses/model');
+const { CourseModel } = require('../courses/model');
 const { Tracking } = require('../tracking/model');
 const { populateTrails } = require('../trails/business');
-const { populateTrailFields } = require('../feed/business');
+const { processCourseInSections } = require('../sections/business');
+
+// @todo revisar aonde vai ficar
+const getCourseLoad = (courseLoad) => {
+    const dur = moment.duration(courseLoad, 'minutes');
+    const durHours = Math.floor(dur.asHours());
+    const durMins = Math.floor(dur.asMinutes()) - durHours * 60;
+
+    return durHours.toString().padStart(2, '0') + ':' + durMins.toString().padStart(2, '0');
+};
 
 module.exports = {
     async getCertificates(req, res) {
@@ -91,14 +100,6 @@ module.exports = {
 
     async createCertificateTrail(req, res) {
 
-        const getCourseLoad = (courseLoad) => {
-            const dur = moment.duration(courseLoad, 'minutes');
-            const durHours = Math.floor(dur.asHours());
-            const durMins = Math.floor(dur.asMinutes()) - durHours * 60;
-
-            return durHours.toString().padStart(2, '0') + ':' + durMins.toString().padStart(2, '0');
-        };
-
         const getItems = async (trail) => {
             const items = await Item.find({
                 '_id': {
@@ -152,15 +153,86 @@ module.exports = {
                 completionDate: trail.completionAt,
                 clientId: process.env.CLIENT_ID,
                 trailDescription: stripHtmlTags(trail.description ?? ''),
-                courseLoad: getCourseLoad(trail.duration),
+                courseLoad: getCourseLoad(trail.durationHours),
                 userName: user.name,
-                expirationDate: null,
+                expirationDate: trail.expirationDate,
                 certificateDue: trail.certificateDue,
-                workload: trail.scoreAverage,
+                workload: trail.scoreAverage,  // @todo revisar
                 layoutId: trail.certificateLayout,
                 itemName: trail.title,
                 initialDate: initialDate,
                 items: await getItems(trail)
+            };
+
+            if (trail.certificateDue && trail.certificateDue.type) {
+                const isFixed = trail.certificateDue.type === 'fixed';
+
+                const expirationDate = !isFixed
+                    ? moment(certificateData.completionDate)
+                        .add(trail.certificateDue.value, 'days')
+                        .format()
+                    : moment(
+                        new Date(trail.certificateDue.value),
+                        'YYYYMMDD-h:mm:ss'
+                    ).format();
+
+                certificateData.expirationDate = expirationDate;
+                certificateData.expired = moment(expirationDate).diff(new Date()) <= 0;
+            }
+
+            const { data } = await certificateClient.post('/certificates', certificateData, {
+                headers: getHeaders(req),
+                responseType: 'arraybuffer'
+            });
+
+            const file = Buffer.from(data, 'binary');
+            const filename = getCertificateFileName({
+                trailName: certificateData.trailName,
+                itemName: certificateData.itemName,
+                userName: certificateData.userName
+            });
+
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}.pdf"`);
+            res.send(file);
+        } catch (error) {
+            _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'createCertificateTrail');
+        }
+    },
+
+    async createCertificateCourse(req, res) {
+        try {
+            const { networkLogin, courseId } = req.body;
+
+            const userPromise = User.findOne({ networkLogin });
+            const coursePromise = CourseModel.findOne({ _id: courseId }).lean();
+
+            const [_course, user] = await Promise.all([coursePromise, userPromise]);
+            const [course] = await processCourseInSections([_course], user._id);
+
+            const initialDate = (course.certificateLayout && course._id)
+                ? await getInitialDate(req)
+                : null;
+
+            const certificateData = {
+                userId: user.networkLogin,
+                trailId: course._id,
+                trailName: course.title,
+                completionDate: course.completionAt,
+                clientId: process.env.CLIENT_ID,
+                trailDescription: stripHtmlTags(course.description ?? ''),
+                courseLoad: getCourseLoad(course.certificateElegible.workload),
+                userName: user.name,
+                expirationDate: null,
+                certificateDue: null,
+                workload: (course.certificateElegible?.grade || 0) > 0 ? course.certificateElegible?.grade?.toString() : undefined,
+                layoutId: course.certificateLayout,
+                itemName: course.title,
+                initialDate,
+                items: [{
+                    title: course.title,
+                    time: getCourseLoad(course.certificateElegible.workload)
+                }]
             };
 
             const { data } = await certificateClient.post('/certificates', certificateData, {
@@ -179,8 +251,103 @@ module.exports = {
             res.setHeader('Content-Disposition', `attachment; filename="${filename}.pdf"`);
             res.send(file);
         } catch (error) {
-            // console.log('error', error);
-            _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'createCertificateTrail');
+            _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'createCertificateCourse');
+        }
+    },
+
+    async createCertificateTrailSummary(req, res) {
+        try {
+            const { networkLogin, trailId } = req.body;
+
+            const user = await User.findOne({ networkLogin }).lean();
+            const tracking = await Tracking.find({
+                userLogin: networkLogin,
+                $or: [
+                    { expiredCompletion: { $exists: false } },
+                    { expiredCompletion: { $eq: null } }
+                ]
+            });
+            let [trailPopulated] = await populateTrails(true, { _id: trailId });
+            const { trail } = processTrailTrackingV2(trailPopulated, tracking);
+
+            const summary = {
+                userName: user.name,
+                trailName: trail.title,
+                courseLoad: getCourseLoad(trail.durationHours)
+            };
+
+            if (trail.completionAt) {
+                summary.completionDate = moment(
+                    new Date(trail.completionAt),
+                    'YYYYMMDD-h:mm:ss'
+                ).format();
+            }
+
+            if (trail.expirationDate) {
+                summary.expirationDate = moment(
+                    new Date(trail.expirationDate),
+                    'YYYYMMDD-h:mm:ss'
+                ).format();
+            }
+
+            if (trail.certificateDue && trail.certificateDue.type) {
+                const isFixed = trail.certificateDue.type === 'fixed';
+                const completionAt = new Date(trail.completionDate);
+
+                const expirationDate = !isFixed
+                    ? moment(completionAt)
+                        .add(trail.certificateDue.value, 'days')
+                        .format()
+                    : moment(
+                        new Date(trail.certificateDue.value),
+                        'YYYYMMDD-h:mm:ss'
+                    ).format();
+
+                summary.expirationDate = expirationDate;
+                summary.expired = moment(expirationDate).diff(new Date()) <= 0;
+            }
+
+            return res.json(summary);
+        } catch (error) {
+            _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'createCertificateTrailSummary');
+        }
+    },
+
+    async createCertificateCourseSummary(req, res) {
+        try {
+            const { networkLogin, courseId } = req.body;
+            const user = await User.findOne({ networkLogin }).lean();
+            const _course = await CourseModel.findOne({ _id: courseId }).lean();
+            const [course] = await processCourseInSections([_course], user._id);
+
+            const summary = {
+                userName: user.name,
+                trailName: course.title,
+                completionDate: course.completionAt,
+                courseLoad: getCourseLoad(course.certificateElegible.workload),
+                certificateDue: course.certificateDue
+            }
+
+            if (course.certificateDue && course.certificateDue.type) {
+                const isFixed = course.certificateDue.type === 'fixed';
+                const completionAt = new Date(course.completionAt);
+
+                const expirationDate = !isFixed
+                    ? moment(completionAt)
+                        .add(trail.certificateDue.value, 'days')
+                        .format()
+                    : moment(
+                        new Date(trail.certificateDue.value),
+                        'YYYYMMDD-h:mm:ss'
+                    ).format();
+
+                summary.expirationDate = expirationDate;
+                summary.expired = moment(expirationDate).diff(new Date()) <= 0;
+            }
+
+            return res.json(summary);
+        } catch (error) {
+            _messages.badRequest(res, req, 'Operação inválida', error.message, 'certifier', 'createCertificateTrailSummary');
         }
     },
 
@@ -196,14 +363,6 @@ module.exports = {
                 ...req.body,
                 courseLoad: formatCourseLoad(req.body.courseLoad)
             };
-
-            console.log('Certificado');
-            console.log({
-                ...bodyFormated,
-                initialDate,
-                trailDescription: stripHtmlTags(trailDescription ?? ''),
-                clientId: process.env.CLIENT_ID
-            });
 
             const { data } = await certificateClient.post(
                 '/certificates',
