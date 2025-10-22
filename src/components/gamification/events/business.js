@@ -23,117 +23,126 @@ const { HistoricEvaluation } = require('../../assessments/model');
 
 const GamificationEventBusiness = {
     async *validate(category, user, meta) {
-        switch (category) {
-            case EVENT_CATEGORY.ACHIEVED_PROGRESS_PERCENTAGE: {
-                yield* handleAchievedProgressPercentage({ user, meta });
-                break;
+        try {
+            switch (category) {
+                case EVENT_CATEGORY.ACHIEVED_PROGRESS_PERCENTAGE: {
+                    yield* handleAchievedProgressPercentage({ user, meta });
+                    break;
+                }
+                case EVENT_CATEGORY.COMMENT: {
+                    yield* handleComment({ meta });
+                    break;
+                }
+                case EVENT_CATEGORY.FEED_COMMENT: {
+                    yield* handleFeedComment({ meta });
+                    break;
+                }
+                case EVENT_CATEGORY.FEED_COMMENT_OWNER: {
+                    yield* handleFeedCommentOwner({ user, meta });
+                    break;
+                }
+                case EVENT_CATEGORY.FEED_GROUP_CREATE: {
+                    yield* handleFeedGroupCreate({ user, meta });
+                    break;
+                }
+                case EVENT_CATEGORY.FEED_GROUP_JOIN: {
+                    yield* handleFeedGroupJoin({ meta });
+                    break;
+                }
+                case EVENT_CATEGORY.FEED_GROUP_PARTICIPANT: {
+                    yield* handleFeedGroupParticipant({ user, meta });
+                    break;
+                }
+                case EVENT_CATEGORY.FEED_LIKE: {
+                    yield* handleFeedLike({ user, meta });
+                    break;
+                }
+                case EVENT_CATEGORY.FEED_LIKE_OWNER: {
+                    yield* handleFeedLikeOwner({ user, meta });
+                    break;
+                }
+                case EVENT_CATEGORY.FEED_SHARE: {
+                    yield* handleFeedShare({ user, meta });
+                    break;
+                }
+                case EVENT_CATEGORY.FEED_SHARE_OWNER: {
+                    yield* handleFeedShareOwner({ user, meta });
+                    break;
+                }
+                case EVENT_CATEGORY.FINISHED_FAVORITE_TRAIL: {
+                    yield* handleFinishedFavoriteTrail({ user, meta });
+                    break;
+                }
+                case EVENT_CATEGORY.FINISHED_HIGHLIGHTED_ITEM: {
+                    yield* handleFinishedHighlightedItem({ meta });
+                    break;
+                }
+                case EVENT_CATEGORY.FINISHED_EXAM_ITEM: {
+                    yield* handleFinishedExamItem({ user, meta });
+                    break;
+                }
+                case EVENT_CATEGORY.FINISHED_ITEM: {
+                    yield* handleFinishedItem({ meta });
+                    break;
+                }
+                case EVENT_CATEGORY.FINISHED_OPTIONAL_ITEM: {
+                    yield* handleFinishedOptionalItem({ meta });
+                    break;
+                }
+                case EVENT_CATEGORY.FINISHED_OPTIONAL_TRAIL: {
+                    yield* handleFinishedOptionalTrail({ user, meta });
+                    break;
+                }
+                case EVENT_CATEGORY.FINISHED_SECTION: {
+                    yield* handleFinishedSection({ user, meta });
+                    break;
+                }
+                case EVENT_CATEGORY.FINISHED_SHARED_TRAIL: {
+                    yield* handleFinishedSharedTrail({ user, meta });
+                    break;
+                }
+                case EVENT_CATEGORY.FINISHED_TRAIL: {
+                    yield* handleFinishedTrail({ user, meta });
+                    break;
+                }
+                case EVENT_CATEGORY.SHARE:
+                case EVENT_CATEGORY.LIKE: {
+                    yield* handleGetTrailMeta({ meta });
+                    break;
+                }
+                case EVENT_CATEGORY.OPTIONAL_SURVEY: {
+                    yield* handleOptionalSurvey({ meta });
+                    break;
+                }
+                case EVENT_CATEGORY.SHARED_CONTENT: {
+                    yield* handleSharedContent({ user, meta });
+                    break;
+                }
+                case EVENT_CATEGORY.STARTED_TRAIL: {
+                    yield* handleStartedTrail({ user, meta });
+                    break;
+                }
+                case EVENT_CATEGORY.SURVEY: {
+                    yield* handleSurvey({ user, meta });
+                    break;
+                }
+                case EVENT_CATEGORY.UPLOADED_CONTENT: {
+                    yield* handleUploadedContent({ meta });
+                    break;
+                }
+                case EVENT_CATEGORY.WATCHED_COLLAB: {
+                    yield* handleWatchedCollab({ user, meta });
+                    break;
+                }
+                default: {
+                    yield { validated: true };
+                    break;
+                }
             }
-            case EVENT_CATEGORY.COMMENT: {
-                yield* handleComment({ meta });
-                break;
-            }
-            case EVENT_CATEGORY.FEED_COMMENT: {
-                yield* handleFeedComment({ meta });
-                break;
-            }
-            case EVENT_CATEGORY.FEED_COMMENT_OWNER: {
-                yield* handleFeedCommentOwner({ user, meta });
-                break;
-            }
-            case EVENT_CATEGORY.FEED_GROUP_CREATE: {
-                yield* handleFeedGroupCreate({ user, meta });
-                break;
-            }
-            case EVENT_CATEGORY.FEED_GROUP_JOIN: {
-                yield* handleFeedGroupJoin({ meta });
-                break;
-            }
-            case EVENT_CATEGORY.FEED_GROUP_PARTICIPANT: {
-                yield* handleFeedGroupParticipant({ user, meta });
-                break;
-            }
-            case EVENT_CATEGORY.FEED_LIKE: {
-                yield* handleFeedLike({ user, meta });
-                break;
-            }
-            case EVENT_CATEGORY.FEED_LIKE_OWNER: {
-                yield* handleFeedLikeOwner({ user, meta });
-                break;
-            }
-            case EVENT_CATEGORY.FEED_SHARE: {
-                yield* handleFeedShare({ user, meta });
-                break;
-            }
-            case EVENT_CATEGORY.FEED_SHARE_OWNER: {
-                yield* handleFeedShareOwner({ user, meta });
-                break;
-            }
-            case EVENT_CATEGORY.FINISHED_FAVORITE_TRAIL: {
-                yield* handleFinishedFavoriteTrail({ user, meta });
-                break;
-            }
-            case EVENT_CATEGORY.FINISHED_HIGHLIGHTED_ITEM: {
-                yield* handleFinishedHighlightedItem({ meta });
-                break;
-            }
-            case EVENT_CATEGORY.FINISHED_EXAM_ITEM: {
-                yield* handleFinishedExamItem({ user, meta });
-                break;
-            }
-            case EVENT_CATEGORY.FINISHED_ITEM: {
-                yield* handleFinishedItem({ meta });
-                break;
-            }
-            case EVENT_CATEGORY.FINISHED_OPTIONAL_ITEM: {
-                yield* handleFinishedOptionalItem({ meta });
-                break;
-            }
-            case EVENT_CATEGORY.FINISHED_OPTIONAL_TRAIL: {
-                yield* handleFinishedOptionalTrail({ user, meta });
-                break;
-            }
-            case EVENT_CATEGORY.FINISHED_SECTION: {
-                yield* handleFinishedSection({ user, meta });
-                break;
-            }
-            case EVENT_CATEGORY.FINISHED_SHARED_TRAIL: {
-                yield* handleFinishedSharedTrail({ user, meta });
-                break;
-            }
-            case EVENT_CATEGORY.FINISHED_TRAIL: {
-                yield* handleFinishedTrail({ user, meta });
-                break;
-            }
-            case EVENT_CATEGORY.SHARE:
-            case EVENT_CATEGORY.LIKE: {
-                yield* handleGetTrailMeta({ meta });
-                break;
-            }
-            case EVENT_CATEGORY.OPTIONAL_SURVEY: {
-                yield* handleOptionalSurvey({ meta });
-                break;
-            }
-            case EVENT_CATEGORY.SHARED_CONTENT: {
-                yield* handleSharedContent({ user, meta });
-                break;
-            }
-            case EVENT_CATEGORY.STARTED_TRAIL: {
-                yield* handleStartedTrail({ user, meta });
-                break;
-            }
-            case EVENT_CATEGORY.SURVEY: {
-                yield* handleSurvey({ user, meta });
-                break;
-            }
-            case EVENT_CATEGORY.WATCHED_COLLAB: {
-                yield* handleWatchedCollab({ user, meta });
-                break;
-            }
-            default: {
-                yield { validated: true };
-                break;
-            }
+        } catch (error) {
+            yield { validated: false };
         }
+
     },
 };
 
@@ -229,6 +238,7 @@ async function* handleFeedGroupCreate({ user, meta }) {
         meta: {
             groupId,
             groupName: data.groupName,
+            banner: data?.banner
         },
     };
 }
@@ -243,7 +253,8 @@ async function* handleFeedGroupJoin({ meta }) {
         validated: true,
         meta: {
             groupId,
-            groupName: data.groupName,
+            groupName: data?.groupName,
+            banner: data?.banner
         },
     };
 }
@@ -263,6 +274,7 @@ async function* handleFeedGroupParticipant({ user, meta }) {
         meta: {
             groupId,
             groupName: data.groupName,
+            banner: data?.banner
         },
     };
 }
@@ -448,7 +460,7 @@ async function* handleFinishedOptionalItem({ meta }) {
 
     const isValidCompleted = isValidCompletedItemGamification(tracking);
 
-    return {
+    yield {
         validated: isValidCompleted && isOptional,
         meta: {
             itemId: tracking.item,
@@ -571,6 +583,7 @@ async function* handleFinishedSharedTrail({ user, meta }) {
 
         const payload = {
             validated: isValidCompleted,
+            issuer: processedTrail?._id,
             meta: {
                 trailId: processedTrail?._id,
                 trailTitle: processedTrail?.title,
@@ -687,7 +700,7 @@ async function* handleSharedContent({ user, meta }) {
 
     const trail = await Trail.findOne({ _id: trailId, author: { $ne: user._id } });
 
-    const author = await User.findById(trail.author);
+    const author = await User.findById(trail?.author);
 
     if (author?._id) {
         const eligibilities = await handleUserEligibilitiesGamification(author.groupsAD);
@@ -716,18 +729,18 @@ async function* handleStartedTrail({ user, meta }) {
 
     for (const trail of trails) {
         const trackings = allTrackingUser
-            .filter((tracking) => trail.items.some((item) => item.itemID?.equals?.(tracking.item)))
+            .filter((tracking) => trail.items.some((item) => item.itemID._id?.equals?.(tracking.item)))
             .sort((prev, curr) => prev.createdAt.getTime() - curr.createdAt.getTime());
 
         const hasOne = trackings?.length === 1;
         const createdAt = moment(trackings?.[0]?.createdAt);
         const updatedAt = moment(tracking?.updatedAt);
         const isValidTracking = createdAt.isSame(updatedAt);
-        const isSameDay = updatedAt.subtract(3, 'hours').isSame(moment(trail.startDate), 'day');
 
         yield {
-            validated: hasOne && isValidTracking && isSameDay,
+            validated: hasOne && isValidTracking,
             sameDayRelease: updatedAt.subtract(3, 'hours').toDate(),
+            targetDate: moment(trail.startDate).toDate(),
             meta: {
                 trailId: trail._id,
                 trailTitle: trail.title,
@@ -748,6 +761,22 @@ async function* handleSurvey({ meta }) {
         meta: {
             itemId: item._id,
             itemTitle: item.title,
+        },
+    };
+}
+
+async function* handleUploadedContent({ meta }) {
+    const { trailId } = meta;
+
+    const trail = await Trail.findOne({ _id: trailId, collaborative: true, moderation: 'approved' });
+
+    yield {
+        validated: trail?._id,
+        issuer: trailId,
+        meta: {
+            trailId: trail._id,
+            trailTitle: trail.title,
+            trailThumbPath: trail.thumbPath,
         },
     };
 }

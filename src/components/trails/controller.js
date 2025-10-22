@@ -2051,6 +2051,9 @@ module.exports = {
                 await GamificationKafka.publishEventRuleValidation({
                     identifier: user.networkLogin,
                     events: [EVENT_CATEGORY.UPLOADED_CONTENT],
+                    meta: {
+                        trailId: trail._id,
+                    }
                 });
             }
 

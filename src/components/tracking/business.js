@@ -29,6 +29,7 @@ const { HistoricEvaluation } = require('../assessments/model');
 const { Trail } = require('../trails/model');
 const { processTrailTracking } = require('../../utils/functions');
 const { User } = require('../users/model');
+const { EVENT_CATEGORY } = require('../gamification/model');
 
 module.exports = {
     async createCompleteTracking(item, trackingType, networkLogin) {
@@ -237,4 +238,87 @@ module.exports = {
             'completionAt'
         ).sort({ completionAt: -1 });
     },
+
+    async getFilteredTrackingEvents({
+        trackingItem,
+        TrackingModel,
+        reqBody,
+        completionAt,
+        userLogin,
+        itemId,
+        isNewTracking,
+    }) {
+        const eventsToDispatch = [];
+
+        const isItemCompleted =
+            completionAt !== null ||
+            (TrackingModel === SCORMTracking &&
+                ['completed', 'passed'].includes(reqBody.lessonStatus)) ||
+            reqBody.completion === 1;
+
+        const trail = await Trail.findOne({ 'items.itemID': itemId });
+
+        if (trail) {
+            if (isNewTracking) {
+                const existingTrackingsCount = await Tracking.countDocuments({
+                    item: { $in: trail.items.map((i) => i.itemID), $ne: itemId },
+                    userLogin: userLogin,
+                    $or: [
+                        { expiredCompletion: { $exists: false } },
+                        { expiredCompletion: { $eq: null } },
+                    ],
+                });
+
+                if (existingTrackingsCount === 0) {
+                    eventsToDispatch.push(EVENT_CATEGORY.STARTED_TRAIL);
+                }
+            }
+
+            if (isItemCompleted) {
+                eventsToDispatch.push(
+                    EVENT_CATEGORY.FINISHED_ITEM,
+                    EVENT_CATEGORY.FINISHED_FAVORITE_TRAIL,
+                    EVENT_CATEGORY.FINISHED_OPTIONAL_TRAIL,
+                    EVENT_CATEGORY.FINISHED_SECTION,
+                    EVENT_CATEGORY.FINISHED_SHARED_TRAIL
+                );
+
+                if (trackingItem?.highlighted) {
+                    eventsToDispatch.push(EVENT_CATEGORY.FINISHED_HIGHLIGHTED_ITEM);
+                }
+
+                const currentItem = trail.items.find(
+                    (item) => item.itemID.toString() === itemId.toString()
+                );
+
+                if (currentItem?.optional) {
+                    eventsToDispatch.push(EVENT_CATEGORY.FINISHED_OPTIONAL_ITEM);
+                }
+
+                const mandatoryItems = trail.items.filter((item) => !item.optional);
+
+                const completedMandatoryTrackings = await Tracking.countDocuments({
+                    item: { $in: mandatoryItems.map((i) => i.itemID) },
+                    userLogin: userLogin,
+                    completionAt: { $ne: null },
+                    $or: [
+                        { expiredCompletion: { $exists: false } },
+                        { expiredCompletion: { $eq: null } },
+                    ],
+                });
+
+                if (completedMandatoryTrackings === mandatoryItems.length) {
+                    eventsToDispatch.push(EVENT_CATEGORY.FINISHED_TRAIL);
+                    eventsToDispatch.push(EVENT_CATEGORY.ACHIEVED_PROGRESS_PERCENTAGE);
+                }
+
+
+                if (trackingItem?.collaborative && (reqBody.completion > 0 || reqBody.lessonStatus)) {
+                    eventsToDispatch.push(EVENT_CATEGORY.WATCHED_COLLAB);
+                }
+            }
+        }
+
+        return eventsToDispatch;
+    }
 };
