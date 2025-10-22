@@ -152,7 +152,7 @@ module.exports = {
                 completionDate: trail.completionAt,
                 clientId: process.env.CLIENT_ID,
                 trailDescription: stripHtmlTags(trail.description ?? ''),
-                courseLoad: getCourseLoad(),
+                courseLoad: getCourseLoad(trail.duration),
                 userName: user.name,
                 expirationDate: null,
                 certificateDue: trail.certificateDue,
