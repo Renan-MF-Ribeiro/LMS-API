@@ -100,14 +100,11 @@ module.exports = {
         };
 
         const getItems = async (trail) => {
-
             const items = await Item.find({
                 '_id': {
                     $in: trail?.items.map((item) => item.itemID)
                 }
             });
-
-            // console.log('items', items);
 
             return items?.map((item) => {
                 const dur = moment.duration(item.durationHours, 'minutes');
@@ -130,7 +127,6 @@ module.exports = {
         try {
             const { networkLogin, trailId } = req.body;
 
-            const trailPromise = Trail.findOne({ _id: trailId });
             const userPromise = User.findOne({ networkLogin });
             const trackingPromise = Tracking.find({
                 userLogin: networkLogin,
@@ -140,9 +136,10 @@ module.exports = {
                 ]
             });
 
-            const [_trail, tracking, user] = await Promise.all([trailPromise, trackingPromise, userPromise]);
+            const [tracking, user] = await Promise.all([trackingPromise, userPromise]);
+            let [trailPopulated] = await populateTrails(true, { _id: trailId });
 
-            const { trailWithTracking, containsACompletedItem } = processTrailTracking(_trail, tracking);
+            const { trail } = processTrailTrackingV2(trailPopulated, tracking);
 
             const initialDate = (trail.certificateLayout && trailId)
                 ? await getInitialDate(req)
@@ -152,8 +149,7 @@ module.exports = {
                 userId: user.networkLogin,
                 trailId: trail._id,
                 trailName: trail.title,
-                // completionDate: trail.completionAt,
-                completionDate: '2025-05-04T07:00:00-03:00', //@fixme corrigir mock
+                completionDate: trail.completionAt,
                 clientId: process.env.CLIENT_ID,
                 trailDescription: stripHtmlTags(trail.description ?? ''),
                 courseLoad: getCourseLoad(),
