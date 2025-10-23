@@ -419,19 +419,17 @@ module.exports = {
             );
 
             const isPresence = ['SIM', 'S'].includes(item.presence?.toUpperCase());
-
-            const originalPresenceAt =  moment(item.presenceAt, "DD/MM/YYYY");
-            const nowDate = moment();
-
-            let presenceDate = isPresence
+            const presenceDate = isPresence
                 ? item.presenceAt
-                    ? originalPresenceAt
+                    ? moment(item.presenceAt)
+                        .add(3, 'hours')
+                        .set({
+                            hour: nowDate.getHours(),
+                            minute: nowDate.getMinutes(),
+                        })
+                        .toDate()
                     : nowDate
                 : null;
-
-            if (isPresence && presenceDate && !moment(presenceDate).isValid()) {
-                presenceDate = nowDate;
-            }
 
             const grade = Number(item.grades ?? 0) > 100 ? 100 : Number(item.grades ?? 0);
 
