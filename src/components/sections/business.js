@@ -348,7 +348,7 @@ async function setCerticateHistoricOnSections (user, sections) {
  * @param withClasses Força o retorno de classes mesmo que o usuário tenha certificado elegível, se false segue fluxo natural
  * @returns {Promise<*>}
  */
-async function processCourseInSections (elegibleCourses, userId, withClasses = false) {
+async function processCourseInSections (elegibleCourses, userId, withClasses = false, classId) {
     const today = new Date();
 
     // Extract course IDs for batch queries
@@ -396,7 +396,9 @@ async function processCourseInSections (elegibleCourses, userId, withClasses = f
         const classesFromCourse = classesByCourse.get(courseIdStr) || [];
 
         // Find the most recent class with presence data or the most recent class if none found
-        const mostRecentClass = classesFromCourse.find(classItem => {
+        const mostRecentClass = classesFromCourse
+            .filter(classItem => classId ? classItem._id === classId : true)
+            .find(classItem => {
             const userInClass = classItem.users.find(matchUserInClass);
 
             const userPassedClass = userInClass?.presence && (userInClass.grades || 0) >= (course.passingScore || 0);

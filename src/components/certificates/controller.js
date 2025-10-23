@@ -214,13 +214,13 @@ module.exports = {
 
     async createCertificateCourse(req, res) {
         try {
-            const { networkLogin, courseId } = req.body;
+            const { networkLogin, courseId, classId } = req.body;
 
             const userPromise = User.findOne({ networkLogin });
             const coursePromise = CourseModel.findOne({ _id: courseId }).lean();
             const [_course, user] = await Promise.all([coursePromise, userPromise]);
 
-            const [course] = await processCourseInSections([_course], user._id, true);
+            const [course] = await processCourseInSections([_course], user._id, true, classId);
             const { modelOptions } = await getCertificateLayout(req, course.certificateLayout);
 
             const certificateData = {
