@@ -427,7 +427,7 @@ async function processCourseInSections (elegibleCourses, userId, withClasses = f
             if (course.certificateDateType === 1) {
                 certificateData.completionAt = mostRecentClass?.dateApplicationFinal;
             } else {
-                const [user] = mostRecentClass?.users;
+                const [user] = mostRecentClass?.users.filter(matchUserInClass) || [];
                 if (user) {
                     certificateData.completionAt = user.presenceAt;
                 } else {
