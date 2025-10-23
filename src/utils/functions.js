@@ -636,6 +636,8 @@ module.exports = {
         const itemsCompletion = trail.items.map((item) => item?.completion || 0);
         const completionTotal = itemsCompletion.reduce((acc, curr) => acc + curr, 0);
         trail.completionPercentage = +((completionTotal / trail.items.length) * 100).toFixed(2);
+        trail.items = trail.items?.filter((i)=> i.itemID);
+        
         return { trail, containsACompletedItem };
     },
     async validateUniqueEmail(email, user) {
