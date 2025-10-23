@@ -672,17 +672,18 @@ module.exports = {
             return _messages.forbidden(
                 res,
                 req,
-                'Usuário não encontrado',
-                'Usuário não encontrado',
+                'Usuário ou senha inválidos.',
+                'Usuário ou senha inválidos.',
                 'users',
                 'ldapSignIn'
             );
         }
+
         let user = await User.findOne({
             _id: new mongoose.Types.ObjectId(req.user._id),
         }).lean();
 
-        if (user.loginType && user.loginType !== 'FORM' && user.loginType !== 'BOTH') {
+        if (user.loginType === 'SSO') {
             return _messages.forbidden(
                 res,
                 req,
@@ -694,11 +695,14 @@ module.exports = {
         }
 
         const { login, password, token } = req.body;
+
         if (token) {
             user = await updateUserByPartnerToken(req, user);
         }
+
         try {
             await handleBlockUser(user);
+
             if (
                 new Date(user?.password?.[user?.password?.length - 1]?.createdAt)?.getTime() <
                 Date.now() - 90 * 24 * 60 * 60 * 1000
@@ -706,16 +710,6 @@ module.exports = {
                 user.passwordValid = false;
             }
 
-            if (user && user.origin && user.origin.type === 'INTEGRATOR') {
-                return _messages.forbidden(
-                    res,
-                    req,
-                    'Utilize a gestão de login externa para fazer seu acesso.',
-                    'Utilize a gestão de login externa para fazer seu acesso.',
-                    'users',
-                    'ldapSignIn'
-                );
-            }
             // Gera todos os tokens necessários
             const [tokens, entryRecord, isUserManager] = await Promise.all([
                 generateTokens(user, login, password, null, res),
@@ -771,12 +765,14 @@ module.exports = {
             );
         } catch (error) {
             console.log({ error });
-            if (user?.id)
+            if (user?.id) {
                 await Block.create({
                     user: user?._id,
                     dateTimeBlock: getDateToday(),
                     ip: req.ip,
                 });
+            }
+
             return _messages.forbidden(
                 res,
                 req,
