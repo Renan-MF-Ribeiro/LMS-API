@@ -8,7 +8,7 @@ const {
     prepareFormData,
     getInitialDate,
     getCertificateFileName,
-    formatCourseLoad
+    formatCourseLoad, getCertificateLayout
 } = require('./business');
 const moment = require('moment');
 const { Item } = require('../items/model');
@@ -16,6 +16,7 @@ const { CourseModel } = require('../courses/model');
 const { Tracking } = require('../tracking/model');
 const { populateTrails } = require('../trails/business');
 const { processCourseInSections } = require('../sections/business');
+
 
 // @todo revisar aonde vai ficar
 const getCourseLoad = (courseLoad) => {
@@ -136,15 +137,11 @@ module.exports = {
                     { expiredCompletion: { $eq: null } }
                 ]
             });
-
             const [tracking, user] = await Promise.all([trackingPromise, userPromise]);
+
             let [trailPopulated] = await populateTrails(true, { _id: trailId });
-
             const { trail } = processTrailTrackingV2(trailPopulated, tracking);
-
-            const initialDate = (trail.certificateLayout && trailId)
-                ? await getInitialDate(req)
-                : null;
+            const { modelOptions } = await getCertificateLayout(req, trail.certificateLayout);
 
             const certificateData = {
                 userId: user.networkLogin,
@@ -160,9 +157,24 @@ module.exports = {
                 workload: trail.scoreAverage,  // @todo revisar
                 layoutId: trail.certificateLayout,
                 itemName: trail.title,
-                initialDate: initialDate,
+                initialDate: '',
                 items: await getItems(trail)
             };
+
+            if (modelOptions.initialDate) {
+                if (modelOptions?.initialDateType === 'item') {
+                    const firstCompletedItem = trail?.items.reduce((min, current) => {
+                        if (!min || (current.completionAt && new Date(current.completionAt) < new Date(min.completionAt))) {
+                            return current;
+                        }
+                        return min;
+                    }, null);
+                    certificateData.initialDate = firstCompletedItem?.completionAt ?? '';
+                }
+                if (modelOptions?.initialDateType === "trail") {
+                    certificateData.initialDate = trail?.startDate ?? null;
+                }
+            }
 
             if (trail.certificateDue && trail.certificateDue.type) {
                 const isFixed = trail.certificateDue.type === 'fixed';
@@ -206,13 +218,10 @@ module.exports = {
 
             const userPromise = User.findOne({ networkLogin });
             const coursePromise = CourseModel.findOne({ _id: courseId }).lean();
-
             const [_course, user] = await Promise.all([coursePromise, userPromise]);
-            const [course] = await processCourseInSections([_course], user._id);
 
-            const initialDate = (course.certificateLayout && course._id)
-                ? await getInitialDate(req)
-                : null;
+            const [course] = await processCourseInSections([_course], user._id);
+            const { modelOptions } = await getCertificateLayout(req, course.certificateLayout);
 
             const certificateData = {
                 userId: user.networkLogin,
@@ -228,12 +237,21 @@ module.exports = {
                 workload: (course.certificateElegible?.grade || 0) > 0 ? course.certificateElegible?.grade?.toString() : undefined,
                 layoutId: course.certificateLayout,
                 itemName: course.title,
-                initialDate,
+                initialDate: "",
                 items: [{
                     title: course.title,
                     time: getCourseLoad(course.certificateElegible.workload)
                 }]
             };
+
+            if (modelOptions?.initialDate) {
+                if (modelOptions?.initialDateType === 'item') {
+                    certificateData.initialDate = course?.completionAt ?? '';
+                }
+                if (modelOptions?.initialDateType === "trail") {
+                    certificateData.initialDate = course?.dateInitial ?? null;
+                }
+            }
 
             const { data } = await certificateClient.post('/certificates', certificateData, {
                 headers: getHeaders(req),
