@@ -220,7 +220,7 @@ module.exports = {
             const coursePromise = CourseModel.findOne({ _id: courseId }).lean();
             const [_course, user] = await Promise.all([coursePromise, userPromise]);
 
-            const [course] = await processCourseInSections([_course], user._id);
+            const [course] = await processCourseInSections([_course], user._id, true);
             const { modelOptions } = await getCertificateLayout(req, course.certificateLayout);
 
             const certificateData = {
@@ -245,12 +245,7 @@ module.exports = {
             };
 
             if (modelOptions?.initialDate) {
-                if (modelOptions?.initialDateType === 'item') {
-                    certificateData.initialDate = course?.completionAt ?? '';
-                }
-                if (modelOptions?.initialDateType === "trail") {
-                    certificateData.initialDate = course?.dateInitial ?? null;
-                }
+                certificateData.initialDate = course?.mostRecentClass?.dateApplicationInitial ?? '';
             }
 
             const { data } = await certificateClient.post('/certificates', certificateData, {
@@ -352,10 +347,10 @@ module.exports = {
 
                 const expirationDate = !isFixed
                     ? moment(completionAt)
-                        .add(trail.certificateDue.value, 'days')
+                        .add(course.certificateDue.value, 'days')
                         .format()
                     : moment(
-                        new Date(trail.certificateDue.value),
+                        new Date(course.certificateDue.value),
                         'YYYYMMDD-h:mm:ss'
                     ).format();
 
