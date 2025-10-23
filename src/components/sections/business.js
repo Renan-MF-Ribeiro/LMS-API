@@ -341,6 +341,139 @@ async function setCerticateHistoricOnSections (user, sections) {
     );
 }
 
+/**
+ *
+ * @param elegibleCourses
+ * @param userId
+ * @param withClasses Força o retorno de classes mesmo que o usuário tenha certificado elegível, se false segue fluxo natural
+ * @returns {Promise<*>}
+ */
+async function processCourseInSections (elegibleCourses, userId, withClasses = false, classId) {
+    const today = new Date();
+
+    // Extract course IDs for batch queries
+    const courseIds = elegibleCourses.map(course => course._id);
+
+    // Batch query for wait list entries
+    const waitListEntries = await WaitListModel.find({
+        userID: userId,
+        courseID: { $in: courseIds },
+        sent: false,
+    }).lean();
+
+    // Create a Set for faster lookups
+    const waitListCourseIds = new Set(waitListEntries.map(entry => entry.courseID.toString()));
+
+    // Batch query for all classes from all courses
+    const allClasses = await ClassModel.find({
+        courseID: { $in: courseIds }
+    })
+        .populate({
+            path: 'materials',
+            match: { author: 'INSTRUTOR' },
+        })
+        .populate('instructor', ['name'])
+        .sort({ createdAt: -1 })
+        .lean();
+
+    // Group classes by courseID for faster lookup
+    const classesByCourse = new Map();
+    allClasses.forEach(classItem => {
+        const courseId = classItem.courseID.toString();
+        if (!classesByCourse.has(courseId)) {
+            classesByCourse.set(courseId, []);
+        }
+        classesByCourse.get(courseId).push(classItem);
+    });
+
+    // Match user in class function
+    const matchUserInClass = (user) => String(user._id) === userId || user.userID?.equals?.(userId) || false;
+
+    // Process courses
+    const processedCourses = elegibleCourses.map((course) => {
+        const courseIdStr = course._id.toString();
+        const inWaitList = waitListCourseIds.has(courseIdStr);
+        const classesFromCourse = classesByCourse.get(courseIdStr) || [];
+
+        // Find the most recent class with presence data or the most recent class if none found
+        const mostRecentClass = classesFromCourse
+            .filter(classItem => classId ? classItem._id === classId : true)
+            .find(classItem => {
+            const userInClass = classItem.users.find(matchUserInClass);
+
+            const userPassedClass = userInClass?.presence && (userInClass.grades || 0) >= (course.passingScore || 0);
+
+            return userPassedClass;
+        }) || classesFromCourse[0] || null;
+
+        const userInMostRecentClass = mostRecentClass?.users.find(matchUserInClass) ?? null;
+
+        const presence = userInMostRecentClass?.presence || false;
+        const completionAt = mostRecentClass?.dateApplicationFinal || null;
+        const instructor = mostRecentClass?.instructor || null;
+        const certificateElegible = userInMostRecentClass?.presence && (userInMostRecentClass?.grades || 0) >= (course.passingScore || 0);
+
+        let certificateData = null
+        if (certificateElegible) {
+            certificateData = {
+                qrcode: mostRecentClass?.qrcode || null,
+                certificate: course.certificate || null,
+                certificateLayout: course.certificateLayout || null,
+                studentMaterials: mostRecentClass?.materials || null,
+                workload: course.workload || null,
+                instructor: mostRecentClass?.instructor || null,
+                grade: userInMostRecentClass?.grades || null,
+                status: certificateElegible
+            }
+
+            if (course.certificateDateType === 1) {
+                certificateData.completionAt = mostRecentClass?.dateApplicationFinal;
+            } else {
+                const [user] = mostRecentClass?.users.filter(matchUserInClass) || [];
+                if (user) {
+                    certificateData.completionAt = user.presenceAt;
+                } else {
+                    certificateData.completionAt = mostRecentClass?.presenceAt
+                }
+            }
+        }
+
+        const _classes = classesFromCourse
+            .filter(classFromCourse => classFromCourse.dateApplicationFinal > today)
+            .map((classFromCourse) => {
+                const inClass = classFromCourse.users.some(matchUserInClass);
+
+                return {
+                    _id: classFromCourse._id,
+                    name: classFromCourse.name,
+                    registrationDeadline: classFromCourse.registrationDeadline,
+                    cancellationDeadline: classFromCourse.cancellationDeadline,
+                    dateApplicationInitial: classFromCourse.dateApplicationInitial,
+                    dateApplicationFinal: classFromCourse.dateApplicationFinal,
+                    location: classFromCourse.location,
+                    status: getClassStatus(classFromCourse, inClass),
+                };
+            });
+
+        // Process classes only if no certificate data
+        let classes = certificateData ? [] : _classes
+
+        return {
+            ...course,
+            certificateElegible: certificateData,
+            inWaitList,
+            classes,
+            hasClasses: classes.length > 0,
+            presence,
+            completionAt,
+            instructor,
+            ...(withClasses ? { mostRecentClass, classes: _classes } : {}),
+        };
+    });
+
+    return processedCourses;
+}
+
 module.exports = {
     checkIfTheTrackIsValid (trail) {
         const today = getDateTodayWithoutHours();
@@ -1214,9 +1347,8 @@ module.exports = {
     setAssessmentHistoricOnSections,
     setCerticateHistoricOnSections,
     retrieveUserContent,
-    getBannersFromContent
-
-
+    getBannersFromContent,
+    processCourseInSections
 };
 
 function isNecessary (trail, tags) {
@@ -1405,119 +1537,6 @@ function getClassStatus (classFromCourse, inClass) {
         reject(error);
     }
 
-}
-
-async function processCourseInSections (elegibleCourses, userId) {
-    const today = new Date();
-
-    // Extract course IDs for batch queries
-    const courseIds = elegibleCourses.map(course => course._id);
-
-    // Batch query for wait list entries
-    const waitListEntries = await WaitListModel.find({
-        userID: userId,
-        courseID: { $in: courseIds },
-        sent: false,
-    }).lean();
-
-    // Create a Set for faster lookups
-    const waitListCourseIds = new Set(waitListEntries.map(entry => entry.courseID.toString()));
-
-    // Batch query for all classes from all courses
-    const allClasses = await ClassModel.find({
-        courseID: { $in: courseIds }
-    })
-        .populate({
-            path: 'materials',
-            match: { author: 'INSTRUTOR' },
-        })
-        .populate('instructor', ['name'])
-        .sort({ createdAt: -1 })
-        .lean();
-
-    // Group classes by courseID for faster lookup
-    const classesByCourse = new Map();
-    allClasses.forEach(classItem => {
-        const courseId = classItem.courseID.toString();
-        if (!classesByCourse.has(courseId)) {
-            classesByCourse.set(courseId, []);
-        }
-        classesByCourse.get(courseId).push(classItem);
-    });
-
-    // Match user in class function
-    const matchUserInClass = (user) => String(user._id) === userId || user.userID?.equals?.(userId) || false;
-
-    // Process courses
-    const processedCourses = elegibleCourses.map((course) => {
-        const courseIdStr = course._id.toString();
-        const inWaitList = waitListCourseIds.has(courseIdStr);
-        const classesFromCourse = classesByCourse.get(courseIdStr) || [];
-
-        // Find the most recent class with presence data or the most recent class if none found
-        const mostRecentClass = classesFromCourse.find(classItem => {
-            const userInClass = classItem.users.find(matchUserInClass);
-
-            const userPassedClass = userInClass?.presence && (userInClass.grades || 0) >= (course.passingScore || 0);
-
-            return userPassedClass;
-        }) || classesFromCourse[0] || null;
-
-        const userInMostRecentClass = mostRecentClass?.users.find(matchUserInClass) ?? null;
-
-        const presence = userInMostRecentClass?.presence || false;
-        const completionAt = course.certificateDateType === 2
-            ? (userInMostRecentClass?.presenceAt || mostRecentClass?.presenceAt || null)
-            : (mostRecentClass?.dateApplicationFinal || null);
-        const instructor = mostRecentClass?.instructor || null;
-        const certificateElegible = userInMostRecentClass?.presence && (userInMostRecentClass?.grades || 0) >= (course.passingScore || 0);
-
-
-        const certificateData = certificateElegible ? {
-            completionAt: course.certificateDateType === 2
-                ? (userInMostRecentClass?.presenceAt || mostRecentClass?.presenceAt || null)
-                : (mostRecentClass?.dateApplicationFinal || null),
-            qrcode: mostRecentClass?.qrcode || null,
-            certificate: course.certificate || null,
-            certificateLayout: course.certificateLayout || null,
-            studentMaterials: mostRecentClass?.materials || null,
-            workload: course.workload || null,
-            instructor: mostRecentClass?.instructor || null,
-            grade: userInMostRecentClass?.grades || null,
-            status: certificateElegible
-        } : null;
-
-        // Process classes only if no certificate data
-        const classes = certificateData ? [] : classesFromCourse
-            .filter(classFromCourse => classFromCourse.dateApplicationFinal > today)
-            .map((classFromCourse) => {
-                const inClass = classFromCourse.users.some(matchUserInClass);
-
-                return {
-                    _id: classFromCourse._id,
-                    name: classFromCourse.name,
-                    registrationDeadline: classFromCourse.registrationDeadline,
-                    cancellationDeadline: classFromCourse.cancellationDeadline,
-                    dateApplicationInitial: classFromCourse.dateApplicationInitial,
-                    dateApplicationFinal: classFromCourse.dateApplicationFinal,
-                    location: classFromCourse.location,
-                    status: getClassStatus(classFromCourse, inClass),
-                };
-            });
-
-        return {
-            ...course,
-            certificateElegible: certificateData,
-            inWaitList,
-            classes,
-            hasClasses: classes.length > 0,
-            presence,
-            completionAt,
-            instructor,
-        };
-    });
-
-    return processedCourses;
 }
 
 function calculateTotalDuration (trails, exceptionIds = []) {

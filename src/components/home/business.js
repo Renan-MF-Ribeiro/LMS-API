@@ -271,7 +271,7 @@ module.exports = {
     async returnCertificates(trails, user) {
         const certs = [];
         const itemsID = [];
-        
+
         for (const trail of trails) {
             for (const item of trail.items) {
                 if (
@@ -283,13 +283,13 @@ module.exports = {
                         userLogin: user.networkLogin,
                         item: item.itemID._id,
                     }).sort({ createdAt: -1 });
-                    
+
                     item.itemID.completionAt = tracking.completionAt;
 
                     const concludedAt = tracking.completionAt;
                     const { completion } = item;
                     const { durationHours, title, thumbPath } = item.itemID;
-                    
+
                     certs.push({
                         duration: durationHours || 0,
                         concludedAt,
@@ -302,16 +302,16 @@ module.exports = {
                         itemId: item.itemID.id,
                         certificateLayout: item.itemID.certificateLayout,
                     });
-                    
+
                     itemsID.push(item.itemID.id);
                 }
             }
-            
+
             var mostRecentDate = new Date(
                 Math.max.apply(
                     null,
                     trail.items.map((e) => {
-                        return new Date(e.itemID.completionAt);
+                        return new Date(e.itemID?.completionAt);
                     })
                 )
             );
@@ -320,9 +320,9 @@ module.exports = {
                 const duration = trail.items.reduce((acc, e) => {
                     return acc + (e.itemID?.durationHours || 0);
                 }, 0);
-                
+
                 const { title, thumbPath, completion } = trail;
-                
+
                 certs.push({
                     duration,
                     title,
@@ -340,7 +340,7 @@ module.exports = {
                 });
             }
         }
-        
+
         return certs;
     },
 };
