@@ -227,7 +227,7 @@ module.exports = {
                 userId: user.networkLogin,
                 trailId: course._id,
                 trailName: course.title,
-                completionDate: course.completionAt,
+                completionDate: course.certificateElegible.completionAt || course.completionAt,
                 clientId: process.env.CLIENT_ID,
                 trailDescription: stripHtmlTags(course.description ?? ''),
                 courseLoad: getCourseLoad(course.certificateElegible.workload),
@@ -336,7 +336,7 @@ module.exports = {
             const summary = {
                 userName: user.name,
                 trailName: course.title,
-                completionDate: course.completionAt,
+                completionDate: course.certificateElegible.completionAt || course.completionAt,
                 courseLoad: getCourseLoad(course.certificateElegible.workload),
                 certificateDue: course.certificateDue
             }

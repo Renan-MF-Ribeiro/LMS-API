@@ -410,18 +410,31 @@ async function processCourseInSections (elegibleCourses, userId, withClasses = f
         const completionAt = mostRecentClass?.dateApplicationFinal || null;
         const instructor = mostRecentClass?.instructor || null;
         const certificateElegible = userInMostRecentClass?.presence && (userInMostRecentClass?.grades || 0) >= (course.passingScore || 0);
-        const certificateData = certificateElegible ? {
-            completionAt: course.certificateDateType === 2
-                ? mostRecentClass?.presenceAt : mostRecentClass?.dateApplicationFinal,
-            qrcode: mostRecentClass?.qrcode || null,
-            certificate: course.certificate || null,
-            certificateLayout: course.certificateLayout || null,
-            studentMaterials: mostRecentClass?.materials || null,
-            workload: course.workload || null,
-            instructor: mostRecentClass?.instructor || null,
-            grade: userInMostRecentClass?.grades || null,
-            status: certificateElegible
-        } : null;
+
+        let certificateData = null
+        if (certificateElegible) {
+            certificateData = {
+                qrcode: mostRecentClass?.qrcode || null,
+                certificate: course.certificate || null,
+                certificateLayout: course.certificateLayout || null,
+                studentMaterials: mostRecentClass?.materials || null,
+                workload: course.workload || null,
+                instructor: mostRecentClass?.instructor || null,
+                grade: userInMostRecentClass?.grades || null,
+                status: certificateElegible
+            }
+
+            if (course.certificateDateType === 1) {
+                certificateData.completionAt = mostRecentClass?.dateApplicationFinal;
+            } else {
+                const [user] = mostRecentClass?.users;
+                if (user) {
+                    certificateData.completionAt = user.presenceAt;
+                } else {
+                    certificateData.completionAt = mostRecentClass?.presenceAt
+                }
+            }
+        }
 
         const _classes = classesFromCourse
             .filter(classFromCourse => classFromCourse.dateApplicationFinal > today)
