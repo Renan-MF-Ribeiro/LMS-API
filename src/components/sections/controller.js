@@ -49,7 +49,7 @@ const { matricesApi } = require('../matrices/http-adapter');
 
 const { ObjectId } = require('mongoose').Types;
 
-function parseSectionBodyTrails (req) {
+function parseSectionBodyTrails(req) {
     return req.body.trails?.map(trail => {
         const trailId = getSectionTrailId(trail);
 
@@ -68,7 +68,7 @@ function parseSectionBodyTrails (req) {
     }) ?? [];
 }
 
-async function fetchMatricesData (authorization, userId) {
+async function fetchMatricesData(authorization, userId) {
     try {
         const { data } = await matricesApi.get(`/users/${userId}`, {
             headers: {
@@ -86,7 +86,7 @@ async function fetchMatricesData (authorization, userId) {
 }
 
 module.exports = {
-    async returnSections (req, res) {
+    async returnSections(req, res) {
         try {
             const searchBy = req.query.searchBy;
 
@@ -130,7 +130,7 @@ module.exports = {
         }
     },
 
-    async createSection (req, res) {
+    async createSection(req, res) {
         try {
             const verify = await Section.find({
                 title: { $eq: req.body.title },
@@ -191,7 +191,7 @@ module.exports = {
         }
     },
 
-    async updateSection (req, res) {
+    async updateSection(req, res) {
         try {
             const { _id } = req.body;
             const verify = await Section.find({
@@ -242,7 +242,7 @@ module.exports = {
         }
     },
 
-    async deleteSection (req, res) {
+    async deleteSection(req, res) {
         try {
             const { id } = req.params;
             const section = await Section.findById(id);
@@ -285,7 +285,7 @@ module.exports = {
         }
     },
 
-    async getSectionsElegibles (req, res) {
+    async getSectionsElegibles(req, res) {
         const start = Date.now()
         const { trailLimit: queryTrailLimit, channel: channelId, networkLogin, ...filter } = req.query;
 
@@ -380,21 +380,24 @@ module.exports = {
 
         console.log('3° Demorou: ', Date.now() - start, 'ms')
 
-        const processedTrails = processTrailTrackingV3(trails, allTrackingUser);
+        //const processedTrails = processTrailTrackingV3(trails, allTrackingUser)
+        for (let trail of trails) {
+            const processedTrail = processTrailTrackingV2(trail, allTrackingUser);
 
-        trails = processedTrails.map(({ trail: updatedTrail }) => {
-            if (updatedTrail.expirationType) {
-                updatedTrail = processExpirationDate(updatedTrail, user);
+            if (trail.expirationType) {
+                trail = processExpirationDate(trail, user);
             }
 
-            updatedTrail.classGroup = updatedTrail.tags.reduce((found, tag) => {
-                if (found) return found;
-                const groupsForTag = classGroupsMap.get(tag.value);
-                return groupsForTag?.length ? findObjectInRange(groupsForTag, now) || found : found;
-            }, null);
+            trail = processedTrail.trail;
 
-            return updatedTrail;
-        });
+            for (const tag of trail.tags) {
+                const groupsForTag = classGroupsMap.get(tag.value);
+                if (groupsForTag?.length) {
+                    trail.classGroup = findObjectInRange(groupsForTag, now);
+                    if (trail.classGroup) break; // Exit early once classGroup is found
+                }
+            }
+        }
 
         console.log('4° Demorou: ', Date.now() - start, 'ms')
 
@@ -459,7 +462,7 @@ module.exports = {
             }
             )).filter(Boolean);
 
-        function limitArray (section) {
+        function limitArray(section) {
             if (!section) return [];
 
             if (!trailLimit) return section;
@@ -522,7 +525,7 @@ module.exports = {
         return _messages.success(res, req, { sections: resultSections, banners: [...channelBanners, ...banners] });
     },
 
-    async getUserAccessibleContent (req, res) {
+    async getUserAccessibleContent(req, res) {
         try {
             const { userId } = req.query;
 
@@ -544,7 +547,7 @@ module.exports = {
         }
     },
 
-    async getCollaborationSectionDetail (req, res) {
+    async getCollaborationSectionDetail(req, res) {
         try {
             const sectionId = req.params.id;
 
@@ -626,7 +629,7 @@ module.exports = {
         }
     },
 
-    async getSectionDetail (req, res) {
+    async getSectionDetail(req, res) {
         const sectionId = req.params.id;
         const channelId = req.query?.channel ?? null;
 
@@ -754,7 +757,7 @@ module.exports = {
 
         let responseSection;
 
-        function setResponse (fnResponse) {
+        function setResponse(fnResponse) {
             if (Array.isArray(fnResponse)) {
                 return fnResponse.find((e) => String(e._id) === String(section._id))
                     ?? { ...section, trails: [] };
@@ -854,7 +857,7 @@ module.exports = {
         res.json(filteredTrails);
     },
 
-    async getSectionsFormation (req, res) {
+    async getSectionsFormation(req, res) {
         try {
             const searchBy = req.query.searchBy;
             const query = searchBy
@@ -894,7 +897,7 @@ module.exports = {
         }
     },
 
-    async getSectionsElegiblesNew (req, res) {
+    async getSectionsElegiblesNew(req, res) {
         try {
             const user = await getUserByToken(req);
             const tags = await getTagsElegiblesByToken(req);
@@ -1031,7 +1034,7 @@ module.exports = {
         }
     },
 
-    async updatePosition (req, res) {
+    async updatePosition(req, res) {
         try {
             const sections = req.body;
 
@@ -1053,7 +1056,7 @@ module.exports = {
         }
     },
 
-    async changeStatus (req, res) {
+    async changeStatus(req, res) {
         const { id, status } = req.params;
 
         const section = await Section.findById(id);
