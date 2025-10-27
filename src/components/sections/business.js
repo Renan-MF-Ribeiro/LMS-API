@@ -31,21 +31,30 @@ const isValidSectionTrailInfo = (trail) => !ObjectId.isValid(String(trail));
 
 const getSectionTrailId = trail => ObjectId.isValid(trail) ? trail : (trail._id ?? null);
 
-async function populateSectionTrails (sections, options) {
+async function populateSectionTrails(sections, options) {
     const newSections = cloneDeep(sections);
 
-    for await (const section of newSections) {
-        if (!section?.trails?.length) continue;
+    const queries = newSections.map((section) => {
+        if (!section?.trails?.length) return Promise.resolve([]);
 
         const trailsIds = section.trails
             .filter(trail => isSectionTrailInfo(trail))
             .map(trail => getSectionTrailId(trail));
 
-        const query = Trail.find({ _id: { $in: trailsIds } });
+        if (trailsIds.length === 0) return Promise.resolve([]);
 
+        const query = Trail.find({ _id: { $in: trailsIds } });
         if (options?.select) query.select(options.select);
 
-        const trails = await query.lean();
+        return query.lean();
+    });
+
+    const results = await Promise.all(queries);
+
+    newSections.forEach((section, index) => {
+        if (!section?.trails?.length) return;
+
+        const trails = results[index];
 
         const trailsMap = new Map(
             trails.map((trail) => [String(trail._id), trail])
@@ -59,7 +68,7 @@ async function populateSectionTrails (sections, options) {
 
             return trail;
         });
-    }
+    });
 
     return newSections;
 }
@@ -399,12 +408,12 @@ async function processCourseInSections (elegibleCourses, userId, withClasses = f
         const mostRecentClass = classesFromCourse
             .filter(classItem => classId ? classItem._id === classId : true)
             .find(classItem => {
-            const userInClass = classItem.users.find(matchUserInClass);
+                const userInClass = classItem.users.find(matchUserInClass);
 
-            const userPassedClass = userInClass?.presence && (userInClass.grades || 0) >= (course.passingScore || 0);
+                const userPassedClass = userInClass?.presence && (userInClass.grades || 0) >= (course.passingScore || 0);
 
-            return userPassedClass;
-        }) || classesFromCourse[0] || null;
+                return userPassedClass;
+            }) || classesFromCourse[0] || null;
 
         const userInMostRecentClass = mostRecentClass?.users.find(matchUserInClass) ?? null;
 
@@ -608,10 +617,10 @@ module.exports = {
             });
         }
     },
-    getTagsElegiblesByToken (req) {
+    getTagsElegiblesByToken (req, reqUser = null) {
         return new Promise(async (resolve, reject) => {
             try {
-                const user = await getUserByToken(req);
+                const user = reqUser ?? await getUserByToken(req);
                 const tags = await getTagsGroupsByToken(req);
                 const today = getDateTodayWithoutHours();
 
@@ -650,27 +659,23 @@ module.exports = {
         });
     },
 
-    getGroupCodesByToken (req, tags) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const user = await getUserByToken(req);
-                const classGroups = [];
+    async getGroupCodesByToken(req, tags, reqUser = null) {
+        const user = reqUser ?? await getUserByToken(req);
 
-                if (user.classGroups.length > 0) {
-                    for (const tag of tags) {
-                        for (const classGroup of user.classGroups) {
-                            if (classGroup.groupCode === tag.value) {
-                                classGroups.push(classGroup);
-                            }
-                        }
-                    }
-                }
+        if (user.classGroups.length === 0) {
+            return []
+        }
 
-                resolve(classGroups);
-            } catch (error) {
-                reject(error);
-            }
-        });
+        const classGroupMap = new Map(
+            user.classGroups.map(cg => [cg.groupCode, cg])
+        );
+
+        const classGroups = tags
+            .map(tag => classGroupMap.get(tag.value))
+            .filter(Boolean);
+
+        return classGroups;
+
     },
 
     getTagsElegibles (user) {
