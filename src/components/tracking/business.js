@@ -280,7 +280,9 @@ module.exports = {
                     EVENT_CATEGORY.FINISHED_FAVORITE_TRAIL,
                     EVENT_CATEGORY.FINISHED_OPTIONAL_TRAIL,
                     EVENT_CATEGORY.FINISHED_SECTION,
-                    EVENT_CATEGORY.FINISHED_SHARED_TRAIL
+                    EVENT_CATEGORY.FINISHED_SHARED_TRAIL,
+                    EVENT_CATEGORY.FINISHED_TRAIL,
+                    EVENT_CATEGORY.ACHIEVED_PROGRESS_PERCENTAGE
                 );
 
                 if (trackingItem?.highlighted) {
@@ -294,24 +296,6 @@ module.exports = {
                 if (currentItem?.optional) {
                     eventsToDispatch.push(EVENT_CATEGORY.FINISHED_OPTIONAL_ITEM);
                 }
-
-                const mandatoryItems = trail.items.filter((item) => !item.optional);
-
-                const completedMandatoryTrackings = await Tracking.countDocuments({
-                    item: { $in: mandatoryItems.map((i) => i.itemID) },
-                    userLogin: userLogin,
-                    completionAt: { $ne: null },
-                    $or: [
-                        { expiredCompletion: { $exists: false } },
-                        { expiredCompletion: { $eq: null } },
-                    ],
-                });
-
-                if (completedMandatoryTrackings === mandatoryItems.length) {
-                    eventsToDispatch.push(EVENT_CATEGORY.FINISHED_TRAIL);
-                    eventsToDispatch.push(EVENT_CATEGORY.ACHIEVED_PROGRESS_PERCENTAGE);
-                }
-
 
                 if (trackingItem?.collaborative && (reqBody.completion > 0 || reqBody.lessonStatus)) {
                     eventsToDispatch.push(EVENT_CATEGORY.WATCHED_COLLAB);
