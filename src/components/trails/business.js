@@ -48,15 +48,6 @@ module.exports = {
         skip = null,
         limit = null
     ) {
-        let socialConfig;
-
-        const features = await getDbCurrentFeatures();
-
-        if (features?.social) {
-            const { data } = await socialApi.get(`client-config/${process.env.CLIENT_ID}`);
-            socialConfig = data;
-        }
-
         const matchObj = filterEnabled
             ? {
                 ...match,
@@ -66,7 +57,7 @@ module.exports = {
             : {
                 deleted: 0,
             };
-        
+
         matchObj['kind'] = { $ne: 'PostItem' };
 
         const trailQuery = Trail.find(findObj)
@@ -106,12 +97,11 @@ module.exports = {
         if (limit !== null) {
             trailQuery.limit(limit);
         }
-        
+
         const trails = await trailQuery.lean();
 
-        const arrTrails = [];
-        
         if (!flag) {
+            const arrTrails = [];
             for (const trail of trails) {
                 const arrItems = [];
                 for (const i of trail.items) {
@@ -119,142 +109,14 @@ module.exports = {
                     if (item !== null) arrItems.push(item);
                 }
 
-                let userName = '';
-                if (trail.author) {
-                    userName = trail.author.name;
-                }
+                const userName = trail.author?.name || '';
 
-                let supportMaterialEnabled = false;
-                const filteredSupportArray = trail.supportMaterial.filter(
-                    (x) => x.deleted === false
-                );
-                if (filteredSupportArray.length > 0) {
-                    supportMaterialEnabled = true;
-                }
+                const supportMaterialEnabled = trail.supportMaterial?.some((x) => x.deleted === false) || false;
 
-                let galleryEnabled = false;
-                const filteredGallery = trail.gallery.filter((x) => x.deleted === false);
-                if (filteredGallery.length > 0) {
-                    galleryEnabled = true;
-                }
+                const galleryEnabled = trail.gallery?.some((x) => x.deleted === false) || false;
 
-                if (socialConfig) {
-                    const trailTags = trail.tags?.map((tag) => tag.value);
-                    for (const tag of socialConfig.tagsLists.allowed) {
-                        if (trailTags?.includes(tag)) {
-                            socialStatus = 'ALLOWED';
-                        }
-                    }
-
-                    for (const tag of socialConfig.tagsLists.blocked) {
-                        if (trailTags?.includes(tag)) {
-                            socialStatus = 'BLOCKED';
-                        }
-                    }
-
-                    for (const tag of socialConfig.tagsLists.moderated) {
-                        if (trailTags?.includes(tag)) {
-                            socialStatus = 'MODERATED';
-                        }
-                    }
-                }
-
-                let durationHours = 0;
-                for (const item of arrItems) {
-                    durationHours += item.itemID.durationHours;
-                }
-                trail.durationHours = durationHours;
-
-                arrTrails.push({
-                    _id: trail._id,
-                    enabled: trail.enabled,
-                    title: trail.title,
-                    titleURL: trail.titleURL,
-                    description: trail.description,
-                    mandatory: trail.mandatory,
-                    highlighted: trail.highlighted,
-                    thumbPath: trail.thumbPath,
-                    backgroundPath: trail.backgroundPath,
-                    bannerPath: trail.bannerPath,
-                    startDate: trail.startDate,
-                    endDate: trail.endDate,
-                    tags: trail.tags,
-                    tagsAnd: trail.tagsAnd || null,
-                    innerTextStatus: trail.innerTextStatus,
-                    innerText: trail.innerText,
-                    author: userName,
-                    completion: trail.completion,
-                    isSequenceEnabled: trail.isSequenceEnabled,
-                    isPadletEnabled: trail.isPadletEnabled,
-                    items: arrItems,
-                    separators: trail.separators,
-                    expirationType: trail.expirationType,
-                    collaborative: trail.collaborative,
-                    moderation: trail.moderation,
-                    complaints: trail.complaints,
-                    certificate: trail.certificate,
-                    certificateDue: trail.certificateDue,
-                    externalPlayer: trail.externalPlayer,
-                    certificateLayout: trail.certificateLayout,
-                    supportMaterialEnabled: supportMaterialEnabled,
-                    socialStatus: socialStatus || null,
-                    innerTextBanner: trail.innerTextBanner,
-                    durationHours: trail.durationHours,
-                    post: trail.post,
-                    gallery: galleryEnabled,
-                    confidential: trail.confidential,
-                    updatedAt: trail.updatedAt,
-                    createdAt: trail.createdAt,
-                });
-            }
-        } else {
-            for (const trail of trails) {
-                const arrItems = trail.items.filter(i => i?.itemID);
-
-                const userName = trail?.author?.name || '';
-
-                let supportMaterialEnabled = false;
-                const filteredSupportArray = trail.supportMaterial?.filter(
-                    (x) => x.deleted === false
-                ) || [];
-
-                if (filteredSupportArray.length > 0) {
-                    supportMaterialEnabled = true;
-                }
-
-                let galleryEnabled = false;
-
-                const filteredGallery = trail.gallery?.filter((x) => x.deleted === false) ?? [];
-                if (filteredGallery.length > 0) {
-                    galleryEnabled = true;
-                }
-
-                let socialStatus = '';
-
-                if (socialConfig) {
-                    const trailTags = trail.tags?.map((tag) => tag.value);
-                    for (const tag of socialConfig.tagsLists.allowed) {
-                        if (trailTags?.includes(tag)) {
-                            socialStatus = 'ALLOWED';
-                        }
-                    }
-
-                    for (const tag of socialConfig.tagsLists.blocked) {
-                        if (trailTags?.includes(tag)) {
-                            socialStatus = 'BLOCKED';
-                        }
-                    }
-
-                    for (const tag of socialConfig.tagsLists.moderated) {
-                        if (trailTags?.includes(tag)) {
-                            socialStatus = 'MODERATED';
-                        }
-                    }
-                }
-
-                trail.durationHours = arrItems.reduce((acc, item) => {
-                    const itemDuration = item.itemID?.durationHours || 0;
-                    return acc + itemDuration;
+                const durationHours = arrItems.reduce((acc, item) => {
+                    return acc + (item.itemID?.durationHours || 0);
                 }, 0);
 
                 arrTrails.push({
@@ -266,20 +128,20 @@ module.exports = {
                     mandatory: trail.mandatory,
                     highlighted: trail.highlighted,
                     thumbPath: trail.thumbPath,
-                    bannerPath: trail.bannerPath,
                     backgroundPath: trail.backgroundPath,
+                    bannerPath: trail.bannerPath,
                     startDate: trail.startDate,
                     endDate: trail.endDate,
                     tags: trail.tags,
                     tagsAnd: trail.tagsAnd || null,
+                    innerTextStatus: trail.innerTextStatus,
+                    innerText: trail.innerText,
+                    author: userName,
                     completion: trail.completion,
                     isSequenceEnabled: trail.isSequenceEnabled,
                     isPadletEnabled: trail.isPadletEnabled,
                     items: arrItems,
                     separators: trail.separators,
-                    innerTextStatus: trail.innerTextStatus,
-                    innerText: trail.innerText,
-                    author: userName,
                     expirationType: trail.expirationType,
                     collaborative: trail.collaborative,
                     moderation: trail.moderation,
@@ -289,9 +151,8 @@ module.exports = {
                     externalPlayer: trail.externalPlayer,
                     certificateLayout: trail.certificateLayout,
                     supportMaterialEnabled: supportMaterialEnabled,
-                    socialStatus: socialStatus || null,
                     innerTextBanner: trail.innerTextBanner,
-                    durationHours: trail.durationHours,
+                    durationHours: durationHours,
                     post: trail.post,
                     gallery: galleryEnabled,
                     confidential: trail.confidential,
@@ -299,9 +160,62 @@ module.exports = {
                     createdAt: trail.createdAt,
                 });
             }
+
+            return arrTrails;
         }
 
-        return arrTrails;
+        return trails.map((trail) => {
+            const arrItems = trail.items.filter(i => i?.itemID);
+            const userName = trail?.author?.name || '';
+            const supportMaterialEnabled = trail.supportMaterial?.some((x) => x.deleted === false) || false;
+            const galleryEnabled = trail.gallery?.some((x) => x.deleted === false) || false;
+
+            const durationHours = arrItems.reduce((acc, item) => {
+                const itemDuration = item.itemID?.durationHours || 0;
+                return acc + itemDuration;
+            }, 0);
+
+            return {
+                _id: trail._id,
+                enabled: trail.enabled,
+                title: trail.title,
+                titleURL: trail.titleURL,
+                description: trail.description,
+                mandatory: trail.mandatory,
+                highlighted: trail.highlighted,
+                thumbPath: trail.thumbPath,
+                bannerPath: trail.bannerPath,
+                backgroundPath: trail.backgroundPath,
+                startDate: trail.startDate,
+                endDate: trail.endDate,
+                tags: trail.tags,
+                tagsAnd: trail.tagsAnd || null,
+                completion: trail.completion,
+                isSequenceEnabled: trail.isSequenceEnabled,
+                isPadletEnabled: trail.isPadletEnabled,
+                items: arrItems,
+                separators: trail.separators,
+                innerTextStatus: trail.innerTextStatus,
+                innerText: trail.innerText,
+                author: userName,
+                expirationType: trail.expirationType,
+                collaborative: trail.collaborative,
+                moderation: trail.moderation,
+                complaints: trail.complaints,
+                certificate: trail.certificate,
+                certificateDue: trail.certificateDue,
+                externalPlayer: trail.externalPlayer,
+                certificateLayout: trail.certificateLayout,
+                supportMaterialEnabled: supportMaterialEnabled,
+                innerTextBanner: trail.innerTextBanner,
+                durationHours: durationHours,
+                post: trail.post,
+                gallery: galleryEnabled,
+                confidential: trail.confidential,
+                updatedAt: trail.updatedAt,
+                createdAt: trail.createdAt,
+            };
+        });
     },
 
     async processTrailWorkload(trails) {
