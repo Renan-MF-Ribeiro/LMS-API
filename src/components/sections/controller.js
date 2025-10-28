@@ -289,7 +289,7 @@ module.exports = {
         const start = Date.now()
         const { trailLimit: queryTrailLimit, channel: channelId, networkLogin, ...filter } = req.query;
 
-        const trailLimit = Number(queryTrailLimit) ?? 25;
+        const trailLimit = Number(queryTrailLimit ?? 25);
         const user = await getUserByToken(req);
         const tags = await getTagsElegiblesByToken(req, user);
 
@@ -464,7 +464,6 @@ module.exports = {
 
         function limitArray(section) {
             if (!section) return [];
-
             if (!trailLimit) return section;
 
             if (Array.isArray(section) && section.length > 0) {
