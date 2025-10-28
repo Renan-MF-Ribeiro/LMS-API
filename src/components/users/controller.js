@@ -787,39 +787,37 @@ module.exports = {
 
     async feedbackElegible(req, res) {
         const user = await getUserByToken(req);
-        const today = new Date();
-        const uri = `${process.env.API_SURVEY}/feedback/listbyuser?userid=${user._id}`;
-        try {
-            const usersDataConfig = await getUsersDataConfig();
 
-            const response = await axios.get(uri);
-            const firstLogin = await returnDateSinceFirstLogin(user._id);
-            const { numberOfItemsCompleted } =
-                await getNumberOfItemsCompletedOrInProgressOrNotStarted(req);
-            if (response.data[0]) {
-                const latestFeedback = response.data.slice(-1);
-                const latestFeedbackDate = new Date(latestFeedback[0].updatedAt);
-                let daysSinceLastFeedback = Math.floor(
-                    (latestFeedbackDate - today) / (24 * 3600 * 1000)
-                );
-                daysSinceLastFeedback *= -1;
+        const completedTracking = await Tracking.findOne({
+            userLogin: user.networkLogin,
+            completionAt: { $ne: null, $exists: true },
+            $or: [
+                { expiredCompletion: { $exists: false } },
+                { expiredCompletion: { $eq: null } },
+            ],
+        });
 
-                if (
-                    firstLogin >= 1 &&
-                    daysSinceLastFeedback >= usersDataConfig.daysSinceLastFeedback &&
-                    numberOfItemsCompleted >= 1
-                ) {
-                    _messages.success(res, req, true);
-                } else {
-                    _messages.success(res, req, false);
-                }
-            } else {
-                _messages.success(res, req, false);
-            }
-        } catch (error) {
-            console.log(error.message);
-            _messages.internalServer(res, req, error.message);
+        if (!completedTracking) return res.send(false);
+
+        const { data: surveyData } = await axios.get(`${environment.API_SURVEY}/feedback/listbyuser?userid=${user._id}`);
+
+        log('feedbackElegible - user', user.networkLogin);
+        log('feedbackElegible - completedTracking', completedTracking._id);
+        log('feedbackElegible - surveyData', surveyData);
+
+        if (!surveyData?.length) return res.send(true);
+
+        const [latestFeedback] = surveyData.slice(-1);
+
+        const usersDataConfig = await getUsersDataConfig();
+
+        const lastFeedbackDateThreshold = moment().subtract(usersDataConfig?.daysSinceLastFeedback || 180, 'days');
+
+        if (moment(latestFeedback.updatedAt).isBefore(lastFeedbackDateThreshold)) {
+            return res.send(true);
         }
+
+        res.send(false);
     },
 
     async singleSignOn(req, res) {
