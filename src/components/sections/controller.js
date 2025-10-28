@@ -313,8 +313,6 @@ module.exports = {
         let sectionInfos = [];
         let channelBanners = [];
 
-        console.log('1° Demorou: ', Date.now() - start, 'ms')
-
         if (channelId) {
             const channel = await Channel.findById(channelId)
                 .select('idSections banners -_id')
@@ -344,8 +342,6 @@ module.exports = {
             sectionsIdArr = idSections;
 
             delete req.query.channel;
-
-            console.log('2° Demorou: ', Date.now() - start, 'ms')
         }
 
         const query = {
@@ -378,8 +374,6 @@ module.exports = {
             })
         ]);
 
-        console.log('3° Demorou: ', Date.now() - start, 'ms')
-
         //const processedTrails = processTrailTrackingV3(trails, allTrackingUser)
         for (let trail of trails) {
             const processedTrail = processTrailTrackingV2(trail, allTrackingUser);
@@ -398,8 +392,6 @@ module.exports = {
                 }
             }
         }
-
-        console.log('4° Demorou: ', Date.now() - start, 'ms')
 
         const filteredTrails = trails.filter(checkIfTheTrackIsValid);
 
@@ -451,8 +443,6 @@ module.exports = {
             arrRecommendedTrailsSections || [],
             arrRecommendedCoursesSections || [],
         ]
-
-        console.log('5° Demorou: ', Date.now() - start, 'ms')
 
         const banners = getBannersFromContent(userContent
             .flat()
@@ -520,7 +510,6 @@ module.exports = {
             resultSections = await setAssessmentHistoricOnSections(user._id, resultSections, tags);
         }
 
-        console.log('6° Demorou: ', Date.now() - start, 'ms')
         return _messages.success(res, req, { sections: resultSections, banners: [...channelBanners, ...banners] });
     },
 
