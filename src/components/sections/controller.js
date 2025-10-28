@@ -321,7 +321,7 @@ module.exports = {
                 .populate({
                     path: 'idSections',
                     match: { active: 1 },
-                    select: 'tags tagsAnd _id collaborative trails'
+                    select: 'tags tagsAnd _id collaborative trails defaultType'
                 });
 
             channelBanners = channel?.banners || [];
