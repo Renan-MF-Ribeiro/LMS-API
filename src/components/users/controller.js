@@ -48,6 +48,7 @@ const {
     getLoginFormByStrategyName,
     clearAuthCookies,
     updateUserByPartnerToken,
+    getLoginConfig,
 } = require('./business');
 
 const {
@@ -679,6 +680,19 @@ module.exports = {
             );
         }
 
+        const loginConfig = await getLoginConfig();
+
+        if (!loginConfig?.formLogin?.enabled) {
+            return _messages.forbidden(
+                res,
+                req,
+                'Formulário de login desabilitado.',
+                'Usuário ou senha inválidos.',
+                'users',
+                'ldapSignIn'
+            );
+        }
+
         let user = await User.findOne({
             _id: new mongoose.Types.ObjectId(req.user._id),
         }).lean();
@@ -687,7 +701,7 @@ module.exports = {
             return _messages.forbidden(
                 res,
                 req,
-                'Usuário ou senha inválidos.',
+                'Usuário configurado apenas para login via SSO.',
                 'Usuário ou senha inválidos.',
                 'users',
                 'ldapSignIn'
