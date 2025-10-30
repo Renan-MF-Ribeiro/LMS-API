@@ -2621,30 +2621,46 @@ module.exports = {
 
         const arrTags = Array.isArray(tag) ? tag : [tag];
 
-        try {
-            const user = await User.findByIdAndUpdate(
-                userId,
-                { $pullAll: { groupsAD: arrTags } },
-                { new: true }
-            );
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { $pullAll: { groupsAD: arrTags } },
+            { new: true }
+        );
 
-            const usersWithGroup = await User.countDocuments({ groupsAD: tag });
-            if (usersWithGroup == 0) {
-                await Group.deleteOne({ name: tag });
-            }
+        const requestUser = await getUserByToken(req);
 
-            const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD);
+        await Log.create({
+            type: 'CHANGE_USER_PROFILES',
+            user: requestUser._id,
+            login: requestUser.networkLogin,
+            groups: requestUser.groupsAD,
+            dataNew: [
+                {
+                    removedProfiles: arrTags,
+                    affectedUser: new ObjectId(userId),
+                }
+            ],
+            component: 'users',
+            route: 'remove-permission',
+            ip: req.ip,
+            browserDetails: req.headers['user-agent'],
+        });
 
-            GamificationBusiness.updateClientUser(user.networkLogin, {
-                eligibilities,
-            });
+        const usersWithGroup = await User.countDocuments({ groupsAD: tag });
 
-            _messages.success(res, req, {
-                message: 'Tag de permissão removida',
-            });
-        } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users');
+        if (usersWithGroup == 0) {
+            await Group.deleteOne({ name: tag });
         }
+
+        const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD);
+
+        GamificationBusiness.updateClientUser(user.networkLogin, {
+            eligibilities,
+        });
+
+        _messages.success(res, req, {
+            message: 'Tag de permissão removida',
+        });
     },
 
     async addGroups(req, res) {
@@ -2686,42 +2702,54 @@ module.exports = {
             );
         }
 
-        try {
-            const normalizedTags = tag.map((t) => removeAccents(t));
-            const user = await User.findOneAndUpdate(
-                { _id: userId },
-                { $addToSet: { groupsAD: normalizedTags } },
-                { new: true }
-            );
-            for (const groupName of normalizedTags) {
-                const findGroup = await Group.findOne({
-                    name: groupName,
-                    deleted: 0,
-                });
-                if (!findGroup) {
-                    await Group.create({
-                        name: groupName,
-                    });
+        const normalizedTags = tag.map((t) => removeAccents(t));
+
+        const user = await User.findOneAndUpdate(
+            { _id: userId },
+            { $addToSet: { groupsAD: normalizedTags } },
+            { new: true }
+        );
+
+        const requestUser = await getUserByToken(req);
+
+        await Log.create({
+            type: 'CHANGE_USER_PROFILES',
+            user: requestUser._id,
+            login: requestUser.networkLogin,
+            groups: requestUser.groupsAD,
+            dataNew: [
+                {
+                    addedProfiles: normalizedTags,
+                    affectedUser: new ObjectId(userId),
                 }
+            ],
+            component: 'users',
+            route: 'add-permission',
+            ip: req.ip,
+            browserDetails: req.headers['user-agent'],
+        });
+
+        for (const groupName of normalizedTags) {
+            const findGroup = await Group.findOne({
+                name: groupName,
+                deleted: 0,
+            });
+            if (!findGroup) {
+                await Group.create({
+                    name: groupName,
+                });
             }
-
-            const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD);
-            GamificationBusiness.updateClientUser(user.networkLogin, {
-                eligibilities,
-            });
-
-            return _messages.success(res, req, {
-                message: 'Tag de permissão adicionada ao usuário',
-            });
-        } catch (error) {
-            return _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'users'
-            );
         }
+
+        const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD);
+
+        GamificationBusiness.updateClientUser(user.networkLogin, {
+            eligibilities,
+        });
+
+        return _messages.success(res, req, {
+            message: 'Tag de permissão adicionada ao usuário',
+        });
     },
 
     async deleteClassTag(req, res) {
