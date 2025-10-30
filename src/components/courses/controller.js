@@ -620,31 +620,35 @@ module.exports = {
                             await Promise.all(removalPromises);
                         }
 
-                        const messengerConfig = await getMessengerConfig();
+                        try {
+                            const messengerConfig = await getMessengerConfig();
 
-                        const classBody = createdClass.toObject ? createdClass.toObject() : createdClass;
-                        const classBodyForMessage = await prepareBodyForMessage(classBody, location);
+                            const classBody = createdClass.toObject ? createdClass.toObject() : createdClass;
+                            const classBodyForMessage = await prepareBodyForMessage(classBody, location);
 
-                        for (const user of newUsers) {
-                            const message = {
-                                category: 'notify',
-                                communication: ['notification', 'email'],
-                                mode: 'manual',
-                                target: {
-                                    type: 'users',
-                                    value: {
-                                        users: [user._id],
+                            for (const user of newUsers) {
+                                const message = {
+                                    category: 'notify',
+                                    communication: ['notification', 'email'],
+                                    mode: 'manual',
+                                    target: {
+                                        type: 'users',
+                                        value: {
+                                            users: [user._id],
+                                        },
                                     },
-                                },
-                                text: `${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.`,
-                                textHtml: `<p>${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.</p>`,
-                                thumbnail: messengerConfig.emailTemplate.thumbnail,
-                                title: `Treinamentos: ${name}`,
-                                class: classBodyForMessage,
-                                courses: true,
-                            }
+                                    text: `${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.`,
+                                    textHtml: `<p>${user.name}, você foi inscrito com sucesso na turma "${classBodyForMessage.name}"! Prepare-se para aprender e aproveitar ao máximo essa experiência.</p>`,
+                                    thumbnail: messengerConfig.emailTemplate.thumbnail,
+                                    title: `Treinamentos: ${name}`,
+                                    class: classBodyForMessage,
+                                    courses: true,
+                                }
 
-                            await createMessagesFromBackend(message);
+                                await createMessagesFromBackend(message);
+                            }
+                        } catch (err) {
+                            console.log('Erro ao enviar mensagem de inscrição na turma', err);
                         }
 
                         success(res, req, 'Criado com sucesso!', 'Criado com sucesso!', 'courses', '/instructor/create-class', createdClass, null, true, 'create');
@@ -675,7 +679,7 @@ module.exports = {
         }
     },
 
-    async updateClass (req, res) {
+    async updateClass(req, res) {
         try {
             let {
                 courseID,
@@ -694,7 +698,7 @@ module.exports = {
                 location,
                 costs,
                 name,
-                signup,
+                signup
             } = req.fields;
             const materials = JSON.parse(req.fields.materials);
             const costsArray = JSON.parse(costs);
@@ -842,44 +846,59 @@ module.exports = {
                         costs: costsArray,
                         name,
                         signup,
-                        // Atualiza usuários
-                        $set: changedUsers.reduce((acc, { index, user }) => {
-                            acc[`users.${index}`] = user;
-                            return acc;
-                        }, {}),
-                    }
-                    // Atualiza classe e usuários
-                    await ClassModel.findByIdAndUpdate(classID, classBody);
+                    };
+
+                    const usersUpdate = changedUsers.reduce((acc, { index, user }) => {
+                        acc[`users.${index}`] = user;
+                        return acc;
+                    }, {});
+
+                    await ClassModel.findByIdAndUpdate(
+                        classID,
+                        {
+                            $set: {
+                                ...classBody,
+                                ...usersUpdate,
+                            },
+                        },
+                        { new: true } // retorna o documento atualizado
+                    );
+
                     await dispatch('update', 'class', { _id: classID, ...classBody });
+
                     // Adiciona usuários
                     if (addedUsers.length) {
                         await ClassModel.findByIdAndUpdate(classID, {
-                            $push: { users: { $each: addedUsers } },
+                            $push: { users: { $each: addedUsers } }
                         });
 
-                        const messengerConfig = await getMessengerConfig();
+                        try {
+                            const messengerConfig = await getMessengerConfig();
 
-                        const classBodyForMessage = await prepareBodyForMessage(classBody, location);
-                        for (const user of addedUsers) {
-                            const message = {
-                                category: 'notify',
-                                communication: ['notification', 'email'],
-                                mode: 'manual',
-                                target: {
-                                    type: 'users',
-                                    value: {
-                                        users: [user._id],
+                            const classBodyForMessage = await prepareBodyForMessage(classBody, location);
+                            for (const user of addedUsers) {
+                                const message = {
+                                    category: 'notify',
+                                    communication: ['notification', 'email'],
+                                    mode: 'manual',
+                                    target: {
+                                        type: 'users',
+                                        value: {
+                                            users: [user._id],
+                                        },
                                     },
-                                },
-                                text: `${user.name}, sua inscrição na turma "${classBodyForMessage.name}" foi atualizada! veja os detalhes abaixo.`,
-                                textHtml: `<p>${user.name}, sua inscrição na turma "${classBodyForMessage.name}" foi atualizada! veja os detalhes abaixo.</p>`,
-                                thumbnail: messengerConfig.emailTemplate.thumbnail,
-                                title: `Treinamentos: ${name}`,
-                                class: classBodyForMessage,
-                                courses: true,
-                            };
+                                    text: `${user.name}, sua inscrição na turma "${classBodyForMessage.name}" foi atualizada! veja os detalhes abaixo.`,
+                                    textHtml: `<p>${user.name}, sua inscrição na turma "${classBodyForMessage.name}" foi atualizada! veja os detalhes abaixo.</p>`,
+                                    thumbnail: messengerConfig.emailTemplate.thumbnail,
+                                    title: `Treinamentos: ${name}`,
+                                    class: classBodyForMessage,
+                                    courses: true,
+                                };
 
-                            await createMessagesFromBackend(message);
+                                await createMessagesFromBackend(message);
+                            }
+                        } catch (err) {
+                            console.log('Erro ao enviar mensagem de inscrição na turma', err);
                         }
                     }
 
@@ -2102,6 +2121,8 @@ module.exports = {
             const { skip, limit } = pagination(req);
             const { order, sort } = ordernation(req);
             const searchBy = req.query.searchBy;
+            const filterByEligibility = req.query?.filterByEligibility === 'true';
+
             const classesFromUser = await ClassModel.find({
                 $or: [
                     { 'users.userID': userId },
@@ -2136,9 +2157,7 @@ module.exports = {
                 }
             }
 
-            const total = await CourseModel.find(query).countDocuments();
-
-            const data = await CourseModel.find(query)
+            let data = await CourseModel.find(query)
                 .select({
                     title: 1,
                     passingScore: 1,
@@ -2147,14 +2166,31 @@ module.exports = {
                     certificateDue: 1,
                     workload: 1,
                     dateFinal: 1,
-                    dateInitial: 1
+                    dateInitial: 1,
+                    tags: 1,
+                    tagsAnd: 1,
+                    tagsOr: 1
                 }).lean()
                 .sort({
                     [order]: sort,
-                })
-                .skip(parseInt(skip))
-                .limit(parseInt(limit));
+                });
 
+            // Filter by eligibility if requested
+            if (filterByEligibility) {
+                // Get user for eligibility check
+                const user = await User.findById(userId).lean();
+                if (user && user.tags) {
+                    // Filter courses by eligibility
+                    data = data.filter(course =>
+                        checkEligibilityTagsAnd(user.tags, course.tagsAnd, course.tagsOr)
+                    );
+                }
+            }
+
+            const total = data.length;
+
+            // Apply pagination after filtering
+            data = data.slice(parseInt(skip), parseInt(skip) + parseInt(limit));
 
             success(res, req, {
                 data: enrichCoursesWithClasses(data, classesFromUser, userId),

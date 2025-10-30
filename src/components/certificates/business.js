@@ -98,6 +98,15 @@ async function getInitialDate(req) {
     return trail?.startDate ?? null;
 }
 
+async function getCertificateLayout(req, layoutId) {
+    const { data } = await certificateClient.get(
+        `/layouts/find-one/${layoutId}`,
+        { headers: getHeaders(req), validateStatus: false }
+    );
+
+    return data;
+}
+
 function getCertificateFileName({ userName, trailName, itemName } = {}) {
     try {
         const parsed = `certificado ${userName} ${trailName ? trailName : itemName}`
@@ -133,4 +142,5 @@ module.exports = {
     getInitialDate,
     getCertificateFileName,
     formatCourseLoad,
+    getCertificateLayout,
 };

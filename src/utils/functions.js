@@ -16,7 +16,7 @@ const { htmlToText } = require('html-to-text');
 const tlds = require('tlds');
 const mongoose = require('mongoose');
 const { CompanyConfigModel } = require('../components/config/model');
-
+const orderBy = require('lodash/orderBy');
 
 module.exports = {
     getDateToday() {
@@ -114,10 +114,10 @@ module.exports = {
         const limitYear = limitDate.getFullYear();
 
         const startString = `${startYear}-${startMonth >= 10 ? startMonth : '0' + startMonth}-${startDay >= 10 ? startDay : '0' + startDay
-        }T00:00:00.000-03:00`;
+            }T00:00:00.000-03:00`;
 
         const limitString = `${limitYear}-${limitMonth >= 10 ? limitMonth : '0' + limitMonth}-${limitDay >= 10 ? limitDay : '0' + limitDay
-        }T23:59:59.000-03:00`;
+            }T23:59:59.000-03:00`;
 
         return {
             startDate: new Date(startString),
@@ -247,38 +247,16 @@ module.exports = {
         });
     },
 
-    getTagsGroupsByToken(req) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const token = req.headers.authorization;
-                let tk = token?.split(' ')[1] || token
-                const { data } = _auth.decodeToken(tk);
-                const groups = data.groups;
-                const tagsTemp = [];
-                const tags = [];
+    async getTagsGroupsByToken(req) {
+        const token = req.headers.authorization;
+        let tk = token?.split(' ')[1] || token
+        const { data } = _auth.decodeToken(tk);
+        const groupsId = data.groups;
 
-                for (const p in groups) {
-                    const group = await Group.findOne({
-                        _id: { $eq: groups[p] },
-                        active: 1,
-                    });
+        const foundGroups = await Group.find({ _id: { $in: groupsId }, active: 1 }, 'tags')
+        const tags = foundGroups.flatMap((g) => g.tags)
 
-                    if (group) {
-                        tagsTemp.push(group.tags);
-                    }
-                }
-
-                for (const p in tagsTemp) {
-                    for (const i in tagsTemp[p]) {
-                        tags.push(tagsTemp[p][i]);
-                    }
-                }
-
-                resolve(tags);
-            } catch (error) {
-                reject(error);
-            }
-        });
+        return tags;
     },
 
     isSCORMCompleted(status = '') {
@@ -409,17 +387,17 @@ module.exports = {
                     userLogin: { $eq: user.networkLogin },
                     ...(!onlyExpired
                         ? {
-                              $or: [
-                                  { expiredCompletion: { $exists: false } },
-                                  { expiredCompletion: { $eq: null } },
-                              ],
-                          }
+                            $or: [
+                                { expiredCompletion: { $exists: false } },
+                                { expiredCompletion: { $eq: null } },
+                            ],
+                        }
                         : {
-                              $and: [
-                                  { expiredCompletion: { $exists: true } },
-                                  { expiredCompletion: { $ne: null } },
-                              ],
-                          }),
+                            $and: [
+                                { expiredCompletion: { $exists: true } },
+                                { expiredCompletion: { $ne: null } },
+                            ],
+                        }),
                 });
                 for (const t of trails) {
                     const { trail } = module.exports.processTrailTracking(t, allTrackingUser, true);
@@ -609,6 +587,7 @@ module.exports = {
             }
 
             item.completion = tmpCompletion;
+            item.process = objTracking?.process || null;
             if (item.completion === 1) {
                 containsACompletedItem = true;
             }
@@ -635,6 +614,8 @@ module.exports = {
         const itemsCompletion = trail.items.map((item) => item?.completion || 0);
         const completionTotal = itemsCompletion.reduce((acc, curr) => acc + curr, 0);
         trail.completionPercentage = +((completionTotal / trail.items.length) * 100).toFixed(2);
+        trail.items = trail.items?.filter((i) => i.itemID);
+
         return { trail, containsACompletedItem };
     },
     async validateUniqueEmail(email, user) {
@@ -652,7 +633,7 @@ module.exports = {
         return email;
     },
 
-     async getCustomEmail(user){
+    async getCustomEmail(user) {
         const companyConfig = await getCompanyConfig();
         const supportFormConfig = companyConfig?.supportFormCustomEmail || null;
         if (!supportFormConfig || supportFormConfig.length < 2) {
@@ -730,9 +711,9 @@ module.exports = {
         query = Array.isArray(query)
             ? query
             : query
-                  .replace(/(\[(\d)\])/g, '.$2')
-                  .replace(/^\./, '')
-                  .split('.');
+                .replace(/(\[(\d)\])/g, '.$2')
+                .replace(/^\./, '')
+                .split('.');
         if (!(query[0] in obj)) {
             return defaultVal;
         }
@@ -850,17 +831,17 @@ module.exports = {
             userLogin: { $eq: user.networkLogin },
             ...(!onlyExpired
                 ? {
-                      $or: [
-                          { expiredCompletion: { $exists: false } },
-                          { expiredCompletion: { $eq: null } },
-                      ],
-                  }
+                    $or: [
+                        { expiredCompletion: { $exists: false } },
+                        { expiredCompletion: { $eq: null } },
+                    ],
+                }
                 : {
-                      $and: [
-                          { expiredCompletion: { $exists: true } },
-                          { expiredCompletion: { $ne: null } },
-                      ],
-                  }),
+                    $and: [
+                        { expiredCompletion: { $exists: true } },
+                        { expiredCompletion: { $ne: null } },
+                    ],
+                }),
         }).lean();
 
         const trackingMap = new Map();
@@ -927,12 +908,27 @@ module.exports = {
         trail.notStarted = false;
         let duration = 0;
 
-        const trackingMap = new Map(
-            allTrackingUser.map((obj) => [String(obj.item), obj])
-        );
+        const trackingMap = new Map();
+
+        allTrackingUser.forEach((obj) => {
+            if (!trackingMap.has(String(obj.item))) {
+                trackingMap.set(String(obj.item), []);
+            }
+
+            trackingMap.get(String(obj.item)).push(obj);
+        })
+
 
         for (const item of trail.items) {
-            const objTracking = trackingMap.get(String(item?.itemID?._id));
+            const itemTrackings = trackingMap.get(String(item?.itemID?._id)) || [];
+
+            const arrayOrdenado = orderBy(
+                itemTrackings,
+                ['completionAt', 'updatedAt'],
+                ['asc', 'asc']
+            );
+
+            const objTracking = arrayOrdenado[0] || null;
 
             if (dashboard && objTracking) {
                 trail.notStarted = true;
@@ -1023,6 +1019,106 @@ module.exports = {
         trail.completionPercentage = +((completionTotal / trail.items.length) * 100).toFixed(2);
 
         return { trail, containsACompletedItem };
+    },
+
+    processTrailTrackingV3(trails, allTrackingUser, dashboard = false) {
+        const trackingMap = new Map();
+        const kindsWithScore = ['ExamTracking', 'ActivityTracking'];
+
+        allTrackingUser.forEach((obj) => {
+            const itemKey = String(obj.item);
+            if (!trackingMap.has(itemKey)) {
+                trackingMap.set(itemKey, []);
+            }
+            trackingMap.get(itemKey).push(obj);
+        });
+
+        for (const [itemKey, trackings] of trackingMap.entries()) {
+            trackingMap.set(itemKey, orderBy(trackings, ['completionAt', 'updatedAt'], ['asc', 'asc']));
+        }
+
+        return trails.map((trail) => {
+            let containsACompletedItem = false;
+            const completionDate = [];
+            const scoreArr = [];
+            trail.notStarted = false;
+            let duration = 0;
+
+
+            trail.items.forEach((item) => {
+                const itemTrackings = trackingMap.get(String(item?.itemID?._id)) || [];
+                const objTracking = itemTrackings[0] || null;
+
+                if (dashboard && objTracking) {
+                    trail.notStarted = true;
+                }
+
+                if (objTracking?.updatedAt) {
+                    const currentTime = trail?.lastTrackingUpdate ? new Date(trail.lastTrackingUpdate).getTime() : 0;
+                    const newTime = new Date(objTracking.updatedAt).getTime();
+
+                    if (currentTime === 0 || newTime > currentTime) {
+                        trail.lastTrackingUpdate = objTracking.updatedAt;
+                    }
+                }
+
+                duration += item?.itemID?.durationHours ?? 0;
+                const score = objTracking?.score || null;
+                const completionAt = objTracking?.completionAt || null;
+                const updatedAt = objTracking?.updatedAt || null;
+                const createdAt = objTracking?.createdAt || null;
+
+                item.completionAt = completionAt;
+                completionDate.push(completionAt);
+
+                let tmpCompletion = null;
+                if (objTracking) {
+                    const isSpecialKind = objTracking.kind === 'SCORMTracking' ||
+                                         objTracking.kind === 'ExamTracking' ||
+                                         objTracking.kind === 'ActivityTracking';
+
+                    if (isSpecialKind) {
+                        const isFailed = objTracking.lessonStatus === 'FAILED' || objTracking.lessonStatus === 'failed';
+                        tmpCompletion = isFailed ? 2 : (_isSCORMCompleted(objTracking.lessonStatus) ? 1 : 0);
+                    } else {
+                        tmpCompletion = objTracking.completion;
+                    }
+                }
+
+                if (item.itemID?.passingScore && item.itemID.passingScore !== 0 && objTracking && kindsWithScore.includes(objTracking.kind)) {
+                    scoreArr.push(objTracking.score);
+                }
+
+                if (item.itemID) {
+                    item.itemID.score = score;
+                    item.itemID.completionAt = completionAt;
+                    item.itemID.updatedAt = updatedAt;
+                    item.itemID.createdAt = createdAt;
+                    item.itemID.completion = tmpCompletion;
+                }
+
+                item.completion = tmpCompletion;
+                if (item.completion === 1) {
+                    containsACompletedItem = true;
+                }
+            });
+
+            const scoreAverage = scoreArr.length > 0
+                ? Number((scoreArr.reduce((sum, score) => sum + score, 0) / scoreArr.length).toFixed(2))
+                : null;
+            trail.scoreAverage = scoreAverage;
+
+            const validDates = completionDate.filter(e => e !== null).map(e => new Date(e).getTime());
+            trail.completionAt = validDates.length > 0 ? new Date(Math.max(...validDates)) : null;
+
+            trail.completion = getTrailCompletion(trail);
+            trail.duration = duration;
+
+            const completionTotal = trail.items.reduce((acc, item) => acc + (item?.completion || 0), 0);
+            trail.completionPercentage = +((completionTotal / trail.items.length) * 100).toFixed(2);
+
+            return { trail, containsACompletedItem };
+        });
     },
 
     parseDocument(document) {

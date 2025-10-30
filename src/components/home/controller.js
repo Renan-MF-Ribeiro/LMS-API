@@ -39,6 +39,7 @@ const { populateTrails } = require('../trails/business');
 const { Section } = require('../sections/model');
 const { maxBy } = require('lodash');
 const { getDbCurrentFeatures } = require('../../utils/features');
+const { Log } = require('../logs/model');
 
 const HomeController = {
     async searchBy(req, res) {
@@ -233,9 +234,9 @@ const HomeController = {
 
                 await Log.create({
                     dataNew: { error: error.response?.data ?? error },
-                    groups: groupsAD ?? [],
-                    user: user._id,
-                    login: user.networkLogin,
+                    groups: user?.groupsAD ?? [],
+                    user: user?._id,
+                    login: user?.networkLogin,
                     type: "ERROR",
                     message: "Erro ao buscar cursos da Alura",
                     component: "home",

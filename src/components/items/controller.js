@@ -14,7 +14,7 @@ const { dispatch } = require('../webhooks/controller');
 const { filter, reduce, pipe } = require('ramda');
 const { Trail } = require('../trails/model');
 const { Section } = require('../sections/model');
-const { error } = require('../../utils/logger');
+const { error, log } = require('../../utils/logger');
 const _errors = require('../../utils/errors');
 const _messages = require('../../utils/messages');
 const _functions = require('../../utils/functions');
@@ -54,6 +54,7 @@ const ApiError = require('../../errors/ApiError');
 const GamificationKafka = require('../gamification/kafka/broker');
 const { dispatchChatItemKafkaEvent, isFeatEnabled } = require('../chat/business');
 const { escapeString } = require('../../utils/strings');
+const { FILE_PROCESSOR_EVENT_TYPES, dispatchFileProcessorKafkaMessage } = require('../../utils/file-processor');
 
 const ITEM_KINDS = Object.freeze({
     DocumentItem: DocumentItem,
@@ -518,6 +519,14 @@ const ItemController = {
                 const item = await ItemModel.create(payload);
 
                 await dispatch('create', 'item', { _id: item._id, ...payload });
+
+                if (thumbPath) {
+                    await dispatchFileProcessorKafkaMessage(
+                        FILE_PROCESSOR_EVENT_TYPES.ITEM_THUMB,
+                        item._id
+                    );
+                }
+
                 _messages.success(
                     res,
                     req,
@@ -761,6 +770,13 @@ const ItemController = {
                 const chatConfig = await getChatIAConfig();
 
                 if (isFeatEnabled(chatConfig)) await dispatchChatItemKafkaEvent(item._id);
+
+                if (thumbPath && thumbPath !== foundItem.thumbPath) {
+                    await dispatchFileProcessorKafkaMessage(
+                        FILE_PROCESSOR_EVENT_TYPES.ITEM_THUMB,
+                        item._id
+                    );
+                }
 
                 _messages.success(
                     res,

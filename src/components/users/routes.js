@@ -10,10 +10,12 @@ const {
     isUserManagerOrSuperAdmin,
     isUserManagerOrSuperAdminOrElegibilityManager,
     canListUsers,
+    isAccountant,
 } = require('../../utils/middlewares');
 
 const { saveStrategyOnCookie } = require('../../utils/cookies');
 const { cacheRequestOnClient } = require('../../utils/cache/middlewares');
+const { userRegisterMustBeEnabled } = require('./middlewares');
 
 const supportedStrategies = ['saml', 'openid', 'oauth2'];
 
@@ -129,7 +131,7 @@ module.exports = express
         multiparty(),
         _controller.importUpdateStatusUsers
     )
-    .post('/signup', _controller.signup)
+    .post('/signup', userRegisterMustBeEnabled, _controller.signup)
     .post('/activate', _controller.activateUser)
     .post('/sso', _controller.singleSignOn)
 
@@ -176,7 +178,7 @@ module.exports = express
     )
     .post('/password/reset', validateTokenRoute, isUserManager, _controller.resetUserPassword)
     .put('/update', validateTokenRoute, isUserManager, _controller.updateUserById)
-    .get('/conteudistas', validateTokenRoute, _controller.getAllConteudistas)
+    .get('/conteudistas', validateTokenRoute, isAccountant, _controller.getAllConteudistas)
     .get('/details', validateTokenRoute, cacheRequestOnClient(5 * 60), _controller.returnUserById) // Cache for 5 minutes
     .get('/feedbackelegibility', validateTokenRoute, _controller.feedbackElegible)
     .post('/remove-permission', validateTokenRoute, _controller.deleteGroups)

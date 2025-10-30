@@ -798,6 +798,13 @@ const MenuDefault = [
         index: 18
     },
     {
+        button: "processes",
+        roles: [
+            "PERFIL_Super_Admin",
+        ],
+        index: 19
+    },
+    {
         button: "system",
         roles: [
             "PERFIL_Conteudista",
@@ -961,7 +968,7 @@ const MenuDefault = [
                 index: 3
             },
         ],
-        index: 19
+        index: 20
     }
 ];
 

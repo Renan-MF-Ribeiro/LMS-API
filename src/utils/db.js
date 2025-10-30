@@ -31,11 +31,11 @@ module.exports = {
     // For compatibility with old code, but should not be used in new code
     async connect() {},
 
-    async connectDatabase() {
+    async connectDatabase(databaseOptions = {}) {
         try {
             const strConn = getConnectionString();
 
-            return await mongoose.connect(strConn, { dbName: DB_NAME, ...getDbOptions() })
+            return await mongoose.connect(strConn, { dbName: DB_NAME, ...getDbOptions(), ...databaseOptions })
         } catch (err) {
             error(err)
         }

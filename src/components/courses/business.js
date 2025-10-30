@@ -10,7 +10,7 @@ const {
     CourseModel,
     CourseEvaluationModel,
 } = require('./model');
-const moment = require('moment');
+const moment = require('moment-timezone');
 const mongoose = require('mongoose');
 const {
     formatDateWithoutHours,
@@ -430,6 +430,7 @@ module.exports = {
                         .toDate()
                     : nowDate
                 : null;
+
             const grade = Number(item.grades ?? 0) > 100 ? 100 : Number(item.grades ?? 0);
 
             const commonData = {
@@ -641,7 +642,7 @@ module.exports = {
             processedLocation: isLocationUrl ? null : location
         };
     },
-    
+
     async prepareBodyForMessage(bodyData, location) {
         const dateApplicationInitial = moment(bodyData.dateApplicationInitial).subtract(3, 'hours');
         const dateApplicationFinal = moment(bodyData.dateApplicationFinal).subtract(3, 'hours');
@@ -649,15 +650,17 @@ module.exports = {
         const formattedDateFinal = dateApplicationFinal.isValid() ? dateApplicationFinal.format('DD/MM/YYYY HH:mm') : '';
 
         const { isLocationUrl, onlineLink } = await module.exports.processLocation(location);
-        
-        const processedBody = { ...bodyData, dateApplicationInitial: formattedDateInitial, dateApplicationFinal: formattedDateFinal };
+
+        const { $set, ...restBody } = bodyData;
+
+        const processedBody = { ...restBody, dateApplicationInitial: formattedDateInitial, dateApplicationFinal: formattedDateFinal };
         if (isLocationUrl) {
             delete processedBody.location;
             processedBody.onlineLink = onlineLink;
         }
 
         console.log('Processed Body for Message:', processedBody);
-        
+
         return processedBody;
     },
 

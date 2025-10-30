@@ -239,6 +239,7 @@ async function generateTokens(user, login, password, tokenIdpProfiles, res) {
 
     return {
         SAS,
+        token,
         tk,
         key,
         tokenAnalytics,
@@ -605,6 +606,13 @@ module.exports = {
 
             const tokens = await generateTokens(newUser, networkLogin, password, null, res);
 
+            const secret = process.env.PROJECT_SECRET_KEY;
+            const sessionData = jwt.verify(tokens.token, secret);
+
+            req.session.passport = { user: sessionData };
+            res.cookie('connect.sid', req.sessionID, getCookieProps());
+            await addSASTokenToResponse(res);
+
             if (newUser && form?.autoLogin) {
                 await Log.create({
                     dataNew: [],
@@ -664,17 +672,18 @@ module.exports = {
             return _messages.forbidden(
                 res,
                 req,
-                'Usuário não encontrado',
-                'Usuário não encontrado',
+                'Usuário ou senha inválidos.',
+                'Usuário ou senha inválidos.',
                 'users',
                 'ldapSignIn'
             );
         }
+
         let user = await User.findOne({
             _id: new mongoose.Types.ObjectId(req.user._id),
         }).lean();
 
-        if (user.loginType && user.loginType !== 'FORM' && user.loginType !== 'BOTH') {
+        if (user.loginType === 'SSO') {
             return _messages.forbidden(
                 res,
                 req,
@@ -686,11 +695,14 @@ module.exports = {
         }
 
         const { login, password, token } = req.body;
+
         if (token) {
             user = await updateUserByPartnerToken(req, user);
         }
+
         try {
             await handleBlockUser(user);
+
             if (
                 new Date(user?.password?.[user?.password?.length - 1]?.createdAt)?.getTime() <
                 Date.now() - 90 * 24 * 60 * 60 * 1000
@@ -698,16 +710,6 @@ module.exports = {
                 user.passwordValid = false;
             }
 
-            if (user && user.origin && user.origin.type === 'INTEGRATOR') {
-                return _messages.forbidden(
-                    res,
-                    req,
-                    'Utilize a gestão de login externa para fazer seu acesso.',
-                    'Utilize a gestão de login externa para fazer seu acesso.',
-                    'users',
-                    'ldapSignIn'
-                );
-            }
             // Gera todos os tokens necessários
             const [tokens, entryRecord, isUserManager] = await Promise.all([
                 generateTokens(user, login, password, null, res),
@@ -763,12 +765,14 @@ module.exports = {
             );
         } catch (error) {
             console.log({ error });
-            if (user?.id)
+            if (user?.id) {
                 await Block.create({
                     user: user?._id,
                     dateTimeBlock: getDateToday(),
                     ip: req.ip,
                 });
+            }
+
             return _messages.forbidden(
                 res,
                 req,
@@ -783,39 +787,37 @@ module.exports = {
 
     async feedbackElegible(req, res) {
         const user = await getUserByToken(req);
-        const today = new Date();
-        const uri = `${process.env.API_SURVEY}/feedback/listbyuser?userid=${user._id}`;
-        try {
-            const usersDataConfig = await getUsersDataConfig();
 
-            const response = await axios.get(uri);
-            const firstLogin = await returnDateSinceFirstLogin(user._id);
-            const { numberOfItemsCompleted } =
-                await getNumberOfItemsCompletedOrInProgressOrNotStarted(req);
-            if (response.data[0]) {
-                const latestFeedback = response.data.slice(-1);
-                const latestFeedbackDate = new Date(latestFeedback[0].updatedAt);
-                let daysSinceLastFeedback = Math.floor(
-                    (latestFeedbackDate - today) / (24 * 3600 * 1000)
-                );
-                daysSinceLastFeedback *= -1;
+        const completedTracking = await Tracking.findOne({
+            userLogin: user.networkLogin,
+            completionAt: { $ne: null, $exists: true },
+            $or: [
+                { expiredCompletion: { $exists: false } },
+                { expiredCompletion: { $eq: null } },
+            ],
+        });
 
-                if (
-                    firstLogin >= 1 &&
-                    daysSinceLastFeedback >= usersDataConfig.daysSinceLastFeedback &&
-                    numberOfItemsCompleted >= 1
-                ) {
-                    _messages.success(res, req, true);
-                } else {
-                    _messages.success(res, req, false);
-                }
-            } else {
-                _messages.success(res, req, false);
-            }
-        } catch (error) {
-            console.log(error.message);
-            _messages.internalServer(res, req, error.message);
+        if (!completedTracking) return res.send(false);
+
+        const { data: surveyData } = await axios.get(`${environment.API_SURVEY}/feedback/listbyuser?userid=${user._id}`);
+
+        log('feedbackElegible - user', user.networkLogin);
+        log('feedbackElegible - completedTracking', completedTracking._id);
+        log('feedbackElegible - surveyData', surveyData);
+
+        if (!surveyData?.length) return res.send(true);
+
+        const [latestFeedback] = surveyData.slice(-1);
+
+        const usersDataConfig = await getUsersDataConfig();
+
+        const lastFeedbackDateThreshold = moment().subtract(usersDataConfig?.daysSinceLastFeedback || 180, 'days');
+
+        if (moment(latestFeedback.updatedAt).isBefore(lastFeedbackDateThreshold)) {
+            return res.send(true);
         }
+
+        res.send(false);
     },
 
     async singleSignOn(req, res) {
@@ -824,7 +826,7 @@ module.exports = {
 
         try {
             const data = jwt.verify(token, secret);
-
+            
             // Need to create the session when using monitoring login
             if (data.monitoringLogin) {
                 req.session.passport = { user: data };
@@ -1400,7 +1402,14 @@ module.exports = {
 
             replaceMap = getConnectMapReplacers(connectMap);
         }
+
+        const usersDataConfig = await getUsersDataConfig();
+
         for (const result of results) {
+            if (usersDataConfig?.inactivateIfNotInSpreadsheet && !result.status) {
+                result.status = 'ATIVO';
+            }
+
             const processedUser = await processUsersLoad(
                 result,
                 fieldsForElegibility,
@@ -1468,7 +1477,6 @@ module.exports = {
             `Usuários processados, iniciando atualizações dos ${existingUsers.length} existentes`
         );
 
-        const usersDataConfig = await getUsersDataConfig();
         if (usersDataConfig?.inactivateIfNotInSpreadsheet) {
             await User.updateMany(
                 {
@@ -1500,7 +1508,6 @@ module.exports = {
         }
 
 
-        
         if (newUsers.length > 0) {
             console.log(
                 `Usuários existentes atualizados, iniciando criação de ${newUsers.length} novos usuários`
@@ -2856,32 +2863,21 @@ module.exports = {
     },
 
     async getAllConteudistas(req, res) {
-        try {
-            const query = {
-                $and: [
-                    {
-                        groupsAD: { $in: ['PERFIL_Conteudista'] },
-                    },
-                ],
-            };
+        const query = {
+            $and: [
+                {
+                    groupsAD: { $in: ['PERFIL_Conteudista'] },
+                },
+            ],
+        };
 
-            if (req?.segmentation) {
-                handleSegmentationOnQuery(req, 'issuer', query);
-            }
-
-            const users = await User.find(query);
-
-            _messages.success(res, req, users);
-        } catch (error) {
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'users',
-                'conteudistas'
-            );
+        if (req?.segmentation) {
+            handleSegmentationOnQuery(req, 'issuer', query);
         }
+
+        const users = await User.find(query).select('_id name');
+
+        _messages.success(res, req, users);
     },
 
     async handleNames(req, res) {
