@@ -1710,7 +1710,7 @@ module.exports = {
         const total = await User.countDocuments(query);
 
         const users = await User.find(query)
-            .select('-password -passwordValid')
+            .select('_id name email status onboarding partner')
             .sort({ [order]: sort })
             .skip(parseInt(skip))
             .limit(parseInt(limit));
