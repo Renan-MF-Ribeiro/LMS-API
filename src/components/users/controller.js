@@ -391,7 +391,8 @@ module.exports = {
                 handleSegmentationOnQuery(req, 'issuer', query);
             }
 
-            const foundUser = await User.findOne(query).select('-password');
+            const foundUser = await User.findOne(query)
+                .select('-password -passwordValid');
 
             _messages.success(res, req, foundUser);
         } catch (error) {
@@ -1710,6 +1711,7 @@ module.exports = {
         const total = await User.countDocuments(query);
 
         const users = await User.find(query)
+            .select('-password -passwordValid')
             .sort({ [order]: sort })
             .skip(parseInt(skip))
             .limit(parseInt(limit));
@@ -1771,6 +1773,7 @@ module.exports = {
 
         const total = await User.countDocuments(query);
         const users = await User.find(query)
+            .select('-password -passwordValid')
             .sort({ [order]: sort })
             .skip(parseInt(skip))
             .limit(parseInt(limit));
@@ -1801,7 +1804,7 @@ module.exports = {
     async returnUserById(req, res) {
         try {
             const { _id } = await getUserByToken(req);
-            const user = await User.findOne({ _id: _id }, { password: 0 });
+            const user = await User.findOne({ _id: _id }, { password: 0, passwordValid: 0 });
 
             _messages.success(res, req, {
                 data: user,
@@ -2389,6 +2392,7 @@ module.exports = {
                     }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             )
+                .select('-password -passwordValid')
                 .sort({
                     [order]: sort,
                 })
