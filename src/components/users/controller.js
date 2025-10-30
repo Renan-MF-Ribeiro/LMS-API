@@ -686,7 +686,7 @@ module.exports = {
             return _messages.forbidden(
                 res,
                 req,
-                'Formulário de login desabilitado.',
+                'Formulário de login desabilitado',
                 'Usuário ou senha inválidos.',
                 'users',
                 'ldapSignIn'
@@ -701,7 +701,7 @@ module.exports = {
             return _messages.forbidden(
                 res,
                 req,
-                'Usuário configurado apenas para login via SSO.',
+                'Usuário configurado apenas para login via SSO',
                 'Usuário ou senha inválidos.',
                 'users',
                 'ldapSignIn'
