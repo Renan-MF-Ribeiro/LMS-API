@@ -130,6 +130,30 @@ module.exports = {
         }
     },
 
+    async getSectionById (req, res) {
+        try {
+            const { id: _id } = req.params;
+
+
+            const sections = await populateSectionTrails(
+                [await Section.findById(_id)
+                    .sort({ position: 'asc' }),
+                { select: ['_id', 'title', 'thumbPath'] }]
+            );
+
+            _messages.success(res, req, sections[0]);
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'section',
+                '/getSectionById'
+            );
+        }
+    },
+
     async createSection(req, res) {
         try {
             const verify = await Section.find({
