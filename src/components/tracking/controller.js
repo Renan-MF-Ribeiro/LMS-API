@@ -217,7 +217,8 @@ const TrackingController = {
                     const i = await Item.findById(item._id).lean();
                     const trackingKind = processTrackingType(i);
 
-                    await createCompleteTracking(i, trackingKind, q.userLogin)
+                    createCompleteTracking(i, trackingKind, q.userLogin)
+                        .catch(error => console.log('Error creating complete tracking for optional item:', error));
                 }
             }
 
