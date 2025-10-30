@@ -3,7 +3,7 @@ const {
     calculateDiffDate,
     formatDateWithoutHours,
     getDateTodayWithoutHours,
-    handleStudentTrails,
+    handleStudentTrailsV2,
 } = require('../../utils/functions');
 const { Group } = require('../groups/model');
 const { Tracking } = require('../tracking/model');
@@ -125,18 +125,30 @@ async function getPercentageCompletedTrailsGamification(user) {
         tags.push(...mappedUserTags);
     }
 
+    const activeSections = await Section.find({
+        deleted: 0,
+        active: 1,
+    }).lean();
+
+    const trailIdsInActiveSections = activeSections.flatMap(section =>
+        (section.trails || [])
+            .filter(trail => Types.ObjectId.isValid(trail))
+            .map(trail => new Types.ObjectId(trail))
+    );
+
     const eligibleTrails = await Trail.find({
+        _id: { $in: trailIdsInActiveSections },
         tags: { $in: tags },
         enabled: true,
-        startDate: { $lt: getDateTodayWithoutHours() },
-        endDate: { $gt: getDateTodayWithoutHours() },
+        startDate: { $lte: moment().subtract(3, 'hours').toDate() },
+        endDate: { $gt: getDateTodayWithoutHours() }
     })
         .sort({ createdAt: -1 })
         .populate('items.itemID');
 
     const totalTrails = eligibleTrails.length;
 
-    const { completedTrails } = await handleStudentTrails(user, eligibleTrails);
+    const { completedTrails } = await handleStudentTrailsV2(user, eligibleTrails);
 
     return Number(((completedTrails.length / totalTrails) * 100).toFixed(2));
 }
