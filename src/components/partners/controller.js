@@ -17,7 +17,7 @@ module.exports = {
 
         if (searchBy) {
             query.$and.push({
-                $or: [{ title: { $regex: searchBy, $options: 'i' } }],
+                $or: [{ title: { $regex: searchBy, $options: 'i' } }]
             });
         }
 
@@ -29,14 +29,14 @@ module.exports = {
             const total = await Partner.find(query).countDocuments();
             const partners = await Partner.find(query)
                 .sort({
-                    [order]: sort,
+                    [order]: sort
                 })
                 .skip(parseInt(skip))
                 .limit(parseInt(limit));
 
             _messages.success(res, req, {
                 data: partners,
-                total,
+                total
             });
         } catch (error) {
             _messages.internalServer(
@@ -186,6 +186,37 @@ module.exports = {
         }
     },
 
+    async updateStatus(req, res) {
+        const { id } = req.params;
+        const { active } = req.body;
+
+        try {
+            const partner = await Partner.findByIdAndUpdate(id, { active });
+
+            return _messages.success(
+                res,
+                req,
+                partner,
+                'Status Atualizado',
+                'partners',
+                'create',
+                partner,
+                [],
+                true,
+                'UPDATE'
+            );
+        } catch (error) {
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'partners',
+                '/update'
+            );
+        }
+    },
+
     async delete(req, res) {
         const { id: _id } = req.params;
         try {
@@ -263,5 +294,5 @@ module.exports = {
                 '/delete'
             );
         }
-    },
+    }
 };
