@@ -1528,6 +1528,8 @@ module.exports = {
                     );
                 }
 
+                const now = new Date();
+
                 const studentRegister = {
                     _id: student._id,
                     userID: student._id,
@@ -1535,6 +1537,8 @@ module.exports = {
                     email: student.email,
                     networkLogin: student.networkLogin,
                     registration: student.registration,
+                    updatedAt: now,
+                    createdAt: now,
                     presence: false,
                     grades: 0,
                 };
