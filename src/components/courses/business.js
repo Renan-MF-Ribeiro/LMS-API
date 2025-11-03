@@ -438,7 +438,7 @@ module.exports = {
                 presence: isPresence,
                 presenceAt: presenceDate,
                 origin: 'instructor',
-                updateAt: nowDate,
+                updatedAt: nowDate,
             };
 
             // If user is in class, update user data
