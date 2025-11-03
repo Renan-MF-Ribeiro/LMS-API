@@ -806,6 +806,7 @@ module.exports = {
                                         userID: mongoose.Types.ObjectId(userId),
                                         presenceAt,
                                         updatedAt: nowDate,
+                                        createdAt: new Date(oldUser.createdAt),
                                     },
                                 });
                             }
