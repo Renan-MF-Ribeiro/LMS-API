@@ -39,6 +39,7 @@ const { createCompleteTracking, getFilteredTrackingEvents } = require('./busines
 const _functions = require('../../utils/functions');
 const GamificationKafka = require('../gamification/kafka/broker');
 const { Group } = require('../groups/model');
+const { Log } = require('../logs/model');
 
 const TRACKING_KINDS = Object.freeze({
     DocumentTracking: DocumentTracking,
@@ -618,51 +619,58 @@ const TrackingController = {
     },
 
     async deleteQuery(req, res) {
-        try {
-            const { item, userLogin } = req.query;
-            var networkLogin = userLogin;
-            const tracking = await Tracking.findOne({
+        const { item, userLogin } = req.query;
+
+        const networkLogin = userLogin;
+
+        const tracking = await Tracking.findOne({
+            item,
+            userLogin,
+            $or: [
+                { expiredCompletion: { $exists: false } },
+                { expiredCompletion: { $eq: null } },
+            ],
+        });
+
+        if (tracking.kind === 'ExamTracking') {
+            const userFind = await User.findOne({ networkLogin });
+            const user = userFind._id;
+            await HistoricEvaluation.deleteMany({
                 item,
-                userLogin,
+                user,
                 $or: [
                     { expiredCompletion: { $exists: false } },
                     { expiredCompletion: { $eq: null } },
                 ],
             });
-
-            if (tracking.kind === 'ExamTracking') {
-                const userFind = await User.findOne({ networkLogin });
-                const user = userFind._id;
-                await HistoricEvaluation.deleteMany({
-                    item,
-                    user,
-                    $or: [
-                        { expiredCompletion: { $exists: false } },
-                        { expiredCompletion: { $eq: null } },
-                    ],
-                });
-            }
-
-            await Tracking.deleteMany({
-                item,
-                userLogin,
-                $or: [
-                    { expiredCompletion: { $exists: false } },
-                    { expiredCompletion: { $eq: null } },
-                ],
-            });
-
-            _messages.successEmpty(res, req);
-        } catch (error) {
-            _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'tracking',
-                'deleteQuery'
-            );
         }
+
+        await Tracking.deleteMany({
+            item,
+            userLogin,
+            $or: [
+                { expiredCompletion: { $exists: false } },
+                { expiredCompletion: { $eq: null } },
+            ],
+        });
+
+        const requestingUser = await getUserByToken(req);
+
+        await Log.create({
+            user: requestingUser._id,
+            login: requestingUser.networkLogin,
+            groups: requestingUser.groupsAD,
+            type: "TRACKING_DELETION",
+            message: `Tracking deletado: ${tracking._id}`,
+            component: 'trackings',
+            route: 'delete',
+            trackingData: tracking,
+            ip: req.ip,
+            dataNew: [{ item, userLogin, tracking }],
+            dataOld: [],
+        });
+
+        _messages.successEmpty(res, req);
     },
 
     async createOrUpdateDocument(req, res) {
