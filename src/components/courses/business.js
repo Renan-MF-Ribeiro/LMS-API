@@ -12,11 +12,7 @@ const {
 } = require('./model');
 const moment = require('moment-timezone');
 const mongoose = require('mongoose');
-const {
-    formatDateWithoutHours,
-    getDateTodayWithoutHours,
-    addHours,
-} = require('../../utils/functions');
+const { formatDateWithoutHours, getDateTodayWithoutHours } = require('../../utils/functions');
 const { checkEligibilityTagsAnd, canRegisterOrCancel } = require('../sections/business');
 const eventsController = require('../calendar/events/controller');
 const { Group } = require('../groups/model');
@@ -332,7 +328,7 @@ module.exports = {
         }));
 
         const users = await User.find({ $or: regexQueries })
-            .select('_id networkLogin name email registration tags groupsAD onboarding')
+            .select('_id networkLogin name email registration tags groupsAD classGroups onboarding')
             .lean();
         console.timeEnd('importAttendanceList - FINDING_USERS');
 
@@ -343,15 +339,36 @@ module.exports = {
         const processedLogins = new Map();
 
         const usersWithTagsMap = new Map(
-            users.map((user) => [
-                String(user.networkLogin).toUpperCase(),
-                {
-                    ...user,
-                    userTags: user.onboarding
-                        ? [...user.tags, ...user.groupsAD]
-                        : [...user.tags, ...user.groupsAD, 'ELEGE_geral'],
-                },
-            ])
+            users.map((user) => {
+                const userTags = [...user.tags, ...user.groupsAD]
+
+                if (user.onboarding) {
+                    userTags.push('ELEGE_geral');
+                }
+
+                user.classGroups.filter((classGroup) => {
+                    if (classGroup.status !== 2) return false;
+
+                    const classGroupStart = new Date(classGroup.startDate);
+                    const classGroupLimit = new Date(classGroup.limitDate);
+                    const classStart = new Date(classInfo.dateApplicationInitial);
+                    const classEnd = new Date(classInfo.dateApplicationFinal);
+
+                    const isValidDuringClass = classGroupStart <= classEnd && classGroupLimit >= classStart;
+
+                    return isValidDuringClass;
+                }).forEach((classGroup) => {
+                    userTags.push(classGroup.groupCode);
+                });
+
+                return [
+                    String(user.networkLogin).toUpperCase(),
+                    {
+                        ...user,
+                        userTags
+                    },
+                ]
+            })
         );
 
         for (let index = 0; index < items.length; index += 1) {
@@ -430,6 +447,25 @@ module.exports = {
                         .toDate()
                     : nowDate
                 : null;
+
+            if (isPresence && presenceDate && user.classGroups?.length > 0) {
+                const hasValidClassGroupForPresence = user.classGroups.some((classGroup) => {
+                    if (classGroup.status !== 2) return false;
+                    
+                    const classGroupStart = new Date(classGroup.startDate);
+                    const classGroupLimit = new Date(classGroup.limitDate);
+                    
+                    return presenceDate >= classGroupStart && presenceDate <= classGroupLimit;
+                });
+
+                if (!hasValidClassGroupForPresence) {
+                    usersWithError.push({
+                        item,
+                        message: 'Data da presença não está dentro do período de vigência das turmas do usuário.',
+                    });
+                    continue;
+                }
+            }
 
             const grade = Number(item.grades ?? 0) > 100 ? 100 : Number(item.grades ?? 0);
 
@@ -697,5 +733,46 @@ module.exports = {
             { _id: classId },
             { $pull: { users: { _id: { $in: userIds.map((id) => mongoose.Types.ObjectId(id)) } } } }
         );
+    },
+
+    async ensureGroupsExist(tags) {
+        if (!tags || !Array.isArray(tags) || tags.length === 0) {
+            return;
+        }
+
+        const tagValues = tags.map(tag => tag.value).filter(Boolean);
+        
+        if (tagValues.length === 0) {
+            return;
+        }
+
+        const existingGroups = await Group.find({
+            "tags.value": { $in: tagValues }
+        }).lean();
+
+        const existingTagValues = new Set();
+        existingGroups.forEach(group => {
+            group.tags.forEach(tag => {
+                if (tag.value) {
+                    existingTagValues.add(tag.value);
+                }
+            });
+        });
+
+        const missingTags = tags.filter(tag => tag.value && !existingTagValues.has(tag.value));
+
+        for (const tag of missingTags) {
+            try {
+                await Group.create({
+                    name: tag.value,
+                    tags: [tag],
+                    deleted: 0,
+                    active: 1
+                });
+                console.log(`Grupo criado automaticamente: ${tag.value}`);
+            } catch (error) {
+                console.error(`Erro ao criar grupo ${tag.value}:`, error.message);
+            }
+        }
     }
 };
