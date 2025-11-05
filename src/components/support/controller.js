@@ -137,6 +137,56 @@ module.exports = {
         }
     },
 
+    async getZendeskTicketById(req, res) {
+        try {
+            const { id } = req.params;
+            const url = `${process.env.API_ZENDESK}/support/ticket/${process.env.CLIENT_ID}/${id}`;
+            console.log('Fetching ticket from URL:', url);
+            const headers = {
+                Authorization: process.env.API_KEY_ZENDESK,
+            };
+
+            try {
+                const response = await axios({
+                    method: 'get',
+                    url,
+                    headers,
+                });
+                return _messages.success(
+                    res,
+                    req,
+                    response.data,
+                    'Sucesso',
+                    'support',
+                    'getZendeskTicketById'
+                );
+            } catch (err) {
+                console.error(
+                    `Failed in zendesk microsservice: ${err.message}`
+                );
+                return _messages.internalServer(
+                    res,
+                    req,
+                    err.message,
+                    'Erro interno no servidor (happlearning-zendesk)',
+                    'support',
+                    'getZendeskTicketById'
+                );
+            }
+        } catch (error) {
+            console.error(`Failed to process ticket data: ${error.message}`);
+
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'support',
+                'getZendeskTicketById'
+            );
+        }
+    },
+
     async createComment(req, res) {
         try {
             const form = new FormData();

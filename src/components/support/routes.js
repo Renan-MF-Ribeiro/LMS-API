@@ -5,4 +5,5 @@ const formidable = require('express-formidable');
 module.exports = express.Router()
     .post('/', formidable(), _controller.create)
     .get('/tickets', _controller.getZendeskTickets)
+    .get('/ticket/:id', _controller.getZendeskTicketById)
     .post('/comment', formidable(), _controller.createComment)
