@@ -137,6 +137,59 @@ module.exports = {
         }
     },
 
+    //TEMPORÁRIO ATÉ MIGRAR TODOS OS CLIENTES PRA 13.5
+    async newGetZendeskTickets(req, res) {
+        try {
+            const { query } = req;
+            const user = await getUserByToken(req)
+            const url = `${process.env.API_ZENDESK}/support/new/tickets/${process.env.CLIENT_ID}/${user.networkLogin}`;
+
+            const headers = {
+                Authorization: process.env.API_KEY_ZENDESK,
+            };
+
+            try {
+                const response = await axios({
+                    method: 'get',
+                    url,
+                    headers,
+                    params: query,
+                });
+                return _messages.success(
+                    res,
+                    req,
+                    response.data,
+                    'Sucesso',
+                    'support',
+                    'getZendeskTickets'
+                );
+            } catch (err) {
+                console.error(
+                    `Failed in zendesk microsservice: ${err.message}`
+                );
+                return _messages.internalServer(
+                    res,
+                    req,
+                    err.message,
+                    'Erro interno no servidor (happlearning-zendesk)',
+                    'support',
+                    'getZendeskTickets'
+                );
+            }
+        } catch (error) {
+            console.error(`Failed to process ticket data: ${error.message}`);
+
+            return _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'support',
+                'getZendeskTickets'
+            );
+        }
+    },
+
     async getZendeskTicketById(req, res) {
         try {
             const { id } = req.params;
