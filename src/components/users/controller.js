@@ -121,6 +121,7 @@ const { getDbCurrentFeatures } = require('../../utils/features');
 const { ObjectId } = require('mongoose').Types;
 const { Profile } = require('../profiles/model');
 const environment = require('../../environment');
+const { storageLog } = require('../../utils/cron');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -826,7 +827,7 @@ module.exports = {
 
         try {
             const data = jwt.verify(token, secret);
-            
+
             // Need to create the session when using monitoring login
             if (data.monitoringLogin) {
                 req.session.passport = { user: data };
@@ -1397,6 +1398,13 @@ module.exports = {
             });
 
             if (errors.length > 0) {
+                storageLog(
+                    `Erro na carga de usuários`,
+                    JSON.stringify(errors),
+                    '',
+                    'DAILY_CHARGE'
+                );
+
                 throw new ApiError('Erro ao importar usuários', 400, errors, { skipDbLog: true });
             }
 
@@ -1531,6 +1539,13 @@ module.exports = {
                 ])
             }
         }
+
+        storageLog(
+            `Carga de ${results?.length} usuários`,
+            '',
+            '',
+            'DAILY_CHARGE'
+        );
 
         _messages.success(res, req, 'Importado com sucesso');
     },

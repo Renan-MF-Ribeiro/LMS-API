@@ -65,6 +65,21 @@ const ApiError = require('../errors/ApiError');
 const { getConnectMap, validateDataByConnectMap, getConnectMapReplacers } = require('./connect');
 const environment = require('../environment');
 
+function storageLog (message, dataNew = [], dataOld = [], cronType) {
+    Log.create({
+        user: null,
+        type: 'CREATE',
+        message,
+        component: cronType ? `CRON_${cronType}` : 'CRON',
+        dataNew,
+        dataOld,
+        route: null,
+        ip: null,
+        login: null,
+        groups: [],
+    });
+}
+
 module.exports = {
     async cronNotifyResponsibleUsers () {
         const cronConfig = await getCronConfig();
@@ -330,7 +345,7 @@ module.exports = {
             );
         }
     },
-    
+
     async executeRemoveAutomaticEligibilityTags(runningFromAPI = false) {
         if (runningFromAPI) {
             return removeAutomaticEligibilityTags();
@@ -350,6 +365,8 @@ module.exports = {
             );
         }
     },
+
+    storageLog,
 };
 
 async function recommendedTrailsCron () {
@@ -608,24 +625,9 @@ function numberOfCompleteAndEligibleCourses (user) {
     });
 }
 
-function storageLog (message, dataNew = [], dataOld = [], cronType) {
-    Log.create({
-        user: null,
-        type: 'CREATE',
-        message,
-        component: cronType ? `CRON_${cronType}` : 'CRON',
-        dataNew,
-        dataOld,
-        route: null,
-        ip: null,
-        login: null,
-        groups: [],
-    });
-}
-
 function hideCPFNumbers(cpf) {
     if(!cpf) return cpf;
-    
+
     return String(cpf).substring(0, 3) + 'XXXXXXXX';
 }
 
@@ -865,11 +867,11 @@ async function processUserLoadFile(directory, fileName, isProduction, usersDataC
 async function getUsersLoad() {
     const env = environment.NODE_ENV;
     const hook = environment.WEBHOOK_URL ? new Webhook(environment.WEBHOOK_URL) : null;
-    
+
     const isProduction = env === 'production';
-    
+
     const usersDataConfig = await getUsersDataConfig();
-    
+
     const importPath = usersDataConfig?.importPath?.replace(/^\//, '') ?? null;
 
     const directory = `${isProduction ? 'producao' : 'homologacao'}${importPath?.length ? `/${importPath}` : ''}`;
@@ -940,7 +942,7 @@ async function courseReleaseCron () {
         });
 
         const messengerConfig = await getMessengerConfig();
-        
+
         const emailTemplate = messengerConfig.emailTemplate;
 
         for (const trail of trails) {
@@ -1010,7 +1012,7 @@ async function courseChargeCron () {
         });
 
         const messengerConfig = await getMessengerConfig();
-        
+
         const emailTemplate = messengerConfig.emailTemplate;
 
         for (let trail of trails) {
