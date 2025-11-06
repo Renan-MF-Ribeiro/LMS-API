@@ -1,14 +1,10 @@
+const { getDbCurrentFeatures } = require("../../utils/features");
 const { forbidden } = require("../../utils/messages");
-const { ConfigLogin } = require("../theme/login-config/model");
-const { getLoginConfig } = require("./business");
 
 async function userRegisterMustBeEnabled(req, res, next) {
-    const loginConfig = await getLoginConfig();
+    const features = await getDbCurrentFeatures();
 
-    if (
-        !loginConfig?.formLogin?.enabled ||
-        !loginConfig?.formLogin?.registerUser
-    ) {
+    if (!features?.registerUser) {
         return forbidden(
             res,
             req,
