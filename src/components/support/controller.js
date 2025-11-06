@@ -142,7 +142,7 @@ module.exports = {
         try {
             const { query } = req;
             const user = await getUserByToken(req)
-            const url = `${process.env.API_ZENDESK}/support/new/tickets/${process.env.CLIENT_ID}/${user.networkLogin}`;
+            const url = `${process.env.API_ZENDESK}/support/new/tickets/${process.env.CLIENT_ID}/${user._id}`;
 
             const headers = {
                 Authorization: process.env.API_KEY_ZENDESK,
