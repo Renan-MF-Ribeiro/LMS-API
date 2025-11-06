@@ -22,6 +22,8 @@ const {
     createCSVString,
 } = require('../../utils/files')
 
+const moment = require('moment-timezone');
+
 module.exports = {
     async returnLogs (req, res) {
         try {
@@ -34,8 +36,9 @@ module.exports = {
             if (months > 6) {
                 badRequest(res, req, 'A diferença das datas escolhidas não pode ser maior que 6 meses!', 'A diferença das datas escolhidas não pode ser maior que 6 meses!', 'logs', 'returnLogs')
             } else {
-                dateInitial = formatDateWithoutHours(dateInitial) + 'T00:00:00.000-00:00'
-                dateFinal = formatDateWithoutHours(dateFinal) + 'T00:00:00.000-00:00'
+                dateInitial = moment(dateInitial).startOf('day').format("YYYY-MM-DDTHH:mm:ss.SSS-00:00");
+                dateFinal = moment(dateFinal).endOf('day').format("YYYY-MM-DDTHH:mm:ss.SSS-00:00");
+
                 switch (type) {
                     case 1:
                         logs = await returnLogsTypeLogin(dateInitial, dateFinal)
@@ -55,11 +58,14 @@ module.exports = {
                 }
 
                 for (const log of logs) {
+
+                    const createdAtWithTimezone = moment.tz(log.createdAt, "America/Sao_Paulo");
+
                     records.push({
                         message: log.message,
                         ip: log.ip,
                         login: log.login,
-                        create: formatDate(log.createdAt),
+                        create: formatDate(createdAtWithTimezone),
                     })
                 }
 
