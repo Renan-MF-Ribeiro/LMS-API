@@ -48,6 +48,7 @@ const {
     getLoginFormByStrategyName,
     clearAuthCookies,
     updateUserByPartnerToken,
+    getLoginConfig,
 } = require('./business');
 
 const {
@@ -390,7 +391,7 @@ module.exports = {
                 handleSegmentationOnQuery(req, 'issuer', query);
             }
 
-            const foundUser = await User.findOne(query).select('-password');
+            const foundUser = await User.findOne(query, '-password -passwordValid')
 
             _messages.success(res, req, foundUser);
         } catch (error) {
@@ -679,6 +680,19 @@ module.exports = {
             );
         }
 
+        const loginConfig = await getLoginConfig();
+
+        if (!loginConfig?.formLogin?.enabled) {
+            return _messages.forbidden(
+                res,
+                req,
+                'Formulário de login desabilitado',
+                'Usuário ou senha inválidos.',
+                'users',
+                'ldapSignIn'
+            );
+        }
+
         let user = await User.findOne({
             _id: new mongoose.Types.ObjectId(req.user._id),
         }).lean();
@@ -687,7 +701,7 @@ module.exports = {
             return _messages.forbidden(
                 res,
                 req,
-                'Usuário ou senha inválidos.',
+                'Usuário configurado apenas para login via SSO',
                 'Usuário ou senha inválidos.',
                 'users',
                 'ldapSignIn'
@@ -1696,6 +1710,7 @@ module.exports = {
         const total = await User.countDocuments(query);
 
         const users = await User.find(query)
+            .select('_id name email status onboarding partner')
             .sort({ [order]: sort })
             .skip(parseInt(skip))
             .limit(parseInt(limit));
@@ -1757,6 +1772,7 @@ module.exports = {
 
         const total = await User.countDocuments(query);
         const users = await User.find(query)
+            .select('-password -passwordValid')
             .sort({ [order]: sort })
             .skip(parseInt(skip))
             .limit(parseInt(limit));
@@ -1787,7 +1803,8 @@ module.exports = {
     async returnUserById(req, res) {
         try {
             const { _id } = await getUserByToken(req);
-            const user = await User.findOne({ _id: _id }, { password: 0 });
+            const user = await User.findOne({ _id: _id })
+                .select('-password -passwordValid');
 
             _messages.success(res, req, {
                 data: user,
@@ -2375,6 +2392,7 @@ module.exports = {
                     }
                     : { groupsAD: { $in: ['PERFIL_Colaborador'] } }
             )
+                .select('-password -passwordValid')
                 .sort({
                     [order]: sort,
                 })
@@ -2607,30 +2625,46 @@ module.exports = {
 
         const arrTags = Array.isArray(tag) ? tag : [tag];
 
-        try {
-            const user = await User.findByIdAndUpdate(
-                userId,
-                { $pullAll: { groupsAD: arrTags } },
-                { new: true }
-            );
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { $pullAll: { groupsAD: arrTags } },
+            { new: true }
+        );
 
-            const usersWithGroup = await User.countDocuments({ groupsAD: tag });
-            if (usersWithGroup == 0) {
-                await Group.deleteOne({ name: tag });
-            }
+        const requestUser = await getUserByToken(req);
 
-            const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD);
+        await Log.create({
+            type: 'CHANGE_USER_PROFILES',
+            user: requestUser._id,
+            login: requestUser.networkLogin,
+            groups: requestUser.groupsAD,
+            dataNew: [
+                {
+                    removedProfiles: arrTags,
+                    affectedUser: new ObjectId(userId),
+                }
+            ],
+            component: 'users',
+            route: 'remove-permission',
+            ip: req.ip,
+            browserDetails: req.headers['user-agent'],
+        });
 
-            GamificationBusiness.updateClientUser(user.networkLogin, {
-                eligibilities,
-            });
+        const usersWithGroup = await User.countDocuments({ groupsAD: tag });
 
-            _messages.success(res, req, {
-                message: 'Tag de permissão removida',
-            });
-        } catch (error) {
-            _messages.internalServer(res, req, error.message, 'Erro interno no servidor', 'users');
+        if (usersWithGroup == 0) {
+            await Group.deleteOne({ name: tag });
         }
+
+        const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD);
+
+        GamificationBusiness.updateClientUser(user.networkLogin, {
+            eligibilities,
+        });
+
+        _messages.success(res, req, {
+            message: 'Tag de permissão removida',
+        });
     },
 
     async addGroups(req, res) {
@@ -2672,42 +2706,54 @@ module.exports = {
             );
         }
 
-        try {
-            const normalizedTags = tag.map((t) => removeAccents(t));
-            const user = await User.findOneAndUpdate(
-                { _id: userId },
-                { $addToSet: { groupsAD: normalizedTags } },
-                { new: true }
-            );
-            for (const groupName of normalizedTags) {
-                const findGroup = await Group.findOne({
-                    name: groupName,
-                    deleted: 0,
-                });
-                if (!findGroup) {
-                    await Group.create({
-                        name: groupName,
-                    });
+        const normalizedTags = tag.map((t) => removeAccents(t));
+
+        const user = await User.findOneAndUpdate(
+            { _id: userId },
+            { $addToSet: { groupsAD: normalizedTags } },
+            { new: true }
+        );
+
+        const requestUser = await getUserByToken(req);
+
+        await Log.create({
+            type: 'CHANGE_USER_PROFILES',
+            user: requestUser._id,
+            login: requestUser.networkLogin,
+            groups: requestUser.groupsAD,
+            dataNew: [
+                {
+                    addedProfiles: normalizedTags,
+                    affectedUser: new ObjectId(userId),
                 }
+            ],
+            component: 'users',
+            route: 'add-permission',
+            ip: req.ip,
+            browserDetails: req.headers['user-agent'],
+        });
+
+        for (const groupName of normalizedTags) {
+            const findGroup = await Group.findOne({
+                name: groupName,
+                deleted: 0,
+            });
+            if (!findGroup) {
+                await Group.create({
+                    name: groupName,
+                });
             }
-
-            const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD);
-            GamificationBusiness.updateClientUser(user.networkLogin, {
-                eligibilities,
-            });
-
-            return _messages.success(res, req, {
-                message: 'Tag de permissão adicionada ao usuário',
-            });
-        } catch (error) {
-            return _messages.internalServer(
-                res,
-                req,
-                error.message,
-                'Erro interno no servidor',
-                'users'
-            );
         }
+
+        const eligibilities = await handleUserEligibilitiesGamification(user.groupsAD);
+
+        GamificationBusiness.updateClientUser(user.networkLogin, {
+            eligibilities,
+        });
+
+        return _messages.success(res, req, {
+            message: 'Tag de permissão adicionada ao usuário',
+        });
     },
 
     async deleteClassTag(req, res) {

@@ -1,10 +1,22 @@
+const { forbidden } = require("../../utils/messages");
 const { ConfigLogin } = require("../theme/login-config/model");
+const { getLoginConfig } = require("./business");
 
 async function userRegisterMustBeEnabled(req, res, next) {
-    const loginConfig = await ConfigLogin.findOne({}).sort({ _id: -1 }).lean();
+    const loginConfig = await getLoginConfig();
 
-    if (!loginConfig?.formLogin?.registerUser) {
-        return res.status(403).send('Não foi possível cadastrar o usuário');
+    if (
+        !loginConfig?.formLogin?.enabled ||
+        !loginConfig?.formLogin?.registerUser
+    ) {
+        return forbidden(
+            res,
+            req,
+            'Cadastro desabilitado',
+            'Não foi possível cadastrar o usuário.',
+            'users',
+            'signup'
+        );
     }
 
     next();
