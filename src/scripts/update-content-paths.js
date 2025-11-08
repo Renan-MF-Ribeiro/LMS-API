@@ -38,7 +38,10 @@ async function updateContentPaths() {
     }).lean();
 
     const items = await Item.find({
-        thumbPath: { $exists: true, $ne: null }
+        $or: [
+            { thumbPath: { $exists: true, $ne: null } },
+            { contentPath: { $exists: true, $ne: null } },
+        ]
     }).lean();
 
     const channels = await Channel.find({
@@ -118,10 +121,18 @@ async function updateContentPaths() {
     for await (const [index, item] of Object.entries(items)) {
         process.stdout.write(`Processing item ${Number(index) + 1} of ${items.length}\r`);
 
+        const updatedFields = {};
+
+        if (item.thumbPath) {
+            updatedFields.thumbPath = sanitizeUrl(item.thumbPath);
+        }
+
+        if (item.contentPath) {
+            updatedFields.contentPath = sanitizeUrl(item.contentPath);
+        }
+
         await Item.updateOne({ _id: item._id }, {
-            $set: {
-                thumbPath: sanitizeUrl(item.thumbPath)
-            }
+            $set: updatedFields
         });
     }
 
