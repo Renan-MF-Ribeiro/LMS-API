@@ -6,6 +6,7 @@ const { Trail } = require("../components/trails/model");
 const { User } = require("../components/users/model");
 const { CourseModel } = require("../components/courses/model");
 const { ThemeLogin } = require("../components/theme/login/model");
+const { Theme } = require("../components/theme/palette/model");
 
 const addTimestampToImages = false;
 const domainToReplace = null;
@@ -52,11 +53,19 @@ async function updateContentPaths() {
         thumbPath: { $exists: true, $ne: null }
     }).lean();
 
-    const themes = await ThemeLogin.find({
+    const loginThemes = await ThemeLogin.find({
         $or: [
             { background: { $exists: true, $ne: null } },
             { backgroundMobile: { $exists: true, $ne: null } },
             { logo: { $exists: true, $ne: null } }
+        ]
+    }).lean();
+
+    const themes = await Theme.find({
+        $or: [
+            { logo: { $exists: true, $ne: null } },
+            { logo_admin: { $exists: true, $ne: null } },
+            { favicon: { $exists: true, $ne: null } },
         ]
     }).lean();
 
@@ -65,6 +74,7 @@ async function updateContentPaths() {
     console.log('Channels:', channels.length);
     console.log('Users:', users.length);
     console.log('Courses:', courses.length);
+    console.log('Login Themes:', loginThemes.length);
     console.log('Themes:', themes.length);
 
     console.log('Updating Trails...');
@@ -161,9 +171,9 @@ async function updateContentPaths() {
 
     console.log('\nUpdating Themes...');
 
-    // Themes
-    for await (const [index, theme] of Object.entries(themes)) {
-        process.stdout.write(`Processing theme ${Number(index) + 1} of ${themes.length}\r`);
+    // Login Themes
+    for await (const [index, theme] of Object.entries(loginThemes)) {
+        process.stdout.write(`Processing theme ${Number(index) + 1} of ${loginThemes.length}\r`);
         const updatedFields = {};
 
         if (theme.background) {
@@ -179,6 +189,30 @@ async function updateContentPaths() {
         }
 
         await ThemeLogin.updateOne({ _id: theme._id }, {
+            $set: updatedFields
+        });
+    }
+
+    console.log('\nUpdating Themes...');
+
+    // Themes
+    for await (const [index, theme] of Object.entries(themes)) {
+        process.stdout.write(`Processing theme ${Number(index) + 1} of ${themes.length}\r`);
+        const updatedFields = {};
+
+        if (theme.logo) {
+            updatedFields.logo = sanitizeUrl(theme.logo);
+        }
+
+        if (theme.logo_admin) {
+            updatedFields.logo_admin = sanitizeUrl(theme.logo_admin);
+        }
+
+        if (theme.favicon) {
+            updatedFields.favicon = sanitizeUrl(theme.favicon);
+        }
+
+        await Theme.updateOne({ _id: theme._id }, {
             $set: updatedFields
         });
     }
