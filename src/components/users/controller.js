@@ -683,7 +683,7 @@ module.exports = {
 
         const loginConfig = await getLoginConfig();
 
-        if (!loginConfig?.formLogin?.enabled) {
+        if (!loginConfig?.formLogin?.enabled && !loginConfig?.singleUser) {
             return _messages.forbidden(
                 res,
                 req,
