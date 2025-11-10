@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const { getSectionTrailId, isSectionTrailInfo } = require("../components/sections/business");
 
 const { runScript, generateReport } = require("./utils");
+const environment = require("../environment");
 
 const ObjectId = mongoose.Types.ObjectId;
 
@@ -355,19 +356,18 @@ async function updateMonolitoIds(connection, { clientId, domainToReplace, domain
 }
 
 async function run() {
-    console.log('DB', process.env.DB_HOST);
-
-    const connection = await mongoose.createConnection(process.env.DB_HOST, {
+    console.log('Conectando ao banco de dados...');
+    const connection = await mongoose.createConnection(environment.DB_HOST, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
     });
 
-    const clientId = 0;
+    console.log('Atualizando Monolito IDs...');
 
     await updateMonolitoIds(connection, {
-        clientId,
-        domainToReplace: 'v2.happlearning.happmobi.com.br',
-        domainToReplaceWith: 'lms.cliente.happlearning.com.br',
+        clientId: environment.CLIENT_ID,
+        domainToReplace: 'lms.experimente1.happmobi.com.br',
+        domainToReplaceWith: environment.DOMAIN.replace(/^https?:\/\//, ''),
         reportName: 'monolito_ids'
     });
 
