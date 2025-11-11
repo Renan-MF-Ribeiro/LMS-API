@@ -50,6 +50,28 @@ const i18nBusiness = {
 
         return translations.map((t) => deepInterpolate(t, vars));
     },
+
+    //FASE 2
+
+    getDefaultLocale: async (code) => {
+        const { data } = await i18nApi.get(`/locales/default/${clientId}/${code}`);
+        return data;
+    },
+
+    listAllLocalesByClientId: async () => {
+        const { data } = await i18nApi.get(`/locales/list/all/${clientId}`);
+        return data;
+    },
+
+    listActiveLocalesByClientId: async () => {
+        const { data } = await i18nApi.get(`/locales/list/active/${clientId}`);
+        return data;
+    },
+    
+    updateByKey: async (id, clientId, payload) => {
+        const { data } = await i18nApi.put(`/locales/key/${clientId}/${id}`, payload);
+        return data;
+    }
 };
 
 function interpolate(text, vars) {
