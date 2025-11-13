@@ -38,16 +38,16 @@ const validateProfile = async (req, res, next, expectedProfiles) => {
         (profile) =>
             expectedProfiles.includes(profile)
     );
-    if (!doesUserHasProfile) {
-        return _messages.forbidden(
-            res,
-            req,
-            'Sem permissão de acesso',
-            'Permissão insuficiente para prosseguir com a ação.',
-            '',
-            req.originalUrl
-        );
-    }
+    // if (!doesUserHasProfile) {
+    //     return _messages.forbidden(
+    //         res,
+    //         req,
+    //         'Sem permissão de acesso',
+    //         'Permissão insuficiente para prosseguir com a ação.',
+    //         '',
+    //         req.originalUrl
+    //     );
+    // }
     next();
 }
 

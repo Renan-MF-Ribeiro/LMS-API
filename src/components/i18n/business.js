@@ -53,22 +53,27 @@ const i18nBusiness = {
 
     //FASE 2
 
-    getDefaultLocale: async (code) => {
-        const { data } = await i18nApi.get(`/locales/default/${clientId}/${code}`);
+    //dicionário de termos
+    createDictionary: async (payload) => {
+        const { data } = await i18nApi.post(`/dictionary`, payload);
+
         return data;
     },
 
-    listAllLocalesByClientId: async () => {
-        const { data } = await i18nApi.get(`/locales/list/all/${clientId}`);
+    listDictionaries: async ({ page = 1, limit = 10 } = {}) => {
+        const { data } = await i18nApi.get(`/dictionary/list/${clientId}/`, {
+            params: { page, limit }
+        });
         return data;
     },
 
-    listActiveLocalesByClientId: async () => {
-        const { data } = await i18nApi.get(`/locales/list/active/${clientId}`);
+    listActiveDictionaries: async () => {
+        const { data } = await i18nApi.get(`/dictionary/active/${clientId}/`);
         return data;
     },
-    
-    updateByKey: async (id, clientId, payload) => {
+
+    //locales
+    updateByKey: async (id, payload) => {
         const { data } = await i18nApi.put(`/locales/key/${clientId}/${id}`, payload);
         return data;
     }

@@ -10,9 +10,9 @@ router
 
     //fase 2
 
-    .get('/default/:code', i18nController.getDefaultLocale)
-    .get('/list/all', i18nController.listAll)
-    .get('/list/active', i18nController.listActive)
-    .put('/key/:clientId/:id', i18nController.updateByKey)
+    .post('/dictionary', i18nController.createDictionary)
+    .get('/dictionary/list', i18nController.listDictionaries)
+    .get('/dictionary/active', i18nController.listActiveDictionaries)
+    .put('/key/:id', i18nController.updateByKey)
 
-module.exports = router;
+module.exports = router;    
