@@ -1,3 +1,4 @@
+const { getDefaultDictionary } = require('./controller');
 const { i18nApi } = require('./http-adapter');
 const { LOCALE, LOCALE_CONTEXT } = require('./model');
 
@@ -60,15 +61,23 @@ const i18nBusiness = {
         return data;
     },
 
-    listDictionaries: async ({ page = 1, limit = 10 } = {}) => {
-        const { data } = await i18nApi.get(`/dictionary/list/${clientId}/`, {
-            params: { page, limit }
-        });
+    getDefaultDictionary: async () => {
+        const { data } = await i18nApi.get(`/dictionary/default`);
         return data;
     },
 
     listActiveDictionaries: async () => {
-        const { data } = await i18nApi.get(`/dictionary/active/${clientId}/`);
+        const { data } = await i18nApi.get(`/dictionary/active/${clientId}`);
+        return data;
+    },
+
+    updateDictionary: async (id, payload) => {
+        const { data } = await i18nApi.put(`/dictionary/${id}`, payload);
+        return data;
+    },
+
+    deleteDictionary: async (id) => {
+        const { data } = await i18nApi.delete(`/dictionary/${id}`);
         return data;
     },
 

@@ -62,6 +62,18 @@ const i18nController = {
         }
     },
 
+    getDefaultDictionary: async (req, res) => {
+        try {
+            const data = await i18nBusiness.getDefaultDictionary();
+            return _messages.success(res, req, data, 'ok', 'i18n', 'getDefaultDictionary');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
     listDictionaries: async (req, res) => {
         try {
             const { page, limit } = req.query;
@@ -79,6 +91,32 @@ const i18nController = {
         try {
             const data = await i18nBusiness.listActiveDictionaries();
             return _messages.success(res, req, data, 'ok', 'i18n', 'listActiveDictionaries');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    updateDictionary: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const data = await i18nBusiness.updateDictionary(id, req.body);
+            return _messages.success(res, req, data, 'ok', 'i18n', 'updateDictionary');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
+    deleteDictionary: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const data = await i18nBusiness.deleteDictionary(id);
+            return _messages.success(res, req, data, 'ok', 'i18n', 'deleteDictionary');
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
