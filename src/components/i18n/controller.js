@@ -127,6 +127,20 @@ const i18nController = {
         }
     },
 
+    getLocaleById: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const data = await i18nBusiness.getLocaleById(id);
+            return _messages.success(res, req, data, 'ok', 'i18n', 'getLocaleById');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
     updateByKey: async (req, res) => {
         try {
             const { id } = req.params;

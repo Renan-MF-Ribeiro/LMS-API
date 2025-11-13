@@ -88,6 +88,12 @@ const i18nBusiness = {
     },
 
     //locales
+
+    getLocaleById: async (id) => {
+        const { data } = await i18nApi.get(`/locales/id/${id}`);
+        return data;
+    },
+
     updateByKey: async (id, payload) => {
         const { data } = await i18nApi.put(`/locales/key/${clientId}/${id}`, payload);
         return data;

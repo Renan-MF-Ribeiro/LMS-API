@@ -10,9 +10,10 @@ router
     .get('/list/active', i18nController.listActiveDictionaries)
     .put('/:id', i18nController.updateDictionary)
     .delete('/:id', i18nController.deleteDictionary)
-    // .get('/locales/', i18nController.listLocales)
 
     .get('/default', i18nController.getDefaultDictionary)
+
+    .get('/locale/:id', i18nController.getLocaleById)
 
     //locales
     .put('/key/:id', i18nController.updateByKey)
