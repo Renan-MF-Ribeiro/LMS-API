@@ -64,10 +64,7 @@ const i18nController = {
 
     getDefaultDictionary: async (req, res) => {
         try {
-            const { locale } = req.params;
-            const { context } = req.query;
-
-            const data = await i18nBusiness.get(locale, context);
+            const data = await i18nBusiness.getDefaultDictionary();
 
             return _messages.success(res, req, data, 'ok', 'i18n', 'get');
         } catch (error) {

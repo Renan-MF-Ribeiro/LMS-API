@@ -1,4 +1,3 @@
-const { getDefaultDictionary } = require('./controller');
 const { i18nApi } = require('./http-adapter');
 const { LOCALE, LOCALE_CONTEXT } = require('./model');
 
@@ -63,6 +62,13 @@ const i18nBusiness = {
 
     getDefaultDictionary: async () => {
         const { data } = await i18nApi.get(`/dictionary/default`);
+        return data;
+    },
+
+    listDictionaries: async ({ page = 1, limit = 10 } = {}) => {
+        const { data } = await i18nApi.get(`/dictionary/list/${clientId}`, {
+            params: { page, limit }
+        });
         return data;
     },
 
