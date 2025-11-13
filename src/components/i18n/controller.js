@@ -64,12 +64,17 @@ const i18nController = {
 
     getDefaultDictionary: async (req, res) => {
         try {
-            const data = await i18nBusiness.getDefaultDictionary();
-            return _messages.success(res, req, data, 'ok', 'i18n', 'getDefaultDictionary');
+            const { locale } = req.params;
+            const { context } = req.query;
+
+            const data = await i18nBusiness.get(locale, context);
+
+            return _messages.success(res, req, data, 'ok', 'i18n', 'get');
         } catch (error) {
             const message = error.response?.data?.message ?? error.message;
             const statusCode = error.response?.data?.statusCode ?? 500;
             const errorMessage = message ?? 'Internal server error';
+
             res.status(statusCode).json(errorMessage);
         }
     },
