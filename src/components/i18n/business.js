@@ -65,6 +65,11 @@ const i18nBusiness = {
         return data;
     },
 
+    getLocaleByDictionaryId: async (id, context) => {
+        const { data } = await i18nApi.get(`/dictionary/locale/${id}?context=${context}`);
+        return data;
+    },
+
     listDictionaries: async ({ page = 1, limit = 10 } = {}) => {
         const { data } = await i18nApi.get(`/dictionary/list/${clientId}`, {
             params: { page, limit }

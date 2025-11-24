@@ -154,7 +154,22 @@ const i18nController = {
 
             res.status(statusCode).json(errorMessage);
         }
-    }
+    },
+
+    getLocaleByDictionaryId: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { context } = req.query;
+            const data = await i18nBusiness.getLocaleByDictionaryId(id, context);
+            return _messages.success(res, req, data, 'ok', 'i18n', 'getLocaleByDictionaryId');
+        } catch (error) {
+            const message = error.response?.data?.message ?? error.message;
+            const statusCode = error.response?.data?.statusCode ?? 500;
+            const errorMessage = message ?? 'Internal server error';
+            res.status(statusCode).json(errorMessage);
+        }
+    },
+
 };
 
 module.exports = i18nController;

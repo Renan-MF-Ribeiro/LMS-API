@@ -13,7 +13,7 @@ router
 
     .get('/default', i18nController.getDefaultDictionary)
 
-    .get('/locale/:id', i18nController.getLocaleById)
+    .get('/locale/:id', i18nController.getLocaleByDictionaryId)
 
     //locales
     .put('/key/:id', i18nController.updateByKey)
