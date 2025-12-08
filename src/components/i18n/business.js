@@ -100,7 +100,7 @@ const i18nBusiness = {
     },
 
     updateByKey: async (id, payload) => {
-        const { data } = await i18nApi.put(`/locales/key/${clientId}/${id}`, payload);
+        const { data } = await i18nApi.put(`/dictionary/key/${id}`, payload);
         return data;
     }
 };
