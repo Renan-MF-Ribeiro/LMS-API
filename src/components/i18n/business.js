@@ -61,7 +61,7 @@ const i18nBusiness = {
     },
 
     getDefaultDictionary: async () => {
-        const { data } = await i18nApi.get(`/dictionary/default`);
+        const { data } = await i18nApi.get(`/dictionary/default/${clientId}`);
         return data;
     },
 
