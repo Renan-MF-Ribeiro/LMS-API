@@ -60,8 +60,8 @@ const i18nBusiness = {
         return data;
     },
 
-    getDefaultDictionary: async () => {
-        const { data } = await i18nApi.get(`/dictionary/default/${clientId}`);
+    getDefaultDictionary: async (preferredLanguage) => {
+        const { data } = await i18nApi.get(`/dictionary/default/${clientId}/${preferredLanguage}`);
         return data;
     },
 

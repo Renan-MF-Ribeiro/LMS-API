@@ -171,7 +171,7 @@ const userSchema = new mongoose.Schema(
         enrollManager: { type: String, default: null, required: false },
         civilName: { type: String, default: null, required: false },
         // é um id de dicionário
-        language: { type: mongoose.Schema.Types.ObjectId, required: false },
+        preferredLanguage: { type: mongoose.Schema.Types.ObjectId, required: false },
     },
     optionsSchema
 );
@@ -824,14 +824,7 @@ const defaultOnboardingUserMap = {
         activeInForms: true,
         type: 'string',
         config: null,
-    },
-    language: {
-        field: 'IDIOMA',
-        label: 'Idioma',
-        activeInForms: true,
-        type: 'string',
-        config: null,
-    },
+    }
 };
 
 const userProjection = {

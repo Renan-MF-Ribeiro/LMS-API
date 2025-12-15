@@ -222,7 +222,7 @@ async function generateTokens(user, login, password, tokenIdpProfiles, res) {
         numbers: profilesIDS?.numbers,
         groups: groupsIDS,
         welcomeVideoWatched: user?.welcomeVideoWatched,
-        language: user?.language,
+        preferredLanguage: user?.preferredLanguage,
     });
 
     const mfaToken = generateMfaToken({

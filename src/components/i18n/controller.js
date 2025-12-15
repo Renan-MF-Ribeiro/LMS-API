@@ -1,4 +1,5 @@
 const { i18nBusiness } = require('./business');
+const { getUserByToken } = require('../../utils/functions');
 const _messages = require('../../utils/messages');
 
 const i18nController = {
@@ -64,7 +65,9 @@ const i18nController = {
 
     getDefaultDictionary: async (req, res) => {
         try {
-            const data = await i18nBusiness.getDefaultDictionary();
+            const user = await getUserByToken(req);
+            const preferredLanguage = user?.preferredLanguage || null;
+            const data = await i18nBusiness.getDefaultDictionary(preferredLanguage);
 
             return _messages.success(res, req, data, 'ok', 'i18n', 'get');
         } catch (error) {
