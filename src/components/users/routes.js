@@ -193,4 +193,5 @@ module.exports = express
     .post('/authorization', _controller.updateWebPushAuthorization)
     .get('/map', validateTokenRoute, _controller.getUserMap)
     .put('/map', validateTokenRoute, _controller.putUserMap)
-    .post('/map/read-headers', validateTokenRoute, formidable(), _controller.readSheetHeaders);
+    .post('/map/read-headers', validateTokenRoute, formidable(), _controller.readSheetHeaders)
+    .put('/language/:id', validateTokenRoute, _controller.updateLanguage);

@@ -165,13 +165,13 @@ const userSchema = new mongoose.Schema(
             required: false,
             default: 'BOTH',
         },
-        
         reasonCode: { type: String, default: null, required: false },
         initials: { type: String, default: null, required: false },
         deviceId: { type: String, default: null, required: false },
         enrollManager: { type: String, default: null, required: false },
         civilName: { type: String, default: null, required: false },
-
+        // é um id de dicionário
+        language: { type: mongoose.Schema.Types.ObjectId, required: false },
     },
     optionsSchema
 );
@@ -821,6 +821,13 @@ const defaultOnboardingUserMap = {
     loginType: {
         field: 'TIPO_LOGIN',
         label: 'Tipo de login',
+        activeInForms: true,
+        type: 'string',
+        config: null,
+    },
+    language: {
+        field: 'IDIOMA',
+        label: 'Idioma',
         activeInForms: true,
         type: 'string',
         config: null,

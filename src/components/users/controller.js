@@ -3166,4 +3166,27 @@ module.exports = {
         await clearAuthCookies(req, res);
         res.status(200).json({ ok: true });
     },
+
+    async updateLanguage(req, res) {
+        try {
+            const user = await getUserByToken(req);
+            const dictionaryId = req.params.id;
+
+            const updatedUser = await User.findByIdAndUpdate(
+                user._id,
+                { $set: { language: dictionaryId } },
+                { new: true }
+            );
+            _messages.success(res, req, updatedUser);
+        } catch (error) {
+            _messages.internalServer(
+                res,
+                req,
+                error.message,
+                'Erro interno no servidor',
+                'users',
+                'updateLanguage'
+            );
+        }
+    },
 };
