@@ -8,8 +8,8 @@ router
     .post('/dictionary', i18nController.createDictionary)
     .get('/list', i18nController.listDictionaries)
     .get('/list/active', i18nController.listActiveDictionaries)
-    .put('/:id', i18nController.updateDictionary)
-    .delete('/:id', i18nController.deleteDictionary)
+    .put('/dictionary/:id', i18nController.updateDictionary)
+    .delete('/dictionary/:id', i18nController.deleteDictionary)
 
     .get('/default', i18nController.getDefaultDictionary)
 
