@@ -55,7 +55,7 @@ const i18nBusiness = {
 
     //dicionário de termos
     createDictionary: async (payload) => {
-        const { data } = await i18nApi.post(`/dictionary`, payload);
+        const { data } = await i18nApi.post(`/dictionary/${clientId}`, payload);
 
         return data;
     },
