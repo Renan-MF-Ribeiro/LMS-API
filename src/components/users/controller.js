@@ -3175,10 +3175,10 @@ module.exports = {
 
             const updatedUser = await User.findByIdAndUpdate(
                 user._id,
-                { $set: { language: dictionaryId } },
+                { $set: { preferredLanguage: dictionaryId } },
                 { new: true }
             );
-            _messages.success(res, req, updatedUser);
+            _messages.success(res, req, dictionaryId);
         } catch (error) {
             _messages.internalServer(
                 res,
