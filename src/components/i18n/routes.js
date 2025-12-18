@@ -11,7 +11,7 @@ router
     .put('/dictionary/:id', i18nController.updateDictionary)
     .delete('/dictionary/:id', i18nController.deleteDictionary)
 
-    .get('/default', i18nController.getDefaultDictionary)
+    .get('/default/:preferredLanguage', i18nController.getDefaultDictionary)
 
     .get('/locale/:id', i18nController.getLocaleByDictionaryId)
 

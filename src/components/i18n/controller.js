@@ -65,8 +65,7 @@ const i18nController = {
 
     getDefaultDictionary: async (req, res) => {
         try {
-            const user = await getUserByToken(req);
-            const preferredLanguage = user?.preferredLanguage || null;
+            const preferredLanguage = req.params.preferredLanguage || null;
             const data = await i18nBusiness.getDefaultDictionary(preferredLanguage);
 
             return _messages.success(res, req, data, 'ok', 'i18n', 'get');
